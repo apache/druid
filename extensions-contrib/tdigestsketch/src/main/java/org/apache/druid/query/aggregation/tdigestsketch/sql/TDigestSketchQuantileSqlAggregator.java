@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation.tdigestsketch.sql;
 
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Inject;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
@@ -33,6 +34,7 @@ import org.apache.calcite.util.Optionality;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.tdigestsketch.TDigestConfig;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchToQuantilePostAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchUtils;
@@ -53,6 +55,13 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
 {
   private static final SqlAggFunction FUNCTION_INSTANCE = new TDigestSketchQuantileSqlAggFunction();
   private static final String NAME = "TDIGEST_QUANTILE";
+  private final TDigestConfig tDigestConfig;
+
+  @Inject
+  public TDigestSketchQuantileSqlAggregator(TDigestConfig tDigestConfig)
+  {
+    this.tDigestConfig = tDigestConfig;
+  }
 
   @Override
   public SqlAggFunction calciteFunction()
@@ -134,14 +143,15 @@ public class TDigestSketchQuantileSqlAggregator implements SqlAggregator
       aggregatorFactory = new TDigestSketchAggregatorFactory(
           sketchName,
           input.getDirectColumn(),
-          compression
+          compression,
+          tDigestConfig
       );
     } else {
       String virtualColumnName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
           input,
           ColumnType.FLOAT
       );
-      aggregatorFactory = new TDigestSketchAggregatorFactory(sketchName, virtualColumnName, compression);
+      aggregatorFactory = new TDigestSketchAggregatorFactory(sketchName, virtualColumnName, compression, tDigestConfig);
     }
 
     return Aggregation.create(

@@ -19,7 +19,15 @@
 
 package org.apache.druid.benchmark;
 
-import org.apache.druid.java.util.common.parsers.Parser;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -38,7 +46,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -50,16 +57,22 @@ public class FlattenJSONBenchmark
 {
   private static final int NUM_EVENTS = 100000;
 
-  List<String> flatInputs;
-  List<String> nestedInputs;
-  List<String> jqInputs;
-  Parser flatParser;
-  Parser nestedParser;
-  Parser jqParser;
-  Parser treeJqParser;
-  Parser treeTreeParser;
-  Parser fieldDiscoveryParser;
-  Parser forcedPathParser;
+  private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
+      new TimestampSpec("ts", "iso", null),
+      DimensionsSpec.EMPTY,
+      ColumnsFilter.all()
+  );
+
+  List<byte[]> flatInputBytes;
+  List<byte[]> nestedInputBytes;
+  List<byte[]> jqInputBytes;
+  JsonInputFormat flatFormat;
+  JsonInputFormat nestedFormat;
+  JsonInputFormat jqFormat;
+  JsonInputFormat treeJqFormat;
+  JsonInputFormat treeTreeFormat;
+  JsonInputFormat fieldDiscoveryFormat;
+  JsonInputFormat forcedPathFormat;
   int flatCounter = 0;
   int nestedCounter = 0;
   int jqCounter = 0;
@@ -68,117 +81,159 @@ public class FlattenJSONBenchmark
   public void prepare() throws Exception
   {
     FlattenJSONBenchmarkUtil gen = new FlattenJSONBenchmarkUtil();
-    flatInputs = new ArrayList<>();
+    flatInputBytes = new ArrayList<>();
     for (int i = 0; i < NUM_EVENTS; i++) {
-      flatInputs.add(gen.generateFlatEvent());
+      flatInputBytes.add(StringUtils.toUtf8(gen.generateFlatEvent()));
     }
-    nestedInputs = new ArrayList<>();
+    nestedInputBytes = new ArrayList<>();
     for (int i = 0; i < NUM_EVENTS; i++) {
-      nestedInputs.add(gen.generateNestedEvent());
+      nestedInputBytes.add(StringUtils.toUtf8(gen.generateNestedEvent()));
     }
-    jqInputs = new ArrayList<>();
+    jqInputBytes = new ArrayList<>();
     for (int i = 0; i < NUM_EVENTS; i++) {
-      jqInputs.add(gen.generateNestedEvent()); // reuse the same event as "nested"
+      jqInputBytes.add(StringUtils.toUtf8(gen.generateNestedEvent())); // reuse the same event as "nested"
     }
 
-    flatParser = gen.getFlatParser();
-    nestedParser = gen.getNestedParser();
-    jqParser = gen.getJqParser();
-    treeJqParser = gen.getTreeJqParser();
-    treeTreeParser = gen.getTreeTreeParser();
-    fieldDiscoveryParser = gen.getFieldDiscoveryParser();
-    forcedPathParser = gen.getForcedPathParser();
+    flatFormat = gen.getFlatFormat();
+    nestedFormat = gen.getNestedFormat();
+    jqFormat = gen.getJqFormat();
+    treeJqFormat = gen.getTreeJqFormat();
+    treeTreeFormat = gen.getTreeTreeFormat();
+    fieldDiscoveryFormat = gen.getFieldDiscoveryFormat();
+    forcedPathFormat = gen.getForcedPathFormat();
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> baseline(final Blackhole blackhole)
+  public InputRow baseline(final Blackhole blackhole) throws Exception
   {
-    Map<String, Object> parsed = flatParser.parseToMap(flatInputs.get(flatCounter));
-    for (String s : parsed.keySet()) {
-      blackhole.consume(parsed.get(s));
+    try (CloseableIterator<InputRow> iterator = flatFormat.createReader(
+        INPUT_ROW_SCHEMA,
+        new ByteEntity(flatInputBytes.get(flatCounter)),
+        null
+    ).read()) {
+      InputRow row = iterator.next();
+      for (String dim : row.getDimensions()) {
+        blackhole.consume(row.getRaw(dim));
+      }
+      flatCounter = (flatCounter + 1) % NUM_EVENTS;
+      return row;
     }
-    flatCounter = (flatCounter + 1) % NUM_EVENTS;
-    return parsed;
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> flatten(final Blackhole blackhole)
+  public InputRow flatten(final Blackhole blackhole) throws Exception
   {
-    Map<String, Object> parsed = nestedParser.parseToMap(nestedInputs.get(nestedCounter));
-    for (String s : parsed.keySet()) {
-      blackhole.consume(parsed.get(s));
+    try (CloseableIterator<InputRow> iterator = nestedFormat.createReader(
+        INPUT_ROW_SCHEMA,
+        new ByteEntity(nestedInputBytes.get(nestedCounter)),
+        null
+    ).read()) {
+      InputRow row = iterator.next();
+      for (String dim : row.getDimensions()) {
+        blackhole.consume(row.getRaw(dim));
+      }
+      nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
+      return row;
     }
-    nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
-    return parsed;
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> treejqflatten(final Blackhole blackhole)
+  public InputRow treejqflatten(final Blackhole blackhole) throws Exception
   {
-    Map<String, Object> parsed = treeJqParser.parseToMap(nestedInputs.get(jqCounter));
-    for (String s : parsed.keySet()) {
-      blackhole.consume(parsed.get(s));
+    try (CloseableIterator<InputRow> iterator = treeJqFormat.createReader(
+        INPUT_ROW_SCHEMA,
+        new ByteEntity(nestedInputBytes.get(jqCounter)),
+        null
+    ).read()) {
+      InputRow row = iterator.next();
+      for (String dim : row.getDimensions()) {
+        blackhole.consume(row.getRaw(dim));
+      }
+      jqCounter = (jqCounter + 1) % NUM_EVENTS;
+      return row;
     }
-    jqCounter = (jqCounter + 1) % NUM_EVENTS;
-    return parsed;
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> treetreeflatten(final Blackhole blackhole)
+  public InputRow treetreeflatten(final Blackhole blackhole) throws Exception
   {
-    Map<String, Object> parsed = treeTreeParser.parseToMap(nestedInputs.get(jqCounter));
-    for (String s : parsed.keySet()) {
-      blackhole.consume(parsed.get(s));
+    try (CloseableIterator<InputRow> iterator = treeTreeFormat.createReader(
+        INPUT_ROW_SCHEMA,
+        new ByteEntity(nestedInputBytes.get(jqCounter)),
+        null
+    ).read()) {
+      InputRow row = iterator.next();
+      for (String dim : row.getDimensions()) {
+        blackhole.consume(row.getRaw(dim));
+      }
+      jqCounter = (jqCounter + 1) % NUM_EVENTS;
+      return row;
     }
-    jqCounter = (jqCounter + 1) % NUM_EVENTS;
-    return parsed;
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> jqflatten(final Blackhole blackhole)
+  public InputRow jqflatten(final Blackhole blackhole) throws Exception
   {
-    Map<String, Object> parsed = jqParser.parseToMap(jqInputs.get(jqCounter));
-    for (String s : parsed.keySet()) {
-      blackhole.consume(parsed.get(s));
+    try (CloseableIterator<InputRow> iterator = jqFormat.createReader(
+        INPUT_ROW_SCHEMA,
+        new ByteEntity(jqInputBytes.get(jqCounter)),
+        null
+    ).read()) {
+      InputRow row = iterator.next();
+      for (String dim : row.getDimensions()) {
+        blackhole.consume(row.getRaw(dim));
+      }
+      jqCounter = (jqCounter + 1) % NUM_EVENTS;
+      return row;
     }
-    jqCounter = (jqCounter + 1) % NUM_EVENTS;
-    return parsed;
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> preflattenNestedParser(final Blackhole blackhole)
+  public InputRow preflattenNestedParser(final Blackhole blackhole) throws Exception
   {
-    Map<String, Object> parsed = fieldDiscoveryParser.parseToMap(flatInputs.get(nestedCounter));
-    for (String s : parsed.keySet()) {
-      blackhole.consume(parsed.get(s));
+    try (CloseableIterator<InputRow> iterator = fieldDiscoveryFormat.createReader(
+        INPUT_ROW_SCHEMA,
+        new ByteEntity(flatInputBytes.get(nestedCounter)),
+        null
+    ).read()) {
+      InputRow row = iterator.next();
+      for (String dim : row.getDimensions()) {
+        blackhole.consume(row.getRaw(dim));
+      }
+      nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
+      return row;
     }
-    nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
-    return parsed;
   }
 
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
-  public Map<String, Object> forcedRootPaths(final Blackhole blackhole)
+  public InputRow forcedRootPaths(final Blackhole blackhole) throws Exception
   {
-    Map<String, Object> parsed = forcedPathParser.parseToMap(flatInputs.get(nestedCounter));
-    for (String s : parsed.keySet()) {
-      blackhole.consume(parsed.get(s));
+    try (CloseableIterator<InputRow> iterator = forcedPathFormat.createReader(
+        INPUT_ROW_SCHEMA,
+        new ByteEntity(flatInputBytes.get(nestedCounter)),
+        null
+    ).read()) {
+      InputRow row = iterator.next();
+      for (String dim : row.getDimensions()) {
+        blackhole.consume(row.getRaw(dim));
+      }
+      nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
+      return row;
     }
-    nestedCounter = (nestedCounter + 1) % NUM_EVENTS;
-    return parsed;
   }
 
   public static void main(String[] args) throws RunnerException

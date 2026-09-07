@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.util.concurrent.atomic.AtomicLong;
@@ -34,14 +34,14 @@ public class CloseableResourceHolderTest
     final Closeable closeable = closeCounter::incrementAndGet;
     final ResourceHolder<Closeable> holder = ResourceHolder.fromCloseable(closeable);
 
-    Assert.assertSame(closeable, holder.get());
+    Assertions.assertSame(closeable, holder.get());
 
     holder.close();
-    Assert.assertEquals(1, closeCounter.get());
+    Assertions.assertEquals(1, closeCounter.get());
 
     holder.close();
-    Assert.assertEquals(1, closeCounter.get());
+    Assertions.assertEquals(1, closeCounter.get());
 
-    Assert.assertThrows(IllegalStateException.class, holder::get);
+    Assertions.assertThrows(IllegalStateException.class, holder::get);
   }
 }

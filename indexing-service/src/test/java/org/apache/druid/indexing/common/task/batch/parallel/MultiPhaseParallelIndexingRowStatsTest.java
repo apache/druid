@@ -20,9 +20,9 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -34,9 +34,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.incremental.RowMeters;
 import org.joda.time.Interval;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,16 +55,23 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   private static final DimensionsSpec DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList(TIME, DIM1, DIM2))
   );
-  private static final ParseSpec PARSE_SPEC = new CSVParseSpec(
-      TIMESTAMP_SPEC,
-      DIMENSIONS_SPEC,
-      null,
+  private static final InputFormat INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim1", "dim2", "val"),
+      null,
       false,
-      0
+      false,
+      0,
+      null
   );
 
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
+
+  // Same day and dim1 so range cannot split the hot key. Unique dim2 avoids rollup.
+  // Hashing only on dim1 still maps all rows into one bucket.
+  private static final String SKEWED_DAY = "2017-12-1";
+  private static final int SKEWED_DIM1 = 0;
+  private static final int SKEWED_FILE_COUNT = 5;
+  private static final int SKEWED_ROWS_PER_FILE = 20;
 
   private File inputDir;
 
@@ -72,13 +79,12 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   {
     super(
         LockGranularity.SEGMENT,
-        false,
         DEFAULT_TRANSIENT_TASK_FAILURE_RATE,
         DEFAULT_TRANSIENT_API_FAILURE_RATE
     );
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     inputDir = temporaryFolder.newFolder("data");
@@ -90,6 +96,15 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         for (int j = 0; j < 10; j++) {
           writer.write(StringUtils.format("2017-12-%d,%d,%d th test file\n", j + 1, i + 10, i));
           writer.write(StringUtils.format("2017-12-%d,%d,%d th test file\n", j + 2, i + 11, i));
+        }
+      }
+    }
+
+    for (int i = 0; i < SKEWED_FILE_COUNT; i++) {
+      try (final Writer writer =
+               Files.newBufferedWriter(new File(inputDir, "skewed_" + i).toPath(), StandardCharsets.UTF_8)) {
+        for (int j = 0; j < SKEWED_ROWS_PER_FILE; j++) {
+          writer.write(StringUtils.format("%s,%d,%d th test file\n", SKEWED_DAY, SKEWED_DIM1, i * SKEWED_ROWS_PER_FILE + j));
         }
       }
     }
@@ -109,7 +124,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   }
 
   @Test
-  @Ignore("assumes record rates, to be fixed PR #12852")
+  @Disabled("assumes record rates, to be fixed PR #12852")
   public void testHashPartitionRowStats_concurrentSubTasks_1()
   {
     testHashPartitionRowStats(1);
@@ -120,10 +135,9 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
     final Integer numShards = 10;
 
     ParallelIndexSupervisorTask task = createTask(
-        null,
-        null,
-        null,
-        PARSE_SPEC,
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
         INTERVAL_TO_INDEX,
         inputDir,
         "test_*",
@@ -145,7 +159,8 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         : buildExpectedTaskReportParallel(
             task.getId(),
             ImmutableList.of(),
-            expectedTotals
+            expectedTotals,
+            null
         );
 
     TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
@@ -157,10 +172,9 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   {
     final int targetRowsPerSegment = 20;
     ParallelIndexSupervisorTask task = createTask(
-        null,
-        null,
-        null,
-        PARSE_SPEC,
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
         INTERVAL_TO_INDEX,
         inputDir,
         "test_*",
@@ -172,8 +186,71 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
     TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(),
-        new RowIngestionMetersTotals(200, 5630, 0, 0, 0, 0)
+        new RowIngestionMetersTotals(200, 5630, 0, 0, 0),
+        0L
     );
+    TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
+    compareTaskReports(expectedReports, actualReports);
+  }
+
+  @Test
+  public void testHashPartitionRowStatsWithOversizedSegments()
+  {
+    final int maxNumConcurrentSubTasks = 10;
+    final int maxRowsPerSegment = 20;
+
+    ParallelIndexSupervisorTask task = createTask(
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
+        INTERVAL_TO_INDEX,
+        inputDir,
+        "skewed_*",
+        new HashedPartitionsSpec(maxRowsPerSegment, null, ImmutableList.of(DIM1), null),
+        maxNumConcurrentSubTasks,
+        false,
+        false
+    );
+
+    final RowIngestionMetersTotals expectedTotals = RowMeters.with().bytes(2790).totalProcessed(100);
+    final TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
+        task.getId(),
+        ImmutableList.of(),
+        expectedTotals,
+        1L
+    );
+
+    TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
+    compareTaskReports(expectedReports, actualReports);
+  }
+
+  @Test
+  public void testRangePartitionRowStatsWithOversizedSegments()
+  {
+    final int maxNumConcurrentSubTasks = 10;
+    final int targetRowsPerSegment = 20;
+
+    ParallelIndexSupervisorTask task = createTask(
+        TIMESTAMP_SPEC,
+        DIMENSIONS_SPEC,
+        INPUT_FORMAT,
+        INTERVAL_TO_INDEX,
+        inputDir,
+        "skewed_*",
+        new SingleDimensionPartitionsSpec(targetRowsPerSegment, null, DIM1, false),
+        maxNumConcurrentSubTasks,
+        false,
+        false
+    );
+
+    final RowIngestionMetersTotals expectedTotals = RowMeters.with().bytes(2790).totalProcessed(100);
+    final TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
+        task.getId(),
+        ImmutableList.of(),
+        expectedTotals,
+        1L
+    );
+
     TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);
   }

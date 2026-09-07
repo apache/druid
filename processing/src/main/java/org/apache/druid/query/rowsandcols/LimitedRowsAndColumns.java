@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.LimitedColumn;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 
 public class LimitedRowsAndColumns implements RowsAndColumns
@@ -64,5 +65,12 @@ public class LimitedRowsAndColumns implements RowsAndColumns
     }
 
     return new LimitedColumn(column, start, end);
+  }
+
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    return null;
   }
 }

@@ -51,7 +51,8 @@ public class ExprMacroTable
           COMPLEX_DECODE_BASE_64_EXPR_MACRO,
           BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS
       ),
-      new BuiltInExprMacros.StringDecodeBase64UTFExprMacro()
+      new BuiltInExprMacros.StringDecodeBase64UTFExprMacro(),
+      new BuiltInExprMacros.NowExprMacro()
   );
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
 
@@ -178,13 +179,17 @@ public class ExprMacroTable
     @Override
     public boolean canVectorize(InputBindingInspector inspector)
     {
-      return canFallbackVectorize(inspector, args);
+      return FallbackVectorProcessor.canFallbackVectorize(args, getOutputType(inspector), inspector);
     }
 
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
     {
-      return FallbackVectorProcessor.create(macro, args, inspector);
+      if (ExpressionProcessing.allowVectorizeFallback()) {
+        return FallbackVectorProcessor.create(macro, args, inspector);
+      } else {
+        throw Exprs.cannotVectorize(this);
+      }
     }
 
     /**

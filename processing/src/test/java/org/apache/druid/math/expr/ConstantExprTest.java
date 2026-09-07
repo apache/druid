@@ -24,8 +24,8 @@ import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategiesTest.NullableLongPair;
 import org.apache.druid.segment.column.TypeStrategiesTest.NullableLongPairTypeStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 
@@ -102,8 +102,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new NullDoubleExpr(),
         "null",
         "null",
-        // the expressions 'null' is always parsed as a StringExpr(null)
-        new StringExpr(null)
+        // the expressions 'null' is always parsed as a NullLongExpr()
+        new NullLongExpr()
     );
   }
 
@@ -114,8 +114,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new NullLongExpr(),
         "null",
         "null",
-        // the expressions 'null' is always parsed as a StringExpr(null)
-        new StringExpr(null)
+        // the expressions 'null' is always parsed as a NullLongExpr()
+        new NullLongExpr()
     );
   }
 
@@ -148,7 +148,8 @@ public class ConstantExprTest extends InitializedNullHandlingTest
         new StringExpr(null),
         null,
         "null",
-        new StringExpr(null)
+        // the expressions 'null' is always parsed as a NullLongExpr()
+        new NullLongExpr()
     );
   }
 
@@ -161,17 +162,17 @@ public class ConstantExprTest extends InitializedNullHandlingTest
   {
     final ObjectBinding bindings = InputBindings.nilBindings();
     if (expr.getLiteralValue() != null) {
-      Assert.assertNotSame(expr.eval(bindings), expr.eval(bindings));
+      Assertions.assertNotSame(expr.eval(bindings), expr.eval(bindings));
     }
     final Expr singleExpr = Expr.singleThreaded(expr, bindings);
-    Assert.assertArrayEquals(expr.getCacheKey(), singleExpr.getCacheKey());
-    Assert.assertSame(singleExpr.eval(bindings), singleExpr.eval(bindings));
-    Assert.assertEquals(expectedToString, expr.toString());
-    Assert.assertEquals(expectedStringify, expr.stringify());
-    Assert.assertEquals(expectedToString, singleExpr.toString());
+    Assertions.assertArrayEquals(expr.getCacheKey(), singleExpr.getCacheKey());
+    Assertions.assertSame(singleExpr.eval(bindings), singleExpr.eval(bindings));
+    Assertions.assertEquals(expectedToString, expr.toString());
+    Assertions.assertEquals(expectedStringify, expr.stringify());
+    Assertions.assertEquals(expectedToString, singleExpr.toString());
     final String stringify = singleExpr.stringify();
     final Expr reParsedExpr = Parser.parse(stringify, ExprMacroTable.nil());
-    Assert.assertEquals(expectedReparsedExpr, reParsedExpr);
-    Assert.assertArrayEquals(expr.getCacheKey(), expectedReparsedExpr.getCacheKey());
+    Assertions.assertEquals(expectedReparsedExpr, reParsedExpr);
+    Assertions.assertArrayEquals(expr.getCacheKey(), expectedReparsedExpr.getCacheKey());
   }
 }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -68,7 +68,7 @@ public class SequenceTestHelper
               this.yield();
             }
 
-            Assert.assertEquals(prefix, valsIter.next(), in);
+            Assertions.assertEquals(valsIter.next(), in, prefix);
             return accumulated + in;
           }
         }
@@ -82,16 +82,16 @@ public class SequenceTestHelper
       }
 
       if (i >= numToTake) {
-        Assert.assertFalse(prefix, yielder.isDone());
-        Assert.assertEquals(prefix, expectedSum, yielder.get().intValue());
+        Assertions.assertFalse(yielder.isDone(), prefix);
+        Assertions.assertEquals(expectedSum, yielder.get().intValue(), prefix);
 
         expectedSum = 0;
         yielder = yielder.next(0);
       }
     }
 
-    Assert.assertEquals(expectedSum, yielder.get().intValue());
-    Assert.assertTrue(prefix, yielder.isDone());
+    Assertions.assertEquals(expectedSum, yielder.get().intValue());
+    Assertions.assertTrue(yielder.isDone(), prefix);
     yielder.close();
   }
 
@@ -112,13 +112,13 @@ public class SequenceTestHelper
           @Override
           public Integer accumulate(Integer accumulated, Integer in)
           {
-            Assert.assertEquals(prefix, valsIter.next(), in);
+            Assertions.assertEquals(valsIter.next(), in, prefix);
             return accumulated + in;
           }
         }
     );
 
-    Assert.assertEquals(prefix, expectedSum, sum);
+    Assertions.assertEquals(expectedSum, sum, prefix);
   }
 
   public static void testClosed(AtomicInteger closedCounter, Sequence<Integer> seq)
@@ -135,8 +135,8 @@ public class SequenceTestHelper
       exceptionThrown = true;
     }
 
-    Assert.assertTrue(exceptionThrown);
-    Assert.assertEquals(1, closedCounter.get());
+    Assertions.assertTrue(exceptionThrown);
+    Assertions.assertEquals(1, closedCounter.get());
 
     // closing with yielder
     exceptionThrown = false;
@@ -158,9 +158,9 @@ public class SequenceTestHelper
       exceptionThrown = true;
     }
 
-    Assert.assertNull(yielder);
-    Assert.assertTrue(exceptionThrown);
-    Assert.assertEquals(2, closedCounter.get());
+    Assertions.assertNull(yielder);
+    Assertions.assertTrue(exceptionThrown);
+    Assertions.assertEquals(2, closedCounter.get());
 
     // closing with forEach
     exceptionThrown = false;
@@ -171,7 +171,7 @@ public class SequenceTestHelper
       exceptionThrown = true;
     }
 
-    Assert.assertTrue(exceptionThrown);
-    Assert.assertEquals(3, closedCounter.get());
+    Assertions.assertTrue(exceptionThrown);
+    Assertions.assertEquals(3, closedCounter.get());
   }
 }

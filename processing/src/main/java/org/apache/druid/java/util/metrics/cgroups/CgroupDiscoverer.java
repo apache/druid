@@ -29,4 +29,21 @@ public interface CgroupDiscoverer
    * @return The path that contains that cgroup's interesting bits.
    */
   Path discover(String cgroup);
+
+  /**
+   * Gets CPU metrics (shares, quota, period, usage) appropriate for this cgroups version.
+   * Encapsulates the difference between v1 (cpu.shares, cpu.cfs_*) and v2 (cpu.weight, cpu.max).
+   * @return CPU metrics compatible with both cgroups v1 and v2
+   */
+  Cpu.CpuMetrics getCpuMetrics();
+
+  /**
+   * Gets CPU set metrics (effective CPU list) appropriate for this cgroups version.
+   * Encapsulates the difference between v1 (cpuset.effective_cpus) and v2 (cpuset.cpus.effective).
+   * @return CPU set metrics compatible with both cgroups v1 and v2
+   */
+  CpuSet.CpuSetMetric getCpuSetMetrics();
+
+  CgroupVersion getCgroupVersion();
+
 }

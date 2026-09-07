@@ -56,7 +56,16 @@ public class WorkerIdTest
     Assertions.assertEquals(
         new WorkerId("https", "local-host:8100", "xyz"),
         WorkerId.fromDruidServerMetadata(
-            new DruidServerMetadata("none", "local-host:8200", "local-host:8100", 1, ServerType.HISTORICAL, "none", 0),
+            new DruidServerMetadata(
+                "none",
+                "local-host:8200",
+                "local-host:8100",
+                1,
+                null,
+                ServerType.HISTORICAL,
+                "none",
+                0
+            ),
             "xyz"
         )
     );

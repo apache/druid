@@ -1,0 +1,252 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.server.broker;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.DefaultQueryBlocklistRule;
+import org.apache.druid.server.QueryBlocklistRule;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+import java.util.Map;
+
+public class BrokerDynamicConfigTest
+{
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper();
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"queryBlocklist\": [\n"
+                     + "    {\n"
+                     + "      \"ruleName\": \"block-wikipedia\",\n"
+                     + "      \"dataSources\": [\"wikipedia\"]\n"
+                     + "    }\n"
+                     + "  ]\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                BrokerDynamicConfig.class
+            )
+        ),
+        BrokerDynamicConfig.class
+    );
+
+    List<QueryBlocklistRule> expectedBlocklist = ImmutableList.of(
+        new DefaultQueryBlocklistRule("block-wikipedia", ImmutableSet.of("wikipedia"), null, null)
+    );
+
+    Assertions.assertEquals(expectedBlocklist, actual.getQueryBlocklist());
+  }
+
+  @Test
+  public void testSerdeWithExplicitDefaultType() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"queryBlocklist\": [\n"
+                     + "    {\n"
+                     + "      \"type\": \"default\",\n"
+                     + "      \"ruleName\": \"block-wikipedia\",\n"
+                     + "      \"dataSources\": [\"wikipedia\"]\n"
+                     + "    }\n"
+                     + "  ]\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
+
+    Assertions.assertEquals(1, actual.getQueryBlocklist().size());
+    Assertions.assertTrue(actual.getQueryBlocklist().get(0) instanceof DefaultQueryBlocklistRule);
+    Assertions.assertEquals(
+        new DefaultQueryBlocklistRule("block-wikipedia", ImmutableSet.of("wikipedia"), null, null),
+        actual.getQueryBlocklist().get(0)
+    );
+  }
+
+  @Test
+  public void testSerdeWithNullBlocklist() throws Exception
+  {
+    String jsonStr = "{}";
+
+    BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
+    // When no blocklist is provided, it defaults to an empty list
+    Assertions.assertNotNull(actual.getQueryBlocklist());
+    Assertions.assertTrue(actual.getQueryBlocklist().isEmpty());
+  }
+
+  @Test
+  public void testSerdeWithEmptyBlocklist() throws Exception
+  {
+    String jsonStr = "{\"queryBlocklist\": []}";
+
+    BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
+    Assertions.assertNotNull(actual.getQueryBlocklist());
+    Assertions.assertTrue(actual.getQueryBlocklist().isEmpty());
+  }
+
+  @Test
+  public void testSerdeWithComplexBlocklist() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"queryBlocklist\": [\n"
+                     + "    {\n"
+                     + "      \"ruleName\": \"block-scan-queries\",\n"
+                     + "      \"queryTypes\": [\"scan\"]\n"
+                     + "    },\n"
+                     + "    {\n"
+                     + "      \"ruleName\": \"block-context\",\n"
+                     + "      \"contextMatches\": {\"priority\": \"0\"}\n"
+                     + "    }\n"
+                     + "  ]\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
+
+    Assertions.assertNotNull(actual.getQueryBlocklist());
+    Assertions.assertEquals(2, actual.getQueryBlocklist().size());
+
+    DefaultQueryBlocklistRule rule1 = (DefaultQueryBlocklistRule) actual.getQueryBlocklist().get(0);
+    Assertions.assertEquals("block-scan-queries", rule1.getRuleName());
+    Assertions.assertEquals(ImmutableSet.of("scan"), rule1.getQueryTypes());
+
+    DefaultQueryBlocklistRule rule2 = (DefaultQueryBlocklistRule) actual.getQueryBlocklist().get(1);
+    Assertions.assertEquals("block-context", rule2.getRuleName());
+    Assertions.assertEquals(ImmutableMap.of("priority", "0"), rule2.getContextMatches());
+  }
+
+  @Test
+  public void testSerdeWithQueryContext() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"queryContext\": {\n"
+                     + "    \"priority\": 10,\n"
+                     + "    \"useCache\": false\n"
+                     + "  }\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, BrokerDynamicConfig.class)),
+        BrokerDynamicConfig.class
+    );
+
+    Assertions.assertEquals(QueryContext.of(ImmutableMap.of("priority", 10, "useCache", false)), actual.getQueryContext());
+  }
+
+  @Test
+  public void testNullQueryContextDefaultsToEmptyMap() throws Exception
+  {
+    BrokerDynamicConfig actual = mapper.readValue("{}", BrokerDynamicConfig.class);
+    Assertions.assertNotNull(actual.getQueryContext());
+    Assertions.assertTrue(actual.getQueryContext().isEmpty());
+  }
+
+  @Test
+  public void testSerdeWithPerSegmentTimeoutConfig() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"perSegmentTimeoutConfig\": {\n"
+                     + "    \"my_large_ds\": {\"perSegmentTimeoutMs\": 5000, \"monitorOnly\": true},\n"
+                     + "    \"my_other_ds\": {\"perSegmentTimeoutMs\": 3000}\n"
+                     + "  }\n"
+                     + "}\n";
+
+    BrokerDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, BrokerDynamicConfig.class)),
+        BrokerDynamicConfig.class
+    );
+
+    Map<String, PerSegmentTimeoutConfig> expected = ImmutableMap.of(
+        "my_large_ds", new PerSegmentTimeoutConfig(5000, true),
+        "my_other_ds", new PerSegmentTimeoutConfig(3000, null)
+    );
+    Assertions.assertEquals(expected, actual.getPerSegmentTimeoutConfig());
+  }
+
+  @Test
+  public void testNullPerSegmentTimeoutConfigDefaultsToEmptyMap() throws Exception
+  {
+    BrokerDynamicConfig actual = mapper.readValue("{}", BrokerDynamicConfig.class);
+    Assertions.assertNotNull(actual.getPerSegmentTimeoutConfig());
+    Assertions.assertTrue(actual.getPerSegmentTimeoutConfig().isEmpty());
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(BrokerDynamicConfig.class)
+                  .usingGetClass()
+                  .verify();
+  }
+
+  @Test
+  public void testContextOverridesInjectsPerSegmentTimeoutForMatchingDatasource()
+  {
+    BrokerDynamicConfig config = perSegmentTimeout("ds", new PerSegmentTimeoutConfig(5000, false));
+    Assertions.assertEquals(5000L, config.getContextOverridesForQuery(query("ds")).getPerSegmentTimeout());
+  }
+
+  @Test
+  public void testContextOverridesEmptyForMonitorOnly()
+  {
+    BrokerDynamicConfig config = perSegmentTimeout("ds", new PerSegmentTimeoutConfig(5000, true));
+    Assertions.assertTrue(config.getContextOverridesForQuery(query("ds")).isEmpty());
+  }
+
+  @Test
+  public void testContextOverridesEmptyForNonMatchingDatasource()
+  {
+    BrokerDynamicConfig config = perSegmentTimeout("other", new PerSegmentTimeoutConfig(5000, false));
+    Assertions.assertTrue(config.getContextOverridesForQuery(query("ds")).isEmpty());
+  }
+
+  @Test
+  public void testContextOverridesEmptyWhenNoPerSegmentTimeoutConfigured()
+  {
+    Assertions.assertTrue(BrokerDynamicConfig.builder().build().getContextOverridesForQuery(query("ds")).isEmpty());
+  }
+
+  private static BrokerDynamicConfig perSegmentTimeout(String datasource, PerSegmentTimeoutConfig timeoutConfig)
+  {
+    return BrokerDynamicConfig.builder().withPerSegmentTimeoutConfig(Map.of(datasource, timeoutConfig)).build();
+  }
+
+  private static TimeseriesQuery query(String datasource)
+  {
+    return Druids.newTimeseriesQueryBuilder()
+                 .dataSource(datasource)
+                 .intervals(List.of(Intervals.ETERNITY))
+                 .aggregators(new CountAggregatorFactory("count"))
+                 .build();
+  }
+}

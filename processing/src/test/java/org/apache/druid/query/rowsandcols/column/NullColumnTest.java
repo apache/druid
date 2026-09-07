@@ -20,8 +20,8 @@
 package org.apache.druid.query.rowsandcols.column;
 
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NullColumnTest
 {
@@ -31,17 +31,17 @@ public class NullColumnTest
   {
     NullColumn col = new NullColumn(ColumnType.UNKNOWN_COMPLEX, 10);
     ColumnAccessor accessor = col.toAccessor();
-    Assert.assertEquals(10, accessor.numRows());
+    Assertions.assertEquals(10, accessor.numRows());
 
     for (int i = 0; i < 10; ++i) {
-      Assert.assertTrue(accessor.isNull(i));
-      Assert.assertNull(accessor.getObject(i));
-      Assert.assertEquals(0, accessor.getInt(i));
-      Assert.assertEquals(0, accessor.getLong(i));
-      Assert.assertEquals(0.0, accessor.getFloat(i), 0);
-      Assert.assertEquals(0.0, accessor.getDouble(i), 0);
+      Assertions.assertTrue(accessor.isNull(i));
+      Assertions.assertNull(accessor.getObject(i));
+      Assertions.assertEquals(0, accessor.getInt(i));
+      Assertions.assertEquals(0, accessor.getLong(i));
+      Assertions.assertEquals(0.0, accessor.getFloat(i), 0);
+      Assertions.assertEquals(0.0, accessor.getDouble(i), 0);
       for (int j = 0; j < i; ++j) {
-        Assert.assertEquals(0, accessor.compareRows(j, i));
+        Assertions.assertEquals(0, accessor.compareRows(j, i));
       }
     }
   }

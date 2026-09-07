@@ -66,7 +66,10 @@ export const ExpressionEditorDialog = React.memo(function ExpressionEditorDialog
         </FormGroup>
         {includeOutputName && (
           <FormGroup label="Output name">
-            <InputGroup value={outputName} onChange={e => setOutputName(e.target.value)} />
+            <InputGroup
+              value={outputName}
+              onChange={e => setOutputName(e.target.value.trimStart())}
+            />
           </FormGroup>
         )}
       </div>

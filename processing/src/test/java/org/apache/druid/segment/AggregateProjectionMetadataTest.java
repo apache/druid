@@ -23,22 +23,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 import java.util.SortedSet;
 
 class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
@@ -49,7 +46,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   void testSerde() throws JsonProcessingException
   {
     AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "some_projection",
             "time",
             new EqualityFilter("a", ColumnType.STRING, "a", null),
@@ -75,15 +72,63 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         spec,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionMetadata.class)
     );
+    String legacy = "{\n"
+                    + "  \"type\" : \"aggregate\",\n"
+                    + "  \"schema\" : {\n"
+                    + "    \"name\" : \"some_projection\",\n"
+                    + "    \"timeColumnName\" : \"time\",\n"
+                    + "    \"filter\" : {\n"
+                    + "      \"type\" : \"equals\",\n"
+                    + "      \"column\" : \"a\",\n"
+                    + "      \"matchValueType\" : \"STRING\",\n"
+                    + "      \"matchValue\" : \"a\"\n"
+                    + "    },\n"
+                    + "    \"virtualColumns\" : [ {\n"
+                    + "      \"type\" : \"expression\",\n"
+                    + "      \"name\" : \"time\",\n"
+                    + "      \"expression\" : \"timestamp_floor(__time,'PT1H',null,'UTC')\",\n"
+                    + "      \"outputType\" : \"LONG\"\n"
+                    + "    } ],\n"
+                    + "    \"groupingColumns\" : [ \"a\", \"b\", \"time\", \"c\", \"d\" ],\n"
+                    + "    \"aggregators\" : [ {\n"
+                    + "      \"type\" : \"count\",\n"
+                    + "      \"name\" : \"count\"\n"
+                    + "    }, {\n"
+                    + "      \"type\" : \"longSum\",\n"
+                    + "      \"name\" : \"e\",\n"
+                    + "      \"fieldName\" : \"e\"\n"
+                    + "    } ],\n"
+                    + "    \"ordering\" : [ {\n"
+                    + "      \"columnName\" : \"a\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    }, {\n"
+                    + "      \"columnName\" : \"b\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    }, {\n"
+                    + "      \"columnName\" : \"time\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    }, {\n"
+                    + "      \"columnName\" : \"c\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    }, {\n"
+                    + "      \"columnName\" : \"d\",\n"
+                    + "      \"order\" : \"ascending\"\n"
+                    + "    } ]\n"
+                    + "  },\n"
+                    + "  \"numRows\" : 12345\n"
+                    + "}";
+    Assertions.assertEquals(
+        spec,
+        JSON_MAPPER.readValue(legacy, AggregateProjectionMetadata.class)
+    );
   }
-
 
   @Test
   void testComparator()
   {
     SortedSet<AggregateProjectionMetadata> metadataBest = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
     AggregateProjectionMetadata good = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "good",
             "theTime",
             null,
@@ -101,7 +146,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
     // same row count, but less grouping columns aggs more better
     AggregateProjectionMetadata betterLessGroupingColumns = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "betterLessGroupingColumns",
             "theTime",
             null,
@@ -118,7 +163,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
     // same grouping columns, but more aggregators
     AggregateProjectionMetadata evenBetterMoreAggs = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "evenBetterMoreAggs",
             "theTime",
             null,
@@ -138,7 +183,7 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     );
     // small rows is best
     AggregateProjectionMetadata best = new AggregateProjectionMetadata(
-        new AggregateProjectionMetadata.Schema(
+        new AggregateProjectionSchema(
             "best",
             null,
             null,
@@ -161,149 +206,8 @@ class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   }
 
   @Test
-  void testInvalidName()
-  {
-    Throwable t = Assertions.assertThrows(
-        DruidException.class,
-        () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                null,
-                null,
-                null,
-                null,
-                null,
-                new AggregatorFactory[]{new CountAggregatorFactory("count")},
-                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
-            ),
-            0
-        )
-    );
-    Assertions.assertEquals(
-        "projection schema name cannot be null or empty",
-        t.getMessage()
-    );
-
-    t = Assertions.assertThrows(
-        DruidException.class,
-        () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "",
-                null,
-                null,
-                null,
-                null,
-                new AggregatorFactory[]{new CountAggregatorFactory("count")},
-                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
-            ),
-            0
-        )
-    );
-    Assertions.assertEquals(
-        "projection schema name cannot be null or empty",
-        t.getMessage()
-    );
-  }
-
-  @Test
-  void testInvalidGrouping()
-  {
-    Throwable t = Assertions.assertThrows(
-        DruidException.class,
-        () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "other_projection",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            ),
-            0
-        )
-    );
-    Assertions.assertEquals(
-        "projection schema[other_projection] groupingColumns and aggregators must not both be null or empty",
-        t.getMessage()
-    );
-
-    t = Assertions.assertThrows(
-        DruidException.class,
-        () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "other_projection",
-                null,
-                null,
-                null,
-                Collections.emptyList(),
-                null,
-                null
-            ),
-            0
-        )
-    );
-    Assertions.assertEquals(
-        "projection schema[other_projection] groupingColumns and aggregators must not both be null or empty",
-        t.getMessage()
-    );
-  }
-
-  @Test
-  void testInvalidOrdering()
-  {
-    Throwable t = Assertions.assertThrows(
-        DruidException.class,
-        () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "no order",
-                null,
-                null,
-                null,
-                null,
-                new AggregatorFactory[]{new CountAggregatorFactory("count")},
-                null
-            ),
-            0
-        )
-    );
-    Assertions.assertEquals(
-        "projection schema[no order] ordering must not be null",
-        t.getMessage()
-    );
-
-    t = Assertions.assertThrows(
-        DruidException.class,
-        () -> new AggregateProjectionMetadata(
-            new AggregateProjectionMetadata.Schema(
-                "",
-                null,
-                null,
-                null,
-                null,
-                new AggregatorFactory[]{new CountAggregatorFactory("count")},
-                List.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("count"))
-            ),
-            0
-        )
-    );
-    Assertions.assertEquals(
-        "projection schema name cannot be null or empty",
-        t.getMessage()
-    );
-  }
-
-  @Test
   void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(AggregateProjectionMetadata.class).usingGetClass().verify();
-  }
-
-  @Test
-  void testEqualsAndHashcodeSchema()
-  {
-    EqualsVerifier.forClass(AggregateProjectionMetadata.Schema.class)
-                  .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "effectiveGranularity")
-                  .usingGetClass()
-                  .verify();
   }
 }

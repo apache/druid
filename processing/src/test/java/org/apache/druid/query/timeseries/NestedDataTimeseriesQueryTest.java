@@ -47,12 +47,12 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,14 +61,15 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters(name = "{0}:vectorize={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    final List<BiFunction<TemporaryFolder, Closer, List<Segment>>> segmentsGenerators =
-        NestedDataTestUtils.getSegmentGenerators(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE);
+    final List<BiFunction<TemporaryFolderExtension, Closer, List<Segment>>> segmentsGenerators =
+        NestedDataTestUtils.getSegmentGeneratorsWithTempDir(NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE);
 
     return QueryRunnerTestHelper.cartesian(
         // runners
@@ -83,18 +84,18 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedResults(expectedResults, results);
   }
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final Closer closer;
   private final AggregationTestHelper helper;
 
-  private final BiFunction<TemporaryFolder, Closer, List<Segment>> segmentsGenerator;
+  private final BiFunction<TemporaryFolderExtension, Closer, List<Segment>> segmentsGenerator;
   private final QueryContexts.Vectorize vectorize;
   private final String segmentsName;
 
   public NestedDataTimeseriesQueryTest(
-      BiFunction<TemporaryFolder, Closer, List<Segment>> segmentsGenerator,
+      BiFunction<TemporaryFolderExtension, Closer, List<Segment>> segmentsGenerator,
       String vectorize
   )
   {
@@ -653,6 +654,37 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     );
   }
 
+  @Test
+  public void testSumArrayElement()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test_datasource")
+                                  .intervals(Collections.singletonList(Intervals.ETERNITY))
+                                  .aggregators(
+                                      new CountAggregatorFactory("count"),
+                                      new LongSumAggregatorFactory("sumNestedVariantNumericArrayElement", "v0")
+                                  )
+                                  .virtualColumns(
+                                      new NestedFieldVirtualColumn("obj", "$.c[1]", "v0", ColumnType.LONG)
+                                  )
+                                  .context(getContext())
+                                  .build();
+    runResults(
+        query,
+        ImmutableList.of(
+            new Result<>(
+                DateTimes.of("2023-01-01T00:00:00.000Z"),
+                new TimeseriesResultValue(
+                    ImmutableMap.<String, Object>builder()
+                                .put("count", 14L)
+                                .put("sumNestedVariantNumericArrayElement", 246L)
+                                .build()
+                )
+            )
+        )
+    );
+  }
+
 
   private void runResults(
       TimeseriesQuery timeseriesQuery,
@@ -675,8 +707,8 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
 
     if (!allCanVectorize) {
       if (vectorize == QueryContexts.Vectorize.FORCE) {
-        Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);
-        Assert.assertEquals(
+        Throwable t = Assertions.assertThrows(RuntimeException.class, runner::get);
+        Assertions.assertEquals(
             "org.apache.druid.java.util.common.ISE: Cannot vectorize!",
             t.getMessage()
         );

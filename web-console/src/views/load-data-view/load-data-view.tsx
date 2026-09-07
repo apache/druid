@@ -23,6 +23,7 @@ import {
   ButtonGroup,
   Callout,
   Card,
+  Classes,
   Code,
   FormGroup,
   H5,
@@ -59,6 +60,7 @@ import {
 import { AlertDialog, AsyncActionDialog, DiffDialog } from '../../dialogs';
 import type {
   ArrayIngestMode,
+  ConsoleViewId,
   DimensionSpec,
   DruidFilter,
   FlattenField,
@@ -142,12 +144,13 @@ import {
   updateSchemaWithSample,
   upgradeSpec,
 } from '../../druid-models';
-import { getSpecDatasourceName } from '../../helpers';
+import { getSpecSupervisorId } from '../../helpers';
 import { getLink } from '../../links';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
   alphanumericCompare,
   compact,
+  copyAndAlert,
   deepDelete,
   deepGet,
   deepMove,
@@ -186,6 +189,7 @@ import {
   sampleForTimestamp,
   sampleForTransform,
 } from '../../utils/sampler';
+import { TableFilters } from '../../utils/table-filters';
 
 import { ExamplePicker } from './example-picker/example-picker';
 import { EXAMPLE_SPECS } from './example-specs';
@@ -271,27 +275,39 @@ function showBlankLine(line: SampleEntry): string {
 function formatSampleEntries(
   sampleEntries: SampleEntry[],
   specialSource: undefined | 'fixedFormat' | 'druid' | 'kafka' | 'kinesis',
-): string[] {
-  if (!sampleEntries.length) return ['No data returned from sampler'];
+): { text: string; tooltip?: string }[] {
+  if (!sampleEntries.length) return [{ text: 'No data returned from sampler' }];
 
+  let showLine: (l: SampleEntry) => string;
   switch (specialSource) {
     case 'fixedFormat':
-      return sampleEntries.map(l => JSONBig.stringify(l.parsed));
+      showLine = l => JSONBig.stringify(l.parsed);
+      break;
 
     case 'druid':
-      return sampleEntries.map(showDruidLine);
+      showLine = showDruidLine;
+      break;
 
     case 'kafka':
-      return sampleEntries.map(showKafkaLine);
+      showLine = showKafkaLine;
+      break;
 
     case 'kinesis':
-      return sampleEntries.map(showKinesisLine);
+      showLine = showKinesisLine;
+      break;
 
     default:
-      return sampleEntries.every(l => !l.parsed)
-        ? sampleEntries.map(showBlankLine)
-        : sampleEntries.map(showRawLine);
+      showLine = sampleEntries.every(l => !l.parsed) ? showBlankLine : showRawLine;
+      break;
   }
+
+  return sampleEntries.map(l => {
+    const fileUri = l.parsed?.['__file_uri'];
+    return {
+      text: showLine(l),
+      tooltip: typeof fileUri === 'string' ? `File URI: ${fileUri}` : undefined,
+    };
+  });
 }
 
 function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec {
@@ -389,9 +405,8 @@ export interface LoadDataViewProps {
   mode: LoadDataViewMode;
   initSupervisorId?: string;
   initTaskId?: string;
-  goToSupervisor: (supervisorId: string) => void;
+  goToView: (tab: ConsoleViewId, filters?: TableFilters) => void;
   openSupervisorSubmit: () => void;
-  goToTasks: (taskGroupId: string) => void;
   openTaskSubmit: () => void;
 }
 
@@ -1177,12 +1192,19 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>
           Please make sure that the
-          <Code>&quot;{requiredModule}&quot;</Code> extension is included in the{' '}
-          <Code>druid.extensions.loadList</Code>.
+          <Code
+            data-tooltip="(click to copy)"
+            onClick={() => {
+              copyAndAlert(`"${requiredModule}"`, `"${requiredModule}" copied to clipboard`);
+            }}
+          >
+            {requiredModule}
+          </Code>{' '}
+          extension is included in the <Code>druid.extensions.loadList</Code>.
         </p>
         <p>
           For more information please refer to the{' '}
-          <ExternalLink href={`${getLink('DOCS')}/operations/including-extensions`}>
+          <ExternalLink href={`${getLink('DOCS')}/configuration/extensions#loading-extensions`}>
             documentation on loading extensions
           </ExternalLink>
           .
@@ -1308,11 +1330,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       mainFill = (
         <>
           {inputData && (
-            <TextArea
-              className="raw-lines"
-              readOnly
-              value={formatSampleEntries(inputData, specialSource).join('\n')}
-            />
+            <div className={classNames('raw-lines', Classes.INPUT)}>
+              {formatSampleEntries(inputData, specialSource).map(({ text, tooltip }, i) => (
+                <div className="raw-line" key={i} data-tooltip={tooltip}>
+                  {text}
+                </div>
+              ))}
+            </div>
           )}
           {inputQueryState.isLoading() && <Loader />}
           {inputQueryState.error && (
@@ -1766,6 +1790,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             icon={IconNames.INFO_SIGN}
             href={`${getLink('DOCS')}/ingestion/data-formats#flattenspec`}
             target="_blank"
+            rel="noopener noreferrer"
             minimal
           />
         </FormGroup>
@@ -3386,6 +3411,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                 ),
               },
               {
+                name: 'id',
+                label: 'Supervisor ID',
+                type: 'string',
+                defined: isStreamingSpec,
+                placeholder: '(default to the datasource name if not set)',
+                info: (
+                  <p>
+                    The ID of the supervisor that will manage the ingestion. This should generally
+                    be set to the datasource name (the default if left unset) unless you are setting
+                    up multiple supervisors for the same datasource.
+                  </p>
+                ),
+              },
+              {
                 name: 'spec.ioConfig.appendToExisting',
                 label: 'Append to existing',
                 type: 'boolean',
@@ -3567,7 +3606,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     }
 
     let currentSupervisorSpec: Partial<IngestionSpec> | undefined;
-    const supervisorId = getSpecDatasourceName(spec);
+    const supervisorId = getSpecSupervisorId(spec);
     if (isStreamingSpec(spec) && supervisorId) {
       try {
         currentSupervisorSpec = cleanSpec(
@@ -3704,7 +3743,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   }
 
   private readonly handleSubmitSupervisor = async () => {
-    const { goToSupervisor } = this.props;
+    const { goToView } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
@@ -3725,16 +3764,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       intent: Intent.SUCCESS,
     });
 
-    const supervisorId = getSpecDatasourceName(spec);
+    const supervisorId = getSpecSupervisorId(spec);
     if (supervisorId) {
       setTimeout(() => {
-        goToSupervisor(supervisorId);
+        goToView('supervisors', TableFilters.eq({ supervisor_id: supervisorId }));
       }, 1000);
     }
   };
 
   private readonly handleSubmitTask = async () => {
-    const { goToTasks } = this.props;
+    const { goToView } = this.props;
     const { spec, submitting } = this.state;
     if (submitting) return;
 
@@ -3757,7 +3796,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
 
     setTimeout(() => {
-      goToTasks(taskResp.data.task);
+      goToView('tasks', TableFilters.eq({ task_id: taskResp.data.task }));
     }, 1000);
   };
 }

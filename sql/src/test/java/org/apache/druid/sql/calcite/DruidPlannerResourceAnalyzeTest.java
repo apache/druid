@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.Resource;
@@ -28,12 +29,16 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
 {
@@ -199,12 +204,14 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
     testSysTable("SELECT * FROM sys.server_segments", null, PLANNER_CONFIG_DEFAULT);
     testSysTable("SELECT * FROM sys.tasks", null, PLANNER_CONFIG_DEFAULT);
     testSysTable("SELECT * FROM sys.supervisors", null, PLANNER_CONFIG_DEFAULT);
+    testSysTable("SELECT * FROM sys.server_properties", null, PLANNER_CONFIG_DEFAULT);
 
     testSysTable("SELECT * FROM sys.segments", "segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.servers", "servers", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.server_segments", "server_segments", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.tasks", "tasks", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
     testSysTable("SELECT * FROM sys.supervisors", "supervisors", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
+    testSysTable("SELECT * FROM sys.server_properties", "server_properties", PLANNER_CONFIG_AUTHORIZE_SYS_TABLES);
   }
 
   private void testSysTable(String sql, String name, PlannerConfig plannerConfig)
@@ -317,6 +324,97 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
             new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
             new ResourceAction(new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE)
 
+        )
+    );
+  }
+
+  @Test
+  public void testTableAppend()
+  {
+    final String sql = "SELECT * FROM TABLE(APPEND('foo', 'numfoo'))";
+
+    analyzeResources(
+        sql,
+        ImmutableList.of(
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("numfoo", ResourceType.DATASOURCE), Action.READ)
+        )
+    );
+  }
+
+  @Test
+  public void testTableAppendInSubquery()
+  {
+    final String sql = "SELECT COUNT(*) FROM (SELECT dim1 FROM TABLE(APPEND('foo', 'numfoo'))) WHERE dim1 <> 'z'";
+
+    analyzeResources(
+        sql,
+        ImmutableList.of(
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("numfoo", ResourceType.DATASOURCE), Action.READ)
+        )
+    );
+  }
+
+  @Test
+  public void testTableAppendJoinedWithTableAndView()
+  {
+    // Resources from the AuthorizableOperator path (APPEND) and the SqlIdentifier path (foo2, aview) must merge.
+    final String sql = "SELECT COUNT(*) FROM TABLE(APPEND('foo', 'numfoo')) t\n"
+                       + "INNER JOIN foo2 ON t.dim2 = foo2.dim2\n"
+                       + "INNER JOIN view.aview v ON t.dim1 = v.dim1_firstchar";
+
+    analyzeResources(
+        sql,
+        ImmutableList.of(
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("numfoo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("foo2", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("aview", ResourceType.VIEW), Action.READ)
+        )
+    );
+  }
+
+  @Test
+  public void testTableAppendRepeatedTable()
+  {
+    final String sql = "SELECT * FROM TABLE(APPEND('foo', 'foo'))";
+
+    analyzeResources(
+        sql,
+        ImmutableList.of(
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ)
+        )
+    );
+  }
+
+  @Test
+  public void testTableAppendUnauthorizedTable()
+  {
+    // APPEND names tables with string literals rather than identifiers, but still resolves them through the
+    // caller's catalog reader, so an unauthorized table is not visible.
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql("SELECT * FROM TABLE(APPEND('foo', 'forbiddenDatasource'))")
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .build()
+            .run()
+    );
+
+    assertThat(
+        e.getMessage(),
+        CoreMatchers.containsString("Table [forbiddenDatasource] not found")
+    );
+
+    // The superuser can see it.
+    analyzeResources(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT * FROM TABLE(APPEND('foo', 'forbiddenDatasource'))",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(
+            new ResourceAction(new Resource("foo", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("forbiddenDatasource", ResourceType.DATASOURCE), Action.READ)
         )
     );
   }

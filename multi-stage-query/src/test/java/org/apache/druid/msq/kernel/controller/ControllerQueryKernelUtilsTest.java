@@ -26,8 +26,8 @@ import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.StageId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -39,7 +39,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeMultiProngedQueryDefinition();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -68,7 +68,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeMultiProngedQueryDefinition();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -95,7 +95,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeLinearQueryDefinitionWithoutShuffle();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -121,7 +121,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeLinearQueryDefinitionWithShuffle();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -147,7 +147,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeLinearQueryDefinitionWithoutShuffle();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 1),
@@ -174,7 +174,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeLinearQueryDefinitionWithShuffle();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 1),
@@ -201,7 +201,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeLinearQueryDefinitionWithoutShuffle();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 1),
@@ -228,7 +228,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeLinearQueryDefinitionWithShuffle();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 1),
@@ -255,7 +255,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeLinearQueryDefinitionWithoutShuffle();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         // Without a sort-based shuffle, we can't leapfrog, so we launch two groups broken up by LOCAL_STORAGE
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0, 1),
@@ -280,7 +280,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeLinearQueryDefinitionWithShuffle();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         // With sort-based shuffle, we can leapfrog 4 stages, all of them being in-memory
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 0),
@@ -303,11 +303,39 @@ public class ControllerQueryKernelUtilsTest
   }
 
   @Test
+  public void test_computeStageGroups_linearWithLeafInput_pipeline_threeAtOnce()
+  {
+    // 0 -> 1 (with leaf input) -> 2
+    // Stage 1 has a stage input from 0 and a non-stage (leaf) input.
+    // canUseMemoryOutput for stage 0 should still return true, because stage 1 has
+    // only a single non-broadcast *stage* input.
+
+    final QueryDefinition queryDef = makeLinearQueryDefinitionWithLeafInput();
+
+    Assertions.assertEquals(
+        ImmutableList.of(
+            makeStageGroup(queryDef.getQueryId(), OutputChannelMode.MEMORY, 0, 1, 2)
+        ),
+        ControllerQueryKernelUtils.computeStageGroups(
+            queryDef,
+            ControllerQueryKernelConfig
+                .builder()
+                .maxRetainedPartitionSketchBytes(1)
+                .maxConcurrentStages(3)
+                .pipeline(true)
+                .faultTolerance(false)
+                .destination(TaskReportMSQDestination.instance())
+                .build()
+        )
+    );
+  }
+
+  @Test
   public void test_computeStageGroups_fanIn()
   {
     final QueryDefinition queryDef = makeFanInQueryDefinition();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -333,7 +361,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeFanInQueryDefinitionWithBroadcast();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -359,7 +387,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeFanInQueryDefinition();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 1),
@@ -386,7 +414,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeFanInQueryDefinition();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.DURABLE_STORAGE_INTERMEDIATE, 1),
@@ -413,7 +441,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeFanInQueryDefinition();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -438,7 +466,7 @@ public class ControllerQueryKernelUtilsTest
   {
     final QueryDefinition queryDef = makeFanInQueryDefinitionWithBroadcast();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         // Output of stage 1 is broadcast, so it must run first; then stages 0 and 2 may be launched together
         ImmutableList.of(
             makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -483,6 +511,18 @@ public class ControllerQueryKernelUtilsTest
         .addEdge(0, 1)
         .addEdge(1, 2)
         .addEdge(2, 3)
+        .getQueryDefinitionBuilder()
+        .build();
+  }
+
+  private static QueryDefinition makeLinearQueryDefinitionWithLeafInput()
+  {
+    // 0 -> 1 -> 2, where stage 1 also has a non-stage (leaf) input
+
+    return new MockQueryDefinitionBuilder(3)
+        .addEdge(0, 1)
+        .addNonStageInput(1)
+        .addEdge(1, 2)
         .getQueryDefinitionBuilder()
         .build();
   }

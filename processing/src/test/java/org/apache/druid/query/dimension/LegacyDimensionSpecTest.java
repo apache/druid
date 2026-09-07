@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,8 +40,8 @@ public class LegacyDimensionSpecTest
     final List<DimensionSpec> deserializedSpecs = mapper.readValue(
         StringUtils.format("[\"%s\"]", dimension), new TypeReference<>() {}
     );
-    Assert.assertEquals(dimension, deserializedSpecs.get(0).getDimension());
-    Assert.assertEquals(dimension, deserializedSpecs.get(0).getOutputName());
-    Assert.assertEquals(new LegacyDimensionSpec(dimension), deserializedSpecs.get(0));
+    Assertions.assertEquals(dimension, deserializedSpecs.get(0).getDimension());
+    Assertions.assertEquals(dimension, deserializedSpecs.get(0).getOutputName());
+    Assertions.assertEquals(new LegacyDimensionSpec(dimension), deserializedSpecs.get(0));
   }
 }

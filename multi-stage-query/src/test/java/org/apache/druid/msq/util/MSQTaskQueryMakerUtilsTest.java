@@ -22,8 +22,8 @@ package org.apache.druid.msq.util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -40,7 +40,7 @@ public class MSQTaskQueryMakerUtilsTest
     MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("b", "__time"), ImmutableSet.of("__time", "a", "b"));
 
     // These are not OK.
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(
             ImmutableList.of("c"),
@@ -57,7 +57,7 @@ public class MSQTaskQueryMakerUtilsTest
                   + "OVERWRITE ALL\\n"
                   + "WITH ext AS "
                   + "(SELECT *\\nFROM TABLE(\\n  "
-                  + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n"
+                  + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"secretAccessKey\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"},\\\"sessionToken\\\":{\\\"type\\\":\\\"default\\\",\\\"password\\\":\\\"secret_pass\\\"}}}',\\n"
                   + "'{\\\"type\\\":\\\"json\\\"}',\\n"
                   + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
                   + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
@@ -108,12 +108,12 @@ public class MSQTaskQueryMakerUtilsTest
                   + "FROM ext\\n"
                   + "PARTITIONED BY DAY\"";
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
         + "(SELECT *\\nFROM TABLE(\\n  "
-        + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>}}',\\n"
+        + "EXTERN(\\n    '{\\\"type\\\":\\\"s3\\\",\\\"prefixes\\\":[\\\"s3://prefix\\\"],\\\"properties\\\":{\\\"accessKeyId\\\":<masked>,\\\"secretAccessKey\\\":<masked>,\\\"sessionToken\\\":<masked>}}',\\n"
         + "'{\\\"type\\\":\\\"json\\\"}',\\n"
         + "'[{\\\"name\\\":\\\"time\\\",\\\"type\\\":\\\"string\\\"},{\\\"name\\\":\\\"name\\\",\\\"type\\\":\\\"string\\\"}]'\\n  )\\n))\\n"
         + "SELECT\\n  TIME_PARSE(\\\"time\\\") AS __time,\\n  name,\\n  country "
@@ -122,7 +122,7 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
@@ -136,7 +136,7 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
@@ -150,7 +150,7 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql3)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
@@ -164,7 +164,7 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql4)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "

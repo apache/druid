@@ -24,7 +24,7 @@ sidebar_label: Load data with native batch ingestion
   -->
 
 
-This topic shows you how to load and query data files in Apache Druid using its native batch ingestion feature. 
+This topic shows you how to load and query data files in Apache&circledR; Druid using its native batch ingestion feature. 
 
 ## Prerequisites
 
@@ -77,7 +77,7 @@ in the Druid root directory represents Wikipedia page edits for a given day.
    Feel free to select other **Input format** options to get a sense of their configuration settings 
    and how Druid parses other types of data.  
 
-6. With the JSON parser selected, click **Next: Parse time**. The **Parse time** settings are where you view and adjust the 
+6. With the JSON input format selected, click **Next: Parse time**. The **Parse time** settings are where you view and adjust the 
    primary timestamp column for the data.
 
    ![Data loader parse time](../assets/tutorial-batch-data-loader-04.png "Data loader parse time")

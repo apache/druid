@@ -23,6 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
@@ -31,10 +32,12 @@ import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.serde.Serializer;
+import org.apache.druid.segment.column.ColumnDescriptor;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileChannel;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.BufferedWriter;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -47,7 +50,6 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +73,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * copied on to the main smoosh file and underlying temporary file will be
  * cleaned up.
  */
-public class FileSmoosher implements Closeable
+public class FileSmoosher implements SegmentFileBuilder
 {
   private static final String FILE_EXTENSION = "smoosh";
   private static final Joiner JOINER = Joiner.on(",");
@@ -123,11 +125,13 @@ public class FileSmoosher implements Closeable
     return new File(baseDir, StringUtils.format("%05d.%s", i, FILE_EXTENSION));
   }
 
-  public void add(File fileToAdd) throws IOException
+  @Override
+  public void addColumn(String name, ColumnDescriptor columnDescriptor)
   {
-    add(fileToAdd.getName(), fileToAdd);
+    throw DruidException.defensive("not supported");
   }
 
+  @Override
   public void add(String name, File fileToAdd) throws IOException
   {
     try (MappedByteBufferHandler fileMappingHandler = FileUtils.map(fileToAdd)) {
@@ -135,12 +139,8 @@ public class FileSmoosher implements Closeable
     }
   }
 
+  @Override
   public void add(String name, ByteBuffer bufferToAdd) throws IOException
-  {
-    add(name, Collections.singletonList(bufferToAdd));
-  }
-
-  public void add(String name, List<ByteBuffer> bufferToAdd) throws IOException
   {
     if (name.contains(",")) {
       throw new IAE("Cannot have a comma in the name of a file, got[%s].", name);
@@ -151,29 +151,37 @@ public class FileSmoosher implements Closeable
     }
 
     long size = 0;
-    for (ByteBuffer buffer : bufferToAdd) {
-      size += buffer.remaining();
-    }
+    size += bufferToAdd.remaining();
 
-    try (SmooshedWriter out = addWithSmooshedWriter(name, size)) {
-      for (ByteBuffer buffer : bufferToAdd) {
-        out.write(buffer);
-      }
+    try (SegmentFileChannel out = addWithChannel(name, size)) {
+      out.write(bufferToAdd);
     }
   }
 
-  public void serializeAs(String name, Serializer serializer) throws IOException
+  @Override
+  public SegmentFileChannel addWithChannel(final String name, final long size) throws IOException
   {
-    try (SmooshedWriter smooshChannel = addWithSmooshedWriter(name, serializer.getSerializedSize())) {
-      serializer.writeTo(smooshChannel, this);
+    return addWithSmooshedWriter(name, size);
+  }
+
+  @Override
+  public void abort()
+  {
+    if (currOut != null) {
+      CloseableUtils.closeAndWrapExceptions(currOut);
     }
   }
 
   public SmooshedWriter addWithSmooshedWriter(final String name, final long size) throws IOException
   {
-
     if (size > maxChunkSize) {
-      throw new IAE("Asked to add buffers[%,d] larger than configured max[%,d]", size, maxChunkSize);
+      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("Serialized buffer size[%,d] for column[%s] exceeds the maximum[%,d]. "
+                                  + "Consider adjusting the tuningConfig - for example, reduce maxRowsPerSegment, "
+                                  + "or partition your data further.",
+                                  size, name, maxChunkSize
+                          );
     }
 
     // If current writer is in use then create a new SmooshedWriter which
@@ -358,9 +366,7 @@ public class FileSmoosher implements Closeable
       {
         return channel.isOpen();
       }
-
     };
-
   }
 
   private String getDelegateFileName(String name)
@@ -441,7 +447,9 @@ public class FileSmoosher implements Closeable
       this.outFile = outFile;
       this.maxLength = maxLength;
 
-      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));  // lgtm [java/output-resource-leak]
+      // The closer owns this stream for the lifetime of the writer and releases it in close().
+      // codeql[java/output-resource-leak]
+      final FileOutputStream outStream = closer.register(new FileOutputStream(outFile));
       this.channel = closer.register(outStream.getChannel());
     }
 

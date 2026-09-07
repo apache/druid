@@ -51,8 +51,7 @@ import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -119,8 +118,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         groupByOnMultiValueColumnDisabled,
         RuntimeException.class,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
+        e -> Assertions.assertTrue(
+            e.getMessage().contains(
                 StringUtils.format(
                     "org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException: "
                     + "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."
@@ -1072,9 +1071,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringToMVOfConstantGroupedBy()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testBuilder()
         .sql("SELECT m1, STRING_TO_MV('a,b', ',') AS mv FROM druid.numfoo GROUP BY 1, 2")
         .expectedQuery(
@@ -1082,30 +1078,23 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
-                        .setVirtualColumns(
-                            expressionVirtualColumn("v0", "string_to_array('a,b',',')", ColumnType.STRING)
-                        )
                         .setDimensions(dimensions(
-                            new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
-                            new DefaultDimensionSpec("v0", "d1", ColumnType.STRING)
+                            new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
                         ))
+                        .setPostAggregatorSpecs(
+                            expressionPostAgg("p0", "string_to_array('a,b',',')", ColumnType.STRING)
+                        )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{1.0f, "a"},
-                new Object[]{1.0f, "b"},
-                new Object[]{2.0f, "a"},
-                new Object[]{2.0f, "b"},
-                new Object[]{3.0f, "a"},
-                new Object[]{3.0f, "b"},
-                new Object[]{4.0f, "a"},
-                new Object[]{4.0f, "b"},
-                new Object[]{5.0f, "a"},
-                new Object[]{5.0f, "b"},
-                new Object[]{6.0f, "a"},
-                new Object[]{6.0f, "b"}
+                new Object[]{1.0f, "[\"a\",\"b\"]"},
+                new Object[]{2.0f, "[\"a\",\"b\"]"},
+                new Object[]{3.0f, "[\"a\",\"b\"]"},
+                new Object[]{4.0f, "[\"a\",\"b\"]"},
+                new Object[]{5.0f, "[\"a\",\"b\"]"},
+                new Object[]{6.0f, "[\"a\",\"b\"]"}
             )
         )
         .run();
@@ -1606,25 +1595,25 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(
                             expressionVirtualColumn(
                                 "v0",
-                                "array_length(\"v2\")",
-                                ColumnType.LONG
-                            ),
-                            expressionVirtualColumn(
-                                "v1",
-                                "array_length(\"dim3\")",
+                                "array_length(\"v1\")",
                                 ColumnType.LONG
                             ),
                             new ListFilteredVirtualColumn(
-                                "v2",
+                                "v1",
                                 DefaultDimensionSpec.of("dim3"),
                                 ImmutableSet.of("b"),
                                 true
+                            ),
+                            expressionVirtualColumn(
+                                "v2",
+                                "array_length(\"dim3\")",
+                                ColumnType.LONG
                             )
                         )
                         .setDimensions(
                             dimensions(
                                 new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
-                                new DefaultDimensionSpec("v1", "d1", ColumnType.LONG)
+                                new DefaultDimensionSpec("v2", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2541,5 +2530,107 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
             new Object[]{"b", 2L}
         )
     );
+  }
+
+  @Test
+  public void testMultiValueRegexFilterOnVirtualMV()
+  {
+    // Test MV_FILTER_REGEX with a virtual multi-value column created by STRING_TO_MV.
+    testBuilder()
+        .sql("SELECT MV_FILTER_REGEX(STRING_TO_MV('abc,def,abd', ','), '^ab')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"[\"abc\",\"abd\"]"}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValuePrefixFilterOnVirtualMV()
+  {
+    // Test MV_FILTER_PREFIX with a virtual multi-value column created by STRING_TO_MV.
+    testBuilder()
+        .sql("SELECT MV_FILTER_PREFIX(STRING_TO_MV('a,b,c', ','), 'a')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"a"}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValuePrefixFilterOnVirtualMVWithRawLiteral()
+  {
+    // Test MV_FILTER_PREFIX with a virtual multi-value column created by raw string.
+    testBuilder()
+        .sql("SELECT MV_FILTER_PREFIX('apple', 'a')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"apple"}
+            )
+        )
+        .run();
+
+    testBuilder()
+        .sql("SELECT MV_FILTER_PREFIX('apple', 'b')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValueRegexFilterOnVirtualMVWithRawLiteral()
+  {
+    // Test MV_FILTER_REGEX with a virtual multi-value column created by raw string.
+    testBuilder()
+        .sql("SELECT MV_FILTER_REGEX('apple', '^a.*')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"apple"}
+            )
+        )
+        .run();
+
+    testBuilder()
+        .sql("SELECT MV_FILTER_REGEX('apple', 'a$')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValueRegexFilterOnNullReturnsNull()
+  {
+    // Test MV_FILTER_REGEX with a null string.
+    testBuilder()
+        .sql("SELECT MV_FILTER_REGEX(null, '^a.*')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testMultiValuePrefixFilterOnNullReturnsNull()
+  {
+    // Test MV_FILTER_PREFIX with a null string.
+    testBuilder()
+        .sql("SELECT MV_FILTER_PREFIX(null, '^a.*')")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{null}
+            )
+        )
+        .run();
   }
 }

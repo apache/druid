@@ -21,10 +21,8 @@ package org.apache.druid.utils;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.IAE;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
@@ -35,12 +33,11 @@ public class ConnectionUriUtilsTest
   public static class ThrowIfURLHasNotAllowedPropertiesTest
   {
     private static final String MYSQL_URI = "jdbc:mysql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
+    private static final String MYSQL_URI_WITH_MARIA_DB_3X_SCHEME =
+        "jdbc:mysql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat&permitMysqlScheme";
     private static final String MARIA_URI = "jdbc:mariadb://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
     private static final String POSTGRES_URI = "jdbc:postgresql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
     private static final String UNKNOWN_URI = "jdbc:druid://localhost:8888/query/v2/sql/avatica?user=druid&password=diurd&keyonly&otherOptions=wat";
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testEmptyActualProperties()
@@ -55,14 +52,14 @@ public class ConnectionUriUtilsTest
     @Test
     public void testThrowForNonAllowedProperties()
     {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("The property [invalid_key] is not in the allowed list [valid_key1, valid_key2]");
-
-      ConnectionUriUtils.throwIfPropertiesAreNotAllowed(
-          ImmutableSet.of("valid_key1", "invalid_key"),
-          ImmutableSet.of("system_key1", "system_key2"),
-          ImmutableSet.of("valid_key1", "valid_key2")
+      IllegalArgumentException e = Assertions.assertThrows(IllegalArgumentException.class, () ->
+          ConnectionUriUtils.throwIfPropertiesAreNotAllowed(
+              ImmutableSet.of("valid_key1", "invalid_key"),
+              ImmutableSet.of("system_key1", "system_key2"),
+              ImmutableSet.of("valid_key1", "valid_key2")
+          )
       );
+      Assertions.assertTrue(e.getMessage().contains("The property [invalid_key] is not in the allowed list [valid_key1, valid_key2]"));
     }
 
     @Test
@@ -99,65 +96,81 @@ public class ConnectionUriUtilsTest
     public void testTryParses()
     {
       Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(POSTGRES_URI, false);
-      Assert.assertEquals(7, props.size());
+      Assertions.assertEquals(7, props.size());
 
       props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
       // though this would be 4 if mysql wasn't loaded in classpath because it would fall back to mariadb
-      Assert.assertEquals(6, props.size());
+      Assertions.assertEquals(6, props.size());
 
       props = ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false);
-      Assert.assertEquals(4, props.size());
+      Assertions.assertEquals(4, props.size());
     }
 
     @Test
     public void testTryParseUnknown()
     {
       Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(UNKNOWN_URI, true);
-      Assert.assertEquals(0, props.size());
+      Assertions.assertEquals(0, props.size());
 
-      expectedException.expect(IAE.class);
-      ConnectionUriUtils.tryParseJdbcUriParameters(UNKNOWN_URI, false);
+      Assertions.assertThrows(IAE.class, () -> ConnectionUriUtils.tryParseJdbcUriParameters(UNKNOWN_URI, false));
     }
 
     @Test
     public void tryParseInvalidPostgres()
     {
-      expectedException.expect(IAE.class);
-      ConnectionUriUtils.tryParseJdbcUriParameters("jdbc:postgresql://bad:1234&param", true);
+      Assertions.assertThrows(IAE.class, () -> ConnectionUriUtils.tryParseJdbcUriParameters("jdbc:postgresql://bad:1234&param", true));
     }
 
     @Test
     public void testMySqlFallbackMySqlMaria2x()
     {
-      MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class);
-      utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false)).thenCallRealMethod();
-      utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI)).thenThrow(ClassNotFoundException.class);
-      utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI)).thenCallRealMethod();
+      try (MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class)) {
+        utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false)).thenCallRealMethod();
+        utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI))
+             .thenReturn(ImmutableSet.of("user", "password", "keyonly", "otherOptions"));
 
-      Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
-      // this would be 9 if didn't fall back to mariadb
-      Assert.assertEquals(4, props.size());
-      utils.close();
+        Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
+        // this would be 9 if didn't fall back to mariadb
+        Assertions.assertEquals(4, props.size());
+      }
+    }
+
+    @Test
+    public void testMySqlFallbackMySqlMaria3x()
+    {
+      try (MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class)) {
+        utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME, false))
+             .thenCallRealMethod();
+        utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenCallRealMethod();
+
+        Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME, false);
+        Assertions.assertEquals(
+            ImmutableSet.of("user", "password", "keyonly", "otherOptions", "permitMysqlScheme"),
+            props
+        );
+      }
     }
 
     @Test
     public void testMariaFallbackMaria3x()
     {
-      MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class);
-      utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false)).thenCallRealMethod();
-      utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MARIA_URI)).thenThrow(ClassNotFoundException.class);
-      utils.when(() -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI)).thenCallRealMethod();
+      try (MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class)) {
+        utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false)).thenCallRealMethod();
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MARIA_URI))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI)).thenCallRealMethod();
 
-      try {
         Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false);
         // this would be 4 if didn't fall back to mariadb 3x
-        Assert.assertEquals(8, props.size());
+        Assertions.assertEquals(4, props.size());
       }
-      catch (RuntimeException e) {
-
-        Assert.assertTrue(e.getMessage().contains("Failed to find MariaDB driver class"));
-      }
-      utils.close();
     }
 
     @Test
@@ -172,7 +185,7 @@ public class ConnectionUriUtilsTest
         ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
       }
       catch (RuntimeException e) {
-        Assert.assertTrue(e.getMessage().contains("Failed to find MySQL driver class"));
+        Assertions.assertTrue(e.getMessage().contains("Failed to find MySQL driver class"));
       }
       utils.close();
     }
@@ -181,12 +194,12 @@ public class ConnectionUriUtilsTest
     public void testPosgresDriver() throws Exception
     {
       Set<String> props = ConnectionUriUtils.tryParsePostgresConnectionUri(POSTGRES_URI);
-      Assert.assertEquals(7, props.size());
+      Assertions.assertEquals(7, props.size());
       // postgres adds a few extra system properties, PGDBNAME, PGHOST, PGPORT
-      Assert.assertTrue(props.contains("user"));
-      Assert.assertTrue(props.contains("password"));
-      Assert.assertTrue(props.contains("otherOptions"));
-      Assert.assertTrue(props.contains("keyonly"));
+      Assertions.assertTrue(props.contains("user"));
+      Assertions.assertTrue(props.contains("password"));
+      Assertions.assertTrue(props.contains("otherOptions"));
+      Assertions.assertTrue(props.contains("keyonly"));
     }
 
     @Test
@@ -195,72 +208,50 @@ public class ConnectionUriUtilsTest
       Set<String> props = ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI);
       // mysql actually misses 'keyonly', but spits out several keys that are not actually uri parameters
       // DBNAME, HOST, PORT, HOST.1, PORT.1, NUM_HOSTS
-      Assert.assertEquals(6, props.size());
-      Assert.assertTrue(props.contains("user"));
-      Assert.assertTrue(props.contains("password"));
-      Assert.assertTrue(props.contains("otherOptions"));
-      Assert.assertFalse(props.contains("keyonly"));
+      Assertions.assertEquals(6, props.size());
+      Assertions.assertTrue(props.contains("user"));
+      Assertions.assertTrue(props.contains("password"));
+      Assertions.assertTrue(props.contains("otherOptions"));
+      Assertions.assertFalse(props.contains("keyonly"));
     }
 
     @Test
-    public void testMariaDb2xDriver() throws Throwable
-    {
-      Set<String> props = ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI);
-      // mariadb doesn't spit out any extras other than what the user specified
-      Assert.assertEquals(4, props.size());
-      Assert.assertTrue(props.contains("user"));
-      Assert.assertTrue(props.contains("password"));
-      Assert.assertTrue(props.contains("otherOptions"));
-      Assert.assertTrue(props.contains("keyonly"));
-      props = ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MARIA_URI);
-      Assert.assertEquals(4, props.size());
-      Assert.assertTrue(props.contains("user"));
-      Assert.assertTrue(props.contains("password"));
-      Assert.assertTrue(props.contains("otherOptions"));
-      Assert.assertTrue(props.contains("keyonly"));
-    }
-
-    @Test(expected = ClassNotFoundException.class)
     public void testMariaDb3xDriver() throws Exception
     {
-      // at the time of adding this test, mariadb connector/j 3.x does not actually parse jdbc:mysql uris
-      // so this would throw an IAE.class instead of ClassNotFoundException.class if the connector is swapped out
-      // in maven dependencies
-      ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MYSQL_URI);
+      // MariaDB Connector/J 3.x rejects plain jdbc:mysql URLs by default. MYSQL_URI lacks permitMysqlScheme,
+      // so Configuration.parse returns null, which Druid translates to IAE.
+      Assertions.assertThrows(IAE.class, () ->
+          ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MYSQL_URI)
+      );
     }
 
-    @Test(expected = ClassNotFoundException.class)
+    @Test
     public void testMariaDb3xDriverMariaUri() throws Exception
     {
-      // mariadb 3.x driver cannot be loaded alongside 2.x, so this will fail with class not found
-      // however, if we swap out version in pom then we end up with 8 keys where
-      // "database", "addresses", "codecs", and "initialUrl" are added as extras
-      // we should perhaps consider adding them to built-in allowed lists in the future when this driver is no longer
-      // an alpha release
       Set<String> props = ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI);
-      Assert.assertEquals(8, props.size());
-      Assert.assertTrue(props.contains("user"));
-      Assert.assertTrue(props.contains("password"));
-      Assert.assertTrue(props.contains("otherOptions"));
-      Assert.assertTrue(props.contains("keyonly"));
+      Assertions.assertEquals(4, props.size());
+      Assertions.assertTrue(props.contains("user"));
+      Assertions.assertTrue(props.contains("password"));
+      Assertions.assertTrue(props.contains("otherOptions"));
+      Assertions.assertTrue(props.contains("keyonly"));
     }
 
-    @Test(expected = IAE.class)
+    @Test
     public void testPostgresInvalidArgs() throws Exception
     {
-      ConnectionUriUtils.tryParsePostgresConnectionUri(MYSQL_URI);
+      Assertions.assertThrows(IAE.class, () -> ConnectionUriUtils.tryParsePostgresConnectionUri(MYSQL_URI));
     }
 
-    @Test(expected = IAE.class)
+    @Test
     public void testMySqlInvalidArgs() throws Exception
     {
-      ConnectionUriUtils.tryParseMySqlConnectionUri(POSTGRES_URI);
+      Assertions.assertThrows(IAE.class, () -> ConnectionUriUtils.tryParseMySqlConnectionUri(POSTGRES_URI));
     }
 
-    @Test(expected = IAE.class)
+    @Test
     public void testMariaDbInvalidArgs() throws Exception
     {
-      ConnectionUriUtils.tryParseMariaDb2xConnectionUri(POSTGRES_URI);
+      Assertions.assertThrows(IAE.class, () -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(POSTGRES_URI));
     }
   }
 }

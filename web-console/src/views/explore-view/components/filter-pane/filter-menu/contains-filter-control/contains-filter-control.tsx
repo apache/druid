@@ -75,7 +75,9 @@ export const ContainsFilterControl = React.memo(function ContainsFilterControl(
       <FormGroup>
         <InputGroup
           value={contains}
-          onChange={e => setFilterPattern({ ...filterPattern, contains: e.target.value })}
+          onChange={e =>
+            setFilterPattern({ ...filterPattern, contains: e.target.value.trimStart() })
+          }
           placeholder="Search string"
         />
       </FormGroup>

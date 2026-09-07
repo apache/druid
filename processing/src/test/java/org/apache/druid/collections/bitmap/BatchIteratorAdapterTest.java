@@ -20,8 +20,8 @@
 package org.apache.druid.collections.bitmap;
 
 import org.apache.druid.collections.IntSetTestUtility;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.roaringbitmap.BatchIterator;
 
 import java.util.BitSet;
@@ -37,6 +37,6 @@ public class BatchIteratorAdapterTest
     batchIterator.advanceIfNeeded(4);
     int[] batch = new int[3];
     batchIterator.nextBatch(batch);
-    Assert.assertArrayEquals(new int[]{5, 8, 13}, batch);
+    Assertions.assertArrayEquals(new int[]{5, 8, 13}, batch);
   }
 }

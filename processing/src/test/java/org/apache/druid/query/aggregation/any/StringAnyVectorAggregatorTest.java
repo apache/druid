@@ -24,13 +24,15 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -40,7 +42,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import static org.apache.druid.query.aggregation.any.StringAnyVectorAggregator.NOT_FOUND_FLAG_VALUE;
 import static org.mockito.ArgumentMatchers.anyInt;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class StringAnyVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final int MAX_STRING_BYTES = 32;
@@ -65,7 +68,7 @@ public class StringAnyVectorAggregatorTest extends InitializedNullHandlingTest
   private StringAnyVectorAggregator multiValueTarget;
   private StringAnyVectorAggregator customMultiValueTarget;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     Mockito.doReturn(MULTI_VALUE_ROWS).when(multiValueSelector).getRowVector();
@@ -83,65 +86,71 @@ public class StringAnyVectorAggregatorTest extends InitializedNullHandlingTest
     customMultiValueTarget = new StringAnyVectorAggregator(null, multiValueSelector, MAX_STRING_BYTES, false);
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void initWithBothSingleAndMultiValueSelectorShouldThrowException()
   {
-    new StringAnyVectorAggregator(singleValueSelector, multiValueSelector, MAX_STRING_BYTES, true);
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> new StringAnyVectorAggregator(singleValueSelector, multiValueSelector, MAX_STRING_BYTES, true)
+    );
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void initWithNeitherSingleNorMultiValueSelectorShouldThrowException()
   {
-    new StringAnyVectorAggregator(null, null, MAX_STRING_BYTES, true);
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> new StringAnyVectorAggregator(null, null, MAX_STRING_BYTES, true)
+    );
   }
 
   @Test
   public void initSingleValueTargetShouldMarkPositionAsNotFound()
   {
     singleValueTarget.init(buf, POSITION + 1);
-    Assert.assertEquals(NOT_FOUND_FLAG_VALUE, buf.getInt(POSITION + 1));
+    Assertions.assertEquals(NOT_FOUND_FLAG_VALUE, buf.getInt(POSITION + 1));
   }
 
   @Test
   public void initMultiValueTargetShouldMarkPositionAsNotFound()
   {
     multiValueTarget.init(buf, POSITION + 1);
-    Assert.assertEquals(NOT_FOUND_FLAG_VALUE, buf.getInt(POSITION + 1));
+    Assertions.assertEquals(NOT_FOUND_FLAG_VALUE, buf.getInt(POSITION + 1));
   }
 
   @Test
   public void aggregatePositionNotFoundShouldPutFirstValue()
   {
     singleValueTarget.aggregate(buf, POSITION, 0, 2);
-    Assert.assertEquals(DICTIONARY[1], singleValueTarget.get(buf, POSITION));
+    Assertions.assertEquals(DICTIONARY[1], singleValueTarget.get(buf, POSITION));
   }
 
   @Test
   public void aggregateEmptyShouldPutNull()
   {
     singleValueTarget.aggregate(buf, POSITION, 2, 3);
-    Assert.assertNull(singleValueTarget.get(buf, POSITION));
+    Assertions.assertNull(singleValueTarget.get(buf, POSITION));
   }
 
   @Test
   public void aggregateMultiValuePositionNotFoundShouldPutFirstValue()
   {
     multiValueTarget.aggregate(buf, POSITION, 0, 2);
-    Assert.assertEquals("[One, Zero]", multiValueTarget.get(buf, POSITION));
+    Assertions.assertEquals("[One, Zero]", multiValueTarget.get(buf, POSITION));
   }
 
   @Test
   public void aggregateMultiValueEmptyShouldPutNull()
   {
     multiValueTarget.aggregate(buf, POSITION, 2, 3);
-    Assert.assertNull(multiValueTarget.get(buf, POSITION));
+    Assertions.assertNull(multiValueTarget.get(buf, POSITION));
   }
 
   @Test
   public void aggregateValueLongerThanLimitShouldPutTruncatedValue()
   {
     singleValueTarget.aggregate(buf, POSITION, 3, 4);
-    Assert.assertEquals(DICTIONARY[2].substring(0, 32), singleValueTarget.get(buf, POSITION));
+    Assertions.assertEquals(DICTIONARY[2].substring(0, 32), singleValueTarget.get(buf, POSITION));
   }
 
   @Test
@@ -153,7 +162,7 @@ public class StringAnyVectorAggregatorTest extends InitializedNullHandlingTest
     singleValueTarget.aggregate(buf, 3, positions, null, positionOffset);
     for (int i = 0; i < positions.length; i++) {
       int position = positions[i] + positionOffset;
-      Assert.assertEquals(singleValueSelector.lookupName(SINGLE_VALUE_ROWS[i]), singleValueTarget.get(buf, position));
+      Assertions.assertEquals(singleValueSelector.lookupName(SINGLE_VALUE_ROWS[i]), singleValueTarget.get(buf, position));
     }
   }
 
@@ -170,13 +179,13 @@ public class StringAnyVectorAggregatorTest extends InitializedNullHandlingTest
       int row = rows[i];
       IndexedInts rowIndex = MULTI_VALUE_ROWS[row];
       if (rowIndex.size() == 0) {
-        Assert.assertNull(multiValueTarget.get(buf, position));
+        Assertions.assertNull(multiValueTarget.get(buf, position));
       } else if (rowIndex.size() == 1) {
-        Assert.assertEquals(multiValueSelector.lookupName(rowIndex.get(0)), multiValueTarget.get(buf, position));
+        Assertions.assertEquals(multiValueSelector.lookupName(rowIndex.get(0)), multiValueTarget.get(buf, position));
       } else {
         List<String> res = new ArrayList<>();
         rowIndex.forEach(index -> res.add(multiValueSelector.lookupName(index)));
-        Assert.assertEquals(res.toString(), multiValueTarget.get(buf, position));
+        Assertions.assertEquals(res.toString(), multiValueTarget.get(buf, position));
       }
     }
   }
@@ -194,9 +203,9 @@ public class StringAnyVectorAggregatorTest extends InitializedNullHandlingTest
       int row = rows[i];
       IndexedInts rowIndex = MULTI_VALUE_ROWS[row];
       if (rowIndex.size() == 0) {
-        Assert.assertNull(customMultiValueTarget.get(buf, position));
+        Assertions.assertNull(customMultiValueTarget.get(buf, position));
       } else {
-        Assert.assertEquals(multiValueSelector.lookupName(rowIndex.get(0)), customMultiValueTarget.get(buf, position));
+        Assertions.assertEquals(multiValueSelector.lookupName(rowIndex.get(0)), customMultiValueTarget.get(buf, position));
       }
     }
   }

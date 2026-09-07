@@ -25,7 +25,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * An annotation to exlcude specific node types that a {@link com.google.inject.Module} can be loaded on.
+ * An annotation to exclude specific node types that a {@link com.google.inject.Module} can be loaded on.
  * The {@link #roles()} should be the {@link org.apache.druid.discovery.NodeRole#jsonName}. If both {@link ExcludeScope}
  * and {@link LoadScope} are set, {@link ExcludeScope} takes precedence.
  * <p>

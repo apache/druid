@@ -30,12 +30,24 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import org.junit.Assert;
-import org.junit.Test;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import org.apache.druid.frame.wire.FrameWireTransferable;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
-import javax.validation.Validation;
-import javax.validation.Validator;
+import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -58,8 +70,8 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{\"test\": \"this is an injection test\", \"\": \"nice try\" }";
       final ClassWithJacksonInject object = mapper.readValue(json, ClassWithJacksonInject.class);
-      Assert.assertEquals("this is an injection test", object.test);
-      Assert.assertEquals(PROPERTY_VALUE, object.injected.val);
+      Assertions.assertEquals("this is an injection test", object.test);
+      Assertions.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
     @Test
@@ -72,8 +84,8 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{\"test\": \"this is an injection test\" }";
       final ClassWithJacksonInject object = mapper.readValue(json, ClassWithJacksonInject.class);
-      Assert.assertEquals("this is an injection test", object.test);
-      Assert.assertEquals(PROPERTY_VALUE, object.injected.val);
+      Assertions.assertEquals("this is an injection test", object.test);
+      Assertions.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
     @Test
@@ -86,8 +98,8 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{\"test\": \"this is an injection test\", \"\": \"nice try\" }";
       final ClassWithEmptyProperty object = mapper.readValue(json, ClassWithEmptyProperty.class);
-      Assert.assertEquals("this is an injection test", object.test);
-      Assert.assertEquals(PROPERTY_VALUE, object.injected.val);
+      Assertions.assertEquals("this is an injection test", object.test);
+      Assertions.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
     @Test
@@ -117,10 +129,10 @@ public class DruidSecondaryModuleTest
           "", new ClassWithJacksonInject("value2", injector.getInstance(InjectedParameter.class)))
       );
       final String jsonWritten = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
-      Assert.assertEquals(json, jsonWritten);
+      Assertions.assertEquals(json, jsonWritten);
       final ClassWithMapAndJacksonInject objectRead = mapper.readValue(json, ClassWithMapAndJacksonInject.class);
-      Assert.assertEquals(object, objectRead);
-      Assert.assertEquals("empty", objectRead.getStringStringMap().get(""));
+      Assertions.assertEquals(object, objectRead);
+      Assertions.assertEquals("empty", objectRead.getStringStringMap().get(""));
     }
 
     @Test
@@ -167,10 +179,10 @@ public class DruidSecondaryModuleTest
                           "", new ClassWithJacksonInject("value2", injector.getInstance(InjectedParameter.class)))
       );
       final String jsonWritten = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
-      Assert.assertEquals(expectedSerializedJson, jsonWritten);
+      Assertions.assertEquals(expectedSerializedJson, jsonWritten);
       final ClassWithMapAndJacksonInject objectRead = mapper.readValue(json, ClassWithMapAndJacksonInject.class);
-      Assert.assertEquals(object, objectRead);
-      Assert.assertEquals("empty", objectRead.getStringStringMap().get(""));
+      Assertions.assertEquals(object, objectRead);
+      Assertions.assertEquals("empty", objectRead.getStringStringMap().get(""));
     }
 
     private static class ClassWithJacksonInject
@@ -300,7 +312,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "[\"this is\", \"an injection test\"]";
       final ClassWithConstructorOfEmptyName object = mapper.readValue(json, ClassWithConstructorOfEmptyName.class);
-      Assert.assertEquals(ImmutableList.of("this is", "an injection test"), object.getTest());
+      Assertions.assertEquals(ImmutableList.of("this is", "an injection test"), object.getTest());
     }
 
     @Test
@@ -312,7 +324,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "[]";
       final ClassWithConstructorOfEmptyName object = mapper.readValue(json, ClassWithConstructorOfEmptyName.class);
-      Assert.assertEquals(ImmutableList.of(), object.getTest());
+      Assertions.assertEquals(ImmutableList.of(), object.getTest());
     }
 
     @Test
@@ -324,7 +336,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "[\"this is\", \"an injection test\"]";
       final ClassWithFactoryMethodOfEmptyName object = mapper.readValue(json, ClassWithFactoryMethodOfEmptyName.class);
-      Assert.assertEquals(ImmutableList.of("this is", "an injection test"), object.getTest());
+      Assertions.assertEquals(ImmutableList.of("this is", "an injection test"), object.getTest());
     }
 
     @Test
@@ -336,7 +348,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "[]";
       final ClassWithFactoryMethodOfEmptyName object = mapper.readValue(json, ClassWithFactoryMethodOfEmptyName.class);
-      Assert.assertEquals(ImmutableList.of(), object.getTest());
+      Assertions.assertEquals(ImmutableList.of(), object.getTest());
     }
 
     @Test
@@ -349,7 +361,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{}";
       final ClassOfEmptyConstructor object = mapper.readValue(json, ClassOfEmptyConstructor.class);
-      Assert.assertEquals("empty constructor", object.val);
+      Assertions.assertEquals("empty constructor", object.val);
     }
 
     private static class ClassWithConstructorOfEmptyName
@@ -415,10 +427,10 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{\"val\": \"this is an injection test\", \"valLen\": 5, \"\": \"nice try\" }";
       final ClassOfMultipleJsonCreators object = mapper.readValue(json, ClassOfMultipleJsonCreators.class);
-      Assert.assertEquals("this is an injection test", object.val);
-      Assert.assertEquals(5, object.valLen);
-      Assert.assertNotNull(object.injected);
-      Assert.assertEquals(PROPERTY_VALUE, object.injected.val);
+      Assertions.assertEquals("this is an injection test", object.val);
+      Assertions.assertEquals(5, object.valLen);
+      Assertions.assertNotNull(object.injected);
+      Assertions.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
     @Test
@@ -431,9 +443,9 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "\"this is an injection test\"";
       final ClassOfMultipleJsonCreators object = mapper.readValue(json, ClassOfMultipleJsonCreators.class);
-      Assert.assertEquals("this is an injection test", object.val);
-      Assert.assertEquals(object.val.length(), object.valLen);
-      Assert.assertNull(object.injected);
+      Assertions.assertEquals("this is an injection test", object.val);
+      Assertions.assertEquals(object.val.length(), object.valLen);
+      Assertions.assertNull(object.injected);
     }
 
     private static class ClassOfMultipleJsonCreators
@@ -499,7 +511,138 @@ public class DruidSecondaryModuleTest
   private static ObjectMapper makeObjectMapper(Injector injector)
   {
     final ObjectMapper mapper = new ObjectMapper();
-    DruidSecondaryModule.setupJackson(injector, mapper);
+    DruidSecondaryModule.setupJackson(
+        injector,
+        mapper,
+        Collections.emptyMap(),
+        true
+    );
     return mapper;
+  }
+
+  /**
+   * Tests for WireTransferable serialization and deserialization.
+   */
+  public static class WireTransferableTests
+  {
+    private static final Map<ByteBuffer, WireTransferable.Deserializer> FRAME_DESERIALIZERS =
+        Collections.singletonMap(
+            StringUtils.toUtf8ByteBuffer(FrameWireTransferable.TYPE),
+            new FrameWireTransferable.Deserializer()
+        );
+
+    @Test
+    public void testColumnBasedFrameRowsAndColumns() throws Exception
+    {
+      final ObjectMapper om = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(om, FRAME_DESERIALIZERS, false);
+
+      final MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+          ImmutableMap.of(
+              "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+              "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+          ));
+
+      final ColumnBasedFrameRowsAndColumns frc = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
+      final byte[] bytes = om.writeValueAsBytes(frc);
+
+      final ColumnBasedFrameRowsAndColumns frc2 = (ColumnBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
+      Assertions.assertEquals(frc, frc2);
+    }
+
+    @Test
+    public void testRowBasedFrameRowsAndColumns() throws Exception
+    {
+      final ObjectMapper om = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(om, FRAME_DESERIALIZERS, false);
+
+      final MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+          ImmutableMap.of(
+              "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+              "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+          ));
+
+      final RowBasedFrameRowsAndColumns frc = RowBasedFrameRowsAndColumnsTest.MAKER.apply(input);
+      final byte[] bytes = om.writeValueAsBytes(frc);
+
+      final RowBasedFrameRowsAndColumns frc2 = (RowBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
+      Assertions.assertEquals(frc, frc2);
+    }
+
+    @Test
+    public void testColumnBasedFrameRowsAndColumnsLegacySerialization() throws Exception
+    {
+      // Test legacy serialization format (for rolling update compatibility)
+      final ObjectMapper legacySerializer = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(
+          legacySerializer,
+          FRAME_DESERIALIZERS,
+          true  // useLegacyFrameSerialization
+      );
+
+      // New deserializer should be able to read legacy format
+      final ObjectMapper newDeserializer = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(
+          newDeserializer,
+          FRAME_DESERIALIZERS,
+          false  // useLegacyFrameSerialization
+      );
+
+      final MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+          ImmutableMap.of(
+              "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+              "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+          ));
+
+      final ColumnBasedFrameRowsAndColumns frc = ColumnBasedFrameRowsAndColumnsTest.buildFrame(input);
+
+      // Serialize with legacy format
+      final byte[] bytes = legacySerializer.writeValueAsBytes(frc);
+
+      // Deserialize with new deserializer (should handle legacy format)
+      final ColumnBasedFrameRowsAndColumns frc2 = (ColumnBasedFrameRowsAndColumns) newDeserializer.readValue(
+          bytes,
+          RowsAndColumns.class
+      );
+      Assertions.assertEquals(frc, frc2);
+    }
+
+    @Test
+    public void testRowBasedFrameRowsAndColumnsLegacySerialization() throws Exception
+    {
+      // Test legacy serialization format (for rolling update compatibility)
+      final ObjectMapper legacySerializer = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(
+          legacySerializer,
+          FRAME_DESERIALIZERS,
+          true  // useLegacyFrameSerialization
+      );
+
+      // New deserializer should be able to read legacy format
+      final ObjectMapper newDeserializer = new ObjectMapper();
+      DruidSecondaryModule.attachWireTransferables(
+          newDeserializer,
+          FRAME_DESERIALIZERS,
+          false  // useLegacyFrameSerialization
+      );
+
+      final MapOfColumnsRowsAndColumns input = MapOfColumnsRowsAndColumns.fromMap(
+          ImmutableMap.of(
+              "colA", new IntArrayColumn(new int[]{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+              "colB", new IntArrayColumn(new int[]{4, -4, 3, -3, 4, 82, -90, 4, 0, 0})
+          ));
+
+      final RowBasedFrameRowsAndColumns frc = RowBasedFrameRowsAndColumnsTest.MAKER.apply(input);
+
+      // Serialize with legacy format
+      final byte[] bytes = legacySerializer.writeValueAsBytes(frc);
+
+      // Deserialize with new deserializer (should handle legacy format)
+      final RowBasedFrameRowsAndColumns frc2 = (RowBasedFrameRowsAndColumns) newDeserializer.readValue(
+          bytes,
+          RowsAndColumns.class
+      );
+      Assertions.assertEquals(frc, frc2);
+    }
   }
 }

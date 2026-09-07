@@ -19,7 +19,7 @@
 
 package org.apache.druid.frame.processor;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class BlockingQueueOutputChannelFactoryTest extends OutputChannelFactoryTest
 {

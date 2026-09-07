@@ -25,16 +25,16 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class KubernetesWorkItemTest extends EasyMockSupport
 {
   private static final Period LOG_SAVE_TIMEOUT = new Period("PT300S");
@@ -46,7 +46,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Mock
   KubernetesPeonLifecycle kubernetesPeonLifecycle;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     task = NoopTask.create();
@@ -82,7 +82,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         return RunnerTaskState.WAITING;
       }
     };
-    Assert.assertFalse(workItem.isPending());
+    Assertions.assertFalse(workItem.isPending());
   }
 
   @Test
@@ -95,7 +95,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         return RunnerTaskState.PENDING;
       }
     };
-    Assert.assertTrue(workItem.isPending());
+    Assertions.assertTrue(workItem.isPending());
   }
 
   @Test
@@ -108,7 +108,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         return RunnerTaskState.WAITING;
       }
     };
-    Assert.assertFalse(workItem.isRunning());
+    Assertions.assertFalse(workItem.isRunning());
   }
 
   @Test
@@ -121,7 +121,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         return RunnerTaskState.RUNNING;
       }
     };
-    Assert.assertTrue(workItem.isRunning());
+    Assertions.assertTrue(workItem.isRunning());
   }
 
   @Test
@@ -138,7 +138,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
-    Assert.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
+    Assertions.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
   }
 
   @Test
@@ -162,7 +162,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
 
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
-    Assert.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
+    Assertions.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
   }
 
   @Test
@@ -186,7 +186,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
 
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
-    Assert.assertEquals(RunnerTaskState.RUNNING, workItem.getRunnerTaskState());
+    Assertions.assertEquals(RunnerTaskState.RUNNING, workItem.getRunnerTaskState());
   }
 
   @Test
@@ -210,7 +210,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
 
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
-    Assert.assertEquals(RunnerTaskState.NONE, workItem.getRunnerTaskState());
+    Assertions.assertEquals(RunnerTaskState.NONE, workItem.getRunnerTaskState());
   }
 
   @Test
@@ -226,7 +226,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         LOG_SAVE_TIMEOUT.toStandardDuration().getMillis()
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
-    Assert.assertFalse(workItem.streamTaskLogs().isPresent());
+    Assertions.assertFalse(workItem.streamTaskLogs().isPresent());
   }
 
   @Test
@@ -243,34 +243,34 @@ public class KubernetesWorkItemTest extends EasyMockSupport
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
-    Assert.assertEquals(TaskLocation.unknown(), workItem.getLocation());
+    Assertions.assertEquals(TaskLocation.unknown(), workItem.getLocation());
   }
 
   @Test
   public void test_getTaskType()
   {
     workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
-    Assert.assertEquals(task.getType(), workItem.getTaskType());
+    Assertions.assertEquals(task.getType(), workItem.getTaskType());
   }
 
   @Test
   public void test_getDataSource()
   {
     workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
-    Assert.assertEquals(task.getDataSource(), workItem.getDataSource());
+    Assertions.assertEquals(task.getDataSource(), workItem.getDataSource());
   }
 
   @Test
   public void test_getTask()
   {
     workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
-    Assert.assertEquals(task, workItem.getTask());
+    Assertions.assertEquals(task, workItem.getTask());
   }
 
   @Test
   public void test_peonLifeycle()
   {
     workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
-    Assert.assertEquals(kubernetesPeonLifecycle, workItem.getPeonLifeycle());
+    Assertions.assertEquals(kubernetesPeonLifecycle, workItem.getPeonLifeycle());
   }
 }

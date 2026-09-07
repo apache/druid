@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.tdunning.math.stats.MergingDigest;
+import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.aggregation.tdigestsketch.sql.TDigestGenerateSketchSqlAggregator;
 import org.apache.druid.query.aggregation.tdigestsketch.sql.TDigestSketchQuantileSqlAggregator;
@@ -66,6 +67,7 @@ public class TDigestSketchModule implements DruidModule
   public void configure(Binder binder)
   {
     registerSerde();
+    JsonConfigProvider.bind(binder, "druid.tdigest", TDigestConfig.class);
     SqlBindings.addAggregator(binder, TDigestSketchQuantileSqlAggregator.class);
     SqlBindings.addAggregator(binder, TDigestGenerateSketchSqlAggregator.class);
   }

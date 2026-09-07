@@ -24,8 +24,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DDSketchToQuantilesPostAggregatorTest
 {
@@ -41,9 +41,9 @@ public class DDSketchToQuantilesPostAggregatorTest
         DDSketchToQuantilesPostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
-    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
@@ -55,7 +55,7 @@ public class DDSketchToQuantilesPostAggregatorTest
         new double[]{0.25, 0.75}
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "DDSketchToQuantilesPostAggregator{name='post', field=ConstantPostAggregator{name='', constantValue=100}, fractions=[0.25, 0.75]}",
         postAgg.toString()
     );
@@ -69,10 +69,10 @@ public class DDSketchToQuantilesPostAggregatorTest
         new ConstantPostAggregator("", 100),
         new double[]{0.25, 0.75}
     );
-    Assert.assertThrows(
-        "Comparing arrays of quantiles is not supported",
+    Assertions.assertThrows(
         IAE.class,
-        () -> postAgg.getComparator());
+        () -> postAgg.getComparator(),
+        "Comparing arrays of quantiles is not supported");
   }
 
   @Test

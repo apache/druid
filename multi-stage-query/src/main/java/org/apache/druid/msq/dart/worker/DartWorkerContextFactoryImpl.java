@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
@@ -30,19 +31,23 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.dart.guice.DartWorkerConfig;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.WorkerContext;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 
 import java.io.File;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Production implementation of {@link DartWorkerContextFactory}.
@@ -56,14 +61,17 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
   private final Injector injector;
   private final ServiceClientFactory serviceClientFactory;
   private final DruidProcessingConfig processingConfig;
+  private final DartWorkerConfig workerConfig;
   private final SegmentWrangler segmentWrangler;
-  private final GroupingEngine groupingEngine;
-  private final DataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
+  private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final Outbox<ControllerMessage> outbox;
   private final DartDataServerQueryHandlerFactory dataServerQueryHandlerFactory;
   private final ServiceEmitter emitter;
+  private final List<InputSliceReaderProvider> inputSliceReaderProviders;
 
   @Inject
   public DartWorkerContextFactoryImpl(
@@ -74,14 +82,17 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
       Injector injector,
       @EscalatedGlobal ServiceClientFactory serviceClientFactory,
       DruidProcessingConfig processingConfig,
+      DartWorkerConfig workerConfig,
       SegmentWrangler segmentWrangler,
-      GroupingEngine groupingEngine,
-      @Dart DataSegmentProvider dataSegmentProvider,
+      SegmentManager segmentManager,
+      VirtualStorageManager virtualStorageManager,
+      CoordinatorClient coordinatorClient,
       MemoryIntrospector memoryIntrospector,
       @Dart ProcessingBuffersProvider processingBuffersProvider,
       Outbox<ControllerMessage> outbox,
       DartDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      @Dart Set<InputSliceReaderProvider> inputSliceReaderProviders
   )
   {
     this.selfNode = selfNode;
@@ -91,14 +102,17 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
     this.injector = injector;
     this.serviceClientFactory = serviceClientFactory;
     this.processingConfig = processingConfig;
+    this.workerConfig = workerConfig;
     this.segmentWrangler = segmentWrangler;
-    this.groupingEngine = groupingEngine;
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.coordinatorClient = coordinatorClient;
+    this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
     this.emitter = emitter;
+    this.inputSliceReaderProviders = List.copyOf(inputSliceReaderProviders);
   }
 
   @Override
@@ -116,18 +130,26 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         jsonMapper,
         policyEnforcer,
         injector,
-        new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, null),
+        createWorkerClient(queryId),
         processingConfig,
+        workerConfig,
         segmentWrangler,
-        groupingEngine,
-        dataSegmentProvider,
+        segmentManager,
+        virtualStorageManager,
+        coordinatorClient,
         memoryIntrospector,
         processingBuffersProvider,
         outbox,
         tempDir,
         queryContext,
         dataServerQueryHandlerFactory,
-        emitter
+        emitter,
+        inputSliceReaderProviders
     );
+  }
+
+  protected DartWorkerClient createWorkerClient(String queryId)
+  {
+    return new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, null);
   }
 }

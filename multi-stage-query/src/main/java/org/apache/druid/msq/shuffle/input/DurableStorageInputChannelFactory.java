@@ -29,11 +29,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.indexing.InputChannelFactory;
+import org.apache.druid.msq.exec.InputChannelFactory;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.storage.StorageConnector;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -52,15 +54,20 @@ public abstract class DurableStorageInputChannelFactory implements InputChannelF
   private final ExecutorService remoteInputStreamPool;
   private final String controllerTaskId;
 
+  @Nullable
+  private final WireTransferableContext wireTransferableContext;
+
   public DurableStorageInputChannelFactory(
       final String controllerTaskId,
       final StorageConnector storageConnector,
-      final ExecutorService remoteInputStreamPool
+      final ExecutorService remoteInputStreamPool,
+      @Nullable final WireTransferableContext wireTransferableContext
   )
   {
     this.controllerTaskId = Preconditions.checkNotNull(controllerTaskId, "controllerTaskId");
     this.storageConnector = Preconditions.checkNotNull(storageConnector, "storageConnector");
     this.remoteInputStreamPool = Preconditions.checkNotNull(remoteInputStreamPool, "remoteInputStreamPool");
+    this.wireTransferableContext = wireTransferableContext;
   }
 
   /**
@@ -71,7 +78,8 @@ public abstract class DurableStorageInputChannelFactory implements InputChannelF
       final String controllerTaskId,
       final StorageConnector storageConnector,
       final Closer closer,
-      final boolean isQueryResults
+      final boolean isQueryResults,
+      @Nullable final WireTransferableContext wireTransferableContext
   )
   {
     final String threadNameFormat =
@@ -84,10 +92,16 @@ public abstract class DurableStorageInputChannelFactory implements InputChannelF
       return new DurableStorageQueryResultsInputChannelFactory(
           controllerTaskId,
           storageConnector,
-          remoteInputStreamPool
+          remoteInputStreamPool,
+          wireTransferableContext
       );
     }
-    return new DurableStorageStageInputChannelFactory(controllerTaskId, storageConnector, remoteInputStreamPool);
+    return new DurableStorageStageInputChannelFactory(
+        controllerTaskId,
+        storageConnector,
+        remoteInputStreamPool,
+        wireTransferableContext
+    );
   }
 
 
@@ -124,7 +138,8 @@ public abstract class DurableStorageInputChannelFactory implements InputChannelF
           inputStream,
           remotePartitionPath,
           remoteInputStreamPool,
-          false
+          false,
+          wireTransferableContext
       );
     }
     catch (Exception e) {

@@ -25,6 +25,8 @@ import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.Row;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
@@ -52,22 +54,26 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,12 +100,12 @@ public class SuperSorterTest
     private static final int NUM_THREADS = 1;
     private static final int FRAME_SIZE = 1_000_000;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     private FrameProcessorExecutor exec;
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
       exec = new FrameProcessorExecutor(
@@ -107,7 +113,7 @@ public class SuperSorterTest
       );
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
       exec.getExecutorService().shutdownNow();
@@ -130,24 +136,25 @@ public class SuperSorterTest
           outputPartitionsFuture,
           exec,
           FrameProcessorDecorator.NONE,
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
           FrameType.latestRowBased(),
           2,
           2,
           SuperSorter.UNLIMITED,
           null,
           superSorterProgressTracker,
-          false
+          false,
+          null
       );
 
       superSorter.setNoWorkRunnable(() -> outputPartitionsFuture.set(ClusterByPartitions.oneUniversalPartition()));
       final OutputChannels channels = superSorter.run().get();
-      Assert.assertEquals(1, channels.getAllChannels().size());
+      Assertions.assertEquals(1, channels.getAllChannels().size());
 
       final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
-      Assert.assertTrue(channel.isFinished());
-      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      Assertions.assertTrue(channel.isFinished());
+      Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
       channel.close();
     }
 
@@ -167,23 +174,24 @@ public class SuperSorterTest
           Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
           exec,
           FrameProcessorDecorator.NONE,
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
           FrameType.latestRowBased(),
           2,
           2,
           -1,
           null,
           superSorterProgressTracker,
-          false
+          false,
+          null
       );
 
       final OutputChannels channels = superSorter.run().get();
-      Assert.assertEquals(1, channels.getAllChannels().size());
+      Assertions.assertEquals(1, channels.getAllChannels().size());
 
       final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
-      Assert.assertTrue(channel.isFinished());
-      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      Assertions.assertTrue(channel.isFinished());
+      Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
       channel.close();
     }
 
@@ -203,23 +211,24 @@ public class SuperSorterTest
           Futures.immediateFuture(ClusterByPartitions.oneUniversalPartition()),
           exec,
           FrameProcessorDecorator.NONE,
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
-          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
           FrameType.latestRowBased(),
           2,
           2,
           3,
           null,
           superSorterProgressTracker,
-          false
+          false,
+          null
       );
 
       final OutputChannels channels = superSorter.run().get();
-      Assert.assertEquals(1, channels.getAllChannels().size());
+      Assertions.assertEquals(1, channels.getAllChannels().size());
 
       final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
-      Assert.assertTrue(channel.isFinished());
-      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      Assertions.assertTrue(channel.isFinished());
+      Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
       channel.close();
     }
   }
@@ -228,7 +237,6 @@ public class SuperSorterTest
    * Parameterized test cases that use {@link TestIndex#getNoRollupIncrementalTestIndex} with various frame sizes,
    * numbers of channels, and worker configurations.
    */
-  @RunWith(Parameterized.class)
   public static class ParameterizedCasesTest extends InitializedNullHandlingTest
   {
     private static CursorFactory CURSOR_FACTORY;
@@ -240,26 +248,19 @@ public class SuperSorterTest
      */
     private static final Map<ClusterBy, List<List<Object>>> SORTED_TEST_ROWS = new HashMap<>();
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    private final FrameType outputFrameType;
-    private final int maxRowsPerFrame;
-    private final int maxBytesPerFrame;
-    private final int numChannels;
-    private final int maxActiveProcessors;
-    private final int maxChannelsPerProcessor;
-    private final int numThreads;
-    private final boolean isComposedStorage;
-    private final boolean partitionsDeferred;
-    private final long limitHint;
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     private RowSignature signature;
     private FrameProcessorExecutor exec;
     private List<ReadableFrameChannel> inputChannels;
     private FrameReader frameReader;
 
-    public ParameterizedCasesTest(
+    /**
+     * One case of the {@link #constructorFeeder()} matrix. Supplied as a single test-method parameter rather than
+     * as ten positional ones, so the test signatures stay readable.
+     */
+    record SortCase(
         FrameType outputFrameType,
         int maxRowsPerFrame,
         int maxBytesPerFrame,
@@ -272,33 +273,15 @@ public class SuperSorterTest
         long limitHint
     )
     {
-      this.outputFrameType = outputFrameType;
-      this.maxRowsPerFrame = maxRowsPerFrame;
-      this.maxBytesPerFrame = maxBytesPerFrame;
-      this.numChannels = numChannels;
-      this.maxActiveProcessors = maxActiveProcessors;
-      this.maxChannelsPerProcessor = maxChannelsPerProcessor;
-      this.numThreads = numThreads;
-      this.isComposedStorage = isComposedStorage;
-      this.partitionsDeferred = partitionsDeferred;
-      this.limitHint = limitHint;
     }
 
-    @Parameterized.Parameters(
-        name = "outputFrameType = {0}, "
-               + "maxRowsPerFrame = {1}, "
-               + "maxBytesPerFrame = {2}, "
-               + "numChannels = {3}, "
-               + "maxActiveProcessors = {4}, "
-               + "maxChannelsPerProcessor= {5}, "
-               + "numThreads = {6}, "
-               + "isComposedStorage = {7}, "
-               + "partitionsDeferred = {8}, "
-               + "limitHint = {9}"
-    )
-    public static Iterable<Object[]> constructorFeeder()
+    /**
+     * Cases for the tests below. These are {@link ParameterizedTest} rather than a parameterized class
+     * for performance reasons: <a href="https://github.com/apache/maven-surefire/issues/3439">maven-surefire#3439</a>.
+     */
+    public static Iterable<SortCase> constructorFeeder()
     {
-      final List<Object[]> constructors = new ArrayList<>();
+      final List<SortCase> constructors = new ArrayList<>();
 
       final FrameType[] rowBasedFrameTypes =
           Arrays.stream(FrameType.values()).filter(FrameType::isRowBased).toArray(FrameType[]::new);
@@ -315,7 +298,7 @@ public class SuperSorterTest
                       for (boolean partitionsDeferred : new boolean[]{true, false}) {
                         for (long limitHint : new long[]{SuperSorter.UNLIMITED, 3, 1_000}) {
                           constructors.add(
-                              new Object[]{
+                              new SortCase(
                                   outputFrameType,
                                   maxRowsPerFrame,
                                   maxBytesPerFrame,
@@ -326,7 +309,7 @@ public class SuperSorterTest
                                   isComposedStorage,
                                   partitionsDeferred,
                                   limitHint
-                              }
+                              )
                           );
                         }
                       }
@@ -344,7 +327,7 @@ public class SuperSorterTest
       for (boolean isComposedStorage : new boolean[]{true, false}) {
         for (long limitHint : new long[]{SuperSorter.UNLIMITED, 3, 1_000}) {
           constructors.add(
-              new Object[]{
+              new SortCase(
                   FrameType.latestRowBased(),
                   1 /* maxRowsPerFrame */,
                   20_000 /* maxBytesPerFrame */,
@@ -355,7 +338,7 @@ public class SuperSorterTest
                   isComposedStorage,
                   false /* partitionsDeferred */,
                   limitHint
-              }
+              )
           );
         }
       }
@@ -363,7 +346,7 @@ public class SuperSorterTest
       return constructors;
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass()
     {
       CURSOR_FACTORY = new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
@@ -371,7 +354,7 @@ public class SuperSorterTest
           FrameSequenceBuilder.signatureWithRowNumber(CURSOR_FACTORY.getRowSignature());
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass()
     {
       CURSOR_FACTORY = null;
@@ -379,15 +362,7 @@ public class SuperSorterTest
       SORTED_TEST_ROWS.clear();
     }
 
-    @Before
-    public void setUp()
-    {
-      exec = new FrameProcessorExecutor(
-          MoreExecutors.listeningDecorator(Execs.multiThreaded(numThreads, getClass().getSimpleName() + "[%d]"))
-      );
-    }
-
-    @After
+    @AfterEach
     public void tearDown() throws Exception
     {
       if (exec != null) {
@@ -403,44 +378,53 @@ public class SuperSorterTest
      *
      * Sets {@link #inputChannels}, {@link #signature}, and {@link #frameReader}.
      */
-    private void setUpInputChannels(final ClusterBy clusterBy) throws Exception
+    private void setUpInputChannels(final SortCase sortCase, final ClusterBy clusterBy) throws Exception
     {
       if (signature != null || inputChannels != null) {
         throw new ISE("Channels already created for this case");
       }
 
+      exec = new FrameProcessorExecutor(
+          MoreExecutors.listeningDecorator(
+              Execs.multiThreaded(sortCase.numThreads(), getClass().getSimpleName() + "[%d]")
+          )
+      );
+
       final FrameSequenceBuilder frameSequenceBuilder =
           FrameSequenceBuilder.fromCursorFactory(CURSOR_FACTORY)
-                              .maxRowsPerFrame(maxRowsPerFrame)
+                              .maxRowsPerFrame(sortCase.maxRowsPerFrame())
                               .sortBy(clusterBy.getColumns())
-                              .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(maxBytesPerFrame)))
+                              .allocator(
+                                  ArenaMemoryAllocator.create(ByteBuffer.allocate(sortCase.maxBytesPerFrame()))
+                              )
                               .frameType(FrameType.latestRowBased())
                               .populateRowNumber();
 
-      inputChannels = makeRoundRobinChannels(frameSequenceBuilder.frames(), numChannels);
+      inputChannels = makeRoundRobinChannels(frameSequenceBuilder.frames(), sortCase.numChannels());
       signature = FrameWriters.sortableSignature(CURSOR_FACTORY_SIGNATURE_WITH_ROW_NUMBER, clusterBy.getColumns());
       frameReader = FrameReader.create(signature);
     }
 
     private void verifySuperSorter(
+        final SortCase sortCase,
         final ClusterBy clusterBy,
         final ClusterByPartitions clusterByPartitions
     ) throws Exception
     {
       final File tempFolder = temporaryFolder.newFolder();
-      final OutputChannelFactory outputChannelFactory = isComposedStorage ? new ComposingOutputChannelFactory(
+      final OutputChannelFactory outputChannelFactory = sortCase.isComposedStorage() ? new ComposingOutputChannelFactory(
           ImmutableList.of(
-              new FileOutputChannelFactory(new File(tempFolder, "1"), maxBytesPerFrame, null),
-              new FileOutputChannelFactory(new File(tempFolder, "2"), maxBytesPerFrame, null)
+              new FileOutputChannelFactory(new File(tempFolder, "1"), sortCase.maxBytesPerFrame(), null, FrameTestUtil.WT_CONTEXT_LEGACY),
+              new FileOutputChannelFactory(new File(tempFolder, "2"), sortCase.maxBytesPerFrame(), null, FrameTestUtil.WT_CONTEXT_LEGACY)
           ),
-          maxBytesPerFrame
-      ) : new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null);
-      final RowKeyReader keyReader = clusterBy.keyReader(signature, outputFrameType);
+          sortCase.maxBytesPerFrame()
+      ) : new FileOutputChannelFactory(tempFolder, sortCase.maxBytesPerFrame(), null, FrameTestUtil.WT_CONTEXT_LEGACY);
+      final RowKeyReader keyReader = clusterBy.keyReader(signature, sortCase.outputFrameType());
       final Comparator<RowKey> keyComparator = clusterBy.keyComparator(signature);
       final SettableFuture<ClusterByPartitions> clusterByPartitionsFuture = SettableFuture.create();
       final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
 
-      if (!partitionsDeferred) {
+      if (!sortCase.partitionsDeferred()) {
         clusterByPartitionsFuture.set(clusterByPartitions);
       }
 
@@ -451,24 +435,25 @@ public class SuperSorterTest
           clusterByPartitionsFuture,
           exec,
           FrameProcessorDecorator.NONE,
-          makeOutputChannelFactory(new FileOutputChannelFactory(tempFolder, maxBytesPerFrame, null)),
+          makeOutputChannelFactory(new FileOutputChannelFactory(tempFolder, sortCase.maxBytesPerFrame(), null, FrameTestUtil.WT_CONTEXT_LEGACY)),
           makeOutputChannelFactory(outputChannelFactory),
-          outputFrameType,
-          maxActiveProcessors,
-          maxChannelsPerProcessor,
-          limitHint,
+          sortCase.outputFrameType(),
+          sortCase.maxActiveProcessors(),
+          sortCase.maxChannelsPerProcessor(),
+          sortCase.limitHint(),
           null,
           superSorterProgressTracker,
-          false
+          false,
+          null
       );
 
-      if (partitionsDeferred) {
+      if (sortCase.partitionsDeferred()) {
         superSorter.setNoWorkRunnable(() -> clusterByPartitionsFuture.set(clusterByPartitions));
       }
 
       final OutputChannels outputChannels = superSorter.run().get();
-      Assert.assertEquals(clusterByPartitions.size(), outputChannels.getAllChannels().size());
-      Assert.assertEquals(Double.valueOf(1.0), superSorterProgressTracker.snapshot().getProgressDigest());
+      Assertions.assertEquals(clusterByPartitions.size(), outputChannels.getAllChannels().size());
+      Assertions.assertEquals(Double.valueOf(1.0), superSorterProgressTracker.snapshot().getProgressDigest());
 
       final int[] clusterByColumns = clusterBy.getColumns().stream().mapToInt(
           part -> signature.indexOf(part.columnName())
@@ -492,11 +477,11 @@ public class SuperSorterTest
                 array[i] = row.get(clusterByColumns[i]);
               }
 
-              final RowKey key = createKey(clusterBy, array);
+              final RowKey key = createKey(sortCase, clusterBy, array);
 
               if (!(partition.getStart() == null || keyComparator.compare(key, partition.getStart()) >= 0)) {
                 // Defer formatting of error message until it's actually needed
-                Assert.fail(
+                Assertions.fail(
                     StringUtils.format(
                         "Key %s >= partition %,d start %s",
                         keyReader.read(key),
@@ -507,7 +492,7 @@ public class SuperSorterTest
               }
 
               if (!(partition.getEnd() == null || keyComparator.compare(key, partition.getEnd()) < 0)) {
-                Assert.fail(
+                Assertions.fail(
                     StringUtils.format(
                         "Key %s < partition %,d end %s",
                         keyReader.read(key),
@@ -522,19 +507,20 @@ public class SuperSorterTest
         );
       }
 
-      if (limitHint != SuperSorter.UNLIMITED) {
-        MatcherAssert.assertThat(readRows.size(), Matchers.greaterThanOrEqualTo(Ints.checkedCast(limitHint)));
+      if (sortCase.limitHint() != SuperSorter.UNLIMITED) {
+        MatcherAssert.assertThat(readRows.size(), Matchers.greaterThanOrEqualTo(Ints.checkedCast(sortCase.limitHint())));
       }
 
       final Sequence<List<Object>> expectedRows =
           Sequences.simple(getOrComputeSortedTestRows(clusterBy))
-                   .limit(limitHint == SuperSorter.UNLIMITED ? Long.MAX_VALUE : readRows.size());
+                   .limit(sortCase.limitHint() == SuperSorter.UNLIMITED ? Long.MAX_VALUE : readRows.size());
 
       FrameTestUtil.assertRowsEqual(expectedRows, Sequences.simple(readRows));
     }
 
-    @Test
-    public void test_clusterByQualityLongAscRowNumberAsc_onePartition() throws Exception
+    @ParameterizedTest
+    @MethodSource("constructorFeeder")
+    public void test_clusterByQualityLongAscRowNumberAsc_onePartition(final SortCase sortCase) throws Exception
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
@@ -544,12 +530,13 @@ public class SuperSorterTest
           0
       );
 
-      setUpInputChannels(clusterBy);
-      verifySuperSorter(clusterBy, ClusterByPartitions.oneUniversalPartition());
+      setUpInputChannels(sortCase, clusterBy);
+      verifySuperSorter(sortCase, clusterBy, ClusterByPartitions.oneUniversalPartition());
     }
 
-    @Test
-    public void test_clusterByQualityLongAscRowNumberAsc_twoPartitionsOneEmpty() throws Exception
+    @ParameterizedTest
+    @MethodSource("constructorFeeder")
+    public void test_clusterByQualityLongAscRowNumberAsc_twoPartitionsOneEmpty(final SortCase sortCase) throws Exception
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
@@ -559,10 +546,11 @@ public class SuperSorterTest
           0
       );
 
-      setUpInputChannels(clusterBy);
+      setUpInputChannels(sortCase, clusterBy);
 
-      final RowKey zeroZero = createKey(clusterBy, 0L, 0L);
+      final RowKey zeroZero = createKey(sortCase, clusterBy, 0L, 0L);
       verifySuperSorter(
+          sortCase,
           clusterBy,
           new ClusterByPartitions(
               ImmutableList.of(
@@ -573,8 +561,9 @@ public class SuperSorterTest
       );
     }
 
-    @Test
-    public void test_clusterByQualityDescRowNumberAsc_fourPartitions() throws Exception
+    @ParameterizedTest
+    @MethodSource("constructorFeeder")
+    public void test_clusterByQualityDescRowNumberAsc_fourPartitions(final SortCase sortCase) throws Exception
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
@@ -584,36 +573,37 @@ public class SuperSorterTest
           0
       );
 
-      setUpInputChannels(clusterBy);
+      setUpInputChannels(sortCase, clusterBy);
 
       final ClusterByPartitions partitions = new ClusterByPartitions(
           ImmutableList.of(
               new ClusterByPartition(
-                  createKey(clusterBy, "travel", 8L),
-                  createKey(clusterBy, "premium", 506L)
+                  createKey(sortCase, clusterBy, "travel", 8L),
+                  createKey(sortCase, clusterBy, "premium", 506L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, "premium", 506L),
-                  createKey(clusterBy, "mezzanine", 204L)
+                  createKey(sortCase, clusterBy, "premium", 506L),
+                  createKey(sortCase, clusterBy, "mezzanine", 204L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, "mezzanine", 204L),
-                  createKey(clusterBy, "health", 900L)
+                  createKey(sortCase, clusterBy, "mezzanine", 204L),
+                  createKey(sortCase, clusterBy, "health", 900L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, "health", 900L),
+                  createKey(sortCase, clusterBy, "health", 900L),
                   null
               )
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(sortCase, clusterBy, partitions);
     }
 
-    @Test
-    public void test_clusterByTimeAscMarketAscRowNumberAsc_fourPartitions() throws Exception
+    @ParameterizedTest
+    @MethodSource("constructorFeeder")
+    public void test_clusterByTimeAscMarketAscRowNumberAsc_fourPartitions(final SortCase sortCase) throws Exception
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
@@ -624,36 +614,37 @@ public class SuperSorterTest
           0
       );
 
-      setUpInputChannels(clusterBy);
+      setUpInputChannels(sortCase, clusterBy);
 
       final ClusterByPartitions partitions = new ClusterByPartitions(
           ImmutableList.of(
               new ClusterByPartition(
-                  createKey(clusterBy, 1294790400000L, "spot", 0L),
-                  createKey(clusterBy, 1296864000000L, "spot", 302L)
+                  createKey(sortCase, clusterBy, 1294790400000L, "spot", 0L),
+                  createKey(sortCase, clusterBy, 1296864000000L, "spot", 302L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1296864000000L, "spot", 302L),
-                  createKey(clusterBy, 1298851200000L, "spot", 604L)
+                  createKey(sortCase, clusterBy, 1296864000000L, "spot", 302L),
+                  createKey(sortCase, clusterBy, 1298851200000L, "spot", 604L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1298851200000L, "spot", 604L),
-                  createKey(clusterBy, 1300838400000L, "total_market", 906L)
+                  createKey(sortCase, clusterBy, 1298851200000L, "spot", 604L),
+                  createKey(sortCase, clusterBy, 1300838400000L, "total_market", 906L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1300838400000L, "total_market", 906L),
+                  createKey(sortCase, clusterBy, 1300838400000L, "total_market", 906L),
                   null
               )
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(sortCase, clusterBy, partitions);
     }
 
-    @Test
-    public void test_clusterByPlacementishDescRowNumberAsc_fourPartitions() throws Exception
+    @ParameterizedTest
+    @MethodSource("constructorFeeder")
+    public void test_clusterByPlacementishDescRowNumberAsc_fourPartitions(final SortCase sortCase) throws Exception
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
@@ -663,36 +654,37 @@ public class SuperSorterTest
           0
       );
 
-      setUpInputChannels(clusterBy);
+      setUpInputChannels(sortCase, clusterBy);
 
       final ClusterByPartitions partitions = new ClusterByPartitions(
           ImmutableList.of(
               new ClusterByPartition(
-                  createKey(clusterBy, ImmutableList.of("preferred", "t"), 7L),
-                  createKey(clusterBy, ImmutableList.of("p", "preferred"), 506L)
+                  createKey(sortCase, clusterBy, ImmutableList.of("preferred", "t"), 7L),
+                  createKey(sortCase, clusterBy, ImmutableList.of("p", "preferred"), 506L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, ImmutableList.of("p", "preferred"), 506L),
-                  createKey(clusterBy, ImmutableList.of("m", "preferred"), 204L)
+                  createKey(sortCase, clusterBy, ImmutableList.of("p", "preferred"), 506L),
+                  createKey(sortCase, clusterBy, ImmutableList.of("m", "preferred"), 204L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, ImmutableList.of("m", "preferred"), 204L),
-                  createKey(clusterBy, ImmutableList.of("h", "preferred"), 900L)
+                  createKey(sortCase, clusterBy, ImmutableList.of("m", "preferred"), 204L),
+                  createKey(sortCase, clusterBy, ImmutableList.of("h", "preferred"), 900L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, ImmutableList.of("h", "preferred"), 900L),
+                  createKey(sortCase, clusterBy, ImmutableList.of("h", "preferred"), 900L),
                   null
               )
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(sortCase, clusterBy, partitions);
     }
 
-    @Test
-    public void test_clusterByQualityLongDescRowNumberAsc_fourPartitions() throws Exception
+    @ParameterizedTest
+    @MethodSource("constructorFeeder")
+    public void test_clusterByQualityLongDescRowNumberAsc_fourPartitions(final SortCase sortCase) throws Exception
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
@@ -702,36 +694,37 @@ public class SuperSorterTest
           0
       );
 
-      setUpInputChannels(clusterBy);
+      setUpInputChannels(sortCase, clusterBy);
 
       final ClusterByPartitions partitions = new ClusterByPartitions(
           ImmutableList.of(
               new ClusterByPartition(
-                  createKey(clusterBy, 1800L, 8L),
-                  createKey(clusterBy, 1600L, 506L)
+                  createKey(sortCase, clusterBy, 1800L, 8L),
+                  createKey(sortCase, clusterBy, 1600L, 506L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1600L, 506L),
-                  createKey(clusterBy, 1400L, 204L)
+                  createKey(sortCase, clusterBy, 1600L, 506L),
+                  createKey(sortCase, clusterBy, 1400L, 204L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1400L, 204L),
-                  createKey(clusterBy, 1300L, 900L)
+                  createKey(sortCase, clusterBy, 1400L, 204L),
+                  createKey(sortCase, clusterBy, 1300L, 900L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1300L, 900L),
+                  createKey(sortCase, clusterBy, 1300L, 900L),
                   null
               )
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(sortCase, clusterBy, partitions);
     }
 
-    @Test
-    public void test_clusterByQualityLongDescRowNumberAsc_fourPartitions_durableStorage() throws Exception
+    @ParameterizedTest
+    @MethodSource("constructorFeeder")
+    public void test_clusterByQualityLongDescRowNumberAsc_fourPartitions_durableStorage(final SortCase sortCase) throws Exception
     {
       final ClusterBy clusterBy = new ClusterBy(
           ImmutableList.of(
@@ -741,38 +734,38 @@ public class SuperSorterTest
           0
       );
 
-      setUpInputChannels(clusterBy);
+      setUpInputChannels(sortCase, clusterBy);
 
       final ClusterByPartitions partitions = new ClusterByPartitions(
           ImmutableList.of(
               new ClusterByPartition(
-                  createKey(clusterBy, 1800L, 8L),
-                  createKey(clusterBy, 1600L, 506L)
+                  createKey(sortCase, clusterBy, 1800L, 8L),
+                  createKey(sortCase, clusterBy, 1600L, 506L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1600L, 506L),
-                  createKey(clusterBy, 1400L, 204L)
+                  createKey(sortCase, clusterBy, 1600L, 506L),
+                  createKey(sortCase, clusterBy, 1400L, 204L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1400L, 204L),
-                  createKey(clusterBy, 1300L, 900L)
+                  createKey(sortCase, clusterBy, 1400L, 204L),
+                  createKey(sortCase, clusterBy, 1300L, 900L)
               ),
               new ClusterByPartition(
-                  createKey(clusterBy, 1300L, 900L),
+                  createKey(sortCase, clusterBy, 1300L, 900L),
                   null
               )
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
-      verifySuperSorter(clusterBy, partitions);
+      verifySuperSorter(sortCase, clusterBy, partitions);
     }
 
-    private RowKey createKey(final ClusterBy clusterBy, final Object... objects)
+    private RowKey createKey(final SortCase sortCase, final ClusterBy clusterBy, final Object... objects)
     {
       final RowSignature keySignature = KeyTestUtils.createKeySignature(clusterBy.getColumns(), signature);
-      return KeyTestUtils.createKey(keySignature, outputFrameType, objects);
+      return KeyTestUtils.createKey(keySignature, sortCase.outputFrameType(), objects);
     }
 
     /**
@@ -816,6 +809,460 @@ public class SuperSorterTest
               keyComparator
           )
       ).toList();
+    }
+  }
+
+  /**
+   * Parameterized test cases for the combiner functionality.
+   */
+  @ParameterizedClass
+  @MethodSource("constructorFeeder")
+  public static class CombinerTest extends InitializedNullHandlingTest
+  {
+    private static final int FRAME_SIZE = 1_000_000;
+
+    private static final RowSignature SIGNATURE = RowSignature.builder()
+                                                              .add("key", ColumnType.STRING)
+                                                              .add("value", ColumnType.LONG)
+                                                              .build();
+
+    private static final ClusterBy CLUSTER_BY = new ClusterBy(
+        ImmutableList.of(new KeyColumn("key", KeyOrder.ASCENDING)),
+        0
+    );
+
+    private static final RowSignature SORTABLE_SIGNATURE =
+        FrameWriters.sortableSignature(SIGNATURE, CLUSTER_BY.getColumns());
+
+    public static Iterable<Object[]> constructorFeeder()
+    {
+      final List<Object[]> constructors = new ArrayList<>();
+      for (int maxRowsPerFrame : new int[]{1, 2, 3, 4, 5, 6}) {
+        for (int maxChannelsPerMerger : new int[]{2, 3}) {
+          constructors.add(new Object[]{maxRowsPerFrame, maxChannelsPerMerger});
+        }
+      }
+      return constructors;
+    }
+
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
+    private final int maxRowsPerFrame;
+    private final int maxChannelsPerMerger;
+    private FrameProcessorExecutor exec;
+
+    public CombinerTest(final int maxRowsPerFrame, final int maxChannelsPerMerger)
+    {
+      this.maxRowsPerFrame = maxRowsPerFrame;
+      this.maxChannelsPerMerger = maxChannelsPerMerger;
+    }
+
+    @BeforeEach
+    public void setUp()
+    {
+      exec = new FrameProcessorExecutor(
+          MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "super-sorter-combiner-test-%d"))
+      );
+    }
+
+    @AfterEach
+    public void tearDown()
+    {
+      exec.getExecutorService().shutdownNow();
+    }
+
+    /**
+     * Test that combining works in direct mode: input data with duplicate keys produces fewer output rows
+     * with combined values.
+     */
+    @Test
+    public void testCombineDirectMode() throws Exception
+    {
+      final List<Object[][]> channelData = ImmutableList.of(
+          new Object[][]{{"a", 1L}, {"b", 2L}, {"c", 3L}},
+          new Object[][]{{"a", 10L}, {"b", 20L}, {"c", 30L}}
+      );
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          2,
+          SuperSorter.UNLIMITED
+      );
+
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("a", 11L),
+              ImmutableList.of("b", 22L),
+              ImmutableList.of("c", 33L)
+          ),
+          rows
+      );
+    }
+
+    /**
+     * Test that combining works in external mode with many channels forcing multi-level merge.
+     */
+    @Test
+    public void testCombineExternalMode() throws Exception
+    {
+      final List<Object[][]> channelData = new ArrayList<>();
+      for (int i = 0; i < 10; i++) {
+        channelData.add(new Object[][]{{"a", 1L}, {"b", 1L}});
+      }
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          1,
+          SuperSorter.UNLIMITED
+      );
+
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("a", 10L),
+              ImmutableList.of("b", 10L)
+          ),
+          rows
+      );
+    }
+
+    /**
+     * Test that combining works correctly when output is partitioned.
+     */
+    @Test
+    public void testCombineWithPartitions() throws Exception
+    {
+      // Two partitions: [null, c) and [c, null)
+      final RowKey partitionBoundary = KeyTestUtils.createKey(
+          KeyTestUtils.createKeySignature(CLUSTER_BY.getColumns(), SORTABLE_SIGNATURE),
+          FrameType.latestRowBased(),
+          "c"
+      );
+
+      final ClusterByPartitions partitions = new ClusterByPartitions(
+          ImmutableList.of(
+              new ClusterByPartition(null, partitionBoundary),
+              new ClusterByPartition(partitionBoundary, null)
+          )
+      );
+
+      final List<Object[][]> channelData = ImmutableList.of(
+          new Object[][]{{"a", 1L}, {"b", 2L}, {"c", 3L}, {"d", 4L}},
+          new Object[][]{{"a", 10L}, {"b", 20L}, {"c", 30L}, {"d", 40L}}
+      );
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          partitions,
+          2,
+          SuperSorter.UNLIMITED
+      );
+
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("a", 11L),
+              ImmutableList.of("b", 22L),
+              ImmutableList.of("c", 33L),
+              ImmutableList.of("d", 44L)
+          ),
+          rows
+      );
+    }
+
+    /**
+     * Test combining when all rows across all channels have the same key.
+     */
+    @Test
+    public void testCombineAllSameKey() throws Exception
+    {
+      final List<Object[][]> channelData = new ArrayList<>();
+      for (int i = 0; i < 5; i++) {
+        channelData.add(new Object[][]{{"x", 1L}, {"x", 2L}, {"x", 3L}});
+      }
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          2,
+          SuperSorter.UNLIMITED
+      );
+
+      // 5 channels * (1 + 2 + 3) = 30
+      Assertions.assertEquals(
+          ImmutableList.of(ImmutableList.of("x", 30L)),
+          rows
+      );
+    }
+
+    /**
+     * Test combining with row limits.
+     */
+    @Test
+    public void testCombineWithRowLimit() throws Exception
+    {
+      final List<Object[][]> channelData = ImmutableList.of(
+          new Object[][]{{"a", 1L}, {"b", 2L}, {"c", 3L}},
+          new Object[][]{{"a", 10L}, {"b", 20L}, {"c", 30L}}
+      );
+
+      for (int limit = 1; limit <= 3; limit++) {
+        final List<List<Object>> rows = runCombiningSuperSorter(
+            SIGNATURE,
+            CLUSTER_BY,
+            SORTABLE_SIGNATURE,
+            channelData,
+            ClusterByPartitions.oneUniversalPartition(),
+            2,
+            limit
+        );
+
+        Assertions.assertEquals(
+            limit,
+            rows.size(),
+            StringUtils.format("limit[%d]: expected exactly %d row(s), got %d", limit, limit, rows.size())
+        );
+        Assertions.assertEquals(ImmutableList.of("a", 11L), rows.get(0));
+        if (limit >= 2) {
+          Assertions.assertEquals(ImmutableList.of("b", 22L), rows.get(1));
+        }
+        if (limit >= 3) {
+          Assertions.assertEquals(ImmutableList.of("c", 33L), rows.get(2));
+        }
+      }
+    }
+
+    /**
+     * Test combining with rowLimit = 1 and all-same-key input: single combined row.
+     */
+    @Test
+    public void testCombineAllSameKeyWithRowLimit1() throws Exception
+    {
+      final List<Object[][]> channelData = ImmutableList.of(
+          new Object[][]{{"x", 1L}},
+          new Object[][]{{"x", 2L}},
+          new Object[][]{{"x", 3L}}
+      );
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          2,
+          1
+      );
+
+      // All rows combine to one; rowLimit = 1 is satisfied.
+      Assertions.assertEquals(
+          ImmutableList.of(ImmutableList.of("x", 6L)),
+          rows
+      );
+    }
+
+    /**
+     * Test combining with a single input channel where duplicate keys are within the same sorted stream.
+     */
+    @Test
+    public void testCombineSingleChannel() throws Exception
+    {
+      final List<Object[][]> channelData = ImmutableList.of(
+          new Object[][]{{"a", 1L}, {"a", 2L}, {"b", 3L}, {"b", 4L}}
+      );
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          1,
+          SuperSorter.UNLIMITED
+      );
+
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("a", 3L),
+              ImmutableList.of("b", 7L)
+          ),
+          rows
+      );
+    }
+
+    /**
+     * Test combining with empty input channels.
+     */
+    @Test
+    public void testCombineEmptyInput() throws Exception
+    {
+      final List<Object[][]> channelData = ImmutableList.of(new Object[][]{});
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          SIGNATURE,
+          CLUSTER_BY,
+          SORTABLE_SIGNATURE,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          1,
+          SuperSorter.UNLIMITED
+      );
+
+      Assertions.assertEquals(ImmutableList.of(), rows);
+    }
+
+    /**
+     * Test combining with a LONG key column, which exercises {@link TrackingColumnValueSelector}.
+     */
+    @Test
+    public void testCombineWithLongKey() throws Exception
+    {
+      final RowSignature longKeySignature =
+          RowSignature.builder()
+                      .add("key", ColumnType.LONG)
+                      .add("value", ColumnType.LONG)
+                      .build();
+
+      final ClusterBy longKeyClusterBy = new ClusterBy(
+          ImmutableList.of(new KeyColumn("key", KeyOrder.ASCENDING)),
+          0
+      );
+
+      final RowSignature longKeySortableSignature =
+          FrameWriters.sortableSignature(longKeySignature, longKeyClusterBy.getColumns());
+
+      final List<Object[][]> channelData = ImmutableList.of(
+          new Object[][]{{1L, 10L}, {2L, 20L}, {3L, 30L}},
+          new Object[][]{{1L, 100L}, {2L, 200L}, {3L, 300L}}
+      );
+
+      final List<List<Object>> rows = runCombiningSuperSorter(
+          longKeySignature,
+          longKeyClusterBy,
+          longKeySortableSignature,
+          channelData,
+          ClusterByPartitions.oneUniversalPartition(),
+          2,
+          SuperSorter.UNLIMITED
+      );
+
+      Assertions.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of(1L, 110L),
+              ImmutableList.of(2L, 220L),
+              ImmutableList.of(3L, 330L)
+          ),
+          rows
+      );
+    }
+
+    /**
+     * Helper that runs a combining SuperSorter with the given signature, channel data, partitions,
+     * maxActiveProcessors, and rowLimit. Returns all output rows across all partitions.
+     */
+    private List<List<Object>> runCombiningSuperSorter(
+        final RowSignature signature,
+        final ClusterBy clusterBy,
+        final RowSignature sortableSignature,
+        final List<Object[][]> channelData,
+        final ClusterByPartitions partitions,
+        final int maxActiveProcessors,
+        final long rowLimit
+    ) throws Exception
+    {
+      final FrameReader frameReader = FrameReader.create(sortableSignature);
+
+      final List<ReadableFrameChannel> channels = new ArrayList<>();
+      for (final Object[][] data : channelData) {
+        channels.add(makeFrameChannel(signature, clusterBy, data));
+      }
+
+      final File tempFolder = temporaryFolder.newFolder();
+
+      final SuperSorter superSorter = new SuperSorter(
+          channels,
+          frameReader,
+          clusterBy.getColumns(),
+          Futures.immediateFuture(partitions),
+          exec,
+          FrameProcessorDecorator.NONE,
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          new FileOutputChannelFactory(tempFolder, FRAME_SIZE, null, FrameTestUtil.WT_CONTEXT_LEGACY),
+          FrameType.latestRowBased(),
+          maxActiveProcessors,
+          maxChannelsPerMerger,
+          rowLimit,
+          null,
+          new SuperSorterProgressTracker(),
+          false,
+          () -> new SummingFrameCombiner(sortableSignature, 1)
+      );
+
+      final OutputChannels outputChannels = superSorter.run().get();
+
+      final List<List<Object>> rows = new ArrayList<>();
+      for (final OutputChannel channel : outputChannels.getAllChannels()) {
+        FrameTestUtil.readRowsFromFrameChannel(channel.getReadableChannel(), frameReader)
+                     .forEach(rows::add);
+      }
+
+      return rows;
+    }
+
+    private ReadableFrameChannel makeFrameChannel(
+        final RowSignature signature,
+        final ClusterBy clusterBy,
+        final Object[][] rows
+    ) throws IOException
+    {
+      final List<Row> rowList = new ArrayList<>();
+      for (final Object[] row : rows) {
+        final Map<String, Object> map = new HashMap<>();
+        for (int i = 0; i < signature.size(); i++) {
+          map.put(signature.getColumnName(i), row[i]);
+        }
+        rowList.add(new MapBasedRow(0L, map));
+      }
+
+      final RowBasedCursorFactory<Row> cursorFactory =
+          new RowBasedCursorFactory<>(
+              Sequences.simple(rowList),
+              RowAdapters.standardRow(),
+              signature
+          );
+
+      final Sequence<Frame> frames =
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
+                              .maxRowsPerFrame(maxRowsPerFrame)
+                              .sortBy(clusterBy.getColumns())
+                              .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(FRAME_SIZE)))
+                              .frameType(FrameType.latestRowBased())
+                              .frames();
+
+      final BlockingQueueFrameChannel channel = new BlockingQueueFrameChannel(100);
+      frames.forEach(frame -> {
+        try {
+          channel.writable().write(frame);
+        }
+        catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      });
+      channel.writable().close();
+      return channel.readable();
     }
   }
 

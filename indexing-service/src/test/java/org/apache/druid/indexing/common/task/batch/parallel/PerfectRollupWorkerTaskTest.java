@@ -30,9 +30,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -41,18 +40,16 @@ import java.util.Map;
 
 public class PerfectRollupWorkerTaskTest
 {
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   @Test
   public void requiresForceGuaranteedRollup()
   {
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("forceGuaranteedRollup must be set");
-
-    new PerfectRollupWorkerTaskBuilder()
-        .forceGuaranteedRollup(false)
-        .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new PerfectRollupWorkerTaskBuilder()
+            .forceGuaranteedRollup(false)
+            .build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("forceGuaranteedRollup must be set"));
   }
 
   @Test

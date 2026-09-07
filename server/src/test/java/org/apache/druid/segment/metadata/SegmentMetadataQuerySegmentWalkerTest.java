@@ -63,10 +63,10 @@ import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -90,10 +90,10 @@ public class SegmentMetadataQuerySegmentWalkerTest
   private TestCoordinatorServerView testCoordinatorServerView;
   private Module module;
 
-  @ClassRule
-  public static QueryStackTests.Junit4ConglomerateRule conglomerateRule = new QueryStackTests.Junit4ConglomerateRule();
+  @RegisterExtension
+  public static QueryStackTests.ConglomerateExtension conglomerateRule = new QueryStackTests.ConglomerateExtension();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     DruidHttpClientConfig httpClientConfig = new DruidHttpClientConfig()
@@ -106,9 +106,9 @@ public class SegmentMetadataQuerySegmentWalkerTest
     };
     servers =
         new DruidServer[]{
-            new DruidServer("test1", "test1", null, 10, ServerType.HISTORICAL, "bye", 0),
-            new DruidServer("test2", "test2", null, 10, ServerType.HISTORICAL, "bye", 0),
-            new DruidServer("test3", "test2", null, 10, ServerType.INDEXER_EXECUTOR, "bye", 0)
+            new DruidServer("test1", "test1", null, 10, null, ServerType.HISTORICAL, "bye", 0),
+            new DruidServer("test2", "test2", null, 10, null, ServerType.HISTORICAL, "bye", 0),
+            new DruidServer("test3", "test2", null, 10, null, ServerType.INDEXER_EXECUTOR, "bye", 0)
         };
 
     random = new Random(0);
@@ -172,7 +172,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
                                                           .map(ServerExpectation::getSegment)
                                                           .map(segment -> segment.getId().toString())
                                                           .collect(Collectors.toSet());
-    Assert.assertEquals(expectedSegmentIds, actualSegmentIds);
+    Assertions.assertEquals(expectedSegmentIds, actualSegmentIds);
   }
 
   @Test
@@ -226,7 +226,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
                                                           .map(ServerExpectation::getSegment)
                                                           .map(segment -> segment.getId().toString())
                                                           .collect(Collectors.toSet());
-    Assert.assertEquals(expectedSegmentIds, actualSegmentIds);
+    Assertions.assertEquals(expectedSegmentIds, actualSegmentIds);
   }
 
   @Test
@@ -294,7 +294,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
                              .map(ServerExpectation::getSegment)
                              .map(segment -> segment.getId().toString())
                              .collect(Collectors.toSet());
-    Assert.assertEquals(expectedSegmentIds, actualSegmentIds);
+    Assertions.assertEquals(expectedSegmentIds, actualSegmentIds);
   }
 
   private Map<String, ServerExpectations> populateTimeline(

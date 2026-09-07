@@ -46,7 +46,7 @@ import java.util.Collections;
 public class K8sTestUtils
 {
 
-  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  private static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
 
   public static PodSpec getDummyPodSpec()
   {
@@ -67,7 +67,7 @@ public class K8sTestUtils
         new IndexTask.IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(

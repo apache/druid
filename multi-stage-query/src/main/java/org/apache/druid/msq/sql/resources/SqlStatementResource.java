@@ -27,6 +27,7 @@ import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.api.core.HttpContext;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
@@ -37,6 +38,7 @@ import org.apache.druid.error.Forbidden;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.error.QueryExceptionCompat;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
@@ -68,14 +70,16 @@ import org.apache.druid.msq.sql.entity.ResultSetInformation;
 import org.apache.druid.msq.sql.entity.SqlStatementResult;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.ExecutionMode;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -98,7 +102,6 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.NotNull;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -119,7 +122,6 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-
 @Path("/druid/v2/sql/statements/")
 public class SqlStatementResource
 {
@@ -133,7 +135,9 @@ public class SqlStatementResource
   private final OverlordClient overlordClient;
   private final StorageConnector storageConnector;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryConfig defaultQueryConfig;
+  private final QueryConfigProvider queryConfigProvider;
+  private final ServerConfig serverConfig;
+  private final WireTransferableContext wireTransferableContext;
 
   @Inject
   public SqlStatementResource(
@@ -142,7 +146,9 @@ public class SqlStatementResource
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       final AuthorizerMapper authorizerMapper,
-      final DefaultQueryConfig defaultQueryConfig
+      final QueryConfigProvider queryConfigProvider,
+      final ServerConfig serverConfig,
+      final WireTransferableContext wireTransferableContext
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
@@ -150,7 +156,9 @@ public class SqlStatementResource
     this.overlordClient = overlordClient;
     this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
-    this.defaultQueryConfig = defaultQueryConfig;
+    this.queryConfigProvider = queryConfigProvider;
+    this.serverConfig = serverConfig;
+    this.wireTransferableContext = wireTransferableContext;
   }
 
   /**
@@ -193,14 +201,18 @@ public class SqlStatementResource
           sqlQuery,
           req,
           ImmutableMap.<String, Object>builder()
-                      .putAll(defaultQueryConfig.getContext())
+                      .putAll(queryConfigProvider.getContext())
                       .put(RESULT_FORMAT, sqlQuery.getResultFormat())
                       .build()
       );
       stmt = msqSqlStatementFactory.httpStatement(sqlQueryPlus, req);
     }
     catch (Exception e) {
-      return SqlResource.handleExceptionBeforeStatementCreated(e, sqlQuery.queryContext());
+      return SqlResource.handleExceptionBeforeStatementCreated(
+          e,
+          sqlQuery.queryContext(),
+          serverConfig.getErrorResponseTransformStrategy()
+      );
     }
 
     final String sqlQueryId = stmt.sqlQueryId();
@@ -805,7 +817,8 @@ public class SqlStatementResource
           msqControllerTask.getId(),
           storageConnector,
           closer,
-          true
+          true,
+          wireTransferableContext
       );
       results = Optional.of(Yielders.each(
           Sequences.concat(pages.stream()
@@ -830,9 +843,9 @@ public class SqlStatementResource
                                   }
                                 })
                                 .collect(Collectors.toList()))
-                   .flatMap(frame ->
+                   .flatMap(rac ->
                                 SqlStatementResourceHelper.getResultSequence(
-                                    frame,
+                                    rac.as(Frame.class),
                                     finalStage.getFrameReader(),
                                     msqControllerTask.getQuerySpec().getColumnMappings(),
                                     new ResultsContext(
@@ -974,7 +987,7 @@ public class SqlStatementResource
   private void checkForDurableStorageConnectorImpl()
   {
     if (storageConnector instanceof NilStorageConnector) {
-      throw DruidException.forPersona(DruidException.Persona.USER)
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               StringUtils.format(

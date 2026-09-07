@@ -31,6 +31,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -63,6 +64,8 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -75,6 +78,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -87,9 +91,8 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatchers;
@@ -141,11 +144,13 @@ public class MSQSelectTest extends MSQTestBase
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
         {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
         {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT},
-        {SUPERUSER, SUPERUSER_MSQ_CONTEXT}
+        {SUPERUSER, SUPERUSER_MSQ_CONTEXT},
+        {USE_COMBINER, USE_COMBINER_MSQ_CONTEXT}
     };
 
     return Arrays.asList(data);
   }
+
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testCalculator(String contextName, Map<String, Object> context)
@@ -169,7 +174,7 @@ public class MSQSelectTest extends MSQTestBase
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("EXPR$0")
                            .columnTypes(ColumnType.LONG)
-                           .context(defaultScanQueryContext(context, resultSignature))
+                           .context(context)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -203,7 +208,7 @@ public class MSQSelectTest extends MSQTestBase
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                           .context(defaultScanQueryContext(context, resultSignature))
+                           .context(context)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -262,13 +267,7 @@ public class MSQSelectTest extends MSQTestBase
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .columns("m1", "dim2")
                               .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                              .context(defaultScanQueryContext(
-                                  context,
-                                  RowSignature.builder()
-                                              .add("m1", ColumnType.LONG)
-                                              .add("dim2", ColumnType.STRING)
-                                              .build()
-                              ))
+                              .context(context)
                               .build())
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -339,7 +338,7 @@ public class MSQSelectTest extends MSQTestBase
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                           .context(defaultScanQueryContext(context, expectedScanSignature))
+                           .context(context)
                            .build()
                    )
                    .columnMappings(expectedColumnMappings)
@@ -404,7 +403,7 @@ public class MSQSelectTest extends MSQTestBase
                            )
                            .columns("cnt", "dim1")
                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                           .context(defaultScanQueryContext(context, resultSignature))
+                           .context(context)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -447,7 +446,7 @@ public class MSQSelectTest extends MSQTestBase
                            )
                            .columns("cnt", "dim1")
                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                           .context(defaultScanQueryContext(context, resultSignature))
+                           .context(context)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -488,7 +487,7 @@ public class MSQSelectTest extends MSQTestBase
                            .columns("cnt", "dim1")
                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .filters(equality("dim2", "nonexistent", ColumnType.STRING))
-                           .context(defaultScanQueryContext(context, resultSignature))
+                           .context(context)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -524,7 +523,7 @@ public class MSQSelectTest extends MSQTestBase
                            .columns("cnt", "dim1")
                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .filters(equality("dim2", "nonexistent", ColumnType.STRING))
-                           .context(defaultScanQueryContext(context, resultSignature))
+                           .context(context)
                            .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
                            .build()
                    )
@@ -706,7 +705,7 @@ public class MSQSelectTest extends MSQTestBase
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                           .context(defaultScanQueryContext(context, resultSignature))
+                           .context(context)
                            .limit(10)
                            .build()
                    )
@@ -1099,16 +1098,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .intervals(querySegmentSpec(Filtration.eternity()))
                                     .columns("dim2", "m1", "m2")
                                     .columnTypes(ColumnType.STRING, ColumnType.FLOAT, ColumnType.DOUBLE)
-                                    .context(
-                                        defaultScanQueryContext(
-                                            queryContext,
-                                            RowSignature.builder()
-                                                        .add("dim2", ColumnType.STRING)
-                                                        .add("m1", ColumnType.FLOAT)
-                                                        .add("m2", ColumnType.DOUBLE)
-                                                        .build()
-                                        )
-                                    )
+                                    .context(queryContext)
                                     .limit(10)
                                     .build()
                                     .withOverriddenContext(queryContext)
@@ -1120,12 +1110,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .columns("m1")
                                     .columnTypes(ColumnType.FLOAT)
                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                    .context(
-                                        defaultScanQueryContext(
-                                            queryContext,
-                                            RowSignature.builder().add("m1", ColumnType.FLOAT).build()
-                                        )
-                                    )
+                                    .context(queryContext)
                                     .build()
                                     .withOverriddenContext(queryContext)
                             ),
@@ -1574,13 +1559,7 @@ public class MSQSelectTest extends MSQTestBase
                              .columns("v0", "user")
                              .columnTypes(ColumnType.LONG, ColumnType.STRING)
                              .filters(new LikeDimFilter("user", "%ot%", null, null))
-                             .context(defaultScanQueryContext(
-                                 multipleWorkerContext,
-                                 RowSignature.builder()
-                                     .add("v0", ColumnType.LONG)
-                                     .add("user", ColumnType.STRING)
-                                     .build()
-                             ))
+                             .context(multipleWorkerContext)
                              .build();
 
     SelectTester selectTester = testSelectQuery()
@@ -1767,13 +1746,7 @@ public class MSQSelectTest extends MSQTestBase
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("m1", "dim2")
                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                           .context(defaultScanQueryContext(
-                               context,
-                               RowSignature.builder()
-                                           .add("m1", ColumnType.LONG)
-                                           .add("dim2", ColumnType.STRING)
-                                           .build()
-                           ))
+                           .context(context)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -1814,11 +1787,6 @@ public class MSQSelectTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testScanWithMultiValueSelectQuery(String contextName, Map<String, Object> context)
   {
-    RowSignature expectedScanSignature = RowSignature.builder()
-                                                     .add("dim3", ColumnType.STRING)
-                                                     .add("v0", ColumnType.STRING_ARRAY)
-                                                     .build();
-
     RowSignature expectedResultSignature = RowSignature.builder()
                                                        .add("dim3", ColumnType.STRING)
                                                        .add("dim3_array", ColumnType.STRING_ARRAY)
@@ -1839,7 +1807,7 @@ public class MSQSelectTest extends MSQTestBase
                                               )
                                               .columns("dim3", "v0")
                                               .columnTypes(ColumnType.STRING, ColumnType.STRING_ARRAY)
-                                              .context(defaultScanQueryContext(context, expectedScanSignature))
+                                              .context(context)
                                               .build())
                                    .columnMappings(
                                        new ColumnMappings(
@@ -1864,6 +1832,78 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{null, null},
             new Object[]{null, null}
         )).verifyResults();
+  }
+
+  @Test
+  public void testMultiValueStringFromJsonObjectArray() throws IOException
+  {
+    // In this test, "language" includes a JSON array like [{},{}] (containing objects rather than strings).
+    final File toRead = getResourceAsTemporaryFile("/nonstring-mv-string-array.json");
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("language", ColumnType.STRING_ARRAY)
+                                                  .build();
+
+    final ScanQuery expectedQuery =
+        newScanQueryBuilder()
+            .dataSource(
+                new ExternalDataSource(
+                    new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
+                    new JsonInputFormat(null, null, null, null, null),
+                    RowSignature.builder()
+                                .add("timestamp", ColumnType.STRING)
+                                .add("language", ColumnType.STRING)
+                                .build()
+                )
+            )
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .virtualColumns(
+                expressionVirtualColumn("v0", "timestamp_parse(\"timestamp\",null,'UTC')", ColumnType.LONG),
+                expressionVirtualColumn("v1", "mv_to_array(\"language\")", ColumnType.STRING_ARRAY)
+            )
+            .columns("v0", "v1")
+            .columnTypes(ColumnType.LONG, ColumnType.STRING_ARRAY)
+            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+            .context(DEFAULT_MSQ_CONTEXT)
+            .build();
+
+    testSelectQuery()
+        .setSql("WITH\n"
+                + "kttm_data AS (\n"
+                + "SELECT * FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [" + toReadAsJson + "],\"type\":\"local\"}',\n"
+                + "    '{\"type\":\"json\"}',\n"
+                + "    '[{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"language\",\"type\":\"string\"}]'\n"
+                + "  )\n"
+                + "))\n"
+                + "\n"
+                + "SELECT\n"
+                + "  TIME_PARSE(\"timestamp\") AS __time,\n"
+                + "  MV_TO_ARRAY(\"language\") AS \"language\"\n"
+                + "FROM kttm_data")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1566691200031L, List.of("{}", "{}")},
+            new Object[]{1566691200059L, List.of("en", "es", "es-419", "es-MX")},
+            new Object[]{1566691200178L, List.of("en", "es", "es-419", "es-US")}
+        ))
+        .setExpectedMSQSpec(
+            LegacyMSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("v0", "__time"),
+                        new ColumnMapping("v1", "language")
+                    )
+                ))
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .build())
+        .setQueryContext(DEFAULT_MSQ_CONTEXT)
+        .verifyResults();
   }
 
   @MethodSource("data")
@@ -2153,12 +2193,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select dim3, count(*) as cnt1 from foo group by dim3")
         .setQueryContext(localContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
+                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
             )
-        ))
+        )
         .verifyExecutionError();
   }
 
@@ -2336,13 +2375,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by dim3")
         .setQueryContext(localContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(
-                CoreMatchers.containsString(
-                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
+                "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false."
             )
-        ))
+        )
         .setExpectedMetricDimensions(
             Map.of(
                 DruidMetrics.DATASOURCE, "foo",
@@ -2360,11 +2397,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
         .setQueryContext(context)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."))
-        ))
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessageContains(
+                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."
+            )
+        )
         .verifyExecutionError();
   }
 
@@ -2498,7 +2535,7 @@ public class MSQSelectTest extends MSQTestBase
       result.add(new Object[]{1});
     }
 
-    Assert.assertTrue(result.size() > Limits.MAX_SELECT_RESULT_ROWS);
+    Assertions.assertTrue(result.size() > Limits.MAX_SELECT_RESULT_ROWS);
 
     testSelectQuery()
         .setSql(StringUtils.format(
@@ -2531,10 +2568,7 @@ public class MSQSelectTest extends MSQTestBase
                            .columns("v0")
                            .columnTypes(ColumnType.LONG)
                            .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
-                           .context(defaultScanQueryContext(
-                               context,
-                               RowSignature.builder().add("v0", ColumnType.LONG).build()
-                           ))
+                           .context(context)
                            .build()
                 )
                 .columnMappings(new ColumnMappings(
@@ -2587,10 +2621,7 @@ public class MSQSelectTest extends MSQTestBase
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .columns("EXPR$0")
                               .columnTypes(ColumnType.LONG)
-                              .context(defaultScanQueryContext(
-                                  context,
-                                  resultSignature
-                              ))
+                              .context(context)
                               .build())
                    .columnMappings(expectedColumnMappings)
                    .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -2640,10 +2671,7 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .context(defaultScanQueryContext(
-                                  context,
-                                  resultSignature
-                              ))
+                              .context(context)
                               .columns("j0.unnest")
                               .columnTypes(ColumnType.STRING)
                               .build())
@@ -2708,10 +2736,7 @@ public class MSQSelectTest extends MSQTestBase
                                           .filters(equality("dim2", "a", ColumnType.STRING))
                                           .columns("dim3")
                                           .columnTypes(ColumnType.STRING)
-                                          .context(defaultScanQueryContext(
-                                              context,
-                                              resultSignature1
-                                          ))
+                                          .context(context)
                                           .limit(10)
                                           .build()
                                   ),
@@ -2720,10 +2745,7 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .context(defaultScanQueryContext(
-                                  context,
-                                  resultSignature
-                              ))
+                              .context(context)
                               .columns("j0.unnest")
                               .columnTypes(ColumnType.STRING)
                               .build())
@@ -2768,13 +2790,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .intervals(querySegmentSpec(Filtration.eternity()))
                                     .columns("m1", "dim2")
                                     .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                                    .context(defaultScanQueryContext(
-                                        timeoutContext,
-                                        RowSignature.builder()
-                                                    .add("m1", ColumnType.LONG)
-                                                    .add("dim2", ColumnType.STRING)
-                                                    .build()
-                                    ))
+                                    .context(timeoutContext)
                                     .build())
                          .columnMappings(ColumnMappings.identity(resultSignature))
                          .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -2786,12 +2802,9 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setQueryContext(timeoutContext)
         .setExpectedMSQFault(CanceledFault.timeout())
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                " Query canceled due to [Configured query timeout].")
-            )
-        ))
+        .setExpectedExecutionErrorMatcher(
+            ThrowableMatcher.of(ISE.class).expectMessageContains("Query timed out")
+        )
         .verifyExecutionError();
   }
 
@@ -2813,13 +2826,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .intervals(querySegmentSpec(Filtration.eternity()))
                                     .columns("m1", "dim2")
                                     .columnTypes(ColumnType.LONG, ColumnType.STRING)
-                                    .context(defaultScanQueryContext(
-                                        context,
-                                        RowSignature.builder()
-                                                    .add("m1", ColumnType.LONG)
-                                                    .add("dim2", ColumnType.STRING)
-                                                    .build()
-                                    ))
+                                    .context(context)
                                     .build())
                          .columnMappings(ColumnMappings.identity(resultSignature))
                          .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -2885,10 +2892,7 @@ public class MSQSelectTest extends MSQTestBase
                               ))
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .context(defaultScanQueryContext(
-                                  context,
-                                  rowSignature
-                              ))
+                              .context(context)
                               .columns("__time", "dim1")
                               .columnTypes(ColumnType.LONG, ColumnType.STRING)
                               .build())
@@ -2947,5 +2951,59 @@ public class MSQSelectTest extends MSQTestBase
   public boolean isPageSizeLimited(String contextName)
   {
     return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName);
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testTimeBoundaryGroupBy(String contextName, Map<String, Object> context)
+  {
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("EXPR$0", ColumnType.LONG)
+                                                  .add("EXPR$1", ColumnType.LONG)
+                                                  .build();
+
+    testSelectQuery()
+        .setSql("SELECT MIN(__time), MAX(__time) FROM foo")
+        .setExpectedMSQSpec(
+            LegacyMSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                  .setDataSource(CalciteTests.DATASOURCE1)
+                                  .setInterval(querySegmentSpec(Filtration.eternity()))
+                                  .setGranularity(Granularities.ALL)
+                                  .setAggregatorSpecs(
+                                      aggregators(
+                                          new LongMinAggregatorFactory("a0", ColumnHolder.TIME_COLUMN_NAME),
+                                          new LongMaxAggregatorFactory("a1", ColumnHolder.TIME_COLUMN_NAME)
+                                      )
+                                  )
+                                  .setContext(context)
+                                  .build()
+                   )
+                   .columnMappings(
+                       new ColumnMappings(
+                           ImmutableList.of(
+                               new ColumnMapping("a0", "EXPR$0"),
+                               new ColumnMapping("a1", "EXPR$1")
+                           )
+                       )
+                   )
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(
+            ImmutableList.of(
+                new Object[]{
+                    DateTimes.of("2000-01-01").getMillis(),
+                    DateTimes.of("2001-01-03").getMillis()
+                }
+            )
+        )
+        .verifyResults();
   }
 }

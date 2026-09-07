@@ -21,8 +21,8 @@ package org.apache.druid.segment.data;
 
 import org.apache.datasketches.memory.Buffer;
 import org.apache.datasketches.memory.WritableBuffer;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -35,36 +35,36 @@ public class SafeWritableBufferTest
   public void testPutAndGet()
   {
     WritableBuffer b1 = getBuffer();
-    Assert.assertEquals(0, b1.getPosition());
+    Assertions.assertEquals(0, b1.getPosition());
     b1.putByte((byte) 0x01);
-    Assert.assertEquals(1, b1.getPosition());
+    Assertions.assertEquals(1, b1.getPosition());
     b1.putBoolean(true);
-    Assert.assertEquals(2, b1.getPosition());
+    Assertions.assertEquals(2, b1.getPosition());
     b1.putBoolean(false);
-    Assert.assertEquals(3, b1.getPosition());
+    Assertions.assertEquals(3, b1.getPosition());
     b1.putChar('c');
-    Assert.assertEquals(5, b1.getPosition());
+    Assertions.assertEquals(5, b1.getPosition());
     b1.putDouble(1.1);
-    Assert.assertEquals(13, b1.getPosition());
+    Assertions.assertEquals(13, b1.getPosition());
     b1.putFloat(1.1f);
-    Assert.assertEquals(17, b1.getPosition());
+    Assertions.assertEquals(17, b1.getPosition());
     b1.putInt(100);
-    Assert.assertEquals(21, b1.getPosition());
+    Assertions.assertEquals(21, b1.getPosition());
     b1.putLong(1000L);
-    Assert.assertEquals(29, b1.getPosition());
+    Assertions.assertEquals(29, b1.getPosition());
     b1.putShort((short) 15);
-    Assert.assertEquals(31, b1.getPosition());
+    Assertions.assertEquals(31, b1.getPosition());
     b1.resetPosition();
 
-    Assert.assertEquals(0x01, b1.getByte());
-    Assert.assertTrue(b1.getBoolean());
-    Assert.assertFalse(b1.getBoolean());
-    Assert.assertEquals('c', b1.getChar());
-    Assert.assertEquals(1.1, b1.getDouble(), 0.0);
-    Assert.assertEquals(1.1f, b1.getFloat(), 0.0);
-    Assert.assertEquals(100, b1.getInt());
-    Assert.assertEquals(1000L, b1.getLong());
-    Assert.assertEquals(15, b1.getShort());
+    Assertions.assertEquals(0x01, b1.getByte());
+    Assertions.assertTrue(b1.getBoolean());
+    Assertions.assertFalse(b1.getBoolean());
+    Assertions.assertEquals('c', b1.getChar());
+    Assertions.assertEquals(1.1, b1.getDouble(), 0.0);
+    Assertions.assertEquals(1.1f, b1.getFloat(), 0.0);
+    Assertions.assertEquals(100, b1.getInt());
+    Assertions.assertEquals(1000L, b1.getLong());
+    Assertions.assertEquals(15, b1.getShort());
   }
 
   @Test
@@ -115,81 +115,81 @@ public class SafeWritableBufferTest
     buffer.getLongArray(longs2, 0, longs1.length);
     buffer.getShortArray(shorts2, 0, shorts1.length);
 
-    Assert.assertArrayEquals(b1, b2);
-    Assert.assertArrayEquals(bool1, bool2);
-    Assert.assertArrayEquals(chars1, chars2);
+    Assertions.assertArrayEquals(b1, b2);
+    Assertions.assertArrayEquals(bool1, bool2);
+    Assertions.assertArrayEquals(chars1, chars2);
     for (int i = 0; i < double1.length; i++) {
-      Assert.assertEquals(double1[i], double2[i], 0.0);
+      Assertions.assertEquals(double1[i], double2[i], 0.0);
     }
     for (int i = 0; i < float1.length; i++) {
-      Assert.assertEquals(float1[i], float2[i], 0.0);
+      Assertions.assertEquals(float1[i], float2[i], 0.0);
     }
-    Assert.assertArrayEquals(ints1, ints2);
-    Assert.assertArrayEquals(longs1, longs2);
-    Assert.assertArrayEquals(shorts1, shorts2);
+    Assertions.assertArrayEquals(ints1, ints2);
+    Assertions.assertArrayEquals(longs1, longs2);
+    Assertions.assertArrayEquals(shorts1, shorts2);
 
-    Assert.assertEquals(pos, buffer.getPosition());
+    Assertions.assertEquals(pos, buffer.getPosition());
   }
 
   @Test
   public void testStartEndRegionAndDuplicate()
   {
     WritableBuffer buffer = getBuffer();
-    Assert.assertEquals(0, buffer.getPosition());
-    Assert.assertEquals(0, buffer.getStart());
-    Assert.assertEquals(CAPACITY, buffer.getEnd());
-    Assert.assertEquals(CAPACITY, buffer.getRemaining());
-    Assert.assertEquals(CAPACITY, buffer.getCapacity());
-    Assert.assertTrue(buffer.hasRemaining());
+    Assertions.assertEquals(0, buffer.getPosition());
+    Assertions.assertEquals(0, buffer.getStart());
+    Assertions.assertEquals(CAPACITY, buffer.getEnd());
+    Assertions.assertEquals(CAPACITY, buffer.getRemaining());
+    Assertions.assertEquals(CAPACITY, buffer.getCapacity());
+    Assertions.assertTrue(buffer.hasRemaining());
     buffer.fill((byte) 0x07);
     buffer.setAndCheckStartPositionEnd(10L, 15L, 100L);
-    Assert.assertEquals(15L, buffer.getPosition());
-    Assert.assertEquals(10L, buffer.getStart());
-    Assert.assertEquals(100L, buffer.getEnd());
-    Assert.assertEquals(85L, buffer.getRemaining());
-    Assert.assertEquals(CAPACITY, buffer.getCapacity());
+    Assertions.assertEquals(15L, buffer.getPosition());
+    Assertions.assertEquals(10L, buffer.getStart());
+    Assertions.assertEquals(100L, buffer.getEnd());
+    Assertions.assertEquals(85L, buffer.getRemaining());
+    Assertions.assertEquals(CAPACITY, buffer.getCapacity());
     buffer.fill((byte) 0x70);
     buffer.resetPosition();
-    Assert.assertEquals(10L, buffer.getPosition());
+    Assertions.assertEquals(10L, buffer.getPosition());
     for (int i = 0; i < 90; i++) {
       if (i < 5) {
-        Assert.assertEquals(0x07, buffer.getByte());
+        Assertions.assertEquals(0x07, buffer.getByte());
       } else {
-        Assert.assertEquals(0x70, buffer.getByte());
+        Assertions.assertEquals(0x70, buffer.getByte());
       }
     }
     buffer.setAndCheckPosition(50);
 
     Buffer duplicate = buffer.duplicate();
-    Assert.assertEquals(buffer.getStart(), duplicate.getStart());
-    Assert.assertEquals(buffer.getPosition(), duplicate.getPosition());
-    Assert.assertEquals(buffer.getEnd(), duplicate.getEnd());
-    Assert.assertEquals(buffer.getRemaining(), duplicate.getRemaining());
-    Assert.assertEquals(buffer.getCapacity(), duplicate.getCapacity());
+    Assertions.assertEquals(buffer.getStart(), duplicate.getStart());
+    Assertions.assertEquals(buffer.getPosition(), duplicate.getPosition());
+    Assertions.assertEquals(buffer.getEnd(), duplicate.getEnd());
+    Assertions.assertEquals(buffer.getRemaining(), duplicate.getRemaining());
+    Assertions.assertEquals(buffer.getCapacity(), duplicate.getCapacity());
 
     duplicate.resetPosition();
     for (int i = 0; i < 90; i++) {
       if (i < 5) {
-        Assert.assertEquals(0x07, duplicate.getByte());
+        Assertions.assertEquals(0x07, duplicate.getByte());
       } else {
-        Assert.assertEquals(0x70, duplicate.getByte());
+        Assertions.assertEquals(0x70, duplicate.getByte());
       }
     }
 
     Buffer region = buffer.region(5L, 105L, buffer.getTypeByteOrder());
-    Assert.assertEquals(0, region.getStart());
-    Assert.assertEquals(0, region.getPosition());
-    Assert.assertEquals(105L, region.getEnd());
-    Assert.assertEquals(105L, region.getRemaining());
-    Assert.assertEquals(105L, region.getCapacity());
+    Assertions.assertEquals(0, region.getStart());
+    Assertions.assertEquals(0, region.getPosition());
+    Assertions.assertEquals(105L, region.getEnd());
+    Assertions.assertEquals(105L, region.getRemaining());
+    Assertions.assertEquals(105L, region.getCapacity());
 
     for (int i = 0; i < 105; i++) {
       if (i < 10) {
-        Assert.assertEquals(0x07, region.getByte());
+        Assertions.assertEquals(0x07, region.getByte());
       } else if (i < 95) {
-        Assert.assertEquals(0x70, region.getByte());
+        Assertions.assertEquals(0x70, region.getByte());
       } else {
-        Assert.assertEquals(0x07, region.getByte());
+        Assertions.assertEquals(0x07, region.getByte());
       }
     }
   }
@@ -202,12 +202,12 @@ public class SafeWritableBufferTest
 
     buffer.fill((byte) 0x0F);
     anotherBuffer.fill((byte) 0x0F);
-    Assert.assertTrue(buffer.equalTo(0L, anotherBuffer, 0L, CAPACITY));
+    Assertions.assertTrue(buffer.equalTo(0L, anotherBuffer, 0L, CAPACITY));
 
     anotherBuffer.setPosition(100);
     anotherBuffer.clear();
-    Assert.assertFalse(buffer.equalTo(0L, anotherBuffer, 0L, CAPACITY));
-    Assert.assertTrue(buffer.equalTo(0L, anotherBuffer, 0L, 100L));
+    Assertions.assertFalse(buffer.equalTo(0L, anotherBuffer, 0L, CAPACITY));
+    Assertions.assertTrue(buffer.equalTo(0L, anotherBuffer, 0L, 100L));
   }
 
   private WritableBuffer getBuffer()

@@ -27,7 +27,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
-import com.google.inject.name.Names;
+import org.apache.druid.catalog.MapMetadataCatalog;
+import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
@@ -35,8 +36,10 @@ import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupReferencesManager;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
@@ -46,21 +49,25 @@ import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -68,6 +75,8 @@ import java.util.stream.Collectors;
 public class DruidCalciteSchemaModuleTest extends CalciteTestBase
 {
   private static final String DRUID_SCHEMA_NAME = "druid";
+  private static final AuthenticationResult AUTH_RESULT =
+      new AuthenticationResult("identity", "authorizer", "authenticator", null);
 
   @Mock
   private QueryLifecycleFactory queryLifecycleFactory;
@@ -80,8 +89,6 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Mock
   private Escalator escalator;
   @Mock
-  AuthorizerMapper authorizerMapper;
-  @Mock
   private FilteredServerInventoryView serverInventoryView;
   @Mock
   private DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
@@ -93,15 +100,17 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   private SegmentManager segmentManager;
   @Mock
   private DruidOperatorTable druidOperatorTable;
+  @Mock
+  private HttpClient httpClient;
 
-  private DruidCalciteSchemaModule target;
   private Injector injector;
 
   @BeforeEach
   public void setUp()
   {
+    EasyMock.expect(plannerConfig.isEnableSysQueriesTable()).andReturn(false).anyTimes();
+    EasyMock.expect(plannerConfig.isAuthorizeTableVisibility()).andReturn(false).anyTimes();
     EasyMock.replay(plannerConfig);
-    target = new DruidCalciteSchemaModule();
     injector = Guice.createInjector(
         binder -> {
           binder.bind(QueryLifecycleFactory.class).toInstance(queryLifecycleFactory);
@@ -110,7 +119,7 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bind(PlannerConfig.class).toInstance(plannerConfig);
           binder.bind(ViewManager.class).toInstance(viewManager);
           binder.bind(Escalator.class).toInstance(escalator);
-          binder.bind(AuthorizerMapper.class).toInstance(authorizerMapper);
+          binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
           binder.bind(FilteredServerInventoryView.class).toInstance(serverInventoryView);
           binder.bind(SegmentManager.class).toInstance(segmentManager);
           binder.bind(DruidOperatorTable.class).toInstance(druidOperatorTable);
@@ -120,119 +129,107 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
           binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
           binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupReferencesManager);
           binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
+          binder.bind(MetadataCatalog.class).toInstance(new MapMetadataCatalog(objectMapper));
           binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("", "", null));
           binder.bind(OverlordClient.class).to(NoopOverlordClient.class);
           binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class);
           binder.bind(CentralizedDatasourceSchemaConfig.class)
                 .toInstance(CentralizedDatasourceSchemaConfig.create());
+          binder.bind(HttpClient.class).toInstance(httpClient);
+          binder.bind(HttpClient.class).annotatedWith(EscalatedClient.class).toInstance(httpClient);
+          binder.bind(new TypeLiteral<Set<SqlEngine>>() {}).toInstance(ImmutableSet.of());
         },
         new LifecycleModule(),
-        target);
+        new DruidCalciteSchemaModule()
+    );
   }
 
   @Test
   public void testDruidSchemaNameIsInjected()
   {
     String schemaName = injector.getInstance(Key.get(String.class, DruidSchemaName.class));
-    Assert.assertEquals(DRUID_SCHEMA_NAME, schemaName);
+    Assertions.assertEquals(DRUID_SCHEMA_NAME, schemaName);
   }
 
   @Test
-  public void testDruidSqlSchemaIsInjectedAsSingleton()
+  public void testNamedSchemasAreInjected()
   {
-    NamedDruidSchema namedDruidSchema = injector.getInstance(NamedDruidSchema.class);
-    Assert.assertNotNull(namedDruidSchema);
-    NamedDruidSchema other = injector.getInstance(NamedDruidSchema.class);
-    Assert.assertSame(other, namedDruidSchema);
+    Set<NamedSchema> namedSchemas = injector.getInstance(Key.get(new TypeLiteral<>() {}));
+    Assertions.assertEquals(
+        Set.of(NamedLookupSchema.class),
+        namedSchemas.stream().map(NamedSchema::getClass).collect(Collectors.toSet())
+    );
   }
 
   @Test
-  public void testSystemSqlSchemaIsInjectedAsSingleton()
+  public void testSchemaProvidersAreInjected()
   {
-    NamedSystemSchema namedSystemSchema = injector.getInstance(NamedSystemSchema.class);
-    Assert.assertNotNull(namedSystemSchema);
-    NamedSystemSchema other = injector.getInstance(NamedSystemSchema.class);
-    Assert.assertSame(other, namedSystemSchema);
+    Set<SchemaProvider> schemaProviders = injector.getInstance(Key.get(new TypeLiteral<>() {}));
+    Assertions.assertEquals(
+        Set.of(DruidSchemaProvider.class, SystemSchemaProvider.class, ViewSchemaProvider.class),
+        schemaProviders.stream().map(SchemaProvider::getClass).collect(Collectors.toSet())
+    );
   }
 
   @Test
-  public void testDruidCalciteSchemasAreInjected()
+  public void testDruidSchemaProviderIsInjectedAsSingleton()
   {
-    Set<NamedSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<>() {}));
-    Set<Class<? extends NamedSchema>> expectedSchemas =
-        ImmutableSet.of(NamedSystemSchema.class, NamedDruidSchema.class, NamedLookupSchema.class, NamedViewSchema.class);
-    Assert.assertEquals(expectedSchemas.size(), sqlSchemas.size());
-    Assert.assertEquals(
-        expectedSchemas,
-        sqlSchemas.stream().map(NamedSchema::getClass).collect(Collectors.toSet()));
-  }
-
-  @Test
-  public void testDruidSchemaIsInjectedAsSingleton()
-  {
-    DruidSchema schema = injector.getInstance(DruidSchema.class);
-    Assert.assertNotNull(schema);
-    DruidSchema other = injector.getInstance(DruidSchema.class);
-    Assert.assertSame(other, schema);
-  }
-
-  @Test
-  public void testSystemSchemaIsInjectedAsSingleton()
-  {
-    SystemSchema schema = injector.getInstance(SystemSchema.class);
-    Assert.assertNotNull(schema);
-    SystemSchema other = injector.getInstance(SystemSchema.class);
-    Assert.assertSame(other, schema);
-  }
-
-  @Test
-  public void testInformationSchemaIsInjectedAsSingleton()
-  {
-    InformationSchema schema = injector.getInstance(InformationSchema.class);
-    Assert.assertNotNull(schema);
-    InformationSchema other = injector.getInstance(InformationSchema.class);
-    Assert.assertSame(other, schema);
+    DruidSchemaProvider schemaProvider = injector.getInstance(DruidSchemaProvider.class);
+    Assertions.assertNotNull(schemaProvider);
+    Assertions.assertSame(schemaProvider, injector.getInstance(DruidSchemaProvider.class));
   }
 
   @Test
   public void testLookupSchemaIsInjectedAsSingleton()
   {
     LookupSchema schema = injector.getInstance(LookupSchema.class);
-    Assert.assertNotNull(schema);
+    Assertions.assertNotNull(schema);
     LookupSchema other = injector.getInstance(LookupSchema.class);
-    Assert.assertSame(other, schema);
+    Assertions.assertSame(other, schema);
   }
 
   @Test
-  public void testRootSchemaAnnotatedIsInjectedAsSingleton()
+  public void testSchemaCatalogProviderIsInjectedAsSingleton()
   {
-    DruidSchemaCatalog rootSchema = injector.getInstance(
-        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
-    );
-    Assert.assertNotNull(rootSchema);
-    DruidSchemaCatalog other = injector.getInstance(
-        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
-    );
-    Assert.assertSame(other, rootSchema);
+    DruidSchemaCatalogProvider provider = injector.getInstance(DruidSchemaCatalogProvider.class);
+    Assertions.assertInstanceOf(DruidSchemaCatalogProviderImpl.class, provider);
+    Assertions.assertSame(provider, injector.getInstance(DruidSchemaCatalogProvider.class));
   }
 
   @Test
-  public void testRootSchemaIsInjectedAsSingleton()
+  public void testRootSchemaHasAllSchemasPlusInformationSchema()
   {
-    DruidSchemaCatalog rootSchema = injector.getInstance(Key.get(DruidSchemaCatalog.class));
-    Assert.assertNotNull(rootSchema);
-    DruidSchemaCatalog other = injector.getInstance(
-        Key.get(DruidSchemaCatalog.class, Names.named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA))
+    EasyMock.expect(viewManager.getViews()).andReturn(Map.of()).anyTimes();
+    EasyMock.replay(viewManager);
+
+    final DruidSchemaCatalog rootSchema =
+        injector.getInstance(DruidSchemaCatalogProvider.class).createRootSchema(AUTH_RESULT);
+
+    // Every schema the module binds must be reachable from the root schema.
+    Assertions.assertEquals(
+        Set.of(
+            DRUID_SCHEMA_NAME,
+            NamedViewSchema.NAME,
+            NamedSystemSchema.NAME,
+            NamedLookupSchema.NAME,
+            InformationSchema.INFORMATION_SCHEMA_NAME
+        ),
+        rootSchema.getSubSchemaNames()
     );
-    Assert.assertSame(other, rootSchema);
+    Assertions.assertNotNull(
+        rootSchema.getSubSchema(InformationSchema.INFORMATION_SCHEMA_NAME).unwrap(InformationSchema.class)
+    );
   }
 
   @Test
-  public void testRootSchemaIsInjectedAndHasInformationSchema()
+  public void testEscalatedRootSchemaUsesEscalator()
   {
-    DruidSchemaCatalog rootSchema = injector.getInstance(Key.get(DruidSchemaCatalog.class));
-    InformationSchema expectedSchema = injector.getInstance(InformationSchema.class);
-    Assert.assertNotNull(rootSchema);
-    Assert.assertSame(expectedSchema, rootSchema.getSubSchema("INFORMATION_SCHEMA").unwrap(InformationSchema.class));
+    EasyMock.expect(viewManager.getViews()).andReturn(Map.of()).anyTimes();
+    EasyMock.replay(viewManager);
+    EasyMock.expect(escalator.createEscalatedAuthenticationResult()).andReturn(AUTH_RESULT).once();
+    EasyMock.replay(escalator);
+
+    Assertions.assertNotNull(injector.getInstance(DruidSchemaCatalogProvider.class).createEscalatedRootSchema());
+    EasyMock.verify(escalator);
   }
 }

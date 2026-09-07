@@ -30,8 +30,12 @@ import org.apache.kafka.common.header.Headers;
 
 import javax.annotation.Nullable;
 
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 
 /**
  * Evaluates Kafka header filters for pre-ingestion filtering.
@@ -39,6 +43,13 @@ import java.nio.charset.Charset;
 public class KafkaHeaderBasedFilterEvaluator
 {
   private static final Logger log = new Logger(KafkaHeaderBasedFilterEvaluator.class);
+
+  /**
+   * Header values larger than this are decoded but not cached, so that a bounded number of cache entries
+   * (see {@link KafkaHeaderBasedFilterConfig#getStringDecodingCacheSize()}) cannot retain unbounded heap when
+   * distinct large headers are seen. Total cached bytes are therefore bounded by cacheSize * this cap.
+   */
+  private static final int MAX_CACHEABLE_HEADER_BYTES = 4096;
 
   private final HeaderFilterHandler filterHandler;
   private final String headerName;
@@ -110,9 +121,10 @@ public class KafkaHeaderBasedFilterEvaluator
     }
 
     Header header = headers.lastHeader(headerName);
-    
-    // Permissive behavior: header is null or empty
-    if (header == null || header.value() == null) {
+
+    // Permissive behavior: header is missing, or its value is null or zero-length. A zero-length value would
+    // otherwise decode to an empty string and be matched against the filter, silently dropping such records.
+    if (header == null || header.value() == null || header.value().length == 0) {
       return true;
     }
 
@@ -128,18 +140,42 @@ public class KafkaHeaderBasedFilterEvaluator
 
   /**
    * Decode header bytes to string with caching.
-   * Returns null if decoding fails.
+   * Returns null if decoding fails, so that undecodable header values fall through to the permissive
+   * (include the record) path rather than matching on a replacement string.
    */
   @Nullable
   private String getDecodedHeaderValue(byte[] headerBytes)
   {
     try {
+      // Do not cache oversized values so the cache cannot retain unbounded heap for distinct large headers.
+      if (headerBytes.length > MAX_CACHEABLE_HEADER_BYTES) {
+        return decodeStrict(headerBytes);
+      }
       ByteBuffer key = ByteBuffer.wrap(headerBytes);
-      return stringDecodingCache.get(key, k -> new String(headerBytes, encoding));
+      return stringDecodingCache.get(key, k -> decodeStrict(headerBytes));
     }
     catch (Exception e) {
+      // Includes UncheckedIOException wrapping CharacterCodingException for malformed/unmappable input.
       log.warn(e, "Failed to decode header bytes, treating as null");
       return null;
+    }
+  }
+
+  /**
+   * Decodes bytes with the configured charset, reporting (rather than silently replacing with U+FFFD) malformed
+   * or unmappable input, so that invalid bytes surface as a failure instead of a bogus match value.
+   */
+  private String decodeStrict(byte[] headerBytes)
+  {
+    final CharsetDecoder decoder = encoding.newDecoder()
+        .onMalformedInput(CodingErrorAction.REPORT)
+        .onUnmappableCharacter(CodingErrorAction.REPORT);
+    try {
+      return decoder.decode(ByteBuffer.wrap(headerBytes)).toString();
+    }
+    catch (CharacterCodingException e) {
+      // Wrap so this can be thrown from the Caffeine loader lambda; getDecodedHeaderValue maps it to null.
+      throw new UncheckedIOException(e);
     }
   }
 

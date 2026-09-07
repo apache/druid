@@ -60,7 +60,7 @@ public class V3CompressedVSizeColumnarMultiIntsSupplierTest extends CompressedVS
   }
 
   @Override
-  public void teardown() throws IOException
+  public void teardownSimple() throws IOException
   {
     columnarMultiIntsSupplier = null;
     closer.close();

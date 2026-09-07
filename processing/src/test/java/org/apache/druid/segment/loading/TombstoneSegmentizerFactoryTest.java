@@ -33,13 +33,13 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class TombstoneSegmentizerFactoryTest
 {
@@ -58,12 +58,12 @@ public class TombstoneSegmentizerFactoryTest
         .build();
 
     Segment segment = factory.factorize(tombstone, null, true, null);
-    Assert.assertNotNull(segment.as(CursorFactory.class));
-    Assert.assertEquals("foo_2021-01-01T00:00:00.000Z_2022-01-01T00:00:00.000Z_1", segment.getId().toString());
-    Assert.assertEquals(expectedInterval, segment.getDataInterval());
+    Assertions.assertNotNull(segment.as(CursorFactory.class));
+    Assertions.assertEquals("foo_2021-01-01T00:00:00.000Z_2022-01-01T00:00:00.000Z_1", segment.getId().toString());
+    Assertions.assertEquals(expectedInterval, segment.getDataInterval());
 
     QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
-    Assert.assertNotNull(queryableIndex);
+    Assertions.assertNotNull(queryableIndex);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getNumRows);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getAvailableDimensions);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getBitmapFactoryForDimensions);
@@ -71,9 +71,9 @@ public class TombstoneSegmentizerFactoryTest
     assertThrows(UnsupportedOperationException.class, queryableIndex::getDimensionHandlers);
     assertThrows(UnsupportedOperationException.class, queryableIndex::getColumnNames);
     assertThrows(UnsupportedOperationException.class, () -> queryableIndex.getColumnHolder(null));
-    Assert.assertTrue(segment.isTombstone());
+    Assertions.assertTrue(segment.isTombstone());
 
-    Assert.assertNotNull(segment.as(CursorFactory.class));
+    Assertions.assertNotNull(segment.as(CursorFactory.class));
 
   }
 
@@ -139,6 +139,6 @@ public class TombstoneSegmentizerFactoryTest
       }
     };
 
-    Assert.assertFalse(segment.isTombstone());
+    Assertions.assertFalse(segment.isTombstone());
   }
 }

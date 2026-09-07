@@ -30,10 +30,8 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
 {
@@ -62,18 +60,15 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
           .build()
   );
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testCreate()
   {
     Expr expr = Parser.parse("hyper_unique()", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0);
   }
 
   @Test
@@ -82,30 +77,30 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("hyper_unique_add('foo', hyper_unique())", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add('bar', hyper_unique_add('foo', hyper_unique()))", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(2.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(2.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add(string, hyper_unique())", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add(nullString, hyper_unique())", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
   }
 
   @Test
@@ -114,30 +109,30 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("hyper_unique_add(1234, hyper_unique())", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add(1234, hyper_unique_add(5678, hyper_unique()))", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(2.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(2.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add(long, hyper_unique())", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add(nullLong, hyper_unique())", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
   }
 
   @Test
@@ -146,30 +141,30 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("hyper_unique_add(1.234, hyper_unique())", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add(1.234, hyper_unique_add(5.678, hyper_unique()))", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(2.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(2.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add(double, hyper_unique())", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(1.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
 
     expr = Parser.parse("hyper_unique_add(nullDouble, hyper_unique())", MACRO_TABLE);
     eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
-    Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assertions.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
+    Assertions.assertTrue(eval.value() instanceof HyperLogLogCollector);
+    Assertions.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
   }
 
   @Test
@@ -178,8 +173,8 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("hyper_unique_estimate(hyper_unique_add(1.234, hyper_unique()))", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(ExpressionType.DOUBLE, eval.type());
-    Assert.assertEquals(1.0, eval.asDouble(), 0.01);
+    Assertions.assertEquals(ExpressionType.DOUBLE, eval.type());
+    Assertions.assertEquals(1.0, eval.asDouble(), 0.01);
   }
 
   @Test
@@ -188,66 +183,58 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
     Expr expr = Parser.parse("hyper_unique_round_estimate(hyper_unique_add(1.234, hyper_unique()))", MACRO_TABLE);
     ExprEval eval = expr.eval(inputBindings);
 
-    Assert.assertEquals(ExpressionType.LONG, eval.type());
-    Assert.assertEquals(1L, eval.asLong(), 0.01);
+    Assertions.assertEquals(ExpressionType.LONG, eval.type());
+    Assertions.assertEquals(1L, eval.asLong(), 0.01);
   }
 
   @Test
   public void testCreateWrongArgsCount()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique] does not accept arguments");
-    Parser.parse("hyper_unique(100)", MACRO_TABLE);
+    IAE e = Assertions.assertThrows(IAE.class, () -> Parser.parse("hyper_unique(100)", MACRO_TABLE));
+    Assertions.assertTrue(e.getMessage().contains("Function[hyper_unique] does not accept arguments"));
   }
 
   @Test
   public void testAddWrongArgsCount()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_add] requires 2 arguments");
-    Parser.parse("hyper_unique_add(100, hyper_unique(), 100)", MACRO_TABLE);
+    IAE e = Assertions.assertThrows(IAE.class, () -> Parser.parse("hyper_unique_add(100, hyper_unique(), 100)", MACRO_TABLE));
+    Assertions.assertTrue(e.getMessage().contains("Function[hyper_unique_add] requires 2 arguments"));
   }
 
   @Test
   public void testAddWrongArgType()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_add] requires a hyper-log-log collector as the second argument");
     Expr expr = Parser.parse("hyper_unique_add(long, string)", MACRO_TABLE);
-    expr.eval(inputBindings);
+    IAE e = Assertions.assertThrows(IAE.class, () -> expr.eval(inputBindings));
+    Assertions.assertTrue(e.getMessage().contains("Function[hyper_unique_add] requires a hyper-log-log collector as the second argument"));
   }
 
   @Test
   public void testEstimateWrongArgsCount()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_estimate] requires 1 argument");
-    Parser.parse("hyper_unique_estimate(hyper_unique(), 100)", MACRO_TABLE);
+    IAE e = Assertions.assertThrows(IAE.class, () -> Parser.parse("hyper_unique_estimate(hyper_unique(), 100)", MACRO_TABLE));
+    Assertions.assertTrue(e.getMessage().contains("Function[hyper_unique_estimate] requires 1 argument"));
   }
 
   @Test
   public void testEstimateWrongArgTypes()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_estimate] requires a hyper-log-log collector as input");
-    Expr expr = Parser.parse("hyper_unique_estimate(100)", MACRO_TABLE);
-    expr.eval(inputBindings);
+    IAE e = Assertions.assertThrows(IAE.class, () -> Parser.parse("hyper_unique_estimate(100)", MACRO_TABLE));
+    Assertions.assertTrue(e.getMessage().contains("Function[hyper_unique_estimate] requires a hyper-log-log collector as input"));
   }
 
   @Test
   public void testRoundEstimateWrongArgsCount()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_round_estimate] requires 1 argument");
-    Parser.parse("hyper_unique_round_estimate(hyper_unique(), 100)", MACRO_TABLE);
+    IAE e = Assertions.assertThrows(IAE.class, () -> Parser.parse("hyper_unique_round_estimate(hyper_unique(), 100)", MACRO_TABLE));
+    Assertions.assertTrue(e.getMessage().contains("Function[hyper_unique_round_estimate] requires 1 argument"));
   }
 
   @Test
   public void testRoundEstimateWrongArgTypes()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Function[hyper_unique_round_estimate] requires a hyper-log-log collector as input");
     Expr expr = Parser.parse("hyper_unique_round_estimate(string)", MACRO_TABLE);
-    expr.eval(inputBindings);
+    IAE e = Assertions.assertThrows(IAE.class, () -> expr.eval(inputBindings));
+    Assertions.assertTrue(e.getMessage().contains("Function[hyper_unique_round_estimate] requires a hyper-log-log collector as input"));
   }
 }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -30,6 +31,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.aggregation.tdigestsketch.TDigestConfig;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchAggregatorFactory;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchModule;
 import org.apache.druid.query.aggregation.tdigestsketch.TDigestSketchToQuantilePostAggregator;
@@ -74,12 +76,14 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       TDigestSketchModule.registerSerde();
-
       final QueryableIndex index =
-          IndexBuilder.create(CalciteTests.getJsonMapper())
+          IndexBuilder.create(jsonMapper)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -90,7 +94,8 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                   new TDigestSketchAggregatorFactory(
                                       "qsketch_m1",
                                       "m1",
-                                      128
+                                      128,
+                                      TDigestConfig.builder().build()
                                   )
                               )
                               .withRollup(false)
@@ -127,7 +132,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0", "m1", 200)
+                      new TDigestSketchAggregatorFactory("a0", "m1", 200, TDigestConfig.builder().build())
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -158,13 +163,13 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
                       new TDigestSketchAggregatorFactory("a0:agg", "m1",
-                                                         TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION
+                                                         TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION, TDigestConfig.builder().build()
                       ),
                       new TDigestSketchAggregatorFactory("a1:agg", "m1",
-                                                         200
+                                                         200, TDigestConfig.builder().build()
                       ),
                       new TDigestSketchAggregatorFactory("a2:agg", "m1",
-                                                         300
+                                                         300, TDigestConfig.builder().build()
                       )
                   ))
                   .postAggregators(
@@ -197,7 +202,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0", "m1", 200)
+                      new TDigestSketchAggregatorFactory("a0", "m1", 200, TDigestConfig.builder().build())
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -234,7 +239,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       )
                   )
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0", "v0", 200)
+                      new TDigestSketchAggregatorFactory("a0", "v0", 200, TDigestConfig.builder().build())
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -263,7 +268,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION)
+                      new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION, TDigestConfig.builder().build())
                   ))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -302,7 +307,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "qsketch_m1", 100)
+                      new TDigestSketchAggregatorFactory("a0:agg", "qsketch_m1", 100, TDigestConfig.builder().build())
                   ))
                   .postAggregators(
                       new TDigestSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.1f),
@@ -345,7 +350,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                             .setDimensions(new DefaultDimensionSpec("dim1", "d0"))
                                             .setAggregatorSpecs(
                                                 ImmutableList.of(
-                                                    new TDigestSketchAggregatorFactory("a0", "m1", 200)
+                                                    new TDigestSketchAggregatorFactory("a0", "m1", 200, TDigestConfig.builder().build())
                                                 )
                                             )
                                             .setContext(QUERY_CONTEXT_DEFAULT)
@@ -356,7 +361,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             ImmutableList.of(
-                                new TDigestSketchAggregatorFactory("_a0:agg", "a0", 100)
+                                new TDigestSketchAggregatorFactory("_a0:agg", "a0", 100, TDigestConfig.builder().build())
                             )
                         )
                         .setPostAggregatorSpecs(
@@ -397,7 +402,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0:agg", "m1", null)
+                      new TDigestSketchAggregatorFactory("a0:agg", "m1", null, TDigestConfig.builder().build())
                   ))
                   .postAggregators(
                       new TDigestSketchToQuantilePostAggregator("a0", makeFieldAccessPostAgg("a0:agg"), 0.0f),
@@ -427,13 +432,13 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
                       new TDigestSketchAggregatorFactory("a0:agg", "m1",
-                                                         TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION
+                                                         TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION, TDigestConfig.builder().build()
                       ),
                       new TDigestSketchAggregatorFactory("a1:agg", "m1",
-                                                         200
+                                                         200, TDigestConfig.builder().build()
                       ),
                       new TDigestSketchAggregatorFactory("a2:agg", "m1",
-                                                         300
+                                                         300, TDigestConfig.builder().build()
                       )
                   ))
                   .postAggregators(
@@ -475,7 +480,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                           ExprMacroTable.nil()
                       )
                   )
-                  .aggregators(new TDigestSketchAggregatorFactory("a0:agg", "v0", 100))
+                  .aggregators(new TDigestSketchAggregatorFactory("a0:agg", "v0", 100, TDigestConfig.builder().build()))
                   .postAggregators(
                       new TDigestSketchToQuantilePostAggregator(
                           "a0",
@@ -520,8 +525,8 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .filters(equality("dim2", 0L, ColumnType.LONG))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
-                      new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
-                      new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100)
+                      new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION, TDigestConfig.builder().build()),
+                      new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100, TDigestConfig.builder().build())
                   ))
                   .postAggregators(
                       new TDigestSketchToQuantilePostAggregator("a1", makeFieldAccessPostAgg("a1:agg"), 0.1f)
@@ -557,11 +562,11 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
-                                    new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),
+                                    new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION, TDigestConfig.builder().build()),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100),
+                                    new TDigestSketchAggregatorFactory("a1:agg", "qsketch_m1", 100, TDigestConfig.builder().build()),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 )
                             )

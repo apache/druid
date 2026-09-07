@@ -21,6 +21,13 @@
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
+  "query/segments/count": {
+    "dimensions": [
+      "dataSource",
+      "type"
+    ],
+    "type": "counter"
+  },
   "query/segment/time": {
     "dimensions": [],
     "type": "timer",
@@ -126,7 +133,8 @@
   },
   "ingest/events/thrownAway": {
     "dimensions": [
-      "dataSource"
+      "dataSource",
+      "reason"
     ],
     "type": "counter"
   },
@@ -212,6 +220,60 @@
     "type": "timer",
     "timeUnit": "NANOSECONDS"
   },
+  "ingest/realtime/segmentUpgrade/persisted": {
+    "dimensions": [
+      "dataSource",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/notified": {
+    "dimensions": [
+      "dataSource",
+      "stream",
+      "taskId",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/unmatched": {
+    "dimensions": [
+      "dataSource",
+      "stream",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/sendFailed": {
+    "dimensions": [
+      "dataSource",
+      "stream",
+      "taskId",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/announced": {
+    "dimensions": [
+      "dataSource",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
+  "ingest/realtime/segmentUpgrade/skipped": {
+    "dimensions": [
+      "dataSource",
+      "reason",
+      "interval",
+      "version"
+    ],
+    "type": "counter"
+  },
   "task/run/time": {
     "dimensions": [
       "dataSource",
@@ -266,24 +328,6 @@
     "type": "counter"
   },
   "segment/unneeded/count": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/raw": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalization": {
-    "dimensions": [
-      "tier"
-    ],
-    "type": "counter"
-  },
-  "segment/cost/normalized": {
     "dimensions": [
       "tier"
     ],
@@ -455,33 +499,33 @@
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/read/count": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/write/size": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/disk/read/size": {
     "dimensions": [
       "fsDevName"
     ],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/net/write/size": {
     "dimensions": [],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/net/read/size": {
     "dimensions": [],
-    "type": "counter"
+    "type": "gauge"
   },
   "sys/fs/used": {
     "dimensions": [

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -61,6 +62,15 @@ public class DataSourceMSQDestination implements MSQDestination
   @Nullable
   private final List<AggregateProjectionSpec> projections;
 
+  /**
+   * When set, generated segments are clustered base tables built from this spec (clustering columns + non-clustering
+   * dimensions + metrics), instead of the legacy {@link #dimensionSchemas}/aggregators shape. Query granularity is
+   * still carried separately (as a virtual column on the spec, derived from the query); see
+   * {@code SegmentGenerationUtils.makeDataSchemaForIngestion}.
+   */
+  @Nullable
+  private final BaseTableProjectionSpec baseTable;
+
   @JsonCreator
   public DataSourceMSQDestination(
       @JsonProperty("dataSource") String dataSource,
@@ -68,6 +78,7 @@ public class DataSourceMSQDestination implements MSQDestination
       @JsonProperty("segmentSortOrder") @Nullable List<String> segmentSortOrder,
       @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks,
       @JsonProperty("dimensionSchemas") @Nullable Map<String, DimensionSchema> dimensionSchemas,
+      @JsonProperty("baseTable") @Nullable BaseTableProjectionSpec baseTable,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @JsonProperty("terminalStageSpec") @Nullable TerminalStageSpec terminalStageSpec
   )
@@ -79,9 +90,35 @@ public class DataSourceMSQDestination implements MSQDestination
     this.dimensionSchemas = dimensionSchemas;
     this.projections = projections;
     this.terminalStageSpec = terminalStageSpec != null ? terminalStageSpec : SegmentGenerationStageSpec.instance();
+    this.baseTable = baseTable;
 
     validateReplaceTimeChunksGranularityAligned(segmentGranularity, replaceTimeChunks);
     DataSchema.validateProjections(projections, segmentGranularity);
+  }
+
+  /**
+   * Backwards-compatible overload for callers that don't (yet) supply a {@code baseTable} spec.
+   */
+  public DataSourceMSQDestination(
+      String dataSource,
+      Granularity segmentGranularity,
+      @Nullable List<String> segmentSortOrder,
+      @Nullable List<Interval> replaceTimeChunks,
+      @Nullable Map<String, DimensionSchema> dimensionSchemas,
+      @Nullable List<AggregateProjectionSpec> projections,
+      @Nullable TerminalStageSpec terminalStageSpec
+  )
+  {
+    this(
+        dataSource,
+        segmentGranularity,
+        segmentSortOrder,
+        replaceTimeChunks,
+        dimensionSchemas,
+        null,
+        projections,
+        terminalStageSpec
+    );
   }
 
   @JsonProperty
@@ -147,6 +184,14 @@ public class DataSourceMSQDestination implements MSQDestination
     return projections;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public BaseTableProjectionSpec getBaseTable()
+  {
+    return baseTable;
+  }
+
   /**
    * Whether this object is in replace-existing-time-chunks mode.
    */
@@ -183,13 +228,14 @@ public class DataSourceMSQDestination implements MSQDestination
            && Objects.equals(replaceTimeChunks, that.replaceTimeChunks)
            && Objects.equals(dimensionSchemas, that.dimensionSchemas)
            && Objects.equals(projections, that.projections)
-           && Objects.equals(terminalStageSpec, that.terminalStageSpec);
+           && Objects.equals(terminalStageSpec, that.terminalStageSpec)
+           && Objects.equals(baseTable, that.baseTable);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionSchemas, projections, terminalStageSpec);
+    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionSchemas, projections, terminalStageSpec, baseTable);
   }
 
   @Override
@@ -201,6 +247,7 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
            ", dimensionSchemas=" + dimensionSchemas +
+           ", baseTable=" + baseTable +
            ", projections=" + projections +
            ", terminalStageSpec=" + terminalStageSpec +
            '}';
@@ -209,7 +256,7 @@ public class DataSourceMSQDestination implements MSQDestination
   @Override
   public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
   {
-    return ShuffleSpecFactories.getGlobalSortWithTargetSize(targetSize);
+    return ShuffleSpecFactories.globalSortWithTargetSize(targetSize);
   }
 
   @Override

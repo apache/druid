@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -32,6 +33,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -65,7 +67,9 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
       @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
-      @JsonProperty("stopTaskCount") Integer stopTaskCount
+      @JsonProperty("stopTaskCount") Integer stopTaskCount,
+      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
   )
   {
     super(
@@ -84,7 +88,9 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
         LagAggregator.DEFAULT,
         lateMessageRejectionStartDateTime,
         new IdleConfig(null, null),
-        stopTaskCount
+        stopTaskCount,
+        serverPriorityToReplicas,
+        boundedStreamConfig
     );
 
     this.consumerProperties = consumerProperties;
@@ -138,6 +144,33 @@ public class RabbitStreamSupervisorIOConfig extends SeekableStreamSupervisorIOCo
         ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
         ", idleConfig=" + getIdleConfig() +
         '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    RabbitStreamSupervisorIOConfig that = (RabbitStreamSupervisorIOConfig) o;
+    return pollTimeout == that.pollTimeout
+           && Objects.equals(uri, that.uri)
+           && Objects.equals(consumerProperties, that.consumerProperties);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), uri, consumerProperties, pollTimeout);
+  }
+
+  @Override
+  public RabbitStreamIOConfigBuilder toBuilder()
+  {
+    return new RabbitStreamIOConfigBuilder().copyFrom(this);
   }
 
 }

@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -42,8 +42,8 @@ public class QuerySegmentSpecTest
     QuerySegmentSpec spec = JSON_MAPPER.readValue(
         "\"2011-10-01/2011-10-10,2011-11-01/2011-11-10\"", QuerySegmentSpec.class
     );
-    Assert.assertTrue(spec instanceof LegacySegmentSpec);
-    Assert.assertEquals(
+    Assertions.assertInstanceOf(LegacySegmentSpec.class, spec);
+    Assertions.assertEquals(
         ImmutableList.of(Intervals.of("2011-10-01/2011-10-10"), Intervals.of("2011-11-01/2011-11-10")),
         spec.getIntervals()
     );
@@ -55,8 +55,8 @@ public class QuerySegmentSpecTest
     QuerySegmentSpec spec = JSON_MAPPER.readValue(
         "[\"2011-09-01/2011-10-10\", \"2011-11-01/2011-11-10\"]", QuerySegmentSpec.class
     );
-    Assert.assertTrue(spec instanceof LegacySegmentSpec);
-    Assert.assertEquals(
+    Assertions.assertInstanceOf(LegacySegmentSpec.class, spec);
+    Assertions.assertEquals(
         ImmutableList.of(Intervals.of("2011-09-01/2011-10-10"), Intervals.of("2011-11-01/2011-11-10")),
         spec.getIntervals()
     );
@@ -69,8 +69,8 @@ public class QuerySegmentSpecTest
         "{\"type\": \"intervals\", \"intervals\":[\"2011-08-01/2011-10-10\", \"2011-11-01/2011-11-10\"]}",
         QuerySegmentSpec.class
     );
-    Assert.assertTrue(spec instanceof MultipleIntervalSegmentSpec);
-    Assert.assertEquals(
+    Assertions.assertInstanceOf(MultipleIntervalSegmentSpec.class, spec);
+    Assertions.assertEquals(
         ImmutableList.of(Intervals.of("2011-08-01/2011-10-10"), Intervals.of("2011-11-01/2011-11-10")),
         spec.getIntervals()
     );
@@ -104,12 +104,12 @@ public class QuerySegmentSpecTest
         ),
         QuerySegmentSpec.class
     );
-    Assert.assertTrue(spec instanceof MultipleSpecificSegmentSpec);
-    Assert.assertEquals(
+    Assertions.assertInstanceOf(MultipleSpecificSegmentSpec.class, spec);
+    Assertions.assertEquals(
         ImmutableList.of(Intervals.of("2011-07-01/2011-10-10"), Intervals.of("2011-11-01/2011-11-10")),
         spec.getIntervals()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             new SegmentDescriptor(Intervals.of("2011-07-01/2011-10-10"), "1", 0),
             new SegmentDescriptor(Intervals.of("2011-07-01/2011-10-10"), "1", 1),

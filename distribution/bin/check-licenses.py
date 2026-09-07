@@ -58,6 +58,10 @@ class DependencyReportParser(HTMLParser):
         if self.state == "none":
             if tag == "h2":
                 self.state = "h2_start"
+            elif tag == "a":
+                for attr in attrs:
+                    if attr[0] == "id" and attr[1] == "Project_Dependencies_compile":
+                        self.state = "modern_compile_anchor"
 
         if self.state == "h2_start":
             if tag == "a":
@@ -75,6 +79,10 @@ class DependencyReportParser(HTMLParser):
                 for attr in attrs:
                     if attr[0] == "name" and attr[1] == "compile":
                         self.state = "compile_start"
+
+        if self.state == "modern_compile_heading":
+            if tag == "h2":
+                self.state = "h3_end"
 
         if self.state == "h3_end":
             if tag == "table":
@@ -109,6 +117,10 @@ class DependencyReportParser(HTMLParser):
         if self.state == "project_dependencies_start":
             if tag == "a":
                 self.state = "project_dependencies_end"
+
+        if self.state == "modern_compile_anchor":
+            if tag == "a":
+                self.state = "modern_compile_heading"
 
         if self.state == "h2_start":
             if tag == "h2":
@@ -264,6 +276,7 @@ def build_compatible_license_names():
     compatible_licenses['BSD-3-Clause'] = 'BSD-3-Clause License'
 
     compatible_licenses['Unicode/ICU License'] = 'Unicode/ICU License'
+    compatible_licenses['Unicode-3.0'] = 'Unicode/ICU License'
 
     compatible_licenses['SIL Open Font License 1.1'] = 'SIL Open Font License 1.1'
 
@@ -288,6 +301,7 @@ def build_compatible_license_names():
     compatible_licenses['Eclipse Public License, Version 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['Eclipse Public License v2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['EPL 2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['EPL-2.0'] = 'Eclipse Public License 2.0'
 
     compatible_licenses['Eclipse Distribution License 1.0'] = 'Eclipse Distribution License 1.0'
     compatible_licenses['Eclipse Distribution License - v 1.0'] = 'Eclipse Distribution License 1.0'
@@ -296,6 +310,9 @@ def build_compatible_license_names():
 
     compatible_licenses['Mozilla Public License Version 2.0'] = 'Mozilla Public License Version 2.0'
     compatible_licenses['Mozilla Public License, Version 2.0'] = 'Mozilla Public License Version 2.0'
+
+    compatible_licenses['MPL 1.1'] = 'MPL 1.1'
+    compatible_licenses['Mozilla Public License 1.1'] = 'MPL 1.1'
 
     compatible_licenses['Creative Commons Attribution 2.5'] = 'Creative Commons Attribution 2.5'
 
@@ -443,6 +460,8 @@ def check_licenses(license_yaml, dependency_reports_root):
     print_log_to_stderr("")
 
     if len(mismatched_licenses) > 0 or len(missing_licenses) > 0:
+        print_log_to_stderr("Mismatched licenses: {}".format(mismatched_licenses))
+        print_log_to_stderr("Missing licenses: {}".format(missing_licenses))
         sys.exit(1)
 
 

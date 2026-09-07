@@ -19,9 +19,6 @@
 
 package org.apache.druid.server.initialization;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 public class JettyWithResponseFilterEnabledTest extends JettyTest
 {
   @Override
@@ -30,13 +27,5 @@ public class JettyWithResponseFilterEnabledTest extends JettyTest
     // call super.setProperties first in case it is setting the same property as this class
     super.setProperties();
     System.setProperty("druid.server.http.showDetailedJettyErrors", "false");
-  }
-
-  @Test
-  @Override
-  public void testJettyErrorHandlerWithFilter()
-  {
-    // Response filter is enabled by config hence we do not show servlet information
-    Assert.assertFalse(server.getErrorHandler().isShowServlet());
   }
 }

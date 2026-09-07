@@ -51,8 +51,10 @@ import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SegmentMetadata;
+import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -132,10 +134,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final Duration pollDuration;
   private final UsageMode cacheMode;
   private final MetadataStorageTablesConfig tablesConfig;
+  private final SegmentsMetadataManagerConfig managerConfig;
   private final SQLMetadataConnector connector;
 
   private final boolean useSchemaCache;
   private final SegmentSchemaCache segmentSchemaCache;
+
+  private final boolean useIndexingStateCache;
+  private final IndexingStateCache indexingStateCache;
 
   private final ListeningScheduledExecutorService pollExecutor;
   private final ServiceEmitter emitter;
@@ -168,17 +174,21 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
       SegmentSchemaCache segmentSchemaCache,
+      IndexingStateCache indexingStateCache,
       SQLMetadataConnector connector,
       ScheduledExecutorFactory executorFactory,
       ServiceEmitter emitter
   )
   {
     this.jsonMapper = jsonMapper;
-    this.cacheMode = config.get().getCacheUsageMode();
-    this.pollDuration = config.get().getPollDuration().toStandardDuration();
+    this.managerConfig = config.get();
+    this.cacheMode = managerConfig.getCacheUsageMode();
+    this.pollDuration = managerConfig.getPollDuration().toStandardDuration();
     this.tablesConfig = tablesConfig.get();
     this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
+    this.useIndexingStateCache = indexingStateCache.isEnabled();
+    this.indexingStateCache = indexingStateCache;
     this.connector = connector;
     this.pollExecutor = isEnabled()
                         ? MoreExecutors.listeningDecorator(executorFactory.create(1, "SegmentMetadataCache-%s"))
@@ -232,6 +242,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.forEach((datasource, cache) -> cache.stop());
         datasourceToSegmentCache.clear();
         datasourcesSnapshot.set(null);
+        if (useIndexingStateCache) {
+          indexingStateCache.clear();
+        }
         syncFinishTime.set(null);
 
         updateCacheState(CacheState.STOPPED, "Stopped sync with metadata store");
@@ -325,6 +338,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     try (final HeapMemoryDatasourceSegmentCache datasourceCache = getCacheWithReference(dataSource)) {
       return datasourceCache.withWriteLock(
           () -> {
+            // Flag the write-through before performing it, so that even a write
+            // which throws after partially mutating the cache still causes the next sync
+            // to refresh this datasource's snapshot.
+            datasourceCache.markHasNewWrites();
             try {
               return writeAction.perform(datasourceCache);
             }
@@ -559,12 +576,16 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
     final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
 
+    // Datasources whose used-segment set changed this sync. Null forces a full
+    // snapshot rebuild (the first sync, which has no previous snapshot to reuse).
+    Set<String> datasourcesToRefresh = null;
+
     // Fetch all used segments if this is the first sync
     if (syncFinishTime.get() == null) {
       retrieveAllUsedSegments(datasourceToSummary);
     } else {
       retrieveUsedSegmentIds(datasourceToSummary);
-      updateSegmentIdsInCache(datasourceToSummary, syncStartTime.minus(SYNC_BUFFER_DURATION));
+      datasourcesToRefresh = updateSegmentIdsInCache(datasourceToSummary, syncStartTime.minus(SYNC_BUFFER_DURATION));
       retrieveUsedSegmentPayloads(datasourceToSummary);
     }
 
@@ -576,21 +597,45 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       retrieveAndResetUsedSegmentSchemas(datasourceToSummary);
     }
 
-    markCacheSynced(syncStartTime);
+    if (useIndexingStateCache) {
+      retrieveAndResetUsedIndexingStates();
+    }
+
+    markCacheSynced(syncStartTime, datasourcesToRefresh);
 
     syncFinishTime.set(DateTimes.nowUtc());
     return totalSyncDuration.millisElapsed();
   }
 
   /**
-   * Marks the cache for all datasources as synced and emit total stats.
+   * Marks the cache for all datasources as synced and emits stats, then rebuilds
+   * the {@link DataSourcesSnapshot}.
+   * <p>
+   * When {@code datasourcesToRefresh} is non-null and a previous snapshot exists,
+   * only the changed datasources are rebuilt into the snapshot (reusing the prior
+   * snapshot's per-datasource timelines/overshadow for the rest); the result is
+   * identical to a full rebuild. A datasource is rebuilt if the metadata-store
+   * diff changed it ({@code datasourcesToRefresh}) or a write-through transaction
+   * mutated its cache since the last sync ({@code hasNewWrites}). Otherwise the
+   * whole snapshot is rebuilt (e.g. first sync, when there is no previous snapshot).
+   *
+   * @param datasourcesToRefresh Datasources changed by the metadata-store diff this
+   *                             sync, or null to force a full rebuild.
    */
-  private void markCacheSynced(DateTime syncStartTime)
+  private void markCacheSynced(DateTime syncStartTime, @Nullable Set<String> datasourcesToRefresh)
   {
     final Stopwatch updateDuration = Stopwatch.createStarted();
 
+    final DataSourcesSnapshot previousSnapshot = datasourcesSnapshot.get();
+    // updateSegmentIdsInCache never returns null, so datasourcesToRefresh is null
+    // only on the first sync which also has no previous snapshot to build on.
+    final boolean incremental = previousSnapshot != null;
+
     final Set<String> cachedDatasources = Set.copyOf(datasourceToSegmentCache.keySet());
+    // In incremental mode this holds only the datasources being rebuilt; in full
+    // mode it holds every non-empty datasource.
     final Map<String, Set<DataSegment>> datasourceToUsedSegments = new HashMap<>();
+    final Set<String> removedDatasources = new HashSet<>();
 
     for (String dataSource : cachedDatasources) {
       final HeapMemoryDatasourceSegmentCache cache = datasourceToSegmentCache.getOrDefault(
@@ -604,8 +649,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.compute(
             dataSource,
             (ds, existingCache) -> {
-              if (existingCache != null && existingCache.isEmpty()
-                  && !existingCache.isBeingUsedByTransaction()) {
+              if (existingCache != null && !existingCache.isBeingUsedByTransaction() && existingCache.isEmpty()) {
                 emitMetric(dataSource, Metric.DELETED_DATASOURCES, 1L);
                 return null;
               } else {
@@ -613,19 +657,43 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
               }
             }
         );
+        removedDatasources.add(dataSource);
       } else {
         emitMetric(dataSource, Metric.CACHED_INTERVALS, stats.getNumIntervals());
         emitMetric(dataSource, Metric.CACHED_USED_SEGMENTS, stats.getNumUsedSegments());
         emitMetric(dataSource, Metric.CACHED_UNUSED_SEGMENTS, stats.getNumUnusedSegments());
         emitMetric(dataSource, Metric.CACHED_PENDING_SEGMENTS, stats.getNumPendingSegments());
 
-        datasourceToUsedSegments.put(dataSource, cache.findUsedSegmentsOverlappingAnyOf(List.of()));
+        if (!incremental) {
+          datasourceToUsedSegments.put(dataSource, cache.findUsedSegmentsOverlappingAnyOf(List.of()));
+        } else if (datasourcesToRefresh.contains(dataSource)) {
+          // Changed by the metadata-store diff; materialize and clear the
+          // write-through flag atomically so a concurrent write is not lost.
+          datasourceToUsedSegments.put(dataSource, cache.getUsedSegmentsAndClearNewWrites());
+        } else {
+          // Not changed in the store, but a write-through transaction may have
+          // mutated the cache directly since the last snapshot; catch that here.
+          final Set<DataSegment> segmentsFromWrites = cache.getUsedSegmentsIfHasNewWrites();
+          if (segmentsFromWrites != null) {
+            datasourceToUsedSegments.put(dataSource, segmentsFromWrites);
+          }
+        }
       }
     }
 
-    datasourcesSnapshot.set(
-        DataSourcesSnapshot.fromUsedSegments(datasourceToUsedSegments, syncStartTime)
-    );
+    if (incremental) {
+      datasourcesSnapshot.set(
+          previousSnapshot.updateSnapshotForDataSources(
+              datasourceToUsedSegments,
+              removedDatasources,
+              syncStartTime
+          )
+      );
+    } else {
+      datasourcesSnapshot.set(
+          DataSourcesSnapshot.fromUsedSegments(datasourceToUsedSegments, syncStartTime)
+      );
+    }
     emitMetric(Metric.UPDATE_SNAPSHOT_DURATION_MILLIS, updateDuration.millisElapsed());
   }
 
@@ -684,7 +752,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     return inReadOnlyTransaction(
         (handle, status) -> sqlFunction.apply(
             SqlSegmentsMetadataQuery
-                .forHandle(handle, connector, tablesConfig, jsonMapper)
+                .forHandle(handle, connector, tablesConfig, managerConfig, jsonMapper)
         )
     );
   }
@@ -714,7 +782,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       try (
           CloseableIterator<DataSegmentPlus> iterator =
               SqlSegmentsMetadataQuery
-                  .forHandle(handle, connector, tablesConfig, jsonMapper)
+                  .forHandle(handle, connector, tablesConfig, managerConfig, jsonMapper)
                   .retrieveSegmentsByIdIterator(dataSource, segmentIdsToRefresh, useSchemaCache)
       ) {
         iterator.forEachRemaining(summary.usedSegments::add);
@@ -728,13 +796,20 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    * metadata store in {@link #retrieveUsedSegmentIds}. The update done on each
    * datasource cache is atomic. Also identifies the segment IDs which have been
    * updated in the metadata store and need to be refreshed in the cache.
+   *
+   * @return Set of datasource names whose used segment set has changed in this
+   * sync and need to be refreshed in the snapshot.
    */
-  private void updateSegmentIdsInCache(
+  private Set<String> updateSegmentIdsInCache(
       Map<String, DatasourceSegmentSummary> datasourceToSummary,
       DateTime syncStartTime
   )
   {
     final Stopwatch updateDuration = Stopwatch.createStarted();
+
+    // Datasources whose used-segment set actually changed this sync (used to
+    // rebuild only the affected part of the snapshot).
+    final Set<String> datasourcesToRefresh = new HashSet<>();
 
     // Sync segments for datasources which were retrieved in the latest poll
     datasourceToSummary.forEach((dataSource, summary) -> {
@@ -745,6 +820,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       emitNonZeroMetric(dataSource, Metric.DELETED_SEGMENTS, result.getDeleted());
 
       summary.usedSegmentIdsToRefresh.addAll(result.getExpiredIds());
+      if (result.getDeleted() > 0 || !result.getExpiredIds().isEmpty()) {
+        datasourcesToRefresh.add(dataSource);
+      }
     });
 
     // Update cache for datasources which returned no segments in the latest poll
@@ -752,10 +830,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       if (!datasourceToSummary.containsKey(dataSource)) {
         final SegmentSyncResult result = cache.syncSegmentIds(List.of(), syncStartTime);
         emitNonZeroMetric(dataSource, Metric.DELETED_SEGMENTS, result.getDeleted());
+        if (result.getDeleted() > 0) {
+          datasourcesToRefresh.add(dataSource);
+        }
       }
     });
 
     emitMetric(Metric.UPDATE_IDS_DURATION_MILLIS, updateDuration.millisElapsed());
+    return datasourcesToRefresh;
   }
 
   /**
@@ -785,13 +867,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final String sql;
     if (useSchemaCache) {
       sql = StringUtils.format(
-          "SELECT id, payload, created_date, used_status_last_updated, schema_fingerprint, num_rows"
+          "SELECT id, payload, created_date, used_status_last_updated, indexing_state_fingerprint, schema_fingerprint, num_rows"
           + " FROM %s WHERE used = true",
           tablesConfig.getSegmentsTable()
       );
     } else {
       sql = StringUtils.format(
-          "SELECT id, payload, created_date, used_status_last_updated"
+          "SELECT id, payload, created_date, used_status_last_updated, indexing_state_fingerprint"
           + " FROM %s WHERE used = true",
           tablesConfig.getSegmentsTable()
       );
@@ -1071,9 +1153,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           DateTimes.of(resultSet.getString(3)),
           SqlSegmentsMetadataQuery.nullAndEmptySafeDate(resultSet.getString(4)),
           true,
-          useSchemaCache ? resultSet.getString(5) : null,
-          useSchemaCache ? (Long) resultSet.getObject(6) : null,
-          null
+          useSchemaCache ? resultSet.getString(6) : null,
+          useSchemaCache ? (Long) resultSet.getObject(7) : null,
+          null,
+          resultSet.getString(5)
       );
     }
     catch (Throwable t) {
@@ -1104,6 +1187,89 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                           .setDimension(DruidMetrics.DATASOURCE, datasource)
                           .setMetric(metric, value)
     );
+  }
+
+  /**
+   * Retrieves required used indexing states from the metadata store and resets
+   * them in the {@link IndexingStateCache}. If this is the first sync, all used
+   * indexing states are retrieved from the metadata store. If this is a delta sync,
+   * first only the fingerprints of all used indexing states are retrieved. Payloads are
+   * then fetched for only the fingerprints which are not present in the cache.
+   */
+  private void retrieveAndResetUsedIndexingStates()
+  {
+    final Stopwatch indexingStateSyncDuration = Stopwatch.createStarted();
+
+    // Reset the IndexingStateCache with latest indexing states
+    final Map<String, CompactionState> fingerprintToStateMap;
+    if (syncFinishTime.get() == null) {
+      fingerprintToStateMap = buildIndexingStateFingerprintToStateMapForFullSync();
+    } else {
+      fingerprintToStateMap = buildIndexingStateFingerprintToStateMapForDeltaSync();
+    }
+
+    indexingStateCache.resetIndexingStatesForPublishedSegments(fingerprintToStateMap);
+
+    // Emit metrics for the current contents of the cache
+    indexingStateCache.getAndResetStats().forEach(this::emitMetric);
+    emitMetric(Metric.RETRIEVE_INDEXING_STATES_DURATION_MILLIS, indexingStateSyncDuration.millisElapsed());
+  }
+
+  /**
+   * Retrieves all used indexing states from the metadata store and builds a
+   * fresh map from indexing state fingerprint to state.
+   */
+  private Map<String, CompactionState> buildIndexingStateFingerprintToStateMapForFullSync()
+  {
+    final List<IndexingStateRecord> records = query(
+        SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStates
+    );
+
+    return records.stream().collect(
+        Collectors.toMap(
+            IndexingStateRecord::getFingerprint,
+            IndexingStateRecord::getState
+        )
+    );
+  }
+
+  /**
+   * Retrieves indexing states from the metadata store if they are not present
+   * in the cache or have been recently updated in the metadata store. These
+   * indexing states along with those already present in the cache are used to
+   * build a complete updated map from indexing state fingerprint to state.
+   *
+   * @return Complete updated map from indexing state fingerprint to state for all
+   * used indexing states currently persisted in the metadata store.
+   */
+  private Map<String, CompactionState> buildIndexingStateFingerprintToStateMapForDeltaSync()
+  {
+    // Identify fingerprints in the cache and in the metadata store
+    final Map<String, CompactionState> fingerprintToStateMap = new HashMap<>(
+        indexingStateCache.getPublishedIndexingStateMap()
+    );
+    final Set<String> cachedFingerprints = Set.copyOf(fingerprintToStateMap.keySet());
+    final Set<String> persistedFingerprints = query(
+        SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStateFingerprints
+    );
+
+    // Remove entry for indexing states that have been deleted from the metadata store
+    final Set<String> deletedFingerprints = Sets.difference(cachedFingerprints, persistedFingerprints);
+    deletedFingerprints.forEach(fingerprintToStateMap::remove);
+    emitMetric(Metric.DELETED_INDEXING_STATES, deletedFingerprints.size());
+
+    // Retrieve and add entry for indexing states that have been added to the metadata store
+    final Set<String> addedFingerprints = Sets.difference(persistedFingerprints, cachedFingerprints);
+    final List<IndexingStateRecord> addedIndexingStateRecords = query(
+        sql -> sql.retrieveIndexingStatesForFingerprints(addedFingerprints)
+    );
+
+    addedIndexingStateRecords.forEach(
+        record -> fingerprintToStateMap.put(record.getFingerprint(), record.getState())
+    );
+    emitMetric(Metric.ADDED_INDEXING_STATES, addedIndexingStateRecords.size());
+
+    return fingerprintToStateMap;
   }
 
   /**

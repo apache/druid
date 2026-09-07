@@ -24,9 +24,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.ISE;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -45,45 +44,45 @@ public class CollectionUtilsTest
   @Test
   public void testSubtract()
   {
-    Assert.assertEquals(empty, CollectionUtils.subtract(empty, empty));
-    Assert.assertEquals(abc, CollectionUtils.subtract(abc, empty));
-    Assert.assertEquals(empty, CollectionUtils.subtract(abc, abc));
-    Assert.assertEquals(abc, CollectionUtils.subtract(abc, efg));
-    Assert.assertEquals(ImmutableSet.of("a"), CollectionUtils.subtract(abc, bcd));
+    Assertions.assertEquals(empty, CollectionUtils.subtract(empty, empty));
+    Assertions.assertEquals(abc, CollectionUtils.subtract(abc, empty));
+    Assertions.assertEquals(empty, CollectionUtils.subtract(abc, abc));
+    Assertions.assertEquals(abc, CollectionUtils.subtract(abc, efg));
+    Assertions.assertEquals(ImmutableSet.of("a"), CollectionUtils.subtract(abc, bcd));
   }
 
   @Test
   public void testIntersect()
   {
-    Assert.assertEquals(empty, CollectionUtils.intersect(empty, empty));
-    Assert.assertEquals(abc, CollectionUtils.intersect(abc, abc));
-    Assert.assertEquals(empty, CollectionUtils.intersect(abc, efg));
-    Assert.assertEquals(ImmutableSet.of("b", "c"), CollectionUtils.intersect(abc, bcd));
+    Assertions.assertEquals(empty, CollectionUtils.intersect(empty, empty));
+    Assertions.assertEquals(abc, CollectionUtils.intersect(abc, abc));
+    Assertions.assertEquals(empty, CollectionUtils.intersect(abc, efg));
+    Assertions.assertEquals(ImmutableSet.of("b", "c"), CollectionUtils.intersect(abc, bcd));
   }
 
   @Test
   public void testUnion()
   {
-    Assert.assertEquals(empty, CollectionUtils.union(empty, empty));
-    Assert.assertEquals(abc, CollectionUtils.union(abc, abc));
-    Assert.assertEquals(ImmutableSet.of("a", "b", "c", "e", "f", "g"), CollectionUtils.union(abc, efg));
-    Assert.assertEquals(ImmutableSet.of("a", "b", "c", "d"), CollectionUtils.union(abc, bcd));
+    Assertions.assertEquals(empty, CollectionUtils.union(empty, empty));
+    Assertions.assertEquals(abc, CollectionUtils.union(abc, abc));
+    Assertions.assertEquals(ImmutableSet.of("a", "b", "c", "e", "f", "g"), CollectionUtils.union(abc, efg));
+    Assertions.assertEquals(ImmutableSet.of("a", "b", "c", "d"), CollectionUtils.union(abc, bcd));
   }
 
   @Test
   public void testGetOnlyElement_empty()
   {
-    final IllegalStateException e = Assert.assertThrows(
+    final IllegalStateException e = Assertions.assertThrows(
         IllegalStateException.class,
         () -> CollectionUtils.getOnlyElement(Collections.emptyList(), xs -> new ISE("oops"))
     );
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("oops")));
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("oops"));
   }
 
   @Test
   public void testGetOnlyElement_one()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "a",
         CollectionUtils.getOnlyElement(Collections.singletonList("a"), xs -> new ISE("oops"))
     );
@@ -92,17 +91,17 @@ public class CollectionUtilsTest
   @Test
   public void testGetOnlyElement_two()
   {
-    final IllegalStateException e = Assert.assertThrows(
+    final IllegalStateException e = Assertions.assertThrows(
         IllegalStateException.class,
         () -> CollectionUtils.getOnlyElement(ImmutableList.of("a", "b"), xs -> new ISE("oops"))
     );
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("oops")));
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("oops"));
   }
 
   @Test
   public void test_toMap()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Map.of("a", "A", "b", "B"),
         CollectionUtils.toMap(
             List.of("a", "b"),

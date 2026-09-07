@@ -20,8 +20,19 @@
 package org.apache.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -29,14 +40,14 @@ import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
+import org.eclipse.jetty.http.UriCompliance;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
@@ -73,7 +84,9 @@ public class ServerConfig
       boolean showDetailedJettyErrors,
       @NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy,
       @Nullable String contentSecurityPolicy,
-      boolean enableHSTS
+      boolean enableHSTS,
+      @Nullable UriCompliance uriCompliance,
+      boolean enforceStrictSNIHostChecking
   )
   {
     this.numThreads = numThreads;
@@ -97,6 +110,8 @@ public class ServerConfig
     this.errorResponseTransformStrategy = errorResponseTransformStrategy;
     this.contentSecurityPolicy = contentSecurityPolicy;
     this.enableHSTS = enableHSTS;
+    this.uriCompliance = uriCompliance != null ? uriCompliance : UriCompliance.LEGACY;
+    this.enforceStrictSNIHostChecking = enforceStrictSNIHostChecking;
   }
 
   public ServerConfig()
@@ -108,6 +123,12 @@ public class ServerConfig
   public ServerConfig(boolean enableQueryRequestsQueuing)
   {
     this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
+  }
+
+  @VisibleForTesting
+  public ServerConfig(@NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy)
+  {
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
   }
 
   @JsonProperty
@@ -185,6 +206,11 @@ public class ServerConfig
   @JsonProperty
   private boolean enableHSTS = false;
 
+  @JsonProperty
+  @JsonDeserialize(using = UriComplianceDeserializer.class)
+  @JsonSerialize(using = UriComplianceSerializer.class)
+  private UriCompliance uriCompliance = UriCompliance.LEGACY;
+
   /**
    * This feature flag enables query requests queuing when admins want to reserve some threads for
    * non-query requests. This feature flag is not documented and will be removed in the future.
@@ -194,6 +220,9 @@ public class ServerConfig
 
   @JsonProperty
   private boolean showDetailedJettyErrors = true;
+
+  @JsonProperty
+  private boolean enforceStrictSNIHostChecking = true;
 
   public int getNumThreads()
   {
@@ -306,6 +335,16 @@ public class ServerConfig
     return enableQueryRequestsQueuing;
   }
 
+  public UriCompliance getUriCompliance()
+  {
+    return uriCompliance;
+  }
+
+  public boolean isEnforceStrictSNIHostChecking()
+  {
+    return enforceStrictSNIHostChecking;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -337,7 +376,9 @@ public class ServerConfig
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
            enableHSTS == that.enableHSTS &&
-           enableQueryRequestsQueuing == that.enableQueryRequestsQueuing;
+           enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
+           Objects.equals(uriCompliance, that.uriCompliance) &&
+           enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking;
   }
 
   @Override
@@ -365,7 +406,9 @@ public class ServerConfig
         showDetailedJettyErrors,
         contentSecurityPolicy,
         enableHSTS,
-        enableQueryRequestsQueuing
+        enableQueryRequestsQueuing,
+        uriCompliance,
+        enforceStrictSNIHostChecking
     );
   }
 
@@ -395,11 +438,43 @@ public class ServerConfig
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
+           ", uriCompliance=" + uriCompliance +
+           ", enforceStrictSNIHostChecking=" + enforceStrictSNIHostChecking +
            '}';
   }
 
   public static int getDefaultNumThreads()
   {
     return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
+  }
+
+  public static int getNumThreadsFromProperties(Properties properties)
+  {
+    final String value = properties.getProperty("druid.server.http.numThreads");
+    return value == null ? getDefaultNumThreads() : Integer.parseInt(value);
+  }
+
+  public static int getDefaultMaxConcurrentRequests(int numThreads)
+  {
+    return Math.max(1, Math.max(numThreads - 4, (int) (numThreads * 0.8)));
+  }
+
+  public static class UriComplianceDeserializer extends JsonDeserializer<UriCompliance>
+  {
+    @Override
+    public UriCompliance deserialize(JsonParser p, DeserializationContext ctxt) throws IOException
+    {
+      String value = p.getValueAsString();
+      return UriCompliance.valueOf(value);
+    }
+  }
+
+  public static class UriComplianceSerializer extends JsonSerializer<UriCompliance>
+  {
+    @Override
+    public void serialize(UriCompliance value, JsonGenerator gen, SerializerProvider serializers) throws IOException
+    {
+      gen.writeString(value.getName());
+    }
   }
 }

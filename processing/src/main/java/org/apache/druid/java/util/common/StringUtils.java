@@ -279,6 +279,20 @@ public class StringUtils
   }
 
   /**
+   * If {@param bytes} is not null, decodes a UTF-8 string from the bytes.
+   *
+   * If {@param bytes} is null, this method returns null.
+   */
+  @Nullable
+  public static String fromUtf8Nullable(@Nullable final byte[] bytes)
+  {
+    if (bytes == null) {
+      return null;
+    }
+    return StringUtils.fromUtf8(bytes);
+  }
+
+  /**
    * Converts a string to a UTF-8 byte array.
    *
    * @throws NullPointerException if "string" is null

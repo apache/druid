@@ -28,8 +28,8 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -61,7 +61,7 @@ public class JacksonUtilsTest
         new TypeReference<>() {}
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(new SerializableClass(2), null, new SerializableClass(3)),
         deserializedValues
     );
@@ -88,7 +88,7 @@ public class JacksonUtilsTest
         new TypeReference<>() {}
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList("foo", null, 1.23),
         deserializedValues
     );
@@ -101,22 +101,22 @@ public class JacksonUtilsTest
     final byte[] bytes = StringUtils.toUtf8("{\"foo\":\"bar\"}");
     final Map<String, Object> expected = ImmutableMap.of("foo", "bar");
 
-    Assert.assertEquals(
-        "readValue(Class)",
+    Assertions.assertEquals(
         expected,
-        JacksonUtils.readValue(objectMapper, bytes, Map.class)
+        JacksonUtils.readValue(objectMapper, bytes, Map.class),
+        "readValue(Class)"
     );
 
-    Assert.assertEquals(
-        "readValue(JavaType)",
+    Assertions.assertEquals(
         expected,
-        JacksonUtils.readValue(objectMapper, bytes, objectMapper.constructType(Map.class))
+        JacksonUtils.readValue(objectMapper, bytes, objectMapper.constructType(Map.class)),
+        "readValue(JavaType)"
     );
 
-    Assert.assertEquals(
-        "readValue(TypeReference)",
+    Assertions.assertEquals(
         expected,
-        JacksonUtils.readValue(objectMapper, bytes, JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING)
+        JacksonUtils.readValue(objectMapper, bytes, JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING),
+        "readValue(TypeReference)"
     );
   }
 

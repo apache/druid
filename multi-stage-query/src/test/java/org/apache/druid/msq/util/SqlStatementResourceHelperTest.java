@@ -36,9 +36,10 @@ import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.indexing.report.MSQTaskReportTest;
 import org.apache.druid.msq.sql.entity.PageInformation;
+import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -333,9 +334,9 @@ public class SqlStatementResourceHelperTest
         payload,
         TaskReportMSQDestination.instance()
     );
-    Assert.assertTrue(pages.isPresent());
-    Assert.assertEquals(1, pages.get().size());
-    Assert.assertEquals(new PageInformation(0, 0L, 0L), pages.get().get(0));
+    Assertions.assertTrue(pages.isPresent());
+    Assertions.assertEquals(1, pages.get().size());
+    Assertions.assertEquals(new PageInformation(0, 0L, 0L), pages.get().get(0));
   }
 
   @Test
@@ -381,15 +382,15 @@ public class SqlStatementResourceHelperTest
             null
         )
     );
-    Assert.assertTrue(pages.isPresent());
-    Assert.assertEquals(1, pages.get().size());
-    Assert.assertEquals(new PageInformation(0, 0L, null), pages.get().get(0));
+    Assertions.assertTrue(pages.isPresent());
+    Assertions.assertEquals(1, pages.get().size());
+    Assertions.assertEquals(new PageInformation(0, 0L, null), pages.get().get(0));
   }
 
   private void validatePages(List<PageInformation> actualPageList, List<PageInformation> expectedPageList)
   {
-    Assert.assertEquals(expectedPageList.size(), actualPageList.size());
-    Assert.assertEquals(expectedPageList, actualPageList);
+    Assertions.assertEquals(expectedPageList.size(), actualPageList.size());
+    Assertions.assertEquals(expectedPageList, actualPageList);
   }
 
   private List<PageInformation> getExpectedPageInformationList(ChannelCounters... workerCounters)
@@ -448,7 +449,7 @@ public class SqlStatementResourceHelperTest
       if (prev > current) {
         throw new IllegalArgumentException("Channel numbers should be in increasing order");
       }
-      channelCounters.addFrame(current, createFrame(current * 10 + 1, 100L));
+      channelCounters.addRAC(createFrame(current * 10 + 1, 100L).asRAC(), current);
       prev = current;
     }
     return channelCounters;
@@ -460,6 +461,14 @@ public class SqlStatementResourceHelperTest
     Frame frame = EasyMock.mock(Frame.class);
     EasyMock.expect(frame.numRows()).andReturn(numRows).anyTimes();
     EasyMock.expect(frame.numBytes()).andReturn(numBytes).anyTimes();
+
+    // Mock asRAC() to return a mock FrameRowsAndColumns
+    FrameRowsAndColumns rac = EasyMock.mock(FrameRowsAndColumns.class);
+    EasyMock.expect(rac.numRows()).andReturn(numRows).anyTimes();
+    EasyMock.expect(rac.as(Frame.class)).andReturn(frame).anyTimes();
+    EasyMock.replay(rac);
+
+    EasyMock.expect(frame.asRAC()).andReturn(rac).anyTimes();
     EasyMock.replay(frame);
     return frame;
   }

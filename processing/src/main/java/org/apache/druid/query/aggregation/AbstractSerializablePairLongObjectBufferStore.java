@@ -20,7 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.serde.cell.ByteBufferProvider;
 import org.apache.druid.segment.serde.cell.CellWriter;
@@ -130,10 +130,10 @@ public abstract class AbstractSerializablePairLongObjectBufferStore<T extends Se
     }
 
     @Override
-    public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+    public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
     {
       columnHeader.transferTo(channel);
-      cellWriter.writeTo(channel, smoosher);
+      cellWriter.writeTo(channel, fileBuilder);
     }
   }
 }

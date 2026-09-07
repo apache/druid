@@ -25,7 +25,9 @@ import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.query.filter.SegmentPruner;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,7 +58,7 @@ public class StageInputSpecSlicer implements InputSpecSlicer
   }
 
   @Override
-  public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
+  public List<InputSlice> sliceStatic(InputSpec inputSpec, @Nullable SegmentPruner segmentPruner, int maxNumSlices)
   {
     final StageInputSpec stageInputSpec = (StageInputSpec) inputSpec;
 
@@ -91,6 +93,7 @@ public class StageInputSpecSlicer implements InputSpecSlicer
   @Override
   public List<InputSlice> sliceDynamic(
       InputSpec inputSpec,
+      @Nullable SegmentPruner segmentPruner,
       int maxNumSlices,
       int maxFilesPerSlice,
       long maxBytesPerSlice

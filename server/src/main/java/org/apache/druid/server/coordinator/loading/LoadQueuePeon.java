@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.loading;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -48,6 +49,29 @@ public interface LoadQueuePeon
   Set<DataSegment> getSegmentsMarkedToDrop();
 
   void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback);
+
+  /**
+   * Like {@link #loadSegment(DataSegment, SegmentAction, LoadPeonCallback)} but for a partial-load request. The
+   * {@code profile} carries the wrapped load-spec map and fingerprint that ride out to the historical via the
+   * outbound {@link org.apache.druid.server.coordination.SegmentChangeRequestLoad}.
+   * <p>
+   * Default implementation throws {@link UnsupportedOperationException} when {@code profile} is non-null so that
+   * minimal mock peons used in tests don't have to implement it; production peons must override.
+   */
+  default void loadSegment(
+      DataSegment segment,
+      SegmentAction action,
+      @Nullable PartialLoadProfile profile,
+      LoadPeonCallback callback
+  )
+  {
+    if (profile != null) {
+      throw new UnsupportedOperationException(
+          "Partial load profile is not supported by this LoadQueuePeon implementation"
+      );
+    }
+    loadSegment(segment, action, callback);
+  }
 
   void dropSegment(DataSegment segment, LoadPeonCallback callback);
 

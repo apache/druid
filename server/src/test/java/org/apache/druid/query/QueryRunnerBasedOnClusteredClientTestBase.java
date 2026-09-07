@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNQueryConfig;
@@ -54,9 +53,9 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -110,13 +109,13 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
     );
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAbstractClass() throws IOException
   {
     CLOSER.close();
   }
 
-  @Before
+  @BeforeEach
   public void setupTestBase()
   {
     segmentGenerator = new SegmentGenerator();
@@ -139,7 +138,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
     servers = new ArrayList<>();
   }
 
-  @After
+  @AfterEach
   public void tearDownTestBase() throws IOException
   {
     segmentGenerator.close();
@@ -228,9 +227,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
 
   protected static ResponseContext responseContext()
   {
-    final ResponseContext responseContext = ConcurrentResponseContext.createEmpty();
-    responseContext.initializeRemainingResponses();
-    return responseContext;
+    return DirectDruidClient.makeResponseContextForQuery();
   }
 
   protected static DataSegment newSegment(

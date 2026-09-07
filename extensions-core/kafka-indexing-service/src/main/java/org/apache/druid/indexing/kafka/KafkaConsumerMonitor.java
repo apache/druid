@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.kafka;
 
+import com.google.common.util.concurrent.AtomicDouble;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -28,18 +28,18 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class KafkaConsumerMonitor extends AbstractMonitor
 {
-  private static final Logger log = new Logger(KafkaConsumerMonitor.class);
-
   private volatile boolean stopAfterNext = false;
 
   private static final String CLIENT_ID_TAG = "client-id";
@@ -47,9 +47,11 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   private static final String PARTITION_TAG = "partition";
   private static final String NODE_ID_TAG = "node-id";
 
+  private static final String POLL_IDLE_RATIO_METRIC_NAME = "poll-idle-ratio-avg";
+
   /**
    * Kafka metric name -> Kafka metric descriptor. Taken from
-   * https://kafka.apache.org/documentation/#consumer_fetch_monitoring.
+   * <a href="https://kafka.apache.org/documentation/#consumer_fetch_monitoring">Kafka documentation</a>.
    */
   private static final Map<String, KafkaConsumerMetric> METRICS =
       Stream.of(
@@ -124,15 +126,33 @@ public class KafkaConsumerMonitor extends AbstractMonitor
               "kafka/consumer/incomingBytes",
               Set.of(CLIENT_ID_TAG, NODE_ID_TAG),
               KafkaConsumerMetric.MetricType.COUNTER
+          ),
+          new KafkaConsumerMetric(
+              POLL_IDLE_RATIO_METRIC_NAME,
+              "kafka/consumer/pollIdleRatio",
+              Set.of(CLIENT_ID_TAG),
+              KafkaConsumerMetric.MetricType.GAUGE
           )
       ).collect(Collectors.toMap(KafkaConsumerMetric::getKafkaMetricName, Function.identity()));
 
   private final KafkaConsumer<?, ?> consumer;
-  private final Map<MetricName, AtomicLong> counters = new HashMap<>();
 
-  public KafkaConsumerMonitor(final KafkaConsumer<?, ?> consumer)
+  /**
+   * Supplies a new metric builder for each emitted metric.
+   */
+  @Nullable
+  private final Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier;
+
+  private final Map<MetricName, AtomicLong> counters = new HashMap<>();
+  private final AtomicDouble pollIdleRatioAvg = new AtomicDouble(1.0d);
+
+  public KafkaConsumerMonitor(
+      final KafkaConsumer<?, ?> consumer,
+      @Nullable final Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
+  )
   {
     this.consumer = consumer;
+    this.metricBuilderSupplier = metricBuilderSupplier;
   }
 
   @Override
@@ -163,13 +183,21 @@ public class KafkaConsumerMonitor extends AbstractMonitor
         }
 
         if (emitValue != null && !Double.isNaN(emitValue.doubleValue())) {
-          final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+          final ServiceMetricEvent.Builder builder =
+              metricBuilderSupplier != null ? metricBuilderSupplier.get() : new ServiceMetricEvent.Builder();
           for (final String dimension : kafkaConsumerMetric.getDimensions()) {
             if (!CLIENT_ID_TAG.equals(dimension)) {
               builder.setDimension(dimension, metricName.tags().get(dimension));
             }
           }
           emitter.emit(builder.setMetric(kafkaConsumerMetric.getDruidMetricName(), emitValue));
+        }
+      }
+
+      // Capture `poll-idle-ratio-avg` metric for autoscaler purposes.
+      if (POLL_IDLE_RATIO_METRIC_NAME.equals(metricName.name())) {
+        if (entry.getValue().metricValue() != null) {
+          pollIdleRatioAvg.set(((Number) entry.getValue().metricValue()).doubleValue());
         }
       }
     }
@@ -180,5 +208,15 @@ public class KafkaConsumerMonitor extends AbstractMonitor
   public void stopAfterNextEmit()
   {
     stopAfterNext = true;
+  }
+
+  /**
+   * Average poll-to-idle ratio as reported by the Kafka consumer.
+   * A value of 0 represents that the consumer is never idle, i.e. always consuming.
+   * A value of 1 represents that the consumer is always idle, i.e. not receiving data.
+   */
+  public double getPollIdleRatioAvg()
+  {
+    return pollIdleRatioAvg.get();
   }
 }

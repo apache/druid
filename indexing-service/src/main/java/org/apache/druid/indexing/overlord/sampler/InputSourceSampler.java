@@ -71,7 +71,7 @@ public class InputSourceSampler
   private static final DataSchema DEFAULT_DATA_SCHEMA =
       DataSchema.builder()
                 .withDataSource(SAMPLER_DATA_SOURCE)
-                .withTimestamp(new TimestampSpec(null, null, null))
+                .withTimestamp(TimestampSpec.DEFAULT)
                 .withDimensions(DimensionsSpec.builder().build())
                 .build();
 
@@ -127,7 +127,7 @@ public class InputSourceSampler
       );
       try (final CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample();
            final IncrementalIndex index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
-           final Closer closer1 = closer) {
+           final Closer ignoredCloser = closer) {
         List<SamplerResponseRow> responseRows = new ArrayList<>(nonNullSamplerConfig.getNumRows());
         int numRowsIndexed = 0;
 

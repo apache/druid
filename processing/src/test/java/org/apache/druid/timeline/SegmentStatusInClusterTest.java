@@ -19,28 +19,20 @@
 
 package org.apache.druid.timeline;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.jackson.CommaListJoinDeserializer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class SegmentStatusInClusterTest
 {
@@ -49,7 +41,7 @@ public class SegmentStatusInClusterTest
   private static final ImmutableMap<String, Object> LOAD_SPEC = ImmutableMap.of("something", "or_other");
   private static final boolean OVERSHADOWED = true;
   private static final Integer REPLICATION_FACTOR = 2;
-  private static final Long NUM_ROWS = 10L;
+  private static final Integer TOTAL_ROWS = 10;
   private static final boolean REALTIME = true;
   private static final int TEST_VERSION = 0x9;
   private static final SegmentStatusInCluster SEGMENT = createSegmentForTest();
@@ -73,8 +65,9 @@ public class SegmentStatusInClusterTest
                                          .loadSpec(LOAD_SPEC)
                                          .binaryVersion(TEST_VERSION)
                                          .size(1)
+                                         .totalRows(TOTAL_ROWS)
                                          .build();
-    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, NUM_ROWS, REALTIME);
+    return new SegmentStatusInCluster(dataSegment, OVERSHADOWED, REPLICATION_FACTOR, null, REALTIME);
   }
 
   @Test
@@ -85,42 +78,31 @@ public class SegmentStatusInClusterTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(15, objectMap.size());
-    Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
-    Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(LOAD_SPEC, objectMap.get("loadSpec"));
-    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
-    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals("proj1,proj2", objectMap.get("projections"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
-    Assert.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
-    Assert.assertEquals(1, objectMap.get("size"));
-    Assert.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
-    Assert.assertEquals(REPLICATION_FACTOR, objectMap.get("replicationFactor"));
-    Assert.assertEquals(NUM_ROWS.intValue(), objectMap.get("numRows"));
-    Assert.assertEquals(REALTIME, objectMap.get("realtime"));
+    Assertions.assertEquals(16, objectMap.size());
+    Assertions.assertEquals("something", objectMap.get("dataSource"));
+    Assertions.assertEquals(INTERVAL.toString(), objectMap.get("interval"));
+    Assertions.assertEquals("1", objectMap.get("version"));
+    Assertions.assertEquals(LOAD_SPEC, objectMap.get("loadSpec"));
+    Assertions.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assertions.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assertions.assertEquals("proj1,proj2", objectMap.get("projections"));
+    Assertions.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assertions.assertEquals(TEST_VERSION, objectMap.get("binaryVersion"));
+    Assertions.assertEquals(1, objectMap.get("size"));
+    Assertions.assertEquals(OVERSHADOWED, objectMap.get("overshadowed"));
+    Assertions.assertEquals(REPLICATION_FACTOR, objectMap.get("replicationFactor"));
+    Assertions.assertNull(objectMap.get("numRows"));  // From SegmentStatusInCluster constructor
+    Assertions.assertEquals(TOTAL_ROWS, objectMap.get("totalRows"));  // From DataSegment
+    Assertions.assertEquals(REALTIME, objectMap.get("realtime"));
 
-    final String json = MAPPER.writeValueAsString(SEGMENT);
-
-    final TestSegment deserializedSegment = MAPPER.readValue(
-        json,
-        TestSegment.class
+    final SegmentStatusInCluster deserializedSegment = MAPPER.readValue(
+        MAPPER.writeValueAsString(SEGMENT),
+        SegmentStatusInCluster.class
     );
 
-    DataSegment dataSegment = SEGMENT.getDataSegment();
-    Assert.assertEquals(dataSegment.getDataSource(), deserializedSegment.getDataSource());
-    Assert.assertEquals(dataSegment.getInterval(), deserializedSegment.getInterval());
-    Assert.assertEquals(dataSegment.getVersion(), deserializedSegment.getVersion());
-    Assert.assertEquals(dataSegment.getLoadSpec(), deserializedSegment.getLoadSpec());
-    Assert.assertEquals(dataSegment.getDimensions(), deserializedSegment.getDimensions());
-    Assert.assertEquals(dataSegment.getMetrics(), deserializedSegment.getMetrics());
-    Assert.assertEquals(dataSegment.getProjections(), deserializedSegment.getProjections());
-    Assert.assertEquals(dataSegment.getShardSpec(), deserializedSegment.getShardSpec());
-    Assert.assertEquals(dataSegment.getSize(), deserializedSegment.getSize());
-    Assert.assertEquals(dataSegment.getId(), deserializedSegment.getId());
-    Assert.assertEquals(OVERSHADOWED, deserializedSegment.isOvershadowed());
-    Assert.assertEquals(REPLICATION_FACTOR, deserializedSegment.getReplicationFactor());
+    Assertions.assertEquals(SEGMENT.getDataSegment().toString(), deserializedSegment.getDataSegment().toString());
+    Assertions.assertEquals(OVERSHADOWED, deserializedSegment.isOvershadowed());
+    Assertions.assertEquals(REPLICATION_FACTOR, deserializedSegment.getReplicationFactor());
   }
 
   // Previously, the implementation of SegmentStatusInCluster had @JsonCreator/@JsonProperty and @JsonUnwrapped
@@ -131,89 +113,7 @@ public class SegmentStatusInClusterTest
   {
     String json = MAPPER.writeValueAsString(SEGMENT);
     SegmentStatusInCluster segment = MAPPER.readValue(json, SegmentStatusInCluster.class);
-    Assert.assertEquals(SEGMENT, segment);
-    Assert.assertEquals(json, MAPPER.writeValueAsString(segment));
-  }
-}
-
-/**
- * Flat subclass of DataSegment for testing
- */
-class TestSegment extends DataSegment
-{
-  private final boolean overshadowed;
-  private final Integer replicationFactor;
-
-  @JsonCreator
-  public TestSegment(
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
-      @JsonProperty("version") String version,
-      @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
-      @JsonProperty("dimensions")
-      @JsonDeserialize(using = CommaListJoinDeserializer.class)
-      @Nullable
-      List<String> dimensions,
-      @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> metrics,
-      @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
-      List<String> projections,
-      @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
-      @JsonProperty("lasCompactionState") @Nullable CompactionState lastCompactionState,
-      @JsonProperty("binaryVersion") Integer binaryVersion,
-      @JsonProperty("size") long size,
-      @JsonProperty("overshadowed") boolean overshadowed,
-      @JsonProperty("replicationFactor") Integer replicationFactor
-  )
-  {
-    super(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        projections,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        PruneSpecsHolder.DEFAULT
-    );
-    this.overshadowed = overshadowed;
-    this.replicationFactor = replicationFactor;
-  }
-
-  @JsonProperty
-  public boolean isOvershadowed()
-  {
-    return overshadowed;
-  }
-
-  @JsonProperty
-  public Integer getReplicationFactor()
-  {
-    return replicationFactor;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    if (!super.equals(o)) {
-      return false;
-    }
-    TestSegment that = (TestSegment) o;
-    return overshadowed == that.overshadowed && Objects.equals(replicationFactor, that.replicationFactor);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(super.hashCode(), overshadowed, replicationFactor);
+    Assertions.assertEquals(SEGMENT, segment);
+    Assertions.assertEquals(json, MAPPER.writeValueAsString(segment));
   }
 }

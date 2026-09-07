@@ -23,25 +23,25 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSimpleNaming()
   {
-    Assert.assertEquals("overrideName", new FilteredAggregatorFactory(
+    Assertions.assertEquals("overrideName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("foo"),
         TrueDimFilter.instance(),
         "overrideName"
     ).getName());
-    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
+    Assertions.assertEquals("delegateName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("delegateName"),
         TrueDimFilter.instance(),
         ""
     ).getName());
-    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
+    Assertions.assertEquals("delegateName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("delegateName"),
         TrueDimFilter.instance(),
         null
@@ -51,17 +51,17 @@ public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
   @Test
   public void testNameOfCombiningFactory()
   {
-    Assert.assertEquals("overrideName", new FilteredAggregatorFactory(
+    Assertions.assertEquals("overrideName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("foo"),
         TrueDimFilter.instance(),
         "overrideName"
     ).getCombiningFactory().getName());
-    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
+    Assertions.assertEquals("delegateName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("delegateName"),
         TrueDimFilter.instance(),
         ""
     ).getCombiningFactory().getName());
-    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
+    Assertions.assertEquals("delegateName", new FilteredAggregatorFactory(
         new CountAggregatorFactory("delegateName"),
         TrueDimFilter.instance(),
         null
@@ -71,7 +71,7 @@ public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
   @Test
   public void testRequiredFields()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("x", "y"),
         new FilteredAggregatorFactory(
             new LongSumAggregatorFactory("x", "x"),

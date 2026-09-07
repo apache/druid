@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.IndexIO.IndexLoader;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -49,12 +50,12 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,12 +68,13 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
 {
   private static final Interval INTERVAL = Intervals.of("2022-01/P1D");
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File segmentDir;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     final IndexMerger indexMerger = TestHelper.getTestIndexMergerV9(
@@ -100,8 +102,8 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
     );
     segmentDir = indexMerger.persist(
         incrementalIndex,
-        temporaryFolder.newFolder(),
-        IndexSpec.DEFAULT,
+        temporaryFolder.getRoot(),
+        IndexSpec.getDefault(),
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
   }
@@ -110,7 +112,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
   public void testV9LoaderThatReadsEmptyColumns() throws IOException
   {
     QueryableIndex queryableIndex = TestHelper.getTestIndexIO().loadIndex(segmentDir);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("dim1", "unknownDim", "dim2"),
         Lists.newArrayList(queryableIndex.getAvailableDimensions().iterator())
     );
@@ -125,7 +127,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
         false,
         SegmentLazyLoadFailCallback.NOOP
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("dim1", "dim2"),
         Lists.newArrayList(queryableIndex.getAvailableDimensions().iterator())
     );
@@ -185,7 +187,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
-      Map<String, Supplier<ColumnHolder>> columns = new HashMap<>();
+      Map<String, Supplier<BaseColumnHolder>> columns = new HashMap<>();
 
       for (String columnName : cols) {
         if (Strings.isNullOrEmpty(columnName)) {
@@ -207,7 +209,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
               }
           ));
         } else {
-          ColumnHolder columnHolder = deserializeColumn(mapper, colBuffer, smooshedFiles);
+          BaseColumnHolder columnHolder = deserializeColumn(mapper, colBuffer, smooshedFiles);
           columns.put(columnName, () -> columnHolder);
         }
 
@@ -228,7 +230,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
             }
         ));
       } else {
-        ColumnHolder columnHolder = deserializeColumn(mapper, timeBuffer, smooshedFiles);
+        BaseColumnHolder columnHolder = deserializeColumn(mapper, timeBuffer, smooshedFiles);
         columns.put(ColumnHolder.TIME_COLUMN_NAME, () -> columnHolder);
       }
 
@@ -263,7 +265,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
       return index;
     }
 
-    private ColumnHolder deserializeColumn(
+    private BaseColumnHolder deserializeColumn(
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
         SmooshedFileMapper smooshedFiles

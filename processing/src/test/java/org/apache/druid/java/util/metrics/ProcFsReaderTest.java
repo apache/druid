@@ -21,11 +21,11 @@ package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,14 +33,14 @@ import java.nio.file.Paths;
 
 public class ProcFsReaderTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    procDir = temporaryFolder.newFolder();
+    procDir = temporaryFolder.newFolder("procDir");
     File kernelDir = new File(
         procDir,
         "sys/kernel/random"
@@ -54,7 +54,7 @@ public class ProcFsReaderTest
   @Test
   public void testUtilThrowsOnBadDir()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new ProcFsReader(Paths.get(procDir + "_dummy"))
     );
@@ -64,13 +64,13 @@ public class ProcFsReaderTest
   public void testBootId()
   {
     final ProcFsReader fetcher = new ProcFsReader(procDir.toPath());
-    Assert.assertEquals("ad1f0a5c-55ea-4a49-9db8-bbb0f22e2ba6", fetcher.getBootId().toString());
+    Assertions.assertEquals("ad1f0a5c-55ea-4a49-9db8-bbb0f22e2ba6", fetcher.getBootId().toString());
   }
 
   @Test
   public void testProcessorCount()
   {
     final ProcFsReader fetcher = new ProcFsReader(procDir.toPath());
-    Assert.assertEquals(8, fetcher.getProcessorCount());
+    Assertions.assertEquals(8, fetcher.getProcessorCount());
   }
 }

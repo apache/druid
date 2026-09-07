@@ -29,16 +29,21 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-@RunWith(MockitoJUnitRunner.class)
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTest
 {
   private static final String NAME = "NAME";
@@ -57,7 +62,7 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
 
   private VarianceAggregatorFactory target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     target = new VarianceAggregatorFactory(NAME, FIELD_NAME);
@@ -67,8 +72,8 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   public void factorizeVectorShouldReturnFloatVectorAggregator()
   {
     VectorAggregator agg = target.factorizeVector(selectorFactory);
-    Assert.assertNotNull(agg);
-    Assert.assertEquals(VarianceFloatVectorAggregator.class, agg.getClass());
+    Assertions.assertNotNull(agg);
+    Assertions.assertEquals(VarianceFloatVectorAggregator.class, agg.getClass());
   }
 
   @Test
@@ -76,8 +81,8 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   {
     target = new VarianceAggregatorFactory(NAME, FIELD_NAME, null, DOUBLE);
     VectorAggregator agg = target.factorizeVector(selectorFactory);
-    Assert.assertNotNull(agg);
-    Assert.assertEquals(VarianceDoubleVectorAggregator.class, agg.getClass());
+    Assertions.assertNotNull(agg);
+    Assertions.assertEquals(VarianceDoubleVectorAggregator.class, agg.getClass());
   }
 
   @Test
@@ -85,8 +90,8 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   {
     target = new VarianceAggregatorFactory(NAME, FIELD_NAME, null, LONG);
     VectorAggregator agg = target.factorizeVector(selectorFactory);
-    Assert.assertNotNull(agg);
-    Assert.assertEquals(VarianceLongVectorAggregator.class, agg.getClass());
+    Assertions.assertNotNull(agg);
+    Assertions.assertEquals(VarianceLongVectorAggregator.class, agg.getClass());
   }
 
   @Test
@@ -94,8 +99,8 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   {
     target = new VarianceAggregatorFactory(NAME, FIELD_NAME, null, VARIANCE);
     VectorAggregator agg = target.factorizeVector(selectorFactory);
-    Assert.assertNotNull(agg);
-    Assert.assertEquals(VarianceObjectVectorAggregator.class, agg.getClass());
+    Assertions.assertNotNull(agg);
+    Assertions.assertEquals(VarianceObjectVectorAggregator.class, agg.getClass());
   }
 
   @Test
@@ -103,8 +108,8 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   {
     mockType(VarianceAggregatorFactory.TYPE);
     VectorAggregator agg = target.factorizeVector(selectorFactory);
-    Assert.assertNotNull(agg);
-    Assert.assertEquals(VarianceObjectVectorAggregator.class, agg.getClass());
+    Assertions.assertNotNull(agg);
+    Assertions.assertEquals(VarianceObjectVectorAggregator.class, agg.getClass());
   }
 
   @Test
@@ -112,8 +117,8 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   {
     mockType(VarianceAggregatorFactory.TYPE);
     BufferAggregator agg = target.factorizeBuffered(metricFactory);
-    Assert.assertNotNull(agg);
-    Assert.assertEquals(VarianceBufferAggregator.ObjectVarianceAggregator.class, agg.getClass());
+    Assertions.assertNotNull(agg);
+    Assertions.assertEquals(VarianceBufferAggregator.ObjectVarianceAggregator.class, agg.getClass());
   }
 
   @Test
@@ -121,22 +126,26 @@ public class VarianceAggregatorFactoryUnitTest extends InitializedNullHandlingTe
   {
     mockType(VarianceAggregatorFactory.TYPE);
     Aggregator agg = target.factorize(metricFactory);
-    Assert.assertNotNull(agg);
-    Assert.assertEquals(VarianceAggregator.ObjectVarianceAggregator.class, agg.getClass());
+    Assertions.assertNotNull(agg);
+    Assertions.assertEquals(VarianceAggregator.ObjectVarianceAggregator.class, agg.getClass());
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void factorizeVectorForUnknownColumnShouldThrowIAE()
   {
-    target = new VarianceAggregatorFactory(NAME, FIELD_NAME, null, UNKNOWN);
-    target.factorizeVector(selectorFactory);
+    assertThrows(IAE.class, () -> {
+      target = new VarianceAggregatorFactory(NAME, FIELD_NAME, null, UNKNOWN);
+      target.factorizeVector(selectorFactory);
+    });
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void factorizeBufferedForUnknownColumnShouldThrowIAE()
   {
-    target = new VarianceAggregatorFactory(NAME, FIELD_NAME, null, UNKNOWN);
-    target.factorizeBuffered(metricFactory);
+    assertThrows(IAE.class, () -> {
+      target = new VarianceAggregatorFactory(NAME, FIELD_NAME, null, UNKNOWN);
+      target.factorizeBuffered(metricFactory);
+    });
   }
 
   @Test

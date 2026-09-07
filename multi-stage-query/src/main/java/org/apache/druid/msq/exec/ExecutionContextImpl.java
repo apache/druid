@@ -44,11 +44,13 @@ public class ExecutionContextImpl implements ExecutionContext
   private final FrameProcessorExecutor executor;
   private final InputSliceReader inputSliceReader;
   private final IntermediateOutputChannelFactoryMaker intermediateOutputChannelFactoryMaker;
+  private final InputChannelFactory inputChannelFactory;
   private final OutputChannelFactory outputChannelFactory;
   private final SettableFuture<ClusterByPartitions> globalClusterByPartitionsFuture;
   private final FrameContext frameContext;
   private final CounterTracker counters;
   private final int maxOutstandingProcessors;
+  private final int segmentLoadAheadCount;
   private final String cancellationId;
   private final RunWorkOrderListener listener;
   private final Set<String> intermediateOutputChannelFactoryNames = Sets.newConcurrentHashSet();
@@ -58,11 +60,13 @@ public class ExecutionContextImpl implements ExecutionContext
       final FrameProcessorExecutor executor,
       final InputSliceReader inputSliceReader,
       final IntermediateOutputChannelFactoryMaker intermediateOutputChannelFactoryMaker,
+      final InputChannelFactory inputChannelFactory,
       final OutputChannelFactory outputChannelFactory,
       final SettableFuture<ClusterByPartitions> globalClusterByPartitionsFuture,
       final FrameContext frameContext,
       final CounterTracker counters,
       final int maxOutstandingProcessors,
+      final int segmentLoadAheadCount,
       final String cancellationId,
       final RunWorkOrderListener listener
   )
@@ -71,11 +75,13 @@ public class ExecutionContextImpl implements ExecutionContext
     this.executor = executor;
     this.inputSliceReader = inputSliceReader;
     this.intermediateOutputChannelFactoryMaker = intermediateOutputChannelFactoryMaker;
+    this.inputChannelFactory = inputChannelFactory;
     this.outputChannelFactory = outputChannelFactory;
     this.globalClusterByPartitionsFuture = globalClusterByPartitionsFuture;
     this.frameContext = frameContext;
     this.counters = counters;
     this.maxOutstandingProcessors = maxOutstandingProcessors;
+    this.segmentLoadAheadCount = segmentLoadAheadCount;
     this.cancellationId = cancellationId;
     this.listener = listener;
   }
@@ -102,6 +108,12 @@ public class ExecutionContextImpl implements ExecutionContext
   public ListenableFuture<ClusterByPartitions> globalClusterByPartitions()
   {
     return globalClusterByPartitionsFuture;
+  }
+
+  @Override
+  public InputChannelFactory inputChannelFactory()
+  {
+    return inputChannelFactory;
   }
 
   @Override
@@ -139,6 +151,12 @@ public class ExecutionContextImpl implements ExecutionContext
   }
 
   @Override
+  public int segmentLoadAheadCount()
+  {
+    return segmentLoadAheadCount;
+  }
+
+  @Override
   public String cancellationId()
   {
     return cancellationId;
@@ -148,9 +166,14 @@ public class ExecutionContextImpl implements ExecutionContext
   public Bouncer processingBouncer()
   {
     if (workOrder.getStageDefinition().getProcessor().usesProcessingBuffers()) {
-      return frameContext.processingBuffers().getBouncer();
+      final Bouncer baseBouncer = frameContext.processingBuffers().getBouncer();
+      if (maxOutstandingProcessors < baseBouncer.getMaxCount()) {
+        return new Bouncer(maxOutstandingProcessors, baseBouncer);
+      } else {
+        return baseBouncer;
+      }
     } else {
-      return Bouncer.unlimited();
+      return new Bouncer(maxOutstandingProcessors);
     }
   }
 

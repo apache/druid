@@ -20,27 +20,50 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
+import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.TestcontainerResource;
+import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.CreatePartitionsResult;
+import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.admin.NewTopic;
+import org.apache.kafka.clients.admin.OffsetSpec;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.RetriableException;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.testcontainers.kafka.KafkaContainer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * A Kafka container for use in embedded tests.
+ * <p>
+ * {@link #KAFKA_IMAGE} can be overriden via system property to use a different Kafka Docker image.
+ * </p>
  */
-public class KafkaResource extends TestcontainerResource<KafkaContainer>
+public class KafkaResource extends StreamIngestResource<KafkaContainer>
 {
-  private static final String KAFKA_IMAGE = "apache/kafka:4.0.0";
+  /**
+   * Kafka Docker image used in embedded tests. The image name is
+   * read from the system property {@code druid.testing.kafka.image} and
+   * defaults to {@code apache/kafka}. Environments that cannot run that
+   * image should set the system property to {@code apache/kafka-native}.
+   */
+  private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.3.0");
+  private static final int PARTITION_READINESS_MAX_TRIES = 5;
 
   private EmbeddedDruidCluster cluster;
 
@@ -65,6 +88,38 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     };
   }
 
+  @Override
+  public void onStarted(EmbeddedDruidCluster cluster)
+  {
+    cluster.addExtension(KafkaIndexTaskModule.class);
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records)
+  {
+    publishRecordsToTopic(topic, records, null);
+  }
+
+  @Override
+  public void publishRecordsToTopicWithoutTransaction(String topic, List<byte[]> records)
+  {
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+    produceRecordsWithoutTransaction(producerRecords);
+  }
+
+  @Override
+  public void publishRecordsToTopic(String topic, List<byte[]> records, Map<String, Object> properties)
+  {
+    ArrayList<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    for (byte[] record : records) {
+      producerRecords.add(new ProducerRecord<>(topic, record));
+    }
+    produceRecordsToTopic(producerRecords, properties);
+  }
+
   public String getBootstrapServerUrl()
   {
     ensureRunning();
@@ -78,12 +133,14 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return props;
   }
 
+  @Override
   public void createTopicWithPartitions(String topicName, int numPartitions)
   {
     try (Admin admin = newAdminClient()) {
       admin.createTopics(
           List.of(new NewTopic(topicName, numPartitions, (short) 1))
       ).all().get();
+      waitForPartitionsToBeReady(admin, topicName, numPartitions);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -100,10 +157,32 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     }
   }
 
+  @Override
   public void deleteTopic(String topicName)
   {
     try (Admin admin = newAdminClient()) {
       admin.deleteTopics(List.of(topicName)).all().get();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Increases the number of partitions in the given Kafka topic. The topic must
+   * already exist. This method waits until every partition is ready to handle
+   * requests.
+   */
+  @Override
+  public void increasePartitionsInTopic(String topic, int newPartitionCount)
+  {
+    try (Admin admin = newAdminClient()) {
+      final CreatePartitionsResult result = admin.createPartitions(
+          Map.of(topic, NewPartitions.increaseTo(newPartitionCount))
+      );
+
+      result.values().get(topic).get();
+      waitForPartitionsToBeReady(admin, topic, newPartitionCount);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -136,6 +215,29 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     produceRecordsToTopic(records, null);
   }
 
+  /**
+   * Produces records to a topic of this embedded Kafka server without using
+   * Kafka transactions.
+   */
+  public void produceRecordsWithoutTransaction(List<ProducerRecord<byte[], byte[]>> records)
+  {
+    final Map<String, Object> props = producerProperties();
+    props.remove(ProducerConfig.TRANSACTIONAL_ID_CONFIG);
+
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = new KafkaProducer<>(props)) {
+      final List<Future<RecordMetadata>> sendResults = new ArrayList<>(records.size());
+      for (final ProducerRecord<byte[], byte[]> record : records) {
+        sendResults.add(kafkaProducer.send(record));
+      }
+      for (final Future<RecordMetadata> sendResult : sendResults) {
+        sendResult.get();
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public Map<String, Object> producerProperties()
   {
     final Map<String, Object> props = new HashMap<>(commonClientProperties());
@@ -154,6 +256,41 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
     return Admin.create(commonClientProperties());
   }
 
+  /**
+   * Returns the current end offsets for all partitions in the specified topic.
+   * The returned map has partition IDs as String keys and end offsets as Long values.
+   */
+  public Map<String, Long> getPartitionOffsets(String topicName)
+  {
+    Map<String, Long> offsets = new HashMap<>();
+
+    // Add required deserializer config
+    Map<String, Object> props = new HashMap<>(consumerProperties());
+    props.put("key.deserializer", ByteArrayDeserializer.class.getName());
+    props.put("value.deserializer", ByteArrayDeserializer.class.getName());
+
+    try (KafkaConsumer<byte[], byte[]> consumer = new KafkaConsumer<>(props)) {
+      // Get all partitions for the topic
+      List<TopicPartition> partitions = new ArrayList<>();
+      consumer.partitionsFor(topicName).forEach(
+          partitionInfo -> partitions.add(new TopicPartition(topicName, partitionInfo.partition()))
+      );
+
+      // Get end offsets for all partitions
+      Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
+
+      // Convert to String keys
+      for (Map.Entry<TopicPartition, Long> entry : endOffsets.entrySet()) {
+        offsets.put(String.valueOf(entry.getKey().partition()), entry.getValue());
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+
+    return offsets;
+  }
+
   @Override
   public String toString()
   {
@@ -167,6 +304,28 @@ public class KafkaResource extends TestcontainerResource<KafkaContainer>
       producerProperties.putAll(extraProperties);
     }
     return new KafkaProducer<>(producerProperties);
+  }
+
+  private void waitForPartitionsToBeReady(Admin admin, String topic, int partitionCount) throws Exception
+  {
+    // Topic and partition creation may complete before the partition leaders
+    // are ready to handle requests. Verify all partitions through their
+    // leaders before allowing callers to publish records.
+    final Map<TopicPartition, OffsetSpec> partitionOffsetRequests = new HashMap<>();
+    for (int partition = 0; partition < partitionCount; partition++) {
+      partitionOffsetRequests.put(new TopicPartition(topic, partition), OffsetSpec.latest());
+    }
+    RetryUtils.retry(
+        () -> admin.listOffsets(partitionOffsetRequests).all().get(),
+        KafkaResource::isRetriableKafkaException,
+        PARTITION_READINESS_MAX_TRIES
+    );
+  }
+
+  private static boolean isRetriableKafkaException(Throwable throwable)
+  {
+    return throwable instanceof RetriableException
+           || (throwable.getCause() != null && isRetriableKafkaException(throwable.getCause()));
   }
 
   private Map<String, Object> commonClientProperties()

@@ -19,32 +19,31 @@
 
 package org.apache.druid.hll;
 
-import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
-import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Random;
 
 /**
  * TODO rewrite to use JMH and move to the benchmarks project
  */
-@RunWith(Parameterized.class)
-@Ignore // Don't need to run every time
-public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
+@ParameterizedClass
+@MethodSource("getParameters")
+@Disabled // Don't need to run every time
+public class HyperLogLogSerdeBenchmarkTest
 {
   private final HyperLogLogCollector collector;
   private final long NUM_HASHES;
@@ -57,22 +56,21 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
 
   private static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
-  @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
   {
     return ImmutableList.of(
-        (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 10)).toArray(),
-        (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 10)).toArray(),
-        (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 10)).toArray(),
-        (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 8)).toArray(),
-        (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 8)).toArray(),
-        (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 8)).toArray(),
-        (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 5)).toArray(),
-        (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 5)).toArray(),
-        (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 5)).toArray(),
-        (Object[]) Arrays.asList(new priorByteBufferSerializer(), new Long(1 << 2)).toArray(),
-        (Object[]) Arrays.asList(new newByteBufferSerializer(), new Long(1 << 2)).toArray(),
-    (Object[]) Arrays.asList(new newByteBufferSerializerWithPuts(), new Long(1 << 2)).toArray()
+        List.of(new priorByteBufferSerializer(), (long) (1 << 10)).toArray(),
+        List.of(new newByteBufferSerializer(), (long) (1 << 10)).toArray(),
+        List.of(new newByteBufferSerializerWithPuts(), (long) (1 << 10)).toArray(),
+        List.of(new priorByteBufferSerializer(), (long) (1 << 8)).toArray(),
+        List.of(new newByteBufferSerializer(), (long) (1 << 8)).toArray(),
+        List.of(new newByteBufferSerializerWithPuts(), (long) (1 << 8)).toArray(),
+        List.of(new priorByteBufferSerializer(), (long) (1 << 5)).toArray(),
+        List.of(new newByteBufferSerializer(), (long) (1 << 5)).toArray(),
+        List.of(new newByteBufferSerializerWithPuts(), (long) (1 << 5)).toArray(),
+        List.of(new priorByteBufferSerializer(), (long) (1 << 2)).toArray(),
+        List.of(new newByteBufferSerializer(), (long) (1 << 2)).toArray(),
+        List.of(new newByteBufferSerializerWithPuts(), (long) (1 << 2)).toArray()
     );
   }
 
@@ -229,13 +227,13 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
     return hasher.hash();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupHash()
   {
 
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     fillCollector(collector);
@@ -245,7 +243,6 @@ public class HyperLogLogSerdeBenchmarkTest extends AbstractBenchmark
   @SuppressWarnings("unused")
   volatile HashCode hashCode;
 
-  @BenchmarkOptions(benchmarkRounds = 100000, warmupRounds = 100)
   @Test
   public void benchmarkToByteBuffer()
   {

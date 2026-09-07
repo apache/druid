@@ -20,16 +20,11 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.java.util.common.IAE;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class IdMappingTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testMappingKnownCardinality()
   {
@@ -40,14 +35,14 @@ public class IdMappingTest
     }
     IdMapping mapping = builder.build();
     for (int i = 0; i < cardinality; i++) {
-      Assert.assertEquals(i * 10, mapping.getReverseId(i));
-      Assert.assertEquals(i, mapping.getForwardedId(i * 10));
+      Assertions.assertEquals(i * 10, mapping.getReverseId(i));
+      Assertions.assertEquals(i, mapping.getForwardedId(i * 10));
     }
 
-    Assert.assertEquals(-1, mapping.getForwardedId(1));
-    Assert.assertEquals(-1, mapping.getForwardedId(-1));
-    Assert.assertEquals(-1, mapping.getReverseId(-1));
-    Assert.assertEquals(-1, mapping.getReverseId(10));
+    Assertions.assertEquals(-1, mapping.getForwardedId(1));
+    Assertions.assertEquals(-1, mapping.getForwardedId(-1));
+    Assertions.assertEquals(-1, mapping.getReverseId(-1));
+    Assertions.assertEquals(-1, mapping.getReverseId(10));
   }
 
   @Test
@@ -60,37 +55,45 @@ public class IdMappingTest
     }
     IdMapping mapping = builder.build();
     for (int i = 0; i < cardinality; i++) {
-      Assert.assertEquals(i * 10, mapping.getReverseId(i));
-      Assert.assertEquals(i, mapping.getForwardedId(i * 10));
+      Assertions.assertEquals(i * 10, mapping.getReverseId(i));
+      Assertions.assertEquals(i, mapping.getForwardedId(i * 10));
     }
 
-    Assert.assertEquals(-1, mapping.getForwardedId(1));
-    Assert.assertEquals(-1, mapping.getForwardedId(-1));
-    Assert.assertEquals(-1, mapping.getReverseId(-1));
-    Assert.assertEquals(-1, mapping.getReverseId(10));
+    Assertions.assertEquals(-1, mapping.getForwardedId(1));
+    Assertions.assertEquals(-1, mapping.getForwardedId(-1));
+    Assertions.assertEquals(-1, mapping.getReverseId(-1));
+    Assertions.assertEquals(-1, mapping.getReverseId(10));
   }
 
   @Test
   public void testMappingCardinalityUnknownKnown()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("addForwardMapping instead");
     final int cardinality = 10;
     IdMapping.Builder builder = IdMapping.Builder.ofUnknownCardinality();
-    for (int i = 0; i < cardinality; i++) {
-      builder.addMapping(i * 10);
-    }
+    final IAE e = Assertions.assertThrows(
+        IAE.class,
+        () -> {
+          for (int i = 0; i < cardinality; i++) {
+            builder.addMapping(i * 10);
+          }
+        }
+    );
+    Assertions.assertTrue(e.getMessage().contains("addForwardMapping instead"));
   }
 
   @Test
   public void testMappingCardinalityKnownUnknown()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("addMapping instead");
     final int cardinality = 10;
     IdMapping.Builder builder = IdMapping.Builder.ofCardinality(cardinality);
-    for (int i = 0; i < cardinality; i++) {
-      builder.addForwardMapping(i * 10);
-    }
+    final IAE e = Assertions.assertThrows(
+        IAE.class,
+        () -> {
+          for (int i = 0; i < cardinality; i++) {
+            builder.addForwardMapping(i * 10);
+          }
+        }
+    );
+    Assertions.assertTrue(e.getMessage().contains("addMapping instead"));
   }
 }

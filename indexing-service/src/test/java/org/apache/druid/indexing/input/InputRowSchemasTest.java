@@ -40,8 +40,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -66,7 +66,7 @@ public class InputRowSchemasTest extends InitializedNullHandlingTest
         }
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ColumnsFilter.inclusionBased(
             ImmutableSet.of(
                 "ts",
@@ -99,7 +99,7 @@ public class InputRowSchemasTest extends InitializedNullHandlingTest
         }
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ColumnsFilter.exclusionBased(
             ImmutableSet.of(
                 "foo"
@@ -112,7 +112,7 @@ public class InputRowSchemasTest extends InitializedNullHandlingTest
   @Test
   public void testFromDataSchema()
   {
-    TimestampSpec timestampSpec = new TimestampSpec(null, null, null);
+    TimestampSpec timestampSpec = TimestampSpec.DEFAULT;
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
         Arrays.asList(
             new StringDimensionSchema("d1"),
@@ -125,7 +125,7 @@ public class InputRowSchemasTest extends InitializedNullHandlingTest
     DataSchema schema =
         DataSchema.builder()
                   .withDataSource("dataSourceName")
-                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withTimestamp(TimestampSpec.DEFAULT)
                   .withDimensions(dimensionsSpec)
                   .withAggregators(
                       new CountAggregatorFactory("count"),
@@ -137,16 +137,16 @@ public class InputRowSchemasTest extends InitializedNullHandlingTest
                   .build();
 
     InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema);
-    Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
-    Assert.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
-    Assert.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
-    Assert.assertEquals(ImmutableSet.of("count", "met"), inputRowSchema.getMetricNames());
+    Assertions.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
+    Assertions.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
+    Assertions.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
+    Assertions.assertEquals(ImmutableSet.of("count", "met"), inputRowSchema.getMetricNames());
   }
 
   @Test
   public void testFromDataSchemaWithNoAggregator()
   {
-    TimestampSpec timestampSpec = new TimestampSpec(null, null, null);
+    TimestampSpec timestampSpec = TimestampSpec.DEFAULT;
     DimensionsSpec dimensionsSpec = new DimensionsSpec(
         Arrays.asList(
             new StringDimensionSchema("d1"),
@@ -158,15 +158,15 @@ public class InputRowSchemasTest extends InitializedNullHandlingTest
     );
     DataSchema schema = DataSchema.builder()
                                   .withDataSource("dataSourceName")
-                                  .withTimestamp(new TimestampSpec(null, null, null))
+                                  .withTimestamp(TimestampSpec.DEFAULT)
                                   .withDimensions(dimensionsSpec)
                                   .withGranularity(new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null))
                                   .build();
 
     InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema);
-    Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
-    Assert.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
-    Assert.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
-    Assert.assertEquals(ImmutableSet.of(), inputRowSchema.getMetricNames());
+    Assertions.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
+    Assertions.assertEquals(dimensionsSpec.getDimensions(), inputRowSchema.getDimensionsSpec().getDimensions());
+    Assertions.assertEquals(dimensionsSpec.getDimensionNames(), inputRowSchema.getDimensionsSpec().getDimensionNames());
+    Assertions.assertEquals(ImmutableSet.of(), inputRowSchema.getMetricNames());
   }
 }

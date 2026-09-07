@@ -20,8 +20,8 @@
 package org.apache.druid.spectator.histogram;
 
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SpectatorHistogramIndexBasedComplexColumnTest
 {
@@ -34,8 +34,8 @@ public class SpectatorHistogramIndexBasedComplexColumnTest
     final String typeName = "type";
     final SpectatorHistogramIndexBasedComplexColumn column =
         new SpectatorHistogramIndexBasedComplexColumn("type", mockIndexed);
-    Assert.assertEquals(typeName, column.getTypeName());
-    Assert.assertEquals(-1, column.getLength());
+    Assertions.assertEquals(typeName, column.getTypeName());
+    Assertions.assertEquals(-1, column.getLength());
 
     EasyMock.verify(mockIndexed);
   }

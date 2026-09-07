@@ -40,6 +40,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndexColumnSelectorFactory;
+import org.apache.druid.segment.ResidentCursorFactory;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.VirtualColumns;
@@ -64,7 +65,7 @@ import java.util.List;
  *
  * @see RowFrameCursorFactory the row-based version
  */
-public class ColumnarFrameCursorFactory implements CursorFactory
+public class ColumnarFrameCursorFactory implements ResidentCursorFactory
 {
   private final Frame frame;
   private final RowSignature signature;
@@ -132,7 +133,7 @@ public class ColumnarFrameCursorFactory implements CursorFactory
       final VirtualColumns virtualColumns = spec.getVirtualColumns();
       final Filter filter = spec.getFilter();
       final QueryContext queryContext = spec.getQueryContext();
-      final ColumnInspector inspector = virtualColumns.wrapInspector(signature);
+      final ColumnInspector inspector = virtualColumns.wrapInspector(ColumnarFrameCursorFactory.this);
 
       // Check that virtual columns are vectorizable.
       if (!virtualColumns.isEmpty()) {
@@ -158,7 +159,7 @@ public class ColumnarFrameCursorFactory implements CursorFactory
     public Cursor asCursor()
     {
       final FrameQueryableIndex index = new FrameQueryableIndex(frame, signature, columnReaders);
-      final ColumnCache columnCache = new ColumnCache(index, closer);
+      final ColumnCache columnCache = new ColumnCache(index, spec.getVirtualColumns(), closer);
       final Filter filterToUse = FrameCursorUtils.buildFilter(spec.getFilter(), spec.getInterval());
       final SimpleSettableOffset baseOffset = new SimpleAscendingOffset(frame.numRows());
 
@@ -200,11 +201,10 @@ public class ColumnarFrameCursorFactory implements CursorFactory
           0,
           frame.numRows()
       );
-      final ColumnCache columnCache = new ColumnCache(index, closer);
+      final ColumnCache columnCache = new ColumnCache(index, spec.getVirtualColumns(), closer);
 
       // baseSelectorFactory using baseOffset is the column selector for filtering.
       final VectorColumnSelectorFactory baseSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-          index,
           baseOffset,
           columnCache,
           spec.getVirtualColumns()
@@ -220,7 +220,6 @@ public class ColumnarFrameCursorFactory implements CursorFactory
         );
 
         final VectorColumnSelectorFactory filteredSelectorFactory = new QueryableIndexVectorColumnSelectorFactory(
-            index,
             filteredOffset,
             columnCache,
             spec.getVirtualColumns()

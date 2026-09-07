@@ -25,11 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.base.Preconditions;
 import org.apache.druid.jackson.CommaListJoinDeserializer;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -45,37 +46,42 @@ public class DataSegmentWithLocation extends DataSegment
   private final Set<DruidServerMetadata> servers;
 
   @JsonCreator
-  public DataSegmentWithLocation(
+  private DataSegmentWithLocation(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("interval") Interval interval,
+      @JsonProperty("interval") String interval,
       @JsonProperty("version") String version,
       // use `Map` *NOT* `LoadSpec` because we want to do lazy materialization to prevent dependency pollution
       @JsonProperty("loadSpec") @Nullable Map<String, Object> loadSpec,
       @JsonProperty("dimensions") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
       List<String> dimensions,
       @JsonProperty("metrics") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> metrics,
-      @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable
-      List<String> projections,
+      @JsonProperty("projections") @JsonDeserialize(using = CommaListJoinDeserializer.class) @Nullable List<String> projections,
+      @JsonProperty("clusterGroups") @Nullable ClusterGroupTuples clusterGroups,
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
       @JsonProperty("size") long size,
+      @JsonProperty("totalRows") Integer totalRows,
       @JsonProperty("servers") Set<DruidServerMetadata> servers,
+      @JsonProperty("indexingStateFingerprint") String indexingStateFingerprint,
       @JacksonInject PruneSpecsHolder pruneSpecsHolder
   )
   {
     super(
         dataSource,
-        interval,
+        Intervals.fromString(interval),
         version,
         loadSpec,
         dimensions,
         metrics,
         projections,
+        clusterGroups,
         shardSpec,
         lastCompactionState,
         binaryVersion,
         size,
+        totalRows,
+        indexingStateFingerprint,
         pruneSpecsHolder
     );
     this.servers = Preconditions.checkNotNull(servers, "servers");
@@ -94,10 +100,13 @@ public class DataSegmentWithLocation extends DataSegment
         dataSegment.getDimensions(),
         dataSegment.getMetrics(),
         dataSegment.getProjections(),
+        dataSegment.getClusterGroups(),
         dataSegment.getShardSpec(),
         null,
         dataSegment.getBinaryVersion(),
         dataSegment.getSize(),
+        dataSegment.getTotalRows(),
+        dataSegment.getIndexingStateFingerprint(),
         PruneSpecsHolder.DEFAULT
     );
     this.servers = servers;

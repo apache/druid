@@ -24,7 +24,7 @@ sidebar_label: "Dimensions"
   -->
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes the native
  language. For information about functions available in SQL, refer to the
  [SQL documentation](sql-scalar.md).
@@ -73,7 +73,7 @@ Please refer to the [Output Types](#output-types) section for more details.
 
 ### Filtered DimensionSpecs
 
-A filtered `DimensionSpec` is only useful for multi-value dimensions. Say you have a row in Apache Druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with a [query filter](filters.md) for a value of "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
+A filtered `DimensionSpec` is only useful for multi-value dimensions. Say you have a row in Apache&circledR; Druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with a [query filter](filters.md) for a value of "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
 
 This happens because Druid uses the "query filter" internally on bitmaps to match the row to include in query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which matches the row with dimension value ["v1", "v2", "v3"]. 
 
@@ -255,7 +255,7 @@ For a regular dimension, it assumes the string is formatted in
 [ISO-8601 date and time format](https://en.wikipedia.org/wiki/ISO_8601).
 
 * `format` : date time format for the resulting dimension value, in [Joda Time DateTimeFormat](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or null to use the default ISO8601 format.
-* `locale` : locale (language and country) to use, given as a [IETF BCP 47 language tag](https://www.oracle.com/java/technologies/javase/jdk11-suported-locales.html#util-text), e.g. `en-US`, `en-GB`, `fr-FR`, `fr-CA`, etc.
+* `locale` : locale (language and country) to use, given as a [IETF BCP 47 language tag](https://www.oracle.com/java/technologies/javase/jdk17-suported-locales.html#util-text), e.g. `en-US`, `en-GB`, `fr-FR`, `fr-CA`, etc.
 * `timeZone` : time zone to use in [IANA tz database format](http://en.wikipedia.org/wiki/List_of_tz_database_time_zones), e.g. `Europe/Berlin` (this can possibly be different than the aggregation time-zone)
 * `granularity` : [granularity](granularities.md) to apply before formatting, or omit to not apply any granularity.
 * `asMillis` : boolean value, set to true to treat input strings as millis rather than ISO8601 strings. Additionally, if `format` is null or not specified, output will be in millis rather than ISO8601.

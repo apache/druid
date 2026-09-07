@@ -85,7 +85,7 @@ export const RegexpFilterControl = React.memo(function RegexpFilterControl(
       <FormGroup>
         <InputGroup
           value={regexp}
-          onChange={e => setFilterPattern({ ...filterPattern, regexp: e.target.value })}
+          onChange={e => setFilterPattern({ ...filterPattern, regexp: e.target.value.trimStart() })}
           placeholder="Regexp"
         />
       </FormGroup>

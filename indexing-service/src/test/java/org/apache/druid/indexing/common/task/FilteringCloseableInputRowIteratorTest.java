@@ -28,13 +28,14 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -42,6 +43,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -60,7 +62,7 @@ public class FilteringCloseableInputRowIteratorTest
   private RowIngestionMeters rowIngestionMeters;
   private ParseExceptionHandler parseExceptionHandler;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     rowIngestionMeters = new SimpleRowIngestionMeters();
@@ -78,17 +80,17 @@ public class FilteringCloseableInputRowIteratorTest
     final Predicate<InputRow> filter = row -> (Integer) row.getRaw("dim1") == 10;
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         CloseableIterators.withEmptyBaggage(ROWS.iterator()),
-        filter,
+        InputRowFilter.fromPredicate(filter),
         rowIngestionMeters,
         parseExceptionHandler
     );
     final List<InputRow> filteredRows = new ArrayList<>();
     rowIterator.forEachRemaining(filteredRows::add);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ROWS.stream().filter(filter).collect(Collectors.toList()),
         filteredRows
     );
-    Assert.assertEquals(2, rowIngestionMeters.getThrownAway());
+    Assertions.assertEquals(2, rowIngestionMeters.getThrownAway());
   }
 
   @Test
@@ -113,7 +115,7 @@ public class FilteringCloseableInputRowIteratorTest
         if (currentIdx % 2 == 0) {
           return ROWS.get(currentIdx / 2);
         } else {
-          throw new ParseException(null, "Parse exception at ", currentIdx);
+          throw new ParseException(null, "Parse exception at [%d]", currentIdx);
         }
       }
 
@@ -125,15 +127,15 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
 
     final List<InputRow> filteredRows = new ArrayList<>();
     rowIterator.forEachRemaining(filteredRows::add);
-    Assert.assertEquals(ROWS, filteredRows);
-    Assert.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
+    Assertions.assertEquals(ROWS, filteredRows);
+    Assertions.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
   }
 
   @Test
@@ -163,7 +165,7 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        filter,
+        InputRowFilter.fromPredicate(filter),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -175,8 +177,8 @@ public class FilteringCloseableInputRowIteratorTest
         ROWS.get(2),
         ROWS.get(4)
     );
-    Assert.assertEquals(expectedRows, filteredRows);
-    Assert.assertEquals(ROWS.size() - expectedRows.size(), rowIngestionMeters.getUnparseable());
+    Assertions.assertEquals(expectedRows, filteredRows);
+    Assertions.assertEquals(ROWS.size() - expectedRows.size(), rowIngestionMeters.getUnparseable());
   }
 
   @Test
@@ -196,7 +198,7 @@ public class FilteringCloseableInputRowIteratorTest
         if (currentIndex % 2 == 0) {
           return currentIndex < numRowsToIterate;
         } else {
-          throw new ParseException(null, "Parse exception at ", currentIndex);
+          throw new ParseException(null, "Parse exception at [%d]", currentIndex);
         }
       }
 
@@ -214,18 +216,18 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
 
     final List<InputRow> filteredRows = new ArrayList<>();
     rowIterator.forEachRemaining(filteredRows::add);
-    Assert.assertEquals(ROWS, filteredRows);
-    Assert.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
+    Assertions.assertEquals(ROWS, filteredRows);
+    Assertions.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testNonParseExceptionInDelegateHasNext()
   {
     // This iterator throws ParseException every other call to hasNext().
@@ -260,15 +262,20 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
 
-    while (rowIterator.hasNext()) {
-      rowIterator.next();
-    }
-    Assert.fail("you never should have come here");
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () -> {
+          while (rowIterator.hasNext()) {
+            rowIterator.next();
+          }
+          Assertions.fail("you never should have come here");
+        }
+    );
   }
 
   @Test
@@ -281,12 +288,12 @@ public class FilteringCloseableInputRowIteratorTest
     );
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         delegate,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
     rowIterator.close();
-    Assert.assertTrue(closed.isTrue());
+    Assertions.assertTrue(closed.isTrue());
   }
 
   @Test
@@ -330,7 +337,7 @@ public class FilteringCloseableInputRowIteratorTest
 
     final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
         parseExceptionThrowingIterator,
-        row -> true,
+        InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -340,15 +347,112 @@ public class FilteringCloseableInputRowIteratorTest
     ArgumentCaptor<Exception> exceptionArgumentCaptor = ArgumentCaptor.forClass(Exception.class);
     Mockito.verify(parseExceptionHandler, Mockito.times(6)).logParseExceptionHelper(exceptionArgumentCaptor.capture());
     Exception parseException = exceptionArgumentCaptor.getValue();
-    Assert.assertTrue(parseException.getMessage().contains("Parse exception at"));
-    Assert.assertNotNull(parseException.getCause());
-    Assert.assertTrue(parseException.getCause().getMessage().contains("this is the root cause of the exception!"));
-    Assert.assertEquals(IllegalArgumentException.class, parseException.getCause().getClass());
+    Assertions.assertTrue(parseException.getMessage().contains("Parse exception at"));
+    Assertions.assertNotNull(parseException.getCause());
+    Assertions.assertTrue(parseException.getCause().getMessage().contains("this is the root cause of the exception!"));
+    Assertions.assertEquals(IllegalArgumentException.class, parseException.getCause().getClass());
 
-    Assert.assertEquals(ROWS, filteredRows);
-    Assert.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
+    Assertions.assertEquals(ROWS, filteredRows);
+    Assertions.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
   }
 
+
+  @Test
+  public void testRowFilterWithReasons()
+  {
+    // RowFilter that returns different reasons based on dim1 value
+    final InputRowFilter rowFilter = row -> {
+      int dim1 = (Integer) row.getRaw("dim1");
+      if (dim1 == 10) {
+        return InputRowFilterResult.ACCEPTED;
+      } else if (dim1 == 20) {
+        return InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME;
+      } else {
+        return InputRowFilterResult.CUSTOM_FILTER;
+      }
+    };
+
+    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
+        CloseableIterators.withEmptyBaggage(ROWS.iterator()),
+        rowFilter,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+
+    final List<InputRow> filteredRows = new ArrayList<>();
+    rowIterator.forEachRemaining(filteredRows::add);
+
+    // Only rows with dim1=10 should pass
+    Assertions.assertEquals(4, filteredRows.size());
+    for (InputRow row : filteredRows) {
+      Assertions.assertEquals(10, row.getRaw("dim1"));
+    }
+
+    // Check total thrown away
+    Assertions.assertEquals(2, rowIngestionMeters.getThrownAway());
+
+    // Check per-reason counts
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assertions.assertEquals(2, byReason.size());
+    Assertions.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason())); // dim1=20
+    Assertions.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason())); // dim1=30
+  }
+
+  @Test
+  public void testRowFilterFromPredicate()
+  {
+    // Use the static helper to convert a Predicate to RowFilter
+    final Predicate<InputRow> predicate = row -> (Integer) row.getRaw("dim1") == 10;
+    final InputRowFilter rowFilter = InputRowFilter.fromPredicate(predicate);
+
+    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
+        CloseableIterators.withEmptyBaggage(ROWS.iterator()),
+        rowFilter,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+
+    final List<InputRow> filteredRows = new ArrayList<>();
+    rowIterator.forEachRemaining(filteredRows::add);
+
+    Assertions.assertEquals(4, filteredRows.size());
+    Assertions.assertEquals(2, rowIngestionMeters.getThrownAway());
+
+    // All thrown away should have FILTERED reason when using fromPredicate
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assertions.assertEquals(1, byReason.size());
+    Assertions.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
+  }
+
+  @Test
+  public void testRowFilterAnd()
+  {
+    // First filter: reject nulls (simulated by checking dim1)
+    final InputRowFilter nullFilter = row -> row == null ? InputRowFilterResult.NULL_OR_EMPTY_RECORD : InputRowFilterResult.ACCEPTED;
+
+    // Second filter: reject if dim1 != 10
+    final InputRowFilter valueFilter = row -> (Integer) row.getRaw("dim1") == 10 ? InputRowFilterResult.ACCEPTED : InputRowFilterResult.CUSTOM_FILTER;
+
+    // Combine filters
+    final InputRowFilter combinedFilter = nullFilter.and(valueFilter);
+
+    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
+        CloseableIterators.withEmptyBaggage(ROWS.iterator()),
+        combinedFilter,
+        rowIngestionMeters,
+        parseExceptionHandler
+    );
+
+    final List<InputRow> filteredRows = new ArrayList<>();
+    rowIterator.forEachRemaining(filteredRows::add);
+
+    Assertions.assertEquals(4, filteredRows.size());
+    Assertions.assertEquals(2, rowIngestionMeters.getThrownAway());
+
+    // All rejected rows should have FILTERED reason (from second filter)
+    Map<String, Long> byReason = rowIngestionMeters.getThrownAwayByReason();
+    Assertions.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
+  }
 
   private static InputRow newRow(DateTime timestamp, Object dim1Val, Object dim2Val)
   {

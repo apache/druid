@@ -26,8 +26,8 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provider;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class GuiceInjectorsTest
 {
@@ -50,7 +50,7 @@ public class GuiceInjectorsTest
 
     CustomEmitter customEmitter = stageTwo.getInstance(CustomEmitter.class);
 
-    Assert.assertEquals("Expected String", customEmitter.getOtherValue());
+    Assertions.assertEquals("Expected String", customEmitter.getOtherValue());
   }
 
   private static class Emitter

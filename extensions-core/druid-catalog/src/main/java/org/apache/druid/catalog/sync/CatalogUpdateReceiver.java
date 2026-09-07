@@ -85,7 +85,7 @@ public class CatalogUpdateReceiver
               LOG.debug("Scheduled catalog refresh is done");
             }
             catch (Throwable t) {
-              LOG.makeAlert(t, "Error occured while refreshing catalog.").emit();
+              LOG.makeAlert(t, "Error occurred while refreshing catalog.").emit();
             }
           }
       );

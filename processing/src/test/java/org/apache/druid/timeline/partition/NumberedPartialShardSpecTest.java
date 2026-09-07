@@ -20,8 +20,8 @@
 package org.apache.druid.timeline.partition;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -34,7 +34,7 @@ public class NumberedPartialShardSpecTest
     final ObjectMapper mapper = ShardSpecTestUtils.initObjectMapper();
     final byte[] json = mapper.writeValueAsBytes(expected);
     final PartialShardSpec fromJson = mapper.readValue(json, PartialShardSpec.class);
-    Assert.assertSame(NumberedPartialShardSpec.class, fromJson.getClass());
+    Assertions.assertSame(NumberedPartialShardSpec.class, fromJson.getClass());
   }
 
   @Test
@@ -42,6 +42,6 @@ public class NumberedPartialShardSpecTest
   {
     final NumberedPartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
     final ShardSpec shardSpec = partialShardSpec.complete(new ObjectMapper(), 1, 3);
-    Assert.assertEquals(new NumberedShardSpec(1, 3), shardSpec);
+    Assertions.assertEquals(new NumberedShardSpec(1, 3), shardSpec);
   }
 }

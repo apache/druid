@@ -21,7 +21,7 @@ package org.apache.druid.client.cache;
 
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
+import net.jpountz.lz4.LZ4SafeDecompressor;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 
 import java.nio.ByteBuffer;
@@ -66,12 +66,12 @@ public class LZ4Transcoder extends SerializingTranscoder
   {
     byte[] out = null;
     if (in != null) {
-      LZ4FastDecompressor decompressor = lz4Factory.fastDecompressor();
+      LZ4SafeDecompressor decompressor = lz4Factory.safeDecompressor();
 
       int size = ByteBuffer.wrap(in).getInt();
 
       out = new byte[size];
-      decompressor.decompress(in, Integer.BYTES, out, 0, out.length);
+      decompressor.decompress(in, Integer.BYTES, in.length - Integer.BYTES, out, 0, out.length);
     }
     return out == null ? null : out;
   }

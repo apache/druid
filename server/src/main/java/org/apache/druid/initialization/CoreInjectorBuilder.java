@@ -26,6 +26,7 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.CatalogCoreModule;
+import org.apache.druid.guice.DefaultServerHolderModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
@@ -35,6 +36,7 @@ import org.apache.druid.guice.JavaScriptModule;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
+import org.apache.druid.guice.PartialLoadSpecModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
@@ -113,7 +115,6 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new SegmentWriteOutMediumModule(),
         new ServerModule(),
         new StorageNodeModule(),
-        new JettyServerModule(),
         new ExpressionModule(),
         new BuiltInTypesModule(),
         new DiscoveryModule(),
@@ -122,6 +123,7 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
         new LocalDataStorageDruidModule(),
+        new PartialLoadSpecModule(),
         new TombstoneDataStorageModule(),
         new JavaScriptModule(),
         new AuthenticatorModule(),
@@ -133,7 +135,9 @@ public class CoreInjectorBuilder extends DruidInjectorBuilder
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
         new StorageConnectorModule(),
-        new CatalogCoreModule()
+        new CatalogCoreModule(),
+        new DefaultServerHolderModule(),
+        JettyServerModule.class
     );
     return this;
   }

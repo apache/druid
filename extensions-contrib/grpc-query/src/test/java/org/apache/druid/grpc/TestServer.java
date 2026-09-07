@@ -23,6 +23,10 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.grpc.server.GrpcEndpointInitializer;
 import org.apache.druid.grpc.server.GrpcQueryConfig;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -36,6 +40,13 @@ import org.junit.jupiter.api.Test;
  */
 public class TestServer extends BaseCalciteQueryTest
 {
+  static final QueryScheduler NOOP_SCHEDULER = new QueryScheduler(
+      0,
+      ManualQueryPrioritizationStrategy.INSTANCE,
+      NoQueryLaningStrategy.INSTANCE,
+      new ServerConfig()
+  );
+
   private GrpcEndpointInitializer serverInit;
 
   @Test
@@ -60,7 +71,8 @@ public class TestServer extends BaseCalciteQueryTest
         plannerFixture.statementFactory(),
         null,
         DefaultQueryConfig.NIL,
-        authMapper
+        authMapper,
+        NOOP_SCHEDULER
     );
     serverInit.start();
     Runtime.getRuntime().addShutdownHook(new Thread()

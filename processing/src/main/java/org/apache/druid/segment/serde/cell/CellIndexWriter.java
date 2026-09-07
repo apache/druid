@@ -20,7 +20,7 @@
 package org.apache.druid.segment.serde.cell;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.Serializer;
 
 import javax.annotation.Nullable;
@@ -61,11 +61,11 @@ public class CellIndexWriter implements Serializer, Closeable
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, @Nullable FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, @Nullable SegmentFileBuilder fileBuilder) throws IOException
   {
     Preconditions.checkState(!open, "cannot transfer a CellIndex that is not closed and finalized");
 
-    payloadWriter.writeTo(channel, smoosher);
+    payloadWriter.writeTo(channel, fileBuilder);
   }
 
   @Override

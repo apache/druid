@@ -19,18 +19,17 @@
 
 package org.apache.druid.frame.processor;
 
-import org.junit.ClassRule;
-import org.junit.rules.TemporaryFolder;
-
-import java.io.IOException;
+import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class FileOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
-  @ClassRule
-  public static TemporaryFolder folder = new TemporaryFolder();
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
-  public FileOutputChannelFactoryTest() throws IOException
+  public FileOutputChannelFactoryTest()
   {
-    super(new FileOutputChannelFactory(folder.newFolder(), 100, null), 100);
+    super(new FileOutputChannelFactory(SHARED_TEMPORARY_FOLDER.getRoot(), 100, null, FrameTestUtil.WT_CONTEXT_LEGACY), 100);
   }
 }

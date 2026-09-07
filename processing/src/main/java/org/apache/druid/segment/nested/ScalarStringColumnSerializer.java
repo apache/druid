@@ -21,13 +21,12 @@ package org.apache.druid.segment.nested;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -43,12 +42,12 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
 {
   public ScalarStringColumnSerializer(
       String name,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
-    super(name, indexSpec, segmentWriteOutMedium, closer);
+    super(name, columnFormatSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -64,7 +63,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
-        indexSpec.getStringDictionaryEncoding(),
+        columnFormatSpec.getStringDictionaryEncoding(),
         segmentWriteOutMedium,
         name
     );
@@ -112,21 +111,21 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  protected void writeValueColumn(FileSmoosher smoosher)
+  protected void writeValueColumn(SegmentFileBuilder fileBuilder)
   {
     // no extra value column for strings
   }
 
   @Override
-  protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
+  protected void writeDictionaryFile(SegmentFileBuilder fileBuilder) throws IOException
   {
     if (dictionaryIdLookup.getStringBufferMapper() != null) {
-      SmooshedFileMapper fileMapper = dictionaryIdLookup.getStringBufferMapper();
+      SegmentFileMapper fileMapper = dictionaryIdLookup.getStringBufferMapper();
       for (String name : fileMapper.getInternalFilenames()) {
-        smoosher.add(name, fileMapper.mapFile(name));
+        fileBuilder.add(name, fileMapper.mapFile(name));
       }
     } else {
-      writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
+      writeInternal(fileBuilder, dictionaryWriter, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
     }
   }
 

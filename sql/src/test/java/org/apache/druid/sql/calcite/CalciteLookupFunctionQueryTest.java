@@ -53,18 +53,15 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
 {
@@ -102,7 +99,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterLookupOfFunction()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("LOOKUP(LOWER(dim1), 'lookyloo') = 'xabc'"),
@@ -118,7 +115,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterFunctionOfLookup()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("LOWER(LOOKUP(dim1, 'lookyloo')) = 'xabc'"),
@@ -518,9 +515,8 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             and(
-                not(equality("v0", "x6", ColumnType.STRING)),
-                not(equality("v0", "nonexistent", ColumnType.STRING)),
-                notNull("v0")
+                notNull("v0"),
+                not(in("v0", ImmutableList.of("nonexistent", "x6")))
             )
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -574,11 +570,8 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             or(
-                and(
-                    not(equality("v0", "x6", ColumnType.STRING)),
-                    not(equality("v0", "nonexistent", ColumnType.STRING))
-                ),
-                isNull("v0")
+                isNull("v0"),
+                not(in("v0", ImmutableList.of("nonexistent", "x6")))
             )
         ),
         ImmutableList.of(
@@ -617,7 +610,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
-            and(not(equality("v0", "x6", ColumnType.STRING)), not(equality("v0", "nonexistent", ColumnType.STRING)))
+            not(in("v0", ImmutableList.of("nonexistent", "x6")))
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );
@@ -686,7 +679,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsNull()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo'), NULL)"),
@@ -700,7 +693,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsNullInjective()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_CONTAINS(LOOKUP(dim1, 'lookyloo121'), NULL)"),
@@ -724,7 +717,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvOverlapNull()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_OVERLAP(lookup(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent', NULL])"),
@@ -755,7 +748,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotMvContains()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("NOT MV_CONTAINS(lookup(dim1, 'lookyloo'), 'xabc')"),
@@ -797,7 +790,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterNotMvOverlap()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("NOT MV_OVERLAP(lookup(dim1, 'lookyloo'), ARRAY['xabc', 'x6', 'nonexistent'])"),
@@ -1119,7 +1112,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvContainsCoalesceSameLiteral()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_CONTAINS(COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6'), 'x6')"),
@@ -1134,7 +1127,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterMvOverlapCoalesceSameLiteral()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
 
     testQuery(
         buildFilterTestSql("MV_OVERLAP(COALESCE(LOOKUP(dim1, 'lookyloo'), 'x6'), ARRAY['xabc', 'x6', 'nonexistent'])"),
@@ -1337,7 +1330,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
     // Test to verify that "maxUnapplyCountForDruidReverseLookupRule" works properly. This ensures that the *other*
     // tests are correctly validating that we aren't doing too many reverse lookups.
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'xabc' OR LOOKUP(dim2, 'lookyloo') = 'x6'"),
@@ -1347,10 +1340,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Too many optimize calls[2]"))
-    );
+    Assertions.assertTrue(e.getMessage().startsWith("Too many optimize calls[2]"));
   }
 
   @Test

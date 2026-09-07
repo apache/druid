@@ -27,9 +27,9 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -75,7 +75,7 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
     stringAggFactory = TestHelper.makeJsonMapper().readValue(strAggSpecJson, SingleValueAggregatorFactory.class);
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     selectorLong = new TestLongColumnSelector(longValues);
@@ -106,21 +106,21 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   @Test
   public void testLongAggregator()
   {
-    Assert.assertEquals(ColumnType.LONG, longAggFactory.getIntermediateType());
-    Assert.assertEquals(ColumnType.LONG, longAggFactory.getResultType());
-    Assert.assertEquals("lng", longAggFactory.getName());
-    Assert.assertEquals("lngFld", longAggFactory.getFieldName());
-    Assert.assertThrows(DruidException.class, () -> longAggFactory.getComparator());
+    Assertions.assertEquals(ColumnType.LONG, longAggFactory.getIntermediateType());
+    Assertions.assertEquals(ColumnType.LONG, longAggFactory.getResultType());
+    Assertions.assertEquals("lng", longAggFactory.getName());
+    Assertions.assertEquals("lngFld", longAggFactory.getFieldName());
+    Assertions.assertThrows(DruidException.class, () -> longAggFactory.getComparator());
 
     Aggregator agg = longAggFactory.factorize(colSelectorFactoryLong);
-    Assert.assertTrue(agg.isNull());
-    Assert.assertThrows(AssertionError.class, () -> agg.getLong());
+    Assertions.assertTrue(agg.isNull());
+    Assertions.assertThrows(AssertionError.class, () -> agg.getLong());
 
     aggregate(selectorLong, agg);
-    Assert.assertEquals(longValues[0], ((Long) agg.get()).longValue());
-    Assert.assertEquals(longValues[0], agg.getLong());
+    Assertions.assertEquals(longValues[0], ((Long) agg.get()).longValue());
+    Assertions.assertEquals(longValues[0], agg.getLong());
 
-    Assert.assertThrows(DruidException.class, () -> aggregate(selectorLong, agg));
+    Assertions.assertThrows(DruidException.class, () -> aggregate(selectorLong, agg));
   }
 
   @Test
@@ -130,32 +130,32 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES + Byte.BYTES]);
     agg.init(buffer, 0);
-    Assert.assertEquals(0L, agg.getLong(buffer, 0));
+    Assertions.assertEquals(0L, agg.getLong(buffer, 0));
 
     aggregate(selectorLong, agg, buffer, 0);
-    Assert.assertEquals(longValues[0], ((Long) agg.get(buffer, 0)).longValue());
-    Assert.assertEquals(longValues[0], agg.getLong(buffer, 0));
+    Assertions.assertEquals(longValues[0], ((Long) agg.get(buffer, 0)).longValue());
+    Assertions.assertEquals(longValues[0], agg.getLong(buffer, 0));
 
-    Assert.assertThrows(DruidException.class, () -> aggregate(selectorLong, agg, buffer, 0));
+    Assertions.assertThrows(DruidException.class, () -> aggregate(selectorLong, agg, buffer, 0));
   }
 
   @Test
   public void testCombine()
   {
-    Assert.assertThrows(DruidException.class, () -> longAggFactory.combine(9223372036854775800L, 9223372036854775803L));
+    Assertions.assertThrows(DruidException.class, () -> longAggFactory.combine(9223372036854775800L, 9223372036854775803L));
   }
 
   @Test
   public void testDoubleAggregator()
   {
     Aggregator agg = doubleAggFactory.factorize(colSelectorFactoryDouble);
-    Assert.assertThrows(AssertionError.class, () -> agg.getDouble());
+    Assertions.assertThrows(AssertionError.class, () -> agg.getDouble());
 
     aggregate(selectorDouble, agg);
-    Assert.assertEquals(doubleValues[0], ((Double) agg.get()).doubleValue(), 0.000001);
-    Assert.assertEquals(doubleValues[0], agg.getDouble(), 0.000001);
+    Assertions.assertEquals(doubleValues[0], ((Double) agg.get()).doubleValue(), 0.000001);
+    Assertions.assertEquals(doubleValues[0], agg.getDouble(), 0.000001);
 
-    Assert.assertThrows(DruidException.class, () -> aggregate(selectorDouble, agg));
+    Assertions.assertThrows(DruidException.class, () -> aggregate(selectorDouble, agg));
   }
 
   @Test
@@ -165,26 +165,26 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[SingleValueAggregatorFactory.DEFAULT_MAX_VALUE_SIZE + Byte.BYTES]);
     agg.init(buffer, 0);
-    Assert.assertEquals(0.0d, agg.getDouble(buffer, 0), 0.000001);
+    Assertions.assertEquals(0.0d, agg.getDouble(buffer, 0), 0.000001);
 
     aggregate(selectorDouble, agg, buffer, 0);
-    Assert.assertEquals(doubleValues[0], ((Double) agg.get(buffer, 0)).doubleValue(), 0.000001);
-    Assert.assertEquals(doubleValues[0], agg.getDouble(buffer, 0), 0.000001);
+    Assertions.assertEquals(doubleValues[0], ((Double) agg.get(buffer, 0)).doubleValue(), 0.000001);
+    Assertions.assertEquals(doubleValues[0], agg.getDouble(buffer, 0), 0.000001);
 
-    Assert.assertThrows(DruidException.class, () -> aggregate(selectorDouble, agg, buffer, 0));
+    Assertions.assertThrows(DruidException.class, () -> aggregate(selectorDouble, agg, buffer, 0));
   }
 
   @Test
   public void testFloatAggregator()
   {
     Aggregator agg = floatAggFactory.factorize(colSelectorFactoryFloat);
-    Assert.assertThrows(AssertionError.class, () -> agg.getFloat());
+    Assertions.assertThrows(AssertionError.class, () -> agg.getFloat());
 
     aggregate(selectorFloat, agg);
-    Assert.assertEquals(floatValues[0], ((Float) agg.get()).floatValue(), 0.000001);
-    Assert.assertEquals(floatValues[0], agg.getFloat(), 0.000001);
+    Assertions.assertEquals(floatValues[0], ((Float) agg.get()).floatValue(), 0.000001);
+    Assertions.assertEquals(floatValues[0], agg.getFloat(), 0.000001);
 
-    Assert.assertThrows(DruidException.class, () -> aggregate(selectorFloat, agg));
+    Assertions.assertThrows(DruidException.class, () -> aggregate(selectorFloat, agg));
   }
 
   @Test
@@ -194,13 +194,13 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[Double.BYTES + Byte.BYTES]);
     agg.init(buffer, 0);
-    Assert.assertEquals(0.0f, agg.getFloat(buffer, 0), 0.000001);
+    Assertions.assertEquals(0.0f, agg.getFloat(buffer, 0), 0.000001);
 
     aggregate(selectorFloat, agg, buffer, 0);
-    Assert.assertEquals(floatValues[0], ((Float) agg.get(buffer, 0)).floatValue(), 0.000001);
-    Assert.assertEquals(floatValues[0], agg.getFloat(buffer, 0), 0.000001);
+    Assertions.assertEquals(floatValues[0], ((Float) agg.get(buffer, 0)).floatValue(), 0.000001);
+    Assertions.assertEquals(floatValues[0], agg.getFloat(buffer, 0), 0.000001);
 
-    Assert.assertThrows(DruidException.class, () -> aggregate(selectorFloat, agg, buffer, 0));
+    Assertions.assertThrows(DruidException.class, () -> aggregate(selectorFloat, agg, buffer, 0));
   }
 
   @Test
@@ -208,12 +208,12 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   {
     Aggregator agg = stringAggFactory.factorize(colSelectorFactoryString);
 
-    Assert.assertEquals(null, agg.get());
+    Assertions.assertEquals(null, agg.get());
 
     aggregate(selectorString, agg);
-    Assert.assertEquals(strValues[0], agg.get());
+    Assertions.assertEquals(strValues[0], agg.get());
 
-    Assert.assertThrows(DruidException.class, () -> aggregate(selectorString, agg));
+    Assertions.assertThrows(DruidException.class, () -> aggregate(selectorString, agg));
   }
 
   @Test
@@ -225,9 +225,9 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
     agg.init(buffer, 0);
 
     aggregate(selectorString, agg, buffer, 0);
-    Assert.assertEquals(strValues[0], agg.get(buffer, 0));
+    Assertions.assertEquals(strValues[0], agg.get(buffer, 0));
 
-    Assert.assertThrows(DruidException.class, () -> aggregate(selectorString, agg, buffer, 0));
+    Assertions.assertThrows(DruidException.class, () -> aggregate(selectorString, agg, buffer, 0));
   }
 
   @Test
@@ -237,10 +237,10 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
     SingleValueAggregatorFactory oneMore = new SingleValueAggregatorFactory("name1", "fieldName1", ColumnType.LONG);
     SingleValueAggregatorFactory two = new SingleValueAggregatorFactory("name2", "fieldName2", ColumnType.LONG);
 
-    Assert.assertEquals(one.hashCode(), oneMore.hashCode());
+    Assertions.assertEquals(one.hashCode(), oneMore.hashCode());
 
-    Assert.assertTrue(one.equals(oneMore));
-    Assert.assertFalse(one.equals(two));
+    Assertions.assertTrue(one.equals(oneMore));
+    Assertions.assertFalse(one.equals(two));
   }
 
   private void aggregate(TestLongColumnSelector selector, Aggregator agg)

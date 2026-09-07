@@ -35,9 +35,9 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.client.api.Response;
-import org.eclipse.jetty.proxy.AsyncProxyServlet;
+import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.client.Response;
+import org.eclipse.jetty.ee8.proxy.AsyncProxyServlet;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;

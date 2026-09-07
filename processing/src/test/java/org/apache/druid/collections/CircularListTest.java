@@ -21,8 +21,8 @@ package org.apache.druid.collections;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -46,7 +46,7 @@ public class CircularListTest
         break;
       }
     }
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), observedElements);
+    Assertions.assertEquals(ImmutableList.of("a", "b", "c"), observedElements);
   }
 
   @Test
@@ -63,7 +63,7 @@ public class CircularListTest
       }
     }
 
-    Assert.assertEquals(ImmutableList.of(100, 0, -1, -4, 100, 0, -1, -4), observedElements);
+    Assertions.assertEquals(ImmutableList.of(100, 0, -1, -4, 100, 0, -1, -4), observedElements);
   }
 
   @Test
@@ -81,7 +81,7 @@ public class CircularListTest
       }
     }
 
-    Assert.assertEquals(ImmutableList.of("a", "b", "c"), observedElements);
+    Assertions.assertEquals(ImmutableList.of("a", "b", "c"), observedElements);
 
     observedElements = new ArrayList<>();
     for (String element : circularList) {
@@ -92,7 +92,7 @@ public class CircularListTest
       }
     }
 
-    Assert.assertEquals(ImmutableList.of("d", "e", "f", "a", "b"), observedElements);
+    Assertions.assertEquals(ImmutableList.of("d", "e", "f", "a", "b"), observedElements);
   }
 
   @Test
@@ -100,9 +100,9 @@ public class CircularListTest
   {
     final Set<String> input = ImmutableSet.of("a", "b", "c");
     final CircularList<String> circularList = new CircularList<>(input, Comparator.naturalOrder());
-    Assert.assertTrue(circularList.equalsSet(ImmutableSet.of("b", "a", "c")));
-    Assert.assertFalse(circularList.equalsSet(ImmutableSet.of("c")));
-    Assert.assertFalse(circularList.equalsSet(ImmutableSet.of("a", "c")));
+    Assertions.assertTrue(circularList.equalsSet(ImmutableSet.of("b", "a", "c")));
+    Assertions.assertFalse(circularList.equalsSet(ImmutableSet.of("c")));
+    Assertions.assertFalse(circularList.equalsSet(ImmutableSet.of("a", "c")));
   }
 
   @Test
@@ -119,7 +119,7 @@ public class CircularListTest
         break;
       }
     }
-    Assert.assertEquals(ImmutableList.of(), observedElements);
+    Assertions.assertEquals(ImmutableList.of(), observedElements);
   }
 
   @Test
@@ -129,7 +129,7 @@ public class CircularListTest
     final CircularList<String> circularList = new CircularList<>(input, Comparator.naturalOrder());
 
     final Iterator<String> iterator = circularList.iterator();
-    Assert.assertFalse(iterator.hasNext());
-    Assert.assertThrows(NoSuchElementException.class, iterator::next);
+    Assertions.assertFalse(iterator.hasNext());
+    Assertions.assertThrows(NoSuchElementException.class, iterator::next);
   }
 }

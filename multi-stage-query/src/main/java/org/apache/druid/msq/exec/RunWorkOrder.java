@@ -21,14 +21,12 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.frame.processor.BlockingQueueOutputChannelFactory;
@@ -44,13 +42,12 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.counters.CounterTracker;
-import org.apache.druid.msq.indexing.InputChannelFactory;
-import org.apache.druid.msq.indexing.InputChannelsImpl;
+import org.apache.druid.msq.indexing.StorageCountingOutputChannelFactory;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
-import org.apache.druid.msq.input.InputSlices;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.input.MapInputSliceReader;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSliceReader;
@@ -60,12 +57,10 @@ import org.apache.druid.msq.input.inline.InlineInputSlice;
 import org.apache.druid.msq.input.inline.InlineInputSliceReader;
 import org.apache.druid.msq.input.lookup.LookupInputSlice;
 import org.apache.druid.msq.input.lookup.LookupInputSliceReader;
-import org.apache.druid.msq.input.stage.InputChannels;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSliceReader;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.SegmentsInputSliceReader;
-import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.shuffle.output.DurableStorageOutputChannelFactory;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -76,6 +71,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -145,7 +141,11 @@ public class RunWorkOrder
   )
   {
     this.workOrder = workOrder;
-    this.inputChannelFactory = inputChannelFactory;
+    this.inputChannelFactory = new CountingInputChannelFactory(
+        inputChannelFactory,
+        workOrder,
+        counterTracker
+    );
     this.counterTracker = counterTracker;
     this.exec = exec;
     this.cancellationId = cancellationId;
@@ -174,12 +174,11 @@ public class RunWorkOrder
 
     try {
       exec.registerCancellationId(cancellationId);
-      initGlobalSortPartitionBoundariesIfNeeded();
       startStageProcessor();
       setUpCompletionCallbacks();
     }
     catch (Throwable t) {
-      stopUnchecked(t);
+      stop(t);
     }
   }
 
@@ -193,7 +192,7 @@ public class RunWorkOrder
    * @param t error to send to {@link RunWorkOrderListener#onFailure}, if success/failure has not already been sent.
    *          Will also be thrown at the end of this method.
    */
-  public void stop(@Nullable Throwable t) throws InterruptedException
+  public void stop(@Nullable Throwable t)
   {
     if (state.compareAndSet(State.INIT, State.STOPPING)
         || state.compareAndSet(State.STARTED, State.STOPPING)
@@ -236,30 +235,25 @@ public class RunWorkOrder
       stopLatch.countDown();
     }
 
-    stopLatch.await();
+    // If stopLatch.await() is interrupted, remember that but keep waiting. This method should only return when
+    // the worker is fully stopped, otherwise cleanup may not have fully happened.
+    boolean interrupted = false;
+    while (stopLatch.getCount() > 0) {
+      try {
+        stopLatch.await();
+      }
+      catch (InterruptedException e) {
+        interrupted = true;
+      }
+    }
+
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
 
     if (t != null) {
-      Throwables.throwIfInstanceOf(t, InterruptedException.class);
       Throwables.throwIfUnchecked(t);
       throw new RuntimeException(t);
-    }
-  }
-
-  /**
-   * Calls {@link #stop(Throwable)}. If the call to {@link #stop(Throwable)} throws {@link InterruptedException},
-   * this method sets the interrupt flag and throws an unchecked exception.
-   *
-   * @param t error to send to {@link RunWorkOrderListener#onFailure}, if success/failure has not already been sent.
-   *          Will also be thrown at the end of this method.
-   */
-  public void stopUnchecked(@Nullable final Throwable t)
-  {
-    try {
-      stop(t);
-    }
-    catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
     }
   }
 
@@ -287,25 +281,6 @@ public class RunWorkOrder
     final ExecutionContext executionContext = makeExecutionContext();
 
     stageResultFuture = processor.execute(executionContext);
-  }
-
-  /**
-   * Initialize {@link #stagePartitionBoundariesFuture} if it will be needed (i.e. if {@link ShuffleKind#GLOBAL_SORT})
-   * but does not need statistics. In this case, it is known upfront, before the job starts.
-   */
-  private void initGlobalSortPartitionBoundariesIfNeeded()
-  {
-    if (workOrder.getStageDefinition().doesShuffle()
-        && workOrder.getStageDefinition().getShuffleSpec().kind() == ShuffleKind.GLOBAL_SORT
-        && !workOrder.getStageDefinition().mustGatherResultKeyStatistics()) {
-      // Result key stats aren't needed, so the partition boundaries are knowable ahead of time. Compute them now.
-      final ClusterByPartitions boundaries =
-          workOrder.getStageDefinition()
-                   .generatePartitionBoundariesForShuffle(null)
-                   .valueOrThrow();
-
-      stagePartitionBoundariesFuture.set(boundaries);
-    }
   }
 
   /**
@@ -411,11 +386,13 @@ public class RunWorkOrder
         exec,
         makeInputSliceReader(),
         this::makeIntermediateOutputChannelFactory,
+        inputChannelFactory,
         makeStageOutputChannelFactory(),
         stagePartitionBoundariesFuture,
         frameContext,
         counterTracker,
         workerContext.threadCount(),
+        workerContext.segmentLoadAheadCount(workOrder),
         cancellationId,
         listener
     );
@@ -423,31 +400,29 @@ public class RunWorkOrder
 
   private InputSliceReader makeInputSliceReader()
   {
-    final String queryId = workOrder.getQueryDefinition().getQueryId();
     final boolean reindex = MultiStageQueryContext.isReindex(workOrder.getWorkerContext());
-
-    final InputChannels inputChannels =
-        new InputChannelsImpl(
-            workOrder.getQueryDefinition(),
-            InputSlices.allReadablePartitions(workOrder.getInputs()),
-            inputChannelFactory,
-            frameContext.frameWriterSpec(),
-            () -> ArenaMemoryAllocator.createOnHeap(frameContext.memoryParameters().getFrameSize()),
-            exec,
-            cancellationId,
-            counterTracker
-        );
-
-    return new MapInputSliceReader(
-        ImmutableMap.<Class<? extends InputSlice>, InputSliceReader>builder()
-                    .put(NilInputSlice.class, NilInputSliceReader.INSTANCE)
-                    .put(StageInputSlice.class, new StageInputSliceReader(queryId, inputChannels))
-                    .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir("external")))
-                    .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
-                    .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
-                    .put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext, reindex))
-                    .build()
+    LinkedHashMap<Class<? extends InputSlice>, InputSliceReader> readers = new LinkedHashMap<>();
+    readers.put(NilInputSlice.class, NilInputSliceReader.INSTANCE);
+    readers.put(StageInputSlice.class, StageInputSliceReader.INSTANCE);
+    readers.put(
+        ExternalInputSlice.class,
+        new ExternalInputSliceReader(
+            frameContext.virtualStorageManager(),
+            frameContext.tempDir("external"),
+            MultiStageQueryContext.isBackgroundFetchExternalFiles(workOrder.getWorkerContext())
+        )
     );
+    readers.put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()));
+    readers.put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()));
+    readers.put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext, reindex));
+
+    // Context-supplied providers override the default ones, so they get added last.
+    for (final InputSliceReaderProvider readerProvider : workerContext.inputSliceReaderProviders()) {
+      final InputSliceReader reader = readerProvider.createReader(frameContext, workOrder.getWorkerContext());
+      readers.put(readerProvider.sliceClass(), reader);
+    }
+
+    return new MapInputSliceReader(readers);
   }
 
   private OutputChannelFactory makeStageOutputChannelFactory()
@@ -471,15 +446,28 @@ public class RunWorkOrder
       case LOCAL_STORAGE:
         final File fileChannelDirectory =
             frameContext.tempDir(StringUtils.format("output_stage_%06d", workOrder.getStageNumber()));
-        outputChannelFactory = new FileOutputChannelFactory(fileChannelDirectory, frameSize, null);
+        outputChannelFactory = new StorageCountingOutputChannelFactory(
+            new FileOutputChannelFactory(
+                fileChannelDirectory,
+                frameSize,
+                null,
+                frameContext.wireTransferableContext()
+            ),
+            counterTracker.storage(intermediateByteTracker),
+            false
+        );
         break;
 
       case DURABLE_STORAGE_INTERMEDIATE:
       case DURABLE_STORAGE_QUERY_RESULTS:
-        outputChannelFactory = makeDurableStorageOutputChannelFactory(
-            frameContext.tempDir("durable"),
-            frameSize,
-            outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
+        outputChannelFactory = new StorageCountingOutputChannelFactory(
+            makeDurableStorageOutputChannelFactory(
+                frameContext.tempDir("durable"),
+                frameSize,
+                outputChannelMode == OutputChannelMode.DURABLE_STORAGE_QUERY_RESULTS
+            ),
+            counterTracker.storage(intermediateByteTracker),
+            true
         );
         break;
 
@@ -504,8 +492,16 @@ public class RunWorkOrder
     final int frameSize = frameContext.memoryParameters().getFrameSize();
     final File fileChannelDirectory =
         new File(tempDir, StringUtils.format("intermediate-stage-%06d", workOrder.getStageNumber()));
-    final FileOutputChannelFactory fileOutputChannelFactory =
-        new FileOutputChannelFactory(fileChannelDirectory, frameSize, intermediateByteTracker);
+    final OutputChannelFactory fileOutputChannelFactory = new StorageCountingOutputChannelFactory(
+        new FileOutputChannelFactory(
+            fileChannelDirectory,
+            frameSize,
+            intermediateByteTracker,
+            frameContext.wireTransferableContext()
+        ),
+        counterTracker.storage(intermediateByteTracker),
+        false
+    );
 
     if (workOrder.getOutputChannelMode().isDurable()
         && frameContext.storageParameters().isIntermediateStorageLimitConfigured()) {
@@ -514,7 +510,11 @@ public class RunWorkOrder
       return new ComposingOutputChannelFactory(
           ImmutableList.of(
               fileOutputChannelFactory,
-              makeDurableStorageOutputChannelFactory(tempDir, frameSize, isQueryResults)
+              new StorageCountingOutputChannelFactory(
+                  makeDurableStorageOutputChannelFactory(tempDir, frameSize, isQueryResults),
+                  counterTracker.storage(intermediateByteTracker),
+                  true
+              )
           ),
           frameSize
       );
@@ -537,7 +537,8 @@ public class RunWorkOrder
         frameSize,
         MSQTasks.makeStorageConnector(workerContext.injector()),
         tmpDir,
-        isQueryResults
+        isQueryResults,
+        frameContext.wireTransferableContext()
     );
   }
 }

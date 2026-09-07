@@ -186,6 +186,21 @@ public class SegmentGenerationMetrics
     }
   }
 
+  public void setMergeTime(long elapsedMergeTimeMillis)
+  {
+    mergeTimeMillis.set(elapsedMergeTimeMillis);
+  }
+
+  public void setMergeCpuTime(long elapsedCpuTimeNanos)
+  {
+    mergeCpuTime.set(elapsedCpuTimeNanos);
+  }
+
+  public void setPersistCpuTime(long elpasedCpuTimeNanos)
+  {
+    persistCpuTime.set(elpasedCpuTimeNanos);
+  }
+
   public void markProcessingDone()
   {
     this.processingDone.set(true);

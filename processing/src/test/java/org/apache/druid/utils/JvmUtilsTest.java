@@ -19,9 +19,9 @@
 
 package org.apache.druid.utils;
 
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -34,7 +34,7 @@ public class JvmUtilsTest
   public void testGetMaxDirectMemory()
   {
     long maxMemory = JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
-    Assert.assertTrue((maxMemory > 0));
+    Assertions.assertTrue((maxMemory > 0));
   }
 
   @Test
@@ -42,11 +42,11 @@ public class JvmUtilsTest
   {
     ClassLoader testClassLoader = this.getClass().getClassLoader();
     // ignore this test unless we can assume URLClassLoader (only applies to Java 8)
-    Assume.assumeTrue(testClassLoader instanceof URLClassLoader);
+    Assumptions.assumeTrue(testClassLoader instanceof URLClassLoader);
 
     List<URL> parsedUrls = JvmUtils.systemClassPath();
     List<URL> classLoaderUrls = Arrays.asList(((URLClassLoader) testClassLoader).getURLs());
 
-    Assert.assertEquals(classLoaderUrls, parsedUrls);
+    Assertions.assertEquals(classLoaderUrls, parsedUrls);
   }
 }

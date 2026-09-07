@@ -49,7 +49,7 @@ export const ExecutionProgressBarPane = React.memo(function ExecutionProgressBar
   }
 
   const idx = stages ? stages.currentStageIndex() : -1;
-  const waitingForSegments = stages && !execution.isWaitingForQuery();
+  const waitingForSegments = execution?.isWaitingForSegments();
 
   const segmentStatusDescription = execution?.getSegmentStatusDescription();
 

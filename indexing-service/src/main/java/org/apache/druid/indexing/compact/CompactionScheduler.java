@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.compact;
 
+import org.apache.druid.indexing.overlord.LeaderOverlordService;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -42,12 +43,8 @@ import java.util.Map;
  * should call {@link #stopCompaction}.</li>
  * </ul>
  */
-public interface CompactionScheduler
+public interface CompactionScheduler extends LeaderOverlordService
 {
-  void becomeLeader();
-
-  void stopBeingLeader();
-
   /**
    * @return true if the scheduler is enabled i.e. when
    * {@link DruidCompactionConfig#isUseSupervisors()} is true.
@@ -65,7 +62,7 @@ public interface CompactionScheduler
   /**
    * Starts compaction for a datasource if not already running.
    */
-  void startCompaction(String dataSourceName, DataSourceCompactionConfig compactionConfig);
+  void startCompaction(String dataSourceName, CompactionSupervisor supervisor);
 
   /**
    * Stops compaction for a datasource if currently running.

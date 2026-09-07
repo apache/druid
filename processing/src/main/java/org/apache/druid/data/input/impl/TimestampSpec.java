@@ -36,15 +36,13 @@ import java.util.Objects;
 @PublicApi
 public class TimestampSpec
 {
-  private static class ParseCtx
-  {
-    Object lastTimeObject = null;
-    DateTime lastDateTime = null;
-  }
-
-  public static final String DEFAULT_COLUMN = "timestamp";
   private static final String DEFAULT_FORMAT = "auto";
   private static final DateTime DEFAULT_MISSING_VALUE = null;
+  // remember last value parsed
+  private static final ThreadLocal<ParseCtx> PARSE_CTX = ThreadLocal.withInitial(ParseCtx::new);
+
+  public static final String DEFAULT_COLUMN = "timestamp";
+  public static final TimestampSpec DEFAULT = new TimestampSpec(null, null, null);
 
   private final String timestampColumn;
   private final String timestampFormat;
@@ -52,9 +50,6 @@ public class TimestampSpec
   private final DateTime missingValue;
   /** This field is a derivative of {@link #timestampFormat}; not checked in {@link #equals} and {@link #hashCode} */
   private final Function<Object, DateTime> timestampConverter;
-
-  // remember last value parsed
-  private static final ThreadLocal<ParseCtx> PARSE_CTX = ThreadLocal.withInitial(ParseCtx::new);
 
   @JsonCreator
   public TimestampSpec(
@@ -67,9 +62,7 @@ public class TimestampSpec
     this.timestampColumn = (timestampColumn == null) ? DEFAULT_COLUMN : timestampColumn;
     this.timestampFormat = format == null ? DEFAULT_FORMAT : format;
     this.timestampConverter = TimestampParser.createObjectTimestampParser(timestampFormat);
-    this.missingValue = missingValue == null
-                        ? DEFAULT_MISSING_VALUE
-                        : missingValue;
+    this.missingValue = missingValue == null ? DEFAULT_MISSING_VALUE : missingValue;
   }
 
   @JsonProperty("column")
@@ -182,5 +175,11 @@ public class TimestampSpec
     }
 
     return result;
+  }
+
+  private static class ParseCtx
+  {
+    Object lastTimeObject = null;
+    DateTime lastDateTime = null;
   }
 }

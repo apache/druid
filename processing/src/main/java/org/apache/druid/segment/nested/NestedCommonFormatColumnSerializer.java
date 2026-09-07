@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.Serializer;
 
@@ -74,15 +74,17 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   public abstract boolean hasNulls();
 
-  protected void writeInternal(FileSmoosher smoosher, Serializer serializer, String fileName) throws IOException
+  protected void writeInternal(SegmentFileBuilder fileBuilder, Serializer serializer, String fileName)
+      throws IOException
   {
-    ColumnSerializerUtils.writeInternal(smoosher, serializer, getColumnName(), fileName);
+    ColumnSerializerUtils.writeInternal(fileBuilder, serializer, getColumnName(), fileName);
   }
 
-  protected static void copyFromTempSmoosh(FileSmoosher smoosher, SmooshedFileMapper fileMapper) throws IOException
+  protected static void copyFromTempSmoosh(SegmentFileBuilder fileBuilder, SegmentFileMapper fileMapper)
+      throws IOException
   {
     for (String internalName : fileMapper.getInternalFilenames()) {
-      smoosher.add(internalName, fileMapper.mapFile(internalName));
+      fileBuilder.add(internalName, fileMapper.mapFile(internalName));
     }
   }
 

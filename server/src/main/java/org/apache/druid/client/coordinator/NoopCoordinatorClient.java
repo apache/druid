@@ -27,6 +27,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.Rule;
@@ -99,6 +100,12 @@ public class NoopCoordinatorClient implements CoordinatorClient
 
   @Override
   public ListenableFuture<CoordinatorDynamicConfig> getCoordinatorDynamicConfig()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<BrokerDynamicConfig> getBrokerDynamicConfig()
   {
     throw new UnsupportedOperationException();
   }

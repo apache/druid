@@ -35,10 +35,8 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -106,31 +104,31 @@ public class LookupSegmentTest
   @Test
   public void test_getId()
   {
-    Assert.assertNull(LOOKUP_SEGMENT.getId());
+    Assertions.assertNull(LOOKUP_SEGMENT.getId());
   }
 
   @Test
   public void test_getDebugString()
   {
-    Assert.assertEquals("LookupSegment:mylookup", LOOKUP_SEGMENT.getDebugString());
+    Assertions.assertEquals("LookupSegment:mylookup", LOOKUP_SEGMENT.getDebugString());
   }
 
   @Test
   public void test_getDataInterval()
   {
-    Assert.assertEquals(Intervals.ETERNITY, LOOKUP_SEGMENT.getDataInterval());
+    Assertions.assertEquals(Intervals.ETERNITY, LOOKUP_SEGMENT.getDataInterval());
   }
 
   @Test
   public void test_asQueryableIndex()
   {
-    Assert.assertNull(LOOKUP_SEGMENT.as(QueryableIndex.class));
+    Assertions.assertNull(LOOKUP_SEGMENT.as(QueryableIndex.class));
   }
 
   @Test
   public void test_asCursorFactory_getRowSignature()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .add("k", ColumnType.STRING)
                     .add("v", ColumnType.STRING)
@@ -144,13 +142,13 @@ public class LookupSegmentTest
   {
     final ColumnCapabilities capabilities = LOOKUP_SEGMENT.as(CursorFactory.class).getColumnCapabilities("k");
 
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
+    Assertions.assertEquals(ValueType.STRING, capabilities.getType());
 
     // Note: the "k" column does not actually have multiple values, but the RowBasedStorageAdapter doesn't allow
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
     // running on top of lookups can take advantage of singly-valued optimizations.
-    Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
-    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
+    Assertions.assertTrue(capabilities.hasMultipleValues().isUnknown());
+    Assertions.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test
@@ -161,9 +159,9 @@ public class LookupSegmentTest
     // Note: the "v" column does not actually have multiple values, but the RowBasedStorageAdapter doesn't allow
     // reporting complete single-valued capabilities. It would be good to change this in the future, so query engines
     // running on top of lookups can take advantage of singly-valued optimizations.
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
-    Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
-    Assert.assertFalse(capabilities.isDictionaryEncoded().isTrue());
+    Assertions.assertEquals(ValueType.STRING, capabilities.getType());
+    Assertions.assertTrue(capabilities.hasMultipleValues().isUnknown());
+    Assertions.assertFalse(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test
@@ -185,7 +183,7 @@ public class LookupSegmentTest
         cursor.advanceUninterruptibly();
       }
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               Pair.of("a", "b"),
               Pair.of("x", "y")
@@ -200,6 +198,6 @@ public class LookupSegmentTest
   {
     // This allows us to assume that LookupSegmentTest is further exercising makeCursor and verifying misc.
     // methods like getMinTime, getMaxTime, getMetadata, etc, without checking them explicitly in _this_ test class.
-    MatcherAssert.assertThat(LOOKUP_SEGMENT.as(CursorFactory.class), CoreMatchers.instanceOf(RowBasedCursorFactory.class));
+    Assertions.assertInstanceOf(RowBasedCursorFactory.class, LOOKUP_SEGMENT.as(CursorFactory.class));
   }
 }

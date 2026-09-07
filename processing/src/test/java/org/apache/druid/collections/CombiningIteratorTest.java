@@ -21,10 +21,10 @@ package org.apache.druid.collections;
 
 import com.google.common.collect.PeekingIterator;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.NoSuchElementException;
@@ -38,7 +38,7 @@ public class CombiningIteratorTest
   private BinaryOperator<String> combiningFunction;
   private PeekingIterator<String> peekIterator;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     peekIterator = EasyMock.createMock(PeekingIterator.class);
@@ -47,7 +47,7 @@ public class CombiningIteratorTest
     testingIterator = CombiningIterator.create(peekIterator, comparator, combiningFunction);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     testingIterator = null;
@@ -61,7 +61,7 @@ public class CombiningIteratorTest
     EasyMock.replay(peekIterator);
     boolean actual = testingIterator.hasNext();
     EasyMock.verify(peekIterator);
-    Assert.assertEquals("The hasNext function is broken", expected, actual);
+    Assertions.assertEquals(expected, actual, "The hasNext function is broken");
   }
 
   @Test
@@ -74,7 +74,7 @@ public class CombiningIteratorTest
     EasyMock.replay(peekIterator);
     Object res = testingIterator.next();
     EasyMock.verify(peekIterator);
-    Assert.assertNull("Should be null", res);
+    Assertions.assertNull(res, "Should be null");
   }
 
   @Test
@@ -101,26 +101,26 @@ public class CombiningIteratorTest
     EasyMock.replay(comparator);
 
     String actual = testingIterator.next();
-    Assert.assertEquals(resString, actual);
+    Assertions.assertEquals(resString, actual);
 
     EasyMock.verify(peekIterator);
     EasyMock.verify(comparator);
     EasyMock.verify(combiningFunction);
   }
 
-  @Test(expected = NoSuchElementException.class)
+  @Test
   public void testExceptionInNext()
   {
     boolean expected = false;
     EasyMock.expect(peekIterator.hasNext()).andReturn(expected);
     EasyMock.replay(peekIterator);
-    testingIterator.next();
+    Assertions.assertThrows(NoSuchElementException.class, () -> testingIterator.next());
     EasyMock.verify(peekIterator);
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testRemove()
   {
-    testingIterator.remove();
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> testingIterator.remove());
   }
 }

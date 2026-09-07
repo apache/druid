@@ -31,12 +31,12 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.annotations.RemoteChatHandler;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.query.lookup.LookupModule;
 import org.apache.druid.segment.realtime.ChatHandlerResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.TLSServerConfig;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -47,7 +47,6 @@ import java.util.Properties;
  */
 public class CliIndexerServerModule implements Module
 {
-  private static final String SERVER_HTTP_NUM_THREADS_PROPERTY = "druid.server.http.numThreads";
   private final Properties properties;
 
   public CliIndexerServerModule(Properties properties)
@@ -62,12 +61,7 @@ public class CliIndexerServerModule implements Module
     LifecycleModule.register(binder, ChatHandlerResource.class);
 
     // Use an equal number of threads for chat handler and non-chat handler requests.
-    int serverHttpNumThreads;
-    if (properties.getProperty(SERVER_HTTP_NUM_THREADS_PROPERTY) == null) {
-      serverHttpNumThreads = ServerConfig.getDefaultNumThreads();
-    } else {
-      serverHttpNumThreads = Integer.parseInt(properties.getProperty(SERVER_HTTP_NUM_THREADS_PROPERTY));
-    }
+    int serverHttpNumThreads = ServerConfig.getNumThreadsFromProperties(properties);
 
     JettyBindings.addQosFilter(
         binder,
@@ -109,10 +103,10 @@ public class CliIndexerServerModule implements Module
   @Provides
   @LazySingleton
   public TaskIdResponseHeaderFilterHolder taskIdResponseHeaderFilterHolderBuilder(
-      final DataSourceTaskIdHolder taskIdHolder
+      final TaskHolder taskHolder
   )
   {
-    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskIdHolder.getTaskId());
+    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskHolder.getTaskId());
   }
 
   @Provides
@@ -166,7 +160,9 @@ public class CliIndexerServerModule implements Module
         oldConfig.isShowDetailedJettyErrors(),
         oldConfig.getErrorResponseTransformStrategy(),
         oldConfig.getContentSecurityPolicy(),
-        oldConfig.isEnableHSTS()
+        oldConfig.isEnableHSTS(),
+        oldConfig.getUriCompliance(),
+        oldConfig.isEnforceStrictSNIHostChecking()
     );
   }
 }

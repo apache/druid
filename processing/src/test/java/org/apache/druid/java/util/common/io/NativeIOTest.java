@@ -19,10 +19,10 @@
 
 package org.apache.druid.java.util.common.io;
 
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -32,27 +32,27 @@ import java.util.Arrays;
 
 public class NativeIOTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testChunkedCopy() throws Exception
   {
-    File f = tempFolder.newFile();
+    File f = temporaryFolder.newFile();
     byte[] bytes = new byte[]{(byte) 0x8, (byte) 0x9};
 
     ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
     NativeIO.chunkedCopy(bis, f);
 
     byte[] data = Files.readAllBytes(f.toPath());
-    Assert.assertTrue(Arrays.equals(bytes, data));
+    Assertions.assertTrue(Arrays.equals(bytes, data));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testException() throws Exception
   {
-    File dir = tempFolder.newFolder();
-    NativeIO.chunkedCopy(null, dir);
+    File dir = temporaryFolder.newFolder("folder");
+    Assertions.assertThrows(IOException.class, () -> NativeIO.chunkedCopy(null, dir));
   }
 
   @Test
@@ -61,7 +61,7 @@ public class NativeIOTest
     boolean possible = NativeIO.isFadvisePossible();
 
     NativeIO.setFadvisePossible(false);
-    File f = tempFolder.newFile();
+    File f = temporaryFolder.newFile();
     byte[] bytes = new byte[]{(byte) 0x8, (byte) 0x9};
 
     ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
@@ -70,7 +70,7 @@ public class NativeIOTest
     byte[] data = Files.readAllBytes(f.toPath());
 
     NativeIO.setFadvisePossible(possible);
-    Assert.assertTrue(Arrays.equals(bytes, data));
+    Assertions.assertTrue(Arrays.equals(bytes, data));
   }
 
   @Test
@@ -79,7 +79,7 @@ public class NativeIOTest
     boolean possible = NativeIO.isSyncFileRangePossible();
 
     NativeIO.setSyncFileRangePossible(false);
-    File f = tempFolder.newFile();
+    File f = temporaryFolder.newFile();
     byte[] bytes = new byte[]{(byte) 0x8, (byte) 0x9};
 
     ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
@@ -88,7 +88,7 @@ public class NativeIOTest
     byte[] data = Files.readAllBytes(f.toPath());
 
     NativeIO.setSyncFileRangePossible(possible);
-    Assert.assertTrue(Arrays.equals(bytes, data));
+    Assertions.assertTrue(Arrays.equals(bytes, data));
   }
 
 }

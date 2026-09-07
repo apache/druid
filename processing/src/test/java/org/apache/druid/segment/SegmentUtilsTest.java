@@ -24,15 +24,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -40,29 +39,27 @@ import java.util.List;
  */
 public class SegmentUtilsTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testVersionBin() throws Exception
   {
-    File dir = tempFolder.newFolder();
-    FileUtils.writeByteArrayToFile(new File(dir, "version.bin"), Ints.toByteArray(9));
-    Assert.assertEquals(9, SegmentUtils.getVersionFromDir(dir));
+    FileUtils.writeByteArrayToFile(temporaryFolder.newFile("version.bin"), Ints.toByteArray(9));
+    Assertions.assertEquals(9, SegmentUtils.getVersionFromDir(temporaryFolder.getRoot()));
   }
 
   @Test
   public void testIndexDrd() throws Exception
   {
-    File dir = tempFolder.newFolder();
-    FileUtils.writeByteArrayToFile(new File(dir, "index.drd"), new byte[]{(byte) 0x8});
-    Assert.assertEquals(8, SegmentUtils.getVersionFromDir(dir));
+    FileUtils.writeByteArrayToFile(temporaryFolder.newFile("index.drd"), new byte[]{(byte) 0x8});
+    Assertions.assertEquals(8, SegmentUtils.getVersionFromDir(temporaryFolder.getRoot()));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testException() throws Exception
   {
-    SegmentUtils.getVersionFromDir(tempFolder.newFolder());
+    Assertions.assertThrows(IOException.class, () -> SegmentUtils.getVersionFromDir(temporaryFolder.getRoot()));
   }
 
   @Test
@@ -76,7 +73,7 @@ public class SegmentUtilsTest
         newSegment(Intervals.of("2020-01-02/P1D"), 1),
         newSegment(Intervals.of("2020-01-02/P1D"), 2)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("2020-01-01/P1D"),
             ImmutableList.of(

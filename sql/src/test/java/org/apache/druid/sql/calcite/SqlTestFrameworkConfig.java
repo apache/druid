@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.FakeIndexTaskUtil;
@@ -45,10 +44,8 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.reflections.Configuration;
 import org.reflections.Reflections;
-import org.reflections.scanners.SubTypesScanner;
-import org.reflections.util.ClasspathHelper;
+import org.reflections.scanners.Scanners;
 import org.reflections.util.ConfigurationBuilder;
-import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
 
@@ -67,6 +64,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -81,7 +79,7 @@ import java.util.stream.Collectors;
  * Specifies current framework settings.
  *
  * Intended usage from tests is via the annotations:
- *   @SqlTestFrameworkConfig.MinTopNThreshold(33)
+ *   @SqlTestFrameworkConfig.NumMergeBuffers(3)
  *
  * In case of annotations used; it picks up all annotations from:
  *  * the method
@@ -101,23 +99,6 @@ public class SqlTestFrameworkConfig
   public @interface NumMergeBuffers
   {
     ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<>(NumMergeBuffers.class)
-    {
-      @Override
-      public Integer fromString(String str) throws NumberFormatException
-      {
-        return Integer.valueOf(str);
-      }
-    };
-
-    int value();
-  }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.METHOD, ElementType.TYPE})
-  @MinTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
-  public @interface MinTopNThreshold
-  {
-    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<>(MinTopNThreshold.class)
     {
       @Override
       public Integer fromString(String str) throws NumberFormatException
@@ -194,14 +175,12 @@ public class SqlTestFrameworkConfig
 
   private static final Set<String> KNOWN_CONFIG_KEYS = ImmutableSet.<String>builder()
       .add(NumMergeBuffers.PROCESSOR.getConfigName())
-      .add(MinTopNThreshold.PROCESSOR.getConfigName())
       .add(ResultCache.PROCESSOR.getConfigName())
       .add(ComponentSupplier.PROCESSOR.getConfigName())
       .add(Datasets.PROCESSOR.getConfigName())
       .build();
 
   public final int numMergeBuffers;
-  public final int minTopNThreshold;
   public final ResultCacheMode resultCache;
   public final Class<? extends QueryComponentSupplier> componentSupplier;
   public final String datasets;
@@ -211,7 +190,6 @@ public class SqlTestFrameworkConfig
   {
     try {
       numMergeBuffers = NumMergeBuffers.PROCESSOR.fromAnnotations(annotations);
-      minTopNThreshold = MinTopNThreshold.PROCESSOR.fromAnnotations(annotations);
       resultCache = ResultCache.PROCESSOR.fromAnnotations(annotations);
       componentSupplier = ComponentSupplier.PROCESSOR.fromAnnotations(annotations);
       datasets = Datasets.PROCESSOR.fromAnnotations(annotations);
@@ -226,7 +204,6 @@ public class SqlTestFrameworkConfig
     validateConfigKeys(queryParams.keySet());
     try {
       numMergeBuffers = NumMergeBuffers.PROCESSOR.fromMap(queryParams);
-      minTopNThreshold = MinTopNThreshold.PROCESSOR.fromMap(queryParams);
       resultCache = ResultCache.PROCESSOR.fromMap(queryParams);
       componentSupplier = ComponentSupplier.PROCESSOR.fromMap(queryParams);
       datasets = Datasets.PROCESSOR.fromMap(queryParams);
@@ -248,7 +225,7 @@ public class SqlTestFrameworkConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, componentSupplier, datasets);
+    return Objects.hash(numMergeBuffers, resultCache, componentSupplier, datasets);
   }
 
   @Override
@@ -258,8 +235,7 @@ public class SqlTestFrameworkConfig
       return false;
     }
     SqlTestFrameworkConfig other = (SqlTestFrameworkConfig) obj;
-    return minTopNThreshold == other.minTopNThreshold
-        && numMergeBuffers == other.numMergeBuffers
+    return numMergeBuffers == other.numMergeBuffers
         && resultCache == other.resultCache
         && componentSupplier == other.componentSupplier
         && Objects.equals(datasets, other.datasets);
@@ -267,6 +243,8 @@ public class SqlTestFrameworkConfig
 
   public static class SqlTestFrameworkConfigStore implements Closeable
   {
+    private static final int MAX_CACHED_CONFIGS = 32;
+
     private final Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper;
 
     public SqlTestFrameworkConfigStore(
@@ -275,13 +253,24 @@ public class SqlTestFrameworkConfig
       this.queryComponentSupplierWrapper = queryComponentSupplierWrapper;
     }
 
-    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
+    Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new LinkedHashMap<>(16, 0.75f, true)
+    {
+      @Override
+      protected boolean removeEldestEntry(Map.Entry<SqlTestFrameworkConfig, ConfigurationInstance> eldest)
+      {
+        if (size() > MAX_CACHED_CONFIGS) {
+          eldest.getValue().close();
+          return true;
+        }
+        return false;
+      }
+    };
 
     public ConfigurationInstance getConfigurationInstance(
         SqlTestFrameworkConfig config) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
-      if (!configMap.containsKey(config)) {
+      if (ret == null) {
         ret = new ConfigurationInstance(config, queryComponentSupplierWrapper);
         configMap.put(config, ret);
       }
@@ -396,7 +385,6 @@ public class SqlTestFrameworkConfig
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .withConfig(config)
           .catalogResolver(testHost.createCatalogResolver())
-          .minTopNThreshold(config.minTopNThreshold)
           .mergeBufferCount(config.numMergeBuffers)
           .withOverrideModule(config.resultCache.makeModule());
 
@@ -446,9 +434,6 @@ public class SqlTestFrameworkConfig
     if (def.numMergeBuffers != numMergeBuffers) {
       map.put("numMergeBuffers", String.valueOf(numMergeBuffers));
     }
-    if (def.minTopNThreshold != minTopNThreshold) {
-      map.put("minTopNThreshold", String.valueOf(minTopNThreshold));
-    }
     if (def.componentSupplier != componentSupplier) {
       map.put("componentSupplier", componentSupplier.getSimpleName());
     }
@@ -460,7 +445,6 @@ public class SqlTestFrameworkConfig
 
   public static SqlTestFrameworkConfig fromURL(String url)
   {
-
     Map<String, String> queryParams;
     queryParams = new HashMap<>();
     try {
@@ -542,13 +526,9 @@ public class SqlTestFrameworkConfig
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)
         {
           Configuration cfg = new ConfigurationBuilder()
-              .setScanners(new SubTypesScanner(true))
-              .setUrls(ClasspathHelper.forJavaClassPath())
-              .filterInputsBy(
-                  new FilterBuilder()
-                      .includePackage(pkg)
-                      .and(s -> s.contains("ComponentSupplier"))
-              );
+              .setScanners(Scanners.SubTypes)
+              .forPackage(pkg.isEmpty() ? "org.apache.druid" : pkg)
+              .filterInputsBy(s -> s.contains("ComponentSupplier"));
           final Set<Class<? extends QueryComponentSupplier>> baseComponentClazzes =
               new Reflections(cfg).getSubTypesOf(QueryComponentSupplier.class);
           LinkedHashSet<Class<? extends QueryComponentSupplier>> retVal = new LinkedHashSet<>(baseComponentClazzes);

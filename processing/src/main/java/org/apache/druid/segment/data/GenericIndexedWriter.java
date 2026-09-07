@@ -28,8 +28,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -213,7 +213,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
   private static void writeBytesIntoSmooshedChannel(
       long numBytesToPutInFile,
       final byte[] buffer,
-      final SmooshedWriter smooshChannel,
+      final SegmentFileChannel smooshChannel,
       final InputStream is
   )
       throws IOException
@@ -352,10 +352,10 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, @Nullable FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, @Nullable SegmentFileBuilder fileBuilder) throws IOException
   {
     if (requireMultipleFiles) {
-      writeToMultiFiles(channel, smoosher);
+      writeToMultiFiles(channel, fileBuilder);
     } else {
       writeToSingleFile(channel);
     }
@@ -382,7 +382,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     valuesOut.writeTo(channel);
   }
 
-  private void writeToMultiFiles(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  private void writeToMultiFiles(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     Preconditions.checkState(
         headerOutLong.size() == numWritten,
@@ -396,8 +396,8 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
         (((long) headerOutLong.size()) * Long.BYTES)
     );
 
-    if (smoosher == null) {
-      throw new IAE("version 2 GenericIndexedWriter requires FileSmoosher.");
+    if (fileBuilder == null) {
+      throw new IAE("version 2 GenericIndexedWriter requires SegmentFileBuilder.");
     }
 
     int bagSizePower = bagSizePower();
@@ -422,14 +422,14 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 
         long numBytesToPutInFile = valuePosition - previousValuePosition;
 
-        try (SmooshedWriter smooshChannel = smoosher
-            .addWithSmooshedWriter(generateValueFileName(filenameBase, i), numBytesToPutInFile)) {
-          writeBytesIntoSmooshedChannel(numBytesToPutInFile, buffer, smooshChannel, is);
+        try (SegmentFileChannel segmentChannel = fileBuilder
+            .addWithChannel(generateValueFileName(filenameBase, i), numBytesToPutInFile)) {
+          writeBytesIntoSmooshedChannel(numBytesToPutInFile, buffer, segmentChannel, is);
           previousValuePosition = valuePosition;
         }
       }
     }
-    writeHeaderLong(smoosher, bagSizePower);
+    writeHeaderLong(fileBuilder, bagSizePower);
   }
 
   /**
@@ -494,7 +494,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     return true;
   }
 
-  private void writeHeaderLong(FileSmoosher smoosher, int bagSizePower)
+  private void writeHeaderLong(SegmentFileBuilder fileBuilder, int bagSizePower)
       throws IOException
   {
     ByteBuffer helperBuffer = ByteBuffer.allocate(Integer.BYTES).order(ByteOrder.nativeOrder());
@@ -503,8 +503,8 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     long currentNumBytes = 0;
     long relativeRefBytes = 0;
     long relativeNumBytes;
-    try (SmooshedWriter smooshChannel = smoosher
-        .addWithSmooshedWriter(generateHeaderFileName(filenameBase), ((long) numWritten) * Integer.BYTES)) {
+    try (SegmentFileChannel smooshChannel = fileBuilder
+        .addWithChannel(generateHeaderFileName(filenameBase), ((long) numWritten) * Integer.BYTES)) {
 
       // following block converts long header indexes into int header indexes.
       for (int pos = 0; pos < numWritten; pos++) {

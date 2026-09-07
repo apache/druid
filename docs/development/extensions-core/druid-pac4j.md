@@ -23,7 +23,7 @@ title: "Druid pac4j based Security extension"
   -->
 
 
-Apache Druid Extension to enable [OpenID Connect](https://openid.net/connect/) based Authentication for Druid Processes using [pac4j](https://github.com/pac4j/pac4j) as the underlying client library.
+Apache&circledR; Druid Extension to enable [OpenID Connect](https://openid.net/connect/) based Authentication for Druid Processes using [pac4j](https://github.com/pac4j/pac4j) as the underlying client library.
 This can be used  with any authentication server that supports same e.g. [Okta](https://developer.okta.com/).
 The pac4j authenticator should only be used at the router node to enable a group of users in existing authentication server to interact with Druid cluster, using the [web console](../../operations/web-console.md). 
 
@@ -55,6 +55,7 @@ druid.auth.authenticator.jwt.type=jwt
 |`druid.auth.pac4j.oidc.discoveryURI`|discovery URI for fetching OP metadata [see this](http://openid.net/specs/openid-connect-discovery-1_0.html).|none|Yes|
 |`druid.auth.pac4j.oidc.oidcClaim`|[claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) that will be extracted from the ID Token after validation.|name|No|
 |`druid.auth.pac4j.oidc.scope`| scope is used by an application during authentication to authorize access to a user's details.|`openid profile email`|No|
+|`druid.auth.pac4j.oidc.clientAuthenticationMethod`|The client authentication method to use when communicating with the OIDC provider. Supported values: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, `none`. If not specified, pac4j will auto-detect the method from the provider's discovery document. Set this explicitly if you need to use a specific method (e.g., when your provider advertises multiple methods but you want to use a particular one).|Auto-detected from provider|No|
 
 :::info
 Users must set a strong passphrase to ensure that an attacker is not able to guess it simply by brute force.

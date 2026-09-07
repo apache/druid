@@ -27,6 +27,8 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Objects;
 
 public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesDecoder
@@ -56,12 +58,35 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
   @Override
   protected DescriptorProtos.FileDescriptorSet loadFileDescriptorSet()
   {
-    try (InputStream fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath)) {
+    InputStream fin;
+    DescriptorProtos.FileDescriptorSet descriptorSet;
+    try {
+      fin = this.getClass().getClassLoader().getResourceAsStream(descriptorFilePath);
       if (fin == null) {
-        throw new ParseException(descriptorFilePath, "Descriptor not found in class path [%s]", descriptorFilePath);
+        URL url;
+        try {
+          url = new URL(descriptorFilePath);
+        }
+        catch (MalformedURLException e) {
+          throw new ParseException(
+              descriptorFilePath,
+              e,
+              "Descriptor not found in class path or malformed URL: [%s]", descriptorFilePath
+              );
+        }
+        try (InputStream urlIn = url.openConnection().getInputStream()) {
+          if (urlIn == null) {
+            throw new ParseException(
+                descriptorFilePath,
+                "Descriptor not found at URL: [%s]", descriptorFilePath
+            );
+          }
+          descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(urlIn);
+        }
+      } else {
+        descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
       }
 
-      final var descriptorSet = DescriptorProtos.FileDescriptorSet.parseFrom(fin);
       if (descriptorSet.getFileCount() == 0) {
         throw new ParseException(null, "No file descriptors found in the descriptor set");
       }
@@ -69,7 +94,7 @@ public class FileBasedProtobufBytesDecoder extends DescriptorBasedProtobufBytesD
       return descriptorSet;
     }
     catch (IOException e) {
-      throw new ParseException(descriptorFilePath, e, "Failed to initialize descriptor");
+      throw new ParseException(descriptorFilePath, e, "Failed to initialize descriptor at [%s]", descriptorFilePath);
     }
   }
 

@@ -100,7 +100,7 @@ public class DruidInjectorBuilder
   /**
    * Add an arbitrary set of modules.
    */
-  public DruidInjectorBuilder add(Object...input)
+  public DruidInjectorBuilder add(Object... input)
   {
     for (Object o : input) {
       addInput(o);
@@ -108,7 +108,7 @@ public class DruidInjectorBuilder
     return this;
   }
 
-  public DruidInjectorBuilder addModules(Module...inputs)
+  public DruidInjectorBuilder addModules(Module... inputs)
   {
     for (Object o : inputs) {
       addInput(o);

@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
 import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
 import org.apache.druid.segment.serde.NullValueIndexSupplier;
@@ -41,7 +41,7 @@ public class ColumnBuilder
   @Nullable
   private ColumnIndexSupplier indexSupplier = NoIndexesColumnIndexSupplier.getInstance();
   @Nullable
-  private SmooshedFileMapper fileMapper = null;
+  private SegmentFileMapper fileMapper = null;
 
   @Nullable
   private ColumnFormat columnFormat = null;
@@ -51,13 +51,13 @@ public class ColumnBuilder
     return capabilitiesBuilder;
   }
 
-  public ColumnBuilder setFileMapper(SmooshedFileMapper fileMapper)
+  public ColumnBuilder setFileMapper(SegmentFileMapper fileMapper)
   {
     this.fileMapper = fileMapper;
     return this;
   }
 
-  public SmooshedFileMapper getFileMapper()
+  public SegmentFileMapper getFileMapper()
   {
     return this.fileMapper;
   }
@@ -154,7 +154,7 @@ public class ColumnBuilder
     return this;
   }
 
-  public ColumnHolder build()
+  public BaseColumnHolder build()
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 

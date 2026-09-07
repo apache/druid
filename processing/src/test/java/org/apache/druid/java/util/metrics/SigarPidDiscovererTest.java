@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.metrics;
 
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 
 public class SigarPidDiscovererTest
 {
@@ -30,7 +30,7 @@ public class SigarPidDiscovererTest
   public void simpleTest()
   {
     // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
 
     // Just make sure we don't crash
     SigarPidDiscoverer.instance().getPid();

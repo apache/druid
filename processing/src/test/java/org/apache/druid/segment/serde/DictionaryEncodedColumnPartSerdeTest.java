@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteOrder;
 
@@ -50,8 +50,8 @@ public class DictionaryEncodedColumnPartSerdeTest
         ColumnPartSerde.class
     );
 
-    Assert.assertEquals(ByteOrder.BIG_ENDIAN, serde.getByteOrder());
-    Assert.assertTrue(serde.getBitmapSerdeFactory() instanceof ConciseBitmapSerdeFactory);
+    Assertions.assertEquals(ByteOrder.BIG_ENDIAN, serde.getByteOrder());
+    Assertions.assertTrue(serde.getBitmapSerdeFactory() instanceof ConciseBitmapSerdeFactory);
 
     //bitmapSerdeFactory specified
     json = "{\n"
@@ -67,7 +67,33 @@ public class DictionaryEncodedColumnPartSerdeTest
         ColumnPartSerde.class
     );
 
-    Assert.assertEquals(ByteOrder.LITTLE_ENDIAN, serde.getByteOrder());
-    Assert.assertTrue(serde.getBitmapSerdeFactory() instanceof RoaringBitmapSerdeFactory);
+    Assertions.assertEquals(ByteOrder.LITTLE_ENDIAN, serde.getByteOrder());
+    Assertions.assertTrue(serde.getBitmapSerdeFactory() instanceof RoaringBitmapSerdeFactory);
   }
+
+  @Test
+  public void testSerdeWithColumnFormatSpec() throws Exception
+  {
+    String json = "{\n"
+                  + "\"type\": \"stringDictionary\",\n"
+                  + "\"byteOrder\": \"LITTLE_ENDIAN\",\n"
+                  + "\"bitmapSerdeFactory\": { \"type\": \"roaring\" },\n"
+                  + "\"columnFormatSpec\": { \"maxStringLength\": 100 }\n"
+                  + "}";
+
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+
+    DictionaryEncodedColumnPartSerde serde = (DictionaryEncodedColumnPartSerde) mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(json, ColumnPartSerde.class)
+        ),
+        ColumnPartSerde.class
+    );
+
+    Assertions.assertEquals(ByteOrder.LITTLE_ENDIAN, serde.getByteOrder());
+    Assertions.assertTrue(serde.getBitmapSerdeFactory() instanceof RoaringBitmapSerdeFactory);
+    Assertions.assertNotNull(serde.getColumnFormatSpec());
+    Assertions.assertEquals(Integer.valueOf(100), serde.getColumnFormatSpec().getMaxStringLength());
+  }
+
 }

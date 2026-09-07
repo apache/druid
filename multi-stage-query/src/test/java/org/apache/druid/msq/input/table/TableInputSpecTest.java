@@ -24,68 +24,61 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.input.InputSpec;
-import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
 public class TableInputSpecTest extends InitializedNullHandlingTest
 {
+
+  private final ObjectMapper mapper = TestHelper.makeJsonMapper()
+                                        .registerModules(new MSQIndexingModule().getJacksonModules());
+
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper mapper = TestHelper.makeJsonMapper()
-                                          .registerModules(new MSQIndexingModule().getJacksonModules());
-
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Collections.singletonList(Intervals.of("2000/P1M")),
-        new SelectorDimFilter("dim", "val", null),
-        Collections.singleton("dim")
+        null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         spec,
         mapper.readValue(mapper.writeValueAsString(spec), InputSpec.class)
     );
   }
 
-  @Test
-  public void testSerdeEmptyFilterFields() throws Exception
-  {
-    final ObjectMapper mapper = TestHelper.makeJsonMapper()
-                                          .registerModules(new MSQIndexingModule().getJacksonModules());
-
-    final TableInputSpec spec = new TableInputSpec(
-        "myds",
-        Collections.singletonList(Intervals.of("2000/P1M")),
-        new SelectorDimFilter("dim", "val", null),
-        Collections.emptySet()
-    );
-
-    Assert.assertEquals(
-        spec,
-        mapper.readValue(mapper.writeValueAsString(spec), InputSpec.class)
-    );
-  }
 
   @Test
   public void testSerdeEternityInterval() throws Exception
   {
-    final ObjectMapper mapper = TestHelper.makeJsonMapper()
-                                          .registerModules(new MSQIndexingModule().getJacksonModules());
-
     final TableInputSpec spec = new TableInputSpec(
         "myds",
         Intervals.ONLY_ETERNITY,
-        new SelectorDimFilter("dim", "val", null),
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
+        spec,
+        mapper.readValue(mapper.writeValueAsString(spec), InputSpec.class)
+    );
+  }
+
+  @Test
+  public void testSerdeWithSegments() throws Exception
+  {
+    final TableInputSpec spec = new TableInputSpec(
+        "myds",
+        Collections.singletonList(Intervals.of("2000/P1M")),
+        Collections.singletonList(new SegmentDescriptor(Intervals.of("2000/P1M"), "version", 0))
+    );
+
+    Assertions.assertEquals(
         spec,
         mapper.readValue(mapper.writeValueAsString(spec), InputSpec.class)
     );

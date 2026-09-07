@@ -25,6 +25,7 @@ import React, { useState } from 'react';
 
 import type {
   CapacityInfo,
+  ConsoleViewId,
   ExternalConfig,
   QueryContext,
   QueryWithContext,
@@ -40,6 +41,7 @@ import { submitTaskQuery } from '../../helpers';
 import { useLocalStorageState } from '../../hooks';
 import { AppToaster } from '../../singletons';
 import { deepDelete, LocalStorageKeys } from '../../utils';
+import type { TableFilters } from '../../utils/table-filters';
 import { CapacityAlert } from '../workbench-view/capacity-alert/capacity-alert';
 import { InputFormatStep } from '../workbench-view/input-format-step/input-format-step';
 import { InputSourceStep } from '../workbench-view/input-source-step/input-source-step';
@@ -58,8 +60,7 @@ interface LoaderContent extends QueryWithContext {
 export interface SqlDataLoaderViewProps {
   capabilities: Capabilities;
   goToQuery(queryWithContext: QueryWithContext): void;
-  goToTask(taskId: string): void;
-  goToTaskGroup(taskGroupId: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   serverQueryContext?: QueryContext;
 }
@@ -70,8 +71,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   const {
     capabilities,
     goToQuery,
-    goToTask,
-    goToTaskGroup,
+    goToView,
     getClusterCapacity,
     serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
   } = props;
@@ -246,8 +246,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <IngestionProgressDialog
           taskId={content.id}
           goToQuery={goToQuery}
-          goToTask={goToTask}
-          goToTaskGroup={goToTaskGroup}
+          goToView={goToView}
           onReset={() => {
             setExternalConfigStep({});
             setContent(undefined);

@@ -389,11 +389,11 @@ public class MultiValueStringOperatorConversions
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             builder,
             druidExpressions,
-            (name, outputType, expression, macroTable) -> new ListFilteredVirtualColumn(
+            (name, outputType, parser, self) -> new ListFilteredVirtualColumn(
                 name,
-                druidExpressions.get(0)
-                                .getSimpleExtraction()
-                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 literals,
                 isAllowList()
             )
@@ -464,17 +464,17 @@ public class MultiValueStringOperatorConversions
         return null;
       }
       final DruidExpression.ExpressionGenerator builder = (args) ->
-          "filter((x) -> regexp_like(x, \"" + pattern + "\"), " + args.get(0).getExpression() + ")";
+          "filter((x) -> regexp_like(x, " + DruidExpression.stringLiteral(pattern) + "), " + args.get(0).getExpression() + ")";
       if (druidExpressions.get(0).isSimpleExtraction()) {
         DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             builder,
             druidExpressions,
-            (name, outputType, expression, macroTable) -> new RegexFilteredVirtualColumn(
+            (name, outputType, parser, self) -> new RegexFilteredVirtualColumn(
                 name,
-                druidExpressions.get(0)
-                                .getSimpleExtraction()
-                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 pattern
             )
         );
@@ -548,18 +548,18 @@ public class MultiValueStringOperatorConversions
       }
       String prefix = (String) prefixLiteral.value();
       final DruidExpression.ExpressionGenerator builder = (args) ->
-          "filter((x) -> (x != null && substring(x, 0, " + prefix.length() + ") == \"" + prefix + "\"), " + args.get(0).getExpression() + ")";
+          "filter((x) -> substring(x, 0, " + prefix.length() + ") == " + DruidExpression.stringLiteral(prefix) + ", " + args.get(0).getExpression() + ")";
 
       if (druidExpressions.get(0).isSimpleExtraction()) {
         DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
             Calcites.getColumnTypeForRelDataType(rexNode.getType()),
             builder,
             druidExpressions,
-            (name, outputType, expression, macroTable) -> new PrefixFilteredVirtualColumn(
+            (name, outputType, parser, self) -> new PrefixFilteredVirtualColumn(
                 name,
-                druidExpressions.get(0)
-                                .getSimpleExtraction()
-                                .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
+                self.getArguments().get(0)
+                    .getSimpleExtraction()
+                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
                 prefix
             )
         );

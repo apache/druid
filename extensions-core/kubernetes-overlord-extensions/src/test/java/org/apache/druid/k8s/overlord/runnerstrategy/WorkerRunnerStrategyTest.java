@@ -21,14 +21,14 @@ package org.apache.druid.k8s.overlord.runnerstrategy;
 
 
 import org.apache.druid.indexing.common.task.Task;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class WorkerRunnerStrategyTest extends EasyMockSupport
 {
   @Mock
@@ -38,6 +38,6 @@ public class WorkerRunnerStrategyTest extends EasyMockSupport
   public void test_workerRunnerStrategy_returnsCorrectRunnerType()
   {
     WorkerRunnerStrategy runnerStrategy = new WorkerRunnerStrategy();
-    Assert.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
+    Assertions.assertEquals(RunnerStrategy.WORKER_NAME, runnerStrategy.getRunnerTypeForTask(task).getType());
   }
 }

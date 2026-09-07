@@ -45,12 +45,15 @@ import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -58,11 +61,12 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class SQLMetadataStorageActionHandlerTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
@@ -73,7 +77,7 @@ public class SQLMetadataStorageActionHandlerTest
 
   private final String entryTable = "entries";
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
@@ -102,50 +106,50 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.insert(entryId, DateTimes.of("2014-01-02T00:00:00.123"), "testDataSource", entry, true, null, "type", "group");
 
-    Assert.assertEquals(Optional.of(entry), handler.getEntry(entryId));
-    Assert.assertEquals(Optional.absent(), handler.getEntry("non_exist_entry"));
-    Assert.assertEquals(Optional.absent(), handler.getStatus(entryId));
-    Assert.assertEquals(Optional.absent(), handler.getStatus("non_exist_entry"));
-    Assert.assertTrue(handler.setStatus(entryId, true, status1));
+    Assertions.assertEquals(Optional.of(entry), handler.getEntry(entryId));
+    Assertions.assertEquals(Optional.absent(), handler.getEntry("non_exist_entry"));
+    Assertions.assertEquals(Optional.absent(), handler.getStatus(entryId));
+    Assertions.assertEquals(Optional.absent(), handler.getStatus("non_exist_entry"));
+    Assertions.assertTrue(handler.setStatus(entryId, true, status1));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(Pair.of(entry, status1)),
         handler.getTaskInfos(ActiveTaskLookup.getInstance(), null).stream()
                .map(taskInfo -> Pair.of(taskInfo.getTask(), taskInfo.getStatus()))
                .collect(Collectors.toList())
     );
 
-    Assert.assertTrue(handler.setStatus(entryId, true, status2));
+    Assertions.assertTrue(handler.setStatus(entryId, true, status2));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(Pair.of(entry, status2)),
         handler.getTaskInfos(ActiveTaskLookup.getInstance(), null).stream()
                .map(taskInfo -> Pair.of(taskInfo.getTask(), taskInfo.getStatus()))
                .collect(Collectors.toList())
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
     );
 
-    Assert.assertTrue(handler.setStatus(entryId, false, status1));
+    Assertions.assertTrue(handler.setStatus(entryId, false, status1));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of(status1),
         handler.getStatus(entryId)
     );
 
     // inactive statuses cannot be updated, this should fail
-    Assert.assertFalse(handler.setStatus(entryId, false, status2));
+    Assertions.assertFalse(handler.setStatus(entryId, false, status2));
 
-    Assert.assertEquals(Optional.of(status1), handler.getStatus(entryId));
-    Assert.assertEquals(Optional.of(entry), handler.getEntry(entryId));
-    Assert.assertEquals(
+    Assertions.assertEquals(Optional.of(status1), handler.getStatus(entryId));
+    Assertions.assertEquals(Optional.of(entry), handler.getEntry(entryId));
+    Assertions.assertEquals(
         ImmutableList.of(),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-03")), null)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(status1),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
                .stream()
@@ -169,9 +173,9 @@ public class SQLMetadataStorageActionHandlerTest
         CompleteTaskLookup.withTasksCreatedPriorTo(7, DateTimes.of("2014-01-01")),
         null
     );
-    Assert.assertEquals(7, statuses.size());
+    Assertions.assertEquals(7, statuses.size());
     for (TaskInfo status : statuses) {
-      Assert.assertEquals(TaskState.RUNNING, status.getStatus().getStatusCode());
+      Assertions.assertEquals(TaskState.RUNNING, status.getStatus().getStatusCode());
     }
   }
 
@@ -190,13 +194,14 @@ public class SQLMetadataStorageActionHandlerTest
         CompleteTaskLookup.withTasksCreatedPriorTo(10, DateTimes.of("2014-01-01")),
         null
     );
-    Assert.assertEquals(5, statuses.size());
+    Assertions.assertEquals(5, statuses.size());
     for (TaskInfo status : statuses) {
-      Assert.assertEquals(TaskState.RUNNING, status.getStatus().getStatusCode());
+      Assertions.assertEquals(TaskState.RUNNING, status.getStatus().getStatusCode());
     }
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testDuplicateInsertThrowsEntryExistsException()
   {
     Task entry = NoopTask.create();
@@ -205,12 +210,12 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group")
     );
-    Assert.assertEquals("invalidInput", exception.getErrorCode());
-    Assert.assertEquals(StringUtils.format("Task [%s] already exists", entryId), exception.getMessage());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(StringUtils.format("Task [%s] already exists", entryId), exception.getMessage());
   }
 
   @Test
@@ -222,20 +227,20 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
-    Assert.assertTrue(handler.getLocks("non_exist_entry").isEmpty());
+    Assertions.assertTrue(handler.getLocks("non_exist_entry").isEmpty());
 
-    Assert.assertTrue(handler.getLocks(entryId).isEmpty());
+    Assertions.assertTrue(handler.getLocks(entryId).isEmpty());
 
     final TaskLock lock1 = createRandomLock(entry);
     final TaskLock lock2 = createRandomLock(entry);
 
-    Assert.assertTrue(handler.addLock(entryId, lock1));
-    Assert.assertTrue(handler.addLock(entryId, lock2));
+    Assertions.assertTrue(handler.addLock(entryId, lock1));
+    Assertions.assertTrue(handler.addLock(entryId, lock2));
 
     final Map<Long, TaskLock> locks = handler.getLocks(entryId);
-    Assert.assertEquals(2, locks.size());
+    Assertions.assertEquals(2, locks.size());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(lock1, lock2),
         new HashSet<>(locks.values())
     );
@@ -245,11 +250,11 @@ public class SQLMetadataStorageActionHandlerTest
     locks.remove(lockId);
 
     final Map<Long, TaskLock> updated = handler.getLocks(entryId);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new HashSet<>(locks.values()),
         new HashSet<>(updated.values())
     );
-    Assert.assertEquals(updated.keySet(), locks.keySet());
+    Assertions.assertEquals(updated.keySet(), locks.keySet());
   }
 
   @Test
@@ -261,12 +266,12 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Long, Map<String, Object>>of(),
         handler.getLocks("non_exist_entry")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Long, Map<String, Object>>of(),
         handler.getLocks(entryId)
     );
@@ -274,12 +279,12 @@ public class SQLMetadataStorageActionHandlerTest
     final TaskLock lock1 = createRandomLock(entry);
     final TaskLock lock2 = createRandomLock(entry);
 
-    Assert.assertTrue(handler.addLock(entryId, lock1));
+    Assertions.assertTrue(handler.addLock(entryId, lock1));
 
     final Long lockId1 = handler.getLockId(entryId, lock1);
-    Assert.assertNotNull(lockId1);
+    Assertions.assertNotNull(lockId1);
 
-    Assert.assertTrue(handler.replaceLock(entryId, lockId1, lock2));
+    Assertions.assertTrue(handler.replaceLock(entryId, lockId1, lock2));
   }
 
   @Test
@@ -291,12 +296,12 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Long, Map<String, Object>>of(),
         handler.getLocks("non_exist_entry")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Long, Map<String, Object>>of(),
         handler.getLocks(entryId)
     );
@@ -304,10 +309,10 @@ public class SQLMetadataStorageActionHandlerTest
     final TaskLock lock1 = createRandomLock(entry);
     final TaskLock lock2 = createRandomLock(entry);
 
-    Assert.assertTrue(handler.addLock(entryId, lock1));
+    Assertions.assertTrue(handler.addLock(entryId, lock1));
 
-    Assert.assertNotNull(handler.getLockId(entryId, lock1));
-    Assert.assertNull(handler.getLockId(entryId, lock2));
+    Assertions.assertNotNull(handler.getLockId(entryId, lock1));
+    Assertions.assertNull(handler.getLockId(entryId, lock2));
   }
 
   @Test
@@ -328,18 +333,18 @@ public class SQLMetadataStorageActionHandlerTest
     TaskStatus status3 = TaskStatus.running(entryId2);
     handler.insert(entryId3, DateTimes.of("2014-01-02T12:00:00.123"), "testDataSource", entry3, false, status3, "type", "group");
 
-    Assert.assertEquals(Optional.of(entry1), handler.getEntry(entryId1));
-    Assert.assertEquals(Optional.of(entry2), handler.getEntry(entryId2));
-    Assert.assertEquals(Optional.of(entry3), handler.getEntry(entryId3));
+    Assertions.assertEquals(Optional.of(entry1), handler.getEntry(entryId1));
+    Assertions.assertEquals(Optional.of(entry2), handler.getEntry(entryId2));
+    Assertions.assertEquals(Optional.of(entry3), handler.getEntry(entryId3));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(entryId2),
         handler.getTaskInfos(ActiveTaskLookup.getInstance(), null).stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(entryId3, entryId1),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
                .stream()
@@ -350,13 +355,13 @@ public class SQLMetadataStorageActionHandlerTest
 
     handler.removeTasksOlderThan(DateTimes.of("2014-01-02").getMillis());
     // active task not removed.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(entryId2),
         handler.getTaskInfos(ActiveTaskLookup.getInstance(), null).stream()
                .map(taskInfo -> taskInfo.getId())
                .collect(Collectors.toList())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(entryId3),
         handler.getTaskInfos(CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01")), null)
                .stream()
@@ -379,11 +384,11 @@ public class SQLMetadataStorageActionHandlerTest
       insertTaskInfo(createRandomTaskInfo(TaskState.SUCCESS), false);
     }
 
-    Assert.assertEquals(numActiveTasks + numCompletedTasks, getUnmigratedTaskCount().intValue());
+    Assertions.assertEquals(numActiveTasks + numCompletedTasks, getUnmigratedTaskCount().intValue());
 
     handler.populateTaskTypeAndGroupId();
 
-    Assert.assertEquals(0, getUnmigratedTaskCount().intValue());
+    Assertions.assertEquals(0, getUnmigratedTaskCount().intValue());
   }
 
   @Test
@@ -412,7 +417,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     // Payload based fetch. task type and groupid will be populated
     taskMetadataInfos = handler.getTaskStatusList(taskLookups, null, true);
-    Assert.assertEquals(4, taskMetadataInfos.size());
+    Assertions.assertEquals(4, taskMetadataInfos.size());
     verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, false);
@@ -420,7 +425,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     // New columns based fetch before migration is complete. type and payload are null when altered = false
     taskMetadataInfos = handler.getTaskStatusList(taskLookups, null, false);
-    Assert.assertEquals(4, taskMetadataInfos.size());
+    Assertions.assertEquals(4, taskMetadataInfos.size());
     verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, true);
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, true);
@@ -431,7 +436,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     // Payload based fetch. task type and groupid will still be populated in tasks tab
     taskMetadataInfos = handler.getTaskStatusList(taskLookups, null, true);
-    Assert.assertEquals(4, taskMetadataInfos.size());
+    Assertions.assertEquals(4, taskMetadataInfos.size());
     verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, false);
@@ -439,7 +444,7 @@ public class SQLMetadataStorageActionHandlerTest
 
     // New columns based fetch after migration is complete. All data must be populated in the tasks table
     taskMetadataInfos = handler.getTaskStatusList(taskLookups, null, false);
-    Assert.assertEquals(4, taskMetadataInfos.size());
+    Assertions.assertEquals(4, taskMetadataInfos.size());
     verifyTaskInfoToMetadataInfo(completedUnaltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, false);
@@ -454,9 +459,11 @@ public class SQLMetadataStorageActionHandlerTest
               "SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL",
               entryTable
           );
-          ResultSet resultSet = handle.getConnection().createStatement().executeQuery(sql);
-          resultSet.next();
-          return resultSet.getInt(1);
+          try (final Statement statement = handle.getConnection().createStatement();
+               final ResultSet resultSet = statement.executeQuery(sql)) {
+            resultSet.next();
+            return resultSet.getInt(1);
+          }
         }
     );
   }
@@ -527,33 +534,33 @@ public class SQLMetadataStorageActionHandlerTest
       }
       return;
     }
-    Assert.fail();
+    Assertions.fail();
   }
 
   private void verifyTaskInfoToMetadataInfo(TaskInfo taskInfo,
                                             TaskIdStatus taskMetadataInfo,
                                             boolean nullNewColumns)
   {
-    Assert.assertEquals(taskInfo.getId(), taskMetadataInfo.getTaskIdentifier().getId());
-    Assert.assertEquals(taskInfo.getCreatedTime(), taskMetadataInfo.getCreatedTime());
-    Assert.assertEquals(taskInfo.getDataSource(), taskMetadataInfo.getDataSource());
+    Assertions.assertEquals(taskInfo.getId(), taskMetadataInfo.getTaskIdentifier().getId());
+    Assertions.assertEquals(taskInfo.getCreatedTime(), taskMetadataInfo.getCreatedTime());
+    Assertions.assertEquals(taskInfo.getDataSource(), taskMetadataInfo.getDataSource());
 
     verifyTaskStatus(taskInfo.getStatus(), taskMetadataInfo.getStatus());
 
     Task task = taskInfo.getTask();
     TaskIdentifier taskIdentifier = taskMetadataInfo.getTaskIdentifier();
-    Assert.assertEquals(task.getId(), taskIdentifier.getId());
+    Assertions.assertEquals(task.getId(), taskIdentifier.getId());
     if (nullNewColumns) {
-      Assert.assertNull(taskIdentifier.getGroupId());
-      Assert.assertNull(taskIdentifier.getType());
+      Assertions.assertNull(taskIdentifier.getGroupId());
+      Assertions.assertNull(taskIdentifier.getType());
     } else {
-      Assert.assertEquals(task.getGroupId(), taskIdentifier.getGroupId());
-      Assert.assertEquals(task.getType(), taskIdentifier.getType());
+      Assertions.assertEquals(task.getGroupId(), taskIdentifier.getGroupId());
+      Assertions.assertEquals(task.getType(), taskIdentifier.getType());
     }
   }
 
   private void verifyTaskStatus(TaskStatus expected, TaskStatus actual)
   {
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 }

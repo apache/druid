@@ -27,10 +27,12 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.exec.InputChannelFactory;
 import org.apache.druid.msq.exec.WorkerClient;
-import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -42,10 +44,18 @@ public class WorkerInputChannelFactory implements InputChannelFactory
   private final WorkerClient workerClient;
   private final Supplier<List<String>> taskList;
 
-  public WorkerInputChannelFactory(final WorkerClient workerClient, final Supplier<List<String>> taskList)
+  @Nullable
+  private final WireTransferableContext wtContext;
+
+  public WorkerInputChannelFactory(
+      final WorkerClient workerClient,
+      final Supplier<List<String>> taskList,
+      @Nullable final WireTransferableContext wtContext
+  )
   {
     this.workerClient = Preconditions.checkNotNull(workerClient, "workerClient");
     this.taskList = Preconditions.checkNotNull(taskList, "taskList");
+    this.wtContext = wtContext;
   }
 
   @Override
@@ -53,7 +63,7 @@ public class WorkerInputChannelFactory implements InputChannelFactory
   {
     final String taskId = taskList.get().get(workerNumber);
     final ReadableByteChunksFrameChannel channel =
-        ReadableByteChunksFrameChannel.create(makeChannelId(taskId, stageId, partitionNumber), false);
+        ReadableByteChunksFrameChannel.create(makeChannelId(taskId, stageId, partitionNumber), false, wtContext);
     fetch(taskId, stageId, partitionNumber, 0, channel);
     return channel;
   }

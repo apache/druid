@@ -22,8 +22,8 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -40,17 +40,17 @@ public class SupervisorStateManagerTest
         false
     );
 
-    Assert.assertFalse(stateManagerConfig.isIdleConfigEnabled());
-    Assert.assertEquals(600000, stateManagerConfig.getInactiveAfterMillis());
+    Assertions.assertFalse(stateManagerConfig.isIdleConfigEnabled());
+    Assertions.assertEquals(600000, stateManagerConfig.getInactiveAfterMillis());
 
     supervisorStateManager.markRunFinished();
 
-    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, supervisorStateManager.getSupervisorState());
+    Assertions.assertEquals(SupervisorStateManager.BasicState.RUNNING, supervisorStateManager.getSupervisorState());
 
     supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
     supervisorStateManager.markRunFinished();
 
-    Assert.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisorStateManager.getSupervisorState());
+    Assertions.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisorStateManager.getSupervisorState());
   }
 
   @Test
@@ -63,7 +63,79 @@ public class SupervisorStateManagerTest
     );
     stateManagerConfig = mapper.convertValue(config, SupervisorStateManagerConfig.class);
 
-    Assert.assertTrue(stateManagerConfig.isIdleConfigEnabled());
-    Assert.assertEquals(60000, stateManagerConfig.getInactiveAfterMillis());
+    Assertions.assertTrue(stateManagerConfig.isIdleConfigEnabled());
+    Assertions.assertEquals(60000, stateManagerConfig.getInactiveAfterMillis());
+  }
+
+  @Test
+  public void testStoppingStateIsTerminal()
+  {
+    stateManagerConfig = new SupervisorStateManagerConfig();
+    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
+        stateManagerConfig,
+        false
+    );
+
+    // Start in PENDING state
+    Assertions.assertEquals(SupervisorStateManager.BasicState.PENDING, supervisorStateManager.getSupervisorState());
+
+    // Transition to STOPPING
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.STOPPING);
+    Assertions.assertEquals(SupervisorStateManager.BasicState.STOPPING, supervisorStateManager.getSupervisorState());
+
+    // Attempt to transition out of STOPPING should be ignored
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
+    Assertions.assertEquals(SupervisorStateManager.BasicState.STOPPING, supervisorStateManager.getSupervisorState());
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
+    Assertions.assertEquals(SupervisorStateManager.BasicState.STOPPING, supervisorStateManager.getSupervisorState());
+
+    // Cannot transition to COMPLETED from STOPPING
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+    Assertions.assertEquals(SupervisorStateManager.BasicState.STOPPING, supervisorStateManager.getSupervisorState());
+  }
+
+  @Test
+  public void testCompletedStateIsHealthy()
+  {
+    stateManagerConfig = new SupervisorStateManagerConfig();
+    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
+        stateManagerConfig,
+        false
+    );
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+
+    Assertions.assertTrue(supervisorStateManager.isHealthy());
+    Assertions.assertEquals(SupervisorStateManager.BasicState.COMPLETED, supervisorStateManager.getSupervisorState());
+  }
+
+  @Test
+  public void testCompletedStateIsNotFirstRunOnly()
+  {
+    stateManagerConfig = new SupervisorStateManagerConfig();
+    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
+        stateManagerConfig,
+        false
+    );
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+
+    Assertions.assertFalse(SupervisorStateManager.BasicState.COMPLETED.isFirstRunOnly());
+  }
+
+  @Test
+  public void testMarkRunFinished_completedStateSkipsHealthyCheck()
+  {
+    stateManagerConfig = new SupervisorStateManagerConfig();
+    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
+        stateManagerConfig,
+        false
+    );
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+    supervisorStateManager.markRunFinished();
+
+    Assertions.assertEquals(SupervisorStateManager.BasicState.COMPLETED, supervisorStateManager.getSupervisorState());
   }
 }

@@ -24,8 +24,8 @@ import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFac
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -47,6 +47,6 @@ public class SchemaPayloadPlusTest
     byte[] bytes = mapper.writeValueAsBytes(metadata);
     SchemaPayloadPlus deserialized = mapper.readValue(bytes, SchemaPayloadPlus.class);
 
-    Assert.assertEquals(metadata, deserialized);
+    Assertions.assertEquals(metadata, deserialized);
   }
 }

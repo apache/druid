@@ -27,13 +27,19 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.DataSegmentAndDescriptor;
+import org.apache.druid.query.LeafSegmentsBundle;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
@@ -46,6 +52,7 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -65,12 +72,21 @@ public class SegmentManager
 
   private final SegmentCacheManager cacheManager;
 
+  private final SegmentTimelineConfig segmentTimelineConfig;
+
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
-  @Inject
   public SegmentManager(SegmentCacheManager cacheManager)
   {
+    this(cacheManager, new SegmentTimelineConfig(false));
+  }
+
+
+  @Inject
+  public SegmentManager(SegmentCacheManager cacheManager, SegmentTimelineConfig segmentTimelineConfig)
+  {
     this.cacheManager = cacheManager;
+    this.segmentTimelineConfig = segmentTimelineConfig;
   }
 
   @VisibleForTesting
@@ -126,28 +142,106 @@ public class SegmentManager
   }
 
   /**
-   * Returns a {@link Segment} transformed with a {@link SegmentMapFunction}, if it is available in the cache. The
-   * returned {@link Segment} must be closed when the caller is finished doing segment things. This method will not
-   * download a {@link DataSegment} if it is not already present in {@link #cacheManager}, use
-   * {@link #acquireSegment(DataSegment)} instead.
+   * Given a list of {@link DataSegmentAndDescriptor} produce a {@link LeafSegmentsBundle} which partitions segments
+   * into cached, loadable, or missing segments. This gives callers the flexibilty to decide to perform operations
+   * on segments which are already cached prior to or alongside the operation to load any segments which are not already
+   * present in the cache on demand.
+   * <p>
+   * What this means mechanically, is that for each {@link DataSegmentAndDescriptor} we check if it is already cached
+   * with {@link #acquireCachedSegment(DataSegment, AcquireMode)} to add to {@link LeafSegmentsBundle#cachedSegments},
+   * else if {@link #canLoadSegmentOnDemand(DataSegment)} is true it is added to
+   * {@link LeafSegmentsBundle#loadableSegments} or {@link LeafSegmentsBundle#missingSegments} if not.
+   * <p>
+   * The segments in {@link LeafSegmentsBundle#loadableSegments} can be retrieved with
+   * {@link #acquireSegment(DataSegment, AcquireMode)} to ensure they are loaded from deep storage.
    */
-  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment)
+  public LeafSegmentsBundle getSegmentsBundle(
+      List<DataSegmentAndDescriptor> segments,
+      SegmentMapFunction segmentMapFunction
+  )
   {
-    return cacheManager.acquireCachedSegment(dataSegment);
+    // Closer to collect everything that needs to be cleaned up in the event of failure. If we make it
+    // out of this function, closing the segment references is the caller's responsibility.
+    final Closer safetyNet = Closer.create();
+    try {
+      final ArrayList<SegmentReference> segmentReferences = new ArrayList<>();
+      final ArrayList<SegmentDescriptor> missingSegments = new ArrayList<>();
+      final ArrayList<DataSegmentAndDescriptor> loadableSegments = new ArrayList<>();
+      for (final DataSegmentAndDescriptor segment : segments) {
+        final DataSegment dataSegment = segment.getDataSegment();
+        if (dataSegment == null) {
+          missingSegments.add(segment.getDescriptor());
+          continue;
+        }
+        final Optional<Segment> ref = acquireCachedSegment(dataSegment, AcquireMode.FULL);
+        if (ref.isPresent()) {
+          try {
+            final Optional<Segment> mapped = segmentMapFunction.apply(ref).map(safetyNet::register);
+            segmentReferences.add(
+                new SegmentReference(
+                    segment.getDescriptor(),
+                    mapped,
+                    null
+                )
+            );
+          }
+          catch (Throwable t) {
+            // If applying the mapFn failed, attach the base segment to the closer and rethrow
+            ref.ifPresent(safetyNet::register);
+            throw t;
+          }
+        } else if (canLoadSegmentOnDemand(dataSegment)) {
+          loadableSegments.add(segment);
+        } else {
+          missingSegments.add(segment.getDescriptor());
+        }
+      }
+      return new LeafSegmentsBundle(segmentReferences, loadableSegments, missingSegments);
+    }
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, safetyNet);
+    }
   }
 
   /**
-   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either return
-   * immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage if not.
-   * The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
+   * Returns a {@link Segment}, if it is available in the cache. The returned {@link Segment} must be closed when the
+   * caller is finished doing segment things. This method will not download a {@link DataSegment} if it is not already
+   * present in {@link #cacheManager}, use {@link #acquireSegment(DataSegment, AcquireMode)} instead.
+   * <p>
+   * With {@link AcquireMode#PARTIAL} the returned segment may not be fully loaded, and callers must use async methods
+   * like {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand; the
+   * synchronous {@code makeCursorHolder} will fail if anything is still missing. See {@link AcquireMode}.
+   */
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
+  {
+    return cacheManager.acquireCachedSegment(segmentId, acquireMode);
+  }
+
+  /**
+   * Convenience overload of {@link #acquireCachedSegment(SegmentId, AcquireMode)} that accepts a {@link DataSegment}.
+   */
+  public Optional<Segment> acquireCachedSegment(DataSegment dataSegment, AcquireMode acquireMode)
+  {
+    return acquireCachedSegment(dataSegment.getId(), acquireMode);
+  }
+
+  /**
+   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either
+   * return immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage
+   * if not. The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
    * <p>
    * Calling this method is treated as an intent to acquire and use the segment via resolving the future, and cache
    * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
    * after resolving the future to acquire the reference to the actual {@link Segment} object.
+   * <p>
+   * With {@link AcquireMode#PARTIAL} the action resolves to a partial-load capable segment (when the segment supports
+   * range reads), and callers must use async methods like
+   * {@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync} to download data on-demand. See
+   * {@link AcquireMode}.
    */
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment) throws SegmentLoadingException
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
   {
-    return cacheManager.acquireSegment(dataSegment);
+    return cacheManager.acquireSegment(dataSegment, acquireMode);
   }
 
   /**
@@ -187,22 +281,30 @@ public class SegmentManager
    * @param loadFailed callback to execute when segment lazy load fails. This applies only
    *                   when lazy loading is enabled.
    *
+   * @return the input {@code dataSegment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
+   *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
+   *         partial-load announcements carry accurate {@code loadedBytes}.
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
-  public void loadSegmentOnBootstrap(
+  public DataSegment loadSegmentOnBootstrap(
       final DataSegment dataSegment,
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
   {
+    final DataSegment loaded;
     try {
-      cacheManager.bootstrap(dataSegment, loadFailed);
+      loaded = cacheManager.bootstrap(dataSegment, loadFailed);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
       throw e;
     }
+    // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
+    // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
+    return loaded;
   }
 
 
@@ -214,19 +316,27 @@ public class SegmentManager
    *
    * @param dataSegment segment to load
    *
+   * @return the input {@code dataSegment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
+   *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
+   *         partial-load announcements carry accurate {@code loadedBytes}.
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
-  public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
+  public DataSegment loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
+    final DataSegment loaded;
     try {
-      cacheManager.load(dataSegment);
+      loaded = cacheManager.load(dataSegment);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
       throw e;
     }
+    // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
+    // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
+    return loaded;
   }
 
   private void loadSegmentInternal(
@@ -239,7 +349,7 @@ public class SegmentManager
     dataSources.compute(
         dataSegment.getDataSource(),
         (k, v) -> {
-          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
+          final DataSourceState dataSourceState = v == null ? new DataSourceState(segmentTimelineConfig) : v;
           final VersionedIntervalTimeline<String, DataSegment> loadedIntervals =
               dataSourceState.getTimeline();
           final PartitionChunk<DataSegment> entry = loadedIntervals.findChunk(
@@ -260,7 +370,8 @@ public class SegmentManager
             );
 
             long numOfRows = 0;
-            final Optional<Segment> loadedSegment = cacheManager.acquireCachedSegment(dataSegment);
+            final Optional<Segment> loadedSegment =
+                cacheManager.acquireCachedSegment(dataSegment.getId(), AcquireMode.FULL);
             if (loadedSegment.isPresent()) {
               final Segment segment = loadedSegment.get();
               final IndexedTable table = segment.as(IndexedTable.class);
@@ -282,7 +393,7 @@ public class SegmentManager
                     segment.getId()
                 );
               }
-              final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+              final RowCountInspector countInspector = segment.as(RowCountInspector.class);
               if (countInspector != null) {
                 numOfRows = countInspector.getNumRows();
               }
@@ -327,13 +438,14 @@ public class SegmentManager
 
             if (oldSegmentRef != null) {
               try (final Closer closer = Closer.create()) {
-                final Optional<Segment> oldSegment = cacheManager.acquireCachedSegment(oldSegmentRef);
+                final Optional<Segment> oldSegment =
+                    cacheManager.acquireCachedSegment(oldSegmentRef.getId(), AcquireMode.FULL);
                 long numberOfRows = oldSegment.map(segment -> {
-                  final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+                  closer.register(segment);
+                  final RowCountInspector countInspector = segment.as(RowCountInspector.class);
                   if (countInspector != null) {
                     return countInspector.getNumRows();
                   }
-                  CloseableUtils.closeAndWrapExceptions(segment);
                   return 0;
                 }).orElse(0);
 
@@ -375,6 +487,16 @@ public class SegmentManager
     return cacheManager.canHandleSegments();
   }
 
+  public boolean canLoadSegmentsOnDemand()
+  {
+    return cacheManager.canLoadSegmentsOnDemand();
+  }
+
+  public boolean canLoadSegmentOnDemand(DataSegment dataSegment)
+  {
+    return cacheManager.canLoadSegmentOnDemand(dataSegment);
+  }
+
   /**
    * Return a list of cached segments, if any. This should be called only when
    * {@link #canHandleSegments()} is true.
@@ -404,14 +526,18 @@ public class SegmentManager
    */
   public static class DataSourceState
   {
-    private final VersionedIntervalTimeline<String, DataSegment> timeline =
-        new VersionedIntervalTimeline<>(Ordering.natural());
+    private final VersionedIntervalTimeline<String, DataSegment> timeline;
 
     private final ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tablesLookup = new ConcurrentHashMap<>();
     private long totalSegmentSize;
     private long numSegments;
     private long rowCount;
     private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
+
+    public DataSourceState(SegmentTimelineConfig segmentTimelineConfig)
+    {
+      timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false, segmentTimelineConfig.isFastIntervalSearch());
+    }
 
     private void addSegment(DataSegment segment, long numOfRows)
     {

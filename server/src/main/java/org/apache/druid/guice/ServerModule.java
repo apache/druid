@@ -20,15 +20,10 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.jackson.DruidServiceSerializerModifier;
-import org.apache.druid.jackson.StringObjectPairList;
-import org.apache.druid.jackson.ToStringObjectPairListDeserializer;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -59,10 +54,6 @@ public class ServerModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return ImmutableList.of(
-        new SimpleModule()
-            .addDeserializer(StringObjectPairList.class, new ToStringObjectPairListDeserializer())
-            .setSerializerModifier(new DruidServiceSerializerModifier())
-    );
+    return List.of();
   }
 }

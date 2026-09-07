@@ -37,6 +37,7 @@ export const DatasourcesCard = React.memo(function DatasourcesCard(props: Dataso
         datasources = await queryDruidSql(
           {
             query: `SELECT datasource FROM sys.segments GROUP BY 1`,
+            context: { engine: 'native' },
           },
           signal,
         );

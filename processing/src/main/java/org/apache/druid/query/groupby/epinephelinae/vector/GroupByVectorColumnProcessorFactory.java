@@ -127,8 +127,11 @@ public class GroupByVectorColumnProcessorFactory implements VectorColumnProcesso
         );
       }
       return new DictionaryBuildingSingleValueStringGroupByVectorColumnSelector(selector);
+    } else if (capabilities.is(ValueType.COMPLEX)) {
+      return new DictionaryBuildingComplexGroupByVectorColumnSelector(selector, capabilities.toColumnType());
+    } else {
+      return NilGroupByVectorColumnSelector.INSTANCE;
     }
-    return NilGroupByVectorColumnSelector.INSTANCE;
   }
 
   /**

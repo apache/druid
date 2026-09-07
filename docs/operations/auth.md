@@ -23,7 +23,7 @@ title: "Authentication and Authorization"
   -->
 
 
-This document describes non-extension specific Apache Druid authentication and authorization configurations.
+This document describes non-extension specific Apache&circledR; Druid authentication and authorization configurations.
 
 |Property|Type|Description|Default|Required|
 |--------|-----------|--------|--------|--------|
@@ -135,7 +135,7 @@ druid.auth.authorizers=["basic"]
 
 Only a single Authorizer will authorize any given request.
 
-Druid includes one built in authorizer:
+Druid includes one built-in authorizer:
 
 ### AllowAll authorizer
 

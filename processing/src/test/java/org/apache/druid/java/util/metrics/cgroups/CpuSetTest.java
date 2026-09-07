@@ -20,11 +20,11 @@
 package org.apache.druid.java.util.metrics.cgroups;
 
 import org.apache.druid.java.util.common.FileUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,16 +32,16 @@ import java.io.IOException;
 
 public class CpuSetTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private CgroupDiscoverer discoverer;
   private File cpusetDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    File cgroupDir = temporaryFolder.newFolder();
-    File procDir = temporaryFolder.newFolder();
+    File cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    File procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     cpusetDir = new File(
@@ -58,14 +58,12 @@ public class CpuSetTest
   @Test
   public void testWontCrash()
   {
-    final CpuSet cpuSet = new CpuSet(cgroup -> {
-      throw new RuntimeException("Should still continue");
-    });
+    final CpuSet cpuSet = new CpuSet(TestUtils.exceptionThrowingDiscoverer());
     final CpuSet.CpuSetMetric metric = cpuSet.snapshot();
-    Assert.assertEquals(0, metric.getCpuSetCpus().length);
-    Assert.assertEquals(0, metric.getEffectiveCpuSetCpus().length);
-    Assert.assertEquals(0, metric.getCpuSetMems().length);
-    Assert.assertEquals(0, metric.getEffectiveCpuSetMems().length);
+    Assertions.assertEquals(0, metric.getCpuSetCpus().length);
+    Assertions.assertEquals(0, metric.getEffectiveCpuSetCpus().length);
+    Assertions.assertEquals(0, metric.getCpuSetMems().length);
+    Assertions.assertEquals(0, metric.getEffectiveCpuSetMems().length);
   }
 
   @Test
@@ -74,10 +72,10 @@ public class CpuSetTest
     TestUtils.copyOrReplaceResource("/cpuset.effective_cpus.simple", new File(cpusetDir, "cpuset.effective_cpus"));
     final CpuSet cpuSet = new CpuSet(discoverer);
     final CpuSet.CpuSetMetric snapshot = cpuSet.snapshot();
-    Assert.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getCpuSetCpus());
-    Assert.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals(new int[]{0, 1, 2, 3}, snapshot.getCpuSetMems());
-    Assert.assertArrayEquals(new int[]{0}, snapshot.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getCpuSetCpus());
+    Assertions.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getEffectiveCpuSetCpus());
+    Assertions.assertArrayEquals(new int[]{0, 1, 2, 3}, snapshot.getCpuSetMems());
+    Assertions.assertArrayEquals(new int[]{0}, snapshot.getEffectiveCpuSetMems());
   }
 
   @Test
@@ -89,9 +87,9 @@ public class CpuSetTest
     );
     final CpuSet cpuSet = new CpuSet(discoverer);
     final CpuSet.CpuSetMetric snapshot = cpuSet.snapshot();
-    Assert.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getCpuSetCpus());
-    Assert.assertArrayEquals(new int[]{0, 1, 2, 7, 12, 13, 14}, snapshot.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals(new int[]{0, 1, 2, 3}, snapshot.getCpuSetMems());
-    Assert.assertArrayEquals(new int[]{0}, snapshot.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(new int[]{0, 1, 2, 3, 4, 5, 6, 7}, snapshot.getCpuSetCpus());
+    Assertions.assertArrayEquals(new int[]{0, 1, 2, 7, 12, 13, 14}, snapshot.getEffectiveCpuSetCpus());
+    Assertions.assertArrayEquals(new int[]{0, 1, 2, 3}, snapshot.getCpuSetMems());
+    Assertions.assertArrayEquals(new int[]{0}, snapshot.getEffectiveCpuSetMems());
   }
 }

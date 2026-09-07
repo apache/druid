@@ -28,8 +28,8 @@ import org.apache.druid.collections.bitmap.WrappedConciseBitmap;
 import org.apache.druid.collections.bitmap.WrappedImmutableConciseBitmap;
 import org.apache.druid.collections.bitmap.WrappedRoaringBitmap;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.roaringbitmap.PeekableIntIterator;
 
 import java.util.ArrayList;
@@ -138,7 +138,7 @@ public class VectorSelectorUtilsTest
 
     VectorSelectorUtils.populateNullVector(nullVector, someOffset, iterator);
     for (int i = 0; i < vectorSize; i++) {
-      Assert.assertEquals(nulls.contains(i), nullVector[i]);
+      Assertions.assertEquals(nulls.contains(i), nullVector[i]);
     }
 
     // test entire set split into 4 chunks with smaller vectors
@@ -150,9 +150,9 @@ public class VectorSelectorUtilsTest
       smallVector = VectorSelectorUtils.populateNullVector(smallVector, smallOffset, iterator);
       for (int i = 0; i < smallerVectorSize; i++) {
         if (smallVector == null) {
-          Assert.assertFalse(nulls.contains(offset + i));
+          Assertions.assertFalse(nulls.contains(offset + i));
         } else {
-          Assert.assertEquals(nulls.contains(offset + i), smallVector[i]);
+          Assertions.assertEquals(nulls.contains(offset + i), smallVector[i]);
         }
       }
     }
@@ -162,7 +162,7 @@ public class VectorSelectorUtilsTest
     ReadableVectorOffset allTheNulls = new BitmapVectorOffset(nulls.size(), bitmap, 0, 32);
     smallVector = VectorSelectorUtils.populateNullVector(smallVector, allTheNulls, iterator);
     for (int i = 0; i < nulls.size(); i++) {
-      Assert.assertTrue(smallVector[i]);
+      Assertions.assertTrue(smallVector[i]);
     }
   }
 }

@@ -28,6 +28,7 @@ import com.google.inject.name.Names;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
+import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BuiltInTypesModule;
@@ -51,21 +52,25 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -79,8 +84,8 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
 {
   private final Closer closer;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   public DumpSegmentTest()
   {
@@ -88,7 +93,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     this.closer = Closer.create();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     closer.close();
@@ -114,7 +119,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(mergeRunner.run(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(expected);
     Mockito.when(index.getOrdering()).thenReturn(Collections.emptyList());
     Sequence actual = DumpSegment.executeQuery(injector, index, query);
-    Assert.assertSame(expected, actual);
+    Assertions.assertSame(expected, actual);
   }
 
   @Test
@@ -127,10 +132,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null, null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null, null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
     QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
@@ -152,7 +157,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
                             + "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"z\":\"b\"},\"count\":1}\n"
                             + "{\"__time\":1609459200000,\"nest\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
                             + "{\"__time\":1609459200000,\"nest\":{\"y\":3.3,\"z\":\"b\"},\"count\":1}\n";
-    Assert.assertEquals(expected, output);
+    Assertions.assertEquals(expected, output);
   }
 
   @Test
@@ -162,8 +167,8 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     QueryableIndex queryableIndex = Mockito.mock(QueryableIndex.class);
     ObjectMapper mapper = new DefaultObjectMapper();
     BitmapFactory bitmapFactory = new RoaringBitmapFactory();
-    ColumnHolder xHolder = Mockito.mock(ColumnHolder.class);
-    ColumnHolder yHolder = Mockito.mock(ColumnHolder.class);
+    BaseColumnHolder xHolder = Mockito.mock(BaseColumnHolder.class);
+    BaseColumnHolder yHolder = Mockito.mock(BaseColumnHolder.class);
     ColumnIndexSupplier indexSupplier = Mockito.mock(ColumnIndexSupplier.class);
     DictionaryEncodedStringValueIndex valueIndex = Mockito.mock(DictionaryEncodedStringValueIndex.class);
 
@@ -188,7 +193,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         ImmutableList.of("x", "y"),
         false
     );
-    Assert.assertTrue(true);
+    Assertions.assertTrue(true);
   }
 
   @Test
@@ -201,10 +206,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null, null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null, null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
     QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
@@ -218,7 +223,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     );
     final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
     final String output = StringUtils.fromUtf8(fileBytes);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"nest\":{\"fields\":[{\"path\":\"$.x\",\"types\":[\"LONG\"]},{\"path\":\"$.y\",\"types\":[\"DOUBLE\"]},{\"path\":\"$.z\",\"types\":[\"STRING\"]}],\"dictionaries\":{\"strings\":[{\"globalId\":0,\"value\":null},{\"globalId\":1,\"value\":\"a\"},{\"globalId\":2,\"value\":\"b\"}],\"longs\":[{\"globalId\":3,\"value\":100},{\"globalId\":4,\"value\":200},{\"globalId\":5,\"value\":400}],\"doubles\":[{\"globalId\":6,\"value\":1.1},{\"globalId\":7,\"value\":2.2},{\"globalId\":8,\"value\":3.3}],\"nullRows\":[]}}}",
         output
     );
@@ -234,10 +239,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null, null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null, null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
     QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
@@ -252,7 +257,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     );
     final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
     final String output = StringUtils.fromUtf8(fileBytes);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"bitmapSerdeFactory\":{\"type\":\"roaring\"},\"nest\":{\"$.x\":{\"types\":[\"LONG\"],\"dictionary\":[{\"localId\":0,\"globalId\":0,\"value\":null,\"rows\":[4]},{\"localId\":1,\"globalId\":3,\"value\":\"100\",\"rows\":[3]},{\"localId\":2,\"globalId\":4,\"value\":\"200\",\"rows\":[0,2]},{\"localId\":3,\"globalId\":5,\"value\":\"400\",\"rows\":[1]}],\"column\":[{\"row\":0,\"raw\":{\"x\":200,\"y\":2.2},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":1,\"raw\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"fieldId\":3,\"fieldValue\":\"400\"},{\"row\":2,\"raw\":{\"x\":200,\"z\":\"b\"},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":3,\"raw\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"fieldId\":1,\"fieldValue\":\"100\"},{\"row\":4,\"raw\":{\"y\":3.3,\"z\":\"b\"},\"fieldId\":0,\"fieldValue\":null}]}}}",
         output
     );
@@ -267,15 +272,81 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         Collections.emptySet(),
         dumpSegment.getModules()
     );
-    Assert.assertNotNull(injector.getInstance(ColumnConfig.class));
-    Assert.assertEquals("druid/tool", injector.getInstance(Key.get(String.class, Names.named("serviceName"))));
-    Assert.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
-    Assert.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
+    Assertions.assertNotNull(injector.getInstance(ColumnConfig.class));
+    Assertions.assertEquals("druid/tool", injector.getInstance(Key.get(String.class, Names.named("serviceName"))));
+    Assertions.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
+    Assertions.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
+  }
+
+  @Test
+  public void testDumpV10Metadata() throws IOException
+  {
+    Injector injector = Mockito.mock(Injector.class);
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null, null, null))
+    );
+    Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null, null, null));
+
+    File f = buildV10Segment();
+
+    File outputFile = tempFolder.newFile();
+    DumpSegment.dumpV10Metadata(
+        injector,
+        f.getPath() + "/" + IndexIO.V10_FILE_NAME,
+        outputFile.getPath()
+    );
+    final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
+    SegmentFileMetadata dumped = mapper.readValue(fileBytes, SegmentFileMetadata.class);
+    Assertions.assertNotNull(dumped);
+    Assertions.assertEquals(1, dumped.getContainers().size());
+    Assertions.assertEquals(2, dumped.getColumnDescriptors().size());
+    Assertions.assertEquals(12, dumped.getFiles().size());
+  }
+
+
+  private File buildV10Segment() throws IOException
+  {
+    final File segmentDir = tempFolder.newFolder();
+    IndexBuilder bob = IndexBuilder.create()
+                                   .useV10()
+                                   .tmpDir(segmentDir)
+                                   .schema(
+                                       IncrementalIndexSchema.builder()
+                                                             .withTimestampSpec(
+                                                                 new TimestampSpec(
+                                                                     "timestamp",
+                                                                     null,
+                                                                     null
+                                                                 )
+                                                             )
+                                                             .withDimensionsSpec(
+                                                                 DimensionsSpec.builder()
+                                                                               .useSchemaDiscovery(true)
+                                                                               .build()
+                                                             )
+                                                             .withQueryGranularity(Granularities.NONE)
+                                                             .withRollup(false)
+                                                             .withMinTimestamp(0)
+                                                             .build()
+                                   )
+                                   .inputSource(ResourceInputSource.of(
+                                       getClass().getClassLoader(),
+                                       "nested-test-data.json"
+                                   ))
+                                   .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
+                                   .inputTmpDir(tempFolder.newFolder());
+    return bob.buildMMappedIndexFile();
   }
 
 
   public static List<Segment> createSegments(
-      TemporaryFolder tempFolder,
+      TemporaryFolderExtension tempFolder,
       Closer closer
   ) throws Exception
   {
@@ -284,7 +355,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         closer,
         "nested-test-data.json",
         TestIndex.DEFAULT_JSON_INPUT_FORMAT,
-        new TimestampSpec("timestamp", null, null),
+        TimestampSpec.DEFAULT,
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         null,
         new AggregatorFactory[] {
@@ -292,7 +363,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         },
         Granularities.HOUR,
         true,
-        IndexSpec.DEFAULT
+        IndexSpec.getDefault()
     );
   }
 }

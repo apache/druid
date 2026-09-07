@@ -19,6 +19,7 @@
 
 package org.apache.druid.frame.file;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.math.IntMath;
 import it.unimi.dsi.fastutil.ints.IntObjectPair;
 import org.apache.druid.frame.Frame;
@@ -27,9 +28,12 @@ import org.apache.druid.frame.TestArrayCursorFactory;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
+import org.apache.druid.frame.wire.FrameWireTransferable;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.RowAdapters;
@@ -38,23 +42,22 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import javax.annotation.Nullable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.math.RoundingMode;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -64,7 +67,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
-@RunWith(Parameterized.class)
 public class FrameFileTest extends InitializedNullHandlingTest
 {
   /**
@@ -138,47 +140,70 @@ public class FrameFileTest extends InitializedNullHandlingTest
     abstract int getRowCount();
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  private final FrameType frameType;
-  private final int maxRowsPerFrame;
-  private final boolean partitioned;
-  private final AdapterType adapterType;
-  private final int maxMmapSize;
-
-  private CursorFactory cursorFactory;
-  private int rowCount;
-  private File file;
-
-  public FrameFileTest(
-      final FrameType frameType,
-      final int maxRowsPerFrame,
-      final boolean partitioned,
-      final AdapterType adapterType,
-      final int maxMmapSize
-  )
+  /**
+   * Writes the frame file for one case into the temporary folder, and returns it.
+   */
+  private File writeFrameFile(final FrameFileCase testCase) throws IOException
   {
-    this.frameType = frameType;
-    this.maxRowsPerFrame = maxRowsPerFrame;
-    this.partitioned = partitioned;
-    this.adapterType = adapterType;
-    this.maxMmapSize = maxMmapSize;
+    final File file = temporaryFolder.newFile();
+
+    try (final OutputStream out = Files.newOutputStream(file.toPath())) {
+      final FrameFileKey frameFileKey = new FrameFileKey(
+          testCase.adapterType(),
+          testCase.frameType(),
+          testCase.maxRowsPerFrame(),
+          testCase.partitioned(),
+          testCase.useLegacyFrameSerialization()
+      );
+      final byte[] frameFileBytes = FRAME_FILES.computeIfAbsent(frameFileKey, FrameFileTest::computeFrameFile);
+      out.write(frameFileBytes);
+    }
+
+    return file;
   }
 
-  @Parameterized.Parameters(
-      name = "frameType = {0}, "
-             + "maxRowsPerFrame = {1}, "
-             + "partitioned = {2}, "
-             + "adapter = {3}, "
-             + "maxMmapSize = {4}"
-  )
-  public static Iterable<Object[]> constructorFeeder()
+  /**
+   * Writes the frame file for one case and opens it.
+   */
+  private FrameFile openFrameFile(final FrameFileCase testCase) throws IOException
   {
-    final List<Object[]> constructors = new ArrayList<>();
+    return FrameFile.open(writeFrameFile(testCase), testCase.maxMmapSize(), null);
+  }
+
+  /**
+   * One case of the {@link #constructorFeeder()} matrix. Supplied as a single test-method parameter rather than
+   * as six positional ones, so the test signatures stay readable.
+   */
+  record FrameFileCase(
+      FrameType frameType,
+      int maxRowsPerFrame,
+      boolean partitioned,
+      AdapterType adapterType,
+      int maxMmapSize,
+      boolean useLegacyFrameSerialization
+  )
+  {
+    CursorFactory cursorFactory()
+    {
+      return adapterType.getCursorFactory();
+    }
+
+    int rowCount()
+    {
+      return adapterType.getRowCount();
+    }
+  }
+
+  /**
+   * Cases for the tests below. These are {@link ParameterizedTest} rather than a parameterized class
+   * for performance reasons: <a href="https://github.com/apache/maven-surefire/issues/3439">maven-surefire#3439</a>.
+   */
+  public static Iterable<FrameFileCase> constructorFeeder()
+  {
+    final List<FrameFileCase> constructors = new ArrayList<>();
 
     for (FrameType frameType : FrameType.values()) {
       for (int maxRowsPerFrame : new int[]{1, 17, 50, PARTITION_SIZE, Integer.MAX_VALUE}) {
@@ -193,7 +218,18 @@ public class FrameFileTest extends InitializedNullHandlingTest
             }
 
             for (int maxMmapSize : maxMmapSizes) {
-              constructors.add(new Object[]{frameType, maxRowsPerFrame, partitioned, adapterType, maxMmapSize});
+              for (boolean useLegacyFrameSerialization : new boolean[]{true, false}) {
+                constructors.add(
+                    new FrameFileCase(
+                        frameType,
+                        maxRowsPerFrame,
+                        partitioned,
+                        adapterType,
+                        maxMmapSize,
+                        useLegacyFrameSerialization
+                    )
+                );
+              }
             }
           }
         }
@@ -203,163 +239,190 @@ public class FrameFileTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @Before
-  public void setUp() throws IOException
+  @Nullable
+  private WireTransferable.ConcreteDeserializer makeConcreteDeserializer(final FrameFileCase testCase)
   {
-    cursorFactory = adapterType.getCursorFactory();
-    rowCount = adapterType.getRowCount();
-    file = temporaryFolder.newFile();
-
-    try (final OutputStream out = Files.newOutputStream(file.toPath())) {
-      final FrameFileKey frameFileKey = new FrameFileKey(adapterType, frameType, maxRowsPerFrame, partitioned);
-      final byte[] frameFileBytes = FRAME_FILES.computeIfAbsent(frameFileKey, FrameFileTest::computeFrameFile);
-      out.write(frameFileBytes);
+    if (testCase.useLegacyFrameSerialization()) {
+      return null;
+    } else {
+      final ObjectMapper objectMapper = new ObjectMapper();
+      return new WireTransferable.ConcreteDeserializer(
+          objectMapper,
+          Map.of(
+              ByteBuffer.wrap(StringUtils.toUtf8(FrameWireTransferable.TYPE)),
+              new FrameWireTransferable.Deserializer()
+          )
+      );
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass()
   {
     FRAME_FILES.clear();
   }
 
-  @Test
-  public void test_numFrames() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_numFrames(final FrameFileCase testCase) throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
-      Assert.assertEquals(computeExpectedNumFrames(), frameFile.numFrames());
+    try (final FrameFile frameFile = openFrameFile(testCase)) {
+      Assertions.assertEquals(computeExpectedNumFrames(testCase), frameFile.numFrames());
     }
   }
 
-  @Test
-  public void test_numPartitions() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_numPartitions(final FrameFileCase testCase) throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
-      Assert.assertEquals(computeExpectedNumPartitions(), frameFile.numPartitions());
+    try (final FrameFile frameFile = openFrameFile(testCase)) {
+      Assertions.assertEquals(computeExpectedNumPartitions(testCase), frameFile.numPartitions());
     }
   }
 
-  @Test
-  public void test_frame_first() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_rac_first(final FrameFileCase testCase) throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
+    try (final FrameFile frameFile = openFrameFile(testCase)) {
       // Skip test for empty files.
-      Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
+      Assumptions.assumeTrue(frameFile.numFrames() > 0);
 
-      final Frame firstFrame = frameFile.frame(0);
-      Assert.assertEquals(Math.min(rowCount, maxRowsPerFrame), firstFrame.numRows());
+      final Frame firstFrame = frameFile.rac(0, makeConcreteDeserializer(testCase)).as(Frame.class);
+      Assertions.assertEquals(Math.min(testCase.rowCount(), testCase.maxRowsPerFrame()), firstFrame.numRows());
     }
   }
 
-  @Test
-  public void test_frame_last() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_rac_last(final FrameFileCase testCase) throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
+    try (final FrameFile frameFile = openFrameFile(testCase)) {
       // Skip test for empty files.
-      Assume.assumeThat(frameFile.numFrames(), Matchers.greaterThan(0));
+      Assumptions.assumeTrue(frameFile.numFrames() > 0);
 
-      final Frame lastFrame = frameFile.frame(frameFile.numFrames() - 1);
-      Assert.assertEquals(
-          rowCount % maxRowsPerFrame != 0
-          ? rowCount % maxRowsPerFrame
-          : Math.min(rowCount, maxRowsPerFrame),
+      final Frame lastFrame = frameFile.rac(frameFile.numFrames() - 1, makeConcreteDeserializer(testCase)).as(Frame.class);
+      Assertions.assertEquals(
+          testCase.rowCount() % testCase.maxRowsPerFrame() != 0
+          ? testCase.rowCount() % testCase.maxRowsPerFrame()
+          : Math.min(testCase.rowCount(), testCase.maxRowsPerFrame()),
           lastFrame.numRows()
       );
     }
   }
 
-  @Test
-  public void test_frame_outOfBoundsNegative() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_rac_outOfBoundsNegative(final FrameFileCase testCase) throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Frame [-1] out of bounds");
-      frameFile.frame(-1);
+    try (final FrameFile frameFile = openFrameFile(testCase)) {
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> frameFile.rac(-1, null)
+      );
+      Assertions.assertEquals("Batch[-1] out of bounds", exception.getMessage());
     }
   }
 
-  @Test
-  public void test_frame_outOfBoundsTooLarge() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_rac_outOfBoundsTooLarge(final FrameFileCase testCase) throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage(StringUtils.format("Frame [%,d] out of bounds", frameFile.numFrames()));
-      frameFile.frame(frameFile.numFrames());
+    try (final FrameFile frameFile = openFrameFile(testCase)) {
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> frameFile.rac(frameFile.numFrames(), null)
+      );
+      Assertions.assertEquals(
+          StringUtils.format("Batch[%,d] out of bounds", frameFile.numFrames()),
+          exception.getMessage()
+      );
     }
   }
 
-  @Test
-  public void test_frame_readAllDataViaCursorFactory() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_rac_readAllDataViaCursorFactory(final FrameFileCase testCase) throws IOException
   {
-    final FrameReader frameReader = FrameReader.create(cursorFactory.getRowSignature());
+    final FrameReader frameReader = FrameReader.create(testCase.cursorFactory().getRowSignature());
 
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
+    try (final FrameFile frameFile = openFrameFile(testCase)) {
       final Sequence<List<Object>> frameFileRows = Sequences.concat(
           () -> IntStream.range(0, frameFile.numFrames())
-                         .mapToObj(frameFile::frame)
+                         .mapToObj(i -> frameFile.rac(i, makeConcreteDeserializer(testCase)).as(Frame.class))
                          .map(frameReader::makeCursorFactory)
                          .map(FrameTestUtil::readRowsFromCursorFactoryWithRowNumber)
                          .iterator()
       );
 
-      final Sequence<List<Object>> adapterRows = FrameTestUtil.readRowsFromCursorFactoryWithRowNumber(cursorFactory);
+      final Sequence<List<Object>> adapterRows = FrameTestUtil.readRowsFromCursorFactoryWithRowNumber(testCase.cursorFactory());
       FrameTestUtil.assertRowsEqual(adapterRows, frameFileRows);
     }
   }
 
-  @Test
-  public void test_getPartitionStartFrame() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_getPartitionStartFrame(final FrameFileCase testCase) throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
-      if (partitioned) {
+    try (final FrameFile frameFile = openFrameFile(testCase)) {
+      if (testCase.partitioned()) {
         for (int partitionNum = 0; partitionNum < frameFile.numPartitions(); partitionNum++) {
-          Assert.assertEquals(
-              "partition #" + partitionNum,
+          Assertions.assertEquals(
               Math.min(
                   IntMath.divide(
                       (partitionNum >= SKIP_PARTITION ? partitionNum + 1 : partitionNum) * PARTITION_SIZE,
-                      maxRowsPerFrame,
+                      testCase.maxRowsPerFrame(),
                       RoundingMode.CEILING
                   ),
                   frameFile.numFrames()
               ),
-              frameFile.getPartitionStartFrame(partitionNum)
+              frameFile.getPartitionStartFrame(partitionNum),
+              "partition #" + partitionNum
           );
         }
       } else {
-        Assert.assertEquals(frameFile.numFrames(), frameFile.getPartitionStartFrame(0));
+        Assertions.assertEquals(frameFile.numFrames(), frameFile.getPartitionStartFrame(0));
       }
     }
   }
 
-  @Test
-  public void test_file() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_file(final FrameFileCase testCase) throws IOException
   {
-    try (final FrameFile frameFile = FrameFile.open(file, maxMmapSize, null)) {
-      Assert.assertEquals(file, frameFile.file());
+    final File file = writeFrameFile(testCase);
+
+    try (final FrameFile frameFile = FrameFile.open(file, testCase.maxMmapSize(), null)) {
+      Assertions.assertEquals(file, frameFile.file());
     }
   }
 
-  @Test
-  public void test_open_withDeleteOnClose() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_open_withDeleteOnClose(final FrameFileCase testCase) throws IOException
   {
-    FrameFile.open(file, maxMmapSize, null).close();
-    Assert.assertTrue(file.exists());
+    final File file = writeFrameFile(testCase);
+
+    FrameFile.open(file, testCase.maxMmapSize(), null).close();
+    Assertions.assertTrue(file.exists());
 
     FrameFile.open(file, null, FrameFile.Flag.DELETE_ON_CLOSE).close();
-    Assert.assertFalse(file.exists());
+    Assertions.assertFalse(file.exists());
   }
 
-  @Test
-  public void test_newReference() throws IOException
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void test_newReference(final FrameFileCase testCase) throws IOException
   {
+    final File file = writeFrameFile(testCase);
+
     final FrameFile frameFile1 = FrameFile.open(file, null, FrameFile.Flag.DELETE_ON_CLOSE);
     final FrameFile frameFile2 = frameFile1.newReference();
     final FrameFile frameFile3 = frameFile2.newReference();
 
     // Closing original file does nothing; must wait for other files to be closed.
     frameFile1.close();
-    Assert.assertTrue(file.exists());
+    Assertions.assertTrue(file.exists());
 
     // Can still get a reference after frameFile1 is closed, just because others are still open. Strange but true.
     final FrameFile frameFile4 = frameFile1.newReference();
@@ -371,32 +434,31 @@ public class FrameFileTest extends InitializedNullHandlingTest
     frameFile2.close();
     frameFile2.close();
     frameFile2.close();
-    Assert.assertTrue(file.exists());
+    Assertions.assertTrue(file.exists());
 
     frameFile3.close();
-    Assert.assertTrue(file.exists());
+    Assertions.assertTrue(file.exists());
 
     // Final reference is closed; file is now gone.
     frameFile4.close();
-    Assert.assertFalse(file.exists());
+    Assertions.assertFalse(file.exists());
 
     // Can no longer get new references.
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Frame file is closed");
-    frameFile1.newReference();
+    final IllegalStateException exception = Assertions.assertThrows(IllegalStateException.class, frameFile1::newReference);
+    Assertions.assertEquals("Frame file is closed", exception.getMessage());
   }
 
-  private int computeExpectedNumFrames()
+  private int computeExpectedNumFrames(final FrameFileCase testCase)
   {
-    return IntMath.divide(countRows(cursorFactory), maxRowsPerFrame, RoundingMode.CEILING);
+    return IntMath.divide(countRows(testCase.cursorFactory()), testCase.maxRowsPerFrame(), RoundingMode.CEILING);
   }
 
-  private int computeExpectedNumPartitions()
+  private int computeExpectedNumPartitions(final FrameFileCase testCase)
   {
-    if (partitioned) {
+    if (testCase.partitioned()) {
       return Math.min(
-          computeExpectedNumFrames(),
-          IntMath.divide(countRows(cursorFactory), PARTITION_SIZE, RoundingMode.CEILING)
+          computeExpectedNumFrames(testCase),
+          IntMath.divide(countRows(testCase.cursorFactory()), PARTITION_SIZE, RoundingMode.CEILING)
       );
     } else {
       // 0 = not partitioned.
@@ -417,6 +479,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   private static byte[] computeFrameFile(final FrameFileKey frameFileKey)
   {
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final WireTransferableContext wireTransferableContext = frameFileKey.makeWireTransferableContext();
 
     try {
       if (frameFileKey.partitioned) {
@@ -443,7 +506,8 @@ public class FrameFileTest extends InitializedNullHandlingTest
                                       }
                                     }
                                 ),
-            baos
+            baos,
+            wireTransferableContext
         );
       } else {
         FrameTestUtil.writeFrameFile(
@@ -451,7 +515,8 @@ public class FrameFileTest extends InitializedNullHandlingTest
                                 .frameType(frameFileKey.frameType)
                                 .maxRowsPerFrame(frameFileKey.maxRowsPerFrame)
                                 .frames(),
-            baos
+            baos,
+            wireTransferableContext
         );
       }
     }
@@ -471,13 +536,39 @@ public class FrameFileTest extends InitializedNullHandlingTest
     final FrameType frameType;
     final int maxRowsPerFrame;
     final boolean partitioned;
+    final boolean useLegacyFrameSerialization;
 
-    public FrameFileKey(AdapterType adapterType, FrameType frameType, int maxRowsPerFrame, boolean partitioned)
+    public FrameFileKey(
+        AdapterType adapterType,
+        FrameType frameType,
+        int maxRowsPerFrame,
+        boolean partitioned,
+        boolean useLegacyFrameSerialization
+    )
     {
       this.adapterType = adapterType;
       this.frameType = frameType;
       this.maxRowsPerFrame = maxRowsPerFrame;
       this.partitioned = partitioned;
+      this.useLegacyFrameSerialization = useLegacyFrameSerialization;
+    }
+
+    @Nullable
+    WireTransferableContext makeWireTransferableContext()
+    {
+      if (useLegacyFrameSerialization) {
+        return null;
+      } else {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final WireTransferable.ConcreteDeserializer deserializer = new WireTransferable.ConcreteDeserializer(
+            objectMapper,
+            Map.of(
+                ByteBuffer.wrap(StringUtils.toUtf8(FrameWireTransferable.TYPE)),
+                new FrameWireTransferable.Deserializer()
+            )
+        );
+        return new WireTransferableContext(objectMapper, deserializer, false);
+      }
     }
 
     @Override
@@ -492,6 +583,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
       FrameFileKey that = (FrameFileKey) o;
       return maxRowsPerFrame == that.maxRowsPerFrame
              && partitioned == that.partitioned
+             && useLegacyFrameSerialization == that.useLegacyFrameSerialization
              && adapterType == that.adapterType
              && frameType == that.frameType;
     }
@@ -499,7 +591,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
     @Override
     public int hashCode()
     {
-      return Objects.hash(adapterType, frameType, maxRowsPerFrame, partitioned);
+      return Objects.hash(adapterType, frameType, maxRowsPerFrame, partitioned, useLegacyFrameSerialization);
     }
 
     @Override
@@ -510,6 +602,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
              ", frameType=" + frameType +
              ", maxRowsPerFrame=" + maxRowsPerFrame +
              ", partitioned=" + partitioned +
+             ", useLegacyFrameSerialization=" + useLegacyFrameSerialization +
              '}';
     }
   }

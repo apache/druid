@@ -43,7 +43,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -145,7 +145,11 @@ public class MSQWarningsTest extends MSQTestBase
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
-                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
+                     .setExpectedMSQFault(
+                         new CannotParseExternalDataFault(
+                             "Unable to parse row [] (Path: file:" + toRead.getAbsolutePath() + ", Record: 2, Line: 2)"
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -350,7 +354,11 @@ public class MSQWarningsTest extends MSQTestBase
                                 .columnMappings(defaultColumnMappings)
                                 .tuningConfig(MSQTuningConfig.defaultConfig())
                                 .build())
-                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
+                     .setExpectedMSQFault(
+                         new CannotParseExternalDataFault(
+                             "Unable to parse row [] (Path: file:" + toRead.getAbsolutePath() + ", Record: 2, Line: 2)"
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -372,7 +380,11 @@ public class MSQWarningsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
-                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
+                     .setExpectedMSQFault(
+                         new CannotParseExternalDataFault(
+                             "Unable to parse row [] (Path: file:" + toRead.getAbsolutePath() + ", Record: 2, Line: 2)"
+                         )
+                     )
                      .verifyResults();
   }
 
@@ -391,11 +403,15 @@ public class MSQWarningsTest extends MSQTestBase
                              + ") group by 1  PARTITIONED by day ")
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
-                     .setExpectedMSQFaultClass(CannotParseExternalDataFault.class)
+                     .setExpectedMSQFault(
+                         new CannotParseExternalDataFault(
+                             "Unable to parse row [] (Path: file:" + toRead.getAbsolutePath() + ", Record: 2, Line: 2)"
+                         )
+                     )
                      .verifyResults();
 
     // Temporary directory should not contain any controller-related folders
-    Assert.assertEquals(0, localFileStorageDir.listFiles().length);
+    Assertions.assertEquals(0, localFileStorageDir.listFiles().length);
   }
 
   @Test

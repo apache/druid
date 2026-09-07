@@ -32,36 +32,23 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
-import org.apache.druid.indexer.Bucket;
-import org.apache.druid.indexer.HadoopDruidIndexerConfig;
-import org.apache.druid.indexer.HadoopIngestionSpec;
-import org.apache.druid.indexer.JobHelper;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.GranularityModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.loading.LocalDataSegmentPusher;
-import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.utils.CompressionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.mapreduce.TaskType;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,6 +56,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  */
@@ -84,20 +74,17 @@ public class HdfsDataSegmentPusherTest
     objectMapper.setInjectableValues(injectableValues);
   }
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private HdfsDataSegmentPusher hdfsDataSegmentPusher;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConf = new HdfsDataSegmentPusherConfig();
     hdfsDataSegmentPusherConf.setStorageDirectory("path/to/");
-    hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true), objectMapper);
+    hdfsDataSegmentPusher = new HdfsDataSegmentPusher(hdfsDataSegmentPusherConf, new Configuration(true));
   }
 
   @Test
@@ -107,14 +94,15 @@ public class HdfsDataSegmentPusherTest
   }
 
   @Test
-  public void testPushWithBadScheme() throws Exception
+  public void testPushWithBadScheme()
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("No FileSystem for scheme");
-    testUsingScheme("xyzzy");
+    Throwable exception = assertThrows(RuntimeException.class, () -> {
+      testUsingScheme("xyzzy");
 
-    // Not reached
-    Assert.assertTrue(false);
+      // Not reached
+      Assertions.assertTrue(false);
+    });
+    assertTrue(exception.getMessage().contains("No FileSystem for scheme"));
   }
 
   @Test
@@ -126,7 +114,8 @@ public class HdfsDataSegmentPusherTest
   @Test
   public void testPushWithMultipleSegments() throws Exception
   {
-    testUsingSchemeForMultipleSegments("file", 3);
+    testUsingSchemeForMultipleSegments("file", 3, CompressionUtils.Format.ZIP);
+    testUsingSchemeForMultipleSegments("file", 3, CompressionUtils.Format.LZ4);
   }
 
   @Test
@@ -146,7 +135,7 @@ public class HdfsDataSegmentPusherTest
     final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
@@ -164,9 +153,9 @@ public class HdfsDataSegmentPusherTest
 
     Pattern pattern =
         Pattern.compile(".*/foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0_[A-Za-z0-9-]{36}_index\\.zip");
-    Assert.assertTrue(
-        segment.getLoadSpec().get("path").toString(),
-        pattern.matcher(segment.getLoadSpec().get("path").toString()).matches()
+    Assertions.assertTrue(
+        pattern.matcher(segment.getLoadSpec().get("path").toString()).matches(),
+        segment.getLoadSpec().get("path").toString()
     );
   }
 
@@ -187,7 +176,7 @@ public class HdfsDataSegmentPusherTest
     final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
@@ -204,13 +193,13 @@ public class HdfsDataSegmentPusherTest
     final String storageDirSuffix = "shuffle-data/index_parallel_session_analysis_test_bkdhhedd_2023-09-08T03:18:21.121Z/2023-08-29T16:00:00.000Z/2023-08-29T17:00:00.000Z";
     DataSegment segment = pusher.pushToPath(segmentDir, segmentToPush, storageDirSuffix);
     
-    Assert.assertTrue(
-        segment.getLoadSpec().get("path").toString(),
-        segment.getLoadSpec().get("path").toString().endsWith(storageDirSuffix.replace(':', '_') + "/0_index.zip")
+    Assertions.assertTrue(
+        segment.getLoadSpec().get("path").toString().endsWith(storageDirSuffix.replace(':', '_') + "/0_index.zip"),
+        segment.getLoadSpec().get("path").toString()
     );
   }
 
-  private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments) throws Exception
+  private void testUsingSchemeForMultipleSegments(final String scheme, final int numberOfSegments, CompressionUtils.Format format) throws Exception
   {
     Configuration conf = new Configuration(true);
     DataSegment[] segments = new DataSegment[numberOfSegments];
@@ -226,12 +215,14 @@ public class HdfsDataSegmentPusherTest
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
     final File storageDirectory = tempFolder.newFolder();
 
+    config.setCompressionFormat(format);
     config.setStorageDirectory(
         scheme != null
         ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     for (int i = 0; i < numberOfSegments; i++) {
       segments[i] = new DataSegment(
@@ -250,16 +241,20 @@ public class HdfsDataSegmentPusherTest
     for (int i = 0; i < numberOfSegments; i++) {
       final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], false);
 
-      String indexUri = StringUtils.format(
-          "%s/%s/%d_index.zip",
-          FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-          pusher.getStorageDir(segments[i], false),
-          segments[i].getShardSpec().getPartitionNum()
-      );
+      final String indexUri;
+      try (FileSystem fileSystem = FileSystem.newInstance(conf)) {
+        indexUri = StringUtils.format(
+            "%s/%s/%d_index.%s",
+            fileSystem.makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+            pusher.getStorageDir(segments[i], false),
+            segments[i].getShardSpec().getPartitionNum(),
+            format.getExtension()
+        );
+      }
 
-      Assert.assertEquals(segments[i].getSize(), pushedSegment.getSize());
-      Assert.assertEquals(segments[i], pushedSegment);
-      Assert.assertEquals(ImmutableMap.of(
+      Assertions.assertEquals(segments[i].getSize(), pushedSegment.getSize());
+      Assertions.assertEquals(segments[i], pushedSegment);
+      Assertions.assertEquals(ImmutableMap.of(
           "type",
           "hdfs",
           "path",
@@ -269,33 +264,38 @@ public class HdfsDataSegmentPusherTest
       String segmentPath = pusher.getStorageDir(pushedSegment, false);
 
       File indexFile = new File(StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_index.%s",
           storageDirectory,
           segmentPath,
-          pushedSegment.getShardSpec().getPartitionNum()
+          pushedSegment.getShardSpec().getPartitionNum(),
+          format.getExtension()
       ));
-      Assert.assertTrue(indexFile.exists());
+      Assertions.assertTrue(indexFile.exists());
 
-      Assert.assertEquals(segments[i].getSize(), pushedSegment.getSize());
-      Assert.assertEquals(segments[i], pushedSegment);
+      Assertions.assertEquals(segments[i].getSize(), pushedSegment.getSize());
+      Assertions.assertEquals(segments[i], pushedSegment);
 
       indexFile = new File(StringUtils.format(
-          "%s/%s/%d_index.zip",
+          "%s/%s/%d_index.%s",
           storageDirectory,
           segmentPath,
-          pushedSegment.getShardSpec().getPartitionNum()
+          pushedSegment.getShardSpec().getPartitionNum(),
+          format.getExtension()
       ));
-      Assert.assertTrue(indexFile.exists());
+      Assertions.assertTrue(indexFile.exists());
 
 
       // push twice will fail and temp dir cleaned
-      File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
-      outDir.setReadOnly();
+      final File outDir = new File(storageDirectory, segmentPath);
+      Assertions.assertTrue(outDir.setReadOnly(), "test setup must be able to make the output directory read-only");
       try {
         pusher.push(segmentDir, segments[i], false);
       }
       catch (IOException e) {
-        Assert.fail("should not throw exception");
+        Assertions.fail("should not throw exception");
+      }
+      finally {
+        Assertions.assertTrue(outDir.setWritable(true), "test teardown must restore write permission");
       }
     }
   }
@@ -320,7 +320,7 @@ public class HdfsDataSegmentPusherTest
         ? StringUtils.format("%s://%s", scheme, storageDirectory.getAbsolutePath())
         : storageDirectory.getAbsolutePath()
     );
-    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf, new DefaultObjectMapper());
+    HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
 
     DataSegment segmentToPush = new DataSegment(
         "foo",
@@ -337,16 +337,19 @@ public class HdfsDataSegmentPusherTest
     DataSegment segment = pusher.push(segmentDir, segmentToPush, false);
 
 
-    String indexUri = StringUtils.format(
-        "%s/%s/%d_index.zip",
-        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-        pusher.getStorageDir(segmentToPush, false),
-        segmentToPush.getShardSpec().getPartitionNum()
-    );
+    final String indexUri;
+    try (FileSystem fileSystem = FileSystem.newInstance(conf)) {
+      indexUri = StringUtils.format(
+          "%s/%s/%d_index.zip",
+          fileSystem.makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+          pusher.getStorageDir(segmentToPush, false),
+          segmentToPush.getShardSpec().getPartitionNum()
+      );
+    }
 
-    Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
-    Assert.assertEquals(segmentToPush, segment);
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
+    Assertions.assertEquals(segmentToPush, segment);
+    Assertions.assertEquals(ImmutableMap.of(
         "type",
         "hdfs",
         "path",
@@ -361,16 +364,19 @@ public class HdfsDataSegmentPusherTest
         segmentPath,
         segment.getShardSpec().getPartitionNum()
     ));
-    Assert.assertTrue(indexFile.exists());
+    Assertions.assertTrue(indexFile.exists());
 
     // push twice will fail and temp dir cleaned
-    File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
-    outDir.setReadOnly();
+    final File outDir = new File(storageDirectory, segmentPath);
+    Assertions.assertTrue(outDir.setReadOnly(), "test setup must be able to make the output directory read-only");
     try {
       pusher.push(segmentDir, segmentToPush, false);
     }
     catch (IOException e) {
-      Assert.fail("should not throw exception");
+      Assertions.fail("should not throw exception");
+    }
+    finally {
+      Assertions.assertTrue(outDir.setWritable(true), "test teardown must restore write permission");
     }
   }
 
@@ -408,6 +414,7 @@ public class HdfsDataSegmentPusherTest
             }
         );
       }
+
     }
   }
 
@@ -431,184 +438,8 @@ public class HdfsDataSegmentPusherTest
     );
 
     String storageDir = hdfsDataSegmentPusher.getStorageDir(segment, false);
-    Assert.assertEquals("something/20111001T000000.000Z_20111002T000000.000Z/brand_new_version", storageDir);
+    Assertions.assertEquals("something/20111001T000000.000Z_20111002T000000.000Z/brand_new_version", storageDir);
 
   }
 
-
-  @Test
-  public void shouldMakeHDFSCompliantSegmentOutputPath()
-  {
-    HadoopIngestionSpec schema;
-
-    try {
-      schema = objectMapper.readValue(
-      "{\n"
-            + "    \"dataSchema\": {\n"
-            + "        \"dataSource\": \"source\",\n"
-            + "        \"metricsSpec\": [],\n"
-            + "        \"granularitySpec\": {\n"
-            + "            \"type\": \"uniform\",\n"
-            + "            \"segmentGranularity\": \"hour\",\n"
-            + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
-            + "        }\n"
-            + "    },\n"
-            + "    \"ioConfig\": {\n"
-            + "        \"type\": \"hadoop\",\n"
-            + "        \"segmentOutputPath\": \"hdfs://server:9100/tmp/druid/datatest\"\n"
-            + "    }\n"
-            + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-
-    //DataSchema dataSchema = new DataSchema("dataSource", null, null, Gra)
-    //schema = new HadoopIngestionSpec(dataSchema, ioConfig, HadoopTuningConfig.makeDefaultTuningConfig());
-    HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withTuningConfig(
-            schema.getTuningConfig()
-                  .withVersion(
-                      "some:brand:new:version"
-                  )
-        )
-    );
-
-    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30, ISOChronology.getInstanceUTC()), 4712);
-    Path path = JobHelper.makeFileNamePath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new DistributedFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            0
-        ),
-        JobHelper.INDEX_ZIP,
-        hdfsDataSegmentPusher
-    );
-    Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
-        + "/4712_index.zip",
-        path.toString()
-    );
-
-    path = JobHelper.makeTmpPath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new DistributedFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            0
-        ),
-        new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0),
-        hdfsDataSegmentPusher
-    );
-    Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version"
-        + "/4712_index.zip.0",
-        path.toString()
-    );
-
-  }
-
-  @Test
-  public void shouldMakeDefaultSegmentOutputPathIfNotHDFS()
-  {
-    final HadoopIngestionSpec schema;
-
-    try {
-      schema = objectMapper.readValue(
-          "{\n"
-          + "    \"dataSchema\": {\n"
-          + "        \"dataSource\": \"the:data:source\",\n"
-          + "        \"metricsSpec\": [],\n"
-          + "        \"granularitySpec\": {\n"
-          + "            \"type\": \"uniform\",\n"
-          + "            \"segmentGranularity\": \"hour\",\n"
-          + "            \"intervals\": [\"2012-07-10/P1D\"]\n"
-          + "        }\n"
-          + "    },\n"
-          + "    \"ioConfig\": {\n"
-          + "        \"type\": \"hadoop\",\n"
-          + "        \"segmentOutputPath\": \"/tmp/dru:id/data:test\"\n"
-          + "    }\n"
-          + "}",
-          HadoopIngestionSpec.class
-      );
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-
-    HadoopDruidIndexerConfig cfg = new HadoopDruidIndexerConfig(
-        schema.withTuningConfig(
-            schema.getTuningConfig()
-                  .withVersion(
-                      "some:brand:new:version"
-                  )
-        )
-    );
-
-    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30, ISOChronology.getInstanceUTC()), 4712);
-    Path path = JobHelper.makeFileNamePath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new LocalFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            0
-        ),
-        JobHelper.INDEX_ZIP,
-        new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig())
-    );
-    Assert.assertEquals(
-        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
-        + "version/4712/index.zip",
-        path.toString()
-    );
-
-    path = JobHelper.makeTmpPath(
-        new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
-        new LocalFileSystem(),
-        new DataSegment(
-            cfg.getSchema().getDataSchema().getDataSource(),
-            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-            cfg.getSchema().getTuningConfig().getVersion(),
-            null,
-            null,
-            null,
-            new NumberedShardSpec(bucket.partitionNum, 5000),
-            -1,
-            0
-        ),
-        new TaskAttemptID("abc", 123, TaskType.REDUCE, 1, 0),
-        new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig())
-    );
-    Assert.assertEquals(
-        "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:"
-        + "version/4712/index.zip.0",
-        path.toString()
-    );
-
-  }
 }

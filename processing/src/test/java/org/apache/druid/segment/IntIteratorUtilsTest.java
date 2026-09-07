@@ -21,8 +21,8 @@ package org.apache.druid.segment;
 
 import it.unimi.dsi.fastutil.ints.IntIterators;
 import it.unimi.dsi.fastutil.ints.IntListIterator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class IntIteratorUtilsTest
 {
@@ -30,20 +30,20 @@ public class IntIteratorUtilsTest
   @Test
   public void testSkip()
   {
-    Assert.assertEquals(0, IntIteratorUtils.skip(IntIterators.EMPTY_ITERATOR, 5));
-    Assert.assertEquals(0, IntIteratorUtils.skip(IntIterators.EMPTY_ITERATOR, 0));
+    Assertions.assertEquals(0, IntIteratorUtils.skip(IntIterators.EMPTY_ITERATOR, 5));
+    Assertions.assertEquals(0, IntIteratorUtils.skip(IntIterators.EMPTY_ITERATOR, 0));
 
     IntListIterator it = IntIterators.fromTo(0, 10);
-    Assert.assertEquals(3, IntIteratorUtils.skip(it, 3));
-    Assert.assertEquals(3, it.nextInt());
-    Assert.assertEquals(6, IntIteratorUtils.skip(it, 100));
-    Assert.assertEquals(0, IntIteratorUtils.skip(it, 100));
-    Assert.assertFalse(it.hasNext());
+    Assertions.assertEquals(3, IntIteratorUtils.skip(it, 3));
+    Assertions.assertEquals(3, it.nextInt());
+    Assertions.assertEquals(6, IntIteratorUtils.skip(it, 100));
+    Assertions.assertEquals(0, IntIteratorUtils.skip(it, 100));
+    Assertions.assertFalse(it.hasNext());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNegativeSkipArgument()
   {
-    IntIteratorUtils.skip(IntIterators.fromTo(0, 10), -1);
+    Assertions.assertThrows(IllegalArgumentException.class, () -> IntIteratorUtils.skip(IntIterators.fromTo(0, 10), -1));
   }
 }

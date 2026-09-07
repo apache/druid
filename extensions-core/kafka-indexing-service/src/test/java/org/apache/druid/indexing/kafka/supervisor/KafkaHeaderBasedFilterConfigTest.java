@@ -23,13 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.extraction.SubstringDimExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,7 +39,7 @@ public class KafkaHeaderBasedFilterConfigTest
 {
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpStatic()
   {
     ExpressionProcessing.initializeForTests();
@@ -50,9 +51,9 @@ public class KafkaHeaderBasedFilterConfigTest
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, null, null);
 
-    Assert.assertEquals(dimFilter, filter.getFilter());
-    Assert.assertEquals("UTF-8", filter.getEncoding());
-    Assert.assertEquals(10_000, filter.getStringDecodingCacheSize());
+    Assertions.assertEquals(dimFilter, filter.getFilter());
+    Assertions.assertEquals("UTF-8", filter.getEncoding());
+    Assertions.assertEquals(10_000, filter.getStringDecodingCacheSize());
   }
 
   @Test
@@ -61,9 +62,9 @@ public class KafkaHeaderBasedFilterConfigTest
     InDimFilter dimFilter = new InDimFilter("service", Arrays.asList("user-service", "payment-service"), null);
     KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, "ISO-8859-1", null);
 
-    Assert.assertEquals(dimFilter, filter.getFilter());
-    Assert.assertEquals("ISO-8859-1", filter.getEncoding());
-    Assert.assertEquals(10_000, filter.getStringDecodingCacheSize());
+    Assertions.assertEquals(dimFilter, filter.getFilter());
+    Assertions.assertEquals("ISO-8859-1", filter.getEncoding());
+    Assertions.assertEquals(10_000, filter.getStringDecodingCacheSize());
   }
 
   @Test
@@ -72,9 +73,9 @@ public class KafkaHeaderBasedFilterConfigTest
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, null, 50_000);
 
-    Assert.assertEquals(dimFilter, filter.getFilter());
-    Assert.assertEquals("UTF-8", filter.getEncoding());
-    Assert.assertEquals(50_000, filter.getStringDecodingCacheSize());
+    Assertions.assertEquals(dimFilter, filter.getFilter());
+    Assertions.assertEquals("UTF-8", filter.getEncoding());
+    Assertions.assertEquals(50_000, filter.getStringDecodingCacheSize());
   }
 
   @Test
@@ -83,11 +84,11 @@ public class KafkaHeaderBasedFilterConfigTest
     SelectorDimFilter dimFilter = new SelectorDimFilter("environment", "production", null);
     try {
       new KafkaHeaderBasedFilterConfig(dimFilter, null, null);
-      Assert.fail("Expected DruidException for SelectorDimFilter");
+      Assertions.fail("Expected DruidException for SelectorDimFilter");
     }
     catch (DruidException e) {
-      Assert.assertTrue("Should mention unsupported filter type", e.getMessage().contains("Unsupported filter type"));
-      Assert.assertTrue("Should mention SelectorDimFilter", e.getMessage().contains("SelectorDimFilter"));
+      Assertions.assertTrue(e.getMessage().contains("Unsupported filter type"), "Should mention unsupported filter type");
+      Assertions.assertTrue(e.getMessage().contains("SelectorDimFilter"), "Should mention SelectorDimFilter");
     }
   }
 
@@ -99,11 +100,11 @@ public class KafkaHeaderBasedFilterConfigTest
     AndDimFilter andFilter = new AndDimFilter(Arrays.asList(envFilter, serviceFilter));
     try {
       new KafkaHeaderBasedFilterConfig(andFilter, null, null);
-      Assert.fail("Expected DruidException for AndDimFilter");
+      Assertions.fail("Expected DruidException for AndDimFilter");
     }
     catch (DruidException e) {
-      Assert.assertTrue("Should mention unsupported filter type", e.getMessage().contains("Unsupported filter type"));
-      Assert.assertTrue("Should mention AndDimFilter", e.getMessage().contains("AndDimFilter"));
+      Assertions.assertTrue(e.getMessage().contains("Unsupported filter type"), "Should mention unsupported filter type");
+      Assertions.assertTrue(e.getMessage().contains("AndDimFilter"), "Should mention AndDimFilter");
     }
   }
 
@@ -114,25 +115,50 @@ public class KafkaHeaderBasedFilterConfigTest
     NotDimFilter notFilter = new NotDimFilter(debugFilter);
     try {
       new KafkaHeaderBasedFilterConfig(notFilter, null, null);
-      Assert.fail("Expected DruidException for NotDimFilter");
+      Assertions.fail("Expected DruidException for NotDimFilter");
     }
     catch (DruidException e) {
-      Assert.assertTrue("Should mention unsupported filter type", e.getMessage().contains("Unsupported filter type"));
-      Assert.assertTrue("Should mention NotDimFilter", e.getMessage().contains("NotDimFilter"));
+      Assertions.assertTrue(e.getMessage().contains("Unsupported filter type"), "Should mention unsupported filter type");
+      Assertions.assertTrue(e.getMessage().contains("NotDimFilter"), "Should mention NotDimFilter");
     }
   }
 
-  @Test(expected = NullPointerException.class)
-  public void testNullFilter()
+  @Test
+  public void testInFilterWithExtractionFnRejected()
   {
-    new KafkaHeaderBasedFilterConfig(null, null, null);
+    // An 'in' filter with an extractionFn is a valid Druid filter, but the header handler ignores the function.
+    // It must be rejected rather than silently evaluated with different semantics.
+    InDimFilter filter = new InDimFilter(
+        "environment",
+        Collections.singletonList("production"),
+        new SubstringDimExtractionFn(0, 5)
+    );
+    try {
+      new KafkaHeaderBasedFilterConfig(filter, null, null);
+      Assertions.fail("Expected DruidException for InDimFilter with extractionFn");
+    }
+    catch (DruidException e) {
+      Assertions.assertTrue(e.getMessage().contains("Extraction functions"), "Should mention extraction functions");
+    }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
+  public void testNullFilter()
+  {
+    Assertions.assertThrows(
+        NullPointerException.class,
+        () -> new KafkaHeaderBasedFilterConfig(null, null, null)
+    );
+  }
+
+  @Test
   public void testInvalidEncoding()
   {
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
-    new KafkaHeaderBasedFilterConfig(dimFilter, "INVALID-ENCODING", null);
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new KafkaHeaderBasedFilterConfig(dimFilter, "INVALID-ENCODING", null)
+    );
   }
 
   @Test
@@ -147,9 +173,9 @@ public class KafkaHeaderBasedFilterConfigTest
     // Deserialize back
     KafkaHeaderBasedFilterConfig deserializedFilter = objectMapper.readValue(json, KafkaHeaderBasedFilterConfig.class);
 
-    Assert.assertEquals(originalFilter.getFilter(), deserializedFilter.getFilter());
-    Assert.assertEquals(originalFilter.getEncoding(), deserializedFilter.getEncoding());
-    Assert.assertEquals(originalFilter.getStringDecodingCacheSize(), deserializedFilter.getStringDecodingCacheSize());
+    Assertions.assertEquals(originalFilter.getFilter(), deserializedFilter.getFilter());
+    Assertions.assertEquals(originalFilter.getEncoding(), deserializedFilter.getEncoding());
+    Assertions.assertEquals(originalFilter.getStringDecodingCacheSize(), deserializedFilter.getStringDecodingCacheSize());
   }
 
   @Test
@@ -165,12 +191,12 @@ public class KafkaHeaderBasedFilterConfigTest
     KafkaHeaderBasedFilterConfig filter4 = new KafkaHeaderBasedFilterConfig(dimFilter1, "UTF-16", null);
     KafkaHeaderBasedFilterConfig filter5 = new KafkaHeaderBasedFilterConfig(dimFilter1, "UTF-8", 5000);
 
-    Assert.assertEquals(filter1, filter2);
-    Assert.assertNotEquals(filter1, filter3);
-    Assert.assertNotEquals(filter1, filter4);
-    Assert.assertNotEquals(filter1, filter5); // Different cache size
-    Assert.assertNotEquals(filter1, null);
-    Assert.assertNotEquals(filter1, "string");
+    Assertions.assertEquals(filter1, filter2);
+    Assertions.assertNotEquals(filter1, filter3);
+    Assertions.assertNotEquals(filter1, filter4);
+    Assertions.assertNotEquals(filter1, filter5); // Different cache size
+    Assertions.assertNotEquals(filter1, null);
+    Assertions.assertNotEquals(filter1, "string");
   }
 
   @Test
@@ -180,9 +206,9 @@ public class KafkaHeaderBasedFilterConfigTest
     KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, "UTF-8", null);
 
     String toString = filter.toString();
-    Assert.assertTrue(toString.contains("KafkaheaderBasedFilterConfig"));
-    Assert.assertTrue(toString.contains("filter="));
-    Assert.assertTrue(toString.contains("encoding='UTF-8'"));
-    Assert.assertTrue(toString.contains("stringDecodingCacheSize=10000"));
+    Assertions.assertTrue(toString.contains("KafkaheaderBasedFilterConfig"));
+    Assertions.assertTrue(toString.contains("filter="));
+    Assertions.assertTrue(toString.contains("encoding='UTF-8'"));
+    Assertions.assertTrue(toString.contains("stringDecodingCacheSize=10000"));
   }
 }

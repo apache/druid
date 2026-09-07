@@ -166,33 +166,27 @@ public class Parser
   public static Expr flatten(Expr expr)
   {
     return expr.visit(childExpr -> {
-      if (childExpr instanceof BinaryOpExprBase) {
-        BinaryOpExprBase binary = (BinaryOpExprBase) childExpr;
+      if (childExpr instanceof BinaryOpExprBase binary) {
         if (Evals.isAllConstants(binary.left, binary.right)) {
           return childExpr.eval(InputBindings.nilBindings()).toExpr();
         }
-      } else if (childExpr instanceof UnaryExpr) {
-        UnaryExpr unary = (UnaryExpr) childExpr;
-
+      } else if (childExpr instanceof UnaryExpr unary) {
         if (unary.expr instanceof ConstantExpr) {
           return childExpr.eval(InputBindings.nilBindings()).toExpr();
         }
-      } else if (childExpr instanceof FunctionExpr) {
-        FunctionExpr functionExpr = (FunctionExpr) childExpr;
+      } else if (childExpr instanceof FunctionExpr functionExpr) {
         List<Expr> args = functionExpr.args;
         if (Evals.isAllConstants(args)) {
           return childExpr.eval(InputBindings.nilBindings()).toExpr();
         }
-      } else if (childExpr instanceof ApplyFunctionExpr) {
-        ApplyFunctionExpr applyFunctionExpr = (ApplyFunctionExpr) childExpr;
+      } else if (childExpr instanceof ApplyFunctionExpr applyFunctionExpr) {
         List<Expr> args = applyFunctionExpr.argsExpr;
         if (Evals.isAllConstants(args)) {
-          if (applyFunctionExpr.analyzeInputs().getFreeVariables().size() == 0) {
+          if (applyFunctionExpr.analyzeInputs().getFreeVariables().isEmpty()) {
             return childExpr.eval(InputBindings.nilBindings()).toExpr();
           }
         }
-      } else if (childExpr instanceof ExprMacroTable.ExprMacroFunctionExpr) {
-        ExprMacroTable.ExprMacroFunctionExpr macroFn = (ExprMacroTable.ExprMacroFunctionExpr) childExpr;
+      } else if (childExpr instanceof ExprMacroTable.ExprMacroFunctionExpr macroFn) {
         if (Evals.isAllConstants(macroFn.getArgs())) {
           return childExpr.eval(InputBindings.nilBindings()).toExpr();
         }

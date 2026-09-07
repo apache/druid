@@ -27,10 +27,10 @@ import org.apache.druid.query.filter.InDimFilter;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.header.internals.RecordHeaders;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
@@ -42,13 +42,13 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
   private KafkaHeaderBasedFilterEvaluator evaluator;
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpStatic()
   {
     ExpressionProcessing.initializeForTests();
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     // Will be initialized in each test
@@ -101,7 +101,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
         100L,
         headers("environment", "production", "service", "user-service")
     );
-    Assert.assertTrue("Production record should be included", evaluator.shouldIncludeRecord(prodRecord));
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(prodRecord), "Production record should be included");
 
     // Staging record - should be excluded
     ConsumerRecord<byte[], byte[]> stagingRecord = createRecord(
@@ -110,7 +110,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
         101L,
         headers("environment", "staging", "service", "user-service")
     );
-    Assert.assertFalse("Staging record should be excluded", evaluator.shouldIncludeRecord(stagingRecord));
+    Assertions.assertFalse(evaluator.shouldIncludeRecord(stagingRecord), "Staging record should be excluded");
 
     // Record without environment header - should be included (permissive)
     ConsumerRecord<byte[], byte[]> noEnvRecord = createRecord(
@@ -119,7 +119,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
         102L,
         headers("service", "user-service")
     );
-    Assert.assertTrue("Record without environment header should be included", evaluator.shouldIncludeRecord(noEnvRecord));
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(noEnvRecord), "Record without environment header should be included");
   }
 
   @Test
@@ -137,7 +137,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
         100L,
         headers("environment", "production", "service", "user-service")
     );
-    Assert.assertTrue("User service record should be included", evaluator.shouldIncludeRecord(userRecord));
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(userRecord), "User service record should be included");
 
     // Payment service record - should be included
     ConsumerRecord<byte[], byte[]> paymentRecord = createRecord(
@@ -146,7 +146,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
         101L,
         headers("environment", "production", "service", "payment-service")
     );
-    Assert.assertTrue("Payment service record should be included", evaluator.shouldIncludeRecord(paymentRecord));
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(paymentRecord), "Payment service record should be included");
 
     // Notification service record - should be excluded
     ConsumerRecord<byte[], byte[]> notificationRecord = createRecord(
@@ -155,7 +155,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
         102L,
         headers("environment", "production", "service", "notification-service")
     );
-    Assert.assertFalse("Notification service record should be excluded", evaluator.shouldIncludeRecord(notificationRecord));
+    Assertions.assertFalse(evaluator.shouldIncludeRecord(notificationRecord), "Notification service record should be excluded");
   }
 
   @Test
@@ -181,7 +181,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
         100L,
         headers("metric.name", "io.kafka.server/delayed_share_fetch/expires/total/delta")
     );
-    Assert.assertTrue("Matching metric should be included", evaluator.shouldIncludeRecord(matchingRecord));
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(matchingRecord), "Matching metric should be included");
 
     // Non-matching metric - should be excluded
     ConsumerRecord<byte[], byte[]> nonMatchingRecord = createRecord(
@@ -190,7 +190,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
         101L,
         headers("metric.name", "some.other.metric")
     );
-    Assert.assertFalse("Non-matching metric should be excluded", evaluator.shouldIncludeRecord(nonMatchingRecord));
+    Assertions.assertFalse(evaluator.shouldIncludeRecord(nonMatchingRecord), "Non-matching metric should be excluded");
   }
 
   @Test
@@ -207,9 +207,9 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
     ConsumerRecord<byte[], byte[]> record3 = createRecord("events", 0, 102L, headers("environment", "production"));
 
     // Verify filtering results
-    Assert.assertTrue("Production record should be included", evaluator.shouldIncludeRecord(record1));
-    Assert.assertFalse("Staging record should be excluded", evaluator.shouldIncludeRecord(record2));
-    Assert.assertTrue("Production record should be included", evaluator.shouldIncludeRecord(record3));
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(record1), "Production record should be included");
+    Assertions.assertFalse(evaluator.shouldIncludeRecord(record2), "Staging record should be excluded");
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(record3), "Production record should be included");
   }
 
   @Test
@@ -226,14 +226,14 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
     KafkaHeaderBasedFilterConfig deserializedFilter = objectMapper.readValue(json, KafkaHeaderBasedFilterConfig.class);
 
     // Verify they're equivalent
-    Assert.assertEquals(originalFilter.getFilter(), deserializedFilter.getFilter());
-    Assert.assertEquals(originalFilter.getEncoding(), deserializedFilter.getEncoding());
-    Assert.assertEquals(originalFilter.getStringDecodingCacheSize(), deserializedFilter.getStringDecodingCacheSize());
+    Assertions.assertEquals(originalFilter.getFilter(), deserializedFilter.getFilter());
+    Assertions.assertEquals(originalFilter.getEncoding(), deserializedFilter.getEncoding());
+    Assertions.assertEquals(originalFilter.getStringDecodingCacheSize(), deserializedFilter.getStringDecodingCacheSize());
 
     // Test that the deserialized filter works
     evaluator = new KafkaHeaderBasedFilterEvaluator(deserializedFilter);
     ConsumerRecord<byte[], byte[]> record = createRecord("events", 0, 100L, headers("environment", "production"));
-    Assert.assertFalse("Deserialized filter should work", evaluator.shouldIncludeRecord(record));
+    Assertions.assertFalse(evaluator.shouldIncludeRecord(record), "Deserialized filter should work");
   }
 
   @Test
@@ -252,7 +252,7 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
 
     ConsumerRecord<byte[], byte[]> record = createRecord("events", 0, 100L, headers);
 
-    Assert.assertTrue("Should handle different encodings correctly", evaluator.shouldIncludeRecord(record));
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(record), "Should handle different encodings correctly");
   }
 
   @Test
@@ -264,6 +264,6 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
     evaluator = new KafkaHeaderBasedFilterEvaluator(headerFilter);
 
     ConsumerRecord<byte[], byte[]> record = createRecord("events", 0, 100L, headers("environment", "production"));
-    Assert.assertTrue("Should work with custom cache size", evaluator.shouldIncludeRecord(record));
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(record), "Should work with custom cache size");
   }
 }

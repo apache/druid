@@ -116,6 +116,9 @@ public class ClusterTestingModule implements DruidModule
       binder.bind(OverlordClient.class)
             .to(FaultyOverlordClient.class)
             .in(LazySingleton.class);
+      binder.bind(RemoteTaskActionClientFactory.class)
+            .to(FaultyRemoteTaskActionClientFactory.class)
+            .in(LazySingleton.class);
     }
   }
 

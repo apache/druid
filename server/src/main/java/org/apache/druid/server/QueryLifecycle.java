@@ -34,12 +34,10 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
@@ -49,6 +47,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -65,6 +64,7 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -96,9 +96,9 @@ public class QueryLifecycle
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
   private final AuthorizerMapper authorizerMapper;
-  private final DefaultQueryConfig defaultQueryConfig;
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
+  private final QueryConfigSnapshot configSnapshot;
   private final long startMs;
   private final long startNs;
 
@@ -108,8 +108,11 @@ public class QueryLifecycle
 
   @MonotonicNonNull
   private Query<?> baseQuery;
+  /**
+   * Context keys as received, i.e. the candidate set for {@link AuthConfig#contextKeysToAuthorize}.
+   */
   @MonotonicNonNull
-  private Set<String> userContextKeys;
+  private Set<String> queryContextKeysToAuthorize;
 
   public QueryLifecycle(
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -118,9 +121,9 @@ public class QueryLifecycle
       final ServiceEmitter emitter,
       final RequestLogger requestLogger,
       final AuthorizerMapper authorizerMapper,
-      final DefaultQueryConfig defaultQueryConfig,
       final AuthConfig authConfig,
       final PolicyEnforcer policyEnforcer,
+      final QueryConfigSnapshot configSnapshot,
       final long startMs,
       final long startNs
   )
@@ -131,9 +134,9 @@ public class QueryLifecycle
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.authorizerMapper = authorizerMapper;
-    this.defaultQueryConfig = defaultQueryConfig;
     this.authConfig = authConfig;
     this.policyEnforcer = policyEnforcer;
+    this.configSnapshot = configSnapshot;
     this.startMs = startMs;
     this.startNs = startNs;
   }
@@ -157,7 +160,21 @@ public class QueryLifecycle
       final AuthorizationResult authorizationResult
   )
   {
-    initialize(query);
+    return runSimple(query, authenticationResult, authorizationResult, null);
+  }
+
+  /**
+   * As {@link #runSimple(Query, AuthenticationResult, AuthorizationResult)}, but takes the context keys the client
+   * actually set. See {@link #initialize(Query, Set)}.
+   */
+  public <T> QueryResponse<T> runSimple(
+      final Query<T> query,
+      final AuthenticationResult authenticationResult,
+      final AuthorizationResult authorizationResult,
+      @Nullable final Set<String> clientProvidedQueryContextKeys
+  )
+  {
+    initialize(query, clientProvidedQueryContextKeys);
 
     final Sequence<T> results;
 
@@ -204,20 +221,36 @@ public class QueryLifecycle
    */
   public void initialize(final Query<?> baseQuery)
   {
+    initialize(baseQuery, null);
+  }
+
+  /**
+   * As {@link #initialize(Query)}, but takes the context keys the client actually set. Pass {@code null} to treat the
+   * whole context as client-set. The SQL layer must pass the real keys, since it merges defaults into the context
+   * and those should still be overridable by dynamic config.
+   *
+   * @throws DruidException if the current state is not NEW, which indicates a bug
+   */
+  public void initialize(final Query<?> baseQuery, @Nullable final Set<String> clientProvidedQueryContextKeys)
+  {
     transition(State.NEW, State.INITIALIZED);
 
-    userContextKeys = new HashSet<>(baseQuery.getContext().keySet());
+    final Map<String, Object> baseContext = baseQuery.getContext();
+    queryContextKeysToAuthorize = new HashSet<>(baseContext.keySet());
+
+    final Set<String> effectiveClientProvidedQueryContextKeys =
+        clientProvidedQueryContextKeys != null ? clientProvidedQueryContextKeys : baseContext.keySet();
+
     String queryId = baseQuery.getId();
     if (Strings.isNullOrEmpty(queryId)) {
       queryId = UUID.randomUUID().toString();
     }
 
-    Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(
-        defaultQueryConfig.getContext(),
-        baseQuery.getContext()
-    );
-    mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
-    this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
+    final Map<String, Object> finalContext =
+        configSnapshot.resolveContext(baseQuery, effectiveClientProvidedQueryContextKeys);
+    finalContext.put(BaseQuery.QUERY_ID, queryId);
+
+    this.baseQuery = baseQuery.withOverriddenContext(finalContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);
   }
 
@@ -244,7 +277,7 @@ public class QueryLifecycle
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         Iterables.transform(
-            authConfig.contextKeysToAuthorize(userContextKeys),
+            authConfig.contextKeysToAuthorize(queryContextKeysToAuthorize),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
@@ -282,7 +315,7 @@ public class QueryLifecycle
             AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR
         ),
         Iterables.transform(
-            authConfig.contextKeysToAuthorize(userContextKeys),
+            authConfig.contextKeysToAuthorize(queryContextKeysToAuthorize),
             contextParam -> new ResourceAction(new Resource(contextParam, ResourceType.QUERY_CONTEXT), Action.WRITE)
         )
     );
@@ -310,6 +343,33 @@ public class QueryLifecycle
     }
   }
 
+  /**
+   * Checks if the query matches any blocklist rules. If a rule matches, throws a DruidException.
+   * Rules are evaluated in order, and the first match wins.
+   *
+   * @throws DruidException if the query is blocklisted
+   */
+  private void checkQueryBlocklist()
+  {
+    final List<QueryBlocklistRule> queryBlocklist = configSnapshot.getQueryBlocklist();
+
+    if (queryBlocklist.isEmpty()) {
+      return;
+    }
+
+    for (QueryBlocklistRule rule : queryBlocklist) {
+      if (rule.matches(this.baseQuery)) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.FORBIDDEN)
+                            .build(
+                                "Query[%s] blocked by rule[%s]",
+                                this.baseQuery.getId(),
+                                rule.getRuleName()
+                            );
+      }
+    }
+  }
+
   private AuthorizationResult doAuthorize(
       final AuthenticationResult authenticationResult,
       final AuthorizationResult authorizationResult
@@ -318,10 +378,18 @@ public class QueryLifecycle
     Preconditions.checkNotNull(authenticationResult, "authenticationResult");
     Preconditions.checkNotNull(authorizationResult, "authorizationResult");
 
+    // Authentication has already happened, so record the identity before anything below can throw. Note this means
+    // a set authenticationResult implies only that authorization was attempted, not that it succeeded.
+    this.authenticationResult = authenticationResult;
+
     if (!authorizationResult.allowBasicAccess()) {
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
+      // Check blocklist while in AUTHORIZING state, before transitioning to AUTHORIZED
+      // This ensures the exception is properly handled as an authorization failure
+      checkQueryBlocklist();
+
       transition(State.AUTHORIZING, State.AUTHORIZED);
       this.baseQuery = this.baseQuery.withDataSource(baseQuery.getDataSource()
                                                               .withPolicies(
@@ -330,7 +398,6 @@ public class QueryLifecycle
                                                               ));
     }
 
-    this.authenticationResult = authenticationResult;
     return authorizationResult;
   }
 
@@ -401,6 +468,9 @@ public class QueryLifecycle
           StringUtils.nullToEmptyNonDruidDataString(remoteAddress)
       );
       queryMetrics.success(success);
+
+      final int statusCode = DruidMetrics.computeStatusCode(e);
+      queryMetrics.statusCode(statusCode);
       queryMetrics.reportQueryTime(queryTimeNs);
 
       if (bytesWritten >= 0) {
@@ -417,6 +487,7 @@ public class QueryLifecycle
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("success", success);
+      statsMap.put(DruidMetrics.STATUS_CODE, statusCode);
 
       if (authenticationResult != null) {
         statsMap.put("identity", authenticationResult.getIdentity());

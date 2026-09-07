@@ -20,20 +20,22 @@
 package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.primitives.Ints;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.StringColumnFormatSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.SelectableColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumnFormat;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
@@ -53,9 +55,10 @@ import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.VSizeColumnarInts;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
 import org.apache.druid.segment.data.WritableSupplier;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -106,28 +109,34 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   @JsonCreator
   public static DictionaryEncodedColumnPartSerde createDeserializer(
       @JsonProperty("bitmapSerdeFactory") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
-      @NotNull @JsonProperty("byteOrder") ByteOrder byteOrder
+      @NotNull @JsonProperty("byteOrder") ByteOrder byteOrder,
+      @JsonProperty("columnFormatSpec") @Nullable StringColumnFormatSpec columnFormatSpec
   )
   {
     return new DictionaryEncodedColumnPartSerde(
         byteOrder,
         bitmapSerdeFactory != null ? bitmapSerdeFactory : new BitmapSerde.LegacyBitmapSerdeFactory(),
+        columnFormatSpec,
         null
     );
   }
 
   private final ByteOrder byteOrder;
   private final BitmapSerdeFactory bitmapSerdeFactory;
+  @Nullable
+  private final StringColumnFormatSpec columnFormatSpec;
   private final Serializer serializer;
 
   private DictionaryEncodedColumnPartSerde(
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable StringColumnFormatSpec columnFormatSpec,
       @Nullable Serializer serializer
   )
   {
     this.byteOrder = byteOrder;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
+    this.columnFormatSpec = columnFormatSpec;
     this.serializer = serializer;
   }
 
@@ -141,6 +150,14 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   public ByteOrder getByteOrder()
   {
     return byteOrder;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public StringColumnFormatSpec getColumnFormatSpec()
+  {
+    return columnFormatSpec;
   }
 
   public static SerializerBuilder serializerBuilder()
@@ -166,6 +183,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     private ByteBufferWriter<ImmutableRTree> spatialIndexWriter = null;
     @Nullable
     private ByteOrder byteOrder = null;
+    @Nullable
+    private StringColumnFormatSpec columnFormatSpec = null;
 
     public SerializerBuilder withDictionary(DictionaryWriter<String> dictionaryWriter)
     {
@@ -203,6 +222,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
+    public SerializerBuilder withColumnFormatSpec(@Nullable StringColumnFormatSpec columnFormatSpec)
+    {
+      this.columnFormatSpec = columnFormatSpec;
+      return this;
+    }
+
     public SerializerBuilder withValue(ColumnarIntsSerializer valueWriter, boolean hasMultiValue, boolean compressed)
     {
       this.valueWriter = valueWriter;
@@ -234,6 +259,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       return new DictionaryEncodedColumnPartSerde(
           byteOrder,
           bitmapSerdeFactory,
+          columnFormatSpec,
           new Serializer()
           {
             @Override
@@ -259,23 +285,23 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
             }
 
             @Override
-            public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+            public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
             {
               Channels.writeFully(channel, ByteBuffer.wrap(new byte[]{version.asByte()}));
               if (version.compareTo(VERSION.COMPRESSED) >= 0) {
                 channel.write(ByteBuffer.wrap(Ints.toByteArray(flags)));
               }
               if (dictionaryWriter != null) {
-                dictionaryWriter.writeTo(channel, smoosher);
+                dictionaryWriter.writeTo(channel, fileBuilder);
               }
               if (valueWriter != null) {
-                valueWriter.writeTo(channel, smoosher);
+                valueWriter.writeTo(channel, fileBuilder);
               }
               if (bitmapIndexWriter != null) {
-                bitmapIndexWriter.writeTo(channel, smoosher);
+                bitmapIndexWriter.writeTo(channel, fileBuilder);
               }
               if (spatialIndexWriter != null) {
-                spatialIndexWriter.writeTo(channel, smoosher);
+                spatialIndexWriter.writeTo(channel, fileBuilder);
               }
             }
           }
@@ -319,7 +345,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
         if (parent != null) {
-          final Supplier<? extends BaseColumn> parentSupplier = parent.getColumnSupplier();
+          final Supplier<? extends SelectableColumn> parentSupplier = parent.getColumnSupplier();
           dictionarySupplier = ((StringUtf8DictionaryEncodedColumnSupplier<?>) parentSupplier).getDictionary();
         } else {
           dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
@@ -380,12 +406,20 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               rSpatialIndex != null
           );
         }
+
+        builder.setColumnFormat(new StringDictionaryEncodedColumnFormat(
+            hasMultipleValues,
+            hasNulls,
+            rBitmaps != null,
+            rSpatialIndex != null,
+            columnFormatSpec
+        ));
       }
 
       private WritableSupplier<ColumnarInts> readSingleValuedColumn(
           VERSION version,
           ByteBuffer buffer,
-          SmooshedFileMapper smooshReader
+          SegmentFileMapper fileMapper
       )
       {
         switch (version) {
@@ -393,7 +427,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           case UNCOMPRESSED_WITH_FLAGS:
             return VSizeColumnarInts.readFromByteBuffer(buffer);
           case COMPRESSED:
-            return CompressedVSizeColumnarIntsSupplier.fromByteBuffer(buffer, byteOrder, smooshReader);
+            return CompressedVSizeColumnarIntsSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
           default:
             throw new IAE("Unsupported single-value version[%s]", version);
         }
@@ -403,7 +437,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           VERSION version,
           ByteBuffer buffer,
           int flags,
-          SmooshedFileMapper smooshReader
+          SegmentFileMapper fileMapper
       )
       {
         switch (version) {
@@ -419,9 +453,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           }
           case COMPRESSED: {
             if (Feature.MULTI_VALUE.isSet(flags)) {
-              return CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder, smooshReader);
+              return CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
             } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
-              return V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder, smooshReader);
+              return V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder, fileMapper);
             } else {
               throw new IAE("Unrecognized multi-value flag[%d] for version[%s]", flags, version);
             }

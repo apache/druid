@@ -74,7 +74,7 @@ public class KinesisInputReader implements InputEntityReader
     final KinesisRecordEntity record = source.getEntity();
     final Map<String, Object> mergedHeaderMap = extractHeaders(record);
 
-    if (record.getRecord().getData() != null) {
+    if (record.getRecord().data() != null) {
       return buildBlendedRows(valueParser, mergedHeaderMap);
     } else {
       return CloseableIterators.withEmptyBaggage(buildInputRowsForMap(mergedHeaderMap).iterator());
@@ -86,7 +86,7 @@ public class KinesisInputReader implements InputEntityReader
   {
     final KinesisRecordEntity record = source.getEntity();
     InputRowListPlusRawValues headers = extractHeaderSample(record);
-    if (record.getRecord().getData() != null) {
+    if (record.getRecord().data() != null) {
       return buildBlendedRowsSample(valueParser, headers.getRawValues());
     } else {
       final List<InputRowListPlusRawValues> rows = Collections.singletonList(headers);
@@ -97,8 +97,8 @@ public class KinesisInputReader implements InputEntityReader
   private Map<String, Object> extractHeaders(KinesisRecordEntity record)
   {
     final Map<String, Object> mergedHeaderMap = new HashMap<>();
-    mergedHeaderMap.put(timestampColumnName, record.getRecord().getApproximateArrivalTimestamp().getTime());
-    mergedHeaderMap.put(partitionKeyColumnName, record.getRecord().getPartitionKey());
+    mergedHeaderMap.put(timestampColumnName, record.getRecord().approximateArrivalTimestamp().toEpochMilli());
+    mergedHeaderMap.put(partitionKeyColumnName, record.getRecord().partitionKey());
     return mergedHeaderMap;
   }
 

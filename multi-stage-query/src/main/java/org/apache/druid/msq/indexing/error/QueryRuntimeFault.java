@@ -22,12 +22,16 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
- * Fault to throw when the error comes from the druid native query runtime while running in the MSQ engine.
+ * Currently unused. Remains for compatibility with older workers that may still report it, and older reports
+ * that still contain it. Currently, {@link DruidExceptionFault} is preferred for {@link DruidException} or
+ * recognized exceptions that are thrown by the query stack. Fault {@link UnknownFault} is preferred for
+ * other errors from the query stack.
  */
 @JsonTypeName(QueryRuntimeFault.CODE)
 public class QueryRuntimeFault extends BaseMSQFault
@@ -52,6 +56,15 @@ public class QueryRuntimeFault extends BaseMSQFault
   public String getBaseErrorMessage()
   {
     return baseErrorMessage;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                         .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

@@ -82,15 +82,10 @@ public class Main
            .withDefaultCommand(Help.class)
            .withCommands(toolCommands);
 
-    builder.withGroup("index")
-           .withDescription("Run indexing for druid")
-           .withDefaultCommand(Help.class)
-           .withCommands(CliHadoopIndexer.class);
-
     builder.withGroup("internal")
            .withDescription("Processes that Druid runs \"internally\", you should rarely use these directly")
            .withDefaultCommand(Help.class)
-           .withCommands(CliPeon.class, CliInternalHadoopIndexer.class);
+           .withCommands(CliPeon.class);
 
     final Injector injector = new StartupInjectorBuilder().forServer().build();
     ExtensionsLoader extnLoader = ExtensionsLoader.instance(injector);

@@ -48,4 +48,4 @@ while IFS= read -r jar; do
         echo "Replaced duplicate $jar with symlink to ${canonical[$key]}"
     fi
 # Read in an order that retain core libs as original jars
-done < <(find $JAR_DIR -wholename '*/lib/*.jar' | sort ; find $JAR_DIR -wholename '*/extensions/*.jar' | sort ; find $JAR_DIR -wholename '*/hadoop-dependencies/*.jar' | sort)
+done < <(find $JAR_DIR -wholename '*/lib/*.jar' | sort ; find $JAR_DIR -wholename '*/extensions/*.jar' | sort)

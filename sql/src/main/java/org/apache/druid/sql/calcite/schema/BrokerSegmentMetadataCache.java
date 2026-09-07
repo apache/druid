@@ -222,6 +222,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // update datasource metadata in the cache
     polledDataSourceMetadata.forEach(this::updateDSMetadata);
 
+    emitMetricForSkippedSegments(segmentsToRefresh, polledDataSourceMetadata);
     // Remove segments of the datasource from refresh list for which we received schema from the Coordinator.
     segmentsToRefresh.removeIf(segmentId -> polledDataSourceMetadata.containsKey(segmentId.getDataSource()));
 
@@ -275,6 +276,29 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       updateDSMetadata(dataSource, physicalDatasourceMetadata);
     }
+  }
+
+  private void emitMetricForSkippedSegments(
+      Set<SegmentId> segmentsToRefresh,
+      Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata
+  )
+  {
+    final Map<String, Integer> datasourceToNumSegmentsSkipped = new HashMap<>();
+
+    for (SegmentId segmentId : segmentsToRefresh) {
+      if (polledDataSourceMetadata.containsKey(segmentId.getDataSource())) {
+        datasourceToNumSegmentsSkipped.merge(segmentId.getDataSource(), 1, Integer::sum);
+      }
+    }
+
+    datasourceToNumSegmentsSkipped.forEach(
+        (dataSource, count) ->
+            emitMetric(
+                Metric.BROKER_SEGMENTS_SKIPPED_REFRESH,
+                count,
+                new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+            )
+    );
   }
 
   @Override
@@ -334,10 +358,33 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   private void updateDSMetadata(String dataSource, PhysicalDatasourceMetadata physicalDatasourceMetadata)
   {
     final PhysicalDatasourceMetadata oldTable = tables.put(dataSource, physicalDatasourceMetadata);
-    if (oldTable == null || !oldTable.getRowSignature().equals(physicalDatasourceMetadata.getRowSignature())) {
-      log.info("[%s] has new signature: %s.", dataSource, physicalDatasourceMetadata.getRowSignature());
+    final RowSignature newRowSignature = physicalDatasourceMetadata.getRowSignature();
+    final int newColumnCount = newRowSignature.getColumnNames().size();
+
+    final ServiceMetricEvent.Builder builder =
+        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource);
+
+    if (oldTable == null) {
+      log.info(
+          "Row signature for datasource[%s] initialized with [%d] columns - signature[%s]",
+          dataSource, newColumnCount, newRowSignature
+      );
+
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newColumnCount, builder);
+      return;
+    }
+
+    final RowSignature oldRowSignature = oldTable.getRowSignature();
+    if (!oldRowSignature.equals(newRowSignature)) {
+      log.info(
+          "Row signature for datasource[%s] updated from [%d] columns to [%d] columns - new signature[%s]",
+          dataSource, oldRowSignature.getColumnNames().size(), newColumnCount, newRowSignature
+      );
+
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_CHANGED, 1, builder);
+      emitMetric(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT, newColumnCount, builder);
     } else {
-      log.debug("[%s] signature is unchanged.", dataSource);
+      log.debug("Row signature for datasource[%s] is unchanged.", dataSource);
     }
   }
 }

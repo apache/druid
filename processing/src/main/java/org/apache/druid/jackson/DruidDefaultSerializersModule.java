@@ -36,7 +36,6 @@ import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameBasedInlineDataSourceSerializer;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContextDeserializer;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
@@ -187,8 +186,5 @@ public class DruidDefaultSerializersModule extends SimpleModule
         }
     );
     addDeserializer(ResponseContext.class, new ResponseContextDeserializer());
-
-    addSerializer(RowsAndColumns.class, new RowsAndColumns.RowsAndColumnsSerializer());
-    addDeserializer(RowsAndColumns.class, new RowsAndColumns.RowsAndColumnsDeserializer());
   }
 }

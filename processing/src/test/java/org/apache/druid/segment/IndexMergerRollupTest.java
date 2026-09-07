@@ -35,11 +35,11 @@ import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.time.Instant;
@@ -56,16 +56,16 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   private IndexIO indexIO;
   private IndexSpec indexSpec;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     indexMerger = TestHelper
         .getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
     indexIO = TestHelper.getTestIndexIO();
-    indexSpec = IndexSpec.DEFAULT;
+    indexSpec = IndexSpec.getDefault();
   }
 
   private void testFirstLastRollup(
@@ -91,7 +91,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
             ))
     );
 
-    final File tempDir = temporaryFolder.newFolder();
+    final File tempDir = temporaryFolder.newFolder("rollup");
 
     List<QueryableIndex> indexes = new ArrayList<>();
     Instant time = Instant.now();
@@ -106,7 +106,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
     File indexFile = indexMerger
         .mergeQueryableIndex(indexes, true, aggregatorFactories, tempDir, indexSpec, null, -1);
     try (QueryableIndex mergedIndex = indexIO.loadIndex(indexFile)) {
-      Assert.assertEquals("Number of rows should be 1", 1, mergedIndex.getNumRows());
+      Assertions.assertEquals(1, mergedIndex.getNumRows(), "Number of rows should be 1");
     }
   }
 

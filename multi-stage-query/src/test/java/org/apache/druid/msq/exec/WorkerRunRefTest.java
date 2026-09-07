@@ -30,13 +30,14 @@ import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -45,13 +46,13 @@ public class WorkerRunRefTest
   private static final Logger log = new Logger(WorkerRunRefTest.class);
   private ListeningExecutorService exec;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(2, "worker-run-ref-test-%s"));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws InterruptedException
   {
     exec.shutdownNow();
@@ -82,6 +83,11 @@ public class WorkerRunRefTest
           workerFinished.countDown();
         }
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -105,9 +111,9 @@ public class WorkerRunRefTest
     // it returns immediately (even when the worker is still running).
     workerFinished.await();
 
-    Assert.assertTrue("Future should be done", future.isDone());
-    Assert.assertTrue("Future should be canceled", future.isCancelled());
-    Assert.assertTrue("Worker should have been interrupted", wasInterrupted.get());
+    Assertions.assertTrue(future.isDone(), "Future should be done");
+    Assertions.assertFalse(future.isCancelled(), "Future should not be canceled");
+    Assertions.assertTrue(wasInterrupted.get(), "Worker should have been interrupted");
 
     // awaitStop should return immediately since the worker is done
     runRef.awaitStop();
@@ -123,6 +129,11 @@ public class WorkerRunRefTest
       {
         // Exit immediately
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -137,8 +148,8 @@ public class WorkerRunRefTest
     }
 
     // Future should be done and not canceled
-    Assert.assertTrue("Future should be done", future.isDone());
-    Assert.assertFalse("Future should not be canceled", future.isCancelled());
+    Assertions.assertTrue(future.isDone(), "Future should be done");
+    Assertions.assertFalse(future.isCancelled(), "Future should not be canceled");
 
     // awaitStop should return immediately since the worker is done
     runRef.awaitStop();
@@ -155,6 +166,11 @@ public class WorkerRunRefTest
       {
         throw expectedException;
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -169,8 +185,8 @@ public class WorkerRunRefTest
     }
 
     // Future should be done and not canceled
-    Assert.assertTrue("Future should be done", future.isDone());
-    Assert.assertFalse("Future should not be canceled", future.isCancelled());
+    Assertions.assertTrue(future.isDone(), "Future should be done");
+    Assertions.assertFalse(future.isCancelled(), "Future should not be canceled");
 
     // awaitStop should not throw even though the worker failed
     runRef.awaitStop();
@@ -187,6 +203,11 @@ public class WorkerRunRefTest
       {
         workerStarted.countDown();
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -196,11 +217,11 @@ public class WorkerRunRefTest
 
     // Run should return a completed future
     final ListenableFuture<?> future = runRef.run(worker, exec);
-    Assert.assertTrue("Future should be done", future.isDone());
-    Assert.assertFalse("Future should not be canceled", future.isCancelled());
+    Assertions.assertTrue(future.isDone(), "Future should be done");
+    Assertions.assertFalse(future.isCancelled(), "Future should not be canceled");
 
     // Worker should not have run
-    Assert.assertEquals(1, workerStarted.getCount());
+    Assertions.assertEquals(1, workerStarted.getCount());
   }
 
   @Test
@@ -213,6 +234,11 @@ public class WorkerRunRefTest
       {
         // Do nothing
       }
+
+      @Override
+      public void stop()
+      {
+      }
     };
 
     final WorkerRunRef runRef = new WorkerRunRef();
@@ -221,7 +247,7 @@ public class WorkerRunRefTest
     runRef.run(worker, exec);
 
     // Second run should throw
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> runRef.run(worker, exec)
     );
@@ -233,10 +259,80 @@ public class WorkerRunRefTest
     final WorkerRunRef runRef = new WorkerRunRef();
 
     // awaitStop without run should throw
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         runRef::awaitStop
     );
+  }
+
+  @Test
+  public void testCancelCallsStop() throws Exception
+  {
+    final CountDownLatch workerStarted = new CountDownLatch(1);
+    final CountDownLatch workerFinished = new CountDownLatch(1);
+    final AtomicBoolean stopCalled = new AtomicBoolean(false);
+    final Worker worker = new TestWorker("test-worker")
+    {
+      @Override
+      public void run()
+      {
+        try {
+          workerStarted.countDown();
+          Thread.sleep(300_000);
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+        finally {
+          workerFinished.countDown();
+        }
+      }
+
+      @Override
+      public void stop()
+      {
+        stopCalled.set(true);
+      }
+    };
+
+    final WorkerRunRef runRef = new WorkerRunRef();
+    runRef.run(worker, exec);
+
+    workerStarted.await();
+    runRef.cancel();
+    workerFinished.await();
+
+    Assertions.assertTrue(stopCalled.get());
+  }
+
+  @Test
+  public void testCancelBeforeRunDoesNotCallStop()
+  {
+    final AtomicBoolean stopCalled = new AtomicBoolean(false);
+    final Worker worker = new TestWorker("test-worker")
+    {
+      @Override
+      public void run()
+      {
+        // Should not run
+      }
+
+      @Override
+      public void stop()
+      {
+        stopCalled.set(true);
+      }
+    };
+
+    final WorkerRunRef runRef = new WorkerRunRef();
+    runRef.cancel();
+
+    Assertions.assertThrows(
+        ExecutionException.class,
+        () -> runRef.run(worker, exec).get()
+    );
+
+    Assertions.assertFalse(stopCalled.get());
   }
 
   /**

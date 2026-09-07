@@ -98,4 +98,16 @@ public interface DataSegmentKiller
    * is only implemented by local and HDFS.
    */
   void killAll() throws IOException;
+
+  /**
+   * Recursively removes a directory (or object-store prefix) under the configured deep storage root. The path is
+   * relative to that root: no leading slash, no {@code ..} segments, no backslashes. If the path does not exist, this
+   * is a no-op. The default implementation does nothing; extensions that cannot recurse should keep the default.
+   * HDFS currently only implements this method.
+   *
+   * @throws IOException if deletion fails
+   */
+  default void killRecursively(String relativePath) throws IOException
+  {
+  }
 }

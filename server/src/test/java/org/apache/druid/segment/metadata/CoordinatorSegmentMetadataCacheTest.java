@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -47,6 +48,8 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -58,10 +61,10 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentMetadata;
@@ -88,10 +91,10 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.skife.jdbi.v2.StatementContext;
@@ -112,6 +115,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetadataCacheTestBase
@@ -124,7 +128,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   private SegmentsMetadataManager segmentsMetadataManager;
   private Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception
   {
@@ -137,7 +141,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     segmentsMetadataManagerConfigSupplier = Suppliers.ofInstance(metadataManagerConfig);
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception
   {
@@ -194,10 +198,10 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   public void testGetTableMap() throws InterruptedException
   {
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch();
-    Assert.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), schema.getDatasourceNames());
+    Assertions.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), schema.getDatasourceNames());
 
     final Set<String> tableNames = schema.getDatasourceNames();
-    Assert.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), tableNames);
+    Assertions.assertEquals(ImmutableSet.of(DATASOURCE1, DATASOURCE2, SOME_DATASOURCE), tableNames);
   }
 
   @Test
@@ -231,34 +235,34 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     final DataSourceInformation fooDs = schema.getDatasource(SOME_DATASOURCE);
     final RowSignature fooRowSignature = fooDs.getRowSignature();
     List<String> columnNames = fooRowSignature.getColumnNames();
-    Assert.assertEquals(9, columnNames.size());
+    Assertions.assertEquals(9, columnNames.size());
 
-    Assert.assertEquals("__time", columnNames.get(0));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+    Assertions.assertEquals("__time", columnNames.get(0));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
 
-    Assert.assertEquals("numbery", columnNames.get(1));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(1)).get());
+    Assertions.assertEquals("numbery", columnNames.get(1));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(1)).get());
 
-    Assert.assertEquals("numberyArrays", columnNames.get(2));
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(2)).get());
+    Assertions.assertEquals("numberyArrays", columnNames.get(2));
+    Assertions.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(2)).get());
 
-    Assert.assertEquals("stringy", columnNames.get(3));
-    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(3)).get());
+    Assertions.assertEquals("stringy", columnNames.get(3));
+    Assertions.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(3)).get());
 
-    Assert.assertEquals("array", columnNames.get(4));
-    Assert.assertEquals(ColumnType.LONG_ARRAY, fooRowSignature.getColumnType(columnNames.get(4)).get());
+    Assertions.assertEquals("array", columnNames.get(4));
+    Assertions.assertEquals(ColumnType.LONG_ARRAY, fooRowSignature.getColumnType(columnNames.get(4)).get());
 
-    Assert.assertEquals("nested", columnNames.get(5));
-    Assert.assertEquals(ColumnType.ofComplex("json"), fooRowSignature.getColumnType(columnNames.get(5)).get());
+    Assertions.assertEquals("nested", columnNames.get(5));
+    Assertions.assertEquals(ColumnType.ofComplex("json"), fooRowSignature.getColumnType(columnNames.get(5)).get());
 
-    Assert.assertEquals("cnt", columnNames.get(6));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(6)).get());
+    Assertions.assertEquals("cnt", columnNames.get(6));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(6)).get());
 
-    Assert.assertEquals("m1", columnNames.get(7));
-    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(7)).get());
+    Assertions.assertEquals("m1", columnNames.get(7));
+    Assertions.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(7)).get());
 
-    Assert.assertEquals("unique_dim1", columnNames.get(8));
-    Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(8)).get());
+    Assertions.assertEquals("unique_dim1", columnNames.get(8));
+    Assertions.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(8)).get());
   }
 
   @Test
@@ -271,34 +275,34 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     final RowSignature fooRowSignature = fooDs.getRowSignature();
     List<String> columnNames = fooRowSignature.getColumnNames();
-    Assert.assertEquals(9, columnNames.size());
+    Assertions.assertEquals(9, columnNames.size());
 
-    Assert.assertEquals("__time", columnNames.get(0));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+    Assertions.assertEquals("__time", columnNames.get(0));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
 
-    Assert.assertEquals("numbery", columnNames.get(1));
-    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(1)).get());
+    Assertions.assertEquals("numbery", columnNames.get(1));
+    Assertions.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(1)).get());
 
-    Assert.assertEquals("numberyArrays", columnNames.get(2));
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(2)).get());
+    Assertions.assertEquals("numberyArrays", columnNames.get(2));
+    Assertions.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(2)).get());
 
-    Assert.assertEquals("stringy", columnNames.get(3));
-    Assert.assertEquals(ColumnType.STRING_ARRAY, fooRowSignature.getColumnType(columnNames.get(3)).get());
+    Assertions.assertEquals("stringy", columnNames.get(3));
+    Assertions.assertEquals(ColumnType.STRING_ARRAY, fooRowSignature.getColumnType(columnNames.get(3)).get());
 
-    Assert.assertEquals("array", columnNames.get(4));
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(4)).get());
+    Assertions.assertEquals("array", columnNames.get(4));
+    Assertions.assertEquals(ColumnType.DOUBLE_ARRAY, fooRowSignature.getColumnType(columnNames.get(4)).get());
 
-    Assert.assertEquals("nested", columnNames.get(5));
-    Assert.assertEquals(ColumnType.ofComplex("json"), fooRowSignature.getColumnType(columnNames.get(5)).get());
+    Assertions.assertEquals("nested", columnNames.get(5));
+    Assertions.assertEquals(ColumnType.ofComplex("json"), fooRowSignature.getColumnType(columnNames.get(5)).get());
 
-    Assert.assertEquals("cnt", columnNames.get(6));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(6)).get());
+    Assertions.assertEquals("cnt", columnNames.get(6));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(6)).get());
 
-    Assert.assertEquals("m1", columnNames.get(7));
-    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(7)).get());
+    Assertions.assertEquals("m1", columnNames.get(7));
+    Assertions.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(7)).get());
 
-    Assert.assertEquals("unique_dim1", columnNames.get(8));
-    Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(8)).get());
+    Assertions.assertEquals("unique_dim1", columnNames.get(8));
+    Assertions.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(8)).get());
   }
 
   @Test
@@ -310,20 +314,20 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
+    Assertions.assertEquals(6, segments.size());
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
-    Assert.assertNotNull(segmentToRemove);
+    Assertions.assertNotNull(segmentToRemove);
     schema.removeSegment(segmentToRemove);
 
     // The following line can cause NPE without segmentMetadata null check in
     // SegmentMetadataCache#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
+    Assertions.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
@@ -381,11 +385,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
+    Assertions.assertEquals(6, segments.size());
 
     // verify that dim3 column isn't present in schema for datasource foo
     DataSourceInformation fooDs = schema.getDatasource("foo");
-    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().noneMatch("dim3"::equals));
+    Assertions.assertTrue(fooDs.getRowSignature().getColumnNames().stream().noneMatch("dim3"::equals));
 
     // segments contains two segments with datasource "foo" and one with datasource "foo2"
     // let's remove the only segment with datasource "foo2"
@@ -393,7 +397,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
-    Assert.assertNotNull(segmentToRemove);
+    Assertions.assertNotNull(segmentToRemove);
     schema.removeSegment(segmentToRemove);
 
     // we will add a segment to another datasource and
@@ -434,7 +438,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     walker.add(newSegment, index);
     serverView.addSegment(newSegment, ServerType.HISTORICAL);
 
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
     Set<String> dataSources = segments.stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
     dataSources.remove("foo2");
@@ -450,13 +454,13 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                     .collect(Collectors.toList());
 
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), dataSourcesToRefresh);
-    Assert.assertEquals(6, schema.getSegmentMetadataSnapshot().size());
+    Assertions.assertEquals(6, schema.getSegmentMetadataSnapshot().size());
 
     fooDs = schema.getDatasource("foo");
 
     // check if the new column present in the added segment is present in the datasource schema
     // ensuring that the schema is rebuilt
-    Assert.assertTrue(fooDs.getRowSignature().getColumnNames().stream().anyMatch("dim3"::equals));
+    Assertions.assertTrue(fooDs.getRowSignature().getColumnNames().stream().anyMatch("dim3"::equals));
   }
 
   @Test
@@ -468,19 +472,19 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
+    Assertions.assertEquals(6, segments.size());
     // remove one of the segments with datasource "foo"
     final DataSegment segmentToRemove = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo"))
                                                 .findFirst()
                                                 .orElse(null);
-    Assert.assertNotNull(segmentToRemove);
+    Assertions.assertNotNull(segmentToRemove);
     schema.removeSegment(segmentToRemove);
 
     // The following line can cause NPE without segmentMetadata null check in
     // SegmentMetadataCache#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
-    Assert.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
+    Assertions.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
   }
 
   @Test
@@ -497,16 +501,16 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                 .filter(segment -> segment.getDataSource().equals("foo3"))
                                                 .findFirst()
                                                 .orElse(null);
-    Assert.assertNotNull(existingSegment);
+    Assertions.assertNotNull(existingSegment);
     final AvailableSegmentMetadata metadata = segmentsMetadata.get(existingSegment.getId());
-    Assert.assertEquals(1L, metadata.isRealtime());
+    Assertions.assertEquals(1L, metadata.isRealtime());
     // get the historical server
     final DruidServer historicalServer = druidServers.stream()
                                                               .filter(s -> s.getType().equals(ServerType.HISTORICAL))
                                                               .findAny()
                                                               .orElse(null);
 
-    Assert.assertNotNull(historicalServer);
+    Assertions.assertNotNull(historicalServer);
     final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();
 
     // add existingSegment to historical
@@ -517,15 +521,15 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                          .filter(segment -> segment.getDataSource().equals("foo3"))
                                          .findFirst()
                                          .orElse(null);
-    Assert.assertNotNull(currentSegment);
+    Assertions.assertNotNull(currentSegment);
     AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    Assert.assertEquals(0L, currentMetadata.isRealtime());
+    Assertions.assertEquals(0L, currentMetadata.isRealtime());
 
     DruidServer realtimeServer = druidServers.stream()
                                                       .filter(s -> s.getType().equals(ServerType.INDEXER_EXECUTOR))
                                                       .findAny()
                                                       .orElse(null);
-    Assert.assertNotNull(realtimeServer);
+    Assertions.assertNotNull(realtimeServer);
     // drop existingSegment from realtime task
     schema.removeServerSegment(realtimeServer.getMetadata(), existingSegment);
     segmentsMetadata = schema.getSegmentMetadataSnapshot();
@@ -533,9 +537,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                              .filter(segment -> segment.getDataSource().equals("foo3"))
                              .findFirst()
                              .orElse(null);
-    Assert.assertNotNull(currentSegment);
+    Assertions.assertNotNull(currentSegment);
     currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    Assert.assertEquals(0L, currentMetadata.isRealtime());
+    Assertions.assertEquals(0L, currentMetadata.isRealtime());
   }
 
   @Test
@@ -567,20 +571,20 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     };
 
     serverView.addSegment(newSegment(datasource, 1), ServerType.HISTORICAL);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(7, schema.getTotalSegments());
+    Assertions.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
         .stream()
         .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
         .collect(Collectors.toList());
-    Assert.assertEquals(1, metadatas.size());
+    Assertions.assertEquals(1, metadatas.size());
     AvailableSegmentMetadata metadata = metadatas.get(0);
-    Assert.assertEquals(0, metadata.isRealtime());
-    Assert.assertEquals(0, metadata.getNumRows());
-    Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
+    Assertions.assertEquals(0, metadata.isRealtime());
+    Assertions.assertEquals(0, metadata.getNumRows());
+    Assertions.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
   }
 
   @Test
@@ -620,22 +624,22 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     DataSegment segment = newSegment(datasource, 1);
     serverView.addSegment(segment, ServerType.INDEXER_EXECUTOR);
     serverView.addSegment(segment, ServerType.HISTORICAL);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(7, schema.getTotalSegments());
+    Assertions.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
         .stream()
         .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
         .collect(Collectors.toList());
-    Assert.assertEquals(1, metadatas.size());
+    Assertions.assertEquals(1, metadatas.size());
     AvailableSegmentMetadata metadata = metadatas.get(0);
-    Assert.assertEquals(0, metadata.isRealtime()); // realtime flag is unset when there is any historical
-    Assert.assertEquals(0, metadata.getNumRows());
-    Assert.assertEquals(2, metadata.getNumReplicas());
-    Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
-    Assert.assertFalse(schema.getMutableSegments().contains(metadata.getSegment().getId()));
+    Assertions.assertEquals(0, metadata.isRealtime()); // realtime flag is unset when there is any historical
+    Assertions.assertEquals(0, metadata.getNumRows());
+    Assertions.assertEquals(2, metadata.getNumReplicas());
+    Assertions.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
+    Assertions.assertFalse(schema.getMutableSegments().contains(metadata.getSegment().getId()));
   }
 
   @Test
@@ -673,21 +677,21 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     };
 
     serverView.addSegment(newSegment(datasource, 1), ServerType.INDEXER_EXECUTOR);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(7, schema.getTotalSegments());
+    Assertions.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
         .stream()
         .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
         .collect(Collectors.toList());
-    Assert.assertEquals(1, metadatas.size());
+    Assertions.assertEquals(1, metadatas.size());
     AvailableSegmentMetadata metadata = metadatas.get(0);
-    Assert.assertEquals(1, metadata.isRealtime());
-    Assert.assertEquals(0, metadata.getNumRows());
-    Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
-    Assert.assertTrue(schema.getMutableSegments().contains(metadata.getSegment().getId()));
+    Assertions.assertEquals(1, metadata.isRealtime());
+    Assertions.assertEquals(0, metadata.getNumRows());
+    Assertions.assertTrue(schema.getSegmentsNeedingRefresh().contains(metadata.getSegment().getId()));
+    Assertions.assertTrue(schema.getMutableSegments().contains(metadata.getSegment().getId()));
   }
 
   @Test
@@ -725,17 +729,17 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     };
 
     serverView.addSegment(newSegment(datasource, 1), ServerType.BROKER);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(6, schema.getTotalSegments());
+    Assertions.assertEquals(6, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
         .stream()
         .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
         .collect(Collectors.toList());
-    Assert.assertEquals(0, metadatas.size());
-    Assert.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
+    Assertions.assertEquals(0, metadatas.size());
+    Assertions.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
   }
 
   @Test
@@ -778,24 +782,24 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     DataSegment segment = newSegment(datasource, 1);
     serverView.addSegment(segment, ServerType.INDEXER_EXECUTOR);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(Sets.newHashSet(segment.getId()), Sets.newHashSet(datasource));
 
     serverView.removeSegment(segment, ServerType.INDEXER_EXECUTOR);
-    Assert.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(6, schema.getTotalSegments());
+    Assertions.assertEquals(6, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
         .stream()
         .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
         .collect(Collectors.toList());
-    Assert.assertEquals(0, metadatas.size());
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segment.getId()));
-    Assert.assertFalse(schema.getMutableSegments().contains(segment.getId()));
-    Assert.assertFalse(schema.getDataSourcesNeedingRebuild().contains(datasource));
-    Assert.assertFalse(schema.getDatasourceNames().contains(datasource));
+    Assertions.assertEquals(0, metadatas.size());
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(segment.getId()));
+    Assertions.assertFalse(schema.getMutableSegments().contains(segment.getId()));
+    Assertions.assertFalse(schema.getDataSourcesNeedingRebuild().contains(datasource));
+    Assertions.assertFalse(schema.getDatasourceNames().contains(datasource));
   }
 
   @Test
@@ -842,24 +846,24 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
     serverView.addSegment(segments.get(0), ServerType.INDEXER_EXECUTOR);
     serverView.addSegment(segments.get(1), ServerType.HISTORICAL);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(datasource));
 
     serverView.removeSegment(segments.get(0), ServerType.INDEXER_EXECUTOR);
-    Assert.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(removeSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(7, schema.getTotalSegments());
+    Assertions.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
         .stream()
         .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
         .collect(Collectors.toList());
-    Assert.assertEquals(1, metadatas.size());
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
-    Assert.assertFalse(schema.getMutableSegments().contains(segments.get(0).getId()));
-    Assert.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
-    Assert.assertTrue(schema.getDatasourceNames().contains(datasource));
+    Assertions.assertEquals(1, metadatas.size());
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
+    Assertions.assertFalse(schema.getMutableSegments().contains(segments.get(0).getId()));
+    Assertions.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
+    Assertions.assertTrue(schema.getDatasourceNames().contains(datasource));
   }
 
   @Test
@@ -893,9 +897,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     serverView.addSegment(newSegment(datasource, 1), ServerType.BROKER);
 
     serverView.removeSegment(newSegment(datasource, 1), ServerType.HISTORICAL);
-    Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(6, schema.getTotalSegments());
+    Assertions.assertEquals(6, schema.getTotalSegments());
   }
 
   @Test
@@ -939,13 +943,13 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     DataSegment segment = newSegment(datasource, 1);
     serverView.addSegment(segment, ServerType.HISTORICAL);
     serverView.addSegment(segment, ServerType.BROKER);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
     serverView.removeSegment(segment, ServerType.BROKER);
-    Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(7, schema.getTotalSegments());
-    Assert.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
+    Assertions.assertEquals(7, schema.getTotalSegments());
+    Assertions.assertTrue(schema.getDataSourcesNeedingRebuild().contains(datasource));
   }
 
   @Test
@@ -989,23 +993,23 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     DataSegment segment = newSegment(datasource, 1);
     serverView.addSegment(segment, ServerType.HISTORICAL);
     serverView.addSegment(segment, ServerType.BROKER);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
 
     serverView.removeSegment(segment, ServerType.HISTORICAL);
-    Assert.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(removeServerSegmentLatch.await(1, TimeUnit.SECONDS));
 
-    Assert.assertEquals(7, schema.getTotalSegments());
+    Assertions.assertEquals(7, schema.getTotalSegments());
     List<AvailableSegmentMetadata> metadatas = schema
         .getSegmentMetadataSnapshot()
         .values()
         .stream()
         .filter(metadata -> datasource.equals(metadata.getSegment().getDataSource()))
         .collect(Collectors.toList());
-    Assert.assertEquals(1, metadatas.size());
+    Assertions.assertEquals(1, metadatas.size());
     AvailableSegmentMetadata metadata = metadatas.get(0);
-    Assert.assertEquals(0, metadata.isRealtime());
-    Assert.assertEquals(0, metadata.getNumRows());
-    Assert.assertEquals(0, metadata.getNumReplicas()); // brokers are not counted as replicas yet
+    Assertions.assertEquals(0, metadata.isRealtime());
+    Assertions.assertEquals(0, metadata.getNumRows());
+    Assertions.assertEquals(0, metadata.getNumReplicas()); // brokers are not counted as replicas yet
   }
 
   /**
@@ -1118,7 +1122,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .add("a", ColumnType.STRING)
                     .add("count", ColumnType.LONG)
@@ -1184,8 +1188,52 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             null
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).add("distinct", ColumnType.ofComplex("hyperUnique")).build(),
+        signature
+    );
+  }
+
+  /**
+   * Verifies that columns with analysis errors are included in the row signature rather than skipped.
+   * Skipping error columns can cause invalid query plans and results as seen in
+   * <a href="https://github.com/apache/druid/issues/18437">issue 18437</a> and <a href="https://github.com/apache/druid/pull/18966">pr 18966</a>.
+   */
+  @Test
+  public void testAnalysisToRowSignatureDoesNotSkipColumnsWhenAnalysisHasErrors()
+  {
+    final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
+    columns.put("a", new ColumnAnalysis(ColumnType.STRING, ColumnType.STRING.asTypeString(), false, true, 1234, 26, "a", "z", null));
+    columns.put("error_col", ColumnAnalysis.error("unknown_type"));
+    columns.put("b", new ColumnAnalysis(ColumnType.LONG, ColumnType.LONG.asTypeString(), false, true, 1234, 26, null, null, null));
+    columns.put("c", new ColumnAnalysis(ColumnType.DOUBLE, ColumnType.DOUBLE.asTypeString(), false, true, 1234, 26, null, null, null));
+    columns.put("d", new ColumnAnalysis(ColumnType.STRING, ColumnType.STRING.asTypeString(), false, true, 1234, 10, "x", "y", null));
+    columns.put("error_col2", ColumnAnalysis.error("multi_value"));
+
+    final RowSignature signature = AbstractSegmentMetadataCache.analysisToRowSignature(
+        new SegmentAnalysis(
+            "id",
+            ImmutableList.of(Intervals.utc(1L, 2L)),
+            columns,
+            1234,
+            100,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+    );
+
+    Assertions.assertEquals(
+        RowSignature.builder()
+                    .add("a", ColumnType.STRING)
+                    .add("error_col", ColumnType.STRING)
+                    .add("b", ColumnType.LONG)
+                    .add("c", ColumnType.DOUBLE)
+                    .add("d", ColumnType.STRING)
+                    .add("error_col2", ColumnType.STRING)
+                    .build(),
         signature
     );
   }
@@ -1197,9 +1245,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     Set<SegmentId> segments = new HashSet<>();
     Set<String> datasources = new HashSet<>();
     datasources.add("wat");
-    Assert.assertNull(schema.getDatasource("wat"));
+    Assertions.assertNull(schema.getDatasource("wat"));
     schema.refresh(segments, datasources);
-    Assert.assertNull(schema.getDatasource("wat"));
+    Assertions.assertNull(schema.getDatasource("wat"));
   }
 
   @Test
@@ -1243,7 +1291,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
     serverView.addSegment(segments.get(0), ServerType.HISTORICAL);
     serverView.addSegment(segments.get(1), ServerType.INDEXER_EXECUTOR);
-    Assert.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(addSegmentLatch.await(1, TimeUnit.SECONDS));
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Sets.newHashSet(dataSource));
 
     emitter.verifyEmitted(Metric.REFRESH_DURATION_MILLIS, Map.of(DruidMetrics.DATASOURCE, dataSource), 1);
@@ -1257,7 +1305,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     EmittingLogger.registerEmitter(new StubServiceEmitter("coordinator", "dummy"));
 
-    Assert.assertFalse(schema.mergeOrCreateRowSignature(
+    Assertions.assertFalse(schema.mergeOrCreateRowSignature(
         segment1.getId(),
         null,
         new SegmentSchemas.SegmentSchema(
@@ -1293,7 +1341,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         )
     );
 
-    Assert.assertTrue(mergedSignature.isPresent());
+    Assertions.assertTrue(mergedSignature.isPresent());
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.add("__time", ColumnType.LONG);
     rowSignatureBuilder.add("dim1", ColumnType.STRING);
@@ -1301,7 +1349,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     rowSignatureBuilder.add("m1", ColumnType.STRING);
     rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
     rowSignatureBuilder.add("dim2", ColumnType.STRING);
-    Assert.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
+    Assertions.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
   }
 
   @Test
@@ -1327,7 +1375,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         )
     );
 
-    Assert.assertTrue(mergedSignature.isPresent());
+    Assertions.assertTrue(mergedSignature.isPresent());
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.add("__time", ColumnType.LONG);
     rowSignatureBuilder.add("dim1", ColumnType.STRING);
@@ -1337,7 +1385,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
     // m2 is added
     rowSignatureBuilder.add("m2", ColumnType.STRING);
-    Assert.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
+    Assertions.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
   }
 
   @Test
@@ -1361,12 +1409,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         )
     );
 
-    Assert.assertTrue(mergedSignature.isPresent());
+    Assertions.assertTrue(mergedSignature.isPresent());
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.add("__time", ColumnType.LONG);
     rowSignatureBuilder.add("cnt", ColumnType.LONG);
     rowSignatureBuilder.add("dim2", ColumnType.STRING);
-    Assert.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
+    Assertions.assertEquals(rowSignatureBuilder.build(), mergedSignature.get());
   }
 
   @Test
@@ -1399,15 +1447,15 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.awaitInitialization();
 
     AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE3, realtimeSegment1.getId());
-    Assert.assertNull(availableSegmentMetadata.getRowSignature());
+    Assertions.assertNull(availableSegmentMetadata.getRowSignature());
 
     // refresh all segments, verify that realtime segments isn't refreshed
     schema.refresh(walker.getSegments().stream().map(DataSegment::getId).collect(Collectors.toSet()), new HashSet<>());
 
-    Assert.assertNull(schema.getDatasource(DATASOURCE3));
-    Assert.assertNotNull(schema.getDatasource(DATASOURCE1));
-    Assert.assertNotNull(schema.getDatasource(DATASOURCE2));
-    Assert.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
+    Assertions.assertNull(schema.getDatasource(DATASOURCE3));
+    Assertions.assertNotNull(schema.getDatasource(DATASOURCE1));
+    Assertions.assertNotNull(schema.getDatasource(DATASOURCE2));
+    Assertions.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
 
     serverView.addSegmentSchemas(
         new SegmentSchemas(Collections.singletonList(
@@ -1435,7 +1483,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             )
         )));
 
-    Assert.assertTrue(schemaAddedLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(schemaAddedLatch.await(1, TimeUnit.SECONDS));
 
     availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE3, realtimeSegment1.getId());
 
@@ -1446,7 +1494,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     rowSignatureBuilder.add("m1", ColumnType.STRING);
     rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
     rowSignatureBuilder.add("dim2", ColumnType.STRING);
-    Assert.assertEquals(rowSignatureBuilder.build(), availableSegmentMetadata.getRowSignature());
+    Assertions.assertEquals(rowSignatureBuilder.build(), availableSegmentMetadata.getRowSignature());
   }
 
   @Test
@@ -1483,15 +1531,15 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.onLeaderStart();
     schema.awaitInitialization();
-    Assert.assertTrue(refresh1Latch.await(10, TimeUnit.SECONDS));
+    Assertions.assertTrue(refresh1Latch.await(10, TimeUnit.SECONDS));
 
     AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata(DATASOURCE3, realtimeSegment1.getId());
-    Assert.assertNull(availableSegmentMetadata.getRowSignature());
+    Assertions.assertNull(availableSegmentMetadata.getRowSignature());
 
-    Assert.assertNull(schema.getDatasource(DATASOURCE3));
-    Assert.assertNotNull(schema.getDatasource(DATASOURCE1));
-    Assert.assertNotNull(schema.getDatasource(DATASOURCE2));
-    Assert.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
+    Assertions.assertNull(schema.getDatasource(DATASOURCE3));
+    Assertions.assertNotNull(schema.getDatasource(DATASOURCE1));
+    Assertions.assertNotNull(schema.getDatasource(DATASOURCE2));
+    Assertions.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
 
     serverView.addSegmentSchemas(
         new SegmentSchemas(Collections.singletonList(
@@ -1519,12 +1567,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
             )
         )));
 
-    Assert.assertTrue(refresh2Latch.await(10, TimeUnit.SECONDS));
+    Assertions.assertTrue(refresh2Latch.await(10, TimeUnit.SECONDS));
 
-    Assert.assertNotNull(schema.getDatasource(DATASOURCE3));
-    Assert.assertNotNull(schema.getDatasource(DATASOURCE1));
-    Assert.assertNotNull(schema.getDatasource(DATASOURCE2));
-    Assert.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
+    Assertions.assertNotNull(schema.getDatasource(DATASOURCE3));
+    Assertions.assertNotNull(schema.getDatasource(DATASOURCE1));
+    Assertions.assertNotNull(schema.getDatasource(DATASOURCE2));
+    Assertions.assertNotNull(schema.getDatasource(SOME_DATASOURCE));
 
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     rowSignatureBuilder.add("__time", ColumnType.LONG);
@@ -1533,7 +1581,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     rowSignatureBuilder.add("m1", ColumnType.STRING);
     rowSignatureBuilder.add("unique_dim1", ColumnType.ofComplex("hyperUnique"));
     rowSignatureBuilder.add("dim2", ColumnType.STRING);
-    Assert.assertEquals(rowSignatureBuilder.build(), schema.getDatasource(DATASOURCE3).getRowSignature());
+    Assertions.assertEquals(rowSignatureBuilder.build(), schema.getDatasource(DATASOURCE3).getRowSignature());
   }
 
   @Test
@@ -1687,8 +1735,8 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                 SchemaPayload schemaPayload = mapper.readValue(r.getBytes(1), SchemaPayload.class);
                 long numRows = r.getLong(2);
                 QueryableIndexCursorFactory cursorFa = new QueryableIndexCursorFactory(index2);
-                Assert.assertEquals(cursorFa.getRowSignature(), schemaPayload.getRowSignature());
-                Assert.assertEquals(index2.getNumRows(), numRows);
+                Assertions.assertEquals(cursorFa.getRowSignature(), schemaPayload.getRowSignature());
+                Assertions.assertEquals(index2.getNumRows(), numRows);
               }
               catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1714,7 +1762,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     CoordinatorSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(config);
 
     QueryableIndexSegment queryableIndexSegment = new QueryableIndexSegment(index2, SegmentId.dummy("test"));
-    PhysicalSegmentInspector rowCountInspector = queryableIndexSegment.as(PhysicalSegmentInspector.class);
+    RowCountInspector rowCountInspector = queryableIndexSegment.as(RowCountInspector.class);
     QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index2);
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
@@ -1728,13 +1776,13 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
+    Assertions.assertEquals(6, segments.size());
     // find the only segment with datasource "foo2"
     final DataSegment existingSegment = segments.stream()
                                                 .filter(segment -> segment.getDataSource().equals("foo2"))
                                                 .findFirst()
                                                 .orElse(null);
-    Assert.assertNotNull(existingSegment);
+    Assertions.assertNotNull(existingSegment);
 
     AvailableSegmentMetadata existingMetadata = segmentsMetadata.get(existingSegment.getId());
 
@@ -1756,9 +1804,9 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
         .findAny()
         .orElse(null);
 
-    Assert.assertNotNull(pair);
+    Assertions.assertNotNull(pair);
     final DruidServer server = pair.lhs;
-    Assert.assertNotNull(server);
+    Assertions.assertNotNull(server);
     final DruidServerMetadata druidServerMetadata = server.getMetadata();
     // invoke SegmentMetadataCache#addSegment on existingSegment
     schema.addSegment(druidServerMetadata, existingSegment);
@@ -1769,7 +1817,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                        .stream()
                                                        .map(AvailableSegmentMetadata::getSegment)
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(6, segments.size());
+    Assertions.assertEquals(6, segments.size());
 
     schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), new HashSet<>());
 
@@ -1784,10 +1832,10 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                .findFirst()
                                                .orElse(null);
     final AvailableSegmentMetadata currentMetadata = segmentsMetadata.get(currentSegment.getId());
-    Assert.assertEquals(currentSegment.getId(), currentMetadata.getSegment().getId());
-    Assert.assertEquals(5L, currentMetadata.getNumRows());
+    Assertions.assertEquals(currentSegment.getId(), currentMetadata.getSegment().getId());
+    Assertions.assertEquals(5L, currentMetadata.getNumRows());
     // numreplicas do not change here since we addSegment with the same server which was serving existingSegment before
-    Assert.assertEquals(existingMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
+    Assertions.assertEquals(existingMetadata.getNumReplicas(), currentMetadata.getNumReplicas());
   }
 
   private CoordinatorSegmentMetadataCache setupForColdDatasourceSchemaTest(ServiceEmitter emitter)
@@ -1890,31 +1938,31 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     emitter.verifyEmitted(Metric.COLD_SEGMENT_SCHEMAS, Map.of(DruidMetrics.DATASOURCE, "cold"), 1);
     emitter.verifyEmitted(Metric.COLD_SCHEMA_REFRESH_DURATION_MILLIS, 1);
 
-    Assert.assertEquals(Set.of("foo", "cold"), schema.getDataSourceInformationMap().keySet());
+    Assertions.assertEquals(Set.of("foo", "cold"), schema.getDataSourceInformationMap().keySet());
 
     // verify that cold schema for both foo and cold is present
     RowSignature fooSignature = schema.getDatasource("foo").getRowSignature();
     List<String> columnNames = fooSignature.getColumnNames();
 
     // verify that foo schema doesn't contain columns from hot segments
-    Assert.assertEquals(3, columnNames.size());
+    Assertions.assertEquals(3, columnNames.size());
 
-    Assert.assertEquals("dim1", columnNames.get(0));
-    Assert.assertEquals(ColumnType.STRING, fooSignature.getColumnType(columnNames.get(0)).get());
+    Assertions.assertEquals("dim1", columnNames.get(0));
+    Assertions.assertEquals(ColumnType.STRING, fooSignature.getColumnType(columnNames.get(0)).get());
 
-    Assert.assertEquals("c1", columnNames.get(1));
-    Assert.assertEquals(ColumnType.STRING, fooSignature.getColumnType(columnNames.get(1)).get());
+    Assertions.assertEquals("c1", columnNames.get(1));
+    Assertions.assertEquals(ColumnType.STRING, fooSignature.getColumnType(columnNames.get(1)).get());
 
-    Assert.assertEquals("c2", columnNames.get(2));
-    Assert.assertEquals(ColumnType.LONG, fooSignature.getColumnType(columnNames.get(2)).get());
+    Assertions.assertEquals("c2", columnNames.get(2));
+    Assertions.assertEquals(ColumnType.LONG, fooSignature.getColumnType(columnNames.get(2)).get());
 
     RowSignature coldSignature = schema.getDatasource("cold").getRowSignature();
     columnNames = coldSignature.getColumnNames();
-    Assert.assertEquals("f1", columnNames.get(0));
-    Assert.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
+    Assertions.assertEquals("f1", columnNames.get(0));
+    Assertions.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
 
-    Assert.assertEquals("f2", columnNames.get(1));
-    Assert.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
+    Assertions.assertEquals("f2", columnNames.get(1));
+    Assertions.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
 
     Set<SegmentId> segmentIds = new HashSet<>();
     segmentIds.add(segment1.getId());
@@ -1922,15 +1970,15 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.refresh(segmentIds, new HashSet<>());
 
-    Assert.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
+    Assertions.assertEquals(new HashSet<>(Arrays.asList("foo", "cold")), schema.getDataSourceInformationMap().keySet());
 
     coldSignature = schema.getDatasource("cold").getRowSignature();
     columnNames = coldSignature.getColumnNames();
-    Assert.assertEquals("f1", columnNames.get(0));
-    Assert.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
+    Assertions.assertEquals("f1", columnNames.get(0));
+    Assertions.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
 
-    Assert.assertEquals("f2", columnNames.get(1));
-    Assert.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
+    Assertions.assertEquals("f2", columnNames.get(1));
+    Assertions.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
 
     // foo now contains schema from both hot and cold segments
     verifyFooDSSchema(schema, 8);
@@ -1938,11 +1986,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     // cold columns should be present at the end
     columnNames = rowSignature.getColumnNames();
-    Assert.assertEquals("c1", columnNames.get(6));
-    Assert.assertEquals(ColumnType.STRING, rowSignature.getColumnType(columnNames.get(6)).get());
+    Assertions.assertEquals("c1", columnNames.get(6));
+    Assertions.assertEquals(ColumnType.STRING, rowSignature.getColumnType(columnNames.get(6)).get());
 
-    Assert.assertEquals("c2", columnNames.get(7));
-    Assert.assertEquals(ColumnType.LONG, rowSignature.getColumnType(columnNames.get(7)).get());
+    Assertions.assertEquals("c2", columnNames.get(7));
+    Assertions.assertEquals(ColumnType.LONG, rowSignature.getColumnType(columnNames.get(7)).get());
   }
 
   @Test
@@ -1957,11 +2005,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.refresh(segmentIds, new HashSet<>());
     // cold datasource shouldn't be present
-    Assert.assertEquals(Collections.singleton("foo"), schema.getDataSourceInformationMap().keySet());
+    Assertions.assertEquals(Collections.singleton("foo"), schema.getDataSourceInformationMap().keySet());
 
     // cold columns shouldn't be present
     verifyFooDSSchema(schema, 6);
-    Assert.assertNull(schema.getDatasource("cold"));
+    Assertions.assertNull(schema.getDatasource("cold"));
 
     schema.refreshColdSegmentSchemas();
 
@@ -1972,26 +2020,26 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     emitter.verifyEmitted(Metric.COLD_SCHEMA_REFRESH_DURATION_MILLIS, 1);
 
     // cold datasource should be present now
-    Assert.assertEquals(Set.of("foo", "cold"), schema.getDataSourceInformationMap().keySet());
+    Assertions.assertEquals(Set.of("foo", "cold"), schema.getDataSourceInformationMap().keySet());
 
     RowSignature coldSignature = schema.getDatasource("cold").getRowSignature();
     List<String> columnNames = coldSignature.getColumnNames();
-    Assert.assertEquals("f1", columnNames.get(0));
-    Assert.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
+    Assertions.assertEquals("f1", columnNames.get(0));
+    Assertions.assertEquals(ColumnType.STRING, coldSignature.getColumnType(columnNames.get(0)).get());
 
-    Assert.assertEquals("f2", columnNames.get(1));
-    Assert.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
+    Assertions.assertEquals("f2", columnNames.get(1));
+    Assertions.assertEquals(ColumnType.DOUBLE, coldSignature.getColumnType(columnNames.get(1)).get());
 
     // columns from cold datasource should be present
     verifyFooDSSchema(schema, 8);
     RowSignature rowSignature = schema.getDatasource("foo").getRowSignature();
 
     columnNames = rowSignature.getColumnNames();
-    Assert.assertEquals("c1", columnNames.get(6));
-    Assert.assertEquals(ColumnType.STRING, rowSignature.getColumnType(columnNames.get(6)).get());
+    Assertions.assertEquals("c1", columnNames.get(6));
+    Assertions.assertEquals(ColumnType.STRING, rowSignature.getColumnType(columnNames.get(6)).get());
 
-    Assert.assertEquals("c2", columnNames.get(7));
-    Assert.assertEquals(ColumnType.LONG, rowSignature.getColumnType(columnNames.get(7)).get());
+    Assertions.assertEquals("c2", columnNames.get(7));
+    Assertions.assertEquals(ColumnType.LONG, rowSignature.getColumnType(columnNames.get(7)).get());
   }
 
   @Test
@@ -2093,32 +2141,32 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.refreshColdSegmentSchemas();
     // alpha has only 1 cold segment
-    Assert.assertNotNull(schema.getDatasource("alpha"));
+    Assertions.assertNotNull(schema.getDatasource("alpha"));
     // gamma has both hot and cold segment
-    Assert.assertNotNull(schema.getDatasource("gamma"));
+    Assertions.assertNotNull(schema.getDatasource("gamma"));
     // assert that cold schema for gamma doesn't contain any columns from hot segment
     RowSignature rowSignature = schema.getDatasource("gamma").getRowSignature();
-    Assert.assertTrue(rowSignature.contains("dim1"));
-    Assert.assertTrue(rowSignature.contains("c1"));
-    Assert.assertTrue(rowSignature.contains("c2"));
-    Assert.assertFalse(rowSignature.contains("c3"));
-    Assert.assertFalse(rowSignature.contains("c4"));
+    Assertions.assertTrue(rowSignature.contains("dim1"));
+    Assertions.assertTrue(rowSignature.contains("c1"));
+    Assertions.assertTrue(rowSignature.contains("c2"));
+    Assertions.assertFalse(rowSignature.contains("c3"));
+    Assertions.assertFalse(rowSignature.contains("c4"));
 
-    Assert.assertEquals(new HashSet<>(Arrays.asList("alpha", "gamma")), schema.getDataSourceInformationMap().keySet());
+    Assertions.assertEquals(new HashSet<>(Arrays.asList("alpha", "gamma")), schema.getDataSourceInformationMap().keySet());
 
     Mockito.when(segmentsMetadataManager.getRecentDataSourcesSnapshot())
            .thenReturn(DataSourcesSnapshot.fromUsedSegments(List.of(coldSegmentBeta, hotSegmentGamma)));
 
     schema.refreshColdSegmentSchemas();
-    Assert.assertNotNull(schema.getDatasource("beta"));
+    Assertions.assertNotNull(schema.getDatasource("beta"));
     // alpha doesn't have any segments
-    Assert.assertNull(schema.getDatasource("alpha"));
+    Assertions.assertNull(schema.getDatasource("alpha"));
     // gamma just has 1 hot segment
-    Assert.assertNull(schema.getDatasource("gamma"));
+    Assertions.assertNull(schema.getDatasource("gamma"));
 
-    Assert.assertNull(schema.getDatasource("doesnotexist"));
+    Assertions.assertNull(schema.getDatasource("doesnotexist"));
 
-    Assert.assertEquals(Collections.singleton("beta"), schema.getDataSourceInformationMap().keySet());
+    Assertions.assertEquals(Collections.singleton("beta"), schema.getDataSourceInformationMap().keySet());
   }
 
   @Test
@@ -2151,7 +2199,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.awaitInitialization();
 
     latch.await(1, TimeUnit.SECONDS);
-    Assert.assertEquals(0, latch.getCount());
+    Assertions.assertEquals(0, latch.getCount());
   }
 
   @Test
@@ -2206,12 +2254,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                      .findAny()
                                                      .orElse(null);
 
-    Assert.assertNotNull(historicalServer);
+    Assertions.assertNotNull(historicalServer);
     final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();
 
     schema.addSegment(historicalServerMetadata, segment);
     schema.addSegment(historicalServerMetadata, tombstone);
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
 
     List<SegmentId> segmentIterable = ImmutableList.of(segment.getId(), tombstone.getId());
 
@@ -2251,20 +2299,20 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     EasyMock.verify(factoryMock, lifecycleMock);
 
     // Verify that datasource schema building logic doesn't mark the tombstone segment for refresh
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
 
     AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata("test", tombstone.getId());
-    Assert.assertNotNull(availableSegmentMetadata);
+    Assertions.assertNotNull(availableSegmentMetadata);
     // fetching metadata for tombstone segment shouldn't mark it for refresh
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
 
     Set<AvailableSegmentMetadata> metadatas = new HashSet<>();
     schema.iterateSegmentMetadata().forEachRemaining(metadatas::add);
 
-    Assert.assertEquals(1, metadatas.stream().filter(metadata -> metadata.getSegment().isTombstone()).count());
+    Assertions.assertEquals(1, metadatas.stream().filter(metadata -> metadata.getSegment().isTombstone()).count());
 
     // iterating over entire metadata doesn't cause tombstone to be marked for refresh
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
   }
 
   @Test
@@ -2304,7 +2352,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                                                      .findAny()
                                                      .orElse(null);
 
-    Assert.assertNotNull(historicalServer);
+    Assertions.assertNotNull(historicalServer);
     final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentStatsMap = new ImmutableMap.Builder<>();
@@ -2327,7 +2375,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.onLeaderStart();
     schema.awaitInitialization();
 
-    Assert.assertTrue(latch.await(2, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(2, TimeUnit.SECONDS));
 
     // make segment3 unused
     segmentStatsMap = new ImmutableMap.Builder<>();
@@ -2344,20 +2392,20 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     schema.refresh(segmentsToRefresh, Sets.newHashSet(dataSource));
 
-    Assert.assertTrue(schema.getSegmentsNeedingRefresh().contains(segments.get(1).getId()));
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(2).getId()));
+    Assertions.assertTrue(schema.getSegmentsNeedingRefresh().contains(segments.get(1).getId()));
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(2).getId()));
 
     AvailableSegmentMetadata availableSegmentMetadata =
         schema.getAvailableSegmentMetadata(dataSource, segments.get(0).getId());
 
-    Assert.assertNotNull(availableSegmentMetadata);
+    Assertions.assertNotNull(availableSegmentMetadata);
     // fetching metadata for unused segment shouldn't mark it for refresh
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
 
     Set<AvailableSegmentMetadata> metadatas = new HashSet<>();
     schema.iterateSegmentMetadata().forEachRemaining(metadatas::add);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         metadatas.stream()
                  .filter(
@@ -2366,7 +2414,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
 
     // iterating over entire metadata doesn't cause unsed segment to be marked for refresh
-    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
+    Assertions.assertFalse(schema.getSegmentsNeedingRefresh().contains(segments.get(0).getId()));
   }
 
   private void verifyFooDSSchema(CoordinatorSegmentMetadataCache schema, int columns)
@@ -2374,25 +2422,25 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     final DataSourceInformation fooDs = schema.getDatasource("foo");
     final RowSignature fooRowSignature = fooDs.getRowSignature();
     List<String> columnNames = fooRowSignature.getColumnNames();
-    Assert.assertEquals(columns, columnNames.size());
+    Assertions.assertEquals(columns, columnNames.size());
 
-    Assert.assertEquals("__time", columnNames.get(0));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+    Assertions.assertEquals("__time", columnNames.get(0));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
 
-    Assert.assertEquals("dim2", columnNames.get(1));
-    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
+    Assertions.assertEquals("dim2", columnNames.get(1));
+    Assertions.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
 
-    Assert.assertEquals("m1", columnNames.get(2));
-    Assert.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(2)).get());
+    Assertions.assertEquals("m1", columnNames.get(2));
+    Assertions.assertEquals(ColumnType.DOUBLE, fooRowSignature.getColumnType(columnNames.get(2)).get());
 
-    Assert.assertEquals("dim1", columnNames.get(3));
-    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(3)).get());
+    Assertions.assertEquals("dim1", columnNames.get(3));
+    Assertions.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(3)).get());
 
-    Assert.assertEquals("cnt", columnNames.get(4));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(4)).get());
+    Assertions.assertEquals("cnt", columnNames.get(4));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(4)).get());
 
-    Assert.assertEquals("unique_dim1", columnNames.get(5));
-    Assert.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(5)).get());
+    Assertions.assertEquals("unique_dim1", columnNames.get(5));
+    Assertions.assertEquals(ColumnType.ofComplex("hyperUnique"), fooRowSignature.getColumnType(columnNames.get(5)).get());
   }
 
   private void verifyFoo2DSSchema(CoordinatorSegmentMetadataCache schema)
@@ -2400,15 +2448,132 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     final DataSourceInformation fooDs = schema.getDatasource("foo2");
     final RowSignature fooRowSignature = fooDs.getRowSignature();
     List<String> columnNames = fooRowSignature.getColumnNames();
-    Assert.assertEquals(3, columnNames.size());
+    Assertions.assertEquals(3, columnNames.size());
 
-    Assert.assertEquals("__time", columnNames.get(0));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
+    Assertions.assertEquals("__time", columnNames.get(0));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(0)).get());
 
-    Assert.assertEquals("dim2", columnNames.get(1));
-    Assert.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
+    Assertions.assertEquals("dim2", columnNames.get(1));
+    Assertions.assertEquals(ColumnType.STRING, fooRowSignature.getColumnType(columnNames.get(1)).get());
 
-    Assert.assertEquals("m1", columnNames.get(2));
-    Assert.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(2)).get());
+    Assertions.assertEquals("m1", columnNames.get(2));
+    Assertions.assertEquals(ColumnType.LONG, fooRowSignature.getColumnType(columnNames.get(2)).get());
+  }
+
+  /**
+   * A failure refreshing one dataSource (e.g. a SegmentMetadataQuery timeout) must not abort the whole
+   * refresh cycle: other dataSources are still refreshed, and a {@code segment/schemaCache/refresh/failed}
+   * metric is emitted for the failing dataSource.
+   */
+  @Test
+  public void testRefreshFailureForOneDatasourceIsIsolated() throws InterruptedException, IOException
+  {
+    final StubServiceEmitter emitter = new StubServiceEmitter("test", "test");
+    final CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        segmentSchemaCache,
+        backFillQueue,
+        segmentsMetadataManager,
+        segmentsMetadataManagerConfigSupplier
+    )
+    {
+      @Override
+      public Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
+      {
+        // Simulate a metadata query that times out for DATASOURCE1 but succeeds for everything else.
+        final SegmentId first = segments.iterator().next();
+        if (DATASOURCE1.equals(first.getDataSource())) {
+          throw new QueryTimeoutException("test-induced timeout for " + DATASOURCE1);
+        }
+        return super.runSegmentMetadataQuery(segments);
+      }
+    };
+
+    schema.onLeaderStart();
+    schema.awaitInitialization();
+
+    final Set<SegmentId> allSegmentIds = schema.getSegmentMetadataSnapshot().keySet();
+    emitter.flush();
+
+    // Must not propagate the DATASOURCE1 failure.
+    final Set<SegmentId> refreshed = schema.refreshSegments(allSegmentIds);
+
+    // The healthy dataSources were still refreshed despite DATASOURCE1 failing.
+    Assertions.assertTrue(
+        refreshed.stream().anyMatch(id -> DATASOURCE2.equals(id.getDataSource())),
+        "expected a refreshed segment from " + DATASOURCE2
+    );
+    Assertions.assertTrue(
+        refreshed.stream().anyMatch(id -> SOME_DATASOURCE.equals(id.getDataSource())),
+        "expected a refreshed segment from " + SOME_DATASOURCE
+    );
+    // The failing dataSource produced no refreshed segments.
+    Assertions.assertTrue(
+        refreshed.stream().noneMatch(id -> DATASOURCE1.equals(id.getDataSource())),
+        "expected no refreshed segments from the failing " + DATASOURCE1
+    );
+
+    // A failure metric was emitted, dimensioned by the failing dataSource.
+    final List<Number> failures = emitter.getMetricValues(
+        Metric.REFRESH_FAILED,
+        ImmutableMap.of(DruidMetrics.DATASOURCE, DATASOURCE1)
+    );
+    Assertions.assertFalse(failures.isEmpty(), "expected a refresh/failed metric for " + DATASOURCE1);
+    Assertions.assertEquals(1, failures.get(0).intValue());
+  }
+
+  @Test
+  public void testLocalInterruptionPropagatesButWrappedQueryFailureIsIsolated() throws IOException
+  {
+    final StubServiceEmitter emitter = new StubServiceEmitter("test", "test");
+    final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+    final CoordinatorSegmentMetadataCache schema = new CoordinatorSegmentMetadataCache(
+        getQueryLifecycleFactory(walker),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        segmentSchemaCache,
+        backFillQueue,
+        segmentsMetadataManager,
+        segmentsMetadataManagerConfigSupplier
+    )
+    {
+      @Override
+      public Sequence<SegmentAnalysis> runSegmentMetadataQuery(Iterable<SegmentId> segments)
+      {
+        throw new QueryInterruptedException(causeRef.get());
+      }
+    };
+
+    final Set<SegmentId> segments = ImmutableSet.of(
+        SegmentId.of(DATASOURCE1, Intervals.of("2000/2001"), "v1", 0)
+    );
+
+    // Genuine local interruption: propagate, restore the interrupt flag, record no failure.
+    causeRef.set(new InterruptedException("test interrupt"));
+    Assertions.assertThrows(QueryInterruptedException.class, () -> schema.refreshSegments(segments));
+    Assertions.assertTrue(Thread.interrupted(), "interrupt flag should be restored"); // also clears it for the next case
+    Assertions.assertTrue(
+        emitter.getMetricEvents(Metric.REFRESH_FAILED).isEmpty(),
+        "local interruption must not emit a refresh/failed metric"
+    );
+
+    // Wrapped ordinary failure (no InterruptedException cause): isolate it - no propagation, failure recorded.
+    causeRef.set(new RuntimeException("wrapped query failure"));
+    schema.refreshSegments(segments); // must not throw
+    Assertions.assertFalse(Thread.currentThread().isInterrupted(), "interrupt flag must not be set for a wrapped failure");
+    final List<Number> failures = emitter.getMetricValues(
+        Metric.REFRESH_FAILED,
+        ImmutableMap.of(DruidMetrics.DATASOURCE, DATASOURCE1)
+    );
+    Assertions.assertFalse(failures.isEmpty(), "a wrapped query failure should emit refresh/failed");
+    Assertions.assertEquals(1, failures.get(0).intValue());
   }
 }

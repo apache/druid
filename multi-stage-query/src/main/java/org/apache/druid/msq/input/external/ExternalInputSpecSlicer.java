@@ -31,7 +31,9 @@ import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.SlicerUtils;
+import org.apache.druid.query.filter.SegmentPruner;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -52,7 +54,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
   }
 
   @Override
-  public List<InputSlice> sliceStatic(InputSpec inputSpec, int maxNumSlices)
+  public List<InputSlice> sliceStatic(InputSpec inputSpec, @Nullable SegmentPruner segmentPruner, int maxNumSlices)
   {
     final ExternalInputSpec externalInputSpec = (ExternalInputSpec) inputSpec;
 
@@ -70,6 +72,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
   @Override
   public List<InputSlice> sliceDynamic(
       final InputSpec inputSpec,
+      @Nullable final SegmentPruner segmentPruner,
       final int maxNumSlices,
       final int maxFilesPerSlice,
       final long maxBytesPerSlice
@@ -176,7 +179,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
   }
 
   /**
-   * Split hint spec used by {@link #sliceStatic(InputSpec, int)}.
+   * Split hint spec used by {@link #sliceStatic(InputSpec, SegmentPruner, int)}.
    */
   static class StaticSplitHintSpec implements SplitHintSpec
   {
@@ -205,7 +208,7 @@ public class ExternalInputSpecSlicer implements InputSpecSlicer
   }
 
   /**
-   * Split hint spec used by {@link #sliceDynamic(InputSpec, int, int, long)}.
+   * Split hint spec used by {@link #sliceDynamic(InputSpec, SegmentPruner, int, int, long)}.
    */
   static class DynamicSplitHintSpec implements SplitHintSpec
   {

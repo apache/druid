@@ -28,6 +28,8 @@ import java.util.Comparator;
  */
 public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStrategy
 {
+  public static final String TYPE = "highestPriority";
+
   @JsonCreator
   public HighestPriorityTierSelectorStrategy(@JacksonInject ServerSelectorStrategy serverSelectorStrategy)
   {
@@ -38,5 +40,11 @@ public class HighestPriorityTierSelectorStrategy extends AbstractTierSelectorStr
   public Comparator<Integer> getComparator()
   {
     return Comparator.reverseOrder();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "HighestPriorityTierSelectorStrategy{}";
   }
 }

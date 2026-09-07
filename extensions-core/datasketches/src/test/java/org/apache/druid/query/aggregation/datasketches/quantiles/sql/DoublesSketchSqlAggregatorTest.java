@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -70,6 +72,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -94,12 +97,15 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       DoublesSketchModule.registerSerde();
 
       final QueryableIndex index =
-          IndexBuilder.create(CalciteTests.getJsonMapper())
+          IndexBuilder.create(jsonMapper)
                       .tmpDir(tempDirProducer.newTempFolder())
                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                       .schema(
@@ -390,7 +396,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
                 .virtualColumns(
                     new ExpressionVirtualColumn("v0", "946684800000", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-                    new ExpressionVirtualColumn("v1", "case_searched((\"j0.a0\" < \"_a0\"),'val2',((\"j0.a0\" >= \"_a0\") && (\"j0.a0\" < \"_a1\")),'val3',(\"j0.a0\" >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                    new ExpressionVirtualColumn("v1", "case_searched((CAST(\"j0.a0\", 'DOUBLE') < \"_a0\"),'val2',((CAST(\"j0.a0\", 'DOUBLE') >= \"_a0\") && (CAST(\"j0.a0\", 'DOUBLE') < \"_a1\")),'val3',(CAST(\"j0.a0\", 'DOUBLE') >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
                 )
                 .columns("v0", "j0.d0", "j0.a0", "v1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.STRING)
@@ -1105,6 +1111,40 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
             }
         )
     );
+  }
+
+  @Test
+  public void testApproxQuantileWithStringLiteral()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT APPROX_QUANTILE_DS(m1, '0.99') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      Assertions.fail("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
+    }
+  }
+
+  @Test
+  public void testApproxQuantileWithStringResolution()
+  {
+    // verify invalid queries return 400 (user error)
+    final String query = "SELECT APPROX_QUANTILE_DS(m1, 0.99, '128') FROM foo";
+
+    try {
+      testQuery(query, ImmutableList.of(), ImmutableList.of());
+      Assertions.fail("Expected DruidException but query succeeded");
+    }
+    catch (DruidException e) {
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
+    }
   }
 
   private static PostAggregator makeFieldAccessPostAgg(String name)

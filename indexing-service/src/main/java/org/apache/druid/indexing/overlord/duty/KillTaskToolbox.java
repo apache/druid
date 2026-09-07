@@ -61,7 +61,7 @@ public class KillTaskToolbox
         .dataSegmentKiller(dataSegmentKiller)
         .taskReportFileWriter(NoopReportWriter.INSTANCE)
         .indexIO(indexIO)
-        .indexMergerV9(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
+        .indexMerger(new IndexMergerV9(mapper, indexIO, TmpFileSegmentWriteOutMediumFactory.instance(), false))
         .emitter(emitter)
         .build();
   }

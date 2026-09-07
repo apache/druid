@@ -21,33 +21,25 @@ package org.apache.druid.server.coordination;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
-import com.google.inject.Key;
-import com.google.inject.Scopes;
-import com.google.inject.name.Names;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.ServerTypeConfig;
-import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
+import org.apache.druid.server.metrics.TestLoadSpecHolder;
 import org.apache.druid.test.utils.TestSegmentCacheManager;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -59,49 +51,25 @@ public class SegmentCacheBootstrapperTest
   private static final int COUNT = 50;
 
   private TestDataSegmentAnnouncer segmentAnnouncer;
-  private TestDataServerAnnouncer serverAnnouncer;
   private SegmentLoaderConfig segmentLoaderConfig;
   private TestCoordinatorClient coordinatorClient;
   private StubServiceEmitter serviceEmitter;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     final File segmentCacheDir = temporaryFolder.newFolder();
 
     segmentAnnouncer = new TestDataSegmentAnnouncer();
-    serverAnnouncer = new TestDataServerAnnouncer();
-    segmentLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return segmentCacheDir;
-      }
-
-      @Override
-      public int getNumLoadingThreads()
-      {
-        return 5;
-      }
-
-      @Override
-      public int getAnnounceIntervalMillis()
-      {
-        return 50;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(segmentCacheDir, null, null)
-        );
-      }
-    };
+    segmentLoaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(segmentCacheDir)
+        .numLoadingThreads(5)
+        .announceIntervalMillis(50)
+        .locations(new StorageLocationConfig(segmentCacheDir, null, null))
+        .build();
 
     coordinatorClient = new TestCoordinatorClient();
     serviceEmitter = new StubServiceEmitter();
@@ -132,23 +100,20 @@ public class SegmentCacheBootstrapperTest
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new DataSourceTaskIdHolder()
+        new DefaultLoadSpecHolder()
     );
 
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
     bootstrapper.start();
 
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
 
     for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(3L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
-      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
+      Assertions.assertEquals(3L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
+      Assertions.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
@@ -156,12 +121,11 @@ public class SegmentCacheBootstrapperTest
     assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
     assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
 
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegments());
+    Assertions.assertEquals(ImmutableList.of(), cacheManager.getObservedSegments());
 
     bootstrapper.stop();
 
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
-    Assert.assertEquals(1, cacheManager.getObservedShutdownBootstrapCount().get());
+    Assertions.assertEquals(1, cacheManager.getObservedShutdownBootstrapCount().get());
   }
 
   @Test
@@ -191,24 +155,21 @@ public class SegmentCacheBootstrapperTest
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new DataSourceTaskIdHolder()
+        new DefaultLoadSpecHolder()
     );
 
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     bootstrapper.start();
 
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
 
     for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(11L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
-      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
+      Assertions.assertEquals(11L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
+      Assertions.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
@@ -216,12 +177,11 @@ public class SegmentCacheBootstrapperTest
     assertUnsortedListsAreEqual(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
     assertUnsortedListsAreEqual(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
 
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedSegments());
+    Assertions.assertEquals(ImmutableList.of(), cacheManager.getObservedSegments());
 
     bootstrapper.stop();
 
-    Assert.assertEquals(0, serverAnnouncer.getObservedCount());
-    Assert.assertEquals(1, cacheManager.getObservedShutdownBootstrapCount().get());
+    Assertions.assertEquals(1, cacheManager.getObservedShutdownBootstrapCount().get());
   }
 
   @Test
@@ -247,24 +207,21 @@ public class SegmentCacheBootstrapperTest
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new DataSourceTaskIdHolder()
+        new DefaultLoadSpecHolder()
     );
 
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     bootstrapper.start();
 
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
 
     for (int i = 0; i < COUNT; ++i) {
-      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
-      Assert.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
+      Assertions.assertEquals(2L, segmentManager.getDataSourceCounts().get("test" + i).longValue());
+      Assertions.assertEquals(2L, segmentManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.copyOf(segments);
@@ -289,17 +246,6 @@ public class SegmentCacheBootstrapperTest
       segments.add(makeSegment("test_two" + i, "1", Intervals.of("P1d/2011-04-02")));
     }
 
-    Injector injector = Guice.createInjector(
-        new JacksonModule(),
-        new LifecycleModule(),
-        binder -> {
-          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.NONE;
-          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
-                .toInstance(broadcastMode);
-        }
-    );
-
     final TestCoordinatorClient coordinatorClient = new TestCoordinatorClient(segments);
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
@@ -312,26 +258,23 @@ public class SegmentCacheBootstrapperTest
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        injector.getInstance(DataSourceTaskIdHolder.class)
+        new TestLoadSpecHolder(LookupLoadingSpec.ALL, BroadcastDatasourceLoadingSpec.NONE)
     );
 
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     bootstrapper.start();
 
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.of();
 
-    Assert.assertEquals(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
+    Assertions.assertEquals(expectedBootstrapSegments, segmentAnnouncer.getObservedSegments());
 
-    Assert.assertEquals(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
+    Assertions.assertEquals(expectedBootstrapSegments, cacheManager.getObservedBootstrapSegments());
 
     bootstrapper.stop();
   }
@@ -349,17 +292,6 @@ public class SegmentCacheBootstrapperTest
     segments.add(ds2Segment1);
     segments.add(ds2Segment2);
 
-    Injector injector = Guice.createInjector(
-        new JacksonModule(),
-        new LifecycleModule(),
-        binder -> {
-          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          final BroadcastDatasourceLoadingSpec broadcastMode = BroadcastDatasourceLoadingSpec.loadOnly(ImmutableSet.of("test1"));
-          binder.bind(Key.get(BroadcastDatasourceLoadingSpec.class, Names.named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)))
-                .toInstance(broadcastMode);
-        }
-    );
-
     final TestCoordinatorClient coordinatorClient = new TestCoordinatorClient(segments);
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
     final SegmentManager segmentManager = new SegmentManager(cacheManager);
@@ -372,21 +304,18 @@ public class SegmentCacheBootstrapperTest
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        injector.getInstance(DataSourceTaskIdHolder.class)
+        new TestLoadSpecHolder(LookupLoadingSpec.NONE, BroadcastDatasourceLoadingSpec.loadOnly(Set.of("test1")))
     );
 
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     bootstrapper.start();
 
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
-    Assert.assertEquals(ImmutableSet.of("test1"), segmentManager.getDataSourceNames());
+    Assertions.assertFalse(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertEquals(ImmutableSet.of("test1"), segmentManager.getDataSourceNames());
 
     final ImmutableList<DataSegment> expectedBootstrapSegments = ImmutableList.of(ds1Segment2, ds1Segment1);
 
@@ -413,23 +342,20 @@ public class SegmentCacheBootstrapperTest
         handler,
         segmentLoaderConfig,
         segmentAnnouncer,
-        serverAnnouncer,
         segmentManager,
-        new ServerTypeConfig(ServerType.HISTORICAL),
         coordinatorClient,
         serviceEmitter,
-        new DataSourceTaskIdHolder()
+        new DefaultLoadSpecHolder()
     );
 
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
     bootstrapper.start();
 
-    Assert.assertEquals(1, serverAnnouncer.getObservedCount());
-    Assert.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
+    Assertions.assertTrue(segmentManager.getDataSourceCounts().isEmpty());
 
-    Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
-    Assert.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegments());
+    Assertions.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
+    Assertions.assertEquals(ImmutableList.of(), cacheManager.getObservedBootstrapSegments());
     serviceEmitter.verifyValue("segment/bootstrap/count", 0);
     serviceEmitter.verifyEmitted("segment/bootstrap/time", 1);
 
@@ -444,7 +370,8 @@ public class SegmentCacheBootstrapperTest
    */
   private static <T> void assertUnsortedListsAreEqual(List<T> expected, List<T> actual)
   {
-    Assert.assertEquals(expected.size(), actual.size());
-    Assert.assertEquals(Set.copyOf(expected), Set.copyOf(actual));
+    Assertions.assertEquals(expected.size(), actual.size());
+    Assertions.assertEquals(Set.copyOf(expected), Set.copyOf(actual));
   }
+
 }

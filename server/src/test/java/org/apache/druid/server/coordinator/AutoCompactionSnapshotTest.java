@@ -20,8 +20,8 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.server.compaction.CompactionStatistics;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class AutoCompactionSnapshotTest
 {
@@ -34,26 +34,26 @@ public class AutoCompactionSnapshotTest
 
     // Increment every stat twice
     for (int i = 0; i < 2; i++) {
-      builder.incrementSkippedStats(CompactionStatistics.create(13, 13, 13));
-      builder.incrementWaitingStats(CompactionStatistics.create(13, 13, 13));
-      builder.incrementCompactedStats(CompactionStatistics.create(13, 13, 13));
+      builder.incrementSkippedStats(CompactionStatistics.create(13, null, 13, 13));
+      builder.incrementWaitingStats(CompactionStatistics.create(13, null, 13, 13));
+      builder.incrementCompactedStats(CompactionStatistics.create(13, null, 13, 13));
     }
 
     final AutoCompactionSnapshot actual = builder.withMessage(expectedMessage).build();
 
-    Assert.assertNotNull(actual);
-    Assert.assertEquals(26, actual.getSegmentCountSkipped());
-    Assert.assertEquals(26, actual.getIntervalCountSkipped());
-    Assert.assertEquals(26, actual.getBytesSkipped());
-    Assert.assertEquals(26, actual.getBytesCompacted());
-    Assert.assertEquals(26, actual.getIntervalCountCompacted());
-    Assert.assertEquals(26, actual.getSegmentCountCompacted());
-    Assert.assertEquals(26, actual.getBytesAwaitingCompaction());
-    Assert.assertEquals(26, actual.getIntervalCountAwaitingCompaction());
-    Assert.assertEquals(26, actual.getSegmentCountAwaitingCompaction());
-    Assert.assertEquals(AutoCompactionSnapshot.ScheduleStatus.RUNNING, actual.getScheduleStatus());
-    Assert.assertEquals(expectedDataSource, actual.getDataSource());
-    Assert.assertEquals(expectedMessage, actual.getMessage());
+    Assertions.assertNotNull(actual);
+    Assertions.assertEquals(26, actual.getSegmentCountSkipped());
+    Assertions.assertEquals(26, actual.getIntervalCountSkipped());
+    Assertions.assertEquals(26, actual.getBytesSkipped());
+    Assertions.assertEquals(26, actual.getBytesCompacted());
+    Assertions.assertEquals(26, actual.getIntervalCountCompacted());
+    Assertions.assertEquals(26, actual.getSegmentCountCompacted());
+    Assertions.assertEquals(26, actual.getBytesAwaitingCompaction());
+    Assertions.assertEquals(26, actual.getIntervalCountAwaitingCompaction());
+    Assertions.assertEquals(26, actual.getSegmentCountAwaitingCompaction());
+    Assertions.assertEquals(AutoCompactionSnapshot.ScheduleStatus.RUNNING, actual.getScheduleStatus());
+    Assertions.assertEquals(expectedDataSource, actual.getDataSource());
+    Assertions.assertEquals(expectedMessage, actual.getMessage());
 
     AutoCompactionSnapshot expected = new AutoCompactionSnapshot(
         expectedDataSource,
@@ -69,6 +69,6 @@ public class AutoCompactionSnapshotTest
         26,
         26
     );
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 }

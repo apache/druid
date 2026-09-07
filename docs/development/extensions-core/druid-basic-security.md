@@ -23,7 +23,7 @@ title: "Basic Security"
   -->
 
 
-The Basic Security extension for Apache Druid adds:
+The Basic Security extension for Apache&circledR; Druid adds:
 
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store.
 - an Escalator which determines the authentication scheme for internal Druid processes.
@@ -105,7 +105,7 @@ druid.auth.authenticator.MyBasicMetadataAuthenticator.initialInternalClientPassw
 # Uses the metadata store for storing users, you can use authentication API to create new users and grant permissions
 druid.auth.authenticator.MyBasicMetadataAuthenticator.credentialsValidator.type=metadata
 
-# If true and the request credential doesn't exists in this credentials store, the request will proceed to next Authenticator in the chain.
+# If true and the request credential doesn't exist in this credentials store, the request proceeds to the next Authenticator in the chain.
 druid.auth.authenticator.MyBasicMetadataAuthenticator.skipOnFailure=false
 druid.auth.authenticator.MyBasicMetadataAuthenticator.authorizerName=MyBasicMetadataAuthorizer
 ```
@@ -261,6 +261,18 @@ The valid credentials cache size. The cache uses a LRU policy.<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 100
 
+**`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupBaseDn`**
+
+The base DN for searching LDAP groups. When set together with `groupSearch`, Druid performs a reverse group lookup to populate the `memberOf` attribute during authentication. This is needed when the LDAP server does not return `memberOf` in user search results. If not set, Druid relies on the `memberOf` attribute being returned directly by the user search.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
+**`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupSearch`**
+
+The LDAP search filter for finding groups that contain a user. The filter must contain a literal `%s` placeholder, which is replaced with the user's full DN. Note that `%%s` does not count, as it is a placeholder escaped for `String.format`. For example, `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`. A filter without the placeholder is rejected at startup because it would match all groups under `groupBaseDn` for every user.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.skipOnFailure`**
 
 If true and the request credential doesn't exists or isn't fully configured in the credentials store, the request will proceed to next Authenticator in the chain.<br />
@@ -401,6 +413,47 @@ The type of role provider (ldap) to authorize requests credentials.<br />
 Array of LDAP group filters used to filter out the allowed set of groups returned from LDAP search. Filters can be begin with *, or end with ,* to provide configurational flexibility to limit or filter allowed set of groups available to LDAP Authorizer.<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
+#### ReadOnly Authorizer
+
+The ReadOnly authorizer allows all READ operations and denies all other operations (WRITE, DELETE, etc.).
+
+Example configuration:
+
+```
+druid.auth.authenticatorChain=["basic","anonymous"]
+
+# Basic authenticator for internal user
+druid.auth.authenticator.basic.type=basic
+druid.auth.authenticator.basic.initialAdminPassword=password
+druid.auth.authenticator.basic.initialInternalClientPassword=password
+druid.auth.authenticator.basic.credentialsValidator.type=metadata
+druid.auth.authenticator.basic.authorizerName=BasicAuthorizer
+
+# Anonymous authenticator for external users
+druid.auth.authenticator.anonymous.type=anonymous
+druid.auth.authenticator.anonymous.identity=defaultUser
+druid.auth.authenticator.anonymous.authorizerName=ReadOnlyAuthorizer
+
+# Escalator with Basic auth for internal communications
+druid.escalator.type=basic
+druid.escalator.internalClientUsername=druid_system
+druid.escalator.internalClientPassword=password
+druid.escalator.authorizerName=BasicAuthorizer
+
+# Both authorizers
+druid.auth.authorizers=["BasicAuthorizer","ReadOnlyAuthorizer"]
+
+# BasicAuthorizer configuration
+druid.auth.authorizer.BasicAuthorizer.type=basic
+
+# ReadOnlyAuthorizer configuration
+druid.auth.authorizer.ReadOnlyAuthorizer.type=readOnly
+```
+
+With this configuration:
+- Internal Druid communications use Basic authentication → AllowAll authorizer → full access
+- External users with no authentication → Anonymous authenticator → ReadOnly authorizer → read-only access
 
 #### Properties for LDAPS
 

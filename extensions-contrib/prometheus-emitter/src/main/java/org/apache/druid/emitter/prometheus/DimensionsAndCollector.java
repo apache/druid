@@ -20,20 +20,34 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.SimpleCollector;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.Stopwatch;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.joda.time.Duration;
+
+import javax.annotation.Nullable;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class DimensionsAndCollector
 {
+  private static final Logger log = new Logger(DimensionsAndCollector.class);
   private final String[] dimensions;
   private final SimpleCollector collector;
   private final double conversionFactor;
   private final double[] histogramBuckets;
+  private final ConcurrentHashMap<List<String>, Stopwatch> labelValuesToStopwatch;
+  private final Duration ttlSeconds;
 
-  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets)
+  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets, @Nullable Integer ttlSeconds)
   {
     this.dimensions = dimensions;
     this.collector = collector;
     this.conversionFactor = conversionFactor;
     this.histogramBuckets = histogramBuckets;
+    this.labelValuesToStopwatch = new ConcurrentHashMap<>();
+    this.ttlSeconds = ttlSeconds != null ? Duration.standardSeconds(ttlSeconds) : null;
   }
 
   public String[] getDimensions()
@@ -54,5 +68,47 @@ public class DimensionsAndCollector
   public double[] getHistogramBuckets()
   {
     return histogramBuckets;
+  }
+
+  /**
+   * For each unique set of labelValues, keeps track of the amount of time that has elapsed since its metric
+   * value has been updated. Label tracking is only required if a metric TTL has been configured
+   */
+  public void resetLastUpdateTime(List<String> labelValues)
+  {
+    if (ttlSeconds == null) {
+      return;
+    }
+    labelValuesToStopwatch.compute(labelValues, (k, v) -> {
+      if (v != null) {
+        v.restart();
+        return v;
+      } else {
+        return Stopwatch.createStarted();
+      }
+    });
+  }
+
+  public ConcurrentMap<List<String>, Stopwatch> getLabelValuesToStopwatch()
+  {
+    return labelValuesToStopwatch;
+  }
+
+  /**
+   * For the given labelValues, checks if the metric value has been updated within the configured {@link #ttlSeconds}.
+   * Returns true and removes the entry from the map if it has expired or if the entry doesn't exist, otherwise
+   * returns false.
+   */
+  public boolean shouldRemoveIfExpired(List<String> labelValues)
+  {
+    if (ttlSeconds == null) {
+      throw DruidException.defensive("Invalid usage of shouldRemoveIfExpired, ttlSeconds has not been set");
+    }
+    return labelValuesToStopwatch.computeIfPresent(labelValues, (k, v) -> {
+      if (v.hasElapsed(ttlSeconds)) {
+        return null;
+      }
+      return v;
+    }) == null;
   }
 }

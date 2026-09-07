@@ -18,6 +18,8 @@
 
 import type { SqlBase } from 'druid-query-toolkit';
 import {
+  F,
+  L,
   SqlColumn,
   SqlExpression,
   SqlFunction,
@@ -177,4 +179,30 @@ export function findAllSqlQueriesInText(text: string): QuerySlice[] {
   }
 
   return found;
+}
+
+const GRANULARITY_TO_ALIGN_TO_DAY: Record<string, boolean> = {
+  PT2H: true,
+  PT3H: true,
+  PT4H: true,
+  PT6H: true,
+  PT8H: true,
+  PT12H: true,
+  PT24H: true,
+};
+
+/**
+ * A smart time floor that adjusts the origin for the hour granularities that divide evenly into days to make them align with days
+ */
+export function smartTimeFloor(
+  ex: SqlExpression,
+  granularity: string,
+  isUTC: boolean,
+): SqlExpression {
+  return F(
+    'TIME_FLOOR',
+    ex,
+    L(granularity),
+    !isUTC && GRANULARITY_TO_ALIGN_TO_DAY[granularity] ? F.timeFloor(ex, 'P1D') : undefined,
+  );
 }

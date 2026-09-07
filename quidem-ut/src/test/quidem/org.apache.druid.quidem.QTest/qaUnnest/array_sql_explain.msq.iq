@@ -47,8 +47,7 @@ FROM test_unnest,
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_unnest",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_unnest"
     } ],
     "processor" : {
       "type" : "scan",
@@ -79,7 +78,6 @@ FROM test_unnest,
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"j0.unnest\",\"type\":\"LONG\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -155,8 +153,7 @@ FROM
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_unnest",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_unnest"
     } ],
     "processor" : {
       "type" : "scan",
@@ -187,7 +184,6 @@ FROM
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"s_int\",\"type\":\"LONG\"},{\"name\":\"s_null\",\"type\":\"STRING\"},{\"name\":\"a_bool\",\"type\":\"ARRAY<LONG>\"},{\"name\":\"a_int\",\"type\":\"ARRAY<LONG>\"},{\"name\":\"a_float\",\"type\":\"ARRAY<DOUBLE>\"},{\"name\":\"a_str\",\"type\":\"ARRAY<STRING>\"},{\"name\":\"a_null\",\"type\":\"ARRAY<LONG>\"},{\"name\":\"a_empty\",\"type\":\"ARRAY<LONG>\"},{\"name\":\"a_mixed\",\"type\":\"ARRAY<STRING>\"},{\"name\":\"a_nested\",\"type\":\"COMPLEX<json>\"},{\"name\":\"j0.unnest\",\"type\":\"LONG\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -290,8 +286,7 @@ GROUP BY c;
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_unnest",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "test_unnest"
     } ],
     "processor" : {
       "type" : "groupByPreShuffle",

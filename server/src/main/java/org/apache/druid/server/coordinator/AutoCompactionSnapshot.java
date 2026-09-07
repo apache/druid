@@ -22,11 +22,11 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.compaction.CompactionStatistics;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
 public class AutoCompactionSnapshot
@@ -204,6 +204,25 @@ public class AutoCompactionSnapshot
     );
   }
 
+  @Override
+  public String toString()
+  {
+    return "AutoCompactionSnapshot{" +
+           "dataSource='" + dataSource + '\'' +
+           ", scheduleStatus=" + scheduleStatus +
+           ", message='" + message + '\'' +
+           ", bytesAwaitingCompaction=" + bytesAwaitingCompaction +
+           ", bytesCompacted=" + bytesCompacted +
+           ", bytesSkipped=" + bytesSkipped +
+           ", segmentCountAwaitingCompaction=" + segmentCountAwaitingCompaction +
+           ", segmentCountCompacted=" + segmentCountCompacted +
+           ", segmentCountSkipped=" + segmentCountSkipped +
+           ", intervalCountAwaitingCompaction=" + intervalCountAwaitingCompaction +
+           ", intervalCountCompacted=" + intervalCountCompacted +
+           ", intervalCountSkipped=" + intervalCountSkipped +
+           '}';
+  }
+
   public static class Builder
   {
     private final String dataSource;
@@ -239,6 +258,11 @@ public class AutoCompactionSnapshot
     public void incrementWaitingStats(CompactionStatistics entry)
     {
       waitingStats.increment(entry);
+    }
+
+    public void decrementWaitingStats(CompactionStatistics entry)
+    {
+      waitingStats.decrement(entry);
     }
 
     public void incrementCompactedStats(CompactionStatistics entry)

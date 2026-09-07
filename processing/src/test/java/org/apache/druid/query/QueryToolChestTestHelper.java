@@ -20,7 +20,7 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.List;
 
@@ -29,9 +29,9 @@ public class QueryToolChestTestHelper
   public static void assertArrayResultsEquals(List<Object[]> expected, final Sequence<Object[]> actual)
   {
     final List<Object[]> actualList = actual.toList();
-    Assert.assertEquals("number of results", expected.size(), actualList.size());
+    Assertions.assertEquals(expected.size(), actualList.size(), "number of results");
     for (int i = 0; i < actualList.size(); i++) {
-      Assert.assertArrayEquals("result #" + i, expected.get(i), actualList.get(i));
+      Assertions.assertArrayEquals(expected.get(i), actualList.get(i), "result #" + i);
     }
   }
 }

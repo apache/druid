@@ -11,3 +11,6 @@ insert_final_newline = true
 [*.md]
 trim_trailing_whitespace = false
 insert_final_newline = false
+
+[*.snap]
+trim_trailing_whitespace = false

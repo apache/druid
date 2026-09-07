@@ -458,6 +458,18 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     }
   }
 
+  @Override
+  public long getMaxMergeBufferUsedBytes()
+  {
+    if (!initialized) {
+      return 0L;
+    }
+
+    long hashTableUsage = super.getMaxMergeBufferUsedBytes();
+    long offSetHeapUsage = offsetHeap.getMaxMergeBufferUsedBytes();
+    return hashTableUsage + offSetHeapUsage;
+  }
+
   private class AlternatingByteBufferHashTable extends ByteBufferHashTable
   {
     // The base buffer is split into two alternating halves, with one sub-buffer in use at a given time.
@@ -509,10 +521,11 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     public void reset()
     {
       size = 0;
+      updateMaxMergeBufferUsedBytes();
       growthCount = 0;
       // clear the used bits of the first buffer
       for (int i = 0; i < maxBuckets; i++) {
-        subHashTableBuffers[0].put(i * bucketSizeWithHash, (byte) 0);
+        subHashTableBuffers[0].putInt(i * bucketSizeWithHash, 0);
       }
       tableBuffer = subHashTableBuffers[0];
     }
@@ -525,7 +538,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
 
       // clear the used bits of the buffer we're swapping to
       for (int i = 0; i < maxBuckets; i++) {
-        newTableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+        newTableBuffer.putInt(i * bucketSizeWithHash, 0);
       }
 
       // Get the offsets of the top N buckets from the heap and copy the buckets to new table
@@ -544,7 +557,7 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
           keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
           // Put the entry in the new hash table
-          final int keyHash = entryBuffer.getInt(entryBuffer.position()) & 0x7fffffff;
+          final int keyHash = entryBuffer.getInt(entryBuffer.position()) & Groupers.USED_FLAG_MASK;
           final int newBucket = findBucket(true, maxBuckets, newTableBuffer, keyBuffer, keyHash);
 
           if (newBucket < 0) {
@@ -570,8 +583,22 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
       }
 
       size = numCopied;
+      updateMaxMergeBufferUsedBytes();
       tableBuffer = newTableBuffer;
       growthCount++;
+    }
+
+    /**
+     * The alternating table trims-and-swaps to keep the top-{@code limit} entries in memory and never spills via the
+     * fill path (see base {@link #recordsFillProximity()}), so suppress fill-proximity recording — such queries read
+     * 0.0. Its only spill signal is a rejection in {@link #findBucketWithAutoGrowth}, which does NOT fire on ordinary
+     * swaps: post-swap {@code size == numCopied <= limit}, and construction guarantees
+     * {@code regrowthThreshold >= limit + 1}, so the next insert always finds a bucket.
+     */
+    @Override
+    protected boolean recordsFillProximity()
+    {
+      return false;
     }
   }
 }

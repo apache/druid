@@ -23,8 +23,8 @@ import org.apache.datasketches.common.SketchesArgumentException;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -42,7 +42,7 @@ public class HllSketchHolderObjectStrategyTest
 
     ByteBuffer buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
     HllSketchHolderObjectStrategy objectStrategy = new HllSketchHolderObjectStrategy();
-    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
+    Assertions.assertTrue(objectStrategy.readRetainsBufferReference());
 
     // valid sketch should not explode when copied, which reads the memory
     objectStrategy.fromByteBufferSafe(buf, bytes.length).getSketch().copy();
@@ -55,7 +55,7 @@ public class HllSketchHolderObjectStrategyTest
       }
 
       final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
-      Assert.assertThrows(
+      Assertions.assertThrows(
           Exception.class, // can throw either SketchesArgumentException or IndexOutOfBoundsException
           () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).getSketch().copy()
       );
@@ -64,7 +64,7 @@ public class HllSketchHolderObjectStrategyTest
     // non sketch that is too short to contain header should fail with regular java buffer exception
     final byte[] garbage = new byte[]{0x01, 0x02};
     final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         SketchesArgumentException.class,
         () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).getSketch().copy()
     );
@@ -72,7 +72,7 @@ public class HllSketchHolderObjectStrategyTest
     // non sketch that is long enough to check (this one doesn't actually need 'safe' read)
     final byte[] garbageLonger = StringUtils.toUtf8("notasketch");
     final ByteBuffer buf4 = ByteBuffer.wrap(garbageLonger).order(ByteOrder.LITTLE_ENDIAN);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         SketchesArgumentException.class,
         () -> objectStrategy.fromByteBufferSafe(buf4, garbageLonger.length).getSketch().copy()
     );
@@ -102,22 +102,22 @@ public class HllSketchHolderObjectStrategyTest
           buf.position(1);
           buf.put(compactBytes);
           buf.position(1);
-          Assert.assertEquals(
-              "Compact array littleEndian " + description,
+          Assertions.assertEquals(
               expectEmpty,
-              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, compactBytes.length)
+              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, compactBytes.length),
+              "Compact array littleEndian " + description
           );
-          Assert.assertEquals(1, buf.position());
+          Assertions.assertEquals(1, buf.position());
 
           // -----------------------------
           // Compact array, big endian buf
           buf.order(ByteOrder.BIG_ENDIAN);
-          Assert.assertEquals(
-              "Compact array bigEndian " + description,
+          Assertions.assertEquals(
               expectEmpty,
-              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, compactBytes.length)
+              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, compactBytes.length),
+              "Compact array bigEndian " + description
           );
-          Assert.assertEquals(1, buf.position());
+          Assertions.assertEquals(1, buf.position());
 
           // ----------------------------------
           // Updatable array, little endian buf
@@ -128,22 +128,22 @@ public class HllSketchHolderObjectStrategyTest
           buf.position(1);
           buf.put(updatableBytes);
           buf.position(1);
-          Assert.assertEquals(
-              "Updatable array littleEndian " + description,
+          Assertions.assertEquals(
               expectEmpty,
-              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, updatableBytes.length)
+              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, updatableBytes.length),
+              "Updatable array littleEndian " + description
           );
-          Assert.assertEquals(1, buf.position());
+          Assertions.assertEquals(1, buf.position());
 
           // -------------------------------
           // Updatable array, big endian buf
           buf.order(ByteOrder.BIG_ENDIAN);
-          Assert.assertEquals(
-              "Updatable array bigEndian " + description,
+          Assertions.assertEquals(
               expectEmpty,
-              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, updatableBytes.length)
+              HllSketchHolderObjectStrategy.isSafeToConvertToNullSketch(buf, updatableBytes.length),
+              "Updatable array bigEndian " + description
           );
-          Assert.assertEquals(1, buf.position());
+          Assertions.assertEquals(1, buf.position());
         }
       }
     }

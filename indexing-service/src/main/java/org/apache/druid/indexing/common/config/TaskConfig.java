@@ -41,11 +41,11 @@ import java.util.List;
  */
 public class TaskConfig implements TaskDirectory
 {
-  public static final String ALLOW_HADOOP_TASK_EXECUTION_KEY = "druid.indexer.task.allowHadoopTaskExecution";
   private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
   private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
   private static final boolean DEFAULT_STORE_EMPTY_COLUMNS = true;
   private static final long DEFAULT_TMP_STORAGE_BYTES_PER_TASK = -1;
+  private static final boolean DEFAULT_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED = true;
 
   @JsonProperty
   private final String baseDir;
@@ -78,7 +78,10 @@ public class TaskConfig implements TaskDirectory
   private final long tmpStorageBytesPerTask;
 
   @JsonProperty
-  private final boolean allowHadoopTaskExecution;
+  private final boolean buildV10;
+
+  @JsonProperty
+  private final boolean virtualStoragePartialDownloadsEnabled;
 
   @JsonCreator
   public TaskConfig(
@@ -92,7 +95,8 @@ public class TaskConfig implements TaskDirectory
       @JsonProperty("storeEmptyColumns") @Nullable Boolean storeEmptyColumns,
       @JsonProperty("encapsulatedTask") boolean enableTaskLevelLogPush,
       @JsonProperty("tmpStorageBytesPerTask") @Nullable Long tmpStorageBytesPerTask,
-      @JsonProperty("allowHadoopTaskExecution") boolean allowHadoopTaskExecution
+      @JsonProperty("buildV10") boolean buildV10,
+      @JsonProperty("virtualStoragePartialDownloadsEnabled") @Nullable Boolean virtualStoragePartialDownloadsEnabled
   )
   {
     this.baseDir = Configs.valueOrDefault(baseDir, System.getProperty("java.io.tmpdir"));
@@ -118,7 +122,11 @@ public class TaskConfig implements TaskDirectory
 
     this.storeEmptyColumns = Configs.valueOrDefault(storeEmptyColumns, DEFAULT_STORE_EMPTY_COLUMNS);
     this.tmpStorageBytesPerTask = Configs.valueOrDefault(tmpStorageBytesPerTask, DEFAULT_TMP_STORAGE_BYTES_PER_TASK);
-    this.allowHadoopTaskExecution = allowHadoopTaskExecution;
+    this.buildV10 = buildV10;
+    this.virtualStoragePartialDownloadsEnabled = Configs.valueOrDefault(
+        virtualStoragePartialDownloadsEnabled,
+        DEFAULT_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_ENABLED
+    );
   }
 
   private TaskConfig(
@@ -132,7 +140,8 @@ public class TaskConfig implements TaskDirectory
       boolean storeEmptyColumns,
       boolean encapsulatedTask,
       long tmpStorageBytesPerTask,
-      boolean allowHadoopTaskExecution
+      boolean buildV10,
+      boolean virtualStoragePartialDownloadsEnabled
   )
   {
     this.baseDir = baseDir;
@@ -145,7 +154,8 @@ public class TaskConfig implements TaskDirectory
     this.storeEmptyColumns = storeEmptyColumns;
     this.encapsulatedTask = encapsulatedTask;
     this.tmpStorageBytesPerTask = tmpStorageBytesPerTask;
-    this.allowHadoopTaskExecution = allowHadoopTaskExecution;
+    this.buildV10 = buildV10;
+    this.virtualStoragePartialDownloadsEnabled = virtualStoragePartialDownloadsEnabled;
   }
 
   @JsonProperty
@@ -239,9 +249,15 @@ public class TaskConfig implements TaskDirectory
   }
 
   @JsonProperty
-  public boolean isAllowHadoopTaskExecution()
+  public boolean buildV10()
   {
-    return allowHadoopTaskExecution;
+    return buildV10;
+  }
+
+  @JsonProperty
+  public boolean isVirtualStoragePartialDownloadsEnabled()
+  {
+    return virtualStoragePartialDownloadsEnabled;
   }
 
   private String defaultDir(@Nullable String configParameter, final String defaultVal)
@@ -266,7 +282,8 @@ public class TaskConfig implements TaskDirectory
         storeEmptyColumns,
         encapsulatedTask,
         tmpStorageBytesPerTask,
-        allowHadoopTaskExecution
+        buildV10,
+        virtualStoragePartialDownloadsEnabled
     );
   }
 
@@ -283,7 +300,8 @@ public class TaskConfig implements TaskDirectory
         storeEmptyColumns,
         encapsulatedTask,
         tmpStorageBytesPerTask,
-        allowHadoopTaskExecution
+        buildV10,
+        virtualStoragePartialDownloadsEnabled
     );
   }
 }

@@ -21,8 +21,8 @@ package org.apache.druid.collections.bitmap;
 
 import org.apache.druid.extendedset.intset.ConciseSet;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.io.IOException;
@@ -34,7 +34,7 @@ public class BitmapOperationAgainstConsecutiveRunsTest extends BitmapOperationTe
   public static final double DENSITY = 0.001;
   public static final int MIN_INTERSECT = 50;
 
-  @BeforeClass
+  @BeforeAll
   public static void prepareRandomRanges() throws Exception
   {
     reset();
@@ -75,7 +75,7 @@ public class BitmapOperationAgainstConsecutiveRunsTest extends BitmapOperationTe
     printSizeStats(DENSITY, "Random Alternating Bitmap");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws IOException
   {
     reset();

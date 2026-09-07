@@ -28,9 +28,9 @@ import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -47,7 +47,7 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
   private long[] longs = {185, -216, -128751132, Long.MIN_VALUE};
   private Long[] objects = {1123126751L, 1784247991L, 1854329816L, 1000000000L};
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     longAnyAggFactory = new LongAnyAggregatorFactory("billy", "nilly");
@@ -72,9 +72,9 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
 
     Long result = (Long) agg.get();
 
-    Assert.assertEquals((Long) longs[0], result);
-    Assert.assertEquals((long) longs[0], agg.getLong());
-    Assert.assertEquals(longs[0], agg.getLong(), 0.0001);
+    Assertions.assertEquals((Long) longs[0], result);
+    Assertions.assertEquals((long) longs[0], agg.getLong());
+    Assertions.assertEquals(longs[0], agg.getLong(), 0.0001);
   }
 
   @Test
@@ -93,9 +93,9 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
 
     Long result = (Long) agg.get(buffer, 0);
 
-    Assert.assertEquals(longs[0], result, 0.0001);
-    Assert.assertEquals((long) longs[0], agg.getLong(buffer, 0));
-    Assert.assertEquals(longs[0], agg.getLong(buffer, 0), 0.0001);
+    Assertions.assertEquals(longs[0], result, 0.0001);
+    Assertions.assertEquals((long) longs[0], agg.getLong(buffer, 0));
+    Assertions.assertEquals(longs[0], agg.getLong(buffer, 0), 0.0001);
   }
 
   @Test
@@ -103,7 +103,7 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
   {
     Long l1 = 3L;
     Long l2 = 4L;
-    Assert.assertEquals(l1, longAnyAggFactory.combine(l1, l2));
+    Assertions.assertEquals(l1, longAnyAggFactory.combine(l1, l2));
   }
 
   @Test
@@ -112,10 +112,10 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
     Long l1 = 3L;
     Long l2 = null;
     Comparator comparator = longAnyAggFactory.getComparator();
-    Assert.assertEquals(1, comparator.compare(l1, l2));
-    Assert.assertEquals(0, comparator.compare(l1, l1));
-    Assert.assertEquals(0, comparator.compare(l2, l2));
-    Assert.assertEquals(-1, comparator.compare(l2, l1));
+    Assertions.assertEquals(1, comparator.compare(l1, l2));
+    Assertions.assertEquals(0, comparator.compare(l1, l1));
+    Assertions.assertEquals(0, comparator.compare(l2, l2));
+    Assertions.assertEquals(-1, comparator.compare(l2, l1));
   }
 
   @Test
@@ -124,9 +124,9 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
     Integer n1 = 3;
     Long n2 = 4L;
     Comparator comparator = longAnyAggFactory.getComparator();
-    Assert.assertEquals(0, comparator.compare(n1, n1));
-    Assert.assertEquals(-1, comparator.compare(n1, n2));
-    Assert.assertEquals(1, comparator.compare(n2, n1));
+    Assertions.assertEquals(0, comparator.compare(n1, n1));
+    Assertions.assertEquals(-1, comparator.compare(n1, n2));
+    Assertions.assertEquals(1, comparator.compare(n2, n1));
   }
 
   @Test
@@ -141,9 +141,9 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
 
     Long result = (Long) agg.get();
 
-    Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0].longValue(), agg.getLong());
-    Assert.assertEquals(objects[0], agg.getLong(), 0.0001);
+    Assertions.assertEquals(objects[0], result, 0.0001);
+    Assertions.assertEquals(objects[0].longValue(), agg.getLong());
+    Assertions.assertEquals(objects[0], agg.getLong(), 0.0001);
   }
 
   @Test
@@ -162,9 +162,9 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
 
     Long result = (Long) agg.get(buffer, 0);
 
-    Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(objects[0], agg.getLong(buffer, 0), 0.0001);
+    Assertions.assertEquals(objects[0], result, 0.0001);
+    Assertions.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
+    Assertions.assertEquals(objects[0], agg.getLong(buffer, 0), 0.0001);
   }
 
   @Test
@@ -172,7 +172,7 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String longSpecJson = "{\"type\":\"longAny\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(longAnyAggFactory, mapper.readValue(longSpecJson, AggregatorFactory.class));
+    Assertions.assertEquals(longAnyAggFactory, mapper.readValue(longSpecJson, AggregatorFactory.class));
   }
 
   private void aggregate(

@@ -25,11 +25,9 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import org.apache.druid.msq.exec.OutputChannelMode;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -55,7 +53,7 @@ public class StageInputSpecSlicerTest
 
   private StageInputSpecSlicer slicer;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     slicer = new StageInputSpecSlicer(STAGE_PARTITIONS_MAP, STAGE_OUTPUT_MODE_MAP);
@@ -64,13 +62,13 @@ public class StageInputSpecSlicerTest
   @Test
   public void test_canSliceDynamic()
   {
-    Assert.assertFalse(slicer.canSliceDynamic(new StageInputSpec(0)));
+    Assertions.assertFalse(slicer.canSliceDynamic(new StageInputSpec(0)));
   }
 
   @Test
   public void test_sliceStatic_stageZeroOneSlice()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList(
             new StageInputSlice(
                 0,
@@ -78,14 +76,14 @@ public class StageInputSpecSlicerTest
                 OutputChannelMode.LOCAL_STORAGE
             )
         ),
-        slicer.sliceStatic(new StageInputSpec(0), 1)
+        slicer.sliceStatic(new StageInputSpec(0), null, 1)
     );
   }
 
   @Test
   public void test_sliceStatic_stageZeroTwoSlices()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             new StageInputSlice(
                 0,
@@ -98,14 +96,14 @@ public class StageInputSpecSlicerTest
                 OutputChannelMode.LOCAL_STORAGE
             )
         ),
-        slicer.sliceStatic(new StageInputSpec(0), 2)
+        slicer.sliceStatic(new StageInputSpec(0), null, 2)
     );
   }
 
   @Test
   public void test_sliceStatic_stageOneTwoSlices()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             new StageInputSlice(
                 1,
@@ -118,18 +116,18 @@ public class StageInputSpecSlicerTest
                 OutputChannelMode.LOCAL_STORAGE
             )
         ),
-        slicer.sliceStatic(new StageInputSpec(1), 2)
+        slicer.sliceStatic(new StageInputSpec(1), null, 2)
     );
   }
 
   @Test
   public void test_sliceStatic_notAvailable()
   {
-    final IllegalStateException e = Assert.assertThrows(
+    final IllegalStateException e = Assertions.assertThrows(
         IllegalStateException.class,
-        () -> slicer.sliceStatic(new StageInputSpec(3), 1)
+        () -> slicer.sliceStatic(new StageInputSpec(3), null, 1)
     );
 
-    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("Stage[3] output partitions not available"));
+    Assertions.assertEquals("Stage[3] output partitions not available", e.getMessage());
   }
 }

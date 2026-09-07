@@ -21,8 +21,10 @@ package org.apache.druid.frame.channel;
 
 import org.apache.druid.frame.file.FrameFileFooter;
 import org.apache.druid.frame.file.FrameFileWriter;
+import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.storage.StorageConnector;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -37,12 +39,16 @@ public class DurableStoragePartitionedReadableFrameChannel implements Partitione
   private final ExecutorService remoteInputStreamPool;
   private final File footerFile;
 
+  @Nullable
+  private final WireTransferableContext wireTransferableContext;
+
   public DurableStoragePartitionedReadableFrameChannel(
       StorageConnector storageConnector,
       Supplier<FrameFileFooter> frameFileFooterSupplier,
       String frameFileFullPath,
       ExecutorService remoteInputStreamPool,
-      File footerFile
+      File footerFile,
+      @Nullable WireTransferableContext wireTransferableContext
   )
   {
     this.storageConnector = storageConnector;
@@ -50,6 +56,7 @@ public class DurableStoragePartitionedReadableFrameChannel implements Partitione
     this.frameFileFullPath = frameFileFullPath;
     this.remoteInputStreamPool = remoteInputStreamPool;
     this.footerFile = footerFile;
+    this.wireTransferableContext = wireTransferableContext;
   }
 
   @Override
@@ -71,7 +78,8 @@ public class DurableStoragePartitionedReadableFrameChannel implements Partitione
           storageConnector.readRange(frameFileFullPath, startByte, endByte - startByte),
           frameFileFullPath,
           remoteInputStreamPool,
-          true
+          true,
+          wireTransferableContext
       );
     }
     catch (IOException e) {

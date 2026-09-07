@@ -22,8 +22,8 @@ package org.apache.druid.k8s.overlord.execution;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class KubernetesTaskRunnerDynamicConfigTest
 {
@@ -36,7 +36,8 @@ public class KubernetesTaskRunnerDynamicConfigTest
                   + "  \"type\": \"default\",\n"
                   + "  \"podTemplateSelectStrategy\": {\n"
                   + "    \"type\": \"default\"\n"
-                  + "  }\n"
+                  + "  },\n"
+                  + "  \"capacity\": 3\n"
                   + "}";
 
     KubernetesTaskRunnerDynamicConfig deserialized = jsonMapper.readValue(
@@ -44,7 +45,8 @@ public class KubernetesTaskRunnerDynamicConfigTest
         KubernetesTaskRunnerDynamicConfig.class
     );
     PodTemplateSelectStrategy selectStrategy = deserialized.getPodTemplateSelectStrategy();
-    Assert.assertTrue(selectStrategy instanceof TaskTypePodTemplateSelectStrategy);
+    Assertions.assertTrue(selectStrategy instanceof TaskTypePodTemplateSelectStrategy);
+    Assertions.assertEquals(Integer.valueOf(3), deserialized.getCapacity());
 
     json = "{\n"
            + "  \"type\": \"default\",\n"
@@ -70,7 +72,16 @@ public class KubernetesTaskRunnerDynamicConfigTest
 
     deserialized = jsonMapper.readValue(json, KubernetesTaskRunnerDynamicConfig.class);
     selectStrategy = deserialized.getPodTemplateSelectStrategy();
-    Assert.assertTrue(selectStrategy instanceof SelectorBasedPodTemplateSelectStrategy);
-    Assert.assertEquals(2, ((SelectorBasedPodTemplateSelectStrategy) selectStrategy).getSelectors().size());
+    Assertions.assertTrue(selectStrategy instanceof SelectorBasedPodTemplateSelectStrategy);
+    Assertions.assertEquals(2, ((SelectorBasedPodTemplateSelectStrategy) selectStrategy).getSelectors().size());
+    Assertions.assertNull(deserialized.getCapacity());
+
+    json = "{\n"
+           + "  \"type\": \"default\",\n"
+           + "  \"capacity\": 12"
+           + "}";
+    deserialized = jsonMapper.readValue(json, KubernetesTaskRunnerDynamicConfig.class);
+    Assertions.assertEquals(Integer.valueOf(12), deserialized.getCapacity());
+    Assertions.assertNull(deserialized.getPodTemplateSelectStrategy());
   }
 }

@@ -22,12 +22,12 @@ package org.apache.druid.segment.serde;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.ObjectStrategy;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -50,7 +50,7 @@ public class CompressedComplexColumnSupplier<T> implements Supplier<ComplexColum
             IndexMerger.SERIALIZER_UTILS.readString(bb),
             ComplexColumnMetadata.class
         );
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final SegmentFileMapper mapper = columnBuilder.getFileMapper();
 
         final CompressedVariableSizedBlobColumnSupplier compressedColumnSupplier;
         final ImmutableBitmap nullValues;

@@ -23,6 +23,7 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.IndexableAdapter;
@@ -34,9 +35,11 @@ import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -184,6 +187,26 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
+  public IndexableAdapter getClusterGroupAdapter(TableClusterGroupSpec spec)
+  {
+    if (!(index instanceof OnheapIncrementalIndex onHeapIndex)) {
+      throw DruidException.defensive("cluster groups are only supported on OnheapIncrementalIndex");
+    }
+    final OnHeapClusteredBaseTable cbt = onHeapIndex.getClusteredBaseTable();
+    if (cbt == null) {
+      throw DruidException.defensive("Index is not a clustered base table");
+    }
+    final OnHeapClusterGroup group = cbt.getGroupForClusteringValues(spec.lookupClusteringValues());
+    if (group == null) {
+      throw DruidException.defensive(
+          "No cluster group matches the given spec [%s]",
+          Arrays.toString(spec.lookupClusteringValues())
+      );
+    }
+    return new IncrementalIndexAdapter(dataInterval, group, bitmapFactory);
+  }
+
+  @Override
   public BitmapValues getBitmapValues(String dimension, int index)
   {
     DimensionAccessor accessor = accessors.get(dimension);
@@ -227,7 +250,14 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     if (index instanceof IncrementalIndex) {
-      return ((IncrementalIndex) index).getMetadata();
+      IncrementalIndex incrementalIndex = (IncrementalIndex) index;
+      return incrementalIndex.getMetadata()
+                             .withDimensionOrder(
+                                 incrementalIndex.getDimensionOrder()
+                                                 .stream()
+                                                 .map(OrderBy::ascending)
+                                                 .collect(Collectors.toList())
+                             );
     }
     throw DruidException.defensive("cannot get metadata of projection");
   }

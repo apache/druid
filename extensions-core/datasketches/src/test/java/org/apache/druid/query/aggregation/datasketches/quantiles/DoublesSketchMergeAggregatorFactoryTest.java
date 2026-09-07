@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -59,7 +59,7 @@ public class DoublesSketchMergeAggregatorFactoryTest
         json,
         AggregatorFactory.class
     );
-    Assert.assertEquals(factory, fromJson);
+    Assertions.assertEquals(factory, fromJson);
   }
 
   @Test
@@ -71,7 +71,7 @@ public class DoublesSketchMergeAggregatorFactoryTest
         1000L,
         null
     );
-    Assert.assertEquals(factory, factory.withName("myFactory"));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName("myFactory"));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

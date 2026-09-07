@@ -65,7 +65,7 @@ public class ExpressionPlanner
     final Set<String> columns = analysis.getRequiredBindings();
 
     // check and set traits which allow optimized selectors to be created
-    if (columns.isEmpty()) {
+    if (columns.isEmpty() && !analysis.isNonDeterministic()) {
       traits.add(ExpressionPlan.Trait.CONSTANT);
     } else if (expression.isIdentifier()) {
       traits.add(ExpressionPlan.Trait.IDENTIFIER);
@@ -187,7 +187,8 @@ public class ExpressionPlanner
     // this check should also change
     boolean supportsVector = ExpressionPlan.none(
         traits,
-        ExpressionPlan.Trait.INCOMPLETE_INPUTS
+        ExpressionPlan.Trait.INCOMPLETE_INPUTS,
+        ExpressionPlan.Trait.NEEDS_APPLIED
     );
 
     if (supportsVector && expression.canVectorize(inspector)) {

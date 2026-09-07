@@ -93,6 +93,11 @@ export const COORDINATOR_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         value: 'turboLoadingNodes',
         documentation: 'List of Historical servers to place in turbo loading mode (experimental)',
       },
+      {
+        value: 'historicalTierAliases',
+        documentation:
+          'Map of virtual alias tier names to sets of physical historical tiers they represent',
+      },
     ],
   },
   // Properties only available when smartSegmentLoading is false

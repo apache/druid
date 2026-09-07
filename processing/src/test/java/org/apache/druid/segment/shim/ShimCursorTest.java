@@ -55,9 +55,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -81,7 +81,6 @@ public class ShimCursorTest
     ExpressionProcessing.initializeForTests();
   }
 
-  @Parameterized.Parameters
   public static Collection<Object> vectorSizes()
   {
     return List.of(1, 2, 4, 7, 512);
@@ -120,11 +119,11 @@ public class ShimCursorTest
                                       .setIncludeAllDimensions(true)
                                       .setDimensions(
                                           List.of(
-                                              new AutoTypeColumnSchema("A", null),
+                                              new AutoTypeColumnSchema("A", null, null),
                                               // set B to DOUBLE to avoid mixed types, which causes the base nonvector
                                               // and vector selectors to return different objects
-                                              new AutoTypeColumnSchema("B", ColumnType.DOUBLE),
-                                              new AutoTypeColumnSchema("C", null)
+                                              new AutoTypeColumnSchema("B", ColumnType.DOUBLE, null),
+                                              new AutoTypeColumnSchema("C", null, null)
 
                                           )
                                       )
@@ -188,14 +187,14 @@ public class ShimCursorTest
                                       .setIncludeAllDimensions(true)
                                       .setDimensions(
                                           List.of(
-                                              new AutoTypeColumnSchema("A", null),
+                                              new AutoTypeColumnSchema("A", null, null),
                                               // set B to DOUBLE to avoid mixed types, which causes the base nonvector
                                               // and vector selectors to return different objects
-                                              new AutoTypeColumnSchema("B", ColumnType.DOUBLE),
-                                              new AutoTypeColumnSchema("C", null),
-                                              new AutoTypeColumnSchema("D", null),
-                                              new AutoTypeColumnSchema("E", null),
-                                              new AutoTypeColumnSchema("F", null)
+                                              new AutoTypeColumnSchema("B", ColumnType.DOUBLE, null),
+                                              new AutoTypeColumnSchema("C", null, null),
+                                              new AutoTypeColumnSchema("D", null, null),
+                                              new AutoTypeColumnSchema("E", null, null),
+                                              new AutoTypeColumnSchema("F", null, null)
                                           )
                                       )
                                       .build()
@@ -377,9 +376,9 @@ public class ShimCursorTest
                                       .setIncludeAllDimensions(false)
                                       .setDimensions(
                                           List.of(
-                                              new AutoTypeColumnSchema("longArr", ColumnType.LONG_ARRAY),
-                                              new AutoTypeColumnSchema("doubleArr", ColumnType.DOUBLE_ARRAY),
-                                              new AutoTypeColumnSchema("stringArr", ColumnType.STRING_ARRAY)
+                                              new AutoTypeColumnSchema("longArr", ColumnType.LONG_ARRAY, null),
+                                              new AutoTypeColumnSchema("doubleArr", ColumnType.DOUBLE_ARRAY, null),
+                                              new AutoTypeColumnSchema("stringArr", ColumnType.STRING_ARRAY, null)
                                           )
                                       )
                                       .build()

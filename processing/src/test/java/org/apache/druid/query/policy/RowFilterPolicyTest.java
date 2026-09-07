@@ -26,12 +26,14 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.AndFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class RowFilterPolicyTest
 {
@@ -59,7 +61,7 @@ public class RowFilterPolicyTest
         "{\"type\":\"row\",\"rowFilter\":{\"type\":\"equals\",\"column\":\"col0\",\"matchValueType\":\"STRING\",\"matchValue\":\"val0\"}}\n",
         Policy.class
     );
-    Assert.assertEquals(SIMPLE_ROW_POLICY, deserialized);
+    Assertions.assertEquals(SIMPLE_ROW_POLICY, deserialized);
   }
 
   @Test
@@ -67,7 +69,7 @@ public class RowFilterPolicyTest
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     Policy deserialized = jsonMapper.readValue(jsonMapper.writeValueAsString(SIMPLE_ROW_POLICY), Policy.class);
-    Assert.assertEquals(SIMPLE_ROW_POLICY, deserialized);
+    Assertions.assertEquals(SIMPLE_ROW_POLICY, deserialized);
   }
 
   @Test
@@ -76,7 +78,19 @@ public class RowFilterPolicyTest
     DimFilter policyFilter = new EqualityFilter("col", ColumnType.STRING, "val", null);
     final RowFilterPolicy policy = RowFilterPolicy.from(policyFilter);
 
-    Assert.assertEquals(policyFilter, policy.visit(CursorBuildSpec.FULL_SCAN).getFilter());
+    Assertions.assertEquals(policyFilter, policy.visit(CursorBuildSpec.FULL_SCAN).getFilter());
+  }
+
+  @Test
+  public void testCreateSegmentPruner()
+  {
+    DimFilter policyFilter = new EqualityFilter("col", ColumnType.STRING, "val", null);
+    final RowFilterPolicy policy = RowFilterPolicy.from(policyFilter);
+
+    Assertions.assertEquals(
+        new FilterSegmentPruner(policyFilter, null, VirtualColumns.EMPTY),
+        policy.createSegmentPruner()
+    );
   }
 
   @Test
@@ -93,7 +107,7 @@ public class RowFilterPolicyTest
 
     Filter expected = new AndFilter(ImmutableList.of(policyFilter.toFilter(), filter));
     final CursorBuildSpec transformed = policy.visit(spec);
-    Assert.assertEquals(expected, transformed.getFilter());
-    Assert.assertEquals(ImmutableSet.of("col", "col0"), transformed.getPhysicalColumns());
+    Assertions.assertEquals(expected, transformed.getFilter());
+    Assertions.assertEquals(ImmutableSet.of("col", "col0"), transformed.getPhysicalColumns());
   }
 }

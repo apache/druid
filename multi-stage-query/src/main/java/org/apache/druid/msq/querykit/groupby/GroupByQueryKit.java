@@ -21,12 +21,15 @@ package org.apache.druid.msq.querykit.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
@@ -58,7 +61,8 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 {
   private final ObjectMapper jsonMapper;
 
-  public GroupByQueryKit(ObjectMapper jsonMapper)
+  @Inject
+  public GroupByQueryKit(@Json final ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
   }
@@ -80,8 +84,6 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
         minStageNumber,
         false
     );
@@ -138,7 +140,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       shuffleSpecFactoryPreAggregation =
           intermediateClusterBy.isEmpty()
           ? ShuffleSpecFactories.singlePartition()
-          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(queryKitSpec.getNumPartitionsForShuffle());
+          : ShuffleSpecFactories.globalSortWithTargetPartitions();
 
       if (doLimitOrOffset) {
         shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartitionWithLimit(postAggregationLimitHint);
@@ -163,7 +165,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .signature(intermediateSignature)
                        .shuffleSpec(shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true))
-                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
+                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount())
                        .processor(new GroupByPreShuffleStageProcessor(queryToRun))
     );
 
@@ -183,7 +185,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         StageDefinition.builder(firstStageNumber + 1)
                        .inputs(new StageInputSpec(firstStageNumber))
                        .signature(resultSignature)
-                       .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
+                       .maxWorkerCount(Limits.MAX_WORKERS)
                        .shuffleSpec(
                            shuffleSpecFactoryPostAggregation != null
                            ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)

@@ -25,10 +25,9 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,13 +38,13 @@ import java.util.stream.Collectors;
 
 public class TaskStorageDirTrackerTest
 {
-  @ClassRule
-  public static final TemporaryFolder TMP = new TemporaryFolder();
+  @TempDir
+  private File temporaryFolder;
 
   @Test
   public void testGetOrSelectTaskDir() throws IOException
   {
-    File tmpFolder = TMP.newFolder();
+    final File tmpFolder = temporaryFolder;
     List<File> files = ImmutableList.of(
         new File(tmpFolder, "A"),
         new File(tmpFolder, "B"),
@@ -80,11 +79,11 @@ public class TaskStorageDirTrackerTest
     otherTracker.returnStorageSlot(otherTracker.pickStorageSlot("task3"));
     verifier.validate(otherTracker.pickStorageSlot("eighth-task"), "A", "slot2");
 
-    final IAE iae = Assert.assertThrows(
+    final IAE iae = Assertions.assertThrows(
         IAE.class,
         () -> tracker.returnStorageSlot(otherTracker.pickStorageSlot("eighth-task"))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot return storage slot for task [eighth-task] that I don't own.",
         iae.getMessage()
     );
@@ -117,7 +116,7 @@ public class TaskStorageDirTrackerTest
   @Test
   public void testFallBackToTaskConfig() throws IOException
   {
-    final File baseDir = new File(TMP.newFolder(), "A");
+    final File baseDir = new File(temporaryFolder, "A");
     final TaskStorageDirTracker tracker = TaskStorageDirTracker.fromConfigs(
         new WorkerConfig()
         {
@@ -147,7 +146,7 @@ public class TaskStorageDirTrackerTest
     verifier.validate(tracker.pickStorageSlot("task4"), "slot4");
     verifier.validate(tracker.pickStorageSlot("task10293721"), "slot3");
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ISE.class,
         () -> tracker.pickStorageSlot("seventh-task")
     );
@@ -156,7 +155,7 @@ public class TaskStorageDirTrackerTest
   @Test
   public void testMoreDirectoriesThanSlots() throws IOException
   {
-    File tmpFolder = TMP.newFolder();
+    final File tmpFolder = temporaryFolder;
     List<File> files = ImmutableList.of(
         new File(tmpFolder, "A"),
         new File(tmpFolder, "B"),
@@ -177,7 +176,7 @@ public class TaskStorageDirTrackerTest
     StorageSlotVerifier verifier = new StorageSlotVerifier(tmpFolder).setExpectedSize(100_000_000L);
     verifier.validate(tracker.pickStorageSlot("task1"), "A", "slot0");
     verifier.validate(tracker.pickStorageSlot("task2"), "B", "slot0");
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ISE.class,
         () -> tracker.pickStorageSlot("third-task")
     );
@@ -186,7 +185,7 @@ public class TaskStorageDirTrackerTest
   @Test
   public void testMigration() throws IOException
   {
-    File tmpFolder = TMP.newFolder();
+    final File tmpFolder = temporaryFolder;
     List<File> files = ImmutableList.of(new File(tmpFolder, "A"), new File(tmpFolder, "B"));
 
     TaskStorageDirTracker tracker = TaskStorageDirTracker.fromBaseDirs(files, 4, 100_000_000L);
@@ -219,10 +218,10 @@ public class TaskStorageDirTrackerTest
     );
 
     // Ensure that task count is correctly updated
-    Assert.assertEquals(2, tracker.getNumUsedSlots());
+    Assertions.assertEquals(2, tracker.getNumUsedSlots());
 
-    Assert.assertNull(dirs.get("task3"));
-    Assert.assertNull(dirs.get("task4"));
+    Assertions.assertNull(dirs.get("task3"));
+    Assertions.assertNull(dirs.get("task4"));
 
     // Re-create the dirs so that we can actually pick stuff again.
     tracker.ensureDirectories();
@@ -242,7 +241,7 @@ public class TaskStorageDirTrackerTest
   @Test
   public void testGetNumUsedSlots() throws IOException
   {
-    File tmpFolder = TMP.newFolder();
+    final File tmpFolder = temporaryFolder;
     List<File> files = ImmutableList.of(
         new File(tmpFolder, "A"),
         new File(tmpFolder, "B"),
@@ -254,26 +253,25 @@ public class TaskStorageDirTrackerTest
     final TaskStorageDirTracker tracker = TaskStorageDirTracker.fromBaseDirs(files, workerCapacity, baseTaskDirSize);
     tracker.ensureDirectories();
 
-    Assert.assertEquals(0, tracker.getNumUsedSlots());
+    Assertions.assertEquals(0, tracker.getNumUsedSlots());
 
     tracker.pickStorageSlot("task0");
     tracker.pickStorageSlot("task1");
     tracker.pickStorageSlot("task2");
 
-    Assert.assertEquals(3, tracker.getNumUsedSlots());
+    Assertions.assertEquals(3, tracker.getNumUsedSlots());
 
     tracker.returnStorageSlot(tracker.pickStorageSlot("task0"));
 
-    Assert.assertEquals(2, tracker.getNumUsedSlots());
+    Assertions.assertEquals(2, tracker.getNumUsedSlots());
 
     tracker.pickStorageSlot("task3");
     tracker.pickStorageSlot("task4");
     tracker.pickStorageSlot("task5");
     tracker.pickStorageSlot("task6");
 
-    Assert.assertEquals(6, tracker.getNumUsedSlots());
+    Assertions.assertEquals(6, tracker.getNumUsedSlots());
 
-    FileUtils.deleteDirectory(tmpFolder);
   }
 
   public static class StorageSlotVerifier
@@ -298,16 +296,16 @@ public class TaskStorageDirTrackerTest
       for (String dir : dirs) {
         theFile = new File(theFile, dir);
       }
-      Assert.assertEquals(theFile, slot.getDirectory());
+      Assertions.assertEquals(theFile, slot.getDirectory());
       if (expectedSize != null) {
-        Assert.assertEquals(expectedSize.longValue(), slot.getNumBytes());
+        Assertions.assertEquals(expectedSize.longValue(), slot.getNumBytes());
       }
       return slot;
     }
 
     public void validateException(TaskStorageDirTracker tracker, String taskId)
     {
-      Assert.assertThrows(
+      Assertions.assertThrows(
           ISE.class,
           () -> tracker.pickStorageSlot(taskId)
       );

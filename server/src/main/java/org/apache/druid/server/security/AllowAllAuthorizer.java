@@ -19,11 +19,36 @@
 
 package org.apache.druid.server.security;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.policy.Policy;
+
+import javax.annotation.Nullable;
+
 public class AllowAllAuthorizer implements Authorizer
 {
+  @Nullable
+  private final Policy policy;
+
+  @JsonCreator
+  public AllowAllAuthorizer(
+      @JsonProperty("policy") @Nullable Policy policy
+  )
+  {
+    this.policy = policy;
+  }
+
   @Override
   public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
   {
+    if (shouldApplyPolicy(resource, action)) {
+      return Access.allowWithRestriction(policy);
+    }
     return Access.OK;
+  }
+
+  private boolean shouldApplyPolicy(Resource resource, Action action)
+  {
+    return policy != null && AuthorizationUtils.shouldApplyPolicy(resource, action);
   }
 }

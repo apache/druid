@@ -24,7 +24,6 @@ import React from 'react';
 import type { RouteComponentProps } from 'react-router';
 import { Redirect } from 'react-router';
 import { HashRouter, Route, Switch } from 'react-router-dom';
-import type { Filter } from 'react-table';
 
 import { initAceDsqlMode } from './ace-modes/dsql';
 import { initAceHjsonMode } from './ace-modes/hjson';
@@ -33,9 +32,9 @@ import { SqlFunctionsProvider } from './contexts/sql-functions-context';
 import type { ConsoleViewId, QueryContext, QueryWithContext } from './druid-models';
 import type { AvailableFunctions } from './helpers';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
-import { stringToTableFilters, tableFiltersToString } from './react-table';
 import { AppToaster } from './singletons';
-import { compact, localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
+import { localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
+import { TableFilters } from './utils/table-filters';
 import {
   DatasourcesView,
   ExploreView,
@@ -54,21 +53,21 @@ import './console-application.scss';
 
 type FiltersRouteMatch = RouteComponentProps<{ filters?: string }>;
 
-function changeTabWithFilter(tab: ConsoleViewId, filters: Filter[]) {
-  const filterString = tableFiltersToString(filters);
+function goToView(tab: ConsoleViewId, filters?: TableFilters) {
+  if (!filters || filters.isEmpty()) {
+    location.hash = tab;
+    return;
+  }
+  const filterString = filters.toString();
   location.hash = tab + (filterString ? `/${filterString}` : '');
 }
 
 function viewFilterChange(tab: ConsoleViewId) {
-  return (filters: Filter[]) => changeTabWithFilter(tab, filters);
+  return (filters: TableFilters) => goToView(tab, filters);
 }
 
 function pathWithFilter(tab: ConsoleViewId) {
   return `/${tab}/:filters?`;
-}
-
-function switchTab(tab: ConsoleViewId) {
-  location.hash = tab;
 }
 
 function switchToWorkbenchTab(tabId: string) {
@@ -183,79 +182,31 @@ export class ConsoleApplication extends React.PureComponent<
 
   private readonly goToStreamingDataLoader = (supervisorId?: string) => {
     if (supervisorId) this.supervisorId = supervisorId;
-    switchTab('streaming-data-loader');
+    goToView('streaming-data-loader');
     this.resetInitialsWithDelay();
   };
 
   private readonly goToClassicBatchDataLoader = (taskId?: string) => {
     if (taskId) this.taskId = taskId;
-    switchTab('classic-batch-data-loader');
+    goToView('classic-batch-data-loader');
     this.resetInitialsWithDelay();
-  };
-
-  private readonly goToDatasources = (datasource: string) => {
-    changeTabWithFilter('datasources', [{ id: 'datasource', value: `=${datasource}` }]);
-  };
-
-  private readonly goToSegments = ({
-    start,
-    end,
-    datasource,
-    realtime,
-  }: {
-    start?: Date;
-    end?: Date;
-    datasource?: string;
-    realtime?: boolean;
-  }) => {
-    changeTabWithFilter(
-      'segments',
-      compact([
-        start && { id: 'start', value: `>=${start.toISOString()}` },
-        end && { id: 'end', value: `<${end.toISOString()}` },
-        datasource && { id: 'datasource', value: `=${datasource}` },
-        typeof realtime === 'boolean' ? { id: 'is_realtime', value: `=${realtime}` } : undefined,
-      ]),
-    );
-  };
-
-  private readonly goToSupervisor = (supervisorId: string) => {
-    changeTabWithFilter('supervisors', [{ id: 'supervisor_id', value: `=${supervisorId}` }]);
-  };
-
-  private readonly goToTasksWithTaskId = (taskId: string) => {
-    changeTabWithFilter('tasks', [{ id: 'task_id', value: `=${taskId}` }]);
-  };
-
-  private readonly goToTasksWithTaskGroupId = (taskGroupId: string) => {
-    changeTabWithFilter('tasks', [{ id: 'group_id', value: `=${taskGroupId}` }]);
-  };
-
-  private readonly goToTasksWithDatasource = (datasource: string, type?: string) => {
-    changeTabWithFilter(
-      'tasks',
-      compact([
-        { id: 'datasource', value: `=${datasource}` },
-        type ? { id: 'type', value: `=${type}` } : undefined,
-      ]),
-    );
   };
 
   private readonly openSupervisorSubmit = () => {
     this.openSupervisorDialog = true;
-    switchTab('supervisors');
+    goToView('supervisors');
     this.resetInitialsWithDelay();
   };
 
   private readonly openTaskSubmit = () => {
     this.openTaskDialog = true;
-    switchTab('tasks');
+    goToView('tasks');
     this.resetInitialsWithDelay();
   };
 
   private readonly goToQuery = (queryWithContext: QueryWithContext) => {
     this.queryWithContext = queryWithContext;
-    switchTab('workbench');
+    goToView('workbench');
     this.resetInitialsWithDelay();
   };
 
@@ -290,8 +241,7 @@ export class ConsoleApplication extends React.PureComponent<
         mode="all"
         initTaskId={this.taskId}
         initSupervisorId={this.supervisorId}
-        goToSupervisor={this.goToSupervisor}
-        goToTasks={this.goToTasksWithTaskGroupId}
+        goToView={goToView}
         openSupervisorSubmit={this.openSupervisorSubmit}
         openTaskSubmit={this.openTaskSubmit}
       />,
@@ -305,8 +255,7 @@ export class ConsoleApplication extends React.PureComponent<
       <LoadDataView
         mode="streaming"
         initSupervisorId={this.supervisorId}
-        goToSupervisor={this.goToSupervisor}
-        goToTasks={this.goToTasksWithTaskGroupId}
+        goToView={goToView}
         openSupervisorSubmit={this.openSupervisorSubmit}
         openTaskSubmit={this.openTaskSubmit}
       />,
@@ -320,8 +269,7 @@ export class ConsoleApplication extends React.PureComponent<
       <LoadDataView
         mode="batch"
         initTaskId={this.taskId}
-        goToSupervisor={this.goToSupervisor}
-        goToTasks={this.goToTasksWithTaskGroupId}
+        goToView={goToView}
         openSupervisorSubmit={this.openSupervisorSubmit}
         openTaskSubmit={this.openTaskSubmit}
       />,
@@ -346,7 +294,7 @@ export class ConsoleApplication extends React.PureComponent<
         baseQueryContext={baseQueryContext}
         serverQueryContext={serverQueryContext}
         queryEngines={capabilities.getSupportedQueryEngines()}
-        goToTask={this.goToTasksWithTaskId}
+        goToView={goToView}
         getClusterCapacity={maybeGetClusterCapacity}
       />,
       'thin',
@@ -361,8 +309,7 @@ export class ConsoleApplication extends React.PureComponent<
       <SqlDataLoaderView
         capabilities={capabilities}
         goToQuery={this.goToQuery}
-        goToTask={this.goToTasksWithTaskId}
-        goToTaskGroup={this.goToTasksWithTaskGroupId}
+        goToView={goToView}
         getClusterCapacity={maybeGetClusterCapacity}
         serverQueryContext={serverQueryContext}
       />,
@@ -374,11 +321,10 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'datasources',
       <DatasourcesView
-        filters={stringToTableFilters(p.match.params.filters)}
+        filters={TableFilters.fromString(p.match.params.filters)}
         onFiltersChange={viewFilterChange('datasources')}
         goToQuery={this.goToQuery}
-        goToTasks={this.goToTasksWithDatasource}
-        goToSegments={this.goToSegments}
+        goToView={goToView}
         capabilities={capabilities}
       />,
     );
@@ -389,7 +335,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'segments',
       <SegmentsView
-        filters={stringToTableFilters(p.match.params.filters)}
+        filters={TableFilters.fromString(p.match.params.filters)}
         onFiltersChange={viewFilterChange('segments')}
         goToQuery={this.goToQuery}
         capabilities={capabilities}
@@ -402,13 +348,12 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'supervisors',
       <SupervisorsView
-        filters={stringToTableFilters(p.match.params.filters)}
+        filters={TableFilters.fromString(p.match.params.filters)}
         onFiltersChange={viewFilterChange('supervisors')}
         openSupervisorDialog={this.openSupervisorDialog}
-        goToDatasource={this.goToDatasources}
+        goToView={goToView}
         goToQuery={this.goToQuery}
         goToStreamingDataLoader={this.goToStreamingDataLoader}
-        goToTasks={this.goToTasksWithTaskGroupId}
         capabilities={capabilities}
       />,
     );
@@ -419,10 +364,10 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'tasks',
       <TasksView
-        filters={stringToTableFilters(p.match.params.filters)}
+        filters={TableFilters.fromString(p.match.params.filters)}
         onFiltersChange={viewFilterChange('tasks')}
         openTaskDialog={this.openTaskDialog}
-        goToDatasource={this.goToDatasources}
+        goToView={goToView}
         goToQuery={this.goToQuery}
         goToClassicBatchDataLoader={this.goToClassicBatchDataLoader}
         capabilities={capabilities}
@@ -435,7 +380,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'services',
       <ServicesView
-        filters={stringToTableFilters(p.match.params.filters)}
+        filters={TableFilters.fromString(p.match.params.filters)}
         onFiltersChange={viewFilterChange('services')}
         goToQuery={this.goToQuery}
         capabilities={capabilities}
@@ -447,7 +392,7 @@ export class ConsoleApplication extends React.PureComponent<
     return this.wrapInViewContainer(
       'lookups',
       <LookupsView
-        filters={stringToTableFilters(p.match.params.filters)}
+        filters={TableFilters.fromString(p.match.params.filters)}
         onFiltersChange={viewFilterChange('lookups')}
       />,
     );

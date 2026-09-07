@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.TypeLiteral;
+import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -34,7 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
-import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
+import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -48,14 +50,13 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.indexing.error.UnknownFault;
-import org.apache.druid.msq.input.InputSpecSlicer;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.ChatHandler;
@@ -65,7 +66,11 @@ import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
@@ -89,6 +94,7 @@ public class IndexerControllerContext implements ControllerContext
   private final ServiceClientFactory clientFactory;
   private final OverlordClient overlordClient;
   private final MemoryIntrospector memoryIntrospector;
+  private final List<InputSpecSlicerProvider> inputSpecSlicerProviders;
 
   public IndexerControllerContext(
       final MSQControllerTask task,
@@ -109,6 +115,9 @@ public class IndexerControllerContext implements ControllerContext
     this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
     final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
     final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(toolbox.getIndexingTmpDir());
+    final Set<InputSpecSlicerProvider> inputSpecSlicerProviders =
+        injector.getInstance(Key.get(new TypeLiteral<>() {}, IndexingService.class));
+    this.inputSpecSlicerProviders = List.copyOf(inputSpecSlicerProviders);
     this.injector = injector.createChildInjector(
         binder -> binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
                         .toInstance(storageConnector));
@@ -147,7 +156,7 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
+  public void emitMetric(MSQMetricEventBuilder metricBuilder)
   {
     // Attach task specific dimensions
     metricBuilder.setTaskDimensions(task, taskQuerySpecContext);
@@ -173,15 +182,9 @@ public class IndexerControllerContext implements ControllerContext
   }
 
   @Override
-  public InputSpecSlicer newTableInputSpecSlicer(final WorkerManager workerManager)
+  public List<InputSpecSlicerProvider> inputSpecSlicerProviders()
   {
-    final SegmentSource includeSegmentSource =
-        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext, DEFAULT_SEGMENT_SOURCE);
-    return new IndexerTableInputSpecSlicer(
-        toolbox.getCoordinatorClient(),
-        toolbox.getTaskActionClient(),
-        includeSegmentSource
-    );
+    return inputSpecSlicerProviders;
   }
 
   @Override
@@ -210,7 +213,7 @@ public class IndexerControllerContext implements ControllerContext
         taskDataSource,
         toolbox.getAuthorizerMapper()
     );
-    toolbox.getChatHandlerProvider().register(controller.queryId(), chatHandler, false);
+    toolbox.getChatHandlerProvider().register(controller.queryId(), chatHandler);
     closer.register(() -> toolbox.getChatHandlerProvider().unregister(controller.queryId()));
   }
 
@@ -230,6 +233,7 @@ public class IndexerControllerContext implements ControllerContext
         makeTaskContext(querySpec, queryKernelConfig, taskContext),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
+        task.getQuerySpec().getTuningConfig().getMaxNumWorkers(),
         new MSQWorkerTaskLauncherConfig()
     );
   }
@@ -238,6 +242,29 @@ public class IndexerControllerContext implements ControllerContext
   public File taskTempDir()
   {
     return toolbox.getIndexingTmpDir();
+  }
+
+  @Override
+  public int maxNonLeafWorkerCount()
+  {
+    return task.getQuerySpec().getTuningConfig().getMaxNumWorkers();
+  }
+
+  @Override
+  public int targetPartitionsPerWorker()
+  {
+    // Assume tasks are symmetric: workers have the same number of processors available as a controller.
+    // Create one partition per processor per worker, for maximum parallelism.
+    return MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
+        taskQuerySpecContext,
+        memoryIntrospector.numProcessingThreads()
+    );
+  }
+
+  @Override
+  public boolean isDebug()
+  {
+    return taskQuerySpecContext.isDebug();
   }
 
   /**
@@ -309,35 +336,39 @@ public class IndexerControllerContext implements ControllerContext
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
     final boolean isReindex = MultiStageQueryContext.isReindex(queryContext);
     final int frameSize = MultiStageQueryContext.getFrameSize(queryContext);
-    final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
 
-    builder
-        .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled)
-        .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions)
-        .put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex)
-        .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
-        .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version())
-        .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
-        .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters)
-        .put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
-
-    if (querySpec.getId() != null) {
-      builder.put(BaseQuery.QUERY_ID, querySpec.getId());
+    // Worker context is based on overall query context.
+    final Map<String, Object> workerContextMap = new LinkedHashMap<>();
+    for (Map.Entry<String, Object> entry : querySpec.getContext().asMap().entrySet()) {
+      if (entry.getValue() != null) {
+        workerContextMap.put(entry.getKey(), entry.getValue());
+      }
     }
 
-    if (queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID)) {
-      builder.put(BaseQuery.SQL_QUERY_ID, queryContext.get(QueryContexts.CTX_SQL_QUERY_ID));
+    // Override certain items to ensure they are the same across all workers; just in case workers have a different
+    // default from the controller.
+    workerContextMap.put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled);
+    workerContextMap.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions);
+    workerContextMap.put(MultiStageQueryContext.CTX_IS_REINDEX, isReindex);
+    workerContextMap.put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages);
+    workerContextMap.put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) rowBasedFrameType.version());
+    workerContextMap.put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes);
+    workerContextMap.put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);
+    workerContextMap.put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
+
+    if (querySpec.getId() != null) {
+      workerContextMap.put(BaseQuery.QUERY_ID, querySpec.getId());
     }
 
     MSQDestination destination = querySpec.getDestination();
     if (destination.toSelectDestination() != null) {
-      builder.put(
+      workerContextMap.put(
           MultiStageQueryContext.CTX_SELECT_DESTINATION,
           destination.toSelectDestination().getName()
       );
     }
 
-    return builder.build();
+    return workerContextMap;
   }
 
   /**
@@ -351,11 +382,9 @@ public class IndexerControllerContext implements ControllerContext
       final Map<String, Object> controllerTaskContext
   )
   {
-    final ImmutableMap.Builder<String, Object> taskContextOverridesBuilder = ImmutableMap.builder();
-
     // Put worker context into the task context. That way, workers can get these context keys either from
     // WorkOrder#getContext or Task#getContext.
-    taskContextOverridesBuilder.putAll(
+    final Map<String, Object> taskContext = new HashMap<>(
         makeWorkerContextMap(
             querySpec,
             queryKernelConfig.isDurableStorage(),
@@ -365,13 +394,13 @@ public class IndexerControllerContext implements ControllerContext
 
     // Put the lookup loading info in the task context to facilitate selective loading of lookups.
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE) != null) {
-      taskContextOverridesBuilder.put(
+      taskContext.put(
           LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE,
           controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE)
       );
     }
     if (controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD) != null) {
-      taskContextOverridesBuilder.put(
+      taskContext.put(
           LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD,
           controllerTaskContext.get(LookupLoadingSpec.CTX_LOOKUPS_TO_LOAD)
       );
@@ -381,9 +410,9 @@ public class IndexerControllerContext implements ControllerContext
     @SuppressWarnings("unchecked")
     Map<String, Object> tags = (Map<String, Object>) controllerTaskContext.get(DruidMetrics.TAGS);
     if (tags != null) {
-      taskContextOverridesBuilder.put(DruidMetrics.TAGS, tags);
+      taskContext.put(DruidMetrics.TAGS, tags);
     }
 
-    return taskContextOverridesBuilder.build();
+    return ImmutableMap.copyOf(taskContext);
   }
 }

@@ -70,7 +70,7 @@ public class SleepExprMacro implements ExprMacro
               Thread.sleep((long) (seconds * 1000));
             }
           }
-          return ExprEval.of(null);
+          return ExprEval.ofMissing();
         }
         catch (InterruptedException e) {
           Thread.currentThread().interrupt();

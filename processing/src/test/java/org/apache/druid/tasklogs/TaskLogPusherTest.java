@@ -19,7 +19,7 @@
 
 package org.apache.druid.tasklogs;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;

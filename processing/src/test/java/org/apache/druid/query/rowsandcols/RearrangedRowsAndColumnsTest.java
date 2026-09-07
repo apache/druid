@@ -24,7 +24,7 @@ import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.AbstractList;
 import java.util.Collections;

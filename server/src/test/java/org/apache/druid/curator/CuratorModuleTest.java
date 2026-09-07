@@ -29,31 +29,30 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.testing.junit.LoggerCaptureRule;
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.contrib.java.lang.system.ExpectedSystemExit;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.List;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public final class CuratorModuleTest
 {
   private static final String CURATOR_CONNECTION_TIMEOUT_MS_KEY =
       CuratorConfig.CONFIG_PREFIX + "." + CuratorConfig.CONNECTION_TIMEOUT_MS;
 
-  @Rule
-  public final ExpectedSystemExit exit = ExpectedSystemExit.none();
-
-  @Rule
-  public final LoggerCaptureRule logger = new LoggerCaptureRule(CuratorModule.class);
+  @RegisterExtension
+  public final LoggerCaptureExtension logger = new LoggerCaptureExtension(CuratorModule.class);
 
   @Test
   public void createsCuratorFrameworkAsConfigured()
@@ -62,24 +61,25 @@ public final class CuratorModuleTest
     CuratorFramework curatorFramework = CuratorModule.createCurator(config);
     CuratorZookeeperClient client = curatorFramework.getZookeeperClient();
 
-    Assert.assertEquals(config.getZkHosts(), client.getCurrentConnectionString());
-    Assert.assertEquals(config.getZkConnectionTimeoutMs(), client.getConnectionTimeoutMs());
+    Assertions.assertEquals(config.getZkHosts(), client.getCurrentConnectionString());
+    Assertions.assertEquals(config.getZkConnectionTimeoutMs(), client.getConnectionTimeoutMs());
 
     MatcherAssert.assertThat(client.getRetryPolicy(), Matchers.instanceOf(BoundedExponentialBackoffRetry.class));
     BoundedExponentialBackoffRetry retryPolicy = (BoundedExponentialBackoffRetry) client.getRetryPolicy();
-    Assert.assertEquals(CuratorModule.BASE_SLEEP_TIME_MS, retryPolicy.getBaseSleepTimeMs());
-    Assert.assertEquals(CuratorModule.MAX_SLEEP_TIME_MS, retryPolicy.getMaxSleepTimeMs());
+    Assertions.assertEquals(CuratorModule.BASE_SLEEP_TIME_MS, retryPolicy.getBaseSleepTimeMs());
+    Assertions.assertEquals(CuratorModule.MAX_SLEEP_TIME_MS, retryPolicy.getMaxSleepTimeMs());
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void exitsJvmWhenMaxRetriesExceeded() throws Exception
   {
+    CountDownLatch exitCalled = new CountDownLatch(1);
     Properties props = new Properties();
     props.setProperty(CURATOR_CONNECTION_TIMEOUT_MS_KEY, "0");
-    Injector injector = newInjector(props);
+    Injector injector = newInjector(props, exitCalled::countDown);
 
     logger.clearLogEvents();
-    exit.expectSystemExitWithStatus(1);
 
     // This will result in a curator unhandled error since the connection timeout is 0 and retries are disabled
     CuratorFramework curatorFramework = createCuratorFramework(injector, 0);
@@ -90,41 +90,43 @@ public final class CuratorModuleTest
     logger.awaitLogEvents();
     List<LogEvent> loggingEvents = logger.getLogEvents();
 
-    Assert.assertTrue(
-        "Logging events: " + loggingEvents,
+    Assertions.assertTrue(
         loggingEvents.stream()
                      .anyMatch(l ->
                                    l.getLevel().equals(Level.ERROR)
                                    && l.getMessage()
                                        .getFormattedMessage()
                                        .equals("Unhandled error in Curator, stopping server.")
-                     )
+                     ),
+        "Logging events: " + loggingEvents
     );
+
+    Assertions.assertTrue(exitCalled.await(10, TimeUnit.SECONDS), "System.exit was not called within timeout");
   }
 
-  @Ignore("Verifies changes in https://github.com/apache/druid/pull/8458, but overkill for regular testing")
+  @Disabled("Verifies changes in https://github.com/apache/druid/pull/8458, but overkill for regular testing")
   @Test
   public void ignoresDeprecatedCuratorConfigProperties()
   {
     Properties props = new Properties();
     String deprecatedPropName = CuratorConfig.CONFIG_PREFIX + ".terminateDruidProcessOnConnectFail";
     props.setProperty(deprecatedPropName, "true");
-    Injector injector = newInjector(props);
+    Injector injector = newInjector(props, () -> {});
 
     try {
       injector.getInstance(CuratorFramework.class);
     }
     catch (Exception e) {
-      Assert.fail("Deprecated curator config was not ignored:\n" + e);
+      Assertions.fail("Deprecated curator config was not ignored:\n" + e);
     }
   }
 
-  private Injector newInjector(final Properties props)
+  private Injector newInjector(final Properties props, final Runnable exitAction)
   {
     return new StartupInjectorBuilder()
         .add(
             new LifecycleModule(),
-            new CuratorModule(false),
+            new CuratorModule(false, exitAction),
             binder -> binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class),
             binder -> binder.bind(Properties.class).toInstance(props)
         )
@@ -135,7 +137,7 @@ public final class CuratorModuleTest
   {
     CuratorFramework curatorFramework = injector.getInstance(CuratorFramework.class);
     RetryPolicy retryPolicy = curatorFramework.getZookeeperClient().getRetryPolicy();
-    Assert.assertThat(retryPolicy, CoreMatchers.instanceOf(ExponentialBackoffRetry.class));
+    MatcherAssert.assertThat(retryPolicy, CoreMatchers.instanceOf(ExponentialBackoffRetry.class));
     RetryPolicy adjustedRetryPolicy = adjustRetryPolicy((BoundedExponentialBackoffRetry) retryPolicy, maxRetries);
     curatorFramework.getZookeeperClient().setRetryPolicy(adjustedRetryPolicy);
     return curatorFramework;

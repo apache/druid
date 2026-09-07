@@ -28,13 +28,15 @@ import com.google.inject.name.Names;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.apache.druid.utils.RuntimeInfo;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -45,8 +47,8 @@ public class DruidServerConfigTest
   private File testSegmentCacheDir1;
   private File testSegmentCacheDir2;
 
-  @Rule
-  public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public ObjectMapper mapper = new DefaultObjectMapper();
 
@@ -56,11 +58,11 @@ public class DruidServerConfigTest
     binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
   };
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
-    testSegmentCacheDir1 = tmpFolder.newFolder("segment_cache_folder1");
-    testSegmentCacheDir2 = tmpFolder.newFolder("segment_cache_folder2");
+    testSegmentCacheDir1 = temporaryFolder.newFolder("segment_cache_folder1");
+    testSegmentCacheDir2 = temporaryFolder.newFolder("segment_cache_folder2");
   }
 
   @Test
@@ -71,8 +73,8 @@ public class DruidServerConfigTest
     );
     final DruidServerConfig druidServerConfig = injector.getInstance(DruidServerConfig.class);
 
-    Assert.assertNotNull(druidServerConfig);
-    Assert.assertEquals(DruidServerConfig.class, druidServerConfig.getClass());
+    Assertions.assertNotNull(druidServerConfig);
+    Assertions.assertEquals(DruidServerConfig.class, druidServerConfig.getClass());
   }
 
   @Test
@@ -83,8 +85,27 @@ public class DruidServerConfigTest
     final StorageLocationConfig locationConfig2 = new StorageLocationConfig(testSegmentCacheDir2, 20000000000L, null);
     locations.add(locationConfig1);
     locations.add(locationConfig2);
-    DruidServerConfig druidServerConfig = new DruidServerConfig(new SegmentLoaderConfig().withLocations(locations));
-    Assert.assertEquals(30000000000L, druidServerConfig.getMaxSize());
+    DruidServerConfig druidServerConfig = new DruidServerConfig(
+        new RuntimeInfo(),
+        SegmentLoaderConfig.builder().locations(locations).build()
+    );
+    Assertions.assertEquals(30000000000L, druidServerConfig.getMaxSize());
+  }
+
+  @Test
+  public void testComputedVirtualSize()
+  {
+    RuntimeInfo runtimeInfo = new RuntimeInfo()
+    {
+      @Override
+      public long getMaxHeapSizeBytes()
+      {
+        return HumanReadableBytes.parse("3GiB");
+      }
+    };
+    SegmentLoaderConfig segmentLoaderConfig = SegmentLoaderConfig.builder().virtualStorage(true).build();
+    DruidServerConfig druidServerConfig = new DruidServerConfig(runtimeInfo, segmentLoaderConfig);
+    Assertions.assertEquals(HumanReadableBytes.parse("45TiB"), druidServerConfig.getMaxSize());
   }
 
   @Test
@@ -104,8 +125,9 @@ public class DruidServerConfigTest
     mapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper())
                                                          .addValue(
                                                              SegmentLoaderConfig.class,
-                                                             new SegmentLoaderConfig().withLocations(locations)
-                                                         ));
+                                                             SegmentLoaderConfig.builder().locations(locations).build()
+                                                         )
+                                                         .addValue(RuntimeInfo.class, new RuntimeInfo()));
 
     DruidServerConfig serverConfigWithDefaultSize = mapper.readValue(
         mapper.writeValueAsString(
@@ -121,8 +143,7 @@ public class DruidServerConfigTest
         DruidServerConfig.class
     );
 
-    Assert.assertEquals(serverConfigWithDefaultSize.getMaxSize(), 10000000000L);
-    Assert.assertEquals(serverConfigWithNonDefaultSize.getMaxSize(), 123456L);
+    Assertions.assertEquals(serverConfigWithDefaultSize.getMaxSize(), 10000000000L);
+    Assertions.assertEquals(serverConfigWithNonDefaultSize.getMaxSize(), 123456L);
   }
 }
-

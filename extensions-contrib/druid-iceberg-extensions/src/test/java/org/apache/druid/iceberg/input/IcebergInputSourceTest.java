@@ -25,11 +25,13 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.Files;
+import org.apache.iceberg.PartitionKey;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
@@ -44,12 +46,11 @@ import org.apache.iceberg.io.DataWriter;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,8 +63,8 @@ import java.util.stream.Stream;
 
 public class IcebergInputSourceTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private IcebergCatalog testCatalog;
   private TableIdentifier tableIdentifier;
@@ -78,7 +79,7 @@ public class IcebergInputSourceTest
   private static final String NAMESPACE = "default";
   private static final String TABLENAME = "foosTable";
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     warehouseDir = FileUtils.createTempDir();
@@ -97,6 +98,7 @@ public class IcebergInputSourceTest
         null,
         testCatalog,
         new LocalInputSourceFactory(),
+        null,
         null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
@@ -106,8 +108,8 @@ public class IcebergInputSourceTest
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList());
 
-    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
-    Assert.assertEquals(1, localInputSourceList.size());
+    Assertions.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assertions.assertEquals(1, localInputSourceList.size());
     CloseableIterable<Record> datafileReader = Parquet.read(Files.localInput(localInputSourceList.get(0)))
                                                       .project(tableSchema)
                                                       .createReaderFunc(fileSchema -> GenericParquetReaders.buildReader(
@@ -118,8 +120,8 @@ public class IcebergInputSourceTest
 
 
     for (Record record : datafileReader) {
-      Assert.assertEquals(tableData.get("id"), record.get(0));
-      Assert.assertEquals(tableData.get("name"), record.get(1));
+      Assertions.assertEquals(tableData.get("id"), record.get(0));
+      Assertions.assertEquals(tableData.get("name"), record.get(1));
     }
   }
 
@@ -132,10 +134,11 @@ public class IcebergInputSourceTest
         new IcebergEqualsFilter("id", "0000"),
         testCatalog,
         new LocalInputSourceFactory(),
+        null,
         null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
-    Assert.assertEquals(0, splits.count());
+    Assertions.assertEquals(0, splits.count());
   }
 
   @Test
@@ -147,6 +150,7 @@ public class IcebergInputSourceTest
         new IcebergEqualsFilter("id", "123988"),
         testCatalog,
         new LocalInputSourceFactory(),
+        null,
         null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
@@ -156,8 +160,8 @@ public class IcebergInputSourceTest
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList());
 
-    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
-    Assert.assertEquals(1, localInputSourceList.size());
+    Assertions.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assertions.assertEquals(1, localInputSourceList.size());
     CloseableIterable<Record> datafileReader = Parquet.read(Files.localInput(localInputSourceList.get(0)))
                                                       .project(tableSchema)
                                                       .createReaderFunc(fileSchema -> GenericParquetReaders.buildReader(
@@ -168,8 +172,8 @@ public class IcebergInputSourceTest
 
 
     for (Record record : datafileReader) {
-      Assert.assertEquals(tableData.get("id"), record.get(0));
-      Assert.assertEquals(tableData.get("name"), record.get(1));
+      Assertions.assertEquals(tableData.get("id"), record.get(0));
+      Assertions.assertEquals(tableData.get("name"), record.get(1));
     }
   }
 
@@ -182,10 +186,11 @@ public class IcebergInputSourceTest
         null,
         testCatalog,
         new LocalInputSourceFactory(),
-        DateTimes.nowUtc()
+        DateTimes.nowUtc(),
+        null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
-    Assert.assertEquals(1, splits.count());
+    Assertions.assertEquals(1, splits.count());
   }
 
   @Test
@@ -201,6 +206,7 @@ public class IcebergInputSourceTest
         new IcebergEqualsFilter("name", "Foo"),
         caseInsensitiveCatalog,
         new LocalInputSourceFactory(),
+        null,
         null
     );
 
@@ -211,11 +217,102 @@ public class IcebergInputSourceTest
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList());
 
-    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
-    Assert.assertEquals(1, localInputSourceList.size());
+    Assertions.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assertions.assertEquals(1, localInputSourceList.size());
   }
 
-  @After
+  @Test
+  public void testResidualFilterModeIgnore() throws IOException
+  {
+    // Filter on non-partition column with IGNORE mode should succeed
+    IcebergInputSource inputSource = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        new IcebergEqualsFilter("id", "123988"),
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        ResidualFilterMode.IGNORE
+    );
+    Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
+    Assertions.assertEquals(1, splits.count());
+  }
+
+  @Test
+  public void testResidualFilterModeFail() throws IOException
+  {
+    // Filter on non-partition column with FAIL mode should throw exception
+    IcebergInputSource inputSource = new IcebergInputSource(
+        TABLENAME,
+        NAMESPACE,
+        new IcebergEqualsFilter("id", "123988"),
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        ResidualFilterMode.FAIL
+    );
+    DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains("residual"),
+        "Expect residual error to be thrown"
+    );
+  }
+
+  @Test
+  public void testResidualFilterModeFailWithPartitionedTable() throws IOException
+  {
+    // Cleanup default table first
+    tearDown();
+    // Create a partitioned table and filter on the partition column
+    tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), "partitionedTable");
+    createAndLoadPartitionedTable(tableIdentifier);
+
+    IcebergInputSource inputSource = new IcebergInputSource(
+        "partitionedTable",
+        NAMESPACE,
+        new IcebergEqualsFilter("id", "123988"),
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        ResidualFilterMode.FAIL
+    );
+    Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
+    Assertions.assertEquals(1, splits.count());
+  }
+
+  @Test
+  public void testResidualFilterModeFailWithPartitionedTableNonPartitionColumn() throws IOException
+  {
+    // Cleanup default table first
+    tearDown();
+    // Create a partitioned table and filter on a non-partition column
+    tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), "partitionedTable2");
+    createAndLoadPartitionedTable(tableIdentifier);
+
+    // Filter on non-partition column with FAIL mode should throw exception
+    IcebergInputSource inputSource = new IcebergInputSource(
+        "partitionedTable2",
+        NAMESPACE,
+        new IcebergEqualsFilter("name", "Foo"),
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        ResidualFilterMode.FAIL
+    );
+    DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains("residual"),
+        "Expect residual error to be thrown"
+    );
+  }
+
+  @AfterEach
   public void tearDown()
   {
     dropTableFromCatalog(tableIdentifier);
@@ -235,7 +332,7 @@ public class IcebergInputSourceTest
     DataWriter<GenericRecord> dataWriter =
         Parquet.writeData(file)
                .schema(tableSchema)
-               .createWriterFunc(GenericParquetWriter::buildWriter)
+               .createWriterFunc(GenericParquetWriter::create)
                .overwrite()
                .withSpec(PartitionSpec.unpartitioned())
                .build();
@@ -253,6 +350,49 @@ public class IcebergInputSourceTest
     //Add the data file to the iceberg table
     icebergTableFromSchema.newAppend().appendFile(dataFile).commit();
 
+  }
+
+  private void createAndLoadPartitionedTable(TableIdentifier tableIdentifier) throws IOException
+  {
+    // Create a partitioned table with 'id' as the partition column
+    PartitionSpec partitionSpec = PartitionSpec.builderFor(tableSchema)
+                                               .identity("id")
+                                               .build();
+    Table icebergTable = testCatalog.retrieveCatalog().createTable(tableIdentifier, tableSchema, partitionSpec);
+
+    // Generate an iceberg record and write it to a file
+    GenericRecord record = GenericRecord.create(tableSchema);
+    ImmutableList.Builder<GenericRecord> builder = ImmutableList.builder();
+
+    builder.add(record.copy(tableData));
+    String filepath = icebergTable.location() + "/data/id=123988/" + UUID.randomUUID() + ".parquet";
+    OutputFile file = icebergTable.io().newOutputFile(filepath);
+
+    // Create a partition key for the partition spec
+    PartitionKey partitionKey = new PartitionKey(partitionSpec, tableSchema);
+    partitionKey.partition(record.copy(tableData));
+
+    DataWriter<GenericRecord> dataWriter =
+        Parquet.writeData(file)
+               .schema(tableSchema)
+               .createWriterFunc(GenericParquetWriter::create)
+               .overwrite()
+               .withSpec(partitionSpec)
+               .withPartition(partitionKey)
+               .build();
+
+    try {
+      for (GenericRecord genRecord : builder.build()) {
+        dataWriter.write(genRecord);
+      }
+    }
+    finally {
+      dataWriter.close();
+    }
+    DataFile dataFile = dataWriter.toDataFile();
+
+    // Add the data file to the iceberg table
+    icebergTable.newAppend().appendFile(dataFile).commit();
   }
 
   private void dropTableFromCatalog(TableIdentifier tableIdentifier)

@@ -373,7 +373,7 @@ public abstract class SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, Se
 
   /**
    * Helper for {@link #pauseAsync}.
-   *
+   * <p>
    * Calls {@link #getStatusAsync} in a loop until a task is paused, then calls {@link #getCurrentOffsetsAsync} to
    * get the post-pause offsets for the task.
    */

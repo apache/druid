@@ -223,7 +223,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
         return;
       }
 
-      while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
+      while (lifecycleLock.isStarted()) {
         try {
           DiscoveryDruidNodeList list = k8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, nodeRole);
           baseNodeRoleWatcher.resetNodes(list.getDruidNodes());
@@ -241,8 +241,10 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
         catch (Throwable ex) {
           LOGGER.error(ex, "Exception while watching for role[%s].", nodeRole);
 
-          // Wait a little before trying again.
-          sleep(watcherErrorRetryWaitMS);
+          if (lifecycleLock.isStarted()) {
+            // If not stopped, wait a little before trying again.
+            sleep(watcherErrorRetryWaitMS);
+          }
         }
       }
 
@@ -252,7 +254,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
     private void keepWatching(String labelSelector, String resourceVersion)
     {
       String nextResourceVersion = resourceVersion;
-      while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
+      while (lifecycleLock.isStarted()) {
         try {
           WatchResult iter =
               k8sApiClient.watchPods(podInfo.getPodNamespace(), labelSelector, nextResourceVersion, nodeRole);
@@ -271,7 +273,12 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
                     baseNodeRoleWatcher.childAdded(item.object.getNode());
                     break;
                   case WatchResult.DELETED:
-                    baseNodeRoleWatcher.childRemoved(item.object.getNode());
+                  case WatchResult.NOT_READY:
+                    // Use skipIfUnknown=true for all k8s discovery removals.
+                    // DELETED can fire after NOT_READY (so the service is already removed), or before ADDED (pod deleted before becoming ready).
+                    // NOT_READY can repeat during CrashLoopBackOff. None of these warrant the error-level logging that
+                    // comes with trying to remove an unknown service.
+                    baseNodeRoleWatcher.childRemoved(item.object.getNode(), true);
                     break;
                   default:
                 }
@@ -295,11 +302,15 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
         catch (SocketTimeoutException ex) {
           // socket read timeout can happen normally due to k8s not having anything new to push leading to socket
           // read timeout, so no error log
-          sleep(watcherErrorRetryWaitMS);
+          if (lifecycleLock.isStarted()) {
+            sleep(watcherErrorRetryWaitMS);
+          }
         }
         catch (Throwable ex) {
           LOGGER.error(ex, "Error while watching role[%s]", this.nodeRole);
-          sleep(watcherErrorRetryWaitMS);
+          if (lifecycleLock.isStarted()) {
+            sleep(watcherErrorRetryWaitMS);
+          }
         }
       }
     }

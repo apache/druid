@@ -20,12 +20,15 @@
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -56,12 +59,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
   private static final Logger log = new Logger(WindowOperatorQueryKit.class);
   private final ObjectMapper jsonMapper;
-  private final boolean isOperatorTransformationEnabled;
 
-  public WindowOperatorQueryKit(ObjectMapper jsonMapper, boolean isOperatorTransformationEnabled)
+  @Inject
+  public WindowOperatorQueryKit(@Json final ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
-    this.isOperatorTransformationEnabled = isOperatorTransformationEnabled;
   }
 
   @Override
@@ -77,8 +79,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
         minStageNumber,
         false
     );
@@ -88,17 +88,19 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                                           .getFinalStageDefinition()
                                                           .getSignature();
 
+    final boolean isOperatorTransformationEnabled =
+        MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(originalQuery.context());
+
     final WindowStages windowStages = new WindowStages(
         originalQuery,
         jsonMapper,
-        queryKitSpec.getNumPartitionsForShuffle(),
-        queryKitSpec.getMaxNonLeafWorkerCount(),
+        Limits.MAX_WORKERS,
         resultShuffleSpecFactory,
         signatureFromInput,
         isOperatorTransformationEnabled
     );
 
-    final ShuffleSpec nextShuffleSpec = windowStages.getStages().get(0).findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
+    final ShuffleSpec nextShuffleSpec = windowStages.getStages().get(0).findShuffleSpec();
     final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryKitSpec.getQueryId(), dataSourcePlan, nextShuffleSpec);
     final int firstWindowStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
 
@@ -119,7 +121,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
   {
     private final List<WindowStage> stages;
     private final WindowOperatorQuery query;
-    private final int numPartitionsForShuffle;
     private final int maxNonLeafWorkerCount;
     private final ShuffleSpec finalWindowStageShuffleSpec;
     private final RowSignature finalWindowStageRowSignature;
@@ -129,7 +130,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     private WindowStages(
         WindowOperatorQuery query,
         ObjectMapper jsonMapper,
-        int numPartitionsForShuffle,
         int maxNonLeafWorkerCount,
         ShuffleSpecFactory resultShuffleSpecFactory,
         RowSignature signatureFromInput,
@@ -138,7 +138,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     {
       this.stages = new ArrayList<>();
       this.query = query;
-      this.numPartitionsForShuffle = numPartitionsForShuffle;
       this.maxNonLeafWorkerCount = maxNonLeafWorkerCount;
       this.isOperatorTransformationEnabled = isOperatorTransformationEnabled;
 
@@ -221,7 +220,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       final WindowStage stage = stages.get(windowStageIndex);
       final ShuffleSpec shuffleSpec = (windowStageIndex == stages.size() - 1) ?
                                       finalWindowStageShuffleSpec :
-                                      stages.get(windowStageIndex + 1).findShuffleSpec(numPartitionsForShuffle);
+                                      stages.get(windowStageIndex + 1).findShuffleSpec();
 
       final RowSignature stageRowSignature = getRowSignatureForStage(windowStageIndex, shuffleSpec);
       final List<OperatorFactory> operatorFactories = isOperatorTransformationEnabled
@@ -360,7 +359,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       return windowOperatorFactories;
     }
 
-    private ShuffleSpec findShuffleSpec(int partitionCount)
+    private ShuffleSpec findShuffleSpec()
     {
       Map<String, ColumnWithDirection.Direction> sortColumnsMap = new HashMap<>();
       if (sortOperatorFactory != null) {
@@ -390,7 +389,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         keyColsOfWindow.add(kc);
       }
 
-      return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), partitionCount);
+      return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), 1, true);
     }
 
     private boolean canAccept(OperatorFactory operatorFactory)

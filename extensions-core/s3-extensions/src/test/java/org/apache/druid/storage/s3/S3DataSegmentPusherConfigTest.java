@@ -21,13 +21,13 @@ package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -40,12 +40,12 @@ public class S3DataSegmentPusherConfigTest
   public void testSerialization() throws IOException
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                        + "\"disableAcl\":false,\"maxListingLength\":2000,\"useS3aSchema\":false}";
+                        + "\"disableAcl\":false,\"maxListingLength\":2000,\"zip\":true}";
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Map<String, String> expected = JSON_MAPPER.readValue(jsonConfig, Map.class);
     Map<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), Map.class);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -53,24 +53,24 @@ public class S3DataSegmentPusherConfigTest
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\"}";
     String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                                + "\"disableAcl\":false,\"maxListingLength\":1024,\"useS3aSchema\":false}";
+                                + "\"disableAcl\":false,\"maxListingLength\":1024,\"zip\":true}";
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Map<String, String> expected = JSON_MAPPER.readValue(expectedJsonConfig, Map.class);
     Map<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), Map.class);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
   public void testSerializationValidatingMaxListingLength() throws IOException
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                        + "\"disableAcl\":false,\"maxListingLength\":-1}";
+                        + "\"disableAcl\":false,\"maxListingLength\":-1,\"zip\":true}";
     Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Set<ConstraintViolation<S3DataSegmentPusherConfig>> violations = validator.validate(config);
-    Assert.assertEquals(1, violations.size());
+    Assertions.assertEquals(1, violations.size());
     ConstraintViolation violation = Iterators.getOnlyElement(violations.iterator());
-    Assert.assertEquals("must be greater than or equal to 1", violation.getMessage());
+    Assertions.assertEquals("must be greater than or equal to 1", violation.getMessage());
   }
 }

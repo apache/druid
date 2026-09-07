@@ -33,6 +33,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * @deprecated Use {@link MinorCompactionInputSpec} for minor compaction instead.
+ */
+@Deprecated
 public class SpecificSegmentsSpec implements CompactionInputSpec
 {
   public static final String TYPE = "segments";

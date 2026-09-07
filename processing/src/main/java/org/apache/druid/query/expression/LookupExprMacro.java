@@ -92,7 +92,7 @@ public class LookupExprMacro implements ExprMacroTable.ExprMacro
       @Override
       public ExprEval eval(final ObjectBinding bindings)
       {
-        return ExprEval.of(extractionFn.apply(arg.eval(bindings).asString()));
+        return ExprEval.ofString(extractionFn.apply(arg.eval(bindings).asString()));
       }
 
       @Nullable

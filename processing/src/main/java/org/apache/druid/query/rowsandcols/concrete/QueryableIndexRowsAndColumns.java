@@ -29,7 +29,7 @@ import org.apache.druid.segment.CloseableShapeshifter;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.BaseColumnHolder;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -82,7 +82,7 @@ public class QueryableIndexRowsAndColumns implements RowsAndColumns, AutoCloseab
     if (closed.get()) {
       throw DruidException.defensive("Cannot be accessed after being closed!?");
     }
-    final ColumnHolder columnHolder = index.getColumnHolder(name);
+    final BaseColumnHolder columnHolder = index.getColumnHolder(name);
     if (columnHolder == null) {
       return null;
     }

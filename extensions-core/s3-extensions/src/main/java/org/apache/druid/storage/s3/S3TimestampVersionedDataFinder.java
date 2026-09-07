@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.inject.Inject;
 import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
@@ -27,6 +26,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.regex.Pattern;
@@ -61,14 +61,17 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
       final CloudObjectLocation coords = new CloudObjectLocation(S3Utils.checkURI(uri));
       long mostRecent = Long.MIN_VALUE;
       URI latest = null;
-      final Iterator<S3ObjectSummary> objectSummaryIterator = S3Utils.objectSummaryIterator(
+      final Iterator<S3ObjectWithBucket> objectSummaryIterator = S3Utils.objectSummaryIterator(
           s3Client,
           Collections.singletonList(uri),
           MAX_LISTING_KEYS
       );
       while (objectSummaryIterator.hasNext()) {
-        final S3ObjectSummary objectSummary = objectSummaryIterator.next();
-        final CloudObjectLocation objectLocation = S3Utils.summaryToCloudObjectLocation(objectSummary);
+        final S3ObjectWithBucket objectSummary = objectSummaryIterator.next();
+        final CloudObjectLocation objectLocation = S3Utils.summaryToCloudObjectLocation(
+            objectSummary.getS3Object(),
+            objectSummary.getBucket()
+        );
         // remove coords path prefix from object path
         String keyString = StringUtils.maybeRemoveLeadingSlash(
             objectLocation.getPath().substring(coords.getPath().length())
@@ -76,7 +79,8 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
         if (pattern != null && !pattern.matcher(keyString).matches()) {
           continue;
         }
-        final long latestModified = objectSummary.getLastModified().getTime();
+        final Instant lastModified = objectSummary.getS3Object().lastModified();
+        final long latestModified = lastModified != null ? lastModified.toEpochMilli() : 0L;
         if (latestModified >= mostRecent) {
           mostRecent = latestModified;
           latest = objectLocation.toUri(S3StorageDruidModule.SCHEME);

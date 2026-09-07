@@ -23,59 +23,51 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MapStringDynamicConfigProvider;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
 public class DynamicConfigProviderUtilsTest
 {
-  public static class ThrowIfURLHasNotAllowedPropertiesTest
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final String DYNAMIC_CONFIG_PROVIDER = "druid.dynamic.config.provider";
+
+  @Test
+  public void testExtraConfigAndSetStringMap()
   {
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
+    DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
+        ImmutableMap.of("prop2", "value2")
+    );
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private final String DYNAMIC_CONFIG_PROVIDER = "druid.dynamic.config.provider";
+    Map<String, Object> properties = ImmutableMap.of(
+        "prop1", "value1",
+        "prop2", "value3",
+        DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
+    );
+    Map<String, String> res = DynamicConfigProviderUtils.extraConfigAndSetStringMap(properties, DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER);
 
-    @Test
-    public void testExtraConfigAndSetStringMap()
-    {
-      DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
-          ImmutableMap.of("prop2", "value2")
-      );
+    Assertions.assertEquals(2, res.size());
+    Assertions.assertEquals("value1", res.get("prop1"));
+    Assertions.assertEquals("value2", res.get("prop2"));
+  }
 
-      Map<String, Object> properties = ImmutableMap.of(
-          "prop1", "value1",
-          "prop2", "value3",
-          DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
-      );
-      Map<String, String> res = DynamicConfigProviderUtils.extraConfigAndSetStringMap(properties, DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER);
+  @Test
+  public void testExtraConfigAndSetObjectMap()
+  {
+    DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
+        ImmutableMap.of("prop2", "value2")
+    );
 
-      Assert.assertEquals(2, res.size());
-      Assert.assertEquals("value1", res.get("prop1"));
-      Assert.assertEquals("value2", res.get("prop2"));
-    }
+    Map<String, Object> properties = ImmutableMap.of(
+        "prop1", "value1",
+        "prop2", "value3",
+        DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
+    );
+    Map<String, Object> res = DynamicConfigProviderUtils.extraConfigAndSetObjectMap(properties, DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER);
 
-    @Test
-    public void testExtraConfigAndSetObjectMap()
-    {
-      DynamicConfigProvider dynamicConfigProvider = new MapStringDynamicConfigProvider(
-          ImmutableMap.of("prop2", "value2")
-      );
-
-      Map<String, Object> properties = ImmutableMap.of(
-          "prop1", "value1",
-          "prop2", "value3",
-          DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER.convertValue(dynamicConfigProvider, Map.class)
-      );
-      Map<String, Object> res = DynamicConfigProviderUtils.extraConfigAndSetObjectMap(properties, DYNAMIC_CONFIG_PROVIDER, OBJECT_MAPPER);
-
-      Assert.assertEquals(2, res.size());
-      Assert.assertEquals("value1", res.get("prop1").toString());
-      Assert.assertEquals("value2", res.get("prop2").toString());
-    }
+    Assertions.assertEquals(2, res.size());
+    Assertions.assertEquals("value1", res.get("prop1").toString());
+    Assertions.assertEquals("value2", res.get("prop2").toString());
   }
 }

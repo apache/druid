@@ -29,16 +29,14 @@ import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.RangeIndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
-import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -47,12 +45,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@ExtendWith(MockitoExtension.class)
 public class StringFieldWriterTest extends InitializedNullHandlingTest
 {
   private static final long MEMORY_POSITION = 1;
-
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
 
   @Mock
   public DimensionSelector selector;
@@ -67,7 +63,7 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   private FieldWriter fieldWriterRemoveNull;
   private FieldWriter fieldWriterUtf8RemoveNull;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
@@ -77,7 +73,7 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     fieldWriterUtf8RemoveNull = new StringFieldWriter(selectorUtf8, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     for (FieldWriter fw : getFieldWriter(FieldWritersType.ALL)) {
@@ -145,10 +141,10 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   public void testNullByteNotReplaced()
   {
     mockSelectors(Arrays.asList("abc\u0000", "foobar", "def"));
-    Assert.assertThrows(InvalidNullByteException.class, () -> {
+    Assertions.assertThrows(InvalidNullByteException.class, () -> {
       doTestWithSpecificFieldWriter(fieldWriter);
     });
-    Assert.assertThrows(InvalidNullByteException.class, () -> {
+    Assertions.assertThrows(InvalidNullByteException.class, () -> {
       doTestWithSpecificFieldWriter(fieldWriterUtf8);
     });
   }
@@ -171,7 +167,7 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
                                          .map(val -> StringUtils.replace(val, "\u0000", ""))
                                          .collect(Collectors.toList());
       }
-      Assert.assertEquals("values read", expectedResults, Arrays.asList(valuesRead));
+      Assertions.assertEquals(expectedResults, Arrays.asList(valuesRead), "values read");
     }
   }
 
@@ -226,7 +222,7 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     for (long maxSize = 0; maxSize < memory.getCapacity() - MEMORY_POSITION; maxSize++) {
       final long written = writer.writeTo(memory, MEMORY_POSITION, maxSize);
       if (written > 0) {
-        Assert.assertEquals("bytes written", maxSize, written);
+        Assertions.assertEquals(maxSize, written, "bytes written");
         return written;
       }
     }

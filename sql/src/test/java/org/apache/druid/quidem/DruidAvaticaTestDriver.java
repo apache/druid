@@ -24,7 +24,6 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,6 +31,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.AvaticaMonitor;
+import org.apache.druid.sql.avatica.DruidAvaticaHandler;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
@@ -43,10 +43,11 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.http.client.utils.URIBuilder;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
+import org.eclipse.jetty.util.thread.QueuedThreadPool;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
@@ -150,7 +151,12 @@ public class DruidAvaticaTestDriver implements Driver
     AvaticaJettyServer(final DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras) throws Exception
     {
       this.druidMeta = druidMeta;
-      server = new Server(new InetSocketAddress("localhost", 0));
+      QueuedThreadPool threadPool = new QueuedThreadPool(10, 2, 1000);
+      server = new Server(threadPool);
+      ServerConnector connector = new ServerConnector(server);
+      connector.setHost("localhost");
+      connector.setPort(0);
+      server.addConnector(connector);
       server.setHandler(getAvaticaHandler(druidMeta));
       server.start();
       url = StringUtils.format(
@@ -185,7 +191,7 @@ public class DruidAvaticaTestDriver implements Driver
       }
     }
 
-    protected AbstractAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
+    protected DruidAvaticaHandler getAvaticaHandler(final DruidMeta druidMeta)
     {
       return new DruidAvaticaJsonHandler(
           druidMeta,

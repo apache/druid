@@ -251,6 +251,15 @@ public class ExpressionVectorSelectors
           case LONG:
             binding.addNumeric(columnName, ExpressionType.LONG, vectorColumnSelectorFactory.makeValueSelector(columnName));
             break;
+          case STRING:
+            binding.addObjectSelector(
+                columnName,
+                columnCapabilities.hasMultipleValues().isTrue()
+                ? ExpressionType.STRING_ARRAY
+                : ExpressionType.fromColumnType(columnCapabilities.toColumnType()),
+                vectorColumnSelectorFactory.makeObjectSelector(columnName)
+            );
+            break;
           default:
             binding.addObjectSelector(
                 columnName,

@@ -81,6 +81,7 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -94,6 +95,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -102,7 +104,6 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -230,7 +231,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     );
     return new FilteringCloseableInputRowIterator(
         inputSourceReader.read(ingestionMeters),
-        rowFilter,
+        InputRowFilter.fromPredicate(rowFilter),
         ingestionMeters,
         parseExceptionHandler
     );
@@ -304,9 +305,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public abstract Granularity getSegmentGranularity();
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
   }
 
   public TaskLockHelper getTaskLockHelper()
@@ -353,42 +354,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         // This branch is the only one that will not initialize taskLockHelper.
         return true;
       }
-    }
-  }
-
-  /**
-   * Attempts to acquire a lock that covers certain segments.
-   * <p>
-   * Will look at {@link Tasks#FORCE_TIME_CHUNK_LOCK_KEY} to decide whether to acquire a time chunk or segment lock.
-   * <p>
-   * This method will initialize {@link #taskLockHelper} as a side effect.
-   *
-   * @return whether the lock was acquired
-   */
-  boolean determineLockGranularityAndTryLockWithSegments(
-      TaskActionClient client,
-      List<DataSegment> segments,
-      BiConsumer<LockGranularity, List<DataSegment>> segmentCheckFunction
-  ) throws IOException
-  {
-    final boolean forceTimeChunkLock = getContextValue(
-        Tasks.FORCE_TIME_CHUNK_LOCK_KEY,
-        Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
-    );
-
-    if (forceTimeChunkLock) {
-      log.info("[%s] is set to true in task context. Use timeChunk lock", Tasks.FORCE_TIME_CHUNK_LOCK_KEY);
-      taskLockHelper = createLockHelper(LockGranularity.TIME_CHUNK);
-      segmentCheckFunction.accept(LockGranularity.TIME_CHUNK, segments);
-      return tryTimeChunkLock(
-          client,
-          new ArrayList<>(segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()))
-      );
-    } else {
-      final LockGranularityDetermineResult result = determineSegmentGranularity(segments);
-      taskLockHelper = createLockHelper(result.lockGranularity);
-      segmentCheckFunction.accept(result.lockGranularity, segments);
-      return tryLockWithDetermineResult(client, result);
     }
   }
 
@@ -641,6 +606,25 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return tuningConfig.isForceGuaranteedRollup();
   }
 
+  /**
+   * Returns a function that adds the given indexing state fingerprint to all segments.
+   * If the fingerprint is null, returns an identity function that leaves segments unchanged.
+   */
+  public static Function<Set<DataSegment>, Set<DataSegment>> addIndexingStateFingerprintToSegments(
+      String indexingStateFingerprint
+  )
+  {
+    if (indexingStateFingerprint != null) {
+      return segments -> segments.stream()
+                                 .map(
+                                     segment -> segment.withIndexingStateFingerprint(indexingStateFingerprint)
+                                 )
+                                 .collect(Collectors.toSet());
+    } else {
+      return Function.identity();
+    }
+  }
+
   public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
       boolean storeCompactionState,
       TaskToolbox toolbox,
@@ -678,6 +662,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
           transformSpec,
           tuningConfig.getIndexSpec(),
           granularitySpec,
+          null,
+          ingestionSpec.getDataSchema().getBaseTable(),
           ingestionSpec.getDataSchema().getProjections()
       );
     } else {
@@ -713,13 +699,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   protected static List<DataSegment> findInputSegments(
       String dataSource,
       TaskActionClient actionClient,
-      List<Interval> intervalsToRead
+      List<Interval> intervalsToRead,
+      EnumSet<SegmentDetail> details
   ) throws IOException
   {
     return ImmutableList.copyOf(
-        actionClient.submit(
-            new RetrieveUsedSegmentsAction(dataSource, intervalsToRead)
-        )
+        actionClient.submit(new RetrieveUsedSegmentsAction(dataSource, intervalsToRead, details))
     );
   }
 
@@ -944,6 +929,16 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return null;
   }
 
+  /**
+   * Number of published segments whose row count exceeds {@code maxRowsPerSegment} times the oversize ratio.
+   * Null when the check does not apply (for example dynamic partitioning, or when no target is configured).
+   */
+  @Nullable
+  protected Long getTaskCompletionOversizedSegments()
+  {
+    return null;
+  }
+
   protected TaskReport.ReportMap buildLiveIngestionStatsReport(
       IngestionState ingestionState,
       Map<String, Object> unparseableEvents,
@@ -960,6 +955,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 false,
                 0L,
+                null,
                 null,
                 null,
                 null
@@ -1023,7 +1019,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             segmentAvailabilityWaitTimeMs,
             Collections.emptyMap(),
             segmentsRead,
-            segmentsPublished
+            segmentsPublished,
+            getTaskCompletionOversizedSegments()
         )
     );
   }

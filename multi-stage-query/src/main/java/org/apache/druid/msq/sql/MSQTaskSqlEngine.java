@@ -168,7 +168,6 @@ public class MSQTaskSqlEngine implements SqlEngine
       case READ_EXTERNAL_DATA:
       case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
-      case SCAN_NEEDS_SIGNATURE:
         return true;
       default:
         throw SqlEngines.generateUnrecognizedFeatureException(MSQTaskSqlEngine.class.getSimpleName(), feature);
@@ -187,10 +186,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         null,
         overlordClient,
         plannerContext,
-        jsonMapper,
         relRoot.fields,
-        terminalStageSpecFactory,
-        queryKitSpecFactory
+        terminalStageSpecFactory
     );
   }
 
@@ -209,11 +206,7 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateInsert(
         relRoot,
         destination instanceof TableDestination
-        ? plannerContext.getPlannerToolbox()
-                        .rootSchema()
-                        .getNamedSchema(plannerContext.getPlannerToolbox().druidSchemaName())
-                        .getSchema()
-                        .getTable(((TableDestination) destination).getTableName())
+        ? plannerContext.getDruidTable(((TableDestination) destination).getTableName())
         : null,
         plannerContext
     );
@@ -222,10 +215,8 @@ public class MSQTaskSqlEngine implements SqlEngine
         destination,
         overlordClient,
         plannerContext,
-        jsonMapper,
         relRoot.fields,
-        terminalStageSpecFactory,
-        queryKitSpecFactory
+        terminalStageSpecFactory
     );
   }
 

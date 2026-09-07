@@ -26,7 +26,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressMatchOperatorConversion;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -67,7 +67,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   @Test
   public void testTooFewArgs()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Collections.emptyList(),
@@ -75,7 +75,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
   }
 
   @Test
@@ -83,7 +83,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   {
     String address = IPV4;
     String subnet = SUBNET_192_168;
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -95,7 +95,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_match] requires 2 arguments", t.getMessage());
   }
 
   @Test
@@ -103,7 +103,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   {
     String address = IPV4;
     String variableName = VAR;
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -114,7 +114,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] subnet argument must be a literal", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_match] subnet argument must be a literal", t.getMessage());
   }
 
   @Test
@@ -122,7 +122,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
   {
     String address = IPV4;
     String invalidSubnet = "192.168.0.1/invalid";
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -133,7 +133,7 @@ public class IPv4AddressMatchExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_match] subnet arg has an invalid format: 192.168.0.1/invalid", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_match] subnet arg has an invalid format: 192.168.0.1/invalid", t.getMessage());
   }
 
   @Test

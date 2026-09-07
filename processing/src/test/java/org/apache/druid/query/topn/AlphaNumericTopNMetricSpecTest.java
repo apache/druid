@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -40,38 +40,38 @@ public class AlphaNumericTopNMetricSpecTest
     final Comparator<String> comparator = AlphaNumericTopNMetricSpec.COMPARATOR;
 
     // equality
-    Assert.assertEquals(0, comparator.compare("", ""));
-    Assert.assertEquals(0, comparator.compare("abc", "abc"));
-    Assert.assertEquals(0, comparator.compare("123", "123"));
-    Assert.assertEquals(0, comparator.compare("abc123", "abc123"));
+    Assertions.assertEquals(0, comparator.compare("", ""));
+    Assertions.assertEquals(0, comparator.compare("abc", "abc"));
+    Assertions.assertEquals(0, comparator.compare("123", "123"));
+    Assertions.assertEquals(0, comparator.compare("abc123", "abc123"));
 
     // empty strings < non-empty
-    Assert.assertTrue(comparator.compare("", "abc") < 0);
-    Assert.assertTrue(comparator.compare("abc", "") > 0);
+    Assertions.assertTrue(comparator.compare("", "abc") < 0);
+    Assertions.assertTrue(comparator.compare("abc", "") > 0);
 
     // numbers < non numeric
-    Assert.assertTrue(comparator.compare("123", "abc") < 0);
-    Assert.assertTrue(comparator.compare("abc", "123") > 0);
+    Assertions.assertTrue(comparator.compare("123", "abc") < 0);
+    Assertions.assertTrue(comparator.compare("abc", "123") > 0);
 
     // numbers ordered numerically
-    Assert.assertTrue(comparator.compare("2", "11") < 0);
-    Assert.assertTrue(comparator.compare("a2", "a11") < 0);
+    Assertions.assertTrue(comparator.compare("2", "11") < 0);
+    Assertions.assertTrue(comparator.compare("a2", "a11") < 0);
 
     // leading zeroes
-    Assert.assertTrue(comparator.compare("02", "11") < 0);
-    Assert.assertTrue(comparator.compare("02", "002") < 0);
+    Assertions.assertTrue(comparator.compare("02", "11") < 0);
+    Assertions.assertTrue(comparator.compare("02", "002") < 0);
 
     // decimal points ...
-    Assert.assertTrue(comparator.compare("1.3", "1.5") < 0);
+    Assertions.assertTrue(comparator.compare("1.3", "1.5") < 0);
 
     // ... don't work too well
-    Assert.assertTrue(comparator.compare("1.3", "1.15") < 0);
+    Assertions.assertTrue(comparator.compare("1.3", "1.15") < 0);
 
     // but you can sort ranges
     List<String> sorted = Lists.newArrayList("1-5", "11-15", "16-20", "21-25", "26-30", "6-10", "Other");
     Collections.sort(sorted, comparator);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("1-5", "6-10", "11-15", "16-20", "21-25", "26-30", "Other"),
         sorted
     );
@@ -82,7 +82,7 @@ public class AlphaNumericTopNMetricSpecTest
     );
     Collections.sort(sortedFixedDecimal, comparator);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             "[0.00-0.05)", "[0.05-0.10)", "[0.10-0.50)", "[0.50-1.00)",
             "[1.00-5.00)", "[5.00-10.00)", "[10.00-20.00)", "Other"
@@ -106,7 +106,7 @@ public class AlphaNumericTopNMetricSpecTest
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     TopNMetricSpec actualMetricSpec = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec, TopNMetricSpec.class)), TopNMetricSpec.class);
     TopNMetricSpec actualMetricSpec1 = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonSpec1, TopNMetricSpec.class)), TopNMetricSpec.class);
-    Assert.assertEquals(expectedMetricSpec, actualMetricSpec);
-    Assert.assertEquals(expectedMetricSpec1, actualMetricSpec1);
+    Assertions.assertEquals(expectedMetricSpec, actualMetricSpec);
+    Assertions.assertEquals(expectedMetricSpec1, actualMetricSpec1);
   }
 }

@@ -29,13 +29,13 @@ Filters are commonly applied on dimensions, but can be applied on aggregated met
 By default, Druid uses SQL compatible three-value logic when filtering. See [Boolean logic](./sql-data-types.md#boolean-logic) for more details.
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes the native
  language. For information about aggregators available in SQL, refer to the
  [SQL documentation](sql-scalar.md).
 :::
 
-This topic describes the filter types supported in Apache Druid.
+This topic describes the filter types supported in Apache&circledR; Druid.
 
 ## Selector filter
 
@@ -431,7 +431,7 @@ The regular expression filter is similar to the selector filter, but using regul
 | -------- | ----------- | -------- |
 | `type` | Must be `regex`.| Yes |
 | `dimension` | Input column or virtual column name to filter on. | Yes |
-| `pattern` | String pattern to match - any standard [Java regular expression](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/regex/Pattern.html). | Yes |
+| `pattern` | String pattern to match - any standard [Java regular expression](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html). | Yes |
 | `extractionFn` | [Extraction function](./dimensionspecs.md#extraction-functions) to apply to `dimension` prior to value matching. See [filtering with extraction functions](#filtering-with-extraction-functions) for details. | No |
 
 Note that it is often more optimal to use a like filter instead of a regex for simple matching of prefixes.

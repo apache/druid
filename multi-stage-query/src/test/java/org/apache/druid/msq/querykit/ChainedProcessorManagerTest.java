@@ -46,10 +46,12 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -67,11 +69,13 @@ import java.util.stream.LongStream;
 /**
  * Unit tests for {@link ChainedProcessorManager}.
  */
-@RunWith(Parameterized.class)
+
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.BaseFrameProcessorExecutorTestSuite
 {
-  private final Bouncer bouncer;
-  private final int maxOutstandingProcessors;
+  private Bouncer bouncer;
+  private int maxOutstandingProcessors;
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                .addTimeColumn()
@@ -85,7 +89,20 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     this.maxOutstandingProcessors = maxOutstandingProcessors;
   }
 
-  @Parameterized.Parameters(name = "numThreads = {0}, bouncerPoolSize = {1}, maxOutstandingProcessors = {2}")
+  @BeforeEach
+  @Override
+  public void setUp() throws Exception
+  {
+    super.setUp();
+  }
+
+  @AfterEach
+  @Override
+  public void tearDown() throws Exception
+  {
+    super.tearDown();
+  }
+
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -129,10 +146,10 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
-    Assert.assertEquals(new HashSet<>(expectedValues), actualValues);
+    Assertions.assertEquals(new HashSet<>(expectedValues), actualValues);
   }
 
   /**
@@ -168,10 +185,10 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
-    Assert.assertEquals(expectedValues, actualValues);
+    Assertions.assertEquals(expectedValues, actualValues);
   }
 
   @Test
@@ -200,15 +217,15 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
         null
     );
 
-    Assert.assertThrows(ExecutionException.class, future::get);
+    Assertions.assertThrows(ExecutionException.class, future::get);
 
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
-    Assert.assertEquals(expectedValues, actualValues);
+    Assertions.assertEquals(expectedValues, actualValues);
   }
 
   @Test
@@ -252,10 +269,10 @@ public class ChainedProcessorManagerTest extends FrameProcessorExecutorTest.Base
     final HashSet<Long> actualValues = new HashSet<>();
     try (ReadableFrameChannel readable = outputChannel.readable()) {
       while (readable.canRead()) {
-        actualValues.add(extractColumnValue(readable.read(), 1));
+        actualValues.add(extractColumnValue(readable.readFrame(), 1));
       }
     }
-    Assert.assertEquals(expectedValues, actualValues);
+    Assertions.assertEquals(expectedValues, actualValues);
   }
 
   @SuppressWarnings("rawtypes")

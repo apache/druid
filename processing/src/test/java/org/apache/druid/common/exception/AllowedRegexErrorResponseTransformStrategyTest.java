@@ -21,8 +21,8 @@ package org.apache.druid.common.exception;
 
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class AllowedRegexErrorResponseTransformStrategyTest
 {
@@ -34,7 +34,7 @@ public class AllowedRegexErrorResponseTransformStrategyTest
     );
     String message = "test message 123";
     String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
-    Assert.assertEquals(message, result);
+    Assertions.assertEquals(message, result);
   }
 
   @Test
@@ -45,7 +45,7 @@ public class AllowedRegexErrorResponseTransformStrategyTest
     );
     String message = "test message 123";
     String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   @Test
@@ -56,7 +56,7 @@ public class AllowedRegexErrorResponseTransformStrategyTest
     );
     String message = "test message 123";
     String result = allowedRegex.getErrorMessageTransformFunction().apply(message);
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   @Test
@@ -66,7 +66,7 @@ public class AllowedRegexErrorResponseTransformStrategyTest
         ImmutableList.of("acbd", "qwer")
     );
     String result = allowedRegex.getErrorMessageTransformFunction().apply(null);
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   @Test

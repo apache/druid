@@ -21,10 +21,8 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,9 +35,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class StreamUtilsTest
 {
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   @Test
   public void testRetryExceptionOnFlush()
   {
@@ -48,7 +43,7 @@ public class StreamUtilsTest
     random.nextBytes(bytes);
     final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     final AtomicLong outputFlushes = new AtomicLong(0);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         bytes.length,
         StreamUtils.retryCopy(
             new ByteSource()
@@ -83,7 +78,7 @@ public class StreamUtilsTest
             10
         )
     );
-    Assert.assertEquals(4, outputFlushes.get()); // 2 closes and 2 manual flushes
-    Assert.assertArrayEquals(bytes, byteArrayOutputStream.toByteArray());
+    Assertions.assertEquals(4, outputFlushes.get()); // 2 closes and 2 manual flushes
+    Assertions.assertArrayEquals(bytes, byteArrayOutputStream.toByteArray());
   }
 }

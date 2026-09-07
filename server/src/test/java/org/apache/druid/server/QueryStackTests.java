@@ -53,7 +53,7 @@ import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -104,10 +104,13 @@ import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.Assert;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -118,20 +121,20 @@ import java.util.Set;
  */
 public class QueryStackTests
 {
-  public static class Junit4ConglomerateRule extends ExternalResource
+  public static class ConglomerateExtension implements BeforeAllCallback, AfterAllCallback
   {
     private Closer closer;
     private QueryRunnerFactoryConglomerate conglomerate;
 
     @Override
-    protected void before()
+    public void beforeAll(ExtensionContext context)
     {
       closer = Closer.create();
       conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
     }
 
     @Override
-    protected void after()
+    public void afterAll(ExtensionContext context)
     {
       try {
         closer.close();
@@ -273,22 +276,26 @@ public class QueryStackTests
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
   {
-    return createQueryRunnerFactoryConglomerate(closer, TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
-  }
-
-  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
-      final Closer closer,
-      final Integer minTopNThreshold
-  )
-  {
     return createQueryRunnerFactoryConglomerate(
         closer,
         getProcessingConfig(
             DEFAULT_NUM_MERGE_BUFFERS
         ),
-        minTopNThreshold,
         TestHelper.makeJsonMapper()
     );
+  }
+
+  /**
+   * @deprecated The minTopNThreshold parameter is no longer used. Use query context to set minTopNThreshold.
+   */
+  @Deprecated
+  @SuppressWarnings("unused")
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final Integer minTopNThreshold
+  )
+  {
+    return createQueryRunnerFactoryConglomerate(closer);
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
@@ -299,7 +306,6 @@ public class QueryStackTests
     return createQueryRunnerFactoryConglomerate(
         closer,
         processingConfig,
-        TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD,
         TestHelper.makeJsonMapper()
     );
   }
@@ -309,7 +315,7 @@ public class QueryStackTests
     final TestBufferPool testBufferPool = TestBufferPool.offHeap(COMPUTE_BUFFER_SIZE, Integer.MAX_VALUE);
     closer.register(() -> {
       // Verify that all objects have been returned to the pool.
-      Assert.assertEquals(0, testBufferPool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, testBufferPool.getOutstandingObjectCount());
     });
     return testBufferPool;
   }
@@ -324,7 +330,6 @@ public class QueryStackTests
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final DruidProcessingConfig processingConfig,
-      final Integer minTopNThreshold,
       final ObjectMapper jsonMapper
   )
   {
@@ -333,23 +338,34 @@ public class QueryStackTests
 
     return createQueryRunnerFactoryConglomerate(
         processingConfig,
-        minTopNThreshold,
         jsonMapper,
         testBufferPool,
         groupByBuffers);
   }
 
+  /**
+   * @deprecated The minTopNThreshold parameter is no longer used. Use query context to set minTopNThreshold.
+   */
+  @Deprecated
+  @SuppressWarnings("unused")
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final Closer closer,
+      final DruidProcessingConfig processingConfig,
+      final Integer minTopNThreshold,
+      final ObjectMapper jsonMapper
+  )
+  {
+    return createQueryRunnerFactoryConglomerate(closer, processingConfig, jsonMapper);
+  }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final DruidProcessingConfig processingConfig,
-      final Integer minTopNThreshold,
       final ObjectMapper jsonMapper,
       final TestBufferPool testBufferPool,
       final TestGroupByBuffers groupByBuffers)
   {
     ImmutableMap<Class<? extends Query>, QueryRunnerFactory> factories = makeDefaultQueryRunnerFactories(
         processingConfig,
-        minTopNThreshold,
         jsonMapper,
         testBufferPool,
         groupByBuffers
@@ -365,15 +381,29 @@ public class QueryStackTests
     return conglomerate;
   }
 
-  @SuppressWarnings("rawtypes")
-  public static ImmutableMap<Class<? extends Query>, QueryRunnerFactory> makeDefaultQueryRunnerFactories(
+  /**
+   * @deprecated The minTopNThreshold parameter is no longer used. Use query context to set minTopNThreshold.
+   */
+  @Deprecated
+  @SuppressWarnings("unused")
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final DruidProcessingConfig processingConfig,
       final Integer minTopNThreshold,
       final ObjectMapper jsonMapper,
       final TestBufferPool testBufferPool,
       final TestGroupByBuffers groupByBuffers)
   {
-    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    return createQueryRunnerFactoryConglomerate(processingConfig, jsonMapper, testBufferPool, groupByBuffers);
+  }
+
+  @SuppressWarnings("rawtypes")
+  public static ImmutableMap<Class<? extends Query>, QueryRunnerFactory> makeDefaultQueryRunnerFactories(
+      final DruidProcessingConfig processingConfig,
+      final ObjectMapper jsonMapper,
+      final TestBufferPool testBufferPool,
+      final TestGroupByBuffers groupByBuffers)
+  {
+    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = GroupByQueryRunnerTestHelper.makeQueryRunnerFactory(
         jsonMapper,
         new GroupByQueryConfig()
         {
@@ -420,14 +450,7 @@ public class QueryStackTests
             TopNQuery.class,
             new TopNQueryRunnerFactory(
                 testBufferPool,
-                new TopNQueryQueryToolChest(new TopNQueryConfig()
-                {
-                  @Override
-                  public int getMinTopNThreshold()
-                  {
-                    return minTopNThreshold;
-                  }
-                }),
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )

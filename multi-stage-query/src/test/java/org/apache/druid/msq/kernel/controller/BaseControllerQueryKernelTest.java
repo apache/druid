@@ -45,9 +45,10 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nonnull;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -139,7 +140,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
           break;
 
         case READING_INPUT:
-          controllerQueryKernel.createWorkOrders(stageId.getStageNumber(), null);
+          controllerQueryKernel.createWorkOrders(stageId.getStageNumber(), Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER, null);
           controllerQueryKernel.startStage(stageId);
           for (int i = 0; i < queryDefinition.getStageDefinition(stageId).getMaxWorkerCount(); ++i) {
             controllerQueryKernel.workOrdersSentForWorker(stageId, i);
@@ -210,6 +211,9 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
         case FAILED:
           controllerQueryKernel.failStage(stageId);
           break;
+
+        case RETRYING:
+          throw new IAE("Cannot initialize a stage directly in the retrying phase");
       }
       if (!recursiveCall) {
         setupStages.add(stageNumber);
@@ -248,7 +252,9 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
               inputSlicerFactory,
               WorkerAssignmentStrategy.MAX,
               MultiStageQueryContext.getRowBasedFrameType(QueryContext.of(config.getWorkerContextMap())),
-              Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
+              Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER,
+              Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER,
+              Limits.DEFAULT_MAX_PARTITIONS
           )
       );
     }
@@ -280,7 +286,7 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
     public void startStage(int stageNumber)
     {
       Preconditions.checkArgument(initialized);
-      controllerQueryKernel.createWorkOrders(stageNumber, null);
+      controllerQueryKernel.createWorkOrders(stageNumber, Limits.DEFAULT_MAX_INPUT_FILES_PER_WORKER, null);
       controllerQueryKernel.startStage(new StageId(queryDefinition.getQueryId(), stageNumber));
 
     }
@@ -299,6 +305,15 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       Preconditions.checkArgument(initialized);
       controllerQueryKernel.getWorkerInputsForStage(stageId).workers()
                            .forEach(n -> controllerQueryKernel.setDoneReadingInputForStageAndWorker(stageId, n));
+    }
+
+    public void doneReadingInputForWorkers(int stageNumber, int... workers)
+    {
+      Preconditions.checkArgument(initialized);
+      final StageId stageId = new StageId(queryDefinition.getQueryId(), stageNumber);
+      for (int worker : workers) {
+        controllerQueryKernel.setDoneReadingInputForStageAndWorker(stageId, worker);
+      }
     }
 
     public void finishStage(int stageNumber)
@@ -451,11 +466,11 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       );
 
       // does not enable the current stage to enable running from start
-      Assert.assertTrue(createAndGetNewStageNumbers().size() == 0);
+      Assertions.assertTrue(createAndGetNewStageNumbers().size() == 0);
       // only work order of failed worker should be there
-      Assert.assertTrue(workOrderList.size() == 1);
-      Assert.assertTrue(workOrderList.get(0).getWorkerNumber() == workeNumber);
-      Assert.assertTrue(workOrderList.get(0).getStageNumber() == retriedStage);
+      Assertions.assertTrue(workOrderList.size() == 1);
+      Assertions.assertTrue(workOrderList.get(0).getWorkerNumber() == workeNumber);
+      Assertions.assertTrue(workOrderList.get(0).getStageNumber() == retriedStage);
 
     }
 

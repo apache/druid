@@ -21,16 +21,29 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.server.compaction.CompactionStatus;
+import org.apache.druid.timeline.CompactionState;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = InlineSchemaDataSourceCompactionConfig.class)
 @JsonSubTypes(value = {
@@ -50,6 +63,11 @@ public interface DataSourceCompactionConfig
 
   String getDataSource();
 
+  /**
+   * Validates that the compaction config is well-formed and can be executed.
+   */
+  CompactionConfigValidationResult validate(ClusterCompactionConfig clusterCompactionConfig);
+
   @Nullable
   CompactionEngine getEngine();
 
@@ -62,6 +80,11 @@ public interface DataSourceCompactionConfig
   Integer getMaxRowsPerSegment();
 
   Period getSkipOffsetFromLatest();
+
+  /**
+   * Intervals to skip from compaction. A compaction interval overlapping any of these will be skipped.
+   */
+  List<Interval> getSkipIntervals();
 
   @Nullable
   UserCompactionTaskQueryTuningConfig getTuningConfig();
@@ -82,6 +105,9 @@ public interface DataSourceCompactionConfig
   List<AggregateProjectionSpec> getProjections();
 
   @Nullable
+  BaseTableProjectionSpec getBaseTable();
+
+  @Nullable
   CompactionTransformSpec getTransformSpec();
 
   @Nullable
@@ -89,4 +115,80 @@ public interface DataSourceCompactionConfig
 
   @Nullable
   AggregatorFactory[] getMetricsSpec();
+
+  /**
+   * Converts this compaction config to a {@link CompactionState}.
+   * <p>
+   * For IndexSpec and DimensionsSpec, we convert to their effective specs so that the fingerprint and associated state
+   * reflect the actual layout of the segments after compaction (with all missing defaults not included in the compaction
+   * config filled in). This is consistent with how {@link org.apache.druid.timeline.DataSegment#lastCompactionState }
+   * has been computed historically.
+   */
+  default CompactionState toCompactionState()
+  {
+    ClientCompactionTaskQueryTuningConfig tuningConfig = ClientCompactionTaskQueryTuningConfig.from(this);
+
+    PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(tuningConfig);
+
+    IndexSpec indexSpec = tuningConfig.getIndexSpec() == null
+                          ? IndexSpec.getDefault().getEffectiveSpec()
+                          : tuningConfig.getIndexSpec().getEffectiveSpec();
+
+    DimensionsSpec dimensionsSpec = null;
+    if (getDimensionsSpec() != null && getDimensionsSpec().getDimensions() != null) {
+      dimensionsSpec = DimensionsSpec.builder()
+                                     .setDimensions(
+                                         getDimensionsSpec().getDimensions()
+                                                       .stream()
+                                                       .map(dim -> dim.getEffectiveSchema(indexSpec))
+                                                       .collect(Collectors.toList())
+                                     ).build();
+    }
+
+    List<AggregatorFactory> metricsSpec = getMetricsSpec() == null
+                                          ? null
+                                          : Arrays.asList(getMetricsSpec());
+
+    CompactionTransformSpec transformSpec = getTransformSpec();
+
+    List<AggregateProjectionSpec> projections = getProjections();
+
+    GranularitySpec granularitySpec = null;
+    SegmentGranularitySpec segmentGranularitySpec = null;
+    BaseTableProjectionSpec baseTable = getBaseTable();
+    if (baseTable != null) {
+      // baseTable (clustered) mode: segment granularity goes in a SegmentGranularitySpec and query granularity lives in
+      // the baseTable spec's virtual column. The effective baseTable carries the configured query granularity so the
+      // expected state matches the recorded effective spec.
+      // intervals=null is consistent the legacy path: input intervals are not a compaction-config property, are
+      // excluded from the fingerprint, and are not compared by the per-field checks.
+      segmentGranularitySpec = new SegmentGranularitySpec(
+          getGranularitySpec() == null ? null : getGranularitySpec().getSegmentGranularity(),
+          null  // intervals
+      );
+      baseTable = baseTable.withQueryGranularity(
+          getGranularitySpec() == null ? null : getGranularitySpec().getQueryGranularity()
+      );
+    } else if (getGranularitySpec() != null) {
+      UserCompactionTaskGranularityConfig userGranularityConfig = getGranularitySpec();
+      granularitySpec = new UniformGranularitySpec(
+          userGranularityConfig.getSegmentGranularity(),
+          userGranularityConfig.getQueryGranularity(),
+          userGranularityConfig.isRollup(),
+          null  // intervals
+      );
+    }
+
+    return new CompactionState(
+        partitionsSpec,
+        dimensionsSpec,
+        metricsSpec,
+        transformSpec,
+        indexSpec,
+        granularitySpec,
+        segmentGranularitySpec,
+        baseTable,
+        projections
+    );
+  }
 }

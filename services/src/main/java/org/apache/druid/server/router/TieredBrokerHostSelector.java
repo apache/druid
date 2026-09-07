@@ -287,7 +287,7 @@ public class TieredBrokerHostSelector
       }
     }
 
-    // Use defaut if not resolved by strategies
+    // Use default if not resolved by strategies
     if (brokerServiceName == null) {
       brokerServiceName = tierConfig.getDefaultBrokerServiceName();
 

@@ -616,6 +616,7 @@ public class CachingClusteredClientBenchmark
         "127.0.0." + nameSuiffix,
         null,
         Long.MAX_VALUE,
+        null,
         ServerType.HISTORICAL,
         "default",
         0

@@ -24,6 +24,7 @@ import com.github.rvesse.airline.Cli;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -33,27 +34,25 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.StringWriter;
-import java.io.Writer;
 
 public class DruidJsonValidatorTest
 {
   private File inputFile;
   private final Injector injector = GuiceInjectors.makeStartupInjector();
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     inputFile = temporaryFolder.newFile();
@@ -66,62 +65,28 @@ public class DruidJsonValidatorTest
                        .build();
 
     Object command = parser.parse(args);
-    Assert.assertTrue(command instanceof Runnable);
+    Assertions.assertTrue(command instanceof Runnable);
 
     injector.injectMembers(command);
     return (Runnable) command;
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testExceptionCase()
   {
-    parseCommand("validator", "-f", inputFile.getAbsolutePath(), "-t", "").run();
-  }
-
-  @Test(expected = RuntimeException.class)
-  public void testExceptionCaseNoFile()
-  {
-    parseCommand("validator", "-f", "", "-t", "query").run();
-  }
-
-  @Test(expected = RuntimeException.class)
-  public void testParseValidatorInvalid()
-  {
-    parseCommand(
-        "validator",
-        "-f", "simple_test_data_record_parser_invalid.json",
-        "-t", "parse"
-    ).run();
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> parseCommand("validator", "-f", inputFile.getAbsolutePath(), "-t", "").run()
+    );
   }
 
   @Test
-  public void testParseValidator()
+  public void testExceptionCaseNoFile()
   {
-    Runnable command = parseCommand(
-        "validator",
-        "-f", "simple_test_data_record_parser.json",
-        "-r", "simple_test_data.tsv",
-        "-t", "parse"
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () -> parseCommand("validator", "-f", "", "-t", "query").run()
     );
-    command.run();
-
-    Writer writer = new StringWriter()
-    {
-      @Override
-      public void write(String str)
-      {
-        super.write(str + '\n');
-      }
-    };
-    DruidJsonValidator druidJsonValidator = (DruidJsonValidator) command;
-    druidJsonValidator.setLogWriter(writer);
-    druidJsonValidator.run();
-
-    String expected = "loading parse spec from resource 'simple_test_data_record_parser.json'\n" +
-                      "loading data from resource 'simple_test_data.tsv'\n" +
-                      "2014-10-20T00:00:00.000Z\tproduct_1\n";
-
-    Assert.assertEquals(expected, writer.toString());
   }
 
   @Test
@@ -134,8 +99,8 @@ public class DruidJsonValidatorTest
         new IndexTask.IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
-                      .withObjectMapper(jsonMapper)
                       .build(),
             new IndexTask.IndexIOConfig(
                 new LocalInputSource(new File("lol"), "rofl"),
@@ -156,7 +121,7 @@ public class DruidJsonValidatorTest
                 null,
                 null,
                 new DynamicPartitionsSpec(10000, null),
-                IndexSpec.DEFAULT,
+                IndexSpec.getDefault(),
                 null,
                 3,
                 false,
@@ -181,8 +146,8 @@ public class DruidJsonValidatorTest
     parseCommand("validator", "-f", tmp.getAbsolutePath(), "-t", "task").run();
   }
 
-  @After
-  public void tearDown()
+  @AfterEach
+  public void tearDown() throws IOException
   {
     temporaryFolder.delete();
   }

@@ -61,6 +61,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -77,6 +78,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -291,10 +293,30 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
     );
   }
 
+  /**
+   * Creates a new {@link DruidInputSource} with the given interval.
+   */
+  public DruidInputSource withInterval(Interval interval)
+  {
+    return new DruidInputSource(
+        this.dataSource,
+        interval,
+        null,
+        this.dimFilter,
+        this.dimensions,
+        this.metrics,
+        this.indexIO,
+        this.coordinatorClient,
+        this.segmentCacheManagerFactory,
+        this.taskConfig
+    );
+  }
+
   @Override
   protected InputSourceReader fixedFormatReader(InputRowSchema inputRowSchema, @Nullable File temporaryDirectory)
   {
-    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(temporaryDirectory);
+    final SegmentCacheManager segmentCacheManager =
+        segmentCacheManagerFactory.manufacturate(temporaryDirectory, null, false, false);
 
     final List<TimelineObjectHolder<String, DataSegment>> timeline = createTimeline();
     final Iterator<DruidSegmentInputEntity> entityIterator = FluentIterable
@@ -569,7 +591,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         usedSegments = toolbox.getTaskActionClient()
                               .submit(new RetrieveUsedSegmentsAction(
                                   dataSource,
-                                  Collections.singletonList(interval)
+                                  Collections.singletonList(interval),
+                                  EnumSet.of(SegmentDetail.LOAD_SPEC)
                               ));
       }
       catch (IOException e) {

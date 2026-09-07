@@ -20,9 +20,9 @@
 package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
 
 /**
  * Stores the configuration for an Azure account.
@@ -166,5 +166,15 @@ public class AzureAccountConfig
     }
 
     return storageAccountEndpointSuffix;
+  }
+
+  public static String createStorageEndpointUrl(String storageAccount, AzureAccountConfig config)
+  {
+    if ("azurite".equals(config.getProtocol())) {
+      // Used by Azurite container in tests
+      return "http://" + config.getBlobStorageEndpoint() + "/" + storageAccount;
+    } else {
+      return "https://" + storageAccount + "." + config.getBlobStorageEndpoint();
+    }
   }
 }

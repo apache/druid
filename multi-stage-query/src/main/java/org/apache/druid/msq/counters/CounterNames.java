@@ -20,6 +20,7 @@
 package org.apache.druid.msq.counters;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.ordering.StringComparators;
 
@@ -37,6 +38,7 @@ public class CounterNames
   private static final String CPU = "cpu";
   private static final String SORT_PROGRESS = "sortProgress";
   private static final String SEGMENT_GENERATION_PROGRESS = "segmentGenerationProgress";
+  private static final String STORAGE = "storage";
   private static final String WARNINGS = "warnings";
   private static final Comparator<String> COMPARATOR = new NameComparator();
 
@@ -83,6 +85,14 @@ public class CounterNames
   public static String sortProgress()
   {
     return SORT_PROGRESS;
+  }
+
+  /**
+   * Standard name for a storage counter created by {@link CounterTracker#storage(ByteTracker)}.
+   */
+  public static String storage()
+  {
+    return STORAGE;
   }
 
   /**

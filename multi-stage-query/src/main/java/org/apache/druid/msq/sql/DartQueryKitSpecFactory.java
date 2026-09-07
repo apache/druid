@@ -20,26 +20,22 @@
 package org.apache.druid.msq.sql;
 
 import com.google.inject.Inject;
-import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.msq.dart.controller.DartControllerContext;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.querykit.DataSourcePlanners;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.apache.druid.server.coordination.ServerType;
 
 public class DartQueryKitSpecFactory implements QueryKitSpecFactory
 {
-  private final TimelineServerView serverView;
+  private final DataSourcePlanners dataSourcePlanners;
 
   @Inject
-  public DartQueryKitSpecFactory(TimelineServerView serverView)
+  public DartQueryKitSpecFactory(final DataSourcePlanners dataSourcePlanners)
   {
-    this.serverView = serverView;
+    this.dataSourcePlanners = dataSourcePlanners;
   }
 
   @Override
@@ -47,33 +43,9 @@ public class DartQueryKitSpecFactory implements QueryKitSpecFactory
       final QueryKit<Query<?>> queryKit,
       final String queryId,
       final MSQTuningConfig tuningConfig,
-      final QueryContext queryContext)
+      final QueryContext queryContext
+  )
   {
-    return new QueryKitSpec(
-        queryKit,
-        queryId,
-        getNumWorkers(),
-        queryContext.getInt(
-            DartControllerContext.CTX_MAX_NON_LEAF_WORKER_COUNT,
-            DartControllerContext.DEFAULT_MAX_NON_LEAF_WORKER_COUNT
-        ),
-        MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
-            queryContext,
-            DartControllerContext.DEFAULT_TARGET_PARTITIONS_PER_WORKER
-        )
-    );
-  }
-
-  private int getNumWorkers()
-  {
-    int cnt = 0;
-    for (DruidServerMetadata s : serverView.getDruidServerMetadatas()) {
-      if (s.getType() == ServerType.HISTORICAL) {
-        cnt++;
-      }
-    }
-
-    // Even if all segments are realtime, launch at least one worker.
-    return Math.max(1, cnt);
+    return new QueryKitSpec(queryKit, dataSourcePlanners, queryId);
   }
 }

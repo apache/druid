@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -33,10 +34,12 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 
@@ -97,10 +100,7 @@ public class AggregateProjectionSpec
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
   )
   {
-    if (name == null || name.isEmpty()) {
-      throw InvalidInput.exception("projection name cannot be null or empty");
-    }
-    this.name = name;
+    this.name = Projections.validateProjectionName(name);
     if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
       throw InvalidInput.exception(
           "projection[%s] groupingColumns and aggregators must not both be null or empty",
@@ -160,9 +160,9 @@ public class AggregateProjectionSpec
   }
 
   @JsonIgnore
-  public AggregateProjectionMetadata.Schema toMetadataSchema()
+  public AggregateProjectionSchema toMetadataSchema()
   {
-    return new AggregateProjectionMetadata.Schema(
+    return new AggregateProjectionSchema(
         name,
         timeColumnName,
         filter,
@@ -225,19 +225,34 @@ public class AggregateProjectionSpec
     Granularity granularity = null;
 
     // determine the granularity and time column name for the projection, based on the finest time-like grouping column.
-    for (final DimensionSchema dimension : groupingColumns) {
-      ordering.add(OrderBy.ascending(dimension.getName()));
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
-        timeColumnName = dimension.getName();
+    for (final DimensionSchema groupingColumn : groupingColumns) {
+      ordering.add(OrderBy.ascending(groupingColumn.getName()));
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(groupingColumn.getName())) {
+        // time must be a LONG type
+        if (!groupingColumn.getColumnType().is(ValueType.LONG)) {
+          throw DruidException
+              .forPersona(DruidException.Persona.USER)
+              .ofCategory(DruidException.Category.INVALID_INPUT)
+              .build(
+                  "Encountered grouping column[%s] with incorrect type[%s]. Type must be 'long'.",
+                  groupingColumn.getName(),
+                  groupingColumn.getColumnType()
+              );
+        }
+        timeColumnName = groupingColumn.getName();
         // already found exact __time grouping, skip assigning, granularity = Granularities.NONE;
         break;
       } else {
-        final VirtualColumn vc = virtualColumns.getVirtualColumn(dimension.getName());
+        // time must be a LONG type
+        if (!groupingColumn.getColumnType().is(ValueType.LONG)) {
+          continue;
+        }
+        final VirtualColumn vc = virtualColumns.getVirtualColumn(groupingColumn.getName());
         final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
         if (maybeGranularity == null || maybeGranularity.equals(Granularities.ALL)) {
           // no __time in inputs or not supported, skip
         } else if (Granularities.NONE.equals(maybeGranularity)) {
-          timeColumnName = dimension.getName();
+          timeColumnName = groupingColumn.getName();
           // already found exact __time grouping, skip assigning, granularity = Granularities.NONE;
           break;
         } else if (maybeGranularity.getClass().equals(PeriodGranularity.class)
@@ -245,7 +260,7 @@ public class AggregateProjectionSpec
             && ((PeriodGranularity) maybeGranularity).getOrigin() == null
             && (granularity == null || maybeGranularity.isFinerThan(granularity))) {
           // found a finer period granularity than the existing granularity, or it's the first one
-          timeColumnName = dimension.getName();
+          timeColumnName = groupingColumn.getName();
           granularity = maybeGranularity;
         }
       }

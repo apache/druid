@@ -22,15 +22,15 @@ package org.apache.druid.data.input.kafka;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class KafkaTopicPartitionTest
 {
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     objectMapper = new ObjectMapper();
@@ -53,13 +53,13 @@ public class KafkaTopicPartitionTest
     KafkaTopicPartition partition7 = new KafkaTopicPartition(true, "topic", 0);
     KafkaTopicPartition partition8 = new KafkaTopicPartition(true, "topic2", 0);
 
-    Assert.assertEquals(partition1, partition2);
-    Assert.assertNotEquals(partition1, partition3);
-    Assert.assertEquals(partition1, partition4);
-    Assert.assertEquals(partition5, partition6);
-    Assert.assertEquals(partition1, partition5);
-    Assert.assertNotEquals(partition1, partition7);
-    Assert.assertNotEquals(partition7, partition8);
+    Assertions.assertEquals(partition1, partition2);
+    Assertions.assertNotEquals(partition1, partition3);
+    Assertions.assertEquals(partition1, partition4);
+    Assertions.assertEquals(partition5, partition6);
+    Assertions.assertEquals(partition1, partition5);
+    Assertions.assertNotEquals(partition1, partition7);
+    Assertions.assertNotEquals(partition7, partition8);
   }
 
   @Test
@@ -74,31 +74,31 @@ public class KafkaTopicPartitionTest
     KafkaTopicPartition partition7 = new KafkaTopicPartition(true, "topic", 0);
     KafkaTopicPartition partition8 = new KafkaTopicPartition(true, "topic2", 0);
 
-    Assert.assertEquals(partition1.hashCode(), partition2.hashCode());
-    Assert.assertNotEquals(partition1.hashCode(), partition3.hashCode());
-    Assert.assertEquals(partition1.hashCode(), partition4.hashCode());
-    Assert.assertEquals(partition5.hashCode(), partition6.hashCode());
-    Assert.assertEquals(partition1.hashCode(), partition5.hashCode());
-    Assert.assertNotEquals(partition1.hashCode(), partition7.hashCode());
-    Assert.assertNotEquals(partition7.hashCode(), partition8.hashCode());
+    Assertions.assertEquals(partition1.hashCode(), partition2.hashCode());
+    Assertions.assertNotEquals(partition1.hashCode(), partition3.hashCode());
+    Assertions.assertEquals(partition1.hashCode(), partition4.hashCode());
+    Assertions.assertEquals(partition5.hashCode(), partition6.hashCode());
+    Assertions.assertEquals(partition1.hashCode(), partition5.hashCode());
+    Assertions.assertNotEquals(partition1.hashCode(), partition7.hashCode());
+    Assertions.assertNotEquals(partition7.hashCode(), partition8.hashCode());
   }
 
   @Test
   public void testMultiTopicDeserialization() throws JsonProcessingException
   {
     KafkaTopicPartition partition = objectMapper.readerFor(KafkaTopicPartition.class).readValue("\"topic:0\"");
-    Assert.assertEquals(0, partition.partition());
-    Assert.assertEquals("topic", partition.topic().orElse(null));
-    Assert.assertTrue(partition.isMultiTopicPartition());
+    Assertions.assertEquals(0, partition.partition());
+    Assertions.assertEquals("topic", partition.topic().orElse(null));
+    Assertions.assertTrue(partition.isMultiTopicPartition());
   }
 
   @Test
   public void testSingleTopicDeserialization() throws JsonProcessingException
   {
     KafkaTopicPartition partition = objectMapper.readerFor(KafkaTopicPartition.class).readValue("0");
-    Assert.assertEquals(0, partition.partition());
-    Assert.assertNull(partition.topic().orElse(null));
-    Assert.assertFalse(partition.isMultiTopicPartition());
+    Assertions.assertEquals(0, partition.partition());
+    Assertions.assertNull(partition.topic().orElse(null));
+    Assertions.assertFalse(partition.isMultiTopicPartition());
   }
 
   @Test
@@ -106,7 +106,7 @@ public class KafkaTopicPartitionTest
   {
     KafkaTopicPartition partition = new KafkaTopicPartition(true, "topic", 0);
     KafkaTopicPartition reincarnated = objectMapper.readerFor(KafkaTopicPartition.class).readValue(objectMapper.writeValueAsString(partition));
-    Assert.assertEquals(partition, reincarnated);
+    Assertions.assertEquals(partition, reincarnated);
   }
 
   @Test
@@ -114,6 +114,6 @@ public class KafkaTopicPartitionTest
   {
     KafkaTopicPartition partition = new KafkaTopicPartition(false, null, 0);
     KafkaTopicPartition reincarnated = objectMapper.readerFor(KafkaTopicPartition.class).readValue(objectMapper.writeValueAsString(partition));
-    Assert.assertEquals(partition, reincarnated);
+    Assertions.assertEquals(partition, reincarnated);
   }
 }

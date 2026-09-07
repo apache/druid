@@ -21,7 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -45,14 +45,14 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
       ByteBuffer fromBuffer,
       ByteOrder byteOrder,
       CompressionStrategy strategy,
-      SmooshedFileMapper smooshMapper
+      SegmentFileMapper fileMapper
   )
   {
     this.strategy = strategy;
     this.baseDoubleBuffers = GenericIndexed.read(
         fromBuffer,
         DecompressingByteBufferObjectStrategy.of(byteOrder, strategy),
-        smooshMapper
+        fileMapper
     );
     this.totalSize = totalSize;
     this.sizePer = sizePer;

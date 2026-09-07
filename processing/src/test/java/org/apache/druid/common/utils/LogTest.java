@@ -21,40 +21,31 @@ package org.apache.druid.common.utils;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 // The issue here is that parameters to the logging system are evaluated eagerly
 // So CPU or resource heavy clauses in the log parameters get evaluated even if there is no debug logging
 public class LogTest
 {
   private static final Logger LOG = new Logger(LogTest.class);
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testGoodLog()
   {
     final ExpensiveClass expensiveClass = new ExpensiveClass();
     if (LOG.isDebugEnabled()) {
-      expectedException.expect(ISE.class);
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Some error %s", expensiveClass.expensiveMethod());
+      Assertions.assertThrows(ISE.class, () -> LOG.debug("Some error %s", expensiveClass.expensiveMethod()));
     }
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testBadLog()
   {
     final ExpensiveClass expensiveClass = new ExpensiveClass();
-    if (LOG.isDebugEnabled()) {
-      expectedException.expect(ISE.class);
-    }
-    LOG.debug("Some error %s", expensiveClass.expensiveMethod());
+    Assertions.assertThrows(ISE.class, () -> LOG.debug("Some error %s", expensiveClass.expensiveMethod()));
   }
 }
 

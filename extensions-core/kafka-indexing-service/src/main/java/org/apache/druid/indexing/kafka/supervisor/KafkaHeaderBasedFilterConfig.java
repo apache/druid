@@ -81,6 +81,15 @@ public class KafkaHeaderBasedFilterConfig
           dimFilter.getClass().getSimpleName()
       );
     }
+
+    // The header filter handler evaluates the 'in' filter as a raw string-set membership check and does not apply
+    // extraction functions. Reject a filter that carries one instead of silently ignoring it (which would evaluate
+    // the filter with different semantics and could drop the wrong records).
+    if (dimFilter instanceof InDimFilter && ((InDimFilter) dimFilter).getExtractionFn() != null) {
+      throw InvalidInput.exception(
+          "Extraction functions are not supported for Kafka header filtering. Remove 'extractionFn' from the 'in' filter."
+      );
+    }
   }
 
   @JsonProperty

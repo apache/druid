@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.Serializer;
 
@@ -78,6 +78,25 @@ public class ColumnDescriptor implements Serializer
     return parts;
   }
 
+  /**
+   * Derive the {@link ColumnType} for this column from the part serdes, without deserializing column data. This is
+   * useful for answering schema queries from metadata alone.
+   * <p>
+   * Part serdes that carry additional type information (such as complex type names or array element types) provide it
+   * via {@link ColumnPartSerde#getColumnType()}. If no part serde provides a type, falls back to a simple
+   * {@link ColumnType} from {@link #getValueType()}.
+   */
+  public ColumnType toColumnType()
+  {
+    for (ColumnPartSerde part : parts) {
+      final ColumnType type = part.getColumnType();
+      if (type != null) {
+        return type;
+      }
+    }
+    return new ColumnType(valueType, null, null);
+  }
+
   @Override
   public long getSerializedSize() throws IOException
   {
@@ -89,24 +108,24 @@ public class ColumnDescriptor implements Serializer
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     for (ColumnPartSerde part : parts) {
-      part.getSerializer().writeTo(channel, smoosher);
+      part.getSerializer().writeTo(channel, fileBuilder);
     }
   }
 
-  public ColumnHolder read(
+  public BaseColumnHolder read(
       ByteBuffer buffer,
       ColumnConfig columnConfig,
-      SmooshedFileMapper smooshedFiles,
+      SegmentFileMapper segmentFileMapper,
       @Nullable ColumnHolder parent
   )
   {
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(valueType)
         .setHasMultipleValues(hasMultipleValues)
-        .setFileMapper(smooshedFiles);
+        .setFileMapper(segmentFileMapper);
 
     for (ColumnPartSerde part : parts) {
       part.getDeserializer().read(buffer, builder, columnConfig, parent);

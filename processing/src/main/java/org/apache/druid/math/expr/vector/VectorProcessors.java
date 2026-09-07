@@ -872,6 +872,10 @@ public class VectorProcessors
     private final ExpressionType outputType;
     private final String bindingName;
     private final int maxVectorSize;
+    @Nullable
+    private ExprEvalNumericBindingVector.VectorCache numericCache;
+    @Nullable
+    private ExprEvalObjectBindingVector.VectorCache objectCache;
 
     public IdentifierVectorProcessor(ExpressionType outputType, String bindingName, int maxVectorSize)
     {
@@ -883,7 +887,10 @@ public class VectorProcessors
     @Override
     public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
     {
-      return new ExprEvalBindingVector<>(outputType, bindings, bindingName);
+      if (outputType.isNumeric()) {
+        return new ExprEvalNumericBindingVector<>(outputType, bindings, bindingName, this::getNumericCache);
+      }
+      return new ExprEvalObjectBindingVector<>(outputType, bindings, bindingName, this::getObjectCache);
     }
 
     @Override
@@ -896,6 +903,22 @@ public class VectorProcessors
     public int maxVectorSize()
     {
       return maxVectorSize;
+    }
+
+    private ExprEvalObjectBindingVector.VectorCache getObjectCache()
+    {
+      if (objectCache == null) {
+        objectCache = ExprEvalObjectBindingVector.createCache(maxVectorSize);
+      }
+      return objectCache;
+    }
+
+    private ExprEvalNumericBindingVector.VectorCache getNumericCache()
+    {
+      if (numericCache == null) {
+        numericCache = ExprEvalNumericBindingVector.createCache(maxVectorSize);
+      }
+      return numericCache;
     }
   }
 }

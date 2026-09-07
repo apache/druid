@@ -114,6 +114,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -127,16 +128,16 @@ import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentArchiver;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.utils.JvmUtils;
@@ -145,14 +146,13 @@ import org.joda.time.DateTime;
 import org.joda.time.Hours;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -171,11 +171,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "taskStorageType={0}")
+@MethodSource("constructFeed")
 public class TaskLifecycleTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper MAPPER;
   private static final IndexMergerV9Factory INDEX_MERGER_V9_FACTORY;
+  private static final IndexMergerV10Factory INDEX_MERGER_V10_FACTORY;
   private static final IndexIO INDEX_IO;
   private static final TestUtils TEST_UTILS;
 
@@ -183,13 +185,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TEST_UTILS = new TestUtils();
     MAPPER = TEST_UTILS.getTestObjectMapper();
     INDEX_MERGER_V9_FACTORY = TEST_UTILS.getIndexMergerV9Factory();
+    INDEX_MERGER_V10_FACTORY = TEST_UTILS.getIndexMergerV10Factory();
     INDEX_IO = TEST_UTILS.getTestIndexIO();
   }
 
   private static final String HEAP_TASK_STORAGE = "HeapMemoryTaskStorage";
   private static final String METADATA_TASK_STORAGE = "MetadataTaskStorage";
 
-  @Parameterized.Parameters(name = "taskStorageType={0}")
   public static Collection<String[]> constructFeed()
   {
     return Arrays.asList(new String[][]{{HEAP_TASK_STORAGE}, {METADATA_TASK_STORAGE}});
@@ -200,8 +202,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     this.taskStorageType = taskStorageType;
   }
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<>()
   {
@@ -226,8 +228,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       ir("2010-01-02T01", "a", "c", 1)
   );
 
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  private final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private final String taskStorageType;
 
@@ -366,9 +367,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
+    derbyConnectorRule.before();
     // mock things
     queryRunnerFactoryConglomerate = EasyMock.createStrictMock(QueryRunnerFactoryConglomerate.class);
     monitorScheduler = EasyMock.createStrictMock(MonitorScheduler.class);
@@ -376,7 +378,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     // initialize variables
     announcedSinks = 0;
     pushedSegments = 0;
-    indexSpec = IndexSpec.DEFAULT;
+    indexSpec = IndexSpec.getDefault();
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
     mapper = TEST_UTILS.getTestObjectMapper();
@@ -437,7 +439,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     TaskMaster taskMaster = EasyMock.createMock(TaskMaster.class);
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(taskMaster);
-    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null, null);
+    tsqa = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null);
     return taskStorage;
   }
 
@@ -484,18 +486,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   {
     return new DataSegmentPusher()
     {
-      @Override
-      public String getPathForHadoop()
-      {
-        throw new UnsupportedOperationException();
-      }
-
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String dataSource)
-      {
-        return getPathForHadoop();
-      }
 
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath)
@@ -585,28 +575,28 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
           }
 
         },
-        EasyMock.createNiceMock(DataSegmentServerAnnouncer.class),
         handoffNotifierFactory,
         () -> queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective
         DruidProcessingConfig::new,
         DirectQueryProcessingPool.INSTANCE, // query executor service
         NoopJoinableFactory.INSTANCE,
         () -> monitorScheduler, // monitor scheduler
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, new DefaultObjectMapper()),
+        SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,
         MapCache.create(0),
         new CacheConfig(),
         new CachePopulatorStats(),
         INDEX_MERGER_V9_FACTORY,
+        INDEX_MERGER_V10_FACTORY,
         EasyMock.createNiceMock(DruidNodeAnnouncer.class),
         EasyMock.createNiceMock(DruidNode.class),
         new LookupNodeService("tier"),
-        new DataNodeService("tier", 1000, ServerType.INDEXER_EXECUTOR, 0),
+        new DataNodeService("tier", 1000, null, ServerType.INDEXER_EXECUTOR, 0),
         new NoopTestTaskReportFileWriter(),
         null,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-        new NoopChatHandlerProvider(),
+        new ChatHandlerProvider(),
         TEST_UTILS.getRowIngestionMetersFactory(),
         appenderatorsManager,
         new NoopOverlordClient(),
@@ -660,12 +650,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     );
   }
 
-  @After
-  public void tearDown()
+  @AfterEach
+  public void tearDown() throws IOException
   {
     if (taskQueue.isActive()) {
       taskQueue.stop();
     }
+    derbyConnectorRule.after();
   }
 
   @Test
@@ -677,7 +668,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
@@ -701,35 +692,35 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getTaskStatus(indexTask.getId());
-    Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
+    Assertions.assertTrue(!preRunTaskStatus.isPresent(), "pre run task status not present");
 
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
     final List<DataSegment> publishedSegments = BY_INTERVAL_ORDERING.sortedCopy(mdc.getPublished());
 
-    Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("merged statusCode", TaskState.SUCCESS, mergedStatus.getStatusCode());
-    Assert.assertEquals("num segments published", 2, mdc.getPublished().size());
-    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(TaskState.SUCCESS, mergedStatus.getStatusCode(), "merged statusCode");
+    Assertions.assertEquals(2, mdc.getPublished().size(), "num segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "num segments nuked");
 
-    Assert.assertEquals("segment1 datasource", "foo", publishedSegments.get(0).getDataSource());
-    Assert.assertEquals("segment1 interval", Intervals.of("2010-01-01/P1D"), publishedSegments.get(0).getInterval());
-    Assert.assertEquals(
-        "segment1 dimensions",
+    Assertions.assertEquals("foo", publishedSegments.get(0).getDataSource(), "segment1 datasource");
+    Assertions.assertEquals(Intervals.of("2010-01-01/P1D"), publishedSegments.get(0).getInterval(), "segment1 interval");
+    Assertions.assertEquals(
         ImmutableList.of("dim1", "dim2"),
-        publishedSegments.get(0).getDimensions()
+        publishedSegments.get(0).getDimensions(),
+        "segment1 dimensions"
     );
-    Assert.assertEquals("segment1 metrics", ImmutableList.of("met"), publishedSegments.get(0).getMetrics());
+    Assertions.assertEquals(ImmutableList.of("met"), publishedSegments.get(0).getMetrics(), "segment1 metrics");
 
-    Assert.assertEquals("segment2 datasource", "foo", publishedSegments.get(1).getDataSource());
-    Assert.assertEquals("segment2 interval", Intervals.of("2010-01-02/P1D"), publishedSegments.get(1).getInterval());
-    Assert.assertEquals(
-        "segment2 dimensions",
+    Assertions.assertEquals("foo", publishedSegments.get(1).getDataSource(), "segment2 datasource");
+    Assertions.assertEquals(Intervals.of("2010-01-02/P1D"), publishedSegments.get(1).getInterval(), "segment2 interval");
+    Assertions.assertEquals(
         ImmutableList.of("dim1", "dim2"),
-        publishedSegments.get(1).getDimensions()
+        publishedSegments.get(1).getDimensions(),
+        "segment2 dimensions"
     );
-    Assert.assertEquals("segment2 metrics", ImmutableList.of("met"), publishedSegments.get(1).getMetrics());
+    Assertions.assertEquals(ImmutableList.of("met"), publishedSegments.get(1).getMetrics(), "segment2 metrics");
   }
 
   @Test
@@ -741,6 +732,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
                           new UniformGranularitySpec(
@@ -749,7 +741,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
                               ImmutableList.of(Intervals.of("2010-01-01/P1D"))
                           )
                       )
-                      .withObjectMapper(mapper)
                       .build(),
             new IndexIOConfig(new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
@@ -765,10 +756,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     final TaskStatus status = runTask(indexTask);
 
-    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
-    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(0, mdc.getPublished().size(), "num segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "num segments nuked");
   }
 
   @Test
@@ -852,20 +843,20 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals("num segments published", 3, mdc.getPublished().size());
-    Assert.assertEquals("num segments nuked", 3, mdc.getNuked().size());
-    Assert.assertEquals("delete segment batch call count", 2, mdc.getDeleteSegmentsCount());
-    Assert.assertTrue(
-        "expected unused segments get killed",
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode(), "merged statusCode");
+    Assertions.assertEquals(3, mdc.getPublished().size(), "num segments published");
+    Assertions.assertEquals(3, mdc.getNuked().size(), "num segments nuked");
+    Assertions.assertEquals(1, mdc.getDeleteSegmentsCount(), "delete segment batch call count");
+    Assertions.assertTrue(
         expectedUnusedSegments.containsAll(mdc.getNuked()) && mdc.getNuked().containsAll(
             expectedUnusedSegments
-        )
+        ),
+        "expected unused segments get killed"
     );
 
     for (File file : segmentFiles) {
-      Assert.assertFalse("unused segments files get deleted", file.exists());
+      Assertions.assertFalse(file.exists(), "unused segments files get deleted");
     }
   }
 
@@ -951,13 +942,13 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         );
 
     final TaskStatus status = runTask(killUnusedSegmentsTask);
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals("num segments published", 3, mdc.getPublished().size());
-    Assert.assertEquals("num segments nuked", maxSegmentsToKill, mdc.getNuked().size());
-    Assert.assertTrue(
-        "expected unused segments get killed",
-        expectedUnusedSegments.containsAll(mdc.getNuked())
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode(), "merged statusCode");
+    Assertions.assertEquals(3, mdc.getPublished().size(), "num segments published");
+    Assertions.assertEquals(maxSegmentsToKill, mdc.getNuked().size(), "num segments nuked");
+    Assertions.assertTrue(
+        expectedUnusedSegments.containsAll(mdc.getNuked()),
+        "expected unused segments get killed"
     );
 
     int expectedNumOfSegmentsRemaining = segmentFiles.size() - maxSegmentsToKill;
@@ -968,10 +959,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       }
     }
 
-    Assert.assertEquals(
-        "Expected of segments deleted did not match expectations",
+    Assertions.assertEquals(
         expectedNumOfSegmentsRemaining,
-        actualNumOfSegmentsRemaining
+        actualNumOfSegmentsRemaining,
+        "Expected of segments deleted did not match expectations"
     );
   }
 
@@ -981,10 +972,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     final Task rtishTask = new RealtimeishTask();
     final TaskStatus status = runTask(rtishTask);
 
-    Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("num segments published", 2, mdc.getPublished().size());
-    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(2, mdc.getPublished().size(), "num segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "num segments nuked");
   }
 
   @Test
@@ -992,10 +983,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   {
     final TaskStatus status = runTask(NoopTask.create());
 
-    Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
-    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(0, mdc.getPublished().size(), "num segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "num segments nuked");
   }
 
   @Test
@@ -1011,10 +1002,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     };
     final TaskStatus status = runTask(neverReadyTask);
 
-    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("num segments published", 0, mdc.getPublished().size());
-    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(0, mdc.getPublished().size(), "num segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "num segments nuked");
   }
 
   @Test
@@ -1070,10 +1061,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     };
 
     final TaskStatus status = runTask(task);
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals("segments published", 1, mdc.getPublished().size());
-    Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(1, mdc.getPublished().size(), "segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "segments nuked");
   }
 
   @Test
@@ -1114,10 +1105,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     final TaskStatus status = runTask(task);
 
-    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("segments published", 0, mdc.getPublished().size());
-    Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(0, mdc.getPublished().size(), "segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "segments nuked");
   }
 
   @Test
@@ -1158,10 +1149,10 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
     final TaskStatus status = runTask(task);
 
-    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("segments published", 0, mdc.getPublished().size());
-    Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(0, mdc.getPublished().size(), "segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "segments nuked");
   }
 
   @Test
@@ -1173,7 +1164,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
@@ -1211,28 +1202,28 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
     final List<DataSegment> publishedSegments = BY_INTERVAL_ORDERING.sortedCopy(mdc.getPublished());
 
-    Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("num segments published", 2, mdc.getPublished().size());
-    Assert.assertEquals("num segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(2, mdc.getPublished().size(), "num segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "num segments nuked");
 
-    Assert.assertEquals("segment1 datasource", "foo", publishedSegments.get(0).getDataSource());
-    Assert.assertEquals("segment1 interval", Intervals.of("2010-01-01/P1D"), publishedSegments.get(0).getInterval());
-    Assert.assertEquals(
-        "segment1 dimensions",
+    Assertions.assertEquals("foo", publishedSegments.get(0).getDataSource(), "segment1 datasource");
+    Assertions.assertEquals(Intervals.of("2010-01-01/P1D"), publishedSegments.get(0).getInterval(), "segment1 interval");
+    Assertions.assertEquals(
         ImmutableList.of("dim1", "dim2"),
-        publishedSegments.get(0).getDimensions()
+        publishedSegments.get(0).getDimensions(),
+        "segment1 dimensions"
     );
-    Assert.assertEquals("segment1 metrics", ImmutableList.of("met"), publishedSegments.get(0).getMetrics());
+    Assertions.assertEquals(ImmutableList.of("met"), publishedSegments.get(0).getMetrics(), "segment1 metrics");
 
-    Assert.assertEquals("segment2 datasource", "foo", publishedSegments.get(1).getDataSource());
-    Assert.assertEquals("segment2 interval", Intervals.of("2010-01-02/P1D"), publishedSegments.get(1).getInterval());
-    Assert.assertEquals(
-        "segment2 dimensions",
+    Assertions.assertEquals("foo", publishedSegments.get(1).getDataSource(), "segment2 datasource");
+    Assertions.assertEquals(Intervals.of("2010-01-02/P1D"), publishedSegments.get(1).getInterval(), "segment2 interval");
+    Assertions.assertEquals(
         ImmutableList.of("dim1", "dim2"),
-        publishedSegments.get(1).getDimensions()
+        publishedSegments.get(1).getDimensions(),
+        "segment2 dimensions"
     );
-    Assert.assertEquals("segment2 metrics", ImmutableList.of("met"), publishedSegments.get(1).getMetrics());
+    Assertions.assertEquals(ImmutableList.of("met"), publishedSegments.get(1).getMetrics(), "segment2 metrics");
   }
 
   @Test
@@ -1262,7 +1253,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         new IndexIngestionSpec(
             DataSchema.builder()
                       .withDataSource("foo")
-                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withTimestamp(TimestampSpec.DEFAULT)
                       .withDimensions(DimensionsSpec.EMPTY)
                       .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
                       .withGranularity(
@@ -1286,21 +1277,21 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     );
 
     final Optional<TaskStatus> preRunTaskStatus = tsqa.getTaskStatus(indexTask.getId());
-    Assert.assertTrue("pre run task status not present", !preRunTaskStatus.isPresent());
+    Assertions.assertTrue(!preRunTaskStatus.isPresent(), "pre run task status not present");
 
     final TaskStatus mergedStatus = runTask(indexTask);
     final TaskStatus status = taskStorage.getStatus(indexTask.getId()).get();
 
-    Assert.assertEquals("statusCode", TaskState.SUCCESS, status.getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode(), "statusCode");
 
     Map<String, UnifiedIndexerAppenderatorsManager.DatasourceBundle> bundleMap =
         unifiedIndexerAppenderatorsManager.getDatasourceBundles();
 
-    Assert.assertEquals(1, bundleMap.size());
+    Assertions.assertEquals(1, bundleMap.size());
 
     unifiedIndexerAppenderatorsManager.removeAppenderatorsForTask(indexTask.getId(), "foo");
 
-    Assert.assertTrue(bundleMap.isEmpty());
+    Assertions.assertTrue(bundleMap.isEmpty());
 
   }
 
@@ -1342,21 +1333,21 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         }
 
         final TaskLock lockBeforeRevoke = toolbox.getTaskActionClient().submit(action);
-        Assert.assertFalse(lockBeforeRevoke.isRevoked());
+        Assertions.assertFalse(lockBeforeRevoke.isRevoked());
 
         taskLockbox.revokeLock(getId(), lock);
 
         final TaskLock lockAfterRevoke = toolbox.getTaskActionClient().submit(action);
-        Assert.assertTrue(lockAfterRevoke.isRevoked());
+        Assertions.assertTrue(lockAfterRevoke.isRevoked());
         return TaskStatus.failure(getId(), "lock revoked test");
       }
     };
 
     final TaskStatus status = runTask(task);
-    Assert.assertEquals(taskLocation, status.getLocation());
-    Assert.assertEquals("statusCode", TaskState.FAILED, status.getStatusCode());
-    Assert.assertEquals("segments published", 0, mdc.getPublished().size());
-    Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
+    Assertions.assertEquals(taskLocation, status.getLocation());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode(), "statusCode");
+    Assertions.assertEquals(0, mdc.getPublished().size(), "segments published");
+    Assertions.assertEquals(0, mdc.getNuked().size(), "segments nuked");
   }
 
   private TaskStatus runTask(final Task task)

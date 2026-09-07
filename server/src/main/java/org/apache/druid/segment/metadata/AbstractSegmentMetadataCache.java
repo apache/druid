@@ -45,6 +45,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -445,6 +446,23 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
+   * Like {@link #iterateSegmentMetadata()} but restricted to the given datasources, so a pushed-down
+   * {@code datasource} predicate from sys.segments scans only the matching datasources' segment maps
+   * rather than the whole cluster. A {@code null} argument iterates all datasources.
+   */
+  public Iterator<AvailableSegmentMetadata> iterateSegmentMetadata(@Nullable Set<String> dataSources)
+  {
+    if (dataSources == null) {
+      return iterateSegmentMetadata();
+    }
+    return FluentIterable.from(dataSources)
+                         .transform(segmentMetadataInfo::get)
+                         .filter(Objects::nonNull)
+                         .transformAndConcat(Map::values)
+                         .iterator();
+  }
+
+  /**
    * Get metadata for the specified segment, which includes information like RowSignature, realtime & numRows.
    *
    * @param datasource segment datasource
@@ -514,6 +532,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                           .build();
                       if (segment.isTombstone()) {
                         log.debug("Skipping refresh for tombstone segment.");
+                        final ServiceMetricEvent.Builder builder = new ServiceMetricEvent
+                            .Builder()
+                            .setDimension(DruidMetrics.DATASOURCE, segment.getDataSource());
+                        emitMetric(Metric.REFRESH_SKIPPED_TOMBSTONES, 1L, builder);
                       } else {
                         markSegmentAsNeedRefresh(segment.getId());
                       }
@@ -713,11 +735,41 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                 .add(segmentId);
     }
 
+    // Refresh each dataSource independently so one failure (e.g. a metadata query timeout) does not
+    // abort the cycle and starve the rest.
     for (Map.Entry<String, TreeSet<SegmentId>> entry : segmentMap.entrySet()) {
-      updatedSegmentIds.addAll(refreshSegmentsForDataSource(entry.getKey(), entry.getValue()));
+      final String dataSource = entry.getKey();
+      try {
+        updatedSegmentIds.addAll(refreshSegmentsForDataSource(dataSource, entry.getValue()));
+      }
+      catch (QueryInterruptedException e) {
+        // QueryInterruptedException also wraps ordinary query failures, not just interruption
+        // Don't emit failures for interrupted exceptions (shutdown signal, etc.)
+        if (e.getCause() instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+          throw e;
+        }
+        recordDataSourceRefreshFailure(dataSource, e);
+      }
+      catch (Exception e) {
+        recordDataSourceRefreshFailure(dataSource, e);
+      }
     }
 
     return updatedSegmentIds;
+  }
+
+  /**
+   * Records a refresh failure for one dataSource; it is skipped this cycle and retried later while the rest continue.
+   */
+  private void recordDataSourceRefreshFailure(String dataSource, Exception e)
+  {
+    log.warn(e, "Failed to refresh segment schema for dataSource[%s]; skipping it this cycle.", dataSource);
+    emitMetric(
+        Metric.REFRESH_FAILED,
+        1,
+        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
   }
 
   private long recomputeIsRealtime(ImmutableSet<DruidServerMetadata> servers)
@@ -987,11 +1039,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   {
     final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
     for (Map.Entry<String, ColumnAnalysis> entry : analysis.getColumns().entrySet()) {
-      if (entry.getValue().isError()) {
-        // Skip columns with analysis errors.
-        continue;
-      }
-
       ColumnType valueType = entry.getValue().getTypeSignature();
 
       // this shouldn't happen, but if it does, first try to fall back to legacy type information field in case

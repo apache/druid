@@ -24,7 +24,6 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.rpc.ServiceClientFactory;
 
 /**
@@ -35,19 +34,16 @@ public class IndexerDataServerQueryHandlerFactory implements DataServerQueryHand
   private final CoordinatorClient coordinatorClient;
   private final ServiceClientFactory serviceClientFactory;
   private final ObjectMapper objectMapper;
-  private final QueryToolChestWarehouse warehouse;
 
   public IndexerDataServerQueryHandlerFactory(
       CoordinatorClient coordinatorClient,
       ServiceClientFactory serviceClientFactory,
-      ObjectMapper objectMapper,
-      QueryToolChestWarehouse warehouse
+      ObjectMapper objectMapper
   )
   {
     this.coordinatorClient = coordinatorClient;
     this.serviceClientFactory = serviceClientFactory;
     this.objectMapper = objectMapper;
-    this.warehouse = warehouse;
   }
 
   @Override
@@ -65,7 +61,6 @@ public class IndexerDataServerQueryHandlerFactory implements DataServerQueryHand
         serviceClientFactory,
         coordinatorClient,
         objectMapper,
-        warehouse,
         requestDescriptor
     );
   }

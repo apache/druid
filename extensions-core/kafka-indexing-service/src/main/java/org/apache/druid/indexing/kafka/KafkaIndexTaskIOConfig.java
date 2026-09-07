@@ -30,6 +30,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -67,6 +68,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
       @JsonProperty("multiTopic") @Nullable Boolean multiTopic,
       @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes,
+      @JsonProperty("boundedStreamConfig") @Nullable BoundedStreamConfig boundedStreamConfig,
       @JsonProperty("headerBasedFilterConfig") @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
   )
   {
@@ -81,7 +83,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        boundedStreamConfig
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -134,7 +137,44 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         configOverrides,
         KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC,
         refreshRejectionPeriodsInMinutes,
+        null,
         headerBasedFilterConfig
+    );
+  }
+
+  /**
+   * Backwards-compatible overload without {@code headerBasedFilterConfig} (defaults to null), retained so that
+   * existing callers compiled against the previous signature keep working.
+   */
+  public KafkaIndexTaskIOConfig(
+      int taskGroupId,
+      String baseSequenceName,
+      SeekableStreamStartSequenceNumbers<KafkaTopicPartition, Long> startSequenceNumbers,
+      SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long> endSequenceNumbers,
+      Map<String, Object> consumerProperties,
+      Long pollTimeout,
+      Boolean useTransaction,
+      DateTime minimumMessageTime,
+      DateTime maximumMessageTime,
+      InputFormat inputFormat,
+      KafkaConfigOverrides configOverrides,
+      Long refreshRejectionPeriodsInMinutes
+  )
+  {
+    this(
+        taskGroupId,
+        baseSequenceName,
+        startSequenceNumbers,
+        endSequenceNumbers,
+        consumerProperties,
+        pollTimeout,
+        useTransaction,
+        minimumMessageTime,
+        maximumMessageTime,
+        inputFormat,
+        configOverrides,
+        refreshRejectionPeriodsInMinutes,
+        null
     );
   }
 

@@ -21,7 +21,10 @@ package org.apache.druid.server;
 
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 
@@ -39,12 +42,19 @@ import javax.ws.rs.core.Response;
 @Path("/druid-internal/v1/config")
 public class BrokerDynamicConfigResource
 {
+  private static final Logger log = new Logger(BrokerDynamicConfigResource.class);
+
   private final BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig;
+  private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
 
   @Inject
-  public BrokerDynamicConfigResource(BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig)
+  public BrokerDynamicConfigResource(
+      BrokerViewOfCoordinatorConfig brokerViewOfCoordinatorConfig,
+      BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
+  )
   {
     this.brokerViewOfCoordinatorConfig = brokerViewOfCoordinatorConfig;
+    this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
   }
 
   /**
@@ -69,6 +79,33 @@ public class BrokerDynamicConfigResource
   public Response setDynamicConfig(final CoordinatorDynamicConfig dynamicConfig)
   {
     brokerViewOfCoordinatorConfig.setDynamicConfig(dynamicConfig);
+    return Response.ok().build();
+  }
+
+  /**
+   * Returns the Broker's view of the {@link BrokerDynamicConfig}.
+   */
+  @GET
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
+  @Path("/broker")
+  public Response getBrokerDynamicConfig()
+  {
+    return Response.ok(brokerViewOfBrokerConfig.getDynamicConfig()).build();
+  }
+
+  /**
+   * Updates the {@link BrokerViewOfBrokerConfig} with the brokerDynamicConfig parameter.
+   */
+  @POST
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
+  @Path("/broker")
+  public Response setBrokerDynamicConfig(final BrokerDynamicConfig brokerDynamicConfig)
+  {
+    log.info("Received broker config push from Coordinator: [%s]", brokerDynamicConfig);
+    brokerViewOfBrokerConfig.setDynamicConfig(brokerDynamicConfig);
+    log.info("Broker config successfully updated");
     return Response.ok().build();
   }
 }

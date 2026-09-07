@@ -27,8 +27,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JSONParseSpec;
-import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -41,8 +39,8 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.EmittingQueryMetrics;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -55,6 +53,7 @@ import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
+import org.apache.druid.query.timeseries.EmittingTimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -115,7 +114,8 @@ public class StreamAppenderatorTester implements AutoCloseable
       final ServiceEmitter serviceEmitter,
       final PolicyEnforcer policyEnforcer,
       final boolean releaseLocksOnHandoff,
-      final TaskIntervalUnlocker taskIntervalUnlocker
+      final TaskIntervalUnlocker taskIntervalUnlocker,
+      final SegmentGenerationMetrics segmentGenerationMetrics
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -128,34 +128,22 @@ public class StreamAppenderatorTester implements AutoCloseable
             .addValue(ObjectMapper.class.getName(), objectMapper)
     );
 
-    final Map<String, Object> parserMap = objectMapper.convertValue(
-        new MapInputRowParser(
-            new JSONParseSpec(
-                new TimestampSpec("ts", "auto", null),
-                DimensionsSpec.EMPTY,
-                null,
-                null,
-                null
-            )
-        ),
-        Map.class
-    );
     schema = DataSchema.builder()
                        .withDataSource(DATASOURCE)
-                       .withParserMap(parserMap)
+                       .withTimestamp(new TimestampSpec("ts", "auto", null))
+                       .withDimensions(DimensionsSpec.EMPTY)
                        .withAggregators(
                            new CountAggregatorFactory("count"),
                            new LongSumAggregatorFactory("met", "met")
                        )
                        .withGranularity(new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null))
-                       .withObjectMapper(objectMapper)
                        .build();
     tuningConfig = new TestAppenderatorConfig(
         TuningConfig.DEFAULT_APPENDABLE_INDEX,
         maxRowsInMemory,
         maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
         skipBytesInMemoryOverheadCheck,
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         0,
         false,
         0L,
@@ -165,7 +153,7 @@ public class StreamAppenderatorTester implements AutoCloseable
         releaseLocksOnHandoff
     );
 
-    metrics = new SegmentGenerationMetrics();
+    metrics = segmentGenerationMetrics == null ? new SegmentGenerationMetrics() : segmentGenerationMetrics;
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
 
     IndexIO indexIO = new IndexIO(
@@ -191,18 +179,6 @@ public class StreamAppenderatorTester implements AutoCloseable
     EmittingLogger.registerEmitter(emitter);
     dataSegmentPusher = new DataSegmentPusher()
     {
-      @Deprecated
-      @Override
-      public String getPathForHadoop(String dataSource)
-      {
-        return getPathForHadoop();
-      }
-
-      @Override
-      public String getPathForHadoop()
-      {
-        throw new UnsupportedOperationException();
-      }
 
       @Override
       public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
@@ -234,12 +210,12 @@ public class StreamAppenderatorTester implements AutoCloseable
           indexMerger,
           DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
               TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                  new TimeseriesQueryQueryToolChest(),
+                  new TimeseriesQueryQueryToolChest(new EmittingTimeseriesQueryMetrics.Factory()),
                   new TimeseriesQueryEngine(),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
               ),
               ScanQuery.class, new ScanQueryRunnerFactory(
-                  new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                  new ScanQueryQueryToolChest(new EmittingQueryMetrics.Factory()),
                   new ScanQueryEngine(),
                   new ScanQueryConfig()
               )
@@ -257,14 +233,9 @@ public class StreamAppenderatorTester implements AutoCloseable
           taskIntervalUnlocker
       );
     } else {
-      SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig()
-      {
-        @Override
-        public int getDropSegmentDelayMillis()
-        {
-          return delayInMilli;
-        }
-      };
+      SegmentLoaderConfig segmentLoaderConfig = SegmentLoaderConfig.builder()
+                                                                   .dropSegmentDelayMillis(delayInMilli)
+                                                                   .build();
       appenderator = Appenderators.createRealtime(
           segmentLoaderConfig,
           schema.getDataSource(),
@@ -277,12 +248,12 @@ public class StreamAppenderatorTester implements AutoCloseable
           indexMerger,
           DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
               TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                  new TimeseriesQueryQueryToolChest(),
+                  new TimeseriesQueryQueryToolChest(new EmittingTimeseriesQueryMetrics.Factory()),
                   new TimeseriesQueryEngine(),
                   QueryRunnerTestHelper.NOOP_QUERYWATCHER
               ),
               ScanQuery.class, new ScanQueryRunnerFactory(
-                  new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                  new ScanQueryQueryToolChest(new EmittingQueryMetrics.Factory()),
                   new ScanQueryEngine(),
                   new ScanQueryConfig()
               )
@@ -364,6 +335,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     private PolicyEnforcer policyEnforcer = NoopPolicyEnforcer.instance();
     private boolean releaseLocksOnHandoff;
     private TaskIntervalUnlocker taskIntervalUnlocker = interval -> {};
+    private SegmentGenerationMetrics segmentGenerationMetrics;
 
     public Builder maxRowsInMemory(final int maxRowsInMemory)
     {
@@ -386,6 +358,12 @@ public class StreamAppenderatorTester implements AutoCloseable
     public Builder enablePushFailure(final boolean enablePushFailure)
     {
       this.enablePushFailure = enablePushFailure;
+      return this;
+    }
+
+    public Builder segmentGenerationMetrics(final SegmentGenerationMetrics segmentGenerationMetrics)
+    {
+      this.segmentGenerationMetrics = segmentGenerationMetrics;
       return this;
     }
 
@@ -446,7 +424,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           serviceEmitter,
           policyEnforcer,
           releaseLocksOnHandoff,
-          taskIntervalUnlocker
+          taskIntervalUnlocker,
+          segmentGenerationMetrics
       );
     }
 
@@ -468,7 +447,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           serviceEmitter,
           policyEnforcer,
           releaseLocksOnHandoff,
-          taskIntervalUnlocker
+          taskIntervalUnlocker,
+          segmentGenerationMetrics
       );
     }
   }

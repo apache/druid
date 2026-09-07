@@ -28,17 +28,26 @@ import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.DataNodeService;
+import org.apache.druid.guice.annotations.EphemeralStorageLoading;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
+import org.apache.druid.segment.loading.external.StorageLocationVirtualStorageManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.metrics.MetricsModule;
+import org.apache.druid.server.metrics.StorageMonitor;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -57,9 +66,13 @@ public class StorageNodeModule implements Module
     JsonConfigProvider.bind(binder, "druid.server", DruidServerConfig.class);
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
     JsonConfigProvider.bind(binder, "druid.indexing.formats", DefaultColumnFormatConfig.class);
+    JsonConfigProvider.bind(binder, "druid.segment.timeline", SegmentTimelineConfig.class);
     bindLocationSelectorStrategy(binder);
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
+    binder.bind(SegmentCacheManager.class).to(SegmentLocalCacheManager.class).in(LazySingleton.class);
+    binder.bind(VirtualStorageManager.class).to(StorageLocationVirtualStorageManager.class).in(LazySingleton.class);
+    MetricsModule.register(binder, StorageMonitor.class);
   }
 
   @Provides
@@ -79,6 +92,7 @@ public class StorageNodeModule implements Module
         node.getHostAndPort(),
         node.getHostAndTlsPort(),
         config.getMaxSize(),
+        config.getStorageSize(),
         serverTypeConfig.getServerType(),
         config.getTier(),
         config.getPriority()
@@ -109,10 +123,32 @@ public class StorageNodeModule implements Module
     return new DataNodeService(
         config.getTier(),
         config.getMaxSize(),
+        config.getStorageSize(),
         serverTypeConfig.getServerType(),
         config.getPriority(),
         isSegmentCacheConfigured
     );
+  }
+
+  @Provides
+  @ManageLifecycle
+  public StorageLoadingThreadPool getStorageLoadingThreadPool(SegmentLoaderConfig config)
+  {
+    return StorageLoadingThreadPool.createFromConfig(config);
+  }
+
+  /**
+   * Process-wide, always-virtual on-demand loading pool shared by the ephemeral per-task segment caches built via
+   * {@code SegmentCacheManagerFactory} (tasks and MSQ workers).
+   */
+  @Provides
+  @LazySingleton
+  @EphemeralStorageLoading
+  public StorageLoadingThreadPool getEphemeralStorageLoadingThreadPool(SegmentLoaderConfig config)
+  {
+    // Force virtual-storage mode: this pool serves per-task caches even when the node itself is not in virtual-storage
+    // mode. Threads are created lazily, so an unused pool on a non-task process is cheap.
+    return StorageLoadingThreadPool.createFromConfig(config.toEphemeralVirtualStorage());
   }
 
   @Provides
@@ -132,6 +168,13 @@ public class StorageNodeModule implements Module
   public List<StorageLocation> provideStorageLocation(SegmentLoaderConfig config)
   {
     return config.toStorageLocations();
+  }
+
+  @Provides
+  @LazySingleton
+  public StorageMonitor provideStorageMonitor(List<StorageLocation> locations)
+  {
+    return new StorageMonitor(locations, null);
   }
 
   /**

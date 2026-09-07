@@ -141,6 +141,13 @@ public class ConcatRowsAndColumns implements RowsAndColumns
     }
   }
 
+  @Nullable
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    return null;
+  }
+
   private class ConcatedidColumn implements Column
   {
 

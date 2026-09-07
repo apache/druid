@@ -25,6 +25,11 @@ import javax.annotation.Nullable;
 
 public class DataSegmentAndDescriptor
 {
+  public static DataSegmentAndDescriptor missing(SegmentDescriptor descriptor)
+  {
+    return new DataSegmentAndDescriptor(null, descriptor);
+  }
+
   @Nullable
   private final DataSegment dataSegment;
   private final SegmentDescriptor descriptor;

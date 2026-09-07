@@ -43,9 +43,12 @@ export default env => {
   if (!druidUrl.startsWith('http')) {
     druidUrl = (druidUrl.endsWith(':9088') ? 'https://' : 'http://') + druidUrl;
   }
-  if (!/:\d+$/.test(druidUrl)) {
+  if (druidUrl.endsWith('localhost')) {
     druidUrl += druidUrl.startsWith('https://') ? ':9088' : ':8888';
   }
+
+  // Optional cookie to add to all proxied requests, e.g. druid_cookie='name=value'
+  const druidCookie = (env || {}).druid_cookie || process.env.druid_cookie;
 
   const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
 
@@ -111,6 +114,14 @@ export default env => {
           context: ['/status', '/druid', '/proxy'],
           target: druidUrl,
           secure: false,
+          changeOrigin: true,
+          onProxyReq: (proxyReq, _req) => {
+            if (druidCookie) {
+              proxyReq.setHeader('Cookie', druidCookie);
+            }
+            // To debug use:
+            // console.log(`[proxy] ${req.method} ${req.url} -> ${proxyReq.path}`);
+          },
         },
       ],
     },

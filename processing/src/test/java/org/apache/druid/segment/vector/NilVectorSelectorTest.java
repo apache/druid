@@ -22,8 +22,8 @@ package org.apache.druid.segment.vector;
 import org.apache.druid.collections.bitmap.WrappedRoaringBitmap;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -71,12 +71,12 @@ public class NilVectorSelectorTest extends InitializedNullHandlingTest
       final Object[] objects = nil.getObjectVector();
 
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
-        Assert.assertEquals(0, dict[i]);
-        Assert.assertEquals(0L, longs[i]);
-        Assert.assertEquals(0.0, doubles[i], 0.0);
-        Assert.assertEquals(0f, floats[i], 0.0);
-        Assert.assertTrue(nulls[i]);
-        Assert.assertNull(objects[i]);
+        Assertions.assertEquals(0, dict[i]);
+        Assertions.assertEquals(0L, longs[i]);
+        Assertions.assertEquals(0.0, doubles[i], 0.0);
+        Assertions.assertEquals(0f, floats[i], 0.0);
+        Assertions.assertTrue(nulls[i]);
+        Assertions.assertNull(objects[i]);
       }
       offset.advance();
     }

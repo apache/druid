@@ -22,9 +22,9 @@ package org.apache.druid.segment.writeout;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +37,7 @@ public class FileWriteOutBytesTest
   private FileChannel mockFileChannel;
   private File mockFile;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mockFileChannel = EasyMock.mock(FileChannel.class);
@@ -72,14 +72,14 @@ public class FileWriteOutBytesTest
   public void writeShouldIncrementSize() throws IOException
   {
     fileWriteOutBytes.write(1);
-    Assert.assertEquals(1, fileWriteOutBytes.size());
+    Assertions.assertEquals(1, fileWriteOutBytes.size());
   }
 
   @Test
   public void writeIntShouldIncrementSize() throws IOException
   {
     fileWriteOutBytes.writeInt(1);
-    Assert.assertEquals(4, fileWriteOutBytes.size());
+    Assertions.assertEquals(4, fileWriteOutBytes.size());
   }
 
   @Test
@@ -95,7 +95,7 @@ public class FileWriteOutBytesTest
     EasyMock.replay(mockFileChannel);
     ByteBuffer src = ByteBuffer.allocate(32768 + 1);
     fileWriteOutBytes.write(src);
-    Assert.assertEquals(src.capacity(), fileWriteOutBytes.size());
+    Assertions.assertEquals(src.capacity(), fileWriteOutBytes.size());
     EasyMock.verify(mockFileChannel);
   }
 
@@ -112,7 +112,7 @@ public class FileWriteOutBytesTest
     EasyMock.replay(mockFileChannel);
     ByteBuffer src = ByteBuffer.allocate(32768 * 2 + 1);
     fileWriteOutBytes.write(src);
-    Assert.assertEquals(32768 * 2 + 1, fileWriteOutBytes.size());
+    Assertions.assertEquals(32768 * 2 + 1, fileWriteOutBytes.size());
   }
 
   @Test
@@ -120,7 +120,7 @@ public class FileWriteOutBytesTest
   {
     ByteBuffer src = ByteBuffer.allocate(32768);
     fileWriteOutBytes.write(src);
-    Assert.assertEquals(src.capacity(), fileWriteOutBytes.size());
+    Assertions.assertEquals(src.capacity(), fileWriteOutBytes.size());
   }
   @Test
   public void sizeDoesNotFlush() throws IOException
@@ -129,10 +129,10 @@ public class FileWriteOutBytesTest
             .andThrow(new AssertionError("file channel should not have been written to."));
     EasyMock.replay(mockFileChannel);
     long size = fileWriteOutBytes.size();
-    Assert.assertEquals(0, size);
+    Assertions.assertEquals(0, size);
     fileWriteOutBytes.writeInt(10);
     size = fileWriteOutBytes.size();
-    Assert.assertEquals(4, size);
+    Assertions.assertEquals(4, size);
   }
 
   @Test
@@ -161,12 +161,12 @@ public class FileWriteOutBytesTest
     for (int i = 0; i < numOfInt; i++) {
       fileWriteOutBytes.writeInt(i);
     }
-    Assert.assertEquals(underlying.capacity(), fileWriteOutBytes.size());
+    Assertions.assertEquals(underlying.capacity(), fileWriteOutBytes.size());
 
     destination.position(0);
     fileWriteOutBytes.readFully(100L * Integer.BYTES, destination);
     destination.position(0);
-    Assert.assertEquals(100, destination.getInt());
+    Assertions.assertEquals(100, destination.getInt());
     EasyMock.verify(mockFileChannel);
   }
 
@@ -180,10 +180,10 @@ public class FileWriteOutBytesTest
     for (int i = 0; i < numOfInt; i++) {
       fileWriteOutBytes.writeInt(i);
     }
-    Assert.assertEquals(fileSize, fileWriteOutBytes.size());
+    Assertions.assertEquals(fileSize, fileWriteOutBytes.size());
 
     destination.position(0);
-    Assert.assertThrows(IAE.class, () -> fileWriteOutBytes.readFully(33000, destination));
+    Assertions.assertThrows(IAE.class, () -> fileWriteOutBytes.readFully(33000, destination));
     EasyMock.verify(mockFileChannel);
   }
 
@@ -196,8 +196,8 @@ public class FileWriteOutBytesTest
     EasyMock.replay(mockFileChannel, mockFile);
     fileWriteOutBytes.writeInt(10);
     fileWriteOutBytes.write(new byte[30]);
-    IOException actual = Assert.assertThrows(IOException.class, () -> fileWriteOutBytes.flush());
-    Assert.assertEquals(String.valueOf(actual.getCause()), actual.getCause(), cause);
-    Assert.assertEquals(actual.getMessage(), actual.getMessage(), "Failed to write to file: /tmp/file. Current size of file: 34");
+    IOException actual = Assertions.assertThrows(IOException.class, () -> fileWriteOutBytes.flush());
+    Assertions.assertEquals(cause, actual.getCause(), String.valueOf(actual.getCause()));
+    Assertions.assertEquals("Failed to write to file: /tmp/file. Current size of file: 34", actual.getMessage(), actual.getMessage());
   }
 }

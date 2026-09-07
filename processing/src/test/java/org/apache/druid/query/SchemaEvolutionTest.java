@@ -19,16 +19,13 @@
 
 package org.apache.druid.query;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -52,14 +49,14 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -69,41 +66,39 @@ import java.util.Map;
 /**
  * Tests designed to exercise changing column types, adding columns, removing columns, etc.
  */
-@RunWith(JUnitParamsRunner.class)
 public class SchemaEvolutionTest
 {
   private static final String DATA_SOURCE = "foo";
   private static final String TIMESTAMP_COLUMN = "t";
   private static final double THIRTY_ONE_POINT_ONE = 31.1d;
 
-  public Object[] doVectorize()
+  public static Object[] doVectorize()
   {
     return Lists.newArrayList(true, false).toArray();
   }
 
   public static List<Result<TimeseriesResultValue>> timeseriesResult(final Map<String, ?> map)
   {
-    return ImmutableList.of(new Result<>(DateTimes.of("2000"), new TimeseriesResultValue((Map<String, Object>) map)));
+    return List.of(new Result<>(DateTimes.of("2000"), new TimeseriesResultValue((Map<String, Object>) map)));
   }
 
   public static List<InputRow> inputRowsWithDimensions(final List<String> dimensions)
   {
-    final MapInputRowParser parser = new MapInputRowParser(
-        new TimeAndDimsParseSpec(
-            new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-            DimensionsSpec.builder()
-                          .setDimensions(DimensionsSpec.getDefaultSchemas(dimensions))
-                          .setDimensionExclusions(dimensions.isEmpty() ? ImmutableList.of("t", "c1", "c2") : null)
-                          .build()
-        )
+    final InputRowSchema schema = new InputRowSchema(
+        new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
+        DimensionsSpec.builder()
+                      .setDimensions(DimensionsSpec.getDefaultSchemas(dimensions))
+                      .setDimensionExclusions(dimensions.isEmpty() ? List.of("t", "c1", "c2") : null)
+                      .build(),
+        ColumnsFilter.all()
     );
-    return ImmutableList.of(
-        parser.parseBatch(ImmutableMap.of("t", "2000-01-01", "c1", "9", "c2", ImmutableList.of("a"))).get(0),
-        parser.parseBatch(ImmutableMap.of("t", "2000-01-02", "c1", "10.1", "c2", ImmutableList.of())).get(0),
-        parser.parseBatch(ImmutableMap.of("t", "2000-01-03", "c1", "2", "c2", ImmutableList.of(""))).get(0),
-        parser.parseBatch(ImmutableMap.of("t", "2001-01-01", "c1", "1", "c2", ImmutableList.of("a", "c"))).get(0),
-        parser.parseBatch(ImmutableMap.of("t", "2001-01-02", "c1", "4", "c2", ImmutableList.of("abc"))).get(0),
-        parser.parseBatch(ImmutableMap.of("t", "2001-01-03", "c1", "5")).get(0)
+    return List.of(
+        MapInputRowParser.parse(schema, Map.of("t", "2000-01-01", "c1", "9", "c2", List.of("a"))),
+        MapInputRowParser.parse(schema, Map.of("t", "2000-01-02", "c1", "10.1", "c2", List.of())),
+        MapInputRowParser.parse(schema, Map.of("t", "2000-01-03", "c1", "2", "c2", List.of(""))),
+        MapInputRowParser.parse(schema, Map.of("t", "2001-01-01", "c1", "1", "c2", List.of("a", "c"))),
+        MapInputRowParser.parse(schema, Map.of("t", "2001-01-02", "c1", "4", "c2", List.of("abc"))),
+        MapInputRowParser.parse(schema, Map.of("t", "2001-01-03", "c1", "5"))
     );
   }
 
@@ -129,8 +124,8 @@ public class SchemaEvolutionTest
     return results.toList();
   }
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   // Index1: c1 is a string, c2 nonexistent, "uniques" nonexistent
   private QueryableIndex index1 = null;
@@ -144,7 +139,7 @@ public class SchemaEvolutionTest
   // Index4: c1 is nonexistent, c2 is uniques on c2
   private QueryableIndex index4 = null;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     // Index1: c1 is a string, c2 nonexistent, "uniques" nonexistent
@@ -156,7 +151,7 @@ public class SchemaEvolutionTest
                                  .withRollup(false)
                                  .build()
                          )
-                         .rows(inputRowsWithDimensions(ImmutableList.of("c1")))
+                         .rows(inputRowsWithDimensions(List.of("c1")))
                          .buildMMappedIndex();
 
     // Index2: c1 is a long, c2 is a string, "uniques" is uniques on c2, "longmin" is min on c1
@@ -173,7 +168,7 @@ public class SchemaEvolutionTest
                                  .withRollup(false)
                                  .build()
                          )
-                         .rows(inputRowsWithDimensions(ImmutableList.of("c2")))
+                         .rows(inputRowsWithDimensions(List.of("c2")))
                          .buildMMappedIndex();
 
     // Index3: c1 is a float, c2 is a string, "uniques" is uniques on c2
@@ -189,7 +184,7 @@ public class SchemaEvolutionTest
                                  .withRollup(false)
                                  .build()
                          )
-                         .rows(inputRowsWithDimensions(ImmutableList.of("c2")))
+                         .rows(inputRowsWithDimensions(List.of("c2")))
                          .buildMMappedIndex();
 
     // Index4: c1 is nonexistent, c2 is uniques on c2
@@ -201,7 +196,7 @@ public class SchemaEvolutionTest
                                  .withRollup(false)
                                  .build()
                          )
-                         .rows(inputRowsWithDimensions(ImmutableList.of()))
+                         .rows(inputRowsWithDimensions(List.of()))
                          .buildMMappedIndex();
 
     if (index4.getAvailableDimensions().size() != 0) {
@@ -210,7 +205,7 @@ public class SchemaEvolutionTest
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     Closeables.close(index1, false);
@@ -219,8 +214,8 @@ public class SchemaEvolutionTest
     Closeables.close(index4, false);
   }
 
-  @Test
-  @Parameters(method = "doVectorize")
+  @ParameterizedTest
+  @MethodSource("doVectorize")
   public void testHyperUniqueEvolutionTimeseries(boolean doVectorize)
   {
     final TimeseriesQueryRunnerFactory factory = QueryRunnerTestHelper.newTimeseriesQueryRunnerFactory();
@@ -230,28 +225,28 @@ public class SchemaEvolutionTest
         .dataSource(DATA_SOURCE)
         .intervals("1000/3000")
         .aggregators(
-            ImmutableList.of(
+            List.of(
                 new HyperUniquesAggregatorFactory("uniques", "uniques")
             )
         )
-        .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .context(Map.of(QueryContexts.VECTORIZE_KEY, doVectorize))
         .build();
 
     // index1 has no "uniques" column
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("uniques", 0d)),
-        runQuery(query, factory, ImmutableList.of(index1))
+    Assertions.assertEquals(
+        timeseriesResult(Map.of("uniques", 0d)),
+        runQuery(query, factory, List.of(index1))
     );
 
     // index1 (no uniques) + index2 and index3 (yes uniques); we should be able to combine
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("uniques", 4.003911343725148d)),
-        runQuery(query, factory, ImmutableList.of(index1, index2, index3))
+    Assertions.assertEquals(
+        timeseriesResult(Map.of("uniques", 4.003911343725148d)),
+        runQuery(query, factory, List.of(index1, index2, index3))
     );
   }
 
-  @Test
-  @Parameters(method = "doVectorize")
+  @ParameterizedTest
+  @MethodSource("doVectorize")
   public void testNumericEvolutionTimeseriesAggregation(boolean doVectorize)
   {
     final TimeseriesQueryRunnerFactory factory = QueryRunnerTestHelper.newTimeseriesQueryRunnerFactory();
@@ -263,33 +258,33 @@ public class SchemaEvolutionTest
         .dataSource(DATA_SOURCE)
         .intervals("1000/3000")
         .aggregators(
-            ImmutableList.of(
+            List.of(
                 new LongSumAggregatorFactory("a", "c1"),
                 new DoubleSumAggregatorFactory("b", "c1"),
                 new LongSumAggregatorFactory("c", null, "c1 * 1", TestExprMacroTable.INSTANCE),
                 new DoubleSumAggregatorFactory("d", null, "c1 * 1", TestExprMacroTable.INSTANCE)
             )
         )
-        .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .context(Map.of(QueryContexts.VECTORIZE_KEY, doVectorize))
         .build();
 
     // Only string(1)
     // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 31L, "b", THIRTY_ONE_POINT_ONE, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
-        runQuery(query, factory, ImmutableList.of(index1))
+    Assertions.assertEquals(
+        timeseriesResult(Map.of("a", 31L, "b", THIRTY_ONE_POINT_ONE, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
+        runQuery(query, factory, List.of(index1))
     );
 
     // Only long(2)
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 31L, "b", 31.0, "c", 31L, "d", 31.0)),
-        runQuery(query, factory, ImmutableList.of(index2))
+    Assertions.assertEquals(
+        timeseriesResult(Map.of("a", 31L, "b", 31.0, "c", 31L, "d", 31.0)),
+        runQuery(query, factory, List.of(index2))
     );
 
     // Only float(3)
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 31L, "b", THIRTY_ONE_POINT_ONE, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
-        runQuery(query, factory, ImmutableList.of(index3))
+    Assertions.assertEquals(
+        timeseriesResult(Map.of("a", 31L, "b", THIRTY_ONE_POINT_ONE, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
+        runQuery(query, factory, List.of(index3))
     );
 
     // Only nonexistent(4)
@@ -298,37 +293,37 @@ public class SchemaEvolutionTest
     result.put("b", null);
     result.put("c", null);
     result.put("d", null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(result),
-        runQuery(query, factory, ImmutableList.of(index4))
+        runQuery(query, factory, List.of(index4))
     );
 
     // string(1) + long(2) + float(3) + nonexistent(4)
     // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of(
+    Assertions.assertEquals(
+        timeseriesResult(Map.of(
             "a", 31L * 3,
             "b", THIRTY_ONE_POINT_ONE * 2 + 31,
             "c", 31L * 3,
             "d", THIRTY_ONE_POINT_ONE * 2 + 31
         )),
-        runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))
+        runQuery(query, factory, List.of(index1, index2, index3, index4))
     );
 
     // long(2) + float(3) + nonexistent(4)
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of(
+    Assertions.assertEquals(
+        timeseriesResult(Map.of(
             "a", 31L * 2,
             "b", THIRTY_ONE_POINT_ONE + 31,
             "c", 31L * 2,
             "d", THIRTY_ONE_POINT_ONE + 31
         )),
-        runQuery(query, factory, ImmutableList.of(index2, index3, index4))
+        runQuery(query, factory, List.of(index2, index3, index4))
     );
   }
 
-  @Test
-  @Parameters(method = "doVectorize")
+  @ParameterizedTest
+  @MethodSource("doVectorize")
   public void testNumericEvolutionFiltering(boolean doVectorize)
   {
     final TimeseriesQueryRunnerFactory factory = QueryRunnerTestHelper.newTimeseriesQueryRunnerFactory();
@@ -341,7 +336,7 @@ public class SchemaEvolutionTest
         .intervals("1000/3000")
         .filters(new BoundDimFilter("c1", "9", "11", false, false, null, null, StringComparators.NUMERIC))
         .aggregators(
-            ImmutableList.of(
+            List.of(
                 new LongSumAggregatorFactory("a", "c1"),
                 new DoubleSumAggregatorFactory("b", "c1"),
                 new FloatSumAggregatorFactory("d", "c1"),
@@ -349,29 +344,29 @@ public class SchemaEvolutionTest
                 new CountAggregatorFactory("c")
             )
         )
-        .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, doVectorize))
+        .context(Map.of(QueryContexts.VECTORIZE_KEY, doVectorize))
         .build();
 
     // Only string(1) -- which we can filter but not aggregate
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f, "e", 9L)),
-        runQuery(query, factory, ImmutableList.of(index1))
+    Assertions.assertEquals(
+        timeseriesResult(Map.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f, "e", 9L)),
+        runQuery(query, factory, List.of(index1))
     );
 
      // Only long(2) -- which we can filter and aggregate
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.0, "c", 2L, "d", 19.0f, "e", 9L)),
-        runQuery(query, factory, ImmutableList.of(index2))
+    Assertions.assertEquals(
+        timeseriesResult(Map.of("a", 19L, "b", 19.0, "c", 2L, "d", 19.0f, "e", 9L)),
+        runQuery(query, factory, List.of(index2))
     );
 
     // Only float(3) -- which we can't filter, but can aggregate
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f, "e", 9L)),
-        runQuery(query, factory, ImmutableList.of(index3))
+    Assertions.assertEquals(
+        timeseriesResult(Map.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f, "e", 9L)),
+        runQuery(query, factory, List.of(index3))
     );
 
     // Only nonexistent(4)
-    Assert.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(TestHelper.makeMap(
             "a",
             null,
@@ -384,19 +379,19 @@ public class SchemaEvolutionTest
             "e",
             null
         )),
-        runQuery(query, factory, ImmutableList.of(index4))
+        runQuery(query, factory, List.of(index4))
     );
 
     // string(1) + long(2) + float(3) + nonexistent(4)
-    Assert.assertEquals(
-        timeseriesResult(ImmutableMap.of(
+    Assertions.assertEquals(
+        timeseriesResult(Map.of(
             "a", 57L,
             "b", 57.2,
             "c", 6L,
             "d", 57.20000076293945,
             "e", 9L
         )),
-        runQuery(query, factory, ImmutableList.of(index1, index2, index3, index4))
+        runQuery(query, factory, List.of(index1, index2, index3, index4))
     );
   }
 }

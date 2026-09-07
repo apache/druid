@@ -26,7 +26,7 @@ sidebar_label: Write an ingestion spec
 
 This tutorial will guide the reader through the process of defining an ingestion spec, pointing out key considerations and guidelines.
 
-For this tutorial, we'll assume you've already downloaded Apache Druid as described in
+For this tutorial, we'll assume you've already downloaded Apache&circledR; Druid as described in
 the [single-machine quickstart](index.md) and have it running on your local machine.
 
 It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md), [Tutorial: Querying data](../tutorials/tutorial-query.md), and [Tutorial: Rollup](../tutorials/tutorial-rollup.md).
@@ -222,8 +222,6 @@ When defining a metric, it is necessary to specify what type of aggregation shou
 
 Here we have defined long sum aggregations on the two long metric columns, `packets` and `bytes`, and a double sum aggregation for the `cost` column.
 
-Note that the `metricsSpec` is on a different nesting level than `dimensionSpec` or `parseSpec`; it belongs on the same nesting level as `parser` within the `dataSchema`.
-
 Note that we have also defined a `count` aggregator. The count aggregator will track how many rows in the original input data contributed to a "rolled up" row in the final ingested data.
 
 ### No rollup
@@ -248,7 +246,7 @@ If we were not using rollup, all columns would be specified in the `dimensionsSp
 
 ### Define granularities
 
-At this point, we are done defining the `parser` and `metricsSpec` within the `dataSchema` and we are almost done writing the ingestion spec.
+At this point, we are done defining the `dimensionsSpec` and `metricsSpec` within the `dataSchema` and we are almost done writing the ingestion spec.
 
 There are some additional properties we need to set in the `granularitySpec`:
 * Type of granularitySpec: the `uniform` granularity spec defines segments with uniform interval sizes. For example, all segments cover an hour's worth of data.
@@ -582,13 +580,15 @@ We've finished defining the ingestion spec, it should now look like the followin
 
 ## Submit the task and query the data
 
-From the `apache-druid-{{DRUIDVERSION}}` package root, run the following command:
+From the `apache-druid-{{DRUIDVERSION}}` package root, run the following command to create a datasource called `ingestion tutorial`:
 
 ```bash
-bin/post-index-task --file quickstart/ingestion-tutorial-index.json --url http://localhost:8081
+curl -X POST http://localhost:8081/druid/indexer/v1/task \
+  -H "Content-Type: application/json" \
+  -d @quickstart/ingestion-tutorial-index.json
 ```
 
-After the script completes, we will query the data.
+After the ingestion completes, we will query the data.
 
 In the web console, open a new tab in the **Query** view. Run the following query to view the ingested data:
 

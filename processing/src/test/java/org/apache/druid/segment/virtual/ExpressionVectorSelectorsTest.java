@@ -33,11 +33,11 @@ import org.apache.druid.query.groupby.DeferExpressionDimensions;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
 import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
+import org.apache.druid.segment.ColumnCache;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
@@ -57,21 +57,24 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
 {
   private static List<String> EXPRESSIONS = ImmutableList.of(
@@ -112,7 +115,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
   private static QueryableIndex INDEX_OTHER_ENCODINGS;
   private static Closer CLOSER;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     CLOSER = Closer.create();
@@ -156,14 +159,13 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
     );
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownClass() throws IOException
   {
     CLOSER.close();
   }
 
-  @Parameterized.Parameters(name = "expression = {0}, encoding = {1}")
-  public static Iterable<?> constructorFeeder()
+  public static Stream<Object[]> constructorFeeder()
   {
     List<Object[]> params = new ArrayList<>();
     for (String encoding : new String[]{"default", "front-coded-and-auto-longs"}) {
@@ -171,38 +173,29 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
         params.add(new Object[]{expression, encoding});
       }
     }
-    return params;
+    return params.stream();
   }
 
-  private String encoding;
+  @Parameter(0)
+  public String expression;
+  @Parameter(1)
+  public String encoding;
   private ExpressionType outputType;
-  private String expression;
-
   private QueryableIndex queryableIndexToUse;
   private Closer perTestCloser = Closer.create();
 
-  public ExpressionVectorSelectorsTest(String expression, String encoding)
-  {
-    this.expression = expression;
-    this.encoding = encoding;
-    if ("front-coded-and-auto-longs".equals(encoding)) {
-      this.queryableIndexToUse = INDEX_OTHER_ENCODINGS;
-    } else {
-      this.queryableIndexToUse = INDEX;
-    }
-  }
-
-  @Before
+  @BeforeEach
   public void setup()
   {
+    queryableIndexToUse = "front-coded-and-auto-longs".equals(encoding) ? INDEX_OTHER_ENCODINGS : INDEX;
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
-    outputType = parsed.getOutputType(new DeprecatedQueryableIndexColumnSelector(queryableIndexToUse));
+    outputType = parsed.getOutputType(new ColumnCache(queryableIndexToUse, VirtualColumns.EMPTY, perTestCloser));
     if (outputType == null) {
       outputType = ExpressionType.STRING;
     }
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     perTestCloser.close();
@@ -212,26 +205,23 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
   @Test
   public void sanityTestVectorizedExpressionSelector()
   {
-    sanityTestVectorizedExpressionSelectors(expression, outputType, queryableIndexToUse, perTestCloser, ROWS_PER_SEGMENT);
+    sanityTestVectorizedExpressionSelectors(expression, outputType, queryableIndexToUse, ROWS_PER_SEGMENT);
   }
 
   public static void sanityTestVectorizedExpressionSelectors(
       String expression,
       @Nullable ExpressionType outputType,
       QueryableIndex index,
-      Closer closer,
       int rowsPerSegment
   )
   {
     final List<Object> results = new ArrayList<>(rowsPerSegment);
     final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn(
-                "v",
-                expression,
-                ExpressionType.toColumnType(outputType),
-                TestExprMacroTable.INSTANCE
-            )
+        new ExpressionVirtualColumn(
+            "v",
+            expression,
+            ExpressionType.toColumnType(outputType),
+            TestExprMacroTable.INSTANCE
         )
     );
     final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
@@ -240,7 +230,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
                                                      .build();
     try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final VectorCursor cursor = cursorHolder.asVectorCursor();
-      Assert.assertNotNull(cursor);
+      Assertions.assertNotNull(cursor);
 
       ColumnCapabilities capabilities = virtualColumns.getColumnCapabilitiesWithFallback(cursorFactory, "v");
 
@@ -272,7 +262,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
           boolean[] nulls;
           switch (outputType.getType()) {
             case LONG:
-              Assert.assertNotNull(selector);
+              Assertions.assertNotNull(selector);
               nulls = selector.getNullVector();
               long[] longs = selector.getLongVector();
               for (int i = 0; i < selector.getCurrentVectorSize(); i++, rowCount++) {
@@ -280,7 +270,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
               }
               break;
             case DOUBLE:
-              Assert.assertNotNull(selector);
+              Assertions.assertNotNull(selector);
               // special case to test floats just to get coverage on getFloatVector
               if ("float2".equals(expression)) {
                 nulls = selector.getNullVector();
@@ -297,7 +287,7 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
               }
               break;
             default:
-              Assert.assertNotNull(objectSelector);
+              Assertions.assertNotNull(objectSelector);
               Object[] objects = objectSelector.getObjectVector();
               for (int i = 0; i < objectSelector.getCurrentVectorSize(); i++, rowCount++) {
                 resultsVector.add(objects[i]);
@@ -313,22 +303,22 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
 
 
       final Cursor nonVectorized = cursorHolder.asCursor();
-      Assert.assertNotNull(nonVectorized);
+      Assertions.assertNotNull(nonVectorized);
       final ColumnValueSelector nonSelector = nonVectorized.getColumnSelectorFactory()
                                                            .makeColumnValueSelector("v");
       int rows = 0;
       while (!nonVectorized.isDone()) {
-        Assert.assertEquals(
-            "Failed at row " + rows,
+        Assertions.assertEquals(
             nonSelector.getObject(),
-            results.get(rows)
+            results.get(rows),
+            "Failed at row " + rows
         );
         rows++;
         nonVectorized.advance();
       }
 
-      Assert.assertTrue(rows > 0);
-      Assert.assertEquals(rows, rowCount);
+      Assertions.assertTrue(rows > 0);
+      Assertions.assertEquals(rows, rowCount);
     }
   }
 
@@ -343,12 +333,12 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
         WritableMemory.allocate(keySize * expectedResults.size());
 
     final int writeKeysRetVal = groupBySelector.writeKeys(keySpace, keySize, keyOffset, 0, expectedResults.size());
-    Assert.assertEquals(0, writeKeysRetVal);
+    Assertions.assertEquals(0, writeKeysRetVal);
 
     for (int i = 0; i < expectedResults.size(); i++) {
       final ResultRow resultRow = ResultRow.create(1);
       groupBySelector.writeKeyToResultRow(new MemoryPointer(keySpace, (long) keySize * i), keyOffset, resultRow, 0);
-      Assert.assertEquals("row #" + i, expectedResults.get(i), resultRow.getArray()[0]);
+      Assertions.assertEquals(expectedResults.get(i), resultRow.getArray()[0], "row #" + i);
     }
   }
 }

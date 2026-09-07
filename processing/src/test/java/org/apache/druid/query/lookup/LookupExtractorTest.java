@@ -26,8 +26,8 @@ import com.google.common.collect.Sets;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -59,7 +59,7 @@ public class LookupExtractorTest extends InitializedNullHandlingTest
   public void testSerDes() throws IOException
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         lookupExtractor,
         mapper.readerFor(LookupExtractor.class).readValue(mapper.writeValueAsBytes(lookupExtractor))
     );
@@ -68,19 +68,19 @@ public class LookupExtractorTest extends InitializedNullHandlingTest
   @Test
   public void testApplyAll()
   {
-    Assert.assertEquals(EXPECTED_MAP, lookupExtractor.applyAll(EXPECTED_MAP.keySet()));
+    Assertions.assertEquals(EXPECTED_MAP, lookupExtractor.applyAll(EXPECTED_MAP.keySet()));
   }
 
   @Test
   public void testApplyAllWithNull()
   {
-    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(null));
+    Assertions.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(null));
   }
 
   @Test
   public void testApplyAllWithEmptySet()
   {
-    Assert.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(Collections.emptySet()));
+    Assertions.assertEquals(Collections.emptyMap(), lookupExtractor.applyAll(Collections.emptySet()));
   }
 
   @Test
@@ -88,19 +88,19 @@ public class LookupExtractorTest extends InitializedNullHandlingTest
   {
     Map<String, String> expected = new HashMap<>();
     expected.put("not there", null);
-    Assert.assertEquals(expected, lookupExtractor.applyAll(Collections.singletonList("not there")));
+    Assertions.assertEquals(expected, lookupExtractor.applyAll(Collections.singletonList("not there")));
   }
 
   @Test
   public void testUnapplyAllWithEmptySet()
   {
-    Assert.assertEquals(Collections.emptySet(), toSet(lookupExtractor.unapplyAll(Collections.emptySet())));
+    Assertions.assertEquals(Collections.emptySet(), toSet(lookupExtractor.unapplyAll(Collections.emptySet())));
   }
 
   @Test
   public void testUnapplyAll()
   {
-    Assert.assertEquals(EXPECTED_REVERSE_SET, toSet(lookupExtractor.unapplyAll(new HashSet<>(EXPECTED_MAP.values()))));
+    Assertions.assertEquals(EXPECTED_REVERSE_SET, toSet(lookupExtractor.unapplyAll(new HashSet<>(EXPECTED_MAP.values()))));
   }
 
   @Nullable

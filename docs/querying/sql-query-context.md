@@ -24,11 +24,11 @@ sidebar_label: "SQL query context"
   -->
 
 :::info
- Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
 
-In Apache Druid, you can control how your [Druid SQL queries](./sql.md) queries run by using query context parameters. The parameters let you adjust aspects of query processing such as using approximations, selecting particular filters, controlling how lookups are executed.
+In Apache&circledR; Druid, you can control how your [Druid SQL queries](./sql.md) queries run by using query context parameters. The parameters let you adjust aspects of query processing such as using approximations, selecting particular filters, controlling how lookups are executed.
 
 For additional context parameters supported for all query types, refer to [Query context reference](query-context-reference.md). To learn how to set the query context, see [Set query context](../querying/query-context.md).
 

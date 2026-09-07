@@ -33,8 +33,12 @@ import java.util.function.Function;
 
 public abstract class TransactionalSegmentPublisher
 {
-  private static final int QUIET_RETRIES = 3;
-  private static final int MAX_RETRIES = 5;
+  private static final int QUIET_RETRIES = 5;
+
+  /**
+   * Approximately 10 minutes of retrying using {@link RetryUtils#nextRetrySleepMillis(int)}.
+   */
+  private static final int MAX_RETRIES = 13;
 
   /**
    * Publish segments, along with some commit metadata, in a single transaction.
@@ -104,7 +108,7 @@ public abstract class TransactionalSegmentPublisher
   /**
    * Sleeps until the next attempt.
    */
-  private static void awaitNextRetry(SegmentPublishResult lastResult, int attemptCount)
+  void awaitNextRetry(SegmentPublishResult lastResult, int attemptCount)
   {
     try {
       RetryUtils.awaitNextRetry(

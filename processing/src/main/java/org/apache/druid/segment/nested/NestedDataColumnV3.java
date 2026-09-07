@@ -22,21 +22,19 @@ package org.apache.druid.segment.nested;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
 
-public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuffer>>
-    extends CompressedNestedDataComplexColumn<TStringDictionary>
+public final class NestedDataColumnV3<TKeyDictionary extends Indexed<ByteBuffer>, TStringDictionary extends Indexed<ByteBuffer>>
+    extends CompressedNestedDataComplexColumn<TKeyDictionary, TStringDictionary>
 {
   public NestedDataColumnV3(
       String columnName,
@@ -44,13 +42,13 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
       ColumnConfig columnConfig,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
-      GenericIndexed<String> fields,
+      Supplier<TKeyDictionary> fieldsSupplier,
       FieldTypeInfo fieldInfo,
       Supplier<TStringDictionary> stringDictionary,
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
       Supplier<FixedIndexed<Double>> doubleDictionarySupplier,
-      SmooshedFileMapper fileMapper,
-      BitmapSerdeFactory bitmapSerdeFactory,
+      SegmentFileMapper fileMapper,
+      NestedCommonFormatColumnFormatSpec formatSpec,
       ByteOrder byteOrder
   )
   {
@@ -60,14 +58,14 @@ public final class NestedDataColumnV3<TStringDictionary extends Indexed<ByteBuff
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
-        fields,
+        fieldsSupplier,
         fieldInfo,
         stringDictionary,
         longDictionarySupplier,
         doubleDictionarySupplier,
         null,
         fileMapper,
-        bitmapSerdeFactory,
+        formatSpec,
         byteOrder,
         NestedPathFinder.JQ_PATH_ROOT
     );

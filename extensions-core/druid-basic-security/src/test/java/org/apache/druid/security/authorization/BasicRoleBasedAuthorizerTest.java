@@ -22,6 +22,7 @@ package org.apache.druid.security.authorization;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
@@ -39,11 +40,11 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.naming.directory.BasicAttribute;
 import javax.naming.directory.BasicAttributes;
@@ -59,8 +60,8 @@ public class BasicRoleBasedAuthorizerTest
   private static final String DB_AUTHORIZER_NAME = "metadata";
   private static final String LDAP_AUTHORIZER_NAME = "ldap";
 
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final JUnit5TestDerbyConnector DERBY_CONNECTOR_RULE = new JUnit5TestDerbyConnector();
 
   private BasicRoleBasedAuthorizer authorizer;
   private BasicRoleBasedAuthorizer ldapAuthorizer;
@@ -74,11 +75,11 @@ public class BasicRoleBasedAuthorizerTest
   private SearchResult userSearchResult;
   private SearchResult adminSearchResult;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
-    TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    TestDerbyConnector connector = DERBY_CONNECTOR_RULE.getConnector();
+    MetadataStorageTablesConfig tablesConfig = DERBY_CONNECTOR_RULE.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
 
     BasicAttributes userAttrs = new BasicAttributes(true);
@@ -148,7 +149,7 @@ public class BasicRoleBasedAuthorizerTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
   }
@@ -173,14 +174,14 @@ public class BasicRoleBasedAuthorizerTest
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     access = authorizer.authorize(
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
   }
 
   @Test
@@ -207,14 +208,14 @@ public class BasicRoleBasedAuthorizerTest
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
   }
   @Test
   public void testAuthGroupMappingPatternRightMask()
@@ -252,21 +253,21 @@ public class BasicRoleBasedAuthorizerTest
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
 
     contexMap = new HashMap<>();
     contexMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userSearchResult);
@@ -277,21 +278,21 @@ public class BasicRoleBasedAuthorizerTest
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.READ
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
   }
 
   @Test
@@ -330,21 +331,21 @@ public class BasicRoleBasedAuthorizerTest
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
 
     contexMap = new HashMap<>();
     contexMap.put(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY, userSearchResult);
@@ -355,21 +356,21 @@ public class BasicRoleBasedAuthorizerTest
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.READ
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
   }
 
   @Test
@@ -397,27 +398,27 @@ public class BasicRoleBasedAuthorizerTest
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("testResource", ResourceType.DATASOURCE),
         Action.READ
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
 
     access = ldapAuthorizer.authorize(
         authenticationResult,
         new Resource("wrongResource", ResourceType.DATASOURCE),
         Action.READ
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
   }
 }

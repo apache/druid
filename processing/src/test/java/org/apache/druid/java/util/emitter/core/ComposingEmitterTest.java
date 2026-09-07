@@ -21,9 +21,9 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.google.common.collect.ImmutableList;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,7 +34,7 @@ public class ComposingEmitterTest
   private List<Emitter> childEmitters;
   private ComposingEmitter composingEmitter;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.childEmitters = ImmutableList.of(
@@ -90,7 +90,7 @@ public class ComposingEmitterTest
     composingEmitter.close();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     for (Emitter emitter : childEmitters) {

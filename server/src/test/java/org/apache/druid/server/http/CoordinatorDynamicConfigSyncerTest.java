@@ -34,8 +34,8 @@ import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 
 import java.util.List;
@@ -53,7 +53,7 @@ public class CoordinatorDynamicConfigSyncerTest
   private CoordinatorConfigManager coordinatorConfigManager;
   private DruidNodeDiscovery druidNodeDiscovery;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     serviceClient = mock(ServiceClient.class);
@@ -102,5 +102,31 @@ public class CoordinatorDynamicConfigSyncerTest
     RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
         .jsonContent(DefaultObjectMapper.INSTANCE, config);
     verify(serviceClient).asyncRequest(eq(requestBuilder), ArgumentMatchers.any());
+  }
+
+  @Test
+  public void testSync_whenDruidNode_isNull()
+  {
+    CoordinatorDynamicConfig config = CoordinatorDynamicConfig
+        .builder()
+        .withMaxSegmentsToMove(105)
+        .withReplicantLifetime(500)
+        .withReplicationThrottleLimit(5)
+        .build();
+
+    doReturn(config).when(coordinatorConfigManager).getCurrentDynamicConfig();
+    List<DiscoveryDruidNode> nodes = List.of(
+        new DiscoveryDruidNode(
+            null,
+            NodeRole.BROKER,
+            null,
+            null
+        )
+    );
+    doReturn(nodes).when(druidNodeDiscovery).getAllNodes();
+
+    target.broadcastConfigToBrokers();
+    RequestBuilder requestBuilder = new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
+        .jsonContent(DefaultObjectMapper.INSTANCE, config);
   }
 }

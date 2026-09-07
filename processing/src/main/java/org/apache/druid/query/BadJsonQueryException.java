@@ -22,6 +22,8 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
+import com.google.common.base.Strings;
 
 public class BadJsonQueryException extends BadQueryException
 {
@@ -30,6 +32,11 @@ public class BadJsonQueryException extends BadQueryException
   public BadJsonQueryException(JsonParseException e)
   {
     this(e, JSON_PARSE_ERROR_CODE, e.getMessage(), ERROR_CLASS);
+  }
+
+  public BadJsonQueryException(ValueInstantiationException e)
+  {
+    this(e, JSON_PARSE_ERROR_CODE, getErrorMessage(e), e.getClass().getName());
   }
 
   @JsonCreator
@@ -50,5 +57,22 @@ public class BadJsonQueryException extends BadQueryException
   )
   {
     super(cause, errorCode, errorMessage, errorClass, null);
+  }
+
+  private static String getErrorMessage(ValueInstantiationException e)
+  {
+    Throwable cause = e.getCause();
+    String errorMessage = null;
+    while (cause != null) {
+      if (!Strings.isNullOrEmpty(cause.getMessage())) {
+        errorMessage = cause.getMessage();
+      }
+      cause = cause.getCause();
+    }
+
+    if (errorMessage == null) {
+      return "Invalid native query: the request contains invalid or missing fields";
+    }
+    return "Invalid native query: " + errorMessage;
   }
 }

@@ -19,11 +19,12 @@
 
 package org.apache.druid.msq.querykit.scan;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -43,7 +44,6 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,25 +52,15 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
 {
   private final ObjectMapper jsonMapper;
 
-  public ScanQueryKit(final ObjectMapper jsonMapper)
+  @Inject
+  public ScanQueryKit(@Json final ObjectMapper jsonMapper)
   {
     this.jsonMapper = jsonMapper;
   }
 
   public static RowSignature getAndValidateSignature(final ScanQuery scanQuery, final ObjectMapper jsonMapper)
   {
-    RowSignature scanSignature;
-    try {
-      final String s = scanQuery.context().getString(DruidQuery.CTX_SCAN_SIGNATURE);
-      if (s == null) {
-        scanSignature = scanQuery.getRowSignature();
-      } else {
-        scanSignature = jsonMapper.readValue(s, RowSignature.class);
-      }
-    }
-    catch (JsonProcessingException e) {
-      throw new RuntimeException(e);
-    }
+    RowSignature scanSignature = scanQuery.getRowSignature();
     // Verify the signature prior to any actual processing.
     QueryKitUtils.verifyRowSignature(scanSignature);
     return scanSignature;
@@ -98,8 +88,6 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
-        originalQuery.getFilter(),
-        null,
         minStageNumber,
         false
     );
@@ -173,7 +161,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .shuffleSpec(scanShuffleSpec)
                        .signature(signatureToUse)
-                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
+                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount())
                        .processor(new ScanQueryStageProcessor(queryToRun))
     );
 

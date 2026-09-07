@@ -36,10 +36,8 @@ import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -98,7 +96,6 @@ import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.DruidNode;
@@ -112,12 +109,10 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -151,14 +146,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   static final AggregatorFactory[] DEFAULT_METRICS_SPEC = new AggregatorFactory[]{
       new LongSumAggregatorFactory("val", "val")
   };
-  static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      DEFAULT_TIMESTAMP_SPEC,
-      DEFAULT_DIMENSIONS_SPEC,
-      null,
-      Arrays.asList("ts", "dim", "val"),
-      false,
-      0
-  );
   static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim", "val"),
       null,
@@ -177,12 +164,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected static final double DEFAULT_TRANSIENT_API_FAILURE_RATE = 0.2;
 
   private static final Logger LOG = new Logger(AbstractParallelIndexSupervisorTaskTest.class);
-
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public final TestName testName = new TestName();
 
   /**
    * Transient task failure rate emulated by the taskKiller in {@link SimpleThreadingTaskRunner}.
@@ -228,15 +209,23 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     this.transientApiCallFailureRate = transientApiCallFailureRate;
   }
 
-  @Before
-  public void setUpAbstractParallelIndexSupervisorTaskTest() throws IOException
+  @BeforeEach
+  public void setUpAbstractParallelIndexSupervisorTaskTest(TestInfo testInfo) throws IOException
   {
     localDeepStorage = temporaryFolder.newFolder("localStorage");
-    taskRunner = new SimpleThreadingTaskRunner(testName.getMethodName());
+    taskRunner = new SimpleThreadingTaskRunner(testInfo.getTestMethod().orElseThrow().getName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
+        .setShuffleDataLocations(
+            ImmutableList.of(
+                new StorageLocationConfig(
+                    temporaryFolder.newFolder("shuffle"),
+                    null,
+                    null
+                )
+            )
+        )
         .build();
     intermediaryDataManager = new LocalIntermediaryDataManager(new WorkerConfig(), taskConfig, null);
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
@@ -244,12 +233,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     prepareObjectMapper(objectMapper, getIndexIO());
   }
 
-  @After
+  @AfterEach
   public void tearDownAbstractParallelIndexSupervisorTaskTest()
   {
     remoteApiExecutor.shutdownNow();
     taskRunner.shutdown();
-    temporaryFolder.delete();
   }
 
   protected ParallelIndexTuningConfig newTuningConfig(
@@ -422,6 +410,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       task.addToContextIfAbsent(
           SinglePhaseParallelIndexTaskRunner.CTX_USE_LINEAGE_BASED_SEGMENT_ALLOCATION_KEY,
           SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
+      );
+      task.addToContextIfAbsent(
+          PartialDimensionDistributionTask.CTX_BLOOM_FILTER_EXPECTED_INSERTIONS,
+          1_000
       );
       final ListenableFuture<TaskStatus> statusFuture = service.submit(
           () -> {
@@ -634,7 +626,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(ExprMacroTable.class, LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
             .addValue(ObjectMapper.class, objectMapper)
-            .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
+            .addValue(ChatHandlerProvider.class, new ChatHandlerProvider())
             .addValue(AuthConfig.class, new AuthConfig())
             .addValue(AuthorizerMapper.class, null)
             .addValue(RowIngestionMetersFactory.class, new DropwizardRowIngestionMetersFactory())
@@ -643,7 +635,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(AppenderatorsManager.class, TestUtils.APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
             .addValue(CoordinatorClient.class, coordinatorClient)
-            .addValue(SegmentCacheManagerFactory.class, new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper))
+            .addValue(SegmentCacheManagerFactory.class, SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, objectMapper))
             .addValue(RetryPolicyFactory.class, new RetryPolicyFactory(new RetryPolicyConfig()))
             .addValue(TaskConfig.class, taskConfig)
     );
@@ -682,16 +674,18 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         )
         .dataSegmentKiller(new NoopDataSegmentKiller())
         .joinableFactory(NoopJoinableFactory.INSTANCE)
-        .segmentCacheManager(newSegmentLoader(temporaryFolder.newFolder()))
+        .segmentCacheManager(
+            newSegmentLoader(temporaryFolder.newFolder("segmentCache"))
+        )
         .jsonMapper(objectMapper)
         .taskWorkDir(temporaryFolder.newFolder(task.getId()))
         .indexIO(getIndexIO())
-        .indexMergerV9(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
+        .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .intermediaryDataManager(intermediaryDataManager)
         .taskReportFileWriter(new SingleFileTaskReportFileWriter(reportsFile))
         .policyEnforcer(NoopPolicyEnforcer.instance())
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .chatHandlerProvider(new ChatHandlerProvider())
         .rowIngestionMetersFactory(new TestUtils().getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
         .overlordClient(indexingServiceClient)
@@ -793,6 +787,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 0L,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -802,7 +797,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected TaskReport.ReportMap buildExpectedTaskReportParallel(
       String taskId,
       List<ParseExceptionReport> expectedUnparseableEvents,
-      RowIngestionMetersTotals expectedTotals
+      RowIngestionMetersTotals expectedTotals,
+      Long oversizedSegments
   )
   {
     Map<String, Object> unparseableEvents = ImmutableMap.of("buildSegments", expectedUnparseableEvents);
@@ -819,7 +815,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 0L,
                 null,
                 null,
-                null
+                null,
+                oversizedSegments
             )
         )
     );
@@ -835,22 +832,22 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     final java.util.Optional<IngestionStatsAndErrorsTaskReport> actualReportOptional
         = actualReports.findReport("ingestionStatsAndErrors");
 
-    Assert.assertTrue(expectedReportOptional.isPresent());
-    Assert.assertTrue(actualReportOptional.isPresent());
+    Assertions.assertTrue(expectedReportOptional.isPresent());
+    Assertions.assertTrue(actualReportOptional.isPresent());
 
     final IngestionStatsAndErrorsTaskReport expectedReport = expectedReportOptional.get();
     final IngestionStatsAndErrorsTaskReport actualReport = actualReportOptional.get();
 
-    Assert.assertEquals(expectedReport.getTaskId(), actualReport.getTaskId());
-    Assert.assertEquals(expectedReport.getReportKey(), actualReport.getReportKey());
+    Assertions.assertEquals(expectedReport.getTaskId(), actualReport.getTaskId());
+    Assertions.assertEquals(expectedReport.getReportKey(), actualReport.getReportKey());
 
     final IngestionStatsAndErrors expectedPayload = expectedReport.getPayload();
     final IngestionStatsAndErrors actualPayload = actualReport.getPayload();
-    Assert.assertEquals(expectedPayload.getIngestionState(), actualPayload.getIngestionState());
+    Assertions.assertEquals(expectedPayload.getIngestionState(), actualPayload.getIngestionState());
 
     Map<String, Object> expectedTotals = expectedPayload.getRowStats();
     Map<String, Object> actualTotals = actualPayload.getRowStats();
-    Assert.assertEquals(expectedTotals, actualTotals);
+    Assertions.assertEquals(expectedTotals, actualTotals);
 
     List<ParseExceptionReport> expectedParseExceptionReports =
         (List<ParseExceptionReport>) (expectedPayload.getUnparseableEvents()).get("buildSegments");
@@ -862,13 +859,14 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .stream().map(r -> r.getDetails().get(0)).collect(Collectors.toList());
     List<String> actualMessages = actualParseExceptionReports
         .stream().map(r -> r.getDetails().get(0)).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assertions.assertEquals(expectedMessages, actualMessages);
 
     List<String> expectedInputs = expectedParseExceptionReports
         .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
     List<String> actualInputs = actualParseExceptionReports
         .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assertions.assertEquals(expectedPayload.getOversizedSegments(), actualPayload.getOversizedSegments());
+    Assertions.assertEquals(expectedInputs, actualInputs);
   }
 
   static class LocalParallelIndexTaskClientProvider implements ParallelIndexSupervisorTaskClientProvider

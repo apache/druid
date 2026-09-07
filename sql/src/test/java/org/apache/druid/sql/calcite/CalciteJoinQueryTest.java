@@ -43,6 +43,7 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryException;
@@ -85,7 +86,6 @@ import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
-import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.MinTopNThreshold;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -93,7 +93,7 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -105,7 +105,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -121,13 +120,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     return false;
   }
 
-  @MinTopNThreshold(1)
   @Test
   public void testInnerJoinWithLimitAndAlias()
   {
 
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
     testQuery(
         "select t1.b1 from (select __time as b1 from numfoo group by 1 order by 1) as t1 inner join (\n"
         + "  select __time as b2 from foo group by 1 order by 1\n"
@@ -183,7 +182,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 
   // Adjust topN threshold, so that the topN engine keeps only 1 slot for aggregates, which should be enough
   // to compute the query with limit 1.
-  @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN)
   public void testExactTopNOnInnerJoinWithLimit()
@@ -191,6 +189,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
     context.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
     testQuery(
         "select f1.\"dim4\", sum(\"m1\") from numfoo f1 inner join (\n"
         + "  select \"dim4\" from numfoo where dim4 <> 'a' group by 1\n"
@@ -1573,10 +1572,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Expected exception to be thrown.");
+      Assertions.fail("Expected exception to be thrown.");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
@@ -2464,6 +2463,26 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             0
         )
     );
+  }
+
+  @Test
+  public void testJoinOfTwoJoinsWithSubQueries()
+  {
+    skipVectorize();
+
+    String sql = "with\n"
+        + "l1 as (SELECT f.dim1, sum(n.dbl1) s1 from foo f join numfoo n on n.dim2=f.dim2 group by f.dim1),\n"
+        + "r1 as (SELECT f.dim2, sum(n.dbl2) s2 from foo f join numfoo n on n.dim1=f.dim1 group by f.dim2)\n"
+        + "select dim1, s1+s2 FROM l1 join r1 on dim1=dim2";
+
+    testBuilder()
+        .sql(sql)
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{"", 1.0D}
+            )
+        )
+        .run();
   }
 
   @MethodSource("provideQueryContexts")
@@ -3401,67 +3420,41 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new GroupByQuery.Builder()
                 .setDataSource(
-                    new QueryDataSource(
-                        GroupByQuery.builder()
-                                    .setDataSource(
-                                        join(
-                                            new QueryDataSource(
-                                                newScanQueryBuilder()
-                                                    .dataSource(CalciteTests.DATASOURCE1)
-                                                    .intervals(querySegmentSpec(Filtration.eternity()))
-                                                    .filters(equality("dim1", "10.1", ColumnType.STRING))
-                                                    .virtualColumns(expressionVirtualColumn(
-                                                        "v0",
-                                                        "\'10.1\'",
-                                                        ColumnType.STRING
-                                                    ))
-                                                    .columns(ImmutableList.of("v0", "__time"))
-                                                    .columnTypes(ColumnType.STRING, ColumnType.LONG)
-                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                    .context(queryContext)
-                                                    .build()
-                                            ),
-                                            new QueryDataSource(
-                                                newScanQueryBuilder()
-                                                    .dataSource(CalciteTests.DATASOURCE1)
-                                                    .intervals(querySegmentSpec(Filtration.eternity()))
-                                                    .filters(equality("dim1", "10.1", ColumnType.STRING))
-                                                    .columns(ImmutableList.of("dim1"))
-                                                    .columnTypes(ColumnType.STRING)
-                                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                    .context(queryContext)
-                                                    .build()
-                                            ),
-                                            "j0.",
-                                            equalsCondition(
-                                                makeColumnExpression("v0"),
-                                                makeColumnExpression("j0.dim1")
-                                            ),
-                                            JoinType.INNER
-                                        ))
-                                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                                    .setVirtualColumns(expressionVirtualColumn("_v0", "\'10.1\'", ColumnType.STRING))
-                                    .setGranularity(Granularities.ALL)
-                                    .setDimensions(new DefaultDimensionSpec(
-                                        "_v0",
-                                        "d0",
-                                        ColumnType.STRING
-                                    ), new DefaultDimensionSpec(
-                                        "__time",
-                                        "d1",
-                                        ColumnType.LONG
-                                    ))
-                                    .setContext(queryContext)
-                                    .build()
+                    join(
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .virtualColumns(expressionVirtualColumn("v0", "'10.1'", ColumnType.STRING))
+                                .filters(equality("dim1", "10.1", ColumnType.STRING))
+                                .columns(ImmutableList.of("v0", "__time"))
+                                .columnTypes(ColumnType.STRING, ColumnType.LONG)
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .filters(equality("dim1", "10.1", ColumnType.STRING))
+                                .columns(ImmutableList.of("dim1"))
+                                .columnTypes(ColumnType.STRING)
+                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                .context(queryContext)
+                                .build()
+                        ),
+                        "j0.",
+                        equalsCondition(
+                            makeColumnExpression("v0"),
+                            makeColumnExpression("j0.dim1")
+                        ),
+                        JoinType.INNER
                     )
                 )
-                .setVirtualColumns(expressionVirtualColumn("v0", "\'10.1\'", ColumnType.STRING))
+                .setVirtualColumns(expressionVirtualColumn("_v0", "'10.1'", ColumnType.STRING))
                 .setInterval(querySegmentSpec(Filtration.eternity()))
-                .setDimensions(new DefaultDimensionSpec(
-                    "v0",
-                    "_d0",
-                    ColumnType.STRING
-                ))
+                .setDimensions(new DefaultDimensionSpec("_v0", "d0", ColumnType.STRING))
                 .setContext(queryContext)
                 .setGranularity(Granularities.ALL)
                 .build()
@@ -3574,8 +3567,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .filters(range(
                                       "m1",
-                                      ColumnType.LONG,
-                                      2L,
+                                      ColumnType.FLOAT,
+                                      2.0,
                                       null,
                                       true,
                                       false
@@ -3973,8 +3966,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTwoSemiJoinsSimultaneously(Map<String, Object> queryContext)
   {
-    // Cannot vectorize timeBoundary with maxTime (the engine will request descending order, which cannot vectorize).
-    cannotVectorize();
+    if (!isRewriteJoinToFilter(queryContext)) {
+      // Rewriting the joins to filters allows all queries to vectorize.
+      cannotVectorize();
+    }
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
@@ -4520,11 +4515,15 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTopNFilterJoinWithProjection(Map<String, Object> queryContext)
   {
-    // Cannot vectorize JOIN operator.
-    cannotVectorize();
+    if (QueryContext.of(queryContext).getEnableRewriteJoinToFilter()) {
+      // Join is eliminated. Cannot vectorize substring function unless fallback vectorization is on.
+      cannotVectorizeUnlessFallback();
+    } else {
+      // Cannot vectorize the join or the substring function.
+      cannotVectorize();
+    }
 
     // Filters on top N values of some dimension by using an inner join. Also projects the outer dimension.
-
     testQuery(
         "SELECT SUBSTRING(t1.dim1, 1, 10), SUM(t1.cnt)\n"
         + "FROM druid.foo t1\n"
@@ -4755,10 +4754,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.INNER
                     )
                 )
-                .virtualColumns(expressionVirtualColumn("v0", "(\"m1\" + \"j0.m1\")", ColumnType.DOUBLE))
+                .virtualColumns(expressionVirtualColumn("v0", "(\"m1\" + \"j0.m1\")", ColumnType.FLOAT))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(
-                    equality("v0", 6.0, ColumnType.DOUBLE)
+                    equality("v0", 6.0, ColumnType.FLOAT)
                 )
                 .columns("m1", "j0.m1")
                 .columnTypes(ColumnType.FLOAT, ColumnType.FLOAT)
@@ -4971,8 +4970,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                         .dataSource(CalciteTests.DATASOURCE1)
                                         .intervals(querySegmentSpec(Intervals.of(
                                             "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
-                                        .columns("dim1", "m2")
-                                        .columnTypes(ColumnType.STRING, ColumnType.DOUBLE)
+                                        .columns("dim1")
+                                        .columnTypes(ColumnType.STRING)
                                         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                         .context(queryContext)
                                         .build()
@@ -5076,7 +5075,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, AuthorizationResult.ALLOW_NO_RESTRICTION)
                      .getResults();
     List<Object> results = seq.toList();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(ResultRow.of("def")),
         results
     );
@@ -5124,6 +5123,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_RESTRICTED_DATASOURCE_SUPPORT2)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testJoinOnRestrictedBroadcast(Map<String, Object> queryContext)
@@ -5164,7 +5164,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    Exception e = Assert.assertThrows(
+    Exception e = Assertions.assertThrows(
         Exception.class,
         () -> testQuery(
             PLANNER_CONFIG_DEFAULT,
@@ -5174,9 +5174,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    Assert.assertTrue(e.getMessage()
-                       .contains(
-                           "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"));
+
+    Assertions.assertTrue(
+        e.getMessage().contains(
+            "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"
+        ),
+        e.getMessage()
+    );
   }
 
   @MethodSource("provideQueryContexts")
@@ -5501,7 +5505,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    Assert.assertTrue("filter pushdown must be enabled", query.context().getEnableJoinFilterPushDown());
+    Assertions.assertTrue(query.context().getEnableJoinFilterPushDown(), "filter pushdown must be enabled");
 
     // no results will be produced since the filter values aren't in the table
     testQuery(
@@ -5611,7 +5615,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    Assert.assertTrue("filter pushdown must be enabled", query.context().getEnableJoinFilterPushDown());
+    Assertions.assertTrue(query.context().getEnableJoinFilterPushDown(), "filter pushdown must be enabled");
 
     // (dim1, dim2, m1) in foo look like
     // [, a, 1.0]
@@ -5661,11 +5665,11 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   new Object[]{29064L}
                               ),
                               RowSignature.builder()
-                                          .add("ROW_VALUE", ColumnType.LONG)
+                                          .add("EXPR$0", ColumnType.LONG)
                                           .build()
                           ),
                           "j0.",
-                          "(\"l1\" == \"j0.ROW_VALUE\")",
+                          "(\"l1\" == \"j0.EXPR$0\")",
                           JoinType.INNER,
                           null,
                           ExprMacroTable.nil(),
@@ -5800,12 +5804,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @SqlTestFrameworkConfig.MinTopNThreshold(1)
   @Test
   public void testJoinWithAliasAndOrderByNoGroupBy()
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
+    context.put(QueryContexts.MIN_TOP_N_THRESHOLD, 1);
     testQuery(
         "select t1.__time from druid.foo as t1 join\n"
         + "  druid.numfoo as t2 on t1.dim2 = t2.dim2\n"
@@ -6230,13 +6234,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testSelfJoinsWithUnnestOnLeftAndRight()
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    testQuery(
-        "with t1 as (\n"
+    String sql = "with t1 as (\n"
         + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3)\n"
         + ")\n"
         + "select t1.dim3, t1.d3, t2.dim2 from t1 JOIN t1 as t2\n"
-        + "ON t1.d3 = t2.d3",
-        context,
+        + "ON t1.d3 = t2.d3";
+    ImmutableList<Query<?>> expectedQueries =
         ImmutableList.of(
             newScanQueryBuilder()
                 .dataSource(
@@ -6269,20 +6272,24 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                 .context(context)
                 .build()
-        ),
-        sortIfSortBased(
-            ImmutableList.of(
-                new Object[]{"[\"a\",\"b\"]", "a", "a"},
-                new Object[]{"[\"a\",\"b\"]", "b", "a"},
-                new Object[]{"[\"a\",\"b\"]", "b", null},
-                new Object[]{"[\"b\",\"c\"]", "b", "a"},
-                new Object[]{"[\"b\",\"c\"]", "b", null},
-                new Object[]{"[\"b\",\"c\"]", "c", null},
-                new Object[]{"d", "d", ""},
-                new Object[]{"", "", "a"}
-            ), 0
-        )
+        );
+    ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[] {"[\"a\",\"b\"]", "a", "a"},
+        new Object[] {"[\"a\",\"b\"]", "b", "a"},
+        new Object[] {"[\"a\",\"b\"]", "b", null},
+        new Object[] {"[\"b\",\"c\"]", "b", "a"},
+        new Object[] {"[\"b\",\"c\"]", "b", null},
+        new Object[] {"[\"b\",\"c\"]", "c", null},
+        new Object[] {"d", "d", ""},
+        new Object[] {"", "", "a"}
     );
+
+    testBuilder()
+        .queryContext(context)
+        .sql(sql)
+        .expectedQueries(expectedQueries)
+        .expectedResults(new UnorderedResultsVerifier(expectedResults, ResultMatchMode.RELAX_NULLS, null))
+        .run();
   }
 
   @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)

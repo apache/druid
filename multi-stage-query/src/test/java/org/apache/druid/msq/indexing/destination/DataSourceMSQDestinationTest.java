@@ -21,17 +21,21 @@ package org.apache.druid.msq.indexing.destination;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -90,20 +94,58 @@ public class DataSourceMSQDestinationTest
                                                  .build()
                       )
                   )
+                  .withPrefabValues(
+                      BaseTableProjectionSpec.class,
+                      ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                                 .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+                                                                 .clusteringColumns("tenant")
+                                                                 .build(),
+                      ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                                 .columns(new StringDimensionSchema("region"), new LongDimensionSchema("__time"))
+                                                                 .clusteringColumns("region")
+                                                                 .build()
+                  )
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testSerdeWithBaseTable() throws JsonProcessingException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final DataSourceMSQDestination destination = new DataSourceMSQDestination(
+        "foo",
+        Granularities.DAY,
+        null,
+        null,
+        null,
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new StringDimensionSchema("region"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build(),
+        null,
+        null
+    );
+    final DataSourceMSQDestination roundTrip =
+        mapper.readValue(mapper.writeValueAsString(destination), DataSourceMSQDestination.class);
+    Assertions.assertEquals(destination, roundTrip);
+    Assertions.assertNotNull(roundTrip.getBaseTable());
   }
 
   @Test
   public void testBackwardCompatibility() throws JsonProcessingException
   {
     DataSourceMSQDestination destination = new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null, null);
-    Assert.assertEquals(SegmentGenerationStageSpec.instance(), destination.getTerminalStageSpec());
+    Assertions.assertEquals(SegmentGenerationStageSpec.instance(), destination.getTerminalStageSpec());
 
     DataSourceMSQDestination dataSourceMSQDestination = new DefaultObjectMapper().readValue(
         "{\"type\":\"dataSource\",\"dataSource\":\"datasource1\",\"segmentGranularity\":\"DAY\",\"rowsInTaskReport\":0,\"destinationResource\":{\"empty\":false,\"present\":true}}",
         DataSourceMSQDestination.class
     );
-    Assert.assertEquals(SegmentGenerationStageSpec.instance(), dataSourceMSQDestination.getTerminalStageSpec());
+    Assertions.assertEquals(SegmentGenerationStageSpec.instance(), dataSourceMSQDestination.getTerminalStageSpec());
   }
 }

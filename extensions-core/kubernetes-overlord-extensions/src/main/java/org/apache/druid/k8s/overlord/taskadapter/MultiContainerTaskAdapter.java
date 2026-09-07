@@ -67,6 +67,31 @@ public class MultiContainerTaskAdapter extends K8sTaskAdapter
     super(client, taskRunnerConfig, taskConfig, startupLoggingConfig, druidNode, mapper, taskLogs);
   }
 
+  public MultiContainerTaskAdapter(
+      KubernetesClientApi podSourceClient,
+      String podSourceNamespace,
+      KubernetesClientApi client,
+      KubernetesTaskRunnerConfig taskRunnerConfig,
+      TaskConfig taskConfig,
+      StartupLoggingConfig startupLoggingConfig,
+      DruidNode druidNode,
+      ObjectMapper mapper,
+      TaskLogs taskLogs
+  )
+  {
+    super(
+        podSourceClient,
+        podSourceNamespace,
+        client,
+        taskRunnerConfig,
+        taskConfig,
+        startupLoggingConfig,
+        druidNode,
+        mapper,
+        taskLogs
+    );
+  }
+
   @Override
   public String getAdapterType()
   {

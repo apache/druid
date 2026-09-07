@@ -28,12 +28,9 @@ import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.apache.druid.segment.CloserRule;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -42,12 +39,6 @@ import java.util.List;
 
 public class BufferHashGrouperTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public CloserRule closerRule = new CloserRule(true);
-
   @Test
   public void testSimple()
   {
@@ -105,16 +96,16 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
 
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk(), String.valueOf(i));
       }
-      Assert.assertFalse(grouper.aggregate(new IntKey(expectedMaxSize)).isOk());
+      Assertions.assertFalse(grouper.aggregate(new IntKey(expectedMaxSize)).isOk());
 
       // Aggregate slightly different row
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk(), String.valueOf(i));
       }
-      Assert.assertFalse(grouper.aggregate(new IntKey(expectedMaxSize)).isOk());
+      Assertions.assertFalse(grouper.aggregate(new IntKey(expectedMaxSize)).isOk());
 
       final List<Grouper.Entry<IntKey>> expected = new ArrayList<>();
       for (int i = 0; i < expectedMaxSize; i++) {
@@ -136,16 +127,16 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
 
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk(), String.valueOf(i));
       }
-      Assert.assertFalse(grouper.aggregate(new IntKey(expectedMaxSize)).isOk());
+      Assertions.assertFalse(grouper.aggregate(new IntKey(expectedMaxSize)).isOk());
 
       // Aggregate slightly different row
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk(), String.valueOf(i));
       }
-      Assert.assertFalse(grouper.aggregate(new IntKey(expectedMaxSize)).isOk());
+      Assertions.assertFalse(grouper.aggregate(new IntKey(expectedMaxSize)).isOk());
 
       final List<Grouper.Entry<IntKey>> expected = new ArrayList<>();
       for (int i = 0; i < expectedMaxSize; i++) {
@@ -154,6 +145,317 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
 
       GrouperTestUtil.assertEntriesEquals(expected.iterator(), grouper.iterator(true));
     }
+  }
+
+  @Test
+  public void testMaxMergeBufferUsedBytes()
+  {
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(1000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        Integer.MAX_VALUE,
+        0,
+        0,
+        true
+    );
+    grouper.init();
+
+    long initialUsage = grouper.getMaxMergeBufferUsedBytes();
+    Assertions.assertEquals(0L, initialUsage);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+
+    grouper.aggregate(new IntKey(1));
+    final long expectedBucketSize = grouper.getMaxMergeBufferUsedBytes();
+
+    grouper.aggregate(new IntKey(2));
+    grouper.aggregate(new IntKey(3));
+
+    Assertions.assertEquals(3L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
+
+    grouper.aggregate(new IntKey(4));
+    grouper.aggregate(new IntKey(5));
+
+    Assertions.assertEquals(5L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
+
+    grouper.reset();
+    Assertions.assertEquals(0, grouper.getSize());
+    Assertions.assertEquals(5L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
+
+    grouper.aggregate(new IntKey(1));
+    grouper.aggregate(new IntKey(6));
+    grouper.aggregate(new IntKey(7));
+    grouper.aggregate(new IntKey(8));
+    grouper.aggregate(new IntKey(9));
+    grouper.aggregate(new IntKey(10));
+
+    Assertions.assertEquals(6L * expectedBucketSize, grouper.getMaxMergeBufferUsedBytes());
+
+    grouper.close();
+  }
+
+  @Test
+  public void testMaxSpillProximityAtSpillTrigger()
+  {
+    // A tiny fixed-size table (maxSizeForTesting=1) forces a spill trigger on the 2nd distinct key: no bucket can be
+    // allocated even after growth attempts, so findBucketWithAutoGrowth returns -1 and pins proximity to exactly 1.0.
+    // The invariant we care about: 1.0 corresponds to the real spill point, and is independent of bucket width /
+    // offset-list overhead / integer truncation. Contrast with the byte-based numerator, which topped out below 1.0.
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 1L)));
+    final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(1000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        /* bufferGrouperMaxSize */ 1,
+        0,
+        0,
+        true
+    );
+    grouper.init();
+
+    // Before any aggregation, proximity is 0.0 (empty table).
+    Assertions.assertEquals(0.0, grouper.getMaxSpillProximity(), 0.0);
+
+    // First key fits. Proximity is still strictly below 1.0 (size < regrowthThreshold after growth).
+    Assertions.assertTrue(grouper.aggregate(new IntKey(1)).isOk());
+    Assertions.assertTrue(
+        grouper.getMaxSpillProximity() < 1.0,
+        "proximity should stay below 1.0 while the table can still accept more keys: " + grouper.getMaxSpillProximity()
+    );
+
+    // Second key triggers a spill (findBucketWithAutoGrowth returns -1). Proximity is pinned to exactly 1.0.
+    Assertions.assertFalse(grouper.aggregate(new IntKey(2)).isOk());
+    Assertions.assertEquals(1.0, grouper.getMaxSpillProximity(), 0.0);
+
+    // Reset preserves the peak: the grouper spilled at some point in its life.
+    grouper.reset();
+    Assertions.assertEquals(1.0, grouper.getMaxSpillProximity(), 0.0);
+
+    grouper.close();
+  }
+
+  @Test
+  public void testMaxSpillProximityBelowOneWhenNoSpill()
+  {
+    // A generously-sized table that never rejects a bucket. Proximity should be strictly below 1.0 for the entire
+    // aggregation. This is the "operator reads <1.0, so no spill happened" invariant.
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 1L)));
+    final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(10_000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        Integer.MAX_VALUE,
+        0,
+        0,
+        true
+    );
+    grouper.init();
+
+    for (int i = 0; i < 20; i++) {
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      Assertions.assertTrue(
+          grouper.getMaxSpillProximity() < 1.0,
+          "no spill occurred; proximity must remain strictly < 1.0: " + grouper.getMaxSpillProximity()
+      );
+    }
+
+    grouper.close();
+  }
+
+  @Test
+  public void testMaxSpillProximityAtTerminalThresholdWithoutRejection()
+  {
+    // Adversarial "at exactly the spill point, but no further insert attempted" case. Fill the grouper until one more
+    // insert would trigger a rejection, then stop calling aggregate. Because the table is at its terminal growth level
+    // (arena exhausted, no room to enlarge regrowthThreshold), size == regrowthThreshold means the next insert would
+    // fail — that's the spill point. Proximity must be exactly 1.0, not (T-1)/T. The base-class updateMax records 1.0
+    // at the terminal level via isTerminalTableLevel().
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 1L)));
+    final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(10_000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        Integer.MAX_VALUE,
+        0.75f,
+        4,
+        true
+    );
+    grouper.init();
+
+    // Fill until the first rejection.
+    int inserted = 0;
+    while (inserted < 10_000 && grouper.aggregate(new IntKey(inserted)).isOk()) {
+      inserted++;
+    }
+    // A rejection occurred, so the grouper is definitively at its spill trigger.
+    Assertions.assertEquals(1.0, grouper.getMaxSpillProximity(), 0.0);
+
+    // The stricter Case #5 check: rebuild and STOP one insert before the rejection. size == regrowthThreshold, but
+    // aggregate() was never called after that, so findBucketWithAutoGrowth was never invoked with a rejection. Still,
+    // being at the terminal level means proximity must be 1.0.
+    grouper.close();
+
+    final BufferHashGrouper<IntKey> parked = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(10_000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        Integer.MAX_VALUE,
+        0.75f,
+        4,
+        true
+    );
+    parked.init();
+    for (int i = 0; i < inserted; i++) {
+      Assertions.assertTrue(parked.aggregate(new IntKey(i)).isOk());
+    }
+    // Confirm the arithmetic: `inserted` == regrowthThreshold_final, so after `inserted` successful inserts the parked
+    // grouper's size sits exactly at getMaxSize() (i.e. regrowthThreshold_final). The next new-key aggregate() would
+    // find no bucket and return not-ok — this IS the spill point.
+    Assertions.assertEquals(inserted, parked.getSize());
+    Assertions.assertEquals(inserted, parked.getMaxSize());
+    // No further aggregate call. Grouper is parked exactly at its terminal threshold; the next insert WOULD spill.
+    Assertions.assertEquals(1.0, parked.getMaxSpillProximity(), 0.0);
+    parked.close();
+  }
+
+  @Test
+  public void testMaxSpillProximityIsProportionalNotSawtooth()
+  {
+    // Regression guard for the sawtooth denominator bug. The old metric divided size by the CURRENT growth level's
+    // regrowthThreshold. Since the table grows by doubling, size/currentRegrowthThreshold resets to ~0.5 on every
+    // doubling and climbs back to ~1.0 before the next — so a table that grows even a couple of times pinned its
+    // lifetime max near (N-1)/N ~ 0.99, regardless of how much headroom remained before the real spill. The fix
+    // divides by the FIXED terminal-level regrowthThreshold, so the value is the true fraction of the way to the spill.
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 1L)));
+
+    // First, discover the terminal threshold T by filling an identical grouper until it rejects.
+    final BufferHashGrouper<IntKey> probe = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(100_000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        Integer.MAX_VALUE,
+        0.75f,
+        4,
+        true
+    );
+    probe.init();
+    int terminalThreshold = 0;
+    while (terminalThreshold < 100_000 && probe.aggregate(new IntKey(terminalThreshold)).isOk()) {
+      terminalThreshold++;
+    }
+    Assertions.assertEquals(1.0, probe.getMaxSpillProximity(), 0.0);
+    probe.close();
+
+    // Now fill a fresh grouper to only a quarter of the terminal threshold. This is enough distinct keys to force
+    // several doublings (so the OLD metric would have pinned near ~0.99), but the table is nowhere near spilling.
+    final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(100_000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        Integer.MAX_VALUE,
+        0.75f,
+        4,
+        true
+    );
+    grouper.init();
+
+    final int inserted = terminalThreshold / 4;
+    for (int i = 0; i < inserted; i++) {
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+    }
+
+    // The table must actually have grown multiple times — otherwise this wouldn't exercise the sawtooth path.
+    Assertions.assertTrue(
+        grouper.getGrowthCount() >= 2,
+        "expected multiple growths to exercise the sawtooth path, got " + grouper.getGrowthCount()
+    );
+
+    // The value tracks size/terminalThreshold ~ 0.25, NOT the ~0.99 the old current-level denominator produced.
+    final double proximity = grouper.getMaxSpillProximity();
+    final double expected = (double) inserted / terminalThreshold;
+    Assertions.assertEquals(
+        expected,
+        proximity,
+        0.05,
+        "proximity should be proportional to fill fraction, was " + proximity
+    );
+    Assertions.assertTrue(
+        proximity < 0.5,
+        "proximity must be far below 1.0 for a quarter-full table, was " + proximity
+    );
+
+    grouper.close();
+  }
+
+  @Test
+  public void testMaxSpillProximityBeforeInitIsZero()
+  {
+    // Grouper never initialized: no hash table has been created, so proximity is 0.0 rather than NaN or a crash.
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final BufferHashGrouper<IntKey> grouper = new BufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(1000)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        Integer.MAX_VALUE,
+        0,
+        0,
+        true
+    );
+    Assertions.assertEquals(0.0, grouper.getMaxSpillProximity(), 0.0);
   }
 
   private ResourceHolder<Grouper<IntKey>> makeGrouper(

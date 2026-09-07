@@ -20,8 +20,8 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -34,9 +34,9 @@ public class EnvironmentVariablePasswordProviderTest
   {
     String providerString = "{\"type\": \"environment\", \"variable\" : \"test\"}";
     PasswordProvider provider = JSON_MAPPER.readValue(providerString, PasswordProvider.class);
-    Assert.assertTrue(provider instanceof EnvironmentVariablePasswordProvider);
-    Assert.assertEquals("test", ((EnvironmentVariablePasswordProvider) provider).getVariable());
+    Assertions.assertTrue(provider instanceof EnvironmentVariablePasswordProvider);
+    Assertions.assertEquals("test", ((EnvironmentVariablePasswordProvider) provider).getVariable());
     PasswordProvider serde = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(provider), PasswordProvider.class);
-    Assert.assertEquals(provider, serde);
+    Assertions.assertEquals(provider, serde);
   }
 }

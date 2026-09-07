@@ -57,7 +57,7 @@ public class DecoupledDartExtension implements BeforeEachCallback
 
   public QueryTestBuilder testBuilder()
   {
-    CalciteTestConfig testConfig = baseTest.new CalciteTestConfig(CONTEXT_OVERRIDES)
+    CalciteTestConfig testConfig = baseTest.new CalciteTestConfig(CONTEXT_OVERRIDES, true)
     {
       @Override
       public SqlTestFramework.PlannerFixture plannerFixture(PlannerConfig plannerConfig, AuthConfig authConfig)

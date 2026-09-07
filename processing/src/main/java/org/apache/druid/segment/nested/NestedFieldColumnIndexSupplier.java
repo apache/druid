@@ -352,7 +352,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     };
   }
 
-  private class NestedFieldDictionaryEncodedStringValueIndex implements DictionaryEncodedStringValueIndex
+  private final class NestedFieldDictionaryEncodedStringValueIndex implements DictionaryEncodedStringValueIndex
   {
     final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
     final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
@@ -369,14 +369,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     @Override
     public String getValue(int index)
     {
-      int globalIndex = localDictionary.get(index);
-      if (globalIndex < adjustLongId) {
-        return StringUtils.fromUtf8Nullable(stringDictionary.get(globalIndex));
-      } else if (globalIndex < adjustDoubleId) {
-        return String.valueOf(longDictionary.get(globalIndex - adjustLongId));
-      } else {
-        return String.valueOf(doubleDictionary.get(globalIndex - adjustDoubleId));
-      }
+      return getStringValueFromGlobalId(localDictionary.get(index));
     }
 
     @Override
@@ -386,9 +379,44 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     }
 
     @Override
+    public Iterator<String> getValueIterator()
+    {
+      final Iterator<Integer> localIterator = localDictionary.iterator();
+      return new Iterator<>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return localIterator.hasNext();
+        }
+
+        @Override
+        public String next()
+        {
+          return getStringValueFromGlobalId(localIterator.next());
+        }
+      };
+    }
+
+    @Override
     public ImmutableBitmap getBitmap(int idx)
     {
       return NestedFieldColumnIndexSupplier.this.getBitmap(idx);
+    }
+
+    @Nullable
+    private String getStringValueFromGlobalId(int globalIndex)
+    {
+      if (globalIndex == 0) {
+        return null;
+      }
+      if (globalIndex < adjustLongId) {
+        return StringUtils.fromUtf8Nullable(stringDictionary.get(globalIndex));
+      } else if (globalIndex < adjustDoubleId) {
+        return String.valueOf(longDictionary.get(globalIndex - adjustLongId));
+      } else {
+        return String.valueOf(doubleDictionary.get(globalIndex - adjustDoubleId));
+      }
     }
   }
 

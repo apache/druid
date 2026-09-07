@@ -19,8 +19,8 @@
 
 package org.apache.druid.error;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -32,7 +32,7 @@ public class ExceptionTest
     DruidException exception = DruidException.defensive().build("defensive");
     StackTraceElement[] stackTrace = exception.getStackTrace();
     for (StackTraceElement stackTraceElement : stackTrace) {
-      Assert.assertFalse(stackTraceElement.getClassName().startsWith(DruidException.CLASS_NAME_STR));
+      Assertions.assertFalse(stackTraceElement.getClassName().startsWith(DruidException.CLASS_NAME_STR));
     }
   }
 
@@ -42,7 +42,7 @@ public class ExceptionTest
     ErrorResponse errorResponse = new ErrorResponse(Forbidden.exception());
     final Map<String, Object> asMap = errorResponse.getAsMap();
     DruidException exception = ErrorResponse.fromMap(asMap).getUnderlyingException();
-    Assert.assertTrue(exception.getCause() instanceof DruidException);
-    Assert.assertEquals(0, exception.getCause().getStackTrace().length);
+    Assertions.assertInstanceOf(DruidException.class, exception.getCause());
+    Assertions.assertEquals(0, exception.getCause().getStackTrace().length);
   }
 }

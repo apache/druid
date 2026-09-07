@@ -29,6 +29,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public final class Intervals
 {
@@ -78,36 +79,39 @@ public final class Intervals
    *
    * Currently, this method is only used in {@link org.apache.druid.timeline.SegmentId}.
    */
-  public static Interval fromString(String string)
+  public static Interval fromString(String serializedInterval)
   {
-    Interval interval = null;
-    if (canDeserializeIntervalOptimallyFromString(string)) {
-      interval = tryOptimizedIntervalDeserialization(string);
+    if (canDeserializeIntervalOptimallyFromString(serializedInterval)) {
+      Interval interval = tryOptimizedIntervalDeserialization(serializedInterval);
+
+      if (interval != null) {
+        return interval;
+      }
     }
 
-    return interval == null ? Intervals.of(string) : interval;
+    return Intervals.of(serializedInterval);
   }
 
-  private static boolean canDeserializeIntervalOptimallyFromString(String intervalText)
+  private static boolean canDeserializeIntervalOptimallyFromString(String serializedInterval)
   {
     // Optimized version does not deal well with Periods.
-    if (intervalText.contains("P")) {
+    if (serializedInterval.contains("P")) {
       return false;
     }
 
-    final int slashIndex = intervalText.indexOf('/');
-    return (slashIndex > 0 && slashIndex < intervalText.length() - 1);
+    final int slashIndex = serializedInterval.indexOf('/');
+    return (slashIndex > 0 && slashIndex < serializedInterval.length() - 1);
   }
 
   /**
    * @return null if the input format cannot be parsed with optimized strategy, else return the Interval.
    */
   @Nullable
-  private static Interval tryOptimizedIntervalDeserialization(final String intervalText)
+  private static Interval tryOptimizedIntervalDeserialization(final String serializedInterval)
   {
-    final int slashIndex = intervalText.indexOf('/');
-    final String startStr = intervalText.substring(0, slashIndex);
-    final String endStr = intervalText.substring(slashIndex + 1);
+    final int slashIndex = serializedInterval.indexOf('/');
+    final String startStr = serializedInterval.substring(0, slashIndex);
+    final String endStr = serializedInterval.substring(slashIndex + 1);
 
     try {
       final long startMillis = FAST_ISO_UTC_FORMATTER.parseMillis(startStr);
@@ -162,6 +166,26 @@ public final class Intervals
     }
 
     return null;
+  }
+
+  /**
+   * @return List of intervals which when added to the given interval create
+   * {@link Intervals#ETERNITY}.
+   */
+  public static List<Interval> complementOf(Interval interval)
+  {
+    if (isEternity(interval)) {
+      return List.of();
+    } else if (DateTimes.MIN.equals(interval.getStart())) {
+      return List.of(new Interval(interval.getEnd(), DateTimes.MAX));
+    } else if (DateTimes.MAX.equals(interval.getEnd())) {
+      return List.of(new Interval(DateTimes.MIN, interval.getStart()));
+    } else {
+      return List.of(
+          new Interval(DateTimes.MIN, interval.getStart()),
+          new Interval(interval.getEnd(), DateTimes.MAX)
+      );
+    }
   }
 
   private Intervals()

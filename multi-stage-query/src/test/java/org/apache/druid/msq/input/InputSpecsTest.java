@@ -25,15 +25,15 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.table.TableInputSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class InputSpecsTest
 {
   @Test
   public void test_getStageNumbers()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(1, 2),
         InputSpecs.getStageNumbers(
             ImmutableList.of(
@@ -47,7 +47,7 @@ public class InputSpecsTest
   @Test
   public void test_getHasLeafInputs_allStages()
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
                 new StageInputSpec(1),
@@ -61,9 +61,9 @@ public class InputSpecsTest
   @Test
   public void test_getHasLeafInputs_broadcastTable()
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         InputSpecs.hasLeafInputs(
-            ImmutableList.of(new TableInputSpec("tbl", null, null, null)),
+            ImmutableList.of(new TableInputSpec("tbl", null, null)),
             IntSet.of(0)
         )
     );
@@ -72,10 +72,10 @@ public class InputSpecsTest
   @Test
   public void test_getHasLeafInputs_oneTableOneStage()
   {
-    Assert.assertTrue(
+    Assertions.assertTrue(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
-                new TableInputSpec("tbl", null, null, null),
+                new TableInputSpec("tbl", null, null),
                 new StageInputSpec(0)
             ),
             IntSets.emptySet()
@@ -86,10 +86,10 @@ public class InputSpecsTest
   @Test
   public void test_getHasLeafInputs_oneTableOneBroadcastStage()
   {
-    Assert.assertTrue(
+    Assertions.assertTrue(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
-                new TableInputSpec("tbl", null, null, null),
+                new TableInputSpec("tbl", null, null),
                 new StageInputSpec(0)
             ),
             IntSet.of(1)
@@ -100,10 +100,10 @@ public class InputSpecsTest
   @Test
   public void test_getHasLeafInputs_oneBroadcastTableOneStage()
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
-                new TableInputSpec("tbl", null, null, null),
+                new TableInputSpec("tbl", null, null),
                 new StageInputSpec(0)
             ),
             IntSet.of(0)
@@ -114,11 +114,11 @@ public class InputSpecsTest
   @Test
   public void test_getHasLeafInputs_oneTableOneBroadcastTable()
   {
-    Assert.assertTrue(
+    Assertions.assertTrue(
         InputSpecs.hasLeafInputs(
             ImmutableList.of(
-                new TableInputSpec("tbl", null, null, null),
-                new TableInputSpec("tbl2", null, null, null)
+                new TableInputSpec("tbl", null, null),
+                new TableInputSpec("tbl2", null, null)
             ),
             IntSet.of(1)
         )

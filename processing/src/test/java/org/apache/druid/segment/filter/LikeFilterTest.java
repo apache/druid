@@ -23,11 +23,10 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -42,28 +41,28 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Closeable;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class LikeFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
 
-  private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
-      new TimeAndDimsParseSpec(
-          new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
-          DimensionsSpec.builder()
-                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2")))
-                        .build()
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIMESTAMP_COLUMN, "iso", DateTimes.of("2000")),
+      DimensionsSpec.builder()
+                    .setDimensions(DimensionsSpec.getDefaultSchemas(List.of("dim0", "dim1", "dim2")))
+                    .build(),
+      ColumnsFilter.all()
   );
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                 .add("dim0", ColumnType.STRING)
@@ -72,14 +71,20 @@ public class LikeFilterTest extends BaseFilterTest
                                                                 .build();
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "0", "", ""),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "1", "foo", "aaa"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "2", "foobar", "aab"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "3", "bar", null),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "4", "foobarbaz", "abb"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "5", "foo%bar", "bbb"),
-      makeSchemaRow(PARSER, ROW_SIGNATURE, "6", "new\nline", "bbz")
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "0", "", ""),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "1", "foo", "aaa"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "2", "foobar", "aab"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "3", "bar", null),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "4", "foobarbaz", "abb"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "5", "foo%bar", "bbb"),
+      makeSchemaRow(SCHEMA, ROW_SIGNATURE, "6", "new\nline", "bbz")
   );
+
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
 
   public LikeFilterTest(
       String testName,
@@ -92,7 +97,7 @@ public class LikeFilterTest extends BaseFilterTest
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(LikeFilterTest.class.getName());
@@ -394,14 +399,14 @@ public class LikeFilterTest extends BaseFilterTest
     Filter filter = new LikeDimFilter("dim0", "e%", null, new SubstringDimExtractionFn(1, 100)).toFilter();
     Filter filter2 = new LikeDimFilter("dim1", "e%", null, new SubstringDimExtractionFn(1, 100)).toFilter();
 
-    Assert.assertTrue(filter.supportsRequiredColumnRewrite());
-    Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+    Assertions.assertTrue(filter.supportsRequiredColumnRewrite());
+    Assertions.assertTrue(filter2.supportsRequiredColumnRewrite());
 
     Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
-    Assert.assertEquals(filter2, rewrittenFilter);
+    Assertions.assertEquals(filter2, rewrittenFilter);
 
-    Throwable t = Assert.assertThrows(IAE.class, () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1")));
-    Assert.assertEquals("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0", t.getMessage());
+    Throwable t = Assertions.assertThrows(IAE.class, () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1")));
+    Assertions.assertEquals("Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0", t.getMessage());
   }
 
   @Test

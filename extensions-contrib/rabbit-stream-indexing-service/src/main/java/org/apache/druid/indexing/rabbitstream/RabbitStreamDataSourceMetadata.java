@@ -25,15 +25,26 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
+
+import javax.annotation.Nullable;
 
 public class RabbitStreamDataSourceMetadata extends SeekableStreamDataSourceMetadata<String, Long>
 {
 
   @JsonCreator
   public RabbitStreamDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, Long> partitions)
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, Long> partitions,
+      @JsonProperty("boundedStreamConfig") @Nullable BoundedStreamConfig boundedStreamConfig)
   {
-    super(partitions);
+    super(partitions, boundedStreamConfig);
+  }
+
+  // Backward compatibility constructor
+  public RabbitStreamDataSourceMetadata(
+      SeekableStreamSequenceNumbers<String, Long> partitions)
+  {
+    this(partitions, null);
   }
 
   @Override
@@ -52,6 +63,6 @@ public class RabbitStreamDataSourceMetadata extends SeekableStreamDataSourceMeta
   protected SeekableStreamDataSourceMetadata<String, Long> createConcreteDataSourceMetaData(
       SeekableStreamSequenceNumbers<String, Long> seekableStreamSequenceNumbers)
   {
-    return new RabbitStreamDataSourceMetadata(seekableStreamSequenceNumbers);
+    return new RabbitStreamDataSourceMetadata(seekableStreamSequenceNumbers, getBoundedStreamConfig());
   }
 }

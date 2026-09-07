@@ -20,8 +20,8 @@
 package org.apache.druid.query.rowsandcols.column;
 
 import org.apache.druid.query.rowsandcols.util.FindResult;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class LongArrayColumnTest
 {
@@ -32,11 +32,11 @@ public class LongArrayColumnTest
     ColumnAccessor accessor = column.toAccessor();
 
     for (int i = 0; i < 10; i++) {
-      Assert.assertFalse(accessor.isNull(i));
-      Assert.assertEquals(i, accessor.getLong(i));
-      Assert.assertEquals((long) i, accessor.getObject(i));
-      Assert.assertEquals(i, accessor.getDouble(i), 0);
-      Assert.assertEquals(i, accessor.getInt(i));
+      Assertions.assertFalse(accessor.isNull(i));
+      Assertions.assertEquals(i, accessor.getLong(i));
+      Assertions.assertEquals((long) i, accessor.getObject(i));
+      Assertions.assertEquals(i, accessor.getDouble(i), 0);
+      Assertions.assertEquals(i, accessor.getInt(i));
     }
   }
 
@@ -47,17 +47,17 @@ public class LongArrayColumnTest
     BinarySearchableAccessor accessor = (BinarySearchableAccessor) column.toAccessor();
 
     FindResult findResult = accessor.findLong(0, accessor.numRows(), 1);
-    Assert.assertTrue(findResult.wasFound());
-    Assert.assertEquals(0, findResult.getStartRow());
-    Assert.assertEquals(3, findResult.getEndRow());
+    Assertions.assertTrue(findResult.wasFound());
+    Assertions.assertEquals(0, findResult.getStartRow());
+    Assertions.assertEquals(3, findResult.getEndRow());
 
     findResult = accessor.findLong(0, accessor.numRows(), 6);
-    Assert.assertTrue(findResult.wasFound());
-    Assert.assertEquals(6, findResult.getStartRow());
-    Assert.assertEquals(7, findResult.getEndRow());
+    Assertions.assertTrue(findResult.wasFound());
+    Assertions.assertEquals(6, findResult.getStartRow());
+    Assertions.assertEquals(7, findResult.getEndRow());
 
-    Assert.assertFalse(accessor.findLong(0, accessor.numRows(), 2).wasFound());
-    Assert.assertFalse(accessor.findLong(0, 3, 9).wasFound());
+    Assertions.assertFalse(accessor.findLong(0, accessor.numRows(), 2).wasFound());
+    Assertions.assertFalse(accessor.findLong(0, 3, 9).wasFound());
   }
 
   @Test
@@ -67,16 +67,16 @@ public class LongArrayColumnTest
     BinarySearchableAccessor accessor = (BinarySearchableAccessor) column.toAccessor();
 
     FindResult findResult = accessor.findNull(0, accessor.numRows());
-    Assert.assertFalse(findResult.wasFound()); // Always false for long array columns
+    Assertions.assertFalse(findResult.wasFound()); // Always false for long array columns
 
     findResult = accessor.findDouble(0, accessor.numRows(), 3.0);
-    Assert.assertTrue(findResult.wasFound());
-    Assert.assertEquals(3, findResult.getStartRow());
-    Assert.assertEquals(4, findResult.getEndRow());
+    Assertions.assertTrue(findResult.wasFound());
+    Assertions.assertEquals(3, findResult.getStartRow());
+    Assertions.assertEquals(4, findResult.getEndRow());
 
     findResult = accessor.findFloat(0, accessor.numRows(), 1.0f);
-    Assert.assertTrue(findResult.wasFound());
-    Assert.assertEquals(1, findResult.getStartRow());
-    Assert.assertEquals(2, findResult.getEndRow());
+    Assertions.assertTrue(findResult.wasFound());
+    Assertions.assertEquals(1, findResult.getStartRow());
+    Assertions.assertEquals(2, findResult.getEndRow());
   }
 }

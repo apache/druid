@@ -19,9 +19,9 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.CompressedPools;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -113,14 +113,14 @@ public class CompressedVariableSizedBlobColumnSerializer implements Serializer
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
   {
     META_SERDE_HELPER.writeTo(channel, this);
-    try (SmooshedWriter sub = smoosher.addWithSmooshedWriter(offsetsFile, offsetsSerializer.getSerializedSize())) {
-      offsetsSerializer.writeTo(sub, smoosher);
+    try (SegmentFileChannel sub = fileBuilder.addWithChannel(offsetsFile, offsetsSerializer.getSerializedSize())) {
+      offsetsSerializer.writeTo(sub, fileBuilder);
     }
-    try (SmooshedWriter sub = smoosher.addWithSmooshedWriter(blobsFile, valuesSerializer.getSerializedSize())) {
-      valuesSerializer.writeTo(sub, smoosher);
+    try (SegmentFileChannel sub = fileBuilder.addWithChannel(blobsFile, valuesSerializer.getSerializedSize())) {
+      valuesSerializer.writeTo(sub, fileBuilder);
     }
   }
 

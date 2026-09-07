@@ -19,12 +19,10 @@
 
 package org.apache.druid.timeline.partition;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
-
-import static org.junit.Assert.assertEquals;
 
 
 public class TombstoneShardSpecTest
@@ -35,44 +33,44 @@ public class TombstoneShardSpecTest
   @Test
   public void getPartitionNum()
   {
-    assertEquals(0, tombstoneShardSpec.getPartitionNum());
+    Assertions.assertEquals(0, tombstoneShardSpec.getPartitionNum());
   }
 
   @Test
   public void getLookup()
   {
     ShardSpecLookup shardSpecLookup = tombstoneShardSpec.getLookup(Collections.singletonList(tombstoneShardSpec));
-    Assert.assertEquals(tombstoneShardSpec, shardSpecLookup.getShardSpec(1, null));
+    Assertions.assertEquals(tombstoneShardSpec, shardSpecLookup.getShardSpec(1, null));
   }
 
   @Test
   public void getDomainDimensions()
   {
-    Assert.assertTrue(tombstoneShardSpec.getDomainDimensions().isEmpty());
+    Assertions.assertTrue(tombstoneShardSpec.getDomainDimensions().isEmpty());
   }
 
   @Test
   public void possibleInDomain()
   {
-    Assert.assertTrue(tombstoneShardSpec.possibleInDomain(Collections.emptyMap()));
+    Assertions.assertTrue(tombstoneShardSpec.possibleInDomain(Collections.emptyMap()));
   }
 
   @Test
   public void getNumCorePartitions()
   {
-    assertEquals(0, tombstoneShardSpec.getNumCorePartitions());
+    Assertions.assertEquals(0, tombstoneShardSpec.getNumCorePartitions());
   }
 
   @Test
   public void getType()
   {
-    Assert.assertEquals(ShardSpec.Type.TOMBSTONE, tombstoneShardSpec.getType());
+    Assertions.assertEquals(ShardSpec.Type.TOMBSTONE, tombstoneShardSpec.getType());
   }
 
   @Test
   public void createChunk()
   {
-    Assert.assertTrue(tombstoneShardSpec.createChunk(new Object()) != null);
+    Assertions.assertTrue(tombstoneShardSpec.createChunk(new Object()) != null);
   }
 
   // just to increase branch coverage
@@ -80,10 +78,10 @@ public class TombstoneShardSpecTest
   public void equalsTest()
   {
     TombstoneShardSpec tombstoneShardSpecOther = tombstoneShardSpec;
-    Assert.assertTrue(tombstoneShardSpec.equals(tombstoneShardSpecOther));
+    Assertions.assertTrue(tombstoneShardSpec.equals(tombstoneShardSpecOther));
     tombstoneShardSpecOther = null;
-    Assert.assertFalse(tombstoneShardSpec.equals(tombstoneShardSpecOther));
+    Assertions.assertFalse(tombstoneShardSpec.equals(tombstoneShardSpecOther));
     TombstoneShardSpec newTombostoneShardSepc = new TombstoneShardSpec();
-    Assert.assertTrue(tombstoneShardSpec.equals(newTombostoneShardSepc));
+    Assertions.assertTrue(tombstoneShardSpec.equals(newTombostoneShardSepc));
   }
 }

@@ -21,7 +21,6 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
@@ -33,7 +32,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.BitmapResultFactory;
@@ -55,6 +54,7 @@ import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.index.AllFalseBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.DictionaryRangeScanningBitmapIndex;
@@ -78,6 +78,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -102,7 +103,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     if (version == NestedCommonFormatColumnSerializer.V0) {
       try {
 
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final SegmentFileMapper mapper = columnBuilder.getFileMapper();
 
         final ByteBuffer encodedValuesBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -348,14 +349,28 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             unknownsIndex
         );
       } else {
-        // values in set are not sorted in double order, transform them on the fly and iterate them all
+        // The values in the set are not sorted in long order, so we need to coerce them to longs and iterate them all.
+        // Values which cannot be equal to a long are dropped instead of being truncated into a value that would match
+        // incorrectly.
+        final ExpressionType matchExpressionType = ExpressionType.fromColumnTypeStrict(matchValueType);
+        final List<Long> longs = new ArrayList<>(sortedValues.size());
+        for (Object value : sortedValues) {
+          if (value == null) {
+            longs.add(null);
+            continue;
+          }
+          final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
+              ExprEval.ofType(matchExpressionType, value),
+              ExpressionType.LONG
+          );
+          if (castForComparison != null) {
+            longs.add(castForComparison.asLong());
+          }
+        }
         return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
             bitmapFactory,
-            Iterables.transform(
-                sortedValues,
-                DimensionHandlerUtils::convertObjectToLong
-            ),
-            sortedValues.size(),
+            longs,
+            longs.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -646,13 +661,33 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     public String getValue(int index)
     {
       final Long value = dictionary.get(index);
-      return value == null ? null : String.valueOf(value);
+      return Evals.asString(value);
     }
 
     @Override
     public BitmapFactory getBitmapFactory()
     {
       return bitmapFactory;
+    }
+
+    @Override
+    public Iterator<String> getValueIterator()
+    {
+      final Iterator<Long> delegate = dictionary.iterator();
+      return new Iterator<>()
+      {
+        @Override
+        public boolean hasNext()
+        {
+          return delegate.hasNext();
+        }
+
+        @Override
+        public String next()
+        {
+          return Evals.asString(delegate.next());
+        }
+      };
     }
   }
 }

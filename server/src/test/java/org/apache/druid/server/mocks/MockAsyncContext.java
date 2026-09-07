@@ -39,6 +39,7 @@ public class MockAsyncContext implements AsyncContext
   public ServletResponse response;
 
   private final AtomicBoolean completed = new AtomicBoolean();
+  private long timeout;
 
   @Override
   public ServletRequest getRequest()
@@ -104,7 +105,8 @@ public class MockAsyncContext implements AsyncContext
   @Override
   public void addListener(AsyncListener listener)
   {
-    throw new UnsupportedOperationException();
+    // Do not throw an UnsupportedOperationException since some tests need to add listeners
+    // Add an implementation here if listeners need to be invoked in tests
   }
 
   @Override
@@ -126,12 +128,12 @@ public class MockAsyncContext implements AsyncContext
   @Override
   public void setTimeout(long timeout)
   {
-    throw new UnsupportedOperationException();
+    this.timeout = timeout;
   }
 
   @Override
   public long getTimeout()
   {
-    throw new UnsupportedOperationException();
+    return timeout;
   }
 }

@@ -20,14 +20,14 @@
 package org.apache.druid.k8s.overlord.runnerstrategy;
 
 import org.apache.druid.indexing.common.task.Task;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class KubernetesRunnerStrategyTest extends EasyMockSupport
 {
   @Mock
@@ -38,6 +38,6 @@ public class KubernetesRunnerStrategyTest extends EasyMockSupport
   {
     KubernetesRunnerStrategy runnerStrategy = new KubernetesRunnerStrategy();
 
-    Assert.assertEquals(RunnerStrategy.RunnerType.KUBERNETES_RUNNER_TYPE, runnerStrategy.getRunnerTypeForTask(task));
+    Assertions.assertEquals(RunnerStrategy.RunnerType.KUBERNETES_RUNNER_TYPE, runnerStrategy.getRunnerTypeForTask(task));
   }
 }

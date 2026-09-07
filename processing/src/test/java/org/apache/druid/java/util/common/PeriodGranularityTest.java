@@ -22,8 +22,8 @@ package org.apache.druid.java.util.common;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class PeriodGranularityTest
 {

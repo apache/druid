@@ -22,34 +22,41 @@ package org.apache.druid.query.aggregation.datasketches.theta;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.io.Files;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.Druids;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.DimensionAndMetricValueExtractor;
+import org.apache.druid.query.topn.InvertedTopNMetricSpec;
+import org.apache.druid.query.topn.NumericTopNMetricSpec;
+import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -57,26 +64,15 @@ import java.util.List;
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class SketchAggregationWithSimpleDataTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
-
-  private final GroupByQueryConfig config;
-  private final QueryContexts.Vectorize vectorize;
+  @TempDir
+  private File tempFolder;
 
   private SketchModule sm;
   private File s1;
   private File s2;
 
-  public SketchAggregationWithSimpleDataTest(GroupByQueryConfig config, String vectorize)
-  {
-    this.config = config;
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
-  }
-
-  @Parameterized.Parameters(name = "config = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -88,8 +84,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     return constructors;
   }
 
-  @Before
-  public void setup() throws Exception
+  private void setup(final GroupByQueryConfig config) throws Exception
   {
     SketchModule.registerSerde();
     sm = new SketchModule();
@@ -101,22 +96,36 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
         )
     ) {
 
-      s1 = tempFolder.newFolder();
+      s1 = FileUtils.createTempDirInLocation(tempFolder.toPath(), "sketch");
+      final InputRowSchema schema = new InputRowSchema(
+          new TimestampSpec("timestamp", "yyyyMMddHH", null),
+          new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+          ColumnsFilter.all()
+      );
+      final InputFormat format = DelimitedInputFormat.forColumns(List.of("timestamp", "product", "pty_country"));
       toolchest.createIndex(
           new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-          readFileFromClasspathAsString("simple_test_data_record_parser.json"),
-          readFileFromClasspathAsString("simple_test_data_aggregators.json"),
+          schema,
+          format,
+          List.of(
+              new SketchMergeAggregatorFactory("pty_country", "pty_country", null, null, null, null),
+              new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", null, null, null, null)
+          ),
           s1,
           0,
           Granularities.NONE,
           5000
       );
 
-      s2 = tempFolder.newFolder();
+      s2 = FileUtils.createTempDirInLocation(tempFolder.toPath(), "sketch");
       toolchest.createIndex(
           new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
-          readFileFromClasspathAsString("simple_test_data_record_parser.json"),
-          readFileFromClasspathAsString("simple_test_data_aggregators.json"),
+          schema,
+          format,
+          List.of(
+              new SketchMergeAggregatorFactory("pty_country", "pty_country", null, null, null, null),
+              new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", null, null, null, null)
+          ),
           s2,
           0,
           Granularities.NONE,
@@ -125,9 +134,11 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     }
   }
 
-  @Test
-  public void testSimpleDataIngestAndGpByQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSimpleDataIngestAndGpByQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
+    setup(config);
     try (
         final AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
             sm.getJacksonModules(),
@@ -135,11 +146,72 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
             tempFolder
         )
     ) {
-      final GroupByQuery groupByQuery = SketchAggregationTest.readQueryFromClasspath(
-          "simple_test_data_group_by_query.json",
-          gpByQueryAggregationTestHelper.getObjectMapper(),
-          vectorize
-      );
+      final GroupByQuery groupByQuery = GroupByQuery.builder()
+          .setDataSource("test_datasource")
+          .setGranularity(Granularities.ALL)
+          .setInterval("2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z")
+          .setDimensions(new DefaultDimensionSpec("product", "product"))
+          .setAggregatorSpecs(
+              new SketchMergeAggregatorFactory("sketch_count", "pty_country", 16384, null, null, null),
+              new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null, null, null)
+          )
+          .setPostAggregatorSpecs(
+              new SketchEstimatePostAggregator(
+                  "sketchEstimatePostAgg",
+                  new FieldAccessPostAggregator("sketchEstimatePostAgg", "sketch_count"),
+                  null
+              ),
+              new SketchEstimatePostAggregator(
+                  "sketchIntersectionPostAggEstimate",
+                  new SketchSetPostAggregator(
+                      "sketchIntersectionPostAgg",
+                      "INTERSECT",
+                      16384,
+                      ImmutableList.of(
+                          new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                          new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                      )
+                  ),
+                  null
+              ),
+              new SketchEstimatePostAggregator(
+                  "sketchAnotBPostAggEstimate",
+                  new SketchSetPostAggregator(
+                      "sketchAnotBUnionPostAgg",
+                      "NOT",
+                      16384,
+                      ImmutableList.of(
+                          new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                          new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                      )
+                  ),
+                  null
+              ),
+              new SketchEstimatePostAggregator(
+                  "sketchUnionPostAggEstimate",
+                  new SketchSetPostAggregator(
+                      "sketchUnionPostAgg",
+                      "UNION",
+                      16384,
+                      ImmutableList.of(
+                          new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                          new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                      )
+                  ),
+                  null
+              )
+          )
+          .setLimitSpec(
+              new DefaultLimitSpec(
+                  ImmutableList.of(
+                      new OrderByColumnSpec("sketchEstimatePostAgg", OrderByColumnSpec.Direction.ASCENDING),
+                      new OrderByColumnSpec("product", OrderByColumnSpec.Direction.ASCENDING)
+                  ),
+                  null
+              )
+          )
+          .setContext(ImmutableMap.of("vectorize", vectorize.toString()))
+          .build();
 
       Sequence<ResultRow> seq = gpByQueryAggregationTestHelper.runQueryOnSegments(
           ImmutableList.of(s1, s2),
@@ -147,8 +219,8 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
       );
 
       List<MapBasedRow> results = seq.map(row -> row.toMapBasedRow(groupByQuery)).toList();
-      Assert.assertEquals(5, results.size());
-      Assert.assertEquals(
+      Assertions.assertEquals(5, results.size());
+      Assertions.assertEquals(
           ImmutableList.of(
               new MapBasedRow(
                   DateTimes.of("2014-10-19T00:00:00.000Z"),
@@ -221,121 +293,284 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     }
   }
 
-  @Test
-  public void testSimpleDataIngestAndTimeseriesQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSimpleDataIngestAndTimeseriesQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    AggregationTestHelper timeseriesQueryAggregationTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
+    setup(config);
+    AggregationTestHelper timeseriesQueryAggregationTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
     );
 
-    Sequence seq = timeseriesQueryAggregationTestHelper.runQueryOnSegments(
+    Sequence<Result<TimeseriesResultValue>> seq = timeseriesQueryAggregationTestHelper.runQueryOnSegments(
         ImmutableList.of(s1, s2),
-        (Query) SketchAggregationTest.readQueryFromClasspath(
-            "timeseries_query.json",
-            timeseriesQueryAggregationTestHelper.getObjectMapper(),
-            vectorize
-        )
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource("test_datasource")
+              .granularity(Granularities.ALL)
+              .intervals("2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z")
+              .aggregators(
+                  new SketchMergeAggregatorFactory("sketch_count", "pty_country", 16384, null, null, null),
+                  new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null, null, null)
+              )
+              .postAggregators(
+                  new SketchEstimatePostAggregator(
+                      "sketchEstimatePostAgg",
+                      new FieldAccessPostAggregator("sketchEstimatePostAgg", "sketch_count"),
+                      null
+                  ),
+                  new SketchEstimatePostAggregator(
+                      "sketchIntersectionPostAggEstimate",
+                      new SketchSetPostAggregator(
+                          "sketchIntersectionPostAgg",
+                          "INTERSECT",
+                          16384,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                              new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                          )
+                      ),
+                      null
+                  ),
+                  new SketchEstimatePostAggregator(
+                      "sketchAnotBPostAggEstimate",
+                      new SketchSetPostAggregator(
+                          "sketchAnotBUnionPostAgg",
+                          "NOT",
+                          16384,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                              new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                          )
+                      ),
+                      null
+                  ),
+                  new SketchEstimatePostAggregator(
+                      "sketchUnionPostAggEstimate",
+                      new SketchSetPostAggregator(
+                          "sketchUnionPostAgg",
+                          "UNION",
+                          16384,
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                              new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                          )
+                      ),
+                      null
+                  )
+              )
+              .context(ImmutableMap.of("vectorize", vectorize.toString()))
+              .build()
     );
 
-    Result<TimeseriesResultValue> result = (Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList());
+    Result<TimeseriesResultValue> result = Iterables.getOnlyElement(seq.toList());
 
-    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assertions.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
-    Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(0.0, result.getValue().getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals(0.0, result.getValue().getDoubleMetric("non_existing_col_validation"), 0.01);
+    Assertions.assertEquals(50.0, result.getValue().getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(50.0, result.getValue().getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(50.0, result.getValue().getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(50.0, result.getValue().getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(0.0, result.getValue().getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals(0.0, result.getValue().getDoubleMetric("non_existing_col_validation"), 0.01);
   }
 
 
-  @Test
-  public void testSimpleDataIngestAndTopNQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSimpleDataIngestAndTopNQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
+    setup(config);
+    AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
     );
 
-    Sequence seq = topNQueryAggregationTestHelper.runQueryOnSegments(
+    Sequence<Result<TopNResultValue>> seq = topNQueryAggregationTestHelper.runQueryOnSegments(
         ImmutableList.of(s1, s2),
-        (Query) SketchAggregationTest.readQueryFromClasspath(
-            "topn_query.json",
-            topNQueryAggregationTestHelper.getObjectMapper(),
-            vectorize
-        )
+        new TopNQueryBuilder()
+            .dataSource("test_datasource")
+            .granularity(Granularities.ALL)
+            .intervals("2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z")
+            .dimension(new DefaultDimensionSpec("product", "product"))
+            .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("sketch_count")))
+            .threshold(1)
+            .aggregators(
+                new SketchMergeAggregatorFactory("sketch_count", "pty_country", 16384, null, null, null),
+                new SketchMergeAggregatorFactory("non_existing_col_validation", "non_existing_col", 16384, null, null, null)
+            )
+            .postAggregators(
+                new SketchEstimatePostAggregator(
+                    "sketchEstimatePostAgg",
+                    new FieldAccessPostAggregator("sketchEstimatePostAgg", "sketch_count"),
+                    null
+                ),
+                new SketchEstimatePostAggregator(
+                    "sketchIntersectionPostAggEstimate",
+                    new SketchSetPostAggregator(
+                        "sketchIntersectionPostAgg",
+                        "INTERSECT",
+                        16384,
+                        ImmutableList.of(
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                        )
+                    ),
+                    null
+                ),
+                new SketchEstimatePostAggregator(
+                    "sketchAnotBPostAggEstimate",
+                    new SketchSetPostAggregator(
+                        "sketchAnotBUnionPostAgg",
+                        "NOT",
+                        16384,
+                        ImmutableList.of(
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                        )
+                    ),
+                    null
+                ),
+                new SketchEstimatePostAggregator(
+                    "sketchUnionPostAggEstimate",
+                    new SketchSetPostAggregator(
+                        "sketchUnionPostAgg",
+                        "UNION",
+                        16384,
+                        ImmutableList.of(
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count")
+                        )
+                    ),
+                    null
+                )
+            )
+            .context(ImmutableMap.of("vectorize", vectorize.toString()))
+            .build()
     );
 
-    Result<TopNResultValue> result = (Result<TopNResultValue>) Iterables.getOnlyElement(seq.toList());
+    Result<TopNResultValue> result = Iterables.getOnlyElement(seq.toList());
 
-    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assertions.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
     DimensionAndMetricValueExtractor value = Iterables.getOnlyElement(result.getValue().getValue());
-    Assert.assertEquals(38.0, value.getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(38.0, value.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(38.0, value.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(38.0, value.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(0.0, value.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals(0.0, value.getDoubleMetric("non_existing_col_validation"), 0.01);
-    Assert.assertEquals("product_3", value.getDimensionValue("product"));
+    Assertions.assertEquals(38.0, value.getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(38.0, value.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(38.0, value.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(38.0, value.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(0.0, value.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals(0.0, value.getDoubleMetric("non_existing_col_validation"), 0.01);
+    Assertions.assertEquals("product_3", value.getDimensionValue("product"));
   }
 
-  @Test
-  public void testTopNQueryWithSketchConstant() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testTopNQueryWithSketchConstant(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
+    setup(config);
+    AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
     );
 
-    Sequence seq = topNQueryAggregationTestHelper.runQueryOnSegments(
+    final String sketchConst = "AgMDAAAazJMCAAAAAACAPzz9j7pWTMdROWGf15uY1nI=";
+    Sequence<Result<TopNResultValue>> seq = topNQueryAggregationTestHelper.runQueryOnSegments(
         ImmutableList.of(s1, s2),
-        (Query) SketchAggregationTest.readQueryFromClasspath(
-            "topn_query_sketch_const.json",
-            topNQueryAggregationTestHelper.getObjectMapper(),
-            vectorize
-        )
+        new TopNQueryBuilder()
+            .dataSource("test_datasource")
+            .granularity(Granularities.ALL)
+            .intervals("2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z")
+            .dimension(new DefaultDimensionSpec("product", "product"))
+            .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("sketch_count")))
+            .threshold(3)
+            .aggregators(
+                new SketchMergeAggregatorFactory("sketch_count", "pty_country", 16384, null, null, null)
+            )
+            .postAggregators(
+                new SketchEstimatePostAggregator(
+                    "sketchEstimatePostAgg",
+                    new FieldAccessPostAggregator("sketchEstimatePostAgg", "sketch_count"),
+                    null
+                ),
+                new SketchEstimatePostAggregator(
+                    "sketchEstimatePostAggForSketchConstant",
+                    new SketchConstantPostAggregator("theta_sketch_count", sketchConst),
+                    null
+                ),
+                new SketchEstimatePostAggregator(
+                    "sketchIntersectionPostAggEstimate",
+                    new SketchSetPostAggregator(
+                        "sketchIntersectionPostAgg",
+                        "INTERSECT",
+                        16384,
+                        ImmutableList.of(
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                            new SketchConstantPostAggregator("theta_sketch_count", sketchConst)
+                        )
+                    ),
+                    null
+                ),
+                new SketchEstimatePostAggregator(
+                    "sketchAnotBPostAggEstimate",
+                    new SketchSetPostAggregator(
+                        "sketchAnotBUnionPostAgg",
+                        "NOT",
+                        16384,
+                        ImmutableList.of(
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                            new SketchConstantPostAggregator("theta_sketch_count", sketchConst)
+                        )
+                    ),
+                    null
+                ),
+                new SketchEstimatePostAggregator(
+                    "sketchUnionPostAggEstimate",
+                    new SketchSetPostAggregator(
+                        "sketchUnionPostAgg",
+                        "UNION",
+                        16384,
+                        ImmutableList.of(
+                            new FieldAccessPostAggregator("sketch_count", "sketch_count"),
+                            new SketchConstantPostAggregator("theta_sketch_count", sketchConst)
+                        )
+                    ),
+                    null
+                )
+            )
+            .context(ImmutableMap.of("vectorize", vectorize.toString()))
+            .build()
     );
 
-    Result<TopNResultValue> result = (Result<TopNResultValue>) Iterables.getOnlyElement(seq.toList());
+    Result<TopNResultValue> result = Iterables.getOnlyElement(seq.toList());
 
-    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assertions.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
     DimensionAndMetricValueExtractor value1 = Iterables.get(result.getValue().getValue(), 0);
-    Assert.assertEquals(38.0, value1.getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(38.0, value1.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(2.0, value1.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
-    Assert.assertEquals(39.0, value1.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(1.0, value1.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(37.0, value1.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals("product_3", value1.getDimensionValue("product"));
+    Assertions.assertEquals(38.0, value1.getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(38.0, value1.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(2.0, value1.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
+    Assertions.assertEquals(39.0, value1.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(1.0, value1.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(37.0, value1.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals("product_3", value1.getDimensionValue("product"));
 
     DimensionAndMetricValueExtractor value2 = Iterables.get(result.getValue().getValue(), 1);
-    Assert.assertEquals(42.0, value2.getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(42.0, value2.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(2.0, value2.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
-    Assert.assertEquals(42.0, value2.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(2.0, value2.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(40.0, value2.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals("product_1", value2.getDimensionValue("product"));
+    Assertions.assertEquals(42.0, value2.getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(42.0, value2.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(2.0, value2.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
+    Assertions.assertEquals(42.0, value2.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(2.0, value2.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(40.0, value2.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals("product_1", value2.getDimensionValue("product"));
 
     DimensionAndMetricValueExtractor value3 = Iterables.get(result.getValue().getValue(), 2);
-    Assert.assertEquals(42.0, value3.getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(42.0, value3.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(2.0, value3.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
-    Assert.assertEquals(42.0, value3.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(2.0, value3.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(40.0, value3.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals("product_2", value3.getDimensionValue("product"));
+    Assertions.assertEquals(42.0, value3.getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(42.0, value3.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(2.0, value3.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
+    Assertions.assertEquals(42.0, value3.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(2.0, value3.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(40.0, value3.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals("product_2", value3.getDimensionValue("product"));
   }
 
-  public static String readFileFromClasspathAsString(String fileName) throws IOException
-  {
-    return Files.asCharSource(
-        new File(SketchAggregationTest.class.getClassLoader().getResource(fileName).getFile()),
-        StandardCharsets.UTF_8
-    ).read();
-  }
 }

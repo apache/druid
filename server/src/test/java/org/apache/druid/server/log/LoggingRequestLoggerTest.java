@@ -36,6 +36,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
@@ -48,11 +49,11 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.layout.JsonLayout;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -157,7 +158,7 @@ public class LoggingRequestLoggerTest
       queryStats
   );
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpStatic()
   {
     LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
@@ -186,13 +187,13 @@ public class LoggingRequestLoggerTest
     logger.addAppender(appender);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     BAOS.reset();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownStatic()
   {
     final Logger logger = (Logger) LogManager.getLogger(
@@ -209,18 +210,40 @@ public class LoggingRequestLoggerTest
   }
 
   @Test
+  public void testSqlLogging() throws Exception
+  {
+    final RequestLogLine sqlLogLine = RequestLogLine.forSql(
+        "select * from foo WHERE x = ?",
+        List.of(new ClientSqlParameter("BIGINT", 1234L)),
+        Map.of("sqlQueryId", "id1"),
+        DateTimes.of("2026-01-01"),
+        null,
+        new QueryStats(Map.of("query/time", 13L))
+    );
+    final LoggingRequestLogger requestLogger = new LoggingRequestLogger(MAPPER, true, false);
+
+    requestLogger.logSqlQuery(sqlLogLine);
+    final String observedLogLine = BAOS.toString(StandardCharsets.UTF_8);
+
+    Assertions.assertEquals(
+        "2026-01-01T00:00:00.000Z\t\t\t{\"query/time\":13}\t{\"context\":{\"sqlQueryId\":\"id1\"},\"query\":\"select * from foo WHERE x = ?\",\"parameters\":[{\"type\":\"BIGINT\",\"value\":1234}]}",
+        MAPPER.readTree(observedLogLine).get("message").asText()
+    );
+  }
+
+  @Test
   public void testLoggingMDC() throws Exception
   {
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, false);
     requestLogger.logNativeQuery(logLine);
     final Map<String, Object> map = readContextMap(BAOS.toByteArray());
-    Assert.assertEquals("datasource", map.get("dataSource"));
-    Assert.assertEquals("PT86400S", map.get("duration"));
-    Assert.assertEquals("false", map.get("hasFilters"));
-    Assert.assertEquals("fake", map.get("queryType"));
-    Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("isNested"));
-    Assert.assertNull(map.get("foo"));
+    Assertions.assertEquals("datasource", map.get("dataSource"));
+    Assertions.assertEquals("PT86400S", map.get("duration"));
+    Assertions.assertEquals("false", map.get("hasFilters"));
+    Assertions.assertEquals("fake", map.get("queryType"));
+    Assertions.assertEquals("some.host.tld", map.get("remoteAddr"));
+    Assertions.assertEquals("false", map.get("isNested"));
+    Assertions.assertNull(map.get("foo"));
   }
 
   @Test
@@ -229,13 +252,13 @@ public class LoggingRequestLoggerTest
     final LoggingRequestLogger requestLogger = new LoggingRequestLogger(new DefaultObjectMapper(), true, true);
     requestLogger.logNativeQuery(logLine);
     final Map<String, Object> map = readContextMap(BAOS.toByteArray());
-    Assert.assertEquals("datasource", map.get("dataSource"));
-    Assert.assertEquals("PT86400S", map.get("duration"));
-    Assert.assertEquals("false", map.get("hasFilters"));
-    Assert.assertEquals("fake", map.get("queryType"));
-    Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("false", map.get("isNested"));
-    Assert.assertEquals("bar", map.get("foo"));
+    Assertions.assertEquals("datasource", map.get("dataSource"));
+    Assertions.assertEquals("PT86400S", map.get("duration"));
+    Assertions.assertEquals("false", map.get("hasFilters"));
+    Assertions.assertEquals("fake", map.get("queryType"));
+    Assertions.assertEquals("some.host.tld", map.get("remoteAddr"));
+    Assertions.assertEquals("false", map.get("isNested"));
+    Assertions.assertEquals("bar", map.get("foo"));
   }
 
   @Test
@@ -249,13 +272,13 @@ public class LoggingRequestLoggerTest
         queryStats
     ));
     final Map<String, Object> map = readContextMap(BAOS.toByteArray());
-    Assert.assertEquals("datasource", map.get("dataSource"));
-    Assert.assertEquals("PT86400S", map.get("duration"));
-    Assert.assertEquals("false", map.get("hasFilters"));
-    Assert.assertEquals("fake", map.get("queryType"));
-    Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("true", map.get("isNested"));
-    Assert.assertNull(map.get("foo"));
+    Assertions.assertEquals("datasource", map.get("dataSource"));
+    Assertions.assertEquals("PT86400S", map.get("duration"));
+    Assertions.assertEquals("false", map.get("hasFilters"));
+    Assertions.assertEquals("fake", map.get("queryType"));
+    Assertions.assertEquals("some.host.tld", map.get("remoteAddr"));
+    Assertions.assertEquals("true", map.get("isNested"));
+    Assertions.assertNull(map.get("foo"));
   }
 
   @Test
@@ -269,13 +292,13 @@ public class LoggingRequestLoggerTest
         queryStats
     ));
     final Map<String, Object> map = readContextMap(BAOS.toByteArray());
-    Assert.assertEquals("datasource", map.get("dataSource"));
-    Assert.assertEquals("PT86400S", map.get("duration"));
-    Assert.assertEquals("false", map.get("hasFilters"));
-    Assert.assertEquals("fake", map.get("queryType"));
-    Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertEquals("true", map.get("isNested"));
-    Assert.assertNull(map.get("foo"));
+    Assertions.assertEquals("datasource", map.get("dataSource"));
+    Assertions.assertEquals("PT86400S", map.get("duration"));
+    Assertions.assertEquals("false", map.get("hasFilters"));
+    Assertions.assertEquals("fake", map.get("queryType"));
+    Assertions.assertEquals("some.host.tld", map.get("remoteAddr"));
+    Assertions.assertEquals("true", map.get("isNested"));
+    Assertions.assertNull(map.get("foo"));
   }
 
   @Test
@@ -289,13 +312,13 @@ public class LoggingRequestLoggerTest
         queryStats
     ));
     final Map<String, Object> map = readContextMap(BAOS.toByteArray());
-    Assert.assertEquals("A,B", map.get("dataSource"));
-    Assert.assertEquals("true", map.get("isNested"));
-    Assert.assertEquals("PT86400S", map.get("duration"));
-    Assert.assertEquals("false", map.get("hasFilters"));
-    Assert.assertEquals("fake", map.get("queryType"));
-    Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
-    Assert.assertNull(map.get("foo"));
+    Assertions.assertEquals("A,B", map.get("dataSource"));
+    Assertions.assertEquals("true", map.get("isNested"));
+    Assertions.assertEquals("PT86400S", map.get("duration"));
+    Assertions.assertEquals("false", map.get("hasFilters"));
+    Assertions.assertEquals("fake", map.get("queryType"));
+    Assertions.assertEquals("some.host.tld", map.get("remoteAddr"));
+    Assertions.assertNull(map.get("foo"));
   }
 
   private static Map<String, Object> readContextMap(byte[] bytes) throws Exception

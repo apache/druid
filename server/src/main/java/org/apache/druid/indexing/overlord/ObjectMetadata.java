@@ -24,6 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Objects;
 
+/**
+ * {@link DataSourceMetadata} that contains a raw {@link Object}. Used in tests.
+ */
 public final class ObjectMetadata implements DataSourceMetadata
 {
   private final Object theObject;

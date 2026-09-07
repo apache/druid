@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.InjectableValues.Std;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -35,7 +35,7 @@ public class BuildingSingleDimensionShardSpecTest
   @Test
   public void testConvert()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new SingleDimensionShardSpec("dim", "start", "end", 5, 10),
         new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5).convert(10)
     );
@@ -44,7 +44,7 @@ public class BuildingSingleDimensionShardSpecTest
   @Test
   public void testCreateChunk()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new NumberedPartitionChunk<>(5, 0, "test"),
         new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5).createChunk("test")
     );
@@ -57,10 +57,10 @@ public class BuildingSingleDimensionShardSpecTest
         new BuildingSingleDimensionShardSpec(1, "dim", "start", "end", 5);
     final String json = serialize(original);
     ShardSpec shardSpec = deserialize(json, ShardSpec.class);
-    Assert.assertEquals(ShardSpec.Type.BUILDING_SINGLE_DIM, shardSpec.getType());
+    Assertions.assertEquals(ShardSpec.Type.BUILDING_SINGLE_DIM, shardSpec.getType());
 
     final BuildingSingleDimensionShardSpec fromJson = (BuildingSingleDimensionShardSpec) shardSpec;
-    Assert.assertEquals(original, fromJson);
+    Assertions.assertEquals(original, fromJson);
   }
 
   @Test
@@ -71,12 +71,12 @@ public class BuildingSingleDimensionShardSpecTest
 
     // Verify the fields of the serializable object
     Map<String, Object> jsonMap = shardSpec.getSerializableObject();
-    Assert.assertEquals(5, jsonMap.size());
-    Assert.assertEquals(1, jsonMap.get("bucketId"));
-    Assert.assertEquals("dim", jsonMap.get("dimension"));
-    Assert.assertEquals("abc", jsonMap.get("start"));
-    Assert.assertEquals("xyz", jsonMap.get("end"));
-    Assert.assertEquals(5, jsonMap.get("partitionNum"));
+    Assertions.assertEquals(5, jsonMap.size());
+    Assertions.assertEquals(1, jsonMap.get("bucketId"));
+    Assertions.assertEquals("dim", jsonMap.get("dimension"));
+    Assertions.assertEquals("abc", jsonMap.get("start"));
+    Assertions.assertEquals("xyz", jsonMap.get("end"));
+    Assertions.assertEquals(5, jsonMap.get("partitionNum"));
   }
 
   @Test
@@ -91,7 +91,7 @@ public class BuildingSingleDimensionShardSpecTest
 
     BuildingSingleDimensionShardSpec shardSpec =
         (BuildingSingleDimensionShardSpec) deserialize(json, ShardSpec.class);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new BuildingSingleDimensionShardSpec(1, "dim", "abc", "xyz", 5),
         shardSpec
     );
@@ -100,7 +100,7 @@ public class BuildingSingleDimensionShardSpecTest
   @Test
   public void testEquals()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new BuildingSingleDimensionShardSpec(10, "dim", "start", "end", 4),
         new BuildingSingleDimensionShardSpec(10, "dim", "start", "end", 4)
     );

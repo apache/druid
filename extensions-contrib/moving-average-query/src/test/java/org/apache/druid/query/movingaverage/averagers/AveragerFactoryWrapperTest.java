@@ -20,8 +20,8 @@
 package org.apache.druid.query.movingaverage.averagers;
 
 import org.apache.druid.query.movingaverage.AveragerFactoryWrapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class AveragerFactoryWrapperTest
 {
@@ -32,7 +32,7 @@ public class AveragerFactoryWrapperTest
         new DoubleMaxAveragerFactory("double", 1, 1, "test"),
         "test"
     );
-    Assert.assertEquals(factoryWrapper, factoryWrapper.withName("test"));
-    Assert.assertEquals("newTestdouble", factoryWrapper.withName("newTest").getName());
+    Assertions.assertEquals(factoryWrapper, factoryWrapper.withName("test"));
+    Assertions.assertEquals("newTestdouble", factoryWrapper.withName("newTest").getName());
   }
 }

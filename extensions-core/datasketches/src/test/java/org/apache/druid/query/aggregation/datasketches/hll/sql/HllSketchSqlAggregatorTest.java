@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -87,7 +88,7 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -260,11 +261,14 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       HllSketchModule.registerSerde();
       final QueryableIndex index = IndexBuilder
-          .create()
+          .create(jsonMapper)
           .tmpDir(tempDirProducer.newTempFolder())
           .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
           .schema(
@@ -509,7 +513,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
   {
-    DruidException druidException = Assert.assertThrows(
+    DruidException druidException = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             "SELECT APPROX_COUNT_DISTINCT_DS_HLL(double_first_added) FROM druid.wikipedia_first_last",
@@ -517,7 +521,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    Assert.assertTrue(druidException.getMessage().contains(
+    Assertions.assertTrue(druidException.getMessage().contains(
         "Cannot apply 'APPROX_COUNT_DISTINCT_DS_HLL' to arguments of type 'APPROX_COUNT_DISTINCT_DS_HLL(<COMPLEX<SERIALIZABLEPAIRLONGDOUBLE>>)'"
     ));
   }
@@ -1117,7 +1121,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
       );
     }
     catch (IllegalArgumentException e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.getMessage().contains("Input byte[] should at least have 2 bytes for base64 bytes")
       );
     }

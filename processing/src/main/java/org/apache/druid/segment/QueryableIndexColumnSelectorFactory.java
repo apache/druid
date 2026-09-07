@@ -26,13 +26,14 @@ import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.SelectableColumn;
 import org.apache.druid.segment.column.ValueTypes;
 import org.apache.druid.segment.data.ReadableOffset;
-import org.apache.druid.segment.nested.NestedDataComplexColumn;
+import org.apache.druid.segment.nested.NestedColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -49,23 +50,23 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
 
   // Share Column objects, since they cache decompressed buffers internally, and we can avoid recomputation if the
   // same column is used by more than one part of a query.
-  private final ColumnCache columnCache;
+  private final ColumnSelector columnSelector;
 
   // Share selectors too, for the same reason that we cache columns (they may cache things internally).
   private final Map<DimensionSpec, DimensionSelector> dimensionSelectorCache;
-  private final Map<String, ColumnValueSelector> valueSelectorCache;
+  private final Map<String, ColumnValueSelector<?>> valueSelectorCache;
 
   public QueryableIndexColumnSelectorFactory(
       VirtualColumns virtualColumns,
       Order timeOrder,
       ReadableOffset offset,
-      ColumnCache columnCache
+      ColumnSelector columnSelector
   )
   {
     this.virtualColumns = virtualColumns;
     this.timeOrder = timeOrder;
     this.offset = offset;
-    this.columnCache = columnCache;
+    this.columnSelector = columnSelector;
     this.dimensionSelectorCache = new HashMap<>();
     this.valueSelectorCache = new HashMap<>();
   }
@@ -75,12 +76,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   {
     Function<DimensionSpec, DimensionSelector> mappingFunction = spec -> {
       if (virtualColumns.exists(spec.getDimension())) {
-        DimensionSelector dimensionSelector = virtualColumns.makeDimensionSelector(dimensionSpec, columnCache, offset);
-        if (dimensionSelector == null) {
-          return virtualColumns.makeDimensionSelector(dimensionSpec, this);
-        } else {
-          return dimensionSelector;
-        }
+        return virtualColumns.makeDimensionSelector(dimensionSpec, this, columnSelector, offset);
       }
 
       return spec.decorate(makeDimensionSelectorUndecorated(spec));
@@ -103,7 +99,7 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    final ColumnHolder columnHolder = columnCache.getColumnHolder(dimension);
+    final ColumnHolder columnHolder = columnSelector.getColumnHolder(dimension);
     if (columnHolder == null) {
       return DimensionSelector.constant(null, extractionFn);
     }
@@ -125,15 +121,18 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
       );
     }
 
-    final BaseColumn column = columnCache.getColumn(dimension);
+    final SelectableColumn column = columnHolder.getColumn();
 
     if (column instanceof DictionaryEncodedColumn) {
       return ((DictionaryEncodedColumn<?>) column).makeDimensionSelector(offset, extractionFn);
-    } else if (column instanceof NestedDataComplexColumn) {
-      return ((NestedDataComplexColumn) column).makeDimensionSelector(Collections.emptyList(), offset, extractionFn);
-    } else {
-      return DimensionSelector.constant(null, extractionFn);
     }
+
+    final NestedColumnSelectorFactory nestedColumnSelectorFactory = column.as(NestedColumnSelectorFactory.class);
+    if (nestedColumnSelectorFactory != null) {
+      return nestedColumnSelectorFactory.makeDimensionSelector(List.of(), extractionFn, this, offset);
+    }
+
+    return DimensionSelector.constant(null, extractionFn);
   }
 
   @Override
@@ -145,17 +144,11 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
     ColumnValueSelector<?> columnValueSelector = valueSelectorCache.get(columnName);
     if (columnValueSelector == null) {
       if (virtualColumns.exists(columnName)) {
-        ColumnValueSelector<?> selector = virtualColumns.makeColumnValueSelector(columnName, columnCache, offset);
-        if (selector == null) {
-          columnValueSelector = virtualColumns.makeColumnValueSelector(columnName, this);
-        } else {
-          columnValueSelector = selector;
-        }
+        columnValueSelector = virtualColumns.makeColumnValueSelector(columnName, this, columnSelector, offset);
       } else {
-        BaseColumn column = columnCache.getColumn(columnName);
-
-        if (column != null) {
-          columnValueSelector = column.makeColumnValueSelector(offset);
+        final ColumnHolder columnHolder = columnSelector.getColumnHolder(columnName);
+        if (columnHolder != null && columnHolder.getColumn() instanceof BaseColumn) {
+          columnValueSelector = ((BaseColumn) columnHolder.getColumn()).makeColumnValueSelector(offset);
         } else {
           columnValueSelector = NilColumnValueSelector.instance();
         }
@@ -183,6 +176,6 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    return virtualColumns.getColumnCapabilitiesWithFallback(columnCache, columnName);
+    return virtualColumns.getColumnCapabilitiesWithFallback(columnSelector, columnName);
   }
 }

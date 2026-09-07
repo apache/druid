@@ -22,11 +22,13 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
@@ -34,7 +36,6 @@ import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.NonnullPair;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -48,11 +49,17 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.transform.ExpressionTransform;
+import org.apache.druid.segment.transform.Transform;
+import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.utils.CollectionUtils;
@@ -60,6 +67,7 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,9 +88,43 @@ public final class SegmentGenerationUtils
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
     final boolean isRollupQuery = isRollupQuery(query);
+
+    final TransformSpec transformSpec;
+    if (query.getFilter() != null) {
+      List<Transform> transforms = new ArrayList<>();
+      for (VirtualColumn vc : query.getVirtualColumns().getVirtualColumns()) {
+        if (vc instanceof ExpressionVirtualColumn) {
+          transforms.add(new ExpressionTransform(vc.getOutputName(), ((ExpressionVirtualColumn) vc).getExpression(), null));
+        }
+      }
+      transformSpec = new TransformSpec(query.getFilter(), transforms);
+    } else {
+      transformSpec = null;
+    }
+
+    // base-table mode, the destination supplies the base-table shape
+    if (destination.getBaseTable() != null) {
+      final Granularity queryGranularity =
+          query.context().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper);
+      final BaseTableProjectionSpec declared =
+          destination.getBaseTable().withQueryGranularity(queryGranularity);
+      // The query may produce columns the base table does not declare, which happens when the target table does not
+      // require a strict schema. Store them rather than drop them; they are appended after the declared columns, so
+      // the shape the operator asked for is unchanged.
+      final BaseTableProjectionSpec baseTable = declared.withAdditionalColumns(
+          undeclaredColumns(declared, querySignature, columnMappings, query, destination.getDimensionSchemas())
+      );
+      return DataSchema.builder()
+                       .withDataSource(destination.getDataSource())
+                       .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
+                       .withTransform(transformSpec)
+                       .withBaseTable(baseTable)
+                       .withProjections(destination.getProjections())
+                       .build();
+    }
+
     final boolean forceSegmentSortByTime =
         MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getContext());
-
     final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
         makeDimensionsAndAggregatorsForIngestion(
             querySignature,
@@ -94,13 +136,18 @@ public final class SegmentGenerationUtils
             query,
             destination.getDimensionSchemas()
         );
-
     return DataSchema.builder()
                      .withDataSource(destination.getDataSource())
                      .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
                      .withDimensions(dimensionsAndAggregators.lhs)
                      .withAggregators(dimensionsAndAggregators.rhs.toArray(new AggregatorFactory[0]))
-                     .withGranularity(makeGranularitySpecForIngestion(query, querySpec.getColumnMappings(), isRollupQuery, jsonMapper))
+                     .withGranularity(makeGranularitySpecForIngestion(
+                         query,
+                         querySpec.getColumnMappings(),
+                         isRollupQuery,
+                         jsonMapper
+                     ))
+                     .withTransform(transformSpec)
                      .withProjections(destination.getProjections())
                      .build();
   }
@@ -112,26 +159,23 @@ public final class SegmentGenerationUtils
       final ObjectMapper jsonMapper
   )
   {
+    final Granularity insertQueryGranularity =
+        query.context().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper);
     if (isRollupQuery) {
       final String queryGranularityString =
           query.context().getString(GroupByQuery.CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY, "");
 
       if (timeIsGroupByDimension((GroupByQuery) query, columnMappings) && !queryGranularityString.isEmpty()) {
-        final Granularity queryGranularity;
-
         try {
-          queryGranularity = jsonMapper.readValue(queryGranularityString, Granularity.class);
+          final Granularity queryGranularity = jsonMapper.readValue(queryGranularityString, Granularity.class);
+          return new ArbitraryGranularitySpec(queryGranularity, true, Intervals.ONLY_ETERNITY);
         }
         catch (JsonProcessingException e) {
           throw new RuntimeException(e);
         }
-
-        return new ArbitraryGranularitySpec(queryGranularity, true, Intervals.ONLY_ETERNITY);
       }
-      return new ArbitraryGranularitySpec(Granularities.NONE, true, Intervals.ONLY_ETERNITY);
-    } else {
-      return new ArbitraryGranularitySpec(Granularities.NONE, false, Intervals.ONLY_ETERNITY);
     }
+    return new ArbitraryGranularitySpec(insertQueryGranularity, isRollupQuery, Intervals.ONLY_ETERNITY);
   }
 
   /**
@@ -174,6 +218,62 @@ public final class SegmentGenerationUtils
     return query instanceof GroupByQuery
            && !MultiStageQueryContext.isFinalizeAggregations(query.context())
            && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
+  }
+
+  /**
+   * The columns a query produces that a base table does not declare, in query output order, as the
+   * {@link DimensionSchema}s they should be stored with.
+   * <p>
+   * A base table declares the columns an operator asked for. When the target table does not require a strict schema,
+   * a query may produce others; they are stored so that ingesting a column is never silently a no-op.
+   */
+  private static List<DimensionSchema> undeclaredColumns(
+      final BaseTableProjectionSpec baseTable,
+      final RowSignature querySignature,
+      final ColumnMappings columnMappings,
+      final Query<?> query,
+      @Nullable final Map<String, DimensionSchema> dimensionSchemas
+  )
+  {
+    final Set<String> declared = new HashSet<>();
+    for (DimensionSchema dimension : baseTable.getDimensionsSpec().getDimensions()) {
+      declared.add(dimension.getName());
+    }
+    for (AggregatorFactory metric : baseTable.getMetrics() == null ? new AggregatorFactory[0] : baseTable.getMetrics()) {
+      declared.add(metric.getName());
+    }
+    // The time column is positional in a base table, never appended.
+    declared.add(ColumnHolder.TIME_COLUMN_NAME);
+
+    final List<DimensionSchema> undeclared = new ArrayList<>();
+    for (final String outputColumnName : columnMappings.getOutputColumnNames()) {
+      if (!declared.add(outputColumnName)) {
+        continue;
+      }
+      final int outputColumn = CollectionUtils.getOnlyElement(
+          columnMappings.getOutputColumnsByName(outputColumnName),
+          xs -> new ISE("Expected single output column for name [%s], but got [%s]", outputColumnName, xs)
+      );
+      final String queryColumn = columnMappings.getQueryColumnName(outputColumn);
+      final ColumnType type =
+          querySignature.getColumnType(queryColumn)
+                        .orElseThrow(() -> new ISE("No type for column [%s]", outputColumnName));
+
+      if (type.is(ValueType.COMPLEX)) {
+        final String typeName = type.getComplexTypeName();
+        if (typeName == null || !DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(typeName)) {
+          // A base table stores columns as dimensions, so a complex type with no dimension handler has nowhere to go
+          throw InvalidInput.exception(
+              "Column [%s] has type [%s], which cannot be stored in a base table that does not declare it. Declare the"
+              + " column in the table, or cast it to a type that can be stored as a dimension",
+              outputColumnName,
+              type
+          );
+        }
+      }
+      undeclared.add(getDimensionSchema(outputColumnName, type, query.context(), dimensionSchemas));
+    }
+    return undeclared;
   }
 
   private static DimensionSchema getDimensionSchema(

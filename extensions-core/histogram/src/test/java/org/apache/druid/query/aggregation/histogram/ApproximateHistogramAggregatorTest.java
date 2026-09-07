@@ -32,8 +32,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -70,20 +70,18 @@ public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingT
 
     ApproximateHistogram h = ((ApproximateHistogram) agg.get(buf, position));
 
-    Assert.assertArrayEquals(
-        "final bin positions don't match expected positions",
-        new float[]{2, 9.5f, 19.33f, 32.67f, 45f}, h.positions, 0.01f
+    Assertions.assertArrayEquals(
+        new float[]{2, 9.5f, 19.33f, 32.67f, 45f}, h.positions, 0.01f, "final bin positions don't match expected positions"
     );
 
-    Assert.assertArrayEquals(
-        "final bin counts don't match expected counts",
-        new long[]{1, 2, 3, 3, 1}, h.bins()
+    Assertions.assertArrayEquals(
+        new long[]{1, 2, 3, 3, 1}, h.bins(), "final bin counts don't match expected counts"
     );
 
-    Assert.assertEquals("getMin value doesn't match expected getMin", 2, h.min(), 0);
-    Assert.assertEquals("getMax value doesn't match expected getMax", 45, h.max(), 0);
+    Assertions.assertEquals(2, h.min(), 0, "getMin value doesn't match expected getMin");
+    Assertions.assertEquals(45, h.max(), 0, "getMax value doesn't match expected getMax");
 
-    Assert.assertEquals("bin count doesn't match expected bin count", 5, h.binCount());
+    Assertions.assertEquals(5, h.binCount(), "bin count doesn't match expected bin count");
   }
 
   @Test
@@ -112,10 +110,10 @@ public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingT
     JsonNode expectedJson = objectMapper.readTree(
             "{\"breaks\":[23.0,23.0,23.0,23.0,23.0,23.0],\"counts\":[0.0,0.0,0.0,0.0,0.0]}");
     JsonNode actualJson = objectMapper.readTree(finalStringHumanReadable);
-    Assert.assertEquals(expectedJson, actualJson);
+    Assertions.assertEquals(expectedJson, actualJson);
     Object finalizedObjectBinary = binaryFactory.finalizeComputation(agg.get());
     String finalStringBinary = objectMapper.writeValueAsString(finalizedObjectBinary);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"//sBQbgAAA==\"",
         finalStringBinary
     );
@@ -141,7 +139,7 @@ public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingT
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("approxHisto", null)
@@ -167,7 +165,7 @@ public class ApproximateHistogramAggregatorTest extends InitializedNullHandlingT
         null,
         false
     );
-    Assert.assertEquals(factory, factory.withName("approxHisto"));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName("approxHisto"));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

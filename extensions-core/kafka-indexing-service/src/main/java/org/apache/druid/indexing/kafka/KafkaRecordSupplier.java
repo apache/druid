@@ -36,6 +36,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
@@ -48,7 +49,6 @@ import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -61,6 +61,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -96,10 +97,11 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       Map<String, Object> consumerProperties,
       ObjectMapper sortingMapper,
       KafkaConfigOverrides configOverrides,
-      boolean multiTopic
+      boolean multiTopic,
+      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, (KafkaHeaderBasedFilterConfig) null);
+    this(consumerProperties, sortingMapper, configOverrides, multiTopic, metricBuilderSupplier, null);
   }
 
   public KafkaRecordSupplier(
@@ -107,30 +109,41 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       ObjectMapper sortingMapper,
       KafkaConfigOverrides configOverrides,
       boolean multiTopic,
+      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier,
       @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, headerBasedFilterConfig);
-  }
-
-  @VisibleForTesting
-  public KafkaRecordSupplier(KafkaConsumer<byte[], byte[]> consumer, boolean multiTopic)
-  {
-    this(consumer, multiTopic, (KafkaHeaderBasedFilterConfig) null);
+    this(
+        getKafkaConsumer(sortingMapper, consumerProperties, configOverrides),
+        multiTopic,
+        metricBuilderSupplier,
+        headerBasedFilterConfig
+    );
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(
       KafkaConsumer<byte[], byte[]> consumer,
       boolean multiTopic,
+      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
+  )
+  {
+    this(consumer, multiTopic, metricBuilderSupplier, null);
+  }
+
+  @VisibleForTesting
+  public KafkaRecordSupplier(
+      KafkaConsumer<byte[], byte[]> consumer,
+      boolean multiTopic,
+      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier,
       @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
   )
   {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
-    this.monitor = new KafkaConsumerMonitor(consumer);
-    this.headerFilterEvaluator = headerBasedFilterConfig != null ?
-        new KafkaHeaderBasedFilterEvaluator(headerBasedFilterConfig) : null;
+    this.monitor = new KafkaConsumerMonitor(consumer, metricBuilderSupplier);
+    this.headerFilterEvaluator = headerBasedFilterConfig != null
+        ? new KafkaHeaderBasedFilterEvaluator(headerBasedFilterConfig) : null;
   }
 
   @Override
@@ -204,12 +217,14 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
 
       // Apply header filter if configured
       if (headerFilterEvaluator != null && !headerFilterEvaluator.shouldIncludeRecord(record)) {
-        // Create filtered record for offset advancement with filtered=true flag
+        // Mark the record as filtered so the downstream reader skips parsing but still advances the offset.
+        // The payload entity is retained (not dropped) so that its bytes are still counted towards
+        // "ingest/input/bytes", consistent with the all-input-bytes contract of that metric.
         polledRecords.add(new OrderedPartitionableRecord<>(
             record.topic(),
             kafkaPartition,
             record.offset(),
-            Collections.emptyList(), // Empty list for filtered records
+            record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
             record.timestamp(),
             true // Mark as filtered
         ));
@@ -276,6 +291,12 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       ),
       p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition())
     ));
+  }
+
+  @Override
+  public double getPollIdleRatioMetric()
+  {
+    return monitor.getPollIdleRatioAvg();
   }
 
   @Override

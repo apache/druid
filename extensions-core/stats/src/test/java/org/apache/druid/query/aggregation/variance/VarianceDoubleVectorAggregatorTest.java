@@ -21,18 +21,21 @@ package org.apache.druid.query.aggregation.variance;
 
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingTest
 {
   private static final int START_ROW = 1;
@@ -48,7 +51,7 @@ public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingT
 
   private VarianceDoubleVectorAggregator target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     byte[] randomBytes = new byte[1024];
@@ -64,9 +67,9 @@ public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingT
   {
     target.init(buf, UNINIT_POSITION);
     VarianceAggregatorCollector collector = VarianceBufferAggregator.getVarianceCollector(buf, UNINIT_POSITION);
-    Assert.assertEquals(0, collector.count);
-    Assert.assertEquals(0, collector.sum, EPSILON);
-    Assert.assertEquals(0, collector.nvariance, EPSILON);
+    Assertions.assertEquals(0, collector.count);
+    Assertions.assertEquals(0, collector.sum, EPSILON);
+    Assertions.assertEquals(0, collector.nvariance, EPSILON);
   }
 
   @Test
@@ -74,9 +77,9 @@ public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingT
   {
     target.aggregate(buf, POSITION, START_ROW, VALUES.length);
     VarianceAggregatorCollector collector = VarianceBufferAggregator.getVarianceCollector(buf, POSITION);
-    Assert.assertEquals(VALUES.length - START_ROW, collector.count);
-    Assert.assertEquals(217.67, collector.sum, EPSILON);
-    Assert.assertEquals(7565.211675, collector.nvariance, EPSILON);
+    Assertions.assertEquals(VALUES.length - START_ROW, collector.count);
+    Assertions.assertEquals(217.67, collector.sum, EPSILON);
+    Assertions.assertEquals(7565.211675, collector.nvariance, EPSILON);
   }
 
   @Test
@@ -85,12 +88,12 @@ public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingT
     mockNullsVector();
     target.aggregate(buf, POSITION, START_ROW, VALUES.length);
     VarianceAggregatorCollector collector = VarianceBufferAggregator.getVarianceCollector(buf, POSITION);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         VALUES.length - START_ROW - 2,
         collector.count
     );
-    Assert.assertEquals(134, collector.sum, EPSILON);
-    Assert.assertEquals(6272, collector.nvariance, EPSILON);
+    Assertions.assertEquals(134, collector.sum, EPSILON);
+    Assertions.assertEquals(6272, collector.nvariance, EPSILON);
   }
 
   @Test
@@ -105,9 +108,9 @@ public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingT
           buf,
           positions[i] + positionOffset
       );
-      Assert.assertEquals(1, collector.count);
-      Assert.assertEquals(VALUES[i], collector.sum, EPSILON);
-      Assert.assertEquals(0, collector.nvariance, EPSILON);
+      Assertions.assertEquals(1, collector.count);
+      Assertions.assertEquals(VALUES[i], collector.sum, EPSILON);
+      Assertions.assertEquals(0, collector.nvariance, EPSILON);
     }
   }
 
@@ -124,9 +127,9 @@ public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingT
           buf,
           positions[i] + positionOffset
       );
-      Assert.assertEquals(1, collector.count);
-      Assert.assertEquals(VALUES[rows[i]], collector.sum, EPSILON);
-      Assert.assertEquals(0, collector.nvariance, EPSILON);
+      Assertions.assertEquals(1, collector.count);
+      Assertions.assertEquals(VALUES[rows[i]], collector.sum, EPSILON);
+      Assertions.assertEquals(0, collector.nvariance, EPSILON);
     }
   }
 
@@ -145,9 +148,9 @@ public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingT
           positions[i] + positionOffset
       );
       boolean isNull = NULLS[rows[i]];
-      Assert.assertEquals(isNull ? 0 : 1, collector.count);
-      Assert.assertEquals(isNull ? 0 : VALUES[rows[i]], collector.sum, EPSILON);
-      Assert.assertEquals(0, collector.nvariance, EPSILON);
+      Assertions.assertEquals(isNull ? 0 : 1, collector.count);
+      Assertions.assertEquals(isNull ? 0 : VALUES[rows[i]], collector.sum, EPSILON);
+      Assertions.assertEquals(0, collector.nvariance, EPSILON);
     }
   }
 
@@ -155,9 +158,9 @@ public class VarianceDoubleVectorAggregatorTest extends InitializedNullHandlingT
   public void getShouldReturnAllZeros()
   {
     VarianceAggregatorCollector collector = target.get(buf, POSITION);
-    Assert.assertEquals(0, collector.count);
-    Assert.assertEquals(0, collector.sum, EPSILON);
-    Assert.assertEquals(0, collector.nvariance, EPSILON);
+    Assertions.assertEquals(0, collector.count);
+    Assertions.assertEquals(0, collector.sum, EPSILON);
+    Assertions.assertEquals(0, collector.nvariance, EPSILON);
   }
   private void clearBufferForPositions(int offset, int... positions)
   {

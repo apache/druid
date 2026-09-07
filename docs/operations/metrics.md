@@ -31,6 +31,8 @@ All Druid metrics share a common set of fields:
 * `metric`: the name of the metric
 * `service`: the service name that emitted the metric
 * `host`: the host name that emitted the metric
+* `version`: the Druid version of the service that emitted the metric
+* `buildRevision`: the git commit of the build that produced the service binary. Useful for verifying that all nodes in a cluster are running the intended revision during rolling deployments.
 * `value`: some numeric value associated with the metric
 
 Metrics may have additional dimensions beyond those listed above.
@@ -45,13 +47,13 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`query/time`|Milliseconds taken to complete a query.|Native Query: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.|< 1s|
+|`query/time`|Milliseconds taken to complete a query.|Native Query: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.|< 1s|
 
 ### Broker
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p>Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p>GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p>Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p>GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
 |`query/bytes`|The total number of bytes returned to the requesting client in the query response from the broker. Other services report the total bytes for their portion of the query. |<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>| |
 |`query/node/time`|Milliseconds taken to query individual historical/realtime processes.|`id`, `status`, `server`|< 1s|
 |`query/resultCache/hit`|Whether the query hit the result cache (1) or not (0). Emission of the metric indicates the result-level cache was polled.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p>|Varies|
@@ -62,15 +64,17 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
-|`query/segments/count`|This metric is not enabled by default. See the `QueryMetrics` Interface for reference regarding enabling this metric. Number of segments that will be touched by the query. In the broker, it makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the broker. The broker will resend the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.||Varies|
+|`query/segments/count`|This metric is not enabled by default. Number of segments that will be touched by the query. The Broker makes a plan to distribute the query to realtime tasks and historicals based on a snapshot of segment distribution state. If there are some segments moved after this snapshot is created, certain historicals and realtime tasks can report those segments as missing to the Broker. The Broker will resend the query to the new servers that serve those segments after move. In this case, those segments can be counted more than once in this metric.||Varies|
 |`query/priority`|Assigned lane and priority, only if Laning strategy is enabled. Refer to [Laning strategies](../configuration/index.md#laning-strategies)|`lane`, `dataSource`, `type`|0|
-|`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`|< 1s|
+|`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`serverview/init/time`|Time taken to initialize the broker server view. Useful to detect if brokers are taking too long to start.||Depends on the number of segments.|
 |`metadatacache/init/time`|Time taken to initialize the broker segment metadata cache. Useful to detect if brokers are taking too long to start||Depends on the number of segments.|
+|`segment/metadataCache/sync/time`|Time taken to poll segment metadata from the Coordinator and update the segment metadata cache. This metric is emitted only if [metadata cache](../configuration/index.md#sql) is enabled on the Broker.||Depends on the number of segments.|
 |`segment/schemaCache/refresh/count`|Number of segments refreshed in broker segment schema cache.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in broker segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the broker segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/poll/count`|Number of coordinator polls to fetch datasource schema.|||
 |`segment/schemaCache/poll/failed`|Number of failed coordinator polls to fetch datasource schema.|||
 |`metadatacache/schemaPoll/time`|Time taken for coordinator polls to fetch datasource schema.|||
@@ -89,15 +93,22 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`mergeBuffer/used`|Number of merge buffers used from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
 |`mergeBuffer/queries`|Number of groupBy queries that acquired a batch of buffers from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
 |`mergeBuffer/acquisitionTimeNs`|Total time in nanoseconds to acquire merge buffer for groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/maxAcquisitionTimeNs`|Maximum time in nanoseconds to acquire merge buffer for any single groupBy query within the emission period.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/bytesUsed`|Total merge buffer bytes used to process groupBy queries, summed across queries. Each query's value is itself the sum across the slices it held: a merge buffer is divided among `druid.processing.numThreads` concurrent query slices, so a query can spill once a single slice fills even though this summed usage looks well below `druid.processing.buffer.sizeBytes`. To gauge spill pressure, use `mergeBuffer/maxSpillProximity` rather than comparing this to `sizeBytes`.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/maxBytesUsed`|Maximum merge buffer bytes used by any single groupBy query within the emission period, where each query's usage is the sum across the slices it held. Because the buffer is sliced among `druid.processing.numThreads` query slices, this value is not directly comparable to `druid.processing.buffer.sizeBytes`; use `mergeBuffer/maxSpillProximity` to gauge spill pressure.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/maxSpillProximity`|How close any single groupBy query came to spilling within the emission period, as a fraction in [0.0, 1.0]. A merge buffer is divided into `druid.processing.numThreads` slices and a query spills as soon as its fullest single slice's hash table cannot allocate another bucket; this metric is that fullest slice's peak fill ratio (bucket count over the load-factor bucket limit), taken as a max across slices and across queries. **1.0 corresponds exactly to the spill trigger** — the value is bucket-count based, so it is not distorted by bucket width, offset-list overhead, or integer truncation. If you see 1.0, raise `druid.processing.buffer.sizeBytes` or lower `druid.processing.numThreads` to widen each slice. Read alongside `groupBy/spilledQueries`.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`groupBy/maxSpilledBytes`|Maximum number of bytes spilled to disk by any single groupBy query within the emission period.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`groupBy/maxMergeDictionarySize`|Maximum size of the on-heap merge dictionary in bytes observed for any single groupBy query within the emission period.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 
 ### Historical
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/segments/count`|This metric is not enabled by default. Number of segments this Historical scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|Varies|
 |`query/segment/time`|Milliseconds taken to query individual segment. Includes time to page in the segment from disk.|`id`, `status`, `segment`, `vectorized`.|several hundred milliseconds|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `segment`|< several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
@@ -113,15 +124,27 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`mergeBuffer/used`|Number of merge buffers used from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
 |`mergeBuffer/queries`|Number of groupBy queries that acquired a batch of buffers from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
 |`mergeBuffer/acquisitionTimeNs`|Total time in nanoseconds to acquire merge buffer for groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/maxAcquisitionTimeNs`|Maximum time in nanoseconds to acquire merge buffer for any single groupBy query within the emission period.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/bytesUsed`|Total merge buffer bytes used to process groupBy queries, summed across queries. Each query's value is itself the sum across the slices it held: a merge buffer is divided among `druid.processing.numThreads` concurrent query slices, so a query can spill once a single slice fills even though this summed usage looks well below `druid.processing.buffer.sizeBytes`. To gauge spill pressure, use `mergeBuffer/maxSpillProximity` rather than comparing this to `sizeBytes`.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/maxBytesUsed`|Maximum merge buffer bytes used by any single groupBy query within the emission period, where each query's usage is the sum across the slices it held. Because the buffer is sliced among `druid.processing.numThreads` query slices, this value is not directly comparable to `druid.processing.buffer.sizeBytes`; use `mergeBuffer/maxSpillProximity` to gauge spill pressure.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/maxSpillProximity`|How close any single groupBy query came to spilling within the emission period, as a fraction in [0.0, 1.0]. A merge buffer is divided into `druid.processing.numThreads` slices and a query spills as soon as its fullest single slice's hash table cannot allocate another bucket; this metric is that fullest slice's peak fill ratio (bucket count over the load-factor bucket limit), taken as a max across slices and across queries. **1.0 corresponds exactly to the spill trigger** — the value is bucket-count based, so it is not distorted by bucket width, offset-list overhead, or integer truncation. If you see 1.0, raise `druid.processing.buffer.sizeBytes` or lower `druid.processing.numThreads` to widen each slice. Read alongside `groupBy/spilledQueries`.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`groupBy/maxSpilledBytes`|Maximum number of bytes spilled to disk by any single groupBy query within the emission period.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 |`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`groupBy/maxMergeDictionarySize`|Maximum size of the on-heap merge dictionary in bytes observed for any single groupBy query within the emission period.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
 
 ### Real-time
 
+:::info
+Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`, `OshiSysMonitor`, `JvmMonitor`, `JvmCpuMonitor`, `JvmThreadsMonitor` and `SysMonitor` 
+to represent the task ID are deprecated and will be removed in a future release. Use the `taskId` dimension instead.
+:::
+
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/time`|Milliseconds taken to complete a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`, `statusCode`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`.</p><p> TopN: `threshold`, `dimension`.</p>|< 1s|
+|`query/segments/count`|This metric is not enabled by default. Number of segments this Peon scans for a query.|<p>Common: `dataSource`, `type`, `interval`, `hasFilters`, `duration`, `context`, `remoteAddress`, `id`.</p><p> Aggregation Queries: `numMetrics`, `numComplexMetrics`.</p><p> GroupBy: `numDimensions`. </p><p>TopN: `threshold`, `dimension`.</p>|Varies|
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|`id`, `segment`|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 |`segment/scan/active`|Number of segments currently scanned. This metric also indicates how many threads from `druid.processing.numThreads` are currently being used.||Close to `druid.processing.numThreads`|
@@ -131,23 +154,32 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
-|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Should be ideally 0, though a higher number isn't representative of a problem.|
-|`mergeBuffer/used`|Number of merge buffers used from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
-|`mergeBuffer/queries`|Number of groupBy queries that acquired a batch of buffers from the merge buffer pool.|This metric is only available if the `GroupByStatsMonitor` module is included.|Depends on the number of groupBy queries needing merge buffers.|
-|`mergeBuffer/acquisitionTimeNs`|Total time in nanoseconds to acquire merge buffer for groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
-|`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes.|This metric is only available if the `GroupByStatsMonitor` module is included.|Varies|
+|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Should be ideally 0, though a higher number isn't representative of a problem.|
+|`mergeBuffer/used`|Number of merge buffers used from the merge buffer pool. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Depends on the number of groupBy queries needing merge buffers.|
+|`mergeBuffer/queries`|Number of groupBy queries that acquired a batch of buffers from the merge buffer pool. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Depends on the number of groupBy queries needing merge buffers.|
+|`mergeBuffer/acquisitionTimeNs`|Total time in nanoseconds to acquire merge buffer for groupBy queries. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`mergeBuffer/maxAcquisitionTimeNs`|Maximum time in nanoseconds to acquire merge buffer for any single groupBy query within the emission period. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`mergeBuffer/bytesUsed`|Total merge buffer bytes used to process groupBy queries, summed across queries. Each query's value is itself the sum across the slices it held: a merge buffer is divided among `druid.processing.numThreads` concurrent query slices, so a query can spill once a single slice fills even though this summed usage looks well below `druid.processing.buffer.sizeBytes`. To gauge spill pressure, use `mergeBuffer/maxSpillProximity` rather than comparing this to `sizeBytes`. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`mergeBuffer/maxBytesUsed`|Maximum merge buffer bytes used by any single groupBy query within the emission period, where each query's usage is the sum across the slices it held. Because the buffer is sliced among `druid.processing.numThreads` query slices, this value is not directly comparable to `druid.processing.buffer.sizeBytes`; use `mergeBuffer/maxSpillProximity` to gauge spill pressure. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`mergeBuffer/maxSpillProximity`|How close any single groupBy query came to spilling within the emission period, as a fraction in [0.0, 1.0]. A merge buffer is divided into `druid.processing.numThreads` slices and a query spills as soon as its fullest single slice's hash table cannot allocate another bucket; this metric is that fullest slice's peak fill ratio (bucket count over the load-factor bucket limit), taken as a max across slices and across queries. **1.0 corresponds exactly to the spill trigger** — the value is bucket-count based, so it is not distorted by bucket width, offset-list overhead, or integer truncation. If you see 1.0, raise `druid.processing.buffer.sizeBytes` or lower `druid.processing.numThreads` to widen each slice. Read alongside `groupBy/spilledQueries`. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`groupBy/spilledQueries`|Number of groupBy queries that have spilled onto the disk. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`groupBy/maxSpilledBytes`|Maximum number of bytes spilled to disk by any single groupBy query within the emission period. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`groupBy/mergeDictionarySize`|Size of on-heap merge dictionary in bytes. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
+|`groupBy/maxMergeDictionarySize`|Maximum size of the on-heap merge dictionary in bytes observed for any single groupBy query within the emission period. This metric is only available if the `GroupByStatsMonitor` module is included.|`dataSource`, `taskId`|Varies|
 
 ### Jetty
 
 |Metric|Description|Normal value|
 |------|-----------|------------|
 |`jetty/numOpenConnections`|Number of open jetty connections.|Not much higher than number of jetty threads.|
-|`jetty/threadPool/total`|Number of total workable threads allocated.|The number should equal to `threadPoolNumIdleThreads` + `threadPoolNumBusyThreads`.|
-|`jetty/threadPool/idle`|Number of idle threads.|Less than or equal to `threadPoolNumTotalThreads`. Non zero number means there is less work to do than configured capacity.|
-|`jetty/threadPool/busy`|Number of busy threads that has work to do from the worker queue.|Less than or equal to `threadPoolNumTotalThreads`.|
-|`jetty/threadPool/isLowOnThreads`|A rough indicator of whether number of total workable threads allocated is enough to handle the works in the work queue.|0|
+|`jetty/threadPool/total`|Number of total threads allocated. This includes internal threads and threads that are ready to serve requests.|Equals the total number of threads in the Jetty thread pool. i.e., `jetty/threadPool/ready` + `jetty/threadPool/utilized` + any reserved threads for internal Jetty usage.|
+|`jetty/threadPool/ready`|Number of threads that are ready to serve requests.|Equals the total number of usable threads in the Jetty thread pool to serve requests. i.e., `jetty/threadPool/idle` + any reserved threads for internal Jetty usage.|
+|`jetty/threadPool/utilized`|Number of threads currently in use by the thread pool to serve requests.|Value < `jetty/threadPool/ready`.|
+|`jetty/threadPool/utilizationRate`|Fraction of thread pool capacity currently in use to serve requests.|0.0 ≤ Value ≤ 1. A value of 0.0 means that the thread pool is not utilized, while a value of 1.0 means that the thread pool is fully utilized.|
+|`jetty/threadPool/idle`|Number of idle threads.|Value ≤ (`jetty/threadPool/ready` - any reserved threads for internal Jetty usage). A non-zero value means there is less work to do than configured capacity.|
+|`jetty/threadPool/busy`|Number of busy threads that have work to do from the worker queue.|Value ≤ (`jetty/threadPool/utilized` + any reserved threads for internal Jetty usage).|
+|`jetty/threadPool/isLowOnThreads`|A rough indicator of whether the number of total workable threads allocated is enough to handle the work in the work queue.|0|
 |`jetty/threadPool/min`|Number of minimum threads allocatable.|`druid.server.http.numThreads` plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
 |`jetty/threadPool/max`|Number of maximum threads allocatable.|`druid.server.http.numThreads` plus a small fixed number of threads allocated for Jetty acceptors and selectors.|
 |`jetty/threadPool/queueSize`|Size of the worker queue.|Not much higher than `druid.server.http.queueSize`.|
@@ -186,7 +218,7 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`sqlQuery/time`|Milliseconds taken to complete a SQL.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`|< 1s|
+|`sqlQuery/time`|Milliseconds taken to complete a SQL.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`, `statusCode`|< 1s|
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 |`sqlQuery/bytes`|number of bytes returned in SQL response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`, `engine`| |
 
@@ -198,6 +230,8 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |------|-----------|----------|------------|
 |`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Always `1`.|
 |`ingest/segments/count`|Count of final segments created by job (includes tombstones). | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
+|`ingest/segments/oversized`|Count of final segments created by job that were detected as being oversized, meaning the number of rows in the segment exceeded more than twice the maxRowsPerSegment in the spec. This is relevant only for hash and range partitioned ingestions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
+|`ingest/rows/published`|Number of rows successfully published by the job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
 |`ingest/tombstones/count`|Count of tombstones created by job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
 
 The `taskIngestionMode` dimension includes the following modes:
@@ -265,7 +299,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/events/processed`|Number of events processed per emission period.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Equal to the number of events per emission period.|
 |`ingest/events/processedWithError`|Number of events processed with some partial errors per emission period. Events processed with partial errors are counted towards both this metric and `ingest/events/processed`.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
-|`ingest/events/thrownAway`|Number of events rejected because they are null, or filtered by `transformSpec`, or outside one of `lateMessageRejectionPeriod`, `earlyMessageRejectionPeriod`, or `windowPeriod`.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
+|`ingest/events/thrownAway`|Number of events rejected because they are null, or filtered by `transformSpec`, or outside one of `lateMessageRejectionPeriod`, `earlyMessageRejectionPeriod`. The `reason` dimension indicates why the event was thrown away.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`, `reason`|0|
 |`ingest/events/filtered`|Number of events rejected by header-based filtering before parsing.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`ingest/events/duplicate`|Number of events rejected because the events are duplicated.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|0|
 |`ingest/input/bytes`|Number of bytes read from input sources, after decompression but prior to parsing. This covers all data read, including data that does not end up being fully processed and ingested. For example, this includes data that ends up being rejected for being unparseable or filtered out.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the amount of data read.|
@@ -288,8 +322,19 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/notices/time`|Milliseconds taken to process a notice by the supervisor.|`supervisorId`, `dataSource`, `tags`| < 1s |
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
-|`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of `lagBased` auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
-|`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`ingest/realtime/segmentUpgrade/persisted`|Number of pending segments that were upgraded in the metadata store while publishing segments to an interval. Emitted by the Overlord only when a REPLACE task (e.g., compaction task with `useConcurrentLocks` set to `true`) commits segments to an interval already containing pending segments allocated to an APPEND task (e.g. streaming task with `useConcurrentLocks` set to `true`).|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`|0 unless [concurrent append and replace](../ingestion/concurrent-append-replace.md) is in use.|
+|`ingest/realtime/segmentUpgrade/notified`|Number of notifications the supervisor sent to running tasks, emitted once per task so it scales with the replica count. Reconcile against the per-task outcomes: `notified` should equal `announced` + `skipped` + `sendFailed` over the same period and `dataSource`, since every notified task either announces, skips, or fails to receive the request. A shortfall indicates a notification was silently dropped.|`supervisorId`, `dataSource`, `stream`, `taskId`, `interval`, `version`, `tags`|Equal to `announced` + `skipped` + `sendFailed`.|
+|`ingest/realtime/segmentUpgrade/unmatched`|Number of upgraded pending segments the supervisor could not route to any running task. These are not announced under the new version until handoff, so the corresponding data may be briefly missing from queries.|`supervisorId`, `dataSource`, `stream`, `interval`, `version`, `tags`|0. A non-zero value indicates a lost upgrade announcement.|
+|`ingest/realtime/segmentUpgrade/sendFailed`|Number of upgrade requests that matched a running task but failed to reach it over the wire after retries.|`supervisorId`, `dataSource`, `stream`, `taskId`, `interval`, `version`, `tags`|0|
+|`ingest/realtime/segmentUpgrade/announced`|Number of upgraded segments a task announced under the new version. Emitted once per task, so it scales with the replica count. Reconcile against `notified` (also per task), not `ingest/realtime/segmentUpgrade/persisted`, which is per segment rather than per replica.|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`|Greater than 0 while concurrent replace occurs.|
+|`ingest/realtime/segmentUpgrade/skipped`|Number of upgrade requests a task received but did not announce. The `reason` dimension is one of `unknown base` (the request reached the wrong task), `base sink already dropped` (the base sink is no longer present), or `dropping base sink` (the base sink is handing off, which is benign and covered by the durable publish path).|`dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `version`, `tags`, `reason`|0, excluding `reason=dropping base sink`.|
+|`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of the auto scaler.|`supervisorId`, `dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
+|`task/autoScaler/scaleActionTime`|Time taken in milliseconds to complete the scale action.|`supervisorId`, `dataSource`, `stream`, `tags`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/optimalTaskCount`|Optimal task count computed by the cost-based auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/lagWeight`|Lag weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/idleWeight`|Idle weight used in the cost function for the auto scaler.|`supervisorId`, `dataSource`, `stream`|Depends on auto scaler config.|
+|`task/autoScaler/costBased/avgProcessingRate`|Windowed average rate of processing records across all tasks in the supervisor.|`supervisorId`, `dataSource`, `stream`|Depends on rate of incoming data and processing capacity of the tasks.|
+|`task/autoScaler/costBased/avgPollIdleRatio`|Poll-to-idle-ratio as reported by the streaming consumer averaged across all tasks in the supervisor. Currently supported only with Kafka supervisors.|`supervisorId`, `dataSource`, `stream`|0 if the consumer is never idle, 1 if the consumer is always idle, -1 if ratio is not available.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 
@@ -298,8 +343,8 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
 |`task/run/time`|Milliseconds taken to run a task.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskStatus`, `description`, `tags`|Varies|
-|`task/pending/time`|Milliseconds taken for a task to wait for running.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
-|`task/action/log/time`|Milliseconds taken to log a task action to the audit log.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|< 1000 (subsecond)|
+|`task/pending/time`|Milliseconds taken for a task to start running after being scheduled by the Overlord.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
+|`task/waiting/time`|Milliseconds taken for a task to be scheduled to run after being submitted to the Overlord.| `dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Varies|
 |`task/action/run/time`|Milliseconds taken to execute a task action.| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|Varies from subsecond to a few seconds, based on action type.|
 |`task/action/success/count`|Number of task actions that were executed successfully during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|Varies|
 |`task/action/failed/count`|Number of task actions that failed during the emission period. Currently only being emitted for [batched `segmentAllocate` actions](../ingestion/tasks.md#batching-segmentallocate-actions).| `dataSource`, `taskId`, `taskType`, `groupId`, `taskActionType`, `tags`|Varies|
@@ -311,11 +356,13 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`segment/added/bytes`|Size in bytes of new segments created.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/moved/bytes`|Size in bytes of segments moved/archived via the Move Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
 |`segment/nuked/bytes`|Size in bytes of segments deleted via the Kill Task.| `dataSource`, `taskId`, `taskType`, `groupId`, `interval`, `tags`|Varies|
-|`task/success/count`|Number of successful tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.| `dataSource`,`taskType`|Varies|
-|`task/failed/count`|Number of failed tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
-|`task/running/count`|Number of current running tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
-|`task/pending/count`|Number of current pending tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
-|`task/waiting/count`|Number of current waiting tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`|Varies|
+|`segment/allocated/count`|Number of segments successfully allocated by the Overlord to an append (realtime or batch) task. May be emitted multiple times for a single allocated segment ID if multiple tasks request an allocation with the same parameters.|`id`, `dataSource`, `taskId`, `taskType`, `groupId`, `tags`, `supervisorId`|Always 1|
+|`task/success/count`|Number of successful tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.| `dataSource`,`taskType`, `supervisorId`|Varies|
+|`task/failed/count`|Number of failed tasks per emission period. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
+|`task/running/count`|Number of current running tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
+|`task/pending/count`|Number of current pending tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
+|`task/waiting/count`|Number of current waiting tasks. This metric is available only if the `TaskCountStatsMonitor` module is included.|`dataSource`,`taskType`, `supervisorId`|Varies|
+|`supervisor/count`|Count of active supervisors. Each supervisor emits 1, tagged with its state, datasource, stream (when applicable), and detailed state. For possible `state` and `detailedState` values, see the [supervisor status report](../ingestion/supervisor.md#status-report). This metric is available only if the `SupervisorStatsMonitor` module is included.|`supervisorId`, `type`, `state`, `dataSource`, `stream` (optional), `detailedState` (optional)|1 per supervisor; aggregate by state for totals|
 |`taskSlot/total/count`|Number of total task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
 |`taskSlot/idle/count`|Number of idle task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
 |`taskSlot/used/count`|Number of busy task slots per emission period. This metric is available only if the `TaskSlotCountStatsMonitor` module is included.| `category`|Varies|
@@ -334,7 +381,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 
 ### Segment metadata cache
 
-The following metrics are emitted only when [segment metadata caching](../configuration/index.md#segment-metadata-cache-experimental) is enabled on the Overlord.
+The following metrics are emitted only when [segment metadata caching](../configuration/index.md#segment-metadata-cache) is enabled on the Overlord.
 
 |Metric|Description|Dimensions|
 |------|-----------|----------|
@@ -342,11 +389,19 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/pending/count`|Number of pending segments currently present in the metadata store.|`dataSource`|
 |`segment/metadataCache/interval/count`|Total number of intervals present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/used/count`|Total number of used segments present in the cache for a single datasource.|`dataSource`|
+|`segment/metadataCache/unused/count`|Total number of unused segments present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/pending/count`|Total number of pending segments present in the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/readOnly`|Number of read-only transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/readWrite`|Number of read-write transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/transactions/writeOnly`|Number of write-only transactions performed on the cache for a single datasource. These transactions happen only if the cache is operating in mode `ifSynced` and the first sync on the leader Overlord is not complete yet.|`dataSource`|
 |`segment/metadataCache/sync/time`|Number of milliseconds taken for the cache to sync with the metadata store.||
+|`segment/metadataCache/fetchIds/time`|Time taken in a sync to fetch the IDs of used segments from the metadata store.||
+|`segment/metadataCache/fetchPayloads/time`|Time taken in a sync to fetch the payloads of used segments that have changed since the last sync.||
+|`segment/metadataCache/fetchPending/time`|Time taken in a sync to fetch pending segments from the metadata store.||
+|`segment/metadataCache/fetchSchemas/time`|Time taken in a sync to fetch segment schemas from the metadata store. Emitted only when centralized datasource schema is enabled.||
+|`segment/metadataCache/fetchIndexingStates/time`|Time taken in a sync to fetch segment indexing states from the metadata store.||
+|`segment/metadataCache/updateIds/time`|Time taken in a sync to reconcile the cached segment IDs of each datasource with the metadata store.||
+|`segment/metadataCache/updateSnapshot/time`|Time taken in a sync to rebuild the datasource snapshot from the cache.||
 |`segment/metadataCache/dataSource/deleted`|Indicates that a datasource has no used or pending segments anymore and has been removed from the cache.|`dataSource`|
 |`segment/metadataCache/deleted`|Total number of segments deleted from the cache during the latest sync.||
 |`segment/metadataCache/skipped`|Total number of unparseable segment records that were skipped in the latest sync.||
@@ -355,6 +410,9 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/metadataCache/pending/deleted`|Number of pending segments deleted from the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
 |`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
+|`segment/metadataCache/schema/skipped`|Number of unparseable segment schema records that were skipped in the latest sync. Emitted only when centralized datasource schema is enabled.||
+|`segment/metadataCache/indexingState/added`|Number of segment indexing states added to the cache during the latest sync.||
+|`segment/metadataCache/indexingState/deleted`|Number of segment indexing states deleted from the cache during the latest sync.||
 
 ### Auto-kill unused segments
 
@@ -365,6 +423,7 @@ These metrics are emitted only if [auto-kill of unused segments](../data-managem
 |`segment/killed/metadataStore/count`|Number of segments permanently deleted from the metadata store.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
 |`segment/killed/deepStorage/count`|Number of segments permanently deleted from the deep storage.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
 |`segment/kill/unusedIntervals/count`|Number of intervals containing unused segments for a given datasource.|`dataSource`|
+|`segment/kill/eligibleSegments/count`|Number of unused segments in an interval that are eligible for kill.|`dataSource`, `interval`|
 |`segment/kill/skippedIntervals/count`|Number of intervals that were skipped for kill due to being already locked by another task.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
 |`segment/kill/queueReset/time`|Time taken in milliseconds to reset the kill queue.||
 |`segment/kill/queueProcess/time`|Time taken in milliseconds to fully process the kill queue.||
@@ -409,13 +468,13 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
-|`tier/historical/count`|Number of available historical nodes in each tier.|`tier`|Varies|
-|`tier/replication/factor`|Configured maximum replication factor in each tier.|`tier`|Varies|
-|`tier/required/capacity`|Total capacity in bytes required in each tier.|`tier`|Varies|
-|`tier/total/capacity`|Total capacity in bytes available in each tier.|`tier`|Varies|
+|`tier/historical/count`|Number of available historical nodes in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/replication/factor`|Configured maximum replication factor in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/required/capacity`|Total capacity in bytes required in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/total/capacity`|Total capacity in bytes available in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
 |`compactTask/maxSlot/count`|Maximum number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
-|`compactTask/availableSlot/count`|Number of available task slots that can be used for auto compaction tasks in the auto compaction run. This is the max number of task slots minus any currently running compaction tasks.| |Varies|
+|`compactTask/availableSlot/count`|Number of currently vacant task slots out of the total slots allocated for auto compaction tasks. This value is computed as the difference between the total number of task slots allocated for auto compaction and the estimated number of task slots currently occupied by running compaction tasks. The number of sub-tasks of each compaction task is estimated to be `maxNumConcurrentSubTasks`.| |Varies|
 |`killTask/availableSlot/count`| Number of available task slots that can be used for auto kill tasks in the auto kill run. This is the max number of task slots minus any currently running auto kill tasks.                                                                                                                                                                                                                                                                                                                     | |Varies|
 |`killTask/maxSlot/count`| Maximum number of task slots available for auto kill tasks in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                | |Varies|
 |`kill/task/count`| Number of tasks issued in the auto kill run.                                                                                                                                                                                                                                                                                                                                                                                                                                                    | |Varies|
@@ -442,9 +501,13 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`serverview/sync/unstableTime`|Time in milliseconds for which the Coordinator has been failing to sync with a segment-loading server. Emitted only when [HTTP-based server view](../configuration/index.md#segment-management) is enabled.|`server`, `tier`|Not emitted for synced servers.|
 |`metadatacache/init/time`|Time taken to initialize the coordinator segment metadata cache.||Depends on the number of segments.|
 |`segment/schemaCache/refresh/count`|Number of segments for which schema was refreshed in coordinator segment schema cache.|`dataSource`||
+|`segment/schemaCache/refreshSkipped/count`|Number of segments for which schema refresh was skipped due to presence of segment metadata in datasource polled from coordinator.|`dataSource`||
 |`segment/schemaCache/dataSource/removed`|Emitted when a datasource is removed from the Broker cache due to segments being marked as unused.|`dataSource`||
 |`segment/schemaCache/refresh/time`|Time taken to refresh segments in coordinator segment schema cache.|`dataSource`||
+|`segment/schemaCache/refresh/failed`|Number of dataSources whose schema refresh failed in the coordinator segment schema cache (for example, a segment metadata query timeout). Emitted only when a refresh fails; the failed dataSource is skipped for the cycle and retried later, while other dataSources are unaffected. Recurring emission indicates a dataSource missing from the SQL schema.|`dataSource`||
 |`segment/schemaCache/backfill/count`|Number of segments for which schema was back filled in the database.|`dataSource`||
+|`segment/schemaCache/rowSignature/changed`|Emitted when the cached row signature on the Broker's segment metadata cache for a datasource changes, indicating schema evolution or some form of flapping.|`dataSource`||
+|`segment/schemaCache/rowSignature/column/count`|Number of columns in the row signature on the Broker's segment metadata cache for a datasource when it's initialized or updated.|`dataSource`||
 |`segment/schemaCache/realtime/count`|Number of realtime segments for which schema is cached.||Depends on the number of realtime segments in the cluster.|
 |`segment/schemaCache/used/count`|Number of published used segments for which schema is cached.||Depends on the number of segments in the cluster.|
 |`segment/schemaCache/usedFingerprint/count`|Number of unique schema fingerprints cached for published used segments.||Depends on the number of distinct schema in the cluster.|
@@ -452,6 +515,15 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/used/deepStorageOnly/count`|Number of published used segments present only on deep storage.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/count`|Number of deep storage only segments with cached schema.|`dataSource`||
 |`segment/schemaCache/deepStorageOnly/refresh/time`|Time taken in milliseconds to refresh schemas of deep storage only segments.||Under a minute|
+
+## Security
+
+These metrics are emitted when `druid.auth.emitAuthMetrics` is set to `true`.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`auth/forbidden`|Emitted when a request is denied due to insufficient permissions. This includes both outright access denials and cases where basic access is granted but a row-level policy restricts full access.|`identity`, `authorizerName`, `resourceName`, `resourceType`, `action`, `errorMessage`|1|
+|`auth/exception`|Emitted when an internal authorization error occurs, such as a missing authorizer, duplicate resource policies, or a double-authorization check on the same request.|`identity`, `authorizerName`, `resourceName` (when available), `resourceType` (when available), `action` (when available), `errorMessage` (when available)|1|
 
 ## General Health
 
@@ -465,7 +537,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-|`segment/max`|Maximum byte limit available for segments.| |Varies.|
+|`segment/max`|Maximum byte limit available for segments.|`tier`, `priority`|Varies.|
 |`segment/used`|Bytes used for served segments.|`dataSource`, `tier`, `priority`|< max|
 |`segment/usedPercent`|Percentage of space used by served segments.|`dataSource`, `tier`, `priority`|< 100%|
 |`segment/count`|Number of served segments.|`dataSource`, `tier`, `priority`|Varies|
@@ -611,3 +683,14 @@ These metrics are available on operating systems with the cgroup kernel feature.
 |`cgroup/cpuset/effective_cpu_count`|Total number of active CPUs available to the process. Derived from `cpuset.effective_cpus`.||Varies|
 |`cgroup/cpuset/mems_count`|Total number of memory nodes available to the process. Derived from `cpuset.mems`.||Varies|
 |`cgroup/cpuset/effective_mems_count`|Total number of active memory nodes available to the process. Derived from `cpuset.effective_mems`.||Varies|
+
+## HDFS
+
+These metrics are available when the `druid-hdfs-storage` extension is used to push/pull segment files.
+
+| Metric               | Description                                                                   | Dimensions                                  | Normal value |
+|----------------------|-------------------------------------------------------------------------------|---------------------------------------------|--------------|
+| `hdfs/pull/size`     | Total bytes of decompressed segment files pulled from HDFS.                   | `format`: compression format (`ZIP`, `LZ4`) | Varies       |
+| `hdfs/pull/duration` | Time in milliseconds spent decompressing and pulling segment files from HDFS. | `format`: compression format (`ZIP`, `LZ4`) | Varies       |
+| `hdfs/push/size`     | Total bytes compressed segment files pushed to HDFS.                          | `format`: compression format (`ZIP`, `LZ4`) | Varies       |
+| `hdfs/push/duration` | Time in milliseconds spent compressing and pushing segment files to HDFS.     | `format`: compression format (`ZIP`, `LZ4`) | Varies       |

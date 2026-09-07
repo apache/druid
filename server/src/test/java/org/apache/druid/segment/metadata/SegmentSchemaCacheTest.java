@@ -26,8 +26,8 @@ import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -44,14 +44,14 @@ public class SegmentSchemaCacheTest
     SegmentId id = SegmentId.dummy("ds");
     cache.addRealtimeSegmentSchema(id, expected);
 
-    Assert.assertTrue(cache.isSchemaCached(id));
+    Assertions.assertTrue(cache.isSchemaCached(id));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
-    Assert.assertTrue(schema.isPresent());
+    Assertions.assertTrue(schema.isPresent());
 
-    Assert.assertEquals(expected, schema.get());
+    Assertions.assertEquals(expected, schema.get());
 
     cache.segmentRemoved(id);
-    Assert.assertFalse(cache.isSchemaCached(id));
+    Assertions.assertFalse(cache.isSchemaCached(id));
   }
 
   @Test
@@ -70,21 +70,21 @@ public class SegmentSchemaCacheTest
     cache.addSchemaPendingBackfill(id, expected);
     cache.addSchemaPendingBackfill(id2, expected);
 
-    Assert.assertTrue(cache.isSchemaCached(id));
-    Assert.assertTrue(cache.isSchemaCached(id2));
+    Assertions.assertTrue(cache.isSchemaCached(id));
+    Assertions.assertTrue(cache.isSchemaCached(id2));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
-    Assert.assertTrue(schema.isPresent());
-    Assert.assertEquals(expected, schema.get());
+    Assertions.assertTrue(schema.isPresent());
+    Assertions.assertEquals(expected, schema.get());
     Optional<SchemaPayloadPlus> schema2 = cache.getSchemaForSegment(id);
-    Assert.assertTrue(schema2.isPresent());
-    Assert.assertEquals(expected, schema2.get());
+    Assertions.assertTrue(schema2.isPresent());
+    Assertions.assertEquals(expected, schema2.get());
 
     cache.markSchemaPersisted(id);
     cache.markSchemaPersisted(id2);
 
     schema = cache.getSchemaForSegment(id);
-    Assert.assertTrue(schema.isPresent());
-    Assert.assertEquals(expected, schema.get());
+    Assertions.assertTrue(schema.isPresent());
+    Assertions.assertEquals(expected, schema.get());
 
     // simulate call after segment polling
 
@@ -96,15 +96,15 @@ public class SegmentSchemaCacheTest
 
     cache.resetSchemaForPublishedSegments(segmentMetadataBuilder.build(), schemaPayloadBuilder.build());
 
-    Assert.assertNull(cache.getTemporaryPublishedMetadataQueryResults(id));
-    Assert.assertNotNull(cache.getTemporaryPublishedMetadataQueryResults(id2));
-    Assert.assertTrue(cache.isSchemaCached(id));
-    Assert.assertTrue(cache.isSchemaCached(id2));
+    Assertions.assertNull(cache.getTemporaryPublishedMetadataQueryResults(id));
+    Assertions.assertNotNull(cache.getTemporaryPublishedMetadataQueryResults(id2));
+    Assertions.assertTrue(cache.isSchemaCached(id));
+    Assertions.assertTrue(cache.isSchemaCached(id2));
     schema = cache.getSchemaForSegment(id);
-    Assert.assertTrue(schema.isPresent());
+    Assertions.assertTrue(schema.isPresent());
 
     schema2 = cache.getSchemaForSegment(id2);
-    Assert.assertTrue(schema2.isPresent());
+    Assertions.assertTrue(schema2.isPresent());
   }
 
   @Test
@@ -112,7 +112,7 @@ public class SegmentSchemaCacheTest
   {
     SegmentSchemaCache cache = new SegmentSchemaCache();
 
-    Assert.assertFalse(cache.isInitialized());
+    Assertions.assertFalse(cache.isInitialized());
 
     RowSignature rowSignature = RowSignature.builder().add("cx", ColumnType.FLOAT).build();
     SchemaPayloadPlus expected = new SchemaPayloadPlus(new SchemaPayload(rowSignature), 20L);
@@ -126,11 +126,11 @@ public class SegmentSchemaCacheTest
 
     cache.resetSchemaForPublishedSegments(segmentMetadataBuilder.build(), schemaPayloadBuilder.build());
 
-    Assert.assertTrue(cache.isInitialized());
-    Assert.assertTrue(cache.isSchemaCached(id));
+    Assertions.assertTrue(cache.isInitialized());
+    Assertions.assertTrue(cache.isSchemaCached(id));
     Optional<SchemaPayloadPlus> schema = cache.getSchemaForSegment(id);
-    Assert.assertTrue(schema.isPresent());
+    Assertions.assertTrue(schema.isPresent());
 
-    Assert.assertEquals(expected, schema.get());
+    Assertions.assertEquals(expected, schema.get());
   }
 }

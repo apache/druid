@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.expression.builtin;
 
 import org.apache.calcite.sql.SqlFunction;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Function;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
@@ -30,7 +29,7 @@ public class LeastOperatorConversion extends DirectOperatorConversion
 {
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(Function.LeastFunc.NAME))
-      .operandTypeChecker(OperandTypes.VARIADIC)
+      .operandTypeChecker(ReductionOperatorConversionHelper.OPERAND_TYPE_CHECKER)
       .returnTypeInference(ReductionOperatorConversionHelper.TYPE_INFERENCE)
       .build();
 

@@ -87,15 +87,22 @@ public interface NestedCommonFormatColumn extends BaseColumn
 
   class Format implements ColumnFormat
   {
-    private final ColumnType logicalType;
-    private final boolean hasNulls;
-    private final boolean enforceLogicalType;
+    protected final ColumnType logicalType;
+    protected final boolean hasNulls;
+    protected final boolean enforceLogicalType;
+    protected final NestedCommonFormatColumnFormatSpec columnFormatSpec;
 
-    public Format(ColumnType logicalType, boolean hasNulls, boolean enforceLogicalType)
+    public Format(
+        ColumnType logicalType,
+        boolean hasNulls,
+        boolean enforceLogicalType,
+        NestedCommonFormatColumnFormatSpec columnFormatSpec
+    )
     {
       this.logicalType = logicalType;
       this.hasNulls = hasNulls;
       this.enforceLogicalType = enforceLogicalType;
+      this.columnFormatSpec = columnFormatSpec;
     }
 
     @Override
@@ -107,13 +114,13 @@ public interface NestedCommonFormatColumn extends BaseColumn
     @Override
     public DimensionHandler getColumnHandler(String columnName)
     {
-      return new NestedCommonFormatColumnHandler(columnName, enforceLogicalType ? logicalType : null);
+      return new NestedCommonFormatColumnHandler(columnName, enforceLogicalType ? logicalType : null, columnFormatSpec);
     }
 
     @Override
     public DimensionSchema getColumnSchema(String columnName)
     {
-      return new AutoTypeColumnSchema(columnName, enforceLogicalType ? logicalType : null);
+      return new AutoTypeColumnSchema(columnName, enforceLogicalType ? logicalType : null, columnFormatSpec);
     }
 
     @Override
@@ -125,10 +132,22 @@ public interface NestedCommonFormatColumn extends BaseColumn
 
       if (otherFormat instanceof Format) {
         final Format other = (Format) otherFormat;
-        if (!getLogicalType().equals(other.getLogicalType())) {
-          return new Format(ColumnType.NESTED_DATA, hasNulls || other.hasNulls, false);
+        // when merging formats in the same ingestion job, all segments should have the exact same columnFormatSpec, so
+        // no need to merge that
+        if (!logicalType.equals(other.logicalType)) {
+          return new Format(
+              ColumnType.leastRestrictiveType(logicalType, other.logicalType),
+              hasNulls || other.hasNulls,
+              false,
+              columnFormatSpec
+          );
         }
-        return new Format(logicalType, hasNulls || other.hasNulls, enforceLogicalType || other.enforceLogicalType);
+        return new Format(
+            logicalType,
+            hasNulls || other.hasNulls,
+            enforceLogicalType || other.enforceLogicalType,
+            columnFormatSpec
+        );
       }
       throw new ISE(
           "Cannot merge columns of type[%s] and format[%s] and with [%s] and [%s]",

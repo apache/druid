@@ -21,13 +21,12 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -59,19 +58,20 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -80,7 +80,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class DoubleStorageTest extends InitializedNullHandlingTest
 {
 
@@ -120,22 +121,21 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   private static final SegmentId SEGMENT_ID = SegmentId.dummy("segmentId");
   private static final Interval INTERVAL = Intervals.of("2011-01-13T00:00:00.000Z/2011-01-22T00:00:00.001Z");
 
-  private static final InputRowParser<Map<String, Object>> ROW_PARSER = new MapInputRowParser(
-      new JSONParseSpec(
-          new TimestampSpec(TIME_COLUMN, "auto", null),
-          DimensionsSpec.builder()
-                        .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)))
-                        .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME))
-                        .build(),
-          null,
-          null,
-          null
-      )
+  private static final InputRowSchema SCHEMA = new InputRowSchema(
+      new TimestampSpec(TIME_COLUMN, "auto", null),
+      DimensionsSpec.builder()
+                    .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)))
+                    .setDimensionExclusions(ImmutableList.of(DIM_FLOAT_NAME))
+                    .build(),
+      ColumnsFilter.all()
   );
 
   private QueryableIndex index;
   private final SegmentAnalysis expectedSegmentAnalysis;
   private final String storeDoubleAs;
+
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public DoubleStorageTest(
       String storeDoubleAs,
@@ -146,8 +146,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     this.expectedSegmentAnalysis = expectedSegmentAnalysis;
   }
 
-  @Parameterized.Parameters
-  public static Collection<?> dataFeeder()
+  public static Stream<Object[]> constructorFeeder()
   {
     SegmentAnalysis expectedSegmentAnalysisDouble = new SegmentAnalysis(
         SEGMENT_ID.toString(),
@@ -252,16 +251,16 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
         null
     );
 
-    return ImmutableList.of(
+    return Stream.of(
         new Object[]{"double", expectedSegmentAnalysisDouble},
         new Object[]{"float", expectedSegmentAnalysisFloat}
     );
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
-    index = buildIndex(storeDoubleAs);
+    index = buildIndex(storeDoubleAs, temporaryFolder.newFolder());
   }
 
   @Test
@@ -293,7 +292,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                                                       .build();
     List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery)).toList();
 
-    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
+    Assertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
 
   }
 
@@ -323,13 +322,20 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     ScanQueryRunnerTest.verify(expectedResults, results);
   }
 
-  private static QueryableIndex buildIndex(String storeDoubleAsFloat) throws IOException
+  private static QueryableIndex buildIndex(final String storeDoubleAsFloat, final File indexDirectory)
+      throws IOException
   {
     String oldValue = System.getProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY);
     System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, storeDoubleAsFloat);
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(DateTimes.of("2011-01-13T00:00:00.000Z").getMillis())
-        .withDimensionsSpec(ROW_PARSER)
+        .withTimestampSpec(new TimestampSpec(TIME_COLUMN, "auto", null))
+        .withDimensionsSpec(
+            DimensionsSpec.builder()
+                          .setDimensions(DimensionsSpec.getDefaultSchemas(List.of(DIM_NAME)))
+                          .setDimensionExclusions(List.of(DIM_FLOAT_NAME))
+                          .build()
+        )
         .withMetrics(
             new DoubleSumAggregatorFactory(DIM_FLOAT_NAME, DIM_FLOAT_NAME)
         )
@@ -342,7 +348,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
 
 
     getStreamOfEvents().forEach(o -> {
-      index.add(ROW_PARSER.parseBatch((Map<String, Object>) o).get(0));
+      index.add(MapInputRowParser.parse(SCHEMA, (Map<String, Object>) o));
     });
 
     if (oldValue == null) {
@@ -350,15 +356,11 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     } else {
       System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, oldValue);
     }
-    File someTmpFile = File.createTempFile("billy", "yay");
-    someTmpFile.delete();
-    FileUtils.mkdirp(someTmpFile);
-    INDEX_MERGER_V9.persist(index, someTmpFile, IndexSpec.DEFAULT, null);
-    someTmpFile.delete();
-    return INDEX_IO.loadIndex(someTmpFile);
+    INDEX_MERGER_V9.persist(index, indexDirectory, IndexSpec.getDefault(), null);
+    return INDEX_IO.loadIndex(indexDirectory);
   }
 
-  @After
+  @AfterEach
   public void cleanUp()
   {
     index.close();

@@ -681,10 +681,14 @@ FROM test_json_cols;
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
   "virtualColumns" : [ {
-    "type" : "expression",
+    "type" : "nested-object",
     "name" : "v0",
-    "expression" : "json_object('a',\"c1\")",
-    "outputType" : "COMPLEX<json>"
+    "object" : {
+      "a" : {
+        "expression" : "\"c1\"",
+        "type" : "COMPLEX<json>"
+      }
+    }
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],
@@ -725,10 +729,14 @@ FROM test_json_cols;
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
   "virtualColumns" : [ {
-    "type" : "expression",
+    "type" : "nested-object",
     "name" : "v0",
-    "expression" : "json_object('a',\"c1\")",
-    "outputType" : "COMPLEX<json>"
+    "object" : {
+      "a" : {
+        "expression" : "\"c1\"",
+        "type" : "COMPLEX<json>"
+      }
+    }
   } ],
   "resultFormat" : "compactedList",
   "columns" : [ "v0" ],

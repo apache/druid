@@ -25,9 +25,11 @@ import org.apache.druid.query.QueryResourceId;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.DoubleAccumulator;
 
 /**
- * Metrics collector for groupBy queries like spilled bytes, merge buffer acquistion time, dictionary size.
+ * Collects groupBy query metrics (spilled bytes, merge buffer usage, dictionary size) per-query, then
+ * aggregates them when queries complete. Stats are retrieved and reset periodically via {@link #getStatsSince()}.
  */
 @LazySingleton
 public class GroupByStatsProvider
@@ -60,34 +62,71 @@ public class GroupByStatsProvider
 
   public synchronized AggregateStats getStatsSince()
   {
-    return aggregateStatsContainer.reset();
+    AggregateStats aggregateStats = new AggregateStats(aggregateStatsContainer);
+    aggregateStatsContainer.reset();
+    return aggregateStats;
   }
 
   public static class AggregateStats
   {
     private long mergeBufferQueries = 0;
     private long mergeBufferAcquisitionTimeNs = 0;
+    private long maxMergeBufferAcquisitionTimeNs = 0;
+    private long totalMergeBufferUsedBytes = 0;
+    private long maxMergeBufferUsedBytes = 0;
+    private double maxSpillProximity = 0.0;
     private long spilledQueries = 0;
     private long spilledBytes = 0;
+    private long maxSpilledBytes = 0;
     private long mergeDictionarySize = 0;
+    private long maxMergeDictionarySize = 0;
 
     public AggregateStats()
     {
     }
 
+    public AggregateStats(AggregateStats aggregateStats)
+    {
+      this(
+          aggregateStats.mergeBufferQueries,
+          aggregateStats.mergeBufferAcquisitionTimeNs,
+          aggregateStats.maxMergeBufferAcquisitionTimeNs,
+          aggregateStats.totalMergeBufferUsedBytes,
+          aggregateStats.maxMergeBufferUsedBytes,
+          aggregateStats.maxSpillProximity,
+          aggregateStats.spilledQueries,
+          aggregateStats.spilledBytes,
+          aggregateStats.maxSpilledBytes,
+          aggregateStats.mergeDictionarySize,
+          aggregateStats.maxMergeDictionarySize
+      );
+    }
+
     public AggregateStats(
         long mergeBufferQueries,
         long mergeBufferAcquisitionTimeNs,
+        long maxMergeBufferAcquisitionTimeNs,
+        long totalMergeBufferUsedBytes,
+        long maxMergeBufferUsedBytes,
+        double maxSpillProximity,
         long spilledQueries,
         long spilledBytes,
-        long mergeDictionarySize
+        long maxSpilledBytes,
+        long mergeDictionarySize,
+        long maxMergeDictionarySize
     )
     {
       this.mergeBufferQueries = mergeBufferQueries;
       this.mergeBufferAcquisitionTimeNs = mergeBufferAcquisitionTimeNs;
+      this.maxMergeBufferAcquisitionTimeNs = maxMergeBufferAcquisitionTimeNs;
+      this.totalMergeBufferUsedBytes = totalMergeBufferUsedBytes;
+      this.maxMergeBufferUsedBytes = maxMergeBufferUsedBytes;
+      this.maxSpillProximity = maxSpillProximity;
       this.spilledQueries = spilledQueries;
       this.spilledBytes = spilledBytes;
+      this.maxSpilledBytes = maxSpilledBytes;
       this.mergeDictionarySize = mergeDictionarySize;
+      this.maxMergeDictionarySize = maxMergeDictionarySize;
     }
 
     public long getMergeBufferQueries()
@@ -100,6 +139,26 @@ public class GroupByStatsProvider
       return mergeBufferAcquisitionTimeNs;
     }
 
+    public long getMaxMergeBufferAcquisitionTimeNs()
+    {
+      return maxMergeBufferAcquisitionTimeNs;
+    }
+
+    public long getTotalMergeBufferUsedBytes()
+    {
+      return totalMergeBufferUsedBytes;
+    }
+
+    public long getMaxMergeBufferUsedBytes()
+    {
+      return maxMergeBufferUsedBytes;
+    }
+
+    public double getMaxSpillProximity()
+    {
+      return maxSpillProximity;
+    }
+
     public long getSpilledQueries()
     {
       return spilledQueries;
@@ -110,56 +169,120 @@ public class GroupByStatsProvider
       return spilledBytes;
     }
 
+    public long getMaxSpilledBytes()
+    {
+      return maxSpilledBytes;
+    }
+
     public long getMergeDictionarySize()
     {
       return mergeDictionarySize;
     }
 
+    public long getMaxMergeDictionarySize()
+    {
+      return maxMergeDictionarySize;
+    }
+
+    /**
+     * Folds a completed query's stats into the running aggregate. For merge-buffer usage:
+     * <ul>
+     *   <li>{@code totalMergeBufferUsedBytes} (emitted as {@code mergeBuffer/bytesUsed}) sums each query's usage
+     *       across all queries, where each query's usage is itself the sum across the query's slices.</li>
+     *   <li>{@code maxMergeBufferUsedBytes} (emitted as {@code mergeBuffer/maxBytesUsed}) is the max such per-query
+     *       summed usage across queries.</li>
+     *   <li>{@code maxSpillProximity} (emitted as {@code mergeBuffer/maxSpillProximity}) is the max across queries of
+     *       each query's fullest-slice peak fill ratio — a per-slice MAX (not a byte sum), so it reflects the slice
+     *       that drives a spill; 1.0 iff a slice actually spilled.</li>
+     * </ul>
+     */
     public void addQueryStats(PerQueryStats perQueryStats)
     {
       if (perQueryStats.getMergeBufferAcquisitionTimeNs() > 0) {
         mergeBufferQueries++;
         mergeBufferAcquisitionTimeNs += perQueryStats.getMergeBufferAcquisitionTimeNs();
+        maxMergeBufferAcquisitionTimeNs = Math.max(
+            maxMergeBufferAcquisitionTimeNs,
+            perQueryStats.getMergeBufferAcquisitionTimeNs()
+        );
+        totalMergeBufferUsedBytes += perQueryStats.getMergeBufferUsedBytes();
+        maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, perQueryStats.getMergeBufferUsedBytes());
+        maxSpillProximity = Math.max(maxSpillProximity, perQueryStats.getSpillProximity());
       }
 
       if (perQueryStats.getSpilledBytes() > 0) {
         spilledQueries++;
         spilledBytes += perQueryStats.getSpilledBytes();
+        maxSpilledBytes = Math.max(maxSpilledBytes, perQueryStats.getSpilledBytes());
       }
 
       mergeDictionarySize += perQueryStats.getMergeDictionarySize();
+      maxMergeDictionarySize = Math.max(maxMergeDictionarySize, perQueryStats.getMergeDictionarySize());
     }
 
-    public AggregateStats reset()
+    public void reset()
     {
-      AggregateStats aggregateStats =
-          new AggregateStats(
-              mergeBufferQueries,
-              mergeBufferAcquisitionTimeNs,
-              spilledQueries,
-              spilledBytes,
-              mergeDictionarySize
-          );
-
       this.mergeBufferQueries = 0;
       this.mergeBufferAcquisitionTimeNs = 0;
+      this.maxMergeBufferAcquisitionTimeNs = 0;
+      this.totalMergeBufferUsedBytes = 0;
+      this.maxMergeBufferUsedBytes = 0;
+      this.maxSpillProximity = 0.0;
       this.spilledQueries = 0;
       this.spilledBytes = 0;
+      this.maxSpilledBytes = 0;
       this.mergeDictionarySize = 0;
-
-      return aggregateStats;
+      this.maxMergeDictionarySize = 0;
     }
   }
 
   public static class PerQueryStats
   {
     private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
+    /**
+     * Sum of the peak merge-buffer usage of every grouper (slice) this query held. A
+     * {@code ConcurrentGrouper} slices a single merge buffer into one slice per processing thread, and each slice
+     * reports its own peak via
+     * {@link #addMergeBufferUsedBytes(long)} when closed, so the per-query value is the SUM across the query's slices.
+     */
+    private final AtomicLong mergeBufferUsedBytes = new AtomicLong(0);
+    /**
+     * Spill proximity of the fullest slice this query held, in [0.0, 1.0]. Each {@link #spillProximity} call contributes
+     * one slice's peak fill ratio and this keeps the MAX across slices: a query spills as soon as its hottest slice
+     * fills, so proximity is driven by that slice, not the byte sum in {@link #mergeBufferUsedBytes}. Keeping each
+     * slice's ratio intact (rather than maxing numerator and denominator separately) stays correct when a query mixes
+     * groupers of different sizes (e.g. {@code ConcurrentGrouper} slices alongside a full-buffer grouper). 1.0 iff a
+     * slice actually spilled.
+     */
+    private final DoubleAccumulator maxSpillProximity = new DoubleAccumulator(Math::max, 0.0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
     private final AtomicLong mergeDictionarySize = new AtomicLong(0);
 
     public void mergeBufferAcquisitionTime(long delay)
     {
       mergeBufferAcquisitionTimeNs.addAndGet(delay);
+    }
+
+    /**
+     * Accumulates the peak merge-buffer usage of one grouper (slice). Despite the previous "max" naming, this method
+     * sums across the slices a query holds; see {@link #mergeBufferUsedBytes}.
+     */
+    public void addMergeBufferUsedBytes(long bytes)
+    {
+      mergeBufferUsedBytes.addAndGet(bytes);
+    }
+
+    /**
+     * Records one slice's peak fill ratio (1.0 iff it spilled), kept as a max across the query's slices; see
+     * {@link #maxSpillProximity}. Clamped to [0, 1]; NaN is ignored so a never-initialized grouper contributes nothing.
+     */
+    public void spillProximity(double proximity)
+    {
+      if (Double.isNaN(proximity)) {
+        return;
+      }
+      final double clamped = proximity < 0.0 ? 0.0 : Math.min(proximity, 1.0);
+      maxSpillProximity.accumulate(clamped);
     }
 
     public void spilledBytes(long bytes)
@@ -175,6 +298,21 @@ public class GroupByStatsProvider
     public long getMergeBufferAcquisitionTimeNs()
     {
       return mergeBufferAcquisitionTimeNs.get();
+    }
+
+    public long getMergeBufferUsedBytes()
+    {
+      return mergeBufferUsedBytes.get();
+    }
+
+    /**
+     * Spill proximity for this query in [0.0, 1.0]: the fullest slice's peak {@code size / regrowthThreshold} over
+     * that slice's lifetime. 1.0 corresponds exactly to the spill trigger (a bucket allocation was rejected). Returns
+     * 0.0 when no slice usage was recorded (e.g. a grouper that never initialized).
+     */
+    public double getSpillProximity()
+    {
+      return maxSpillProximity.get();
     }
 
     public long getSpilledBytes()

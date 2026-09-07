@@ -38,22 +38,21 @@ import org.apache.druid.data.input.s3.S3InputSourceTest;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test the catalog definition on top of the S3 input source. Here we assume that
@@ -97,7 +96,8 @@ public class S3InputSourceDefnTest
   /**
    * Finish up Jackson configuration: add the required S3 input source subtype.
    */
-  @Before
+
+  @BeforeEach
   public void setup()
   {
     mapper.registerModules(new S3InputSourceDruidModule().getJacksonModules());
@@ -558,7 +558,7 @@ public class S3InputSourceDefnTest
   @Test
   public void testFullTableSpecHappyPath()
   {
-    S3InputSourceConfig config = new S3InputSourceConfig(null, null, "foo", null);
+    S3InputSourceConfig config = new S3InputSourceConfig(null, null, "foo", null, null);
     S3InputSource s3InputSource = s3InputSource(
         Arrays.asList("s3://foo/bar/", "s3://mumble/"), null, null, "*.csv", config);
     TableMetadata table = TableBuilder.external("foo")

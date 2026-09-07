@@ -22,17 +22,20 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Injector;
+import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.dart.controller.messages.PostCounters;
+import org.apache.druid.msq.dart.guice.DartWorkerConfig;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
 import org.apache.druid.msq.exec.FrameWriterSpec;
-import org.apache.druid.msq.exec.MSQMetriceEventBuilder;
+import org.apache.druid.msq.exec.MSQMetricEventBuilder;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.ProcessingBuffersSet;
@@ -41,20 +44,23 @@ import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.querykit.DataSegmentProvider;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.SegmentManager;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.util.List;
 
 /**
  * Dart implementation of {@link WorkerContext}.
@@ -62,6 +68,12 @@ import java.io.File;
  */
 public class DartWorkerContext implements WorkerContext
 {
+  /**
+   * Default for {@link MultiStageQueryContext#CTX_LIVE_REPORT_COUNTERS}. Off by default since older Dart controllers
+   * don't understand the {@link PostCounters} message, and because it adds some overhead.
+   */
+  public static final boolean DEFAULT_LIVE_REPORT_COUNTERS = false;
+
   private final String queryId;
   private final String controllerHost;
   private final WorkerId workerId;
@@ -70,16 +82,24 @@ public class DartWorkerContext implements WorkerContext
   private final PolicyEnforcer policyEnforcer;
   private final Injector injector;
   private final DartWorkerClient workerClient;
-  private final DruidProcessingConfig processingConfig;
   private final SegmentWrangler segmentWrangler;
-  private final GroupingEngine groupingEngine;
-  private final DataSegmentProvider dataSegmentProvider;
+  private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
+  private final CoordinatorClient coordinatorClient;
   private final MemoryIntrospector memoryIntrospector;
   private final ProcessingBuffersProvider processingBuffersProvider;
   private final Outbox<ControllerMessage> outbox;
   private final File tempDir;
   private final QueryContext queryContext;
   private final ServiceEmitter emitter;
+  private final int threadCount;
+
+  /**
+   * Worker-local segment load-ahead count from {@link DartWorkerConfig#getSegmentLoadAheadCount()}, or null if unset.
+   * Used as the default in {@link #segmentLoadAheadCount(WorkOrder)} when the query context does not supply a value.
+   */
+  @Nullable
+  private final Integer segmentLoadAheadCountConfig;
 
   /**
    * Lazy initialized upon call to {@link #frameContext(WorkOrder)}.
@@ -87,6 +107,7 @@ public class DartWorkerContext implements WorkerContext
   @MonotonicNonNull
   private volatile ResourceHolder<ProcessingBuffersSet> processingBuffersSet;
   private final DataServerQueryHandlerFactory dataServerQueryHandlerFactory;
+  private final List<InputSliceReaderProvider> inputSliceReaderProviders;
 
   DartWorkerContext(
       final String queryId,
@@ -97,16 +118,19 @@ public class DartWorkerContext implements WorkerContext
       final Injector injector,
       final DartWorkerClient workerClient,
       final DruidProcessingConfig processingConfig,
+      final DartWorkerConfig workerConfig,
       final SegmentWrangler segmentWrangler,
-      final GroupingEngine groupingEngine,
-      final DataSegmentProvider dataSegmentProvider,
+      final SegmentManager segmentManager,
+      final VirtualStorageManager virtualStorageManager,
+      final CoordinatorClient coordinatorClient,
       final MemoryIntrospector memoryIntrospector,
       final ProcessingBuffersProvider processingBuffersProvider,
       final Outbox<ControllerMessage> outbox,
       final File tempDir,
       final QueryContext queryContext,
       final DataServerQueryHandlerFactory dataServerQueryHandlerFactory,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final List<InputSliceReaderProvider> inputSliceReaderProviders
   )
   {
     this.queryId = queryId;
@@ -118,16 +142,25 @@ public class DartWorkerContext implements WorkerContext
     this.policyEnforcer = policyEnforcer;
     this.injector = injector;
     this.workerClient = workerClient;
-    this.processingConfig = processingConfig;
     this.segmentWrangler = segmentWrangler;
-    this.groupingEngine = groupingEngine;
-    this.dataSegmentProvider = dataSegmentProvider;
+    this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
+    this.coordinatorClient = coordinatorClient;
     this.memoryIntrospector = memoryIntrospector;
     this.processingBuffersProvider = processingBuffersProvider;
     this.outbox = outbox;
     this.tempDir = tempDir;
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.emitter = emitter;
+    this.inputSliceReaderProviders = inputSliceReaderProviders;
+
+    // Compute thread count once in constructor
+    final int baseThreadCount = processingConfig.getNumThreads();
+    final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
+    this.threadCount = (maxThreads != null && maxThreads > 0) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
+
+    // Worker-local segment load-ahead config from this worker's DartWorkerConfig.
+    this.segmentLoadAheadCountConfig = workerConfig.getSegmentLoadAheadCount();
   }
 
   @Override
@@ -161,6 +194,12 @@ public class DartWorkerContext implements WorkerContext
   }
 
   @Override
+  public List<InputSliceReaderProvider> inputSliceReaderProviders()
+  {
+    return inputSliceReaderProviders;
+  }
+
+  @Override
   public void registerWorker(Worker worker, Closer closer)
   {
     // Nothing to register per-Worker.
@@ -177,7 +216,7 @@ public class DartWorkerContext implements WorkerContext
   }
 
   @Override
-  public void emitMetric(MSQMetriceEventBuilder metricBuilder)
+  public void emitMetric(MSQMetricEventBuilder metricBuilder)
   {
     metricBuilder.setDartDimensions(queryContext);
     metricBuilder.setDimension(QueryContexts.CTX_DART_QUERY_ID, queryId());
@@ -187,7 +226,12 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public ControllerClient makeControllerClient()
   {
-    return new DartControllerClient(outbox, queryId, controllerHost);
+    return new DartControllerClient(
+        outbox,
+        queryId,
+        controllerHost,
+        MultiStageQueryContext.getLiveReportCounters(queryContext, DEFAULT_LIVE_REPORT_COUNTERS)
+    );
   }
 
   @Override
@@ -230,9 +274,10 @@ public class DartWorkerContext implements WorkerContext
         this,
         FrameWriterSpec.fromContext(workOrder.getWorkerContext()),
         segmentWrangler,
-        groupingEngine,
-        dataSegmentProvider,
-        processingBuffersSet.get().acquireForStage(workOrder.getStageDefinition()),
+        segmentManager,
+        virtualStorageManager,
+        coordinatorClient,
+        workOrder.getStageDefinition().getProcessor().usesProcessingBuffers() ? processingBuffersSet.get() : null,
         memoryParameters,
         storageParameters,
         dataServerQueryHandlerFactory
@@ -242,13 +287,33 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public int threadCount()
   {
-    return processingConfig.getNumThreads();
+    return threadCount;
   }
 
   @Override
-  public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
+  public int segmentLoadAheadCount(final WorkOrder workOrder)
   {
-    return dataServerQueryHandlerFactory;
+    final Integer fromContext = MultiStageQueryContext.getSegmentLoadAheadCount(workOrder.getWorkerContext());
+    return resolveSegmentLoadAheadCount(fromContext, segmentLoadAheadCountConfig, threadCount);
+  }
+
+  /**
+   * Determine which of the three potential sources of segment load ahead count to use.
+   * <p>
+   * Precedence is: a value supplied in the query context wins when set; otherwise the worker-local config is used
+   * when set to a positive value; lastly we fall back to {@code 2 * threadCount}.
+   */
+  static int resolveSegmentLoadAheadCount(
+      @Nullable final Integer fromContext,
+      @Nullable final Integer workerConfig,
+      final int threadCount
+  )
+  {
+    if (fromContext != null) {
+      return fromContext;
+    }
+    final boolean hasWorkerConfig = workerConfig != null && workerConfig > 0;
+    return hasWorkerConfig ? workerConfig : threadCount * 2;
   }
 
   @Override
@@ -257,6 +322,12 @@ public class DartWorkerContext implements WorkerContext
     // The context parameter "includeAllCounters" is meant to assist with backwards compatibility for versions prior
     // to Druid 31. Dart didn't exist prior to Druid 31, so there is no need for it here. Always emit all counters.
     return true;
+  }
+
+  @Override
+  public boolean isDebug()
+  {
+    return queryContext.isDebug();
   }
 
   @Override

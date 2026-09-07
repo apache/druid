@@ -23,12 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
-
-import static org.junit.Assert.assertEquals;
 
 public class ExplainAttributesTest
 {
@@ -38,11 +36,11 @@ public class ExplainAttributesTest
   public void testGetters()
   {
     final ExplainAttributes selectAttributes = new ExplainAttributes("SELECT", null, null, null, null);
-    assertEquals("SELECT", selectAttributes.getStatementType());
-    Assert.assertNull(selectAttributes.getTargetDataSource());
-    Assert.assertNull(selectAttributes.getPartitionedBy());
-    Assert.assertNull(selectAttributes.getClusteredBy());
-    Assert.assertNull(selectAttributes.getReplaceTimeChunks());
+    Assertions.assertEquals("SELECT", selectAttributes.getStatementType());
+    Assertions.assertNull(selectAttributes.getTargetDataSource());
+    Assertions.assertNull(selectAttributes.getPartitionedBy());
+    Assertions.assertNull(selectAttributes.getClusteredBy());
+    Assertions.assertNull(selectAttributes.getReplaceTimeChunks());
   }
 
   @Test
@@ -182,13 +180,13 @@ public class ExplainAttributesTest
     final ExplainAttributes observedAttributes;
     try {
       final String observedSerializedAttributes = MAPPER.writeValueAsString(explainAttributes);
-      assertEquals(expectedSerializedAttributes, observedSerializedAttributes);
+      Assertions.assertEquals(expectedSerializedAttributes, observedSerializedAttributes);
       observedAttributes = MAPPER.readValue(observedSerializedAttributes, ExplainAttributes.class);
     }
     catch (Exception e) {
       throw DruidException.defensive(e, "Error serializing/deserializing explain plan[%s].", explainAttributes);
     }
-    assertEquals(explainAttributes, observedAttributes);
+    Assertions.assertEquals(explainAttributes, observedAttributes);
   }
 
 }

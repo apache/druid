@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram.sql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -77,11 +78,14 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
       ApproximateHistogramDruidModule.registerSerde();
 
-      final QueryableIndex index = IndexBuilder.create(CalciteTests.getJsonMapper())
+      final QueryableIndex index = IndexBuilder.create(jsonMapper)
                                                .tmpDir(tempDirProducer.newTempFolder())
                                                .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                                                .schema(

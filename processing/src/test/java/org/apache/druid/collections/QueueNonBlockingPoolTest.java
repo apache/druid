@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -39,36 +39,36 @@ public class QueueNonBlockingPoolTest
 
     // Take everything from pool
     final ResourceHolder<String> obj1 = pool.take();
-    Assert.assertEquals("foo", obj1.get());
-    Assert.assertEquals(1, queue.size());
+    Assertions.assertEquals("foo", obj1.get());
+    Assertions.assertEquals(1, queue.size());
 
     final ResourceHolder<String> obj2 = pool.take();
-    Assert.assertEquals("bar", obj2.get());
-    Assert.assertEquals(0, queue.size());
+    Assertions.assertEquals("bar", obj2.get());
+    Assertions.assertEquals(0, queue.size());
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NoSuchElementException.class,
         pool::take
     );
 
     // Re-fill pool in reverse order
     obj2.close();
-    Assert.assertEquals(1, queue.size());
+    Assertions.assertEquals(1, queue.size());
 
     obj1.close();
-    Assert.assertEquals(2, queue.size());
+    Assertions.assertEquals(2, queue.size());
 
     // Re-take everything from pool
 
     final ResourceHolder<String> obj1b = pool.take();
-    Assert.assertEquals("bar", obj1b.get());
-    Assert.assertEquals(1, queue.size());
+    Assertions.assertEquals("bar", obj1b.get());
+    Assertions.assertEquals(1, queue.size());
 
     final ResourceHolder<String> obj2b = pool.take();
-    Assert.assertEquals("foo", obj2b.get());
-    Assert.assertEquals(0, queue.size());
+    Assertions.assertEquals("foo", obj2b.get());
+    Assertions.assertEquals(0, queue.size());
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NoSuchElementException.class,
         pool::take
     );

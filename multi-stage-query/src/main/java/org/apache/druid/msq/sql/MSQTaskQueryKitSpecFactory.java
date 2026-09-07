@@ -22,21 +22,20 @@ package org.apache.druid.msq.sql;
 import com.google.inject.Inject;
 import org.apache.druid.msq.exec.QueryKitSpecFactory;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
+import org.apache.druid.msq.querykit.DataSourcePlanners;
 import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
-import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 
 public class MSQTaskQueryKitSpecFactory implements QueryKitSpecFactory
 {
-  private DruidProcessingConfig processingConfig;
+  private final DataSourcePlanners dataSourcePlanners;
 
   @Inject
-  public MSQTaskQueryKitSpecFactory(DruidProcessingConfig processingConfig)
+  public MSQTaskQueryKitSpecFactory(final DataSourcePlanners dataSourcePlanners)
   {
-    this.processingConfig = processingConfig;
+    this.dataSourcePlanners = dataSourcePlanners;
   }
 
   @Override
@@ -44,21 +43,9 @@ public class MSQTaskQueryKitSpecFactory implements QueryKitSpecFactory
       QueryKit<Query<?>> queryKit,
       String queryId,
       MSQTuningConfig tuningConfig,
-      QueryContext queryContext)
+      QueryContext queryContext
+  )
   {
-    return new QueryKitSpec(
-        queryKit,
-        queryId,
-        tuningConfig.getMaxNumWorkers(),
-        tuningConfig.getMaxNumWorkers(),
-
-        // Assume tasks are symmetric: workers have the same number of processors available as a controller.
-        // Create one partition per processor per task, for maximum parallelism.
-        MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
-            queryContext,
-            processingConfig.getNumThreads()
-        )
-    );
+    return new QueryKitSpec(queryKit, dataSourcePlanners, queryId);
   }
-
 }

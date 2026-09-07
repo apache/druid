@@ -224,6 +224,13 @@ public class SQLServerConnector extends SQLMetadataConnector
     return String.format(Locale.ENGLISH, "FETCH NEXT %d ROWS ONLY", limit);
   }
 
+  @Override
+  protected String getDropIndexStatement(String indexName, String tableName)
+  {
+    // SQL Server requires the target table in a DROP INDEX statement.
+    return StringUtils.format("DROP INDEX %s ON %s", indexName, tableName);
+  }
+
   /**
    *
    * {@inheritDoc}
@@ -291,6 +298,25 @@ public class SQLServerConnector extends SQLMetadataConnector
       if (TRANSIENT_SQL_CLASS_CODES.contains(sqlClassCode)) {
         return true;
       }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean isUniqueConstraintViolation(Throwable t)
+  {
+    Throwable cause = t;
+    while (cause != null) {
+      if (cause instanceof SQLException) {
+        SQLException sqlException = (SQLException) cause;
+        String sqlState = sqlException.getSQLState();
+
+        // SQL standard unique constraint violation code is 23000 for Sql Server
+        if ("23000".equals(sqlState)) {
+          return true;
+        }
+      }
+      cause = cause.getCause();
     }
     return false;
   }

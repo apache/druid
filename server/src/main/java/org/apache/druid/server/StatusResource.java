@@ -40,6 +40,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -59,19 +60,22 @@ public class StatusResource
   private final DruidServerConfig druidServerConfig;
   private final ExtensionsLoader extnLoader;
   private final RuntimeInfo runtimeInfo;
+  private final ServiceAnnouncementState serviceAnnouncementState;
 
   @Inject
   public StatusResource(
       final Properties properties,
       final DruidServerConfig druidServerConfig,
       final ExtensionsLoader extnLoader,
-      final RuntimeInfo runtimeInfo
+      final RuntimeInfo runtimeInfo,
+      final ServiceAnnouncementState serviceAnnouncementState
   )
   {
     this.properties = properties;
     this.druidServerConfig = druidServerConfig;
     this.extnLoader = extnLoader;
     this.runtimeInfo = runtimeInfo;
+    this.serviceAnnouncementState = serviceAnnouncementState;
   }
 
   @GET
@@ -133,6 +137,23 @@ public class StatusResource
   public boolean getHealth()
   {
     return true;
+  }
+
+  /**
+   * This is an unsecured endpoint, defined as such in UNSECURED_PATHS in the service initialization files.
+   * Returns 200 when the service has announced itself and is ready to receive traffic,
+   * or 503 when the service has not yet announced or has begun unannouncing (e.g. during shutdown).
+   */
+  @GET
+  @Path("/ready")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getReady()
+  {
+    final boolean ready = serviceAnnouncementState.isReady();
+    if (ready) {
+      return Response.ok(true).build();
+    }
+    return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity(false).build();
   }
 
   public static class Status

@@ -32,11 +32,12 @@ import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.Streams;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collections;
@@ -53,7 +54,7 @@ public class ExternalInputSpecSlicerTest
 
   private ExternalInputSpecSlicer slicer;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     slicer = new ExternalInputSpecSlicer();
@@ -62,177 +63,177 @@ public class ExternalInputSpecSlicerTest
   @Test
   public void test_canSliceDynamic_splittable()
   {
-    Assert.assertTrue(slicer.canSliceDynamic(splittableSpec()));
+    Assertions.assertTrue(slicer.canSliceDynamic(splittableSpec()));
   }
 
   @Test
   public void test_canSliceDynamic_splittableThatIgnoresSplitHints()
   {
-    Assert.assertTrue(slicer.canSliceDynamic(splittableSpecThatIgnoresSplitHints()));
+    Assertions.assertTrue(slicer.canSliceDynamic(splittableSpecThatIgnoresSplitHints()));
   }
 
   @Test
   public void test_canSliceDynamic_unsplittable()
   {
-    Assert.assertFalse(slicer.canSliceDynamic(unsplittableSpec()));
+    Assertions.assertFalse(slicer.canSliceDynamic(unsplittableSpec()));
   }
 
   @Test
   public void test_sliceStatic_unsplittable()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(unsplittableSlice("foo", "bar", "baz")),
-        slicer.sliceStatic(unsplittableSpec("foo", "bar", "baz"), 2)
+        slicer.sliceStatic(unsplittableSpec("foo", "bar", "baz"), null, 2)
     );
   }
 
   @Test
   public void test_sliceStatic_unsplittable_empty()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(unsplittableSlice()),
-        slicer.sliceStatic(unsplittableSpec(), 2)
+        slicer.sliceStatic(unsplittableSpec(), null, 2)
     );
   }
 
   @Test
   public void test_sliceStatic_splittable()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo", "baz"),
             splittableSlice("bar")
         ),
-        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), 2)
+        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), null, 2)
     );
   }
 
   @Test
   public void test_sliceStatic_splittable_someWorkersEmpty()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo"),
             splittableSlice("bar"),
             splittableSlice("baz")
         ),
-        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), 5)
+        slicer.sliceStatic(splittableSpec("foo", "bar", "baz"), null, 5)
     );
   }
 
   @Test
   public void test_sliceStatic_splittable_empty()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(),
-        slicer.sliceStatic(splittableSpec(), 2)
+        slicer.sliceStatic(splittableSpec(), null, 2)
     );
   }
 
   @Test
   public void test_sliceStatic_splittableThatIgnoresSplitHints()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo", "baz"),
             splittableSlice("bar")
         ),
-        slicer.sliceStatic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), 2)
+        slicer.sliceStatic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), null, 2)
     );
   }
 
   @Test
   public void test_sliceDynamic_unsplittable()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             unsplittableSlice("foo", "bar", "baz")
         ),
-        slicer.sliceDynamic(unsplittableSpec("foo", "bar", "baz"), 100, 1, 1)
+        slicer.sliceDynamic(unsplittableSpec("foo", "bar", "baz"), null, 100, 1, 1)
     );
   }
 
   @Test
   public void test_sliceDynamic_splittable_needOne()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo", "bar", "baz")
         ),
-        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), 100, 5, Long.MAX_VALUE)
+        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), null, 100, 5, Long.MAX_VALUE)
     );
   }
 
   @Test
   public void test_sliceDynamic_splittable_needTwoDueToFiles()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo", "bar"),
             splittableSlice("baz")
         ),
-        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), 100, 2, Long.MAX_VALUE)
+        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), null, 100, 2, Long.MAX_VALUE)
     );
   }
 
   @Test
   public void test_sliceDynamic_splittable_needTwoDueToBytes()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo", "bar"),
             splittableSlice("baz")
         ),
-        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), 100, 5, 7)
+        slicer.sliceDynamic(splittableSpec("foo", "bar", "baz"), null, 100, 5, 7)
     );
   }
 
   @Test
   public void test_sliceDynamic_splittableFilesWithCompression_needThreeDueToBytes()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo.gz"),
             splittableSlice("bar.gz"),
             splittableSlice("baz.gz")
         ),
-        slicer.sliceDynamic(splittableSpec("foo.gz", "bar.gz", "baz.gz"), 100, 5, 7)
+        slicer.sliceDynamic(splittableSpec("foo.gz", "bar.gz", "baz.gz"), null, 100, 5, 7)
     );
   }
 
   @Test
   public void test_sliceDynamic_splittableThatIgnoresSplitHints_oneHundredMax()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo"),
             splittableSlice("bar"),
             splittableSlice("baz")
         ),
-        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), 100, 5, 7)
+        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), null, 100, 5, 7)
     );
   }
 
   @Test
   public void test_sliceDynamic_splittableThatIgnoresSplitHints_twoMax()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo", "baz"),
             splittableSlice("bar")
         ),
-        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), 2, 2, Long.MAX_VALUE)
+        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), null, 2, 2, Long.MAX_VALUE)
     );
   }
 
   @Test
   public void test_sliceDynamic_splittableThatIgnoresSplitHints_oneMax()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             splittableSlice("foo", "bar", "baz")
         ),
-        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), 1, 5, Long.MAX_VALUE)
+        slicer.sliceDynamic(splittableSpecThatIgnoresSplitHints("foo", "bar", "baz"), null, 1, 5, Long.MAX_VALUE)
     );
   }
 

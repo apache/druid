@@ -22,8 +22,8 @@ package org.apache.druid.query.operator;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -161,8 +161,7 @@ public class GlueingPartitioningOperatorTest
         2
     );
 
-    Assert.assertThrows(
-        "Too many rows to process (requested = 3, max = 2).",
+    Assertions.assertThrows(
         DruidException.class,
         () -> new OperatorTestHelper().expectRowsAndColumns().runToCompletion(op)
     );
@@ -182,8 +181,7 @@ public class GlueingPartitioningOperatorTest
         3
     );
 
-    Assert.assertThrows(
-        "Too many rows to process (requested = 4, max = 3).",
+    Assertions.assertThrows(
         DruidException.class,
         () -> new OperatorTestHelper().expectRowsAndColumns().runToCompletion(op)
     );

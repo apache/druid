@@ -35,7 +35,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
@@ -245,7 +244,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Segmen
     while (inputChannelIterator.hasNext()) {
       final int channelNumber = inputChannelIterator.nextInt();
       if (sideChannelNumbers.contains(channelNumber) && channels.get(channelNumber).canRead()) {
-        final Frame frame = channels.get(channelNumber).read();
+        final Frame frame = channels.get(channelNumber).readFrame();
 
         memoryUsed += frame.numBytes();
 

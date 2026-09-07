@@ -27,13 +27,14 @@ import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StageDefinitionTest
 {
@@ -60,7 +61,10 @@ public class StageDefinitionTest
         false
     );
 
-    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionBoundariesForShuffle(null));
+    Assertions.assertThrows(
+        ISE.class,
+        () -> stageDefinition.generatePartitionBoundariesForShuffle(null, Limits.DEFAULT_MAX_PARTITIONS)
+    );
   }
 
   @Test
@@ -82,7 +86,10 @@ public class StageDefinitionTest
         false
     );
 
-    Assert.assertThrows(ISE.class, () -> stageDefinition.generatePartitionBoundariesForShuffle(null));
+    Assertions.assertThrows(
+        ISE.class,
+        () -> stageDefinition.generatePartitionBoundariesForShuffle(null, Limits.DEFAULT_MAX_PARTITIONS)
+    );
   }
 
   @Test
@@ -104,7 +111,7 @@ public class StageDefinitionTest
         false
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ISE.class,
         () -> stageDefinition.generatePartitionBoundariesForShuffle(
             ClusterByStatisticsCollectorImpl.create(
@@ -117,7 +124,8 @@ public class StageDefinitionTest
                 100,
                 false,
                 false
-            )
+            ),
+            Limits.DEFAULT_MAX_PARTITIONS
         )
     );
   }

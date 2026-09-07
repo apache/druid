@@ -21,9 +21,9 @@ package org.apache.druid.k8s.overlord.common;
 
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +37,7 @@ public class PeonPhaseTest
     PodStatus status = mock(PodStatus.class);
     when(status.getPhase()).thenReturn("Succeeded");
     when(pod.getStatus()).thenReturn(status);
-    assertEquals(PeonPhase.UNKNOWN, PeonPhase.getPhaseFor(null));
-    assertEquals(PeonPhase.SUCCEEDED, PeonPhase.getPhaseFor(pod));
+    Assertions.assertEquals(PeonPhase.UNKNOWN, PeonPhase.getPhaseFor(null));
+    Assertions.assertEquals(PeonPhase.SUCCEEDED, PeonPhase.getPhaseFor(pod));
   }
 }

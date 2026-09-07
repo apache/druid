@@ -1,0 +1,3 @@
+{"timestamp":"2000-01-01","thisRow":"isJson"}
+{"timestamp":"2000-01-01","thisRow":"isAlsoJson"}
+this row is not json

@@ -21,6 +21,8 @@ package org.apache.druid.catalog.storage.sql;
 
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 
+import java.sql.SQLIntegrityConstraintViolationException;
+
 public class DbUtils
 {
   // Move to SqlMetadataConnector and its subclasses
@@ -31,13 +33,7 @@ public class DbUtils
       return false;
     }
 
-    // Use class names to avoid compile-time dependencies.
-    // Derby implementation
-    if (cause.getClass().getSimpleName().equals("DerbySQLIntegrityConstraintViolationException")) {
-      return true;
-    }
-    // MySQL implementation
-    if (cause.getClass().getSimpleName().equals("MySQLIntegrityConstraintViolationException")) {
+    if (cause instanceof SQLIntegrityConstraintViolationException) {
       return true;
     }
 

@@ -43,7 +43,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @SqlTestFrameworkConfig.ComponentSupplier(CatalogQueryComponentSupplier.class)
 public class CatalogQueryTest extends BaseCalciteQueryTest

@@ -31,8 +31,8 @@ import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.join.JoinType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class PreJoinableClauseTest
 {
@@ -59,31 +59,31 @@ public class PreJoinableClauseTest
   @Test
   public void test_getPrefix()
   {
-    Assert.assertEquals("j.", clause.getPrefix());
+    Assertions.assertEquals("j.", clause.getPrefix());
   }
 
   @Test
   public void test_getJoinType()
   {
-    Assert.assertEquals(JoinType.LEFT, clause.getJoinType());
+    Assertions.assertEquals(JoinType.LEFT, clause.getJoinType());
   }
 
   @Test
   public void test_getCondition()
   {
-    Assert.assertEquals("x == \"j.x\"", clause.getCondition().getOriginalExpression());
+    Assertions.assertEquals("x == \"j.x\"", clause.getCondition().getOriginalExpression());
   }
 
   @Test
   public void test_getDataSource()
   {
-    Assert.assertEquals(new TableDataSource("foo"), clause.getDataSource());
+    Assertions.assertEquals(new TableDataSource("foo"), clause.getDataSource());
   }
 
   @Test
   public void test_maybeUnwrapRestrictedDataSource()
   {
-    Assert.assertEquals(new TableDataSource("foo"), clause.maybeUnwrapRestrictedDataSource());
+    Assertions.assertEquals(new TableDataSource("foo"), clause.maybeUnwrapRestrictedDataSource());
 
     RestrictedDataSource left = RestrictedDataSource.create(
         new TableDataSource("bar"),
@@ -119,15 +119,15 @@ public class PreJoinableClauseTest
         null,
         JoinAlgorithm.BROADCAST
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new TableDataSource("foo"),
         new PreJoinableClause(join1CanbeUnwrapped).maybeUnwrapRestrictedDataSource()
     );
-    QueryUnsupportedException e = Assert.assertThrows(
+    QueryUnsupportedException e = Assertions.assertThrows(
         QueryUnsupportedException.class,
         () -> new PreJoinableClause(join2NotSupported).maybeUnwrapRestrictedDataSource()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Restricted data source [foo] with policy [RowFilterPolicy{rowFilter=col IS NULL}] is not supported",
         e.getMessage()
     );

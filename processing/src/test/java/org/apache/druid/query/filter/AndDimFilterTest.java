@@ -25,8 +25,8 @@ import org.apache.druid.segment.filter.FalseFilter;
 import org.apache.druid.segment.filter.FilterTestUtils;
 import org.apache.druid.segment.filter.TrueFilter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class AndDimFilterTest extends InitializedNullHandlingTest
 {
@@ -40,7 +40,7 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
             new SelectorDimFilter("c", "d", null)
         )
     );
-    Assert.assertEquals(andDimFilter.getRequiredColumns(), Sets.newHashSet("a", "b", "c"));
+    Assertions.assertEquals(andDimFilter.getRequiredColumns(), Sets.newHashSet("a", "b", "c"));
   }
 
   @Test
@@ -65,7 +65,7 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
         ),
         FilterTestUtils.selector("col3", "3")
     );
-    Assert.assertEquals(expected, dimFilter.toFilter());
+    Assertions.assertEquals(expected, dimFilter.toFilter());
   }
 
   @Test
@@ -75,14 +75,14 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
         DimFilterTestUtils.selector("col1", "1"),
         FalseDimFilter.instance()
     );
-    Assert.assertTrue(filter.toFilter() instanceof FalseFilter);
+    Assertions.assertTrue(filter.toFilter() instanceof FalseFilter);
   }
 
   @Test
   public void testToFilterOringTrueFilters()
   {
     DimFilter filter = DimFilterTestUtils.and(TrueDimFilter.instance(), TrueDimFilter.instance());
-    Assert.assertSame(TrueFilter.instance(), filter.toFilter());
+    Assertions.assertSame(TrueFilter.instance(), filter.toFilter());
   }
 
   @Test
@@ -90,7 +90,7 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
   {
     DimFilter expected = DimFilterTestUtils.selector("col1", "1");
     DimFilter filter = DimFilterTestUtils.and(expected);
-    Assert.assertEquals(expected.toFilter(), filter.toFilter());
+    Assertions.assertEquals(expected.toFilter(), filter.toFilter());
   }
 
   @Test
@@ -100,6 +100,6 @@ public class AndDimFilterTest extends InitializedNullHandlingTest
         DimFilterTestUtils.selector("col1", "1"),
         DimFilterTestUtils.selector("col1", "2")
     );
-    Assert.assertEquals(filter.toFilter(), filter.toFilter());
+    Assertions.assertEquals(filter.toFilter(), filter.toFilter());
   }
 }

@@ -33,7 +33,8 @@ import org.apache.druid.msq.exec.Controller;
     @JsonSubTypes.Type(value = DoneReadingInput.class, name = "doneReadingInput"),
     @JsonSubTypes.Type(value = ResultsComplete.class, name = "resultsComplete"),
     @JsonSubTypes.Type(value = WorkerError.class, name = "workerError"),
-    @JsonSubTypes.Type(value = WorkerWarning.class, name = "workerWarning")
+    @JsonSubTypes.Type(value = WorkerWarning.class, name = "workerWarning"),
+    @JsonSubTypes.Type(value = PostCounters.class, name = "postCounters")
 })
 public interface ControllerMessage
 {

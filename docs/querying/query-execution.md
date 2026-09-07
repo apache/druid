@@ -51,8 +51,7 @@ and tasks running on Middle Managers) that are currently serving those segments.
 
 4. For all query types except [Scan](scan-query.md), data servers process each segment in parallel and generate partial
 results for each segment. The specific processing that is done depends on the query type. These partial results may be
-cached if [query caching](caching.md) is enabled. For Scan queries, segments are processed in order by a single thread,
-and results are not cached.
+cached if [query caching](caching.md) is enabled. For Scan queries, segments are processed in order by a single thread.
 
 5. The Broker receives partial results from each data server, merges them into the final result set, and returns them
 to the caller. For Timeseries and Scan queries, and for GroupBy queries where there is no sorting, the Broker is able to

@@ -214,6 +214,11 @@ public class EqualityFilter extends AbstractOptimizableDimFilter implements Filt
     if (!Objects.equals(getColumn(), dimension)) {
       return null;
     }
+    // The RangeSet returned here is compared lexicographically against shard boundaries (see DimensionRangeShardSpec),
+    // so it is only OK to return one for STRING comparison.
+    if (!matchValueType.is(ValueType.STRING)) {
+      return null;
+    }
     RangeSet<String> retSet = TreeRangeSet.create();
     if (matchValueEval.isArray()) {
       retSet.add(Range.singleton(Arrays.deepToString(matchValueEval.asArray())));

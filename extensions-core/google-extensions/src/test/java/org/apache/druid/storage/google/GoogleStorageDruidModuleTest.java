@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class GoogleStorageDruidModuleTest
 {
@@ -39,14 +39,14 @@ public class GoogleStorageDruidModuleTest
     // 2. That the same object is returned.
     Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(new GoogleStorageDruidModule()));
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
-    Assert.assertTrue(killer.getKillers().containsKey(GoogleStorageDruidModule.SCHEME));
-    Assert.assertSame(
+    Assertions.assertTrue(killer.getKillers().containsKey(GoogleStorageDruidModule.SCHEME));
+    Assertions.assertSame(
         killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get(),
         killer.getKillers().get(GoogleStorageDruidModule.SCHEME).get()
     );
 
     final Storage storage = injector.getInstance(Storage.class);
-    Assert.assertSame(storage, injector.getInstance(Storage.class));
+    Assertions.assertSame(storage, injector.getInstance(Storage.class));
   }
 
   @Test
@@ -59,6 +59,6 @@ public class GoogleStorageDruidModuleTest
     // 2. That the same object is returned.
     Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.of(new GoogleStorageDruidModule()));
     final GoogleStorage instance = injector.getInstance(GoogleStorage.class);
-    Assert.assertSame(instance, injector.getInstance(GoogleStorage.class));
+    Assertions.assertSame(instance, injector.getInstance(GoogleStorage.class));
   }
 }

@@ -22,8 +22,8 @@ package org.apache.druid.query.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -36,7 +36,7 @@ public class FalseDimFilterTest
     final FalseDimFilter original = FalseDimFilter.instance();
     final byte[] bytes = mapper.writeValueAsBytes(original);
     final FalseDimFilter fromBytes = (FalseDimFilter) mapper.readValue(bytes, DimFilter.class);
-    Assert.assertSame(original, fromBytes);
+    Assertions.assertSame(original, fromBytes);
   }
 
   @Test

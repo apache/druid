@@ -11,6 +11,46 @@ exports[`SupervisorsView matches snapshot 1`] = `
       localStorageKey="supervisors-refresh-rate"
       onRefresh={[Function]}
     />
+    <Blueprint5.Popover
+      boundary="clippingParents"
+      captureDismiss={false}
+      content={
+        <Blueprint5.Menu>
+          <Blueprint5.MenuItem
+            active={false}
+            disabled={false}
+            icon="manually-entered-data"
+            multiline={false}
+            onClick={[Function]}
+            popoverProps={{}}
+            shouldDismissPopover={true}
+            text="Submit JSON supervisor"
+          />
+        </Blueprint5.Menu>
+      }
+      defaultIsOpen={false}
+      disabled={false}
+      fill={false}
+      hasBackdrop={false}
+      hoverCloseDelay={300}
+      hoverOpenDelay={150}
+      inheritDarkTheme={true}
+      interactionKind="click"
+      matchTargetWidth={false}
+      minimal={false}
+      openOnTargetFocus={true}
+      position="bottom-left"
+      positioningStrategy="absolute"
+      shouldReturnFocusOnClose={false}
+      targetTagName="span"
+      transitionDuration={300}
+      usePortal={true}
+    >
+      <Blueprint5.Button
+        icon="plus"
+        text="Create"
+      />
+    </Blueprint5.Popover>
     <React.Fragment>
       <Memo(MoreButton)>
         <Blueprint5.MenuItem
@@ -22,16 +62,6 @@ exports[`SupervisorsView matches snapshot 1`] = `
           popoverProps={{}}
           shouldDismissPopover={true}
           text="View SQL query for table"
-        />
-        <Blueprint5.MenuItem
-          active={false}
-          disabled={false}
-          icon="manually-entered-data"
-          multiline={false}
-          onClick={[Function]}
-          popoverProps={{}}
-          shouldDismissPopover={true}
-          text="Submit JSON supervisor"
         />
         <Blueprint5.MenuItem
           active={false}
@@ -81,7 +111,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           },
           {
             "label": "status API",
-            "text": "Aggregate lag",
+            "text": "Details",
           },
           {
             "label": "stats API",
@@ -227,13 +257,14 @@ exports[`SupervisorsView matches snapshot 1`] = `
             },
             {
               "Cell": [Function],
-              "Header": "Aggregate lag",
+              "Header": "Details",
               "accessor": "supervisor_id",
               "className": "padded",
               "filterable": false,
+              "id": "details",
               "show": true,
               "sortable": false,
-              "width": 200,
+              "width": 250,
             },
             {
               "Cell": [Function],
@@ -257,6 +288,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
               "Header": "Recent errors",
               "accessor": "supervisor_id",
               "filterable": false,
+              "id": "recent_errors",
               "show": true,
               "sortable": false,
               "width": 150,

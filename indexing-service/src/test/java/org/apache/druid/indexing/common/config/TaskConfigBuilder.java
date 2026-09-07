@@ -36,7 +36,8 @@ public class TaskConfigBuilder
   private Boolean storeEmptyColumns;
   private boolean enableTaskLevelLogPush;
   private Long tmpStorageBytesPerTask;
-  private boolean allowHadoopTaskExecution;
+  private boolean buildV10;
+  private Boolean virtualStoragePartialDownloadsEnabled;
 
   public TaskConfigBuilder setBaseDir(String baseDir)
   {
@@ -98,9 +99,15 @@ public class TaskConfigBuilder
     return this;
   }
 
-  public TaskConfigBuilder setAllowHadoopTaskExecution(boolean allowHadoopTaskExecution)
+  public TaskConfigBuilder setBuildV10(boolean buildV10)
   {
-    this.allowHadoopTaskExecution = allowHadoopTaskExecution;
+    this.buildV10 = buildV10;
+    return this;
+  }
+
+  public TaskConfigBuilder setVirtualStoragePartialDownloadsEnabled(Boolean virtualStoragePartialDownloadsEnabled)
+  {
+    this.virtualStoragePartialDownloadsEnabled = virtualStoragePartialDownloadsEnabled;
     return this;
   }
 
@@ -117,7 +124,8 @@ public class TaskConfigBuilder
         storeEmptyColumns,
         enableTaskLevelLogPush,
         tmpStorageBytesPerTask,
-        allowHadoopTaskExecution
+        buildV10,
+        virtualStoragePartialDownloadsEnabled
     );
   }
 }

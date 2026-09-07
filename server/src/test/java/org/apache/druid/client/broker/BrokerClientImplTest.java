@@ -35,18 +35,20 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
 
 public class BrokerClientImplTest
 {
@@ -54,7 +56,7 @@ public class BrokerClientImplTest
   private MockServiceClient serviceClient;
   private BrokerClient brokerClient;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     jsonMapper = new DefaultObjectMapper();
@@ -62,7 +64,7 @@ public class BrokerClientImplTest
     brokerClient = new BrokerClientImpl(serviceClient, jsonMapper);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     serviceClient.verify();
@@ -87,7 +89,7 @@ public class BrokerClientImplTest
         jsonMapper.writeValueAsBytes(response)
     );
 
-    assertEquals(
+    Assertions.assertEquals(
         jsonMapper.writeValueAsString(response),
         brokerClient.submitNativeQuery(scanQuery).get()
     );
@@ -115,7 +117,7 @@ public class BrokerClientImplTest
         jsonMapper.writeValueAsBytes(taskStatus)
     );
 
-    assertEquals(taskStatus, brokerClient.submitSqlTask(query).get());
+    Assertions.assertEquals(taskStatus, brokerClient.submitSqlTask(query).get());
   }
 
   @Test
@@ -163,10 +165,41 @@ public class BrokerClientImplTest
         jsonMapper.writeValueAsBytes(givenPlans)
     );
 
-    assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(new ExplainPlan(plan, resources, attributes)),
         brokerClient.fetchExplainPlan(query).get()
     );
   }
 
+  @Test
+  public void testUpdateCoordinatorDynamicConfig() throws Exception
+  {
+    final CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder().build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/coordinator")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        new byte[0]
+    );
+
+    Assertions.assertEquals(true, brokerClient.updateCoordinatorDynamicConfig(config).get());
+  }
+
+  @Test
+  public void testUpdateBrokerDynamicConfig() throws Exception
+  {
+    final BrokerDynamicConfig config = BrokerDynamicConfig.builder().build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid-internal/v1/config/broker")
+            .jsonContent(jsonMapper, config),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        new byte[0]
+    );
+
+    Assertions.assertEquals(true, brokerClient.updateBrokerDynamicConfig(config).get());
+  }
 }

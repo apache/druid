@@ -37,7 +37,7 @@ public class QueryNotSupportedFault extends BaseMSQFault
   @Override
   public DruidException toDruidException()
   {
-    return DruidException.forPersona(DruidException.Persona.USER)
+    return DruidException.forPersona(DruidException.Persona.DEVELOPER)
                          .ofCategory(DruidException.Category.UNSUPPORTED)
                          .withErrorCode(getErrorCode())
                          .build(MSQFaultUtils.generateMessageWithErrorCode(this));

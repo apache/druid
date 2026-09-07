@@ -60,12 +60,12 @@ git clone https://github.com/apache/druid
   ```
 * launch the broker instance with:
   ```bash
-  mvn exec:exec -pl quidem-ut -Dquidem.record.autostart=true
+  mvn exec:exec -pl quidem-ut -Pquidem -Dquidem.record.autostart=true
   ```
   * the broker will be running at http://localhost:12345
   * the used test configuration backend can configured by supplying `quidem.uri`
     ```bash
-    mvn exec:exec -pl quidem-ut -Dquidem.uri=druidtest:///?componentSupplier=ThetaSketchComponentSupplier
+    mvn exec:exec -pl quidem-ut -Pquidem -Dquidem.uri=druidtest:///?componentSupplier=ThetaSketchComponentSupplier
     ``` 
   * new record files can be started by calling http://localhost:12345/quidem/start
     * if `quidem.record.autostart` is omitted recording will not start

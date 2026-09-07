@@ -101,7 +101,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     {
       ExprEval timestamp = args.get(0).eval(bindings);
       if (timestamp.isNumericNull()) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
       return ExprEval.of(chronology.add(period, timestamp.asLong(), step));
     }
@@ -144,7 +144,7 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     {
       ExprEval timestamp = args.get(0).eval(bindings);
       if (timestamp.isNumericNull()) {
-        return ExprEval.of(null);
+        return ExprEval.ofLong(null);
       }
       final Period period = getPeriod(args, bindings);
       final Chronology chronology = getTimeZone(args, bindings);

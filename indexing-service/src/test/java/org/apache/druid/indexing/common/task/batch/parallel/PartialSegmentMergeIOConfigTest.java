@@ -23,15 +23,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 import java.util.Collections;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "partitionLocation = {0}")
+@MethodSource("data")
 public class PartialSegmentMergeIOConfigTest
 {
   final PartitionLocation partitionLocation;
@@ -41,7 +42,6 @@ public class PartialSegmentMergeIOConfigTest
     this.partitionLocation = partitionLocation;
   }
 
-  @Parameterized.Parameters(name = "partitionLocation = {0}")
   public static Collection<Object[]> data()
   {
     return ImmutableList.of(new Object[]{
@@ -66,7 +66,7 @@ public class PartialSegmentMergeIOConfigTest
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
   private PartialSegmentMergeIOConfig target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     target = new PartialSegmentMergeIOConfig(Collections.singletonList(partitionLocation));

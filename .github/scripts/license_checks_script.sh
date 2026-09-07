@@ -18,7 +18,7 @@
 set -e
 
 ./.github/scripts/setup_generate_license.sh
-${MVN} apache-rat:check -Prat --fail-at-end \
+mvn -B apache-rat:check -Prat --fail-at-end \
 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
 -Drat.consoleOutput=true
 # Generate dependency reports and checks they are valid.

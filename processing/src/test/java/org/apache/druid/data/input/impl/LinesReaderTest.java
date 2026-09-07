@@ -29,8 +29,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -47,10 +47,10 @@ public class LinesReaderTest extends InitializedNullHandlingTest
 
     final List<InputRow> inputRows = readAllRows(reader);
 
-    Assert.assertEquals(3, inputRows.size());
-    Assert.assertEquals("line1", inputRows.get(0).getRaw("line"));
-    Assert.assertEquals("line2", inputRows.get(1).getRaw("line"));
-    Assert.assertEquals("line3", inputRows.get(2).getRaw("line"));
+    Assertions.assertEquals(3, inputRows.size());
+    Assertions.assertEquals("line1", inputRows.get(0).getRaw("line"));
+    Assertions.assertEquals("line2", inputRows.get(1).getRaw("line"));
+    Assertions.assertEquals("line3", inputRows.get(2).getRaw("line"));
   }
 
   @Test
@@ -61,10 +61,10 @@ public class LinesReaderTest extends InitializedNullHandlingTest
 
     final List<InputRow> inputRows = readAllRows(reader);
 
-    Assert.assertEquals(3, inputRows.size());
-    Assert.assertEquals("line1", inputRows.get(0).getRaw("line"));
-    Assert.assertEquals("", inputRows.get(1).getRaw("line"));
-    Assert.assertEquals(" line3", inputRows.get(2).getRaw("line"));
+    Assertions.assertEquals(3, inputRows.size());
+    Assertions.assertEquals("line1", inputRows.get(0).getRaw("line"));
+    Assertions.assertEquals("", inputRows.get(1).getRaw("line"));
+    Assertions.assertEquals(" line3", inputRows.get(2).getRaw("line"));
   }
 
   @Test
@@ -75,8 +75,8 @@ public class LinesReaderTest extends InitializedNullHandlingTest
 
     final List<InputRow> inputRows = readAllRows(reader);
 
-    Assert.assertEquals(1, inputRows.size());
-    Assert.assertEquals("single line without newline", inputRows.get(0).getRaw("line"));
+    Assertions.assertEquals(1, inputRows.size());
+    Assertions.assertEquals("single line without newline", inputRows.get(0).getRaw("line"));
   }
 
   @Test
@@ -87,8 +87,8 @@ public class LinesReaderTest extends InitializedNullHandlingTest
 
     final List<Map<String, Object>> maps = reader.toMap("test line");
 
-    Assert.assertEquals(1, maps.size());
-    Assert.assertEquals(ImmutableMap.of("line", "test line"), maps.get(0));
+    Assertions.assertEquals(1, maps.size());
+    Assertions.assertEquals(ImmutableMap.of("line", "test line"), maps.get(0));
   }
 
   private InputEntityReader createReader(

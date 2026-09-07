@@ -797,8 +797,10 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
         private boolean[] nullVector = null;
         private int id = ReadableVectorInspector.NULL_ID;
 
-        @Nullable
-        private PeekableIntIterator nullIterator = nullValueBitmap != null ? nullValueBitmap.peekableIterator() : null;
+        private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+        /**
+         * One past the highest row id of the previous batch, or -1 before the first batch.
+         */
         private int offsetMark = -1;
         @Override
         public double[] getDoubleVector()
@@ -829,10 +831,10 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
             encodedValueColumn.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
           } else {
             final int[] offsets = offset.getOffsets();
-            if (offsets[offsets.length - 1] < offsetMark) {
+            if (offsets[0] < offsetMark) {
               nullIterator = nullValueBitmap.peekableIterator();
             }
-            offsetMark = offsets[offsets.length - 1];
+            offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
             encodedValueColumn.get(idVector, offsets, offset.getCurrentVectorSize());
           }
           for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
@@ -846,9 +848,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
             }
           }
 
-          if (nullIterator != null) {
-            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
-          }
+          nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
 
           id = offset.getId();
         }
@@ -1019,7 +1019,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @SuppressWarnings("unchecked")
   @Nullable
   @Override
-  public <T> T as(Class<? extends T> clazz)
+  public <T> T as(Class<T> clazz)
   {
     //noinspection ReturnOfNull
     return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);

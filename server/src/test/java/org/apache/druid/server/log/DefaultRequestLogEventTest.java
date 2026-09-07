@@ -26,22 +26,25 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DefaultRequestLogEventTest
@@ -52,35 +55,38 @@ public class DefaultRequestLogEventTest
   public void testDefaultRequestLogEventSerde() throws Exception
   {
     RequestLogLine nativeLine = RequestLogLine.forNative(
-            new TimeseriesQuery(
-                    new TableDataSource("dummy"),
-                    new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
-                    true,
-                    VirtualColumns.EMPTY,
-                    null,
-                    Granularities.ALL,
-                    ImmutableList.of(),
-                    ImmutableList.of(),
-                    5,
-                    ImmutableMap.of("key", "value")),
-            DateTimes.of(2019, 12, 12, 3, 1),
-            "127.0.0.1",
-            new QueryStats(ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"))
+        new TimeseriesQuery(
+            new TableDataSource("dummy"),
+            new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2015-01-01/2015-01-02"))),
+            true,
+            VirtualColumns.EMPTY,
+            null,
+            Granularities.ALL,
+            ImmutableList.of(),
+            ImmutableList.of(),
+            5,
+            ImmutableMap.of("key", "value")
+        ),
+        DateTimes.of(2019, 12, 12, 3, 1),
+        "127.0.0.1",
+        new QueryStats(ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"))
     );
 
     DefaultRequestLogEvent defaultRequestLogEvent = new DefaultRequestLogEvent(
-            ImmutableMap.of("service", "druid-service", "host", "127.0.0.1"),
-            "feed",
-            nativeLine);
+        ImmutableMap.of("service", "druid-service", "host", "127.0.0.1"),
+        "feed",
+        nativeLine
+    );
 
     String logEventJson = objectMapper.writeValueAsString(defaultRequestLogEvent);
-    String expected = "{\"feed\":\"feed\",\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"
+    String expected =
+        "{\"feed\":\"feed\",\"query\":{\"queryType\":\"timeseries\",\"dataSource\":{\"type\":\"table\",\"name\":\"dummy\"},"
         + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"2015-01-01T00:00:00.000Z/2015-01-02T00:00:00.000Z\"]},"
         + "\"descending\":true,\"granularity\":{\"type\":\"all\"},\"limit\":5,"
         + "\"context\":{\"key\":\"value\"}},\"host\":\"127.0.0.1\",\"timestamp\":\"2019-12-12T03:01:00.000Z\","
         + "\"service\":\"druid-service\",\"sql\":null,\"sqlQueryContext\":{},\"remoteAddr\":\"127.0.0.1\","
         + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
-    Assert.assertEquals(objectMapper.readTree(expected), objectMapper.readTree(logEventJson));
+    Assertions.assertEquals(objectMapper.readTree(expected), objectMapper.readTree(logEventJson));
   }
 
   @Test
@@ -100,7 +106,8 @@ public class DefaultRequestLogEventTest
         ImmutableList.of(),
         ImmutableList.of(),
         5,
-        ImmutableMap.of("key", "value"));
+        ImmutableMap.of("key", "value")
+    );
     final QueryStats queryStats = new QueryStats(
         ImmutableMap.of("query/time", 13L, "query/bytes", 10L, "success", true, "identity", "allowAll"));
     RequestLogLine nativeLine = RequestLogLine.forNative(
@@ -122,17 +129,20 @@ public class DefaultRequestLogEventTest
     expected.put("remoteAddr", host);
     expected.put("queryStats", queryStats);
 
-    Assert.assertEquals(expected, defaultRequestLogEvent.toMap());
+    Assertions.assertEquals(expected, defaultRequestLogEvent.toMap());
   }
 
   @Test
-  public void testDefaultRequestLogEventToMapSQL()
+  public void testDefaultRequestLogEventToMapSQL() throws JsonProcessingException
   {
     final String feed = "test";
     final DateTime timestamp = DateTimes.of(2019, 12, 12, 3, 1);
     final String service = "druid-service";
     final String host = "127.0.0.1";
-    final String sql = "select * from 1337";
+    final String sql = "select * from foo where x = ?";
+    final List<ClientSqlParameter> parameters = List.of(
+        new ClientSqlParameter("BIGINT", 1234L)
+    );
     final QueryStats queryStats = new QueryStats(
         ImmutableMap.of(
             "sqlQuery/time", 13L,
@@ -145,6 +155,7 @@ public class DefaultRequestLogEventTest
 
     RequestLogLine nativeLine = RequestLogLine.forSql(
         sql,
+        parameters,
         ImmutableMap.of(),
         timestamp,
         host,
@@ -160,11 +171,20 @@ public class DefaultRequestLogEventTest
     expected.put("service", service);
     expected.put("host", host);
     expected.put("sql", sql);
+    expected.put("sqlParameters", parameters);
     expected.put("sqlQueryContext", ImmutableMap.of());
     expected.put("remoteAddr", host);
     expected.put("queryStats", queryStats);
 
-    Assert.assertEquals(expected, defaultRequestLogEvent.toMap());
+    final EventMap observedEventMap = defaultRequestLogEvent.toMap();
+    Assertions.assertEquals(expected, observedEventMap);
+    Assertions.assertEquals(
+        StringUtils.format(
+            "{\"feed\":\"test\",\"timestamp\":\"%s\",\"service\":\"druid-service\",\"host\":\"127.0.0.1\",\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"sqlQuery/time\":13,\"sqlQuery/planningTimeMs\":1,\"sqlQuery/bytes\":10,\"success\":true,\"identity\":\"allowAll\"},\"sqlQueryContext\":{},\"sql\":\"select * from foo where x = ?\",\"sqlParameters\":[{\"type\":\"BIGINT\",\"value\":1234}]}",
+            timestamp
+        ),
+        new DefaultObjectMapper().writeValueAsString(observedEventMap)
+    );
   }
 
   @Test
@@ -200,7 +220,7 @@ public class DefaultRequestLogEventTest
                       + "\"remoteAddr\":\"127.0.0.1\""
                       + "}";
 
-    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assertions.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
   @Test
@@ -263,7 +283,7 @@ public class DefaultRequestLogEventTest
                       + "\"remoteAddr\":\"127.0.0.1\","
                       + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
 
-    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assertions.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
   @Test
@@ -336,7 +356,7 @@ public class DefaultRequestLogEventTest
                       + "\"text\":\"some text\","
                       + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
 
-    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assertions.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
 }

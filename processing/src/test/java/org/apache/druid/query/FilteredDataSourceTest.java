@@ -25,18 +25,13 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
 public class FilteredDataSourceTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final TableDataSource fooDataSource = new TableDataSource("foo");
   private final TableDataSource barDataSource = new TableDataSource("bar");
   private final FilteredDataSource filteredFooDataSource = FilteredDataSource.create(fooDataSource, DimFilters.dimEquals("col", "value"));
@@ -45,39 +40,41 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
   @Test
   public void test_getTableNames()
   {
-    Assert.assertEquals(Collections.singleton("foo"), filteredFooDataSource.getTableNames());
+    Assertions.assertEquals(Collections.singleton("foo"), filteredFooDataSource.getTableNames());
   }
 
   @Test
   public void test_getChildren()
   {
-    Assert.assertEquals(Collections.singletonList(fooDataSource), filteredFooDataSource.getChildren());
+    Assertions.assertEquals(Collections.singletonList(fooDataSource), filteredFooDataSource.getChildren());
   }
 
   @Test
   public void test_isCacheable()
   {
-    Assert.assertFalse(filteredFooDataSource.isCacheable(true));
+    Assertions.assertFalse(filteredFooDataSource.isCacheable(true));
   }
 
   @Test
   public void test_isGlobal()
   {
-    Assert.assertFalse(filteredFooDataSource.isGlobal());
+    Assertions.assertFalse(filteredFooDataSource.isGlobal());
   }
 
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(filteredFooDataSource.isProcessable());
+    Assertions.assertTrue(filteredFooDataSource.isProcessable());
   }
 
   @Test
   public void test_withChildren_empty()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Expected [1] child");
-    Assert.assertSame(filteredFooDataSource, filteredFooDataSource.withChildren(Collections.emptyList()));
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> filteredFooDataSource.withChildren(Collections.emptyList())
+    );
+    Assertions.assertTrue(e.getMessage().contains("Expected [1] child"));
   }
 
   @Test
@@ -85,11 +82,13 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
   {
     FilteredDataSource newFilteredDataSource = (FilteredDataSource) filteredFooDataSource.withChildren(ImmutableList.of(
         new TableDataSource("bar")));
-    Assert.assertTrue(newFilteredDataSource.getBase().equals(barDataSource));
+    Assertions.assertEquals(newFilteredDataSource.getBase(), barDataSource);
 
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Expected [1] child");
-    filteredFooDataSource.withChildren(ImmutableList.of(fooDataSource, barDataSource));
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> filteredFooDataSource.withChildren(ImmutableList.of(fooDataSource, barDataSource))
+    );
+    Assertions.assertTrue(e.getMessage().contains("Expected [1] child"));
   }
 
   @Test
@@ -107,8 +106,8 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
         DataSource.class
     );
 
-    Assert.assertEquals(filteredFooDataSource, deserialized);
-    Assert.assertNotEquals(fooDataSource, deserialized);
+    Assertions.assertEquals(filteredFooDataSource, deserialized);
+    Assertions.assertNotEquals(fooDataSource, deserialized);
   }
 
   @Test
@@ -121,8 +120,8 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
         FilteredDataSource.class
     );
 
-    Assert.assertEquals(filteredFooDataSource, deserializedFilteredDataSource);
-    Assert.assertNotEquals(fooDataSource, deserializedFilteredDataSource);
+    Assertions.assertEquals(filteredFooDataSource, deserializedFilteredDataSource);
+    Assertions.assertNotEquals(fooDataSource, deserializedFilteredDataSource);
   }
 
   @Test
@@ -130,7 +129,7 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final String s = jsonMapper.writeValueAsString(filteredFooDataSource);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":{\"type\":\"selector\",\"dimension\":\"col\",\"value\":\"value\"}}",
         s
     );
@@ -139,6 +138,6 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
   @Test
   public void testStringRep()
   {
-    Assert.assertFalse(filteredFooDataSource.toString().equals(filteredBarDataSource.toString()));
+    Assertions.assertNotEquals(filteredFooDataSource.toString(), filteredBarDataSource.toString());
   }
 }

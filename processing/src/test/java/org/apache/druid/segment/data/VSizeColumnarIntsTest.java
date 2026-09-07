@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.data;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -36,10 +36,10 @@ public class VSizeColumnarIntsTest
     final int[] array = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     VSizeColumnarInts ints = VSizeColumnarInts.fromArray(array);
 
-    Assert.assertEquals(1, ints.getNumBytes());
-    Assert.assertEquals(array.length, ints.size());
+    Assertions.assertEquals(1, ints.getNumBytes());
+    Assertions.assertEquals(array.length, ints.size());
     for (int i = 0; i < array.length; i++) {
-      Assert.assertEquals(array[i], ints.get(i));
+      Assertions.assertEquals(array[i], ints.get(i));
     }
   }
 
@@ -53,13 +53,30 @@ public class VSizeColumnarIntsTest
     ints.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
-    Assert.assertEquals(ints.getSerializedSize(), bytes.length);
+    Assertions.assertEquals(ints.getSerializedSize(), bytes.length);
     VSizeColumnarInts deserialized = VSizeColumnarInts.readFromByteBuffer(ByteBuffer.wrap(bytes));
 
-    Assert.assertEquals(1, deserialized.getNumBytes());
-    Assert.assertEquals(array.length, deserialized.size());
+    Assertions.assertEquals(1, deserialized.getNumBytes());
+    Assertions.assertEquals(array.length, deserialized.size());
     for (int i = 0; i < array.length; i++) {
-      Assert.assertEquals(array[i], deserialized.get(i));
+      Assertions.assertEquals(array[i], deserialized.get(i));
     }
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final VSizeColumnarInts ints = VSizeColumnarInts.fromArray(new int[]{1, 2, 3});
+    final VSizeColumnarInts equalInts = VSizeColumnarInts.fromArray(new int[]{1, 2, 3});
+    final VSizeColumnarInts differentValues = VSizeColumnarInts.fromArray(new int[]{1, 2, 4});
+    final VSizeColumnarInts differentWidth = VSizeColumnarInts.fromArray(new int[]{1, 2, 3}, 256);
+
+    Assertions.assertEquals(ints, ints);
+    Assertions.assertEquals(ints, equalInts);
+    Assertions.assertEquals(ints.hashCode(), equalInts.hashCode());
+    Assertions.assertNotEquals(ints, null);
+    Assertions.assertNotEquals(ints, "not columnar ints");
+    Assertions.assertNotEquals(ints, differentValues);
+    Assertions.assertNotEquals(ints, differentWidth);
   }
 }

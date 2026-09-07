@@ -21,6 +21,7 @@ package org.apache.druid.rpc;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -29,7 +30,7 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayDeque;
 import java.util.Map;
@@ -52,15 +53,15 @@ public class MockServiceClient implements ServiceClient
     final Expectation expectation = expectations.poll();
 
     requestNumber++;
-    Assert.assertEquals(
-        "request[" + requestNumber + "]",
+    Assertions.assertEquals(
         expectation == null ? null : expectation.request,
-        requestBuilder
+        requestBuilder,
+        "request[" + requestNumber + "]"
     );
 
     if (expectation.response.isValue()) {
       final ClientResponse<FinalType> response =
-          handler.done(handler.handleResponse(expectation.response.valueOrThrow(), chunkNum -> 0));
+          handler.done(handler.handleResponse(expectation.response.valueOrThrow(), TestHttpClient.NOOP_TRAFFIC_COP));
       return Futures.immediateFuture(response.getObj());
     } else {
       return Futures.immediateFailedFuture(expectation.response.error());
@@ -104,7 +105,7 @@ public class MockServiceClient implements ServiceClient
 
   public void verify()
   {
-    Assert.assertTrue("all requests were made", expectations.isEmpty());
+    Assertions.assertTrue(expectations.isEmpty(), "all requests were made");
   }
 
   private static class Expectation

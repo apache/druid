@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
@@ -80,10 +81,9 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -96,9 +96,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Calcite tests which involve subqueries and materializing the intermediate results on {@link org.apache.druid.server.ClientQuerySegmentWalker}
@@ -448,7 +447,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     }
     cannotVectorizeUnlessFallback();
     testQuery(
-        "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x)\n"
+        "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x), MIN(x)\n"
         + "FROM (\n"
         + "    SELECT\n"
         + "        FLOOR(__time to hour) as \"date\",\n"
@@ -480,11 +479,12 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .addDimension(new DefaultDimensionSpec("v0", "_d0"))
                         .addAggregator(new LongSumAggregatorFactory("_a0", "a0"))
+                        .addAggregator(new LongMinAggregatorFactory("_a1", "a0"))
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"2000-01", 3L},
-            new Object[]{"2001-01", 3L}
+            new Object[]{"2000-01", 3L, 1L},
+            new Object[]{"2001-01", 3L, 1L}
         )
     );
   }
@@ -566,8 +566,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         .setGranularity(Granularities.ALL)
                                         .setDimFilter(equality("dim2", "abc", ColumnType.STRING))
                                         .setDimensions(dimensions(
-                                            new DefaultDimensionSpec("dim1", "d0"),
-                                            new DefaultDimensionSpec("dim2", "d1")
+                                            new DefaultDimensionSpec("dim1", "d0")
                                         ))
                                         .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
                                         .setPostAggregatorSpecs(
@@ -751,8 +750,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
             + "WHERE cnt > 0",
         modifiedQueryContext,
         ResourceLimitExceededException.class,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
+        e -> Assertions.assertTrue(
+            e.getMessage().contains(
                 "Cannot issue the query, subqueries generated results beyond maximum[1] rows. Try setting the "
                     + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
                     + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
@@ -1611,7 +1610,10 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
 
       final String datasource1 = "dsMissingCol";
@@ -1639,7 +1641,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
               ))
               .collect(Collectors.toList());
       final QueryableIndex queryableIndex1 = IndexBuilder
-          .create()
+          .create(jsonMapper)
           .tmpDir(new File(tmpFolder, datasource1))
           .segmentWriteOutMediumFactory(OnHeapMemorySegmentWriteOutMediumFactory.instance())
           .schema(new IncrementalIndexSchema.Builder()
@@ -1697,7 +1699,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
           .rows(rows2)
           .buildMMappedIndex();
 
-      super.addSegmentsToWalker(walker);
+      super.addSegmentsToWalker(walker, jsonMapper);
       walker.add(
           DataSegment.builder()
               .dataSource(datasource1)

@@ -237,7 +237,6 @@ export const OVERLORD_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
       { value: 'index_kafka', documentation: 'Kafka indexing tasks' },
       { value: 'index_kinesis', documentation: 'Kinesis indexing tasks' },
       { value: 'index_parallel', documentation: 'Parallel batch indexing tasks' },
-      { value: 'index_hadoop', documentation: 'Hadoop batch indexing tasks' },
     ],
   },
   // Category configuration properties

@@ -38,6 +38,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -90,7 +91,7 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
         return null;
       }
 
-      sketchSize = ((Number) RexLiteral.value(sketchSizeArg)).intValue();
+      sketchSize = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(sketchSizeArg), getName(), "size").intValue();
     } else {
       sketchSize = SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE;
     }
@@ -172,6 +173,8 @@ public abstract class ThetaSketchBaseSqlAggregator implements SqlAggregator
       boolean finalizeAggregations,
       AggregatorFactory aggregatorFactory
   );
+
+  protected abstract String getName();
 
   private boolean isValidComplexInputType(ColumnType columnType)
   {

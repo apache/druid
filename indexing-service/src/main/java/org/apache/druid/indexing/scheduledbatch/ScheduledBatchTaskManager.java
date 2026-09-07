@@ -25,6 +25,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.overlord.LeaderOverlordService;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
@@ -63,7 +64,7 @@ import java.util.concurrent.TimeUnit;
  * and is not persisted in the metadata store.
  * </p>
  */
-public class ScheduledBatchTaskManager
+public class ScheduledBatchTaskManager implements LeaderOverlordService
 {
   private static final Logger log = new EmittingLogger(ScheduledBatchTaskManager.class);
 
@@ -155,11 +156,9 @@ public class ScheduledBatchTaskManager
   /**
    * Starts the scheduled batch task manager by registering the {@link TaskRunnerListener}.
    * This allows tracking of any tasks submitted by the batch supervisor.
-   * <p>
-   * Should be invoked when the Overlord service starts or during leadership transitions.
-   * </p>
    */
-  public void start()
+  @Override
+  public void becomeLeader()
   {
     log.info("Starting scheduled batch task manager.");
     final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
@@ -173,11 +172,9 @@ public class ScheduledBatchTaskManager
   /**
    * Stops the scheduled batch task manager by shutting down all scheduled batch supervisors and
    * unregistering the registered {@link TaskRunnerListener}.
-   * <p>
-   * Should be invoked when the Overlord service stops or during leadership transitions.
-   * </p>
    */
-  public void stop()
+  @Override
+  public void stopBeingLeader()
   {
     log.info("Stopping scheduled batch task manager.");
     supervisorToTaskScheduler.forEach((supervisorId, taskScheduler) -> {
@@ -308,11 +305,19 @@ public class ScheduledBatchTaskManager
       statusTracker.cleanupStaleTaskStatuses(supervisorId);
     }
 
+    /**
+     * Emits a metric with all the dimensions applicable to this supervisor.
+     * The {@link #supervisorId} is added to both {@link DruidMetrics#SUPERVISOR_ID}
+     * and {@link DruidMetrics#ID} dimensions for backward compatibility.
+     * {@link DruidMetrics#ID} is deprecated because it is ambiguous and will be
+     * removed in a future release.
+     */
     private void emitMetric(final String metricName, final int value)
     {
       emitter.emit(
           ServiceMetricEvent.builder()
                             .setDimension(DruidMetrics.ID, supervisorId)
+                            .setDimension(DruidMetrics.SUPERVISOR_ID, supervisorId)
                             .setDimension(DruidMetrics.DATASOURCE, dataSource)
                             .setMetric(metricName, value)
       );

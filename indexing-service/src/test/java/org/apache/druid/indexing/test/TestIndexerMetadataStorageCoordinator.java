@@ -27,15 +27,18 @@ import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SortOrder;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
@@ -56,6 +59,11 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
 
   private int deleteSegmentsCount = 0;
 
+  public SegmentsMetadataManager getManager()
+  {
+    return segmentsMetadataManager;
+  }
+
   @Override
   public Set<String> retrieveAllDatasourceNames()
   {
@@ -63,13 +71,23 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit)
+  public List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit)
   {
     return List.of();
   }
 
   @Override
-  public List<DataSegment> retrieveUnusedSegmentsWithExactInterval(
+  public Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  )
+  {
+    return Map.of();
+  }
+
+  @Override
+  public List<DataSegmentPlus> retrieveUnusedSegmentsWithExactInterval(
       String dataSource,
       Interval interval,
       DateTime maxUpdatedTime,
@@ -106,13 +124,22 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
-    return Set.copyOf(
-        segmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(dataSource).getSegments()
-    );
+    if (visibility == Segments.ONLY_VISIBLE) {
+      return segmentsMetadataManager
+          .getRecentDataSourcesSnapshot()
+          .getAllUsedNonOvershadowedSegments(dataSource, Intervals.ETERNITY);
+    } else {
+      return Set.copyOf(
+          segmentsMetadataManager.getRecentDataSourcesSnapshot().getDataSource(dataSource).getSegments()
+      );
+    }
   }
 
   @Override
-  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
+  public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(
+      String dataSource,
+      List<Interval> intervals
+  )
   {
     return List.of();
   }
@@ -244,6 +271,14 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   )
   {
     return SegmentPublishResult.ok(commitSegments(appendSegments, segmentSchemaMapping));
+  }
+
+  @Override
+  public int insertIntoUpgradeSegmentsTable(
+      Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
+  )
+  {
+    throw new UnsupportedOperationException("not implemented");
   }
 
   @Override

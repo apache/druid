@@ -52,7 +52,6 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.WorkerTaskRunnerQueryAdapter;
-import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -82,12 +81,10 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
@@ -109,7 +106,6 @@ public class OverlordResourceTest
   private TaskStorage taskStorage;
   private GlobalTaskLockbox taskLockbox;
   private JacksonConfigManager configManager;
-  private ProvisioningStrategy provisioningStrategy;
   private AuthConfig authConfig;
   private TaskQueryTool taskQueryTool;
   private IndexerMetadataStorageAdapter indexerMetadataStorageAdapter;
@@ -119,16 +115,12 @@ public class OverlordResourceTest
   private WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
   private AuditManager auditManager;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setUp()
   {
     taskRunner = EasyMock.createMock(TaskRunner.class);
     taskQueue = EasyMock.createStrictMock(TaskQueue.class);
     configManager = EasyMock.createMock(JacksonConfigManager.class);
-    provisioningStrategy = EasyMock.createMock(ProvisioningStrategy.class);
     authConfig = EasyMock.createMock(AuthConfig.class);
     overlord = EasyMock.createStrictMock(DruidOverlord.class);
     taskMaster = EasyMock.createStrictMock(TaskMaster.class);
@@ -138,7 +130,6 @@ public class OverlordResourceTest
         taskStorage,
         taskLockbox,
         taskMaster,
-        provisioningStrategy,
         () -> configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class).get()
     );
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
@@ -197,7 +188,7 @@ public class OverlordResourceTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(
@@ -226,8 +217,7 @@ public class OverlordResourceTest
         workerTaskRunnerQueryAdapter,
         authConfig,
         configManager,
-        auditManager,
-        provisioningStrategy
+        auditManager
     );
   }
 
@@ -238,8 +228,8 @@ public class OverlordResourceTest
     replayAll();
 
     final Response response = overlordResource.getLeader();
-    Assert.assertEquals("boz", response.getEntity());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals("boz", response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
   }
 
   @Test
@@ -251,13 +241,13 @@ public class OverlordResourceTest
 
     // true
     final Response response1 = overlordResource.isLeader();
-    Assert.assertEquals(ImmutableMap.of("leader", true), response1.getEntity());
-    Assert.assertEquals(200, response1.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("leader", true), response1.getEntity());
+    Assertions.assertEquals(200, response1.getStatus());
 
     // false
     final Response response2 = overlordResource.isLeader();
-    Assert.assertEquals(ImmutableMap.of("leader", false), response2.getEntity());
-    Assert.assertEquals(404, response2.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("leader", false), response2.getEntity());
+    Assertions.assertEquals(404, response2.getStatus());
   }
 
   @Test
@@ -289,8 +279,8 @@ public class OverlordResourceTest
 
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource.getWaitingTasks(req)
                                                                                   .getEntity();
-    Assert.assertEquals(1, responseObjects.size());
-    Assert.assertEquals("id_2", responseObjects.get(0).getId());
+    Assertions.assertEquals(1, responseObjects.size());
+    Assertions.assertEquals("id_2", responseObjects.get(0).getId());
   }
 
   @Test
@@ -314,9 +304,9 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List) overlordResource
         .getCompleteTasks(null, req).getEntity();
 
-    Assert.assertEquals(2, responseObjects.size());
-    Assert.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
-    Assert.assertEquals(tasksIds.get(2), responseObjects.get(1).getId());
+    Assertions.assertEquals(2, responseObjects.size());
+    Assertions.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
+    Assertions.assertEquals(tasksIds.get(2), responseObjects.get(1).getId());
   }
 
   @Test
@@ -349,8 +339,28 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List) overlordResource.getRunningTasks(null, req)
                                                                   .getEntity();
 
-    Assert.assertEquals(1, responseObjects.size());
-    Assert.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
+    Assertions.assertEquals(1, responseObjects.size());
+    Assertions.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
+  }
+
+  @Test
+  public void test_getAllActiveTasks_withTaskQueryTool_returnsRunningTasksOnly()
+  {
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue));
+    EasyMock.expect(taskQueue.getTaskInfos()).andReturn(
+        List.of(
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.success("s"), new NoopTask("s", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.failure("f", ""), new NoopTask("f", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.running("r1"), new NoopTask("r1", null, null, 1L, 0L, null)),
+            new TaskInfo(DateTimes.nowUtc(), TaskStatus.running("r2"), new NoopTask("r2", null, null, 1L, 0L, null))
+        )
+    );
+
+    replayAll();
+
+    final List<TaskStatusPlus> activeTasks = taskQueryTool.getAllActiveTasks();
+    Assertions.assertEquals(2, activeTasks.size());
+    Assertions.assertTrue(activeTasks.stream().allMatch(status -> status.getStatusCode().equals(TaskState.RUNNING)));
   }
 
   @Test
@@ -390,7 +400,7 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks(null, null, null, null, null, req)
         .getEntity();
-    Assert.assertEquals(4, responseObjects.size());
+    Assertions.assertEquals(4, responseObjects.size());
   }
 
   @Test
@@ -430,9 +440,9 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks(null, "allow", null, null, null, req)
         .getEntity();
-    Assert.assertEquals(7, responseObjects.size());
-    Assert.assertEquals("id_5", responseObjects.get(0).getId());
-    Assert.assertEquals("DataSource Check", "allow", responseObjects.get(0).getDataSource());
+    Assertions.assertEquals(7, responseObjects.size());
+    Assertions.assertEquals("id_5", responseObjects.get(0).getId());
+    Assertions.assertEquals("allow", responseObjects.get(0).getDataSource(), "DataSource Check");
   }
 
   @Test
@@ -475,8 +485,8 @@ public class OverlordResourceTest
             null,
             req
         ).getEntity();
-    Assert.assertEquals(1, responseObjects.size());
-    Assert.assertEquals("id_2", responseObjects.get(0).getId());
+    Assertions.assertEquals(1, responseObjects.size());
+    Assertions.assertEquals("id_2", responseObjects.get(0).getId());
   }
 
   @Test
@@ -516,9 +526,9 @@ public class OverlordResourceTest
         .getTasks("running", "allow", null, null, null, req)
         .getEntity();
 
-    Assert.assertEquals(2, responseObjects.size());
-    Assert.assertEquals(tasksIds.get(0), responseObjects.get(0).getId());
-    Assert.assertEquals("DataSource Check", "allow", responseObjects.get(0).getDataSource());
+    Assertions.assertEquals(2, responseObjects.size());
+    Assertions.assertEquals(tasksIds.get(0), responseObjects.get(0).getId());
+    Assertions.assertEquals("allow", responseObjects.get(0).getDataSource(), "DataSource Check");
   }
 
   @Test
@@ -558,9 +568,9 @@ public class OverlordResourceTest
         .getTasks("pending", null, null, null, null, req)
         .getEntity();
 
-    Assert.assertEquals(1, responseObjects.size());
-    Assert.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
-    Assert.assertEquals("DataSource Check", "allow", responseObjects.get(0).getDataSource());
+    Assertions.assertEquals(1, responseObjects.size());
+    Assertions.assertEquals(tasksIds.get(1), responseObjects.get(0).getId());
+    Assertions.assertEquals("allow", responseObjects.get(0).getDataSource(), "DataSource Check");
   }
 
   @Test
@@ -584,9 +594,9 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks("complete", null, null, null, null, req)
         .getEntity();
-    Assert.assertEquals(2, responseObjects.size());
-    Assert.assertEquals("id_1", responseObjects.get(0).getId());
-    Assert.assertTrue("DataSource Check", "allow".equals(responseObjects.get(0).getDataSource()));
+    Assertions.assertEquals(2, responseObjects.size());
+    Assertions.assertEquals("id_1", responseObjects.get(0).getId());
+    Assertions.assertTrue("allow".equals(responseObjects.get(0).getDataSource()), "DataSource Check");
   }
 
   @Test
@@ -613,9 +623,9 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks("complete", null, interval, null, null, req)
         .getEntity();
-    Assert.assertEquals(2, responseObjects.size());
-    Assert.assertEquals("id_2", responseObjects.get(0).getId());
-    Assert.assertEquals("DataSource Check", "allow", responseObjects.get(0).getDataSource());
+    Assertions.assertEquals(2, responseObjects.size());
+    Assertions.assertEquals("id_2", responseObjects.get(0).getId());
+    Assertions.assertEquals("allow", responseObjects.get(0).getDataSource(), "DataSource Check");
   }
 
   @Test
@@ -661,9 +671,9 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks(null, null, null, null, null, req)
         .getEntity();
-    Assert.assertEquals(2, responseObjects.size());
+    Assertions.assertEquals(2, responseObjects.size());
     for (TaskStatusPlus taskStatus : responseObjects) {
-      Assert.assertEquals(Datasources.WIKIPEDIA, taskStatus.getDataSource());
+      Assertions.assertEquals(Datasources.WIKIPEDIA, taskStatus.getDataSource());
     }
   }
 
@@ -709,9 +719,9 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks(null, null, null, null, "to-return", req)
         .getEntity();
-    Assert.assertEquals(1, responseObjects.size());
+    Assertions.assertEquals(1, responseObjects.size());
     for (TaskStatusPlus taskStatus : responseObjects) {
-      Assert.assertEquals("to-return", taskStatus.getType());
+      Assertions.assertEquals("to-return", taskStatus.getType());
     }
   }
 
@@ -725,7 +735,7 @@ public class OverlordResourceTest
     replayAll();
 
     // Verify that only the tasks of read access datasource are returned
-    Assert.assertThrows(
+    Assertions.assertThrows(
         WebApplicationException.class,
         () -> overlordResource.getTasks(null, Datasources.BUZZFEED, null, null, null, req)
     );
@@ -755,9 +765,9 @@ public class OverlordResourceTest
     List<TaskStatusPlus> responseObjects = (List<TaskStatusPlus>) overlordResource
         .getTasks("complete", null, null, null, null, req)
         .getEntity();
-    Assert.assertEquals(2, responseObjects.size());
-    Assert.assertEquals("id_1", responseObjects.get(0).getId());
-    Assert.assertEquals("DataSource Check", "allow", responseObjects.get(0).getDataSource());
+    Assertions.assertEquals(2, responseObjects.size());
+    Assertions.assertEquals("id_1", responseObjects.get(0).getId());
+    Assertions.assertEquals("allow", responseObjects.get(0).getDataSource(), "DataSource Check");
   }
 
   @Test
@@ -768,7 +778,7 @@ public class OverlordResourceTest
     Object responseObject = overlordResource
         .getTasks("blah", "ds_test", null, null, null, req)
         .getEntity();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Invalid task state[blah]. Must be one of [pending, waiting, running, complete].",
         responseObject.toString()
     );
@@ -777,14 +787,13 @@ public class OverlordResourceTest
   @Test
   public void testSecuredTaskPost()
   {
-    expectedException.expect(ForbiddenException.class);
     expectAuthorizationTokenCheck();
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(false);
 
     replayAll();
 
-    Task task = NoopTask.create();
-    overlordResource.taskPost(task, req);
+    final Task task = NoopTask.create();
+    Assertions.assertThrows(ForbiddenException.class, () -> overlordResource.taskPost(task, req));
   }
 
   @Test
@@ -816,12 +825,12 @@ public class OverlordResourceTest
     Task task = new KillUnusedSegmentsTask("kill_all", "allow", Intervals.ETERNITY, null, null, 10, null, null);
     overlordResource.taskPost(task, req);
 
-    Assert.assertTrue(auditEntryCapture.hasCaptured());
+    Assertions.assertTrue(auditEntryCapture.hasCaptured());
     AuditEntry auditEntry = auditEntryCapture.getValue();
-    Assert.assertEquals(username, auditEntry.getAuditInfo().getAuthor());
-    Assert.assertEquals("killing segments", auditEntry.getAuditInfo().getComment());
-    Assert.assertEquals("druid", auditEntry.getAuditInfo().getIdentity());
-    Assert.assertEquals("127.0.0.1", auditEntry.getAuditInfo().getIp());
+    Assertions.assertEquals(username, auditEntry.getAuditInfo().getAuthor());
+    Assertions.assertEquals("killing segments", auditEntry.getAuditInfo().getComment());
+    Assertions.assertEquals("druid", auditEntry.getAuditInfo().getIdentity());
+    Assertions.assertEquals("127.0.0.1", auditEntry.getAuditInfo().getIp());
   }
 
   @Test
@@ -833,10 +842,8 @@ public class OverlordResourceTest
     replayAll();
 
     // Verify that taskPost fails for user who has only datasource read access
-    Task task = NoopTask.forDatasource(Datasources.WIKIPEDIA);
-    expectedException.expect(ForbiddenException.class);
-    expectedException.expect(ForbiddenException.class);
-    overlordResource.taskPost(task, req);
+    final Task task = NoopTask.forDatasource(Datasources.WIKIPEDIA);
+    Assertions.assertThrows(ForbiddenException.class, () -> overlordResource.taskPost(task, req));
   }
 
   @Test
@@ -858,8 +865,8 @@ public class OverlordResourceTest
 
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("numDeleted", 2), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("numDeleted", 2), response.getEntity());
   }
 
   @Test
@@ -884,8 +891,8 @@ public class OverlordResourceTest
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
   }
 
   @Test
@@ -910,8 +917,8 @@ public class OverlordResourceTest
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
-    Assert.assertEquals(500, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+    Assertions.assertEquals(500, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
   }
 
   @Test
@@ -936,8 +943,8 @@ public class OverlordResourceTest
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
-    Assert.assertEquals(500, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
+    Assertions.assertEquals(500, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", exceptionMsg), response.getEntity());
   }
 
   @Test
@@ -952,8 +959,8 @@ public class OverlordResourceTest
     Response response = overlordResource
         .killPendingSegments("allow", new Interval(DateTimes.MIN, DateTimes.nowUtc()).toString(), req);
 
-    Assert.assertEquals(503, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "overlord is not the leader or not initialized yet"), response.getEntity());
+    Assertions.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", "overlord is not the leader or not initialized yet"), response.getEntity());
   }
 
   @Test
@@ -979,14 +986,14 @@ public class OverlordResourceTest
         TestHelper.makeJsonMapper().writeValueAsString(response1.getEntity()),
         TaskPayloadResponse.class
     );
-    Assert.assertEquals(new TaskPayloadResponse("mytask", task), taskPayloadResponse1);
+    Assertions.assertEquals(new TaskPayloadResponse("mytask", task), taskPayloadResponse1);
 
     final Response response2 = overlordResource.getTaskPayload("othertask");
     final TaskPayloadResponse taskPayloadResponse2 = TestHelper.makeJsonMapper().readValue(
         TestHelper.makeJsonMapper().writeValueAsString(response2.getEntity()),
         TaskPayloadResponse.class
     );
-    Assert.assertEquals(new TaskPayloadResponse("othertask", null), taskPayloadResponse2);
+    Assertions.assertEquals(new TaskPayloadResponse("othertask", null), taskPayloadResponse2);
   }
 
   @Test
@@ -1027,9 +1034,7 @@ public class OverlordResourceTest
         TestHelper.makeJsonMapper().writeValueAsString(response1.getEntity()),
         TaskStatusResponse.class
     );
-    TaskStatusPlus tsp = taskStatusResponse1.getStatus();
-    Assert.assertEquals(tsp.getStatusCode(), tsp.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new TaskStatusResponse(
             taskId,
             new TaskStatusPlus(
@@ -1054,7 +1059,7 @@ public class OverlordResourceTest
         TestHelper.makeJsonMapper().writeValueAsString(response2.getEntity()),
         TaskStatusResponse.class
     );
-    Assert.assertEquals(new TaskStatusResponse("othertask", null), taskStatusResponse2);
+    Assertions.assertEquals(new TaskStatusResponse("othertask", null), taskStatusResponse2);
   }
 
   @Test
@@ -1076,7 +1081,7 @@ public class OverlordResourceTest
     replayAll();
 
     final Response response = overlordResource.getDatasourceLockedIntervals(lockFilterPolicies);
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     Map<String, List<Interval>> observedIntervals = jsonMapper.readValue(
@@ -1084,7 +1089,7 @@ public class OverlordResourceTest
         new TypeReference<>() {}
     );
 
-    Assert.assertEquals(expectedIntervals, observedIntervals);
+    Assertions.assertEquals(expectedIntervals, observedIntervals);
   }
 
   @Test
@@ -1093,10 +1098,10 @@ public class OverlordResourceTest
     replayAll();
 
     Response response = overlordResource.getDatasourceLockedIntervals(null);
-    Assert.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(400, response.getStatus());
 
     response = overlordResource.getDatasourceLockedIntervals(Collections.emptyList());
-    Assert.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(400, response.getStatus());
   }
 
   @Test
@@ -1132,7 +1137,7 @@ public class OverlordResourceTest
     replayAll();
 
     final Response response = overlordResource.getActiveLocks(lockFilterPolicies);
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     Map<String, List<TaskLock>> observedLocks = jsonMapper.readValue(
@@ -1142,7 +1147,7 @@ public class OverlordResourceTest
         }
     ).getDatasourceToLocks();
 
-    Assert.assertEquals(expectedLocks, observedLocks);
+    Assertions.assertEquals(expectedLocks, observedLocks);
   }
 
   @Test
@@ -1151,10 +1156,10 @@ public class OverlordResourceTest
     replayAll();
 
     Response response = overlordResource.getActiveLocks(null);
-    Assert.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(400, response.getStatus());
 
     response = overlordResource.getActiveLocks(Collections.emptyList());
-    Assert.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(400, response.getStatus());
   }
 
   @Test
@@ -1176,7 +1181,7 @@ public class OverlordResourceTest
     final Map<String, Integer> response = (Map<String, Integer>) overlordResource
         .doShutdown("id_1")
         .getEntity();
-    Assert.assertEquals("id_1", response.get("task"));
+    Assertions.assertEquals("id_1", response.get("task"));
   }
 
   @Test
@@ -1214,7 +1219,7 @@ public class OverlordResourceTest
     final Map<String, String> response = (Map<String, String>) overlordResource
         .shutdownTasksForDataSource("datasource")
         .getEntity();
-    Assert.assertEquals("datasource", response.get("dataSource"));
+    Assertions.assertEquals("datasource", response.get("dataSource"));
   }
 
   @Test
@@ -1228,7 +1233,7 @@ public class OverlordResourceTest
     replayAll();
 
     final Response response = overlordResource.shutdownTasksForDataSource("notExisting");
-    Assert.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Status.NOT_FOUND.getStatusCode(), response.getStatus());
   }
 
   @Test
@@ -1243,8 +1248,8 @@ public class OverlordResourceTest
 
     final Response response = overlordResource.enableWorker(host);
 
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
-    Assert.assertEquals(ImmutableMap.of(host, "enabled"), response.getEntity());
+    Assertions.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of(host, "enabled"), response.getEntity());
   }
 
   @Test
@@ -1259,8 +1264,8 @@ public class OverlordResourceTest
 
     final Response response = overlordResource.disableWorker(host);
 
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
-    Assert.assertEquals(ImmutableMap.of(host, "disabled"), response.getEntity());
+    Assertions.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of(host, "disabled"), response.getEntity());
   }
 
   @Test
@@ -1275,8 +1280,8 @@ public class OverlordResourceTest
 
     final Response response = overlordResource.enableWorker(host);
 
-    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
+    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
   }
 
   @Test
@@ -1291,8 +1296,8 @@ public class OverlordResourceTest
 
     final Response response = overlordResource.disableWorker(host);
 
-    Assert.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
+    Assertions.assertEquals(HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode(), response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", "Worker API returns error!"), response.getEntity());
   }
 
   @Test
@@ -1301,7 +1306,7 @@ public class OverlordResourceTest
     EasyMock.expect(overlord.isLeader()).andReturn(false);
     replayAll();
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE.getCode(), response.getStatus());
+    Assertions.assertEquals(HttpResponseStatus.SERVICE_UNAVAILABLE.getCode(), response.getStatus());
   }
 
   @Test
@@ -1319,10 +1324,10 @@ public class OverlordResourceTest
     replayAll();
 
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
-    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
-    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
-    Assert.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+    Assertions.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assertions.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assertions.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
+    Assertions.assertEquals(-1, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
 
   @Test
@@ -1342,10 +1347,10 @@ public class OverlordResourceTest
     replayAll();
 
     final Response response = overlordResource.getTotalWorkerCapacity();
-    Assert.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
-    Assert.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
-    Assert.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
-    Assert.assertEquals(expectedWorkerCapacityWithAutoscale, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
+    Assertions.assertEquals(HttpResponseStatus.OK.getCode(), response.getStatus());
+    Assertions.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getCurrentClusterCapacity());
+    Assertions.assertEquals(expectedWorkerCapacity, ((TotalWorkerCapacityResponse) response.getEntity()).getUsedClusterCapacity());
+    Assertions.assertEquals(expectedWorkerCapacityWithAutoscale, ((TotalWorkerCapacityResponse) response.getEntity()).getMaximumCapacityWithAutoScale());
   }
 
   @Test
@@ -1373,7 +1378,7 @@ public class OverlordResourceTest
         new ResourceAction(new Resource(inputSourceType, ResourceType.EXTERNAL), Action.READ)
     );
     Set<ResourceAction> resourceActions = overlordResource.getNeededResourceActionsForTask(task);
-    Assert.assertEquals(expectedResourceActions, resourceActions);
+    Assertions.assertEquals(expectedResourceActions, resourceActions);
   }
 
   @Test
@@ -1392,12 +1397,12 @@ public class OverlordResourceTest
     EasyMock.replay(task);
     replayAll();
 
-    final UOE e = Assert.assertThrows(
+    final UOE e = Assertions.assertThrows(
         UOE.class,
         () -> overlordResource.getNeededResourceActionsForTask(task)
     );
 
-    Assert.assertEquals(expectedException, e);
+    Assertions.assertEquals(expectedException, e);
   }
 
   @Test
@@ -1423,7 +1428,7 @@ public class OverlordResourceTest
         new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.WRITE)
     );
     Set<ResourceAction> resourceActions = overlordResource.getNeededResourceActionsForTask(task);
-    Assert.assertEquals(expectedResourceActions, resourceActions);
+    Assertions.assertEquals(expectedResourceActions, resourceActions);
   }
 
   @Test
@@ -1437,7 +1442,7 @@ public class OverlordResourceTest
 
     final Object response = overlordResource.getMultipleTaskStatuses(ImmutableSet.of("task"))
                                             .getEntity();
-    Assert.assertEquals(ImmutableMap.of("task", TaskStatus.running("task")), response);
+    Assertions.assertEquals(ImmutableMap.of("task", TaskStatus.running("task")), response);
   }
 
   @Test
@@ -1450,7 +1455,7 @@ public class OverlordResourceTest
 
     final Object response = overlordResource.getMultipleTaskStatuses(ImmutableSet.of("task"))
                                             .getEntity();
-    Assert.assertEquals(ImmutableMap.of("task", TaskStatus.running("task")), response);
+    Assertions.assertEquals(ImmutableMap.of("task", TaskStatus.running("task")), response);
   }
 
   @Test
@@ -1460,8 +1465,8 @@ public class OverlordResourceTest
     OverlordResource overlordResource =
         new OverlordResource(null, null, null, null, null, null, null, null, null, null);
     final Response response = overlordResource.getTaskSegments("taskId");
-    Assert.assertEquals(404, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(
         Collections.singletonMap(
             "error",
             "Segment IDs committed by a task action are not persisted anymore."
@@ -1480,10 +1485,10 @@ public class OverlordResourceTest
   {
     AuthenticationResult authenticationResult = new AuthenticationResult(username, "druid", null, null);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .atLeastOnce();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
 
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
     EasyMock.expectLastCall().anyTimes();

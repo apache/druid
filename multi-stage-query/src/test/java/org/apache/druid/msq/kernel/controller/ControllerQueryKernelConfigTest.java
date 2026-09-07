@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -70,7 +70,7 @@ public class ControllerQueryKernelConfigTest
         .workerContextMap(workerContextMap)
         .build();
 
-    Assert.assertEquals(config1, config2);
+    Assertions.assertEquals(config1, config2);
   }
 
   @Test

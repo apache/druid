@@ -21,8 +21,8 @@ package org.apache.druid.collections.bitmap;
 
 import org.apache.druid.extendedset.intset.ConciseSet;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.io.IOException;
@@ -33,7 +33,7 @@ public class BitmapOperationAgainstUniformDistributionTest extends BitmapOperati
   public static final double DENSITY = 0.01;
   public static final int MIN_INTERSECT = 50;
 
-  @BeforeClass
+  @BeforeAll
   public static void prepareMostlyUniform() throws Exception
   {
     reset();
@@ -71,7 +71,7 @@ public class BitmapOperationAgainstUniformDistributionTest extends BitmapOperati
     printSizeStats(DENSITY, "Uniform Bitmap");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws IOException
   {
     reset();

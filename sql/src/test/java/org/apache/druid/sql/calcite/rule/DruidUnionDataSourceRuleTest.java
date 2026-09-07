@@ -36,8 +36,8 @@ import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -69,7 +69,7 @@ public class DruidUnionDataSourceRuleTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
@@ -86,7 +86,7 @@ public class DruidUnionDataSourceRuleTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of(ImmutableList.of("col1")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
@@ -103,7 +103,7 @@ public class DruidUnionDataSourceRuleTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.empty(),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
@@ -120,7 +120,7 @@ public class DruidUnionDataSourceRuleTest
         DruidRelsTest.mockFilter()
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.empty(),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
@@ -138,7 +138,7 @@ public class DruidUnionDataSourceRuleTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
@@ -165,7 +165,7 @@ public class DruidUnionDataSourceRuleTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of(ImmutableList.of("col2", "col1")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
@@ -183,7 +183,7 @@ public class DruidUnionDataSourceRuleTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of(ImmutableList.of("__time", "col1", "col2")),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
@@ -200,7 +200,7 @@ public class DruidUnionDataSourceRuleTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.empty(),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );
@@ -217,7 +217,7 @@ public class DruidUnionDataSourceRuleTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.empty(),
         DruidUnionDataSourceRule.getColumnNamesIfTableOrUnion(druidRel, null)
     );

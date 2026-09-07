@@ -37,15 +37,15 @@ import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.ws.rs.core.Response;
 
@@ -55,10 +55,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test of REST API operations for the table catalog.
@@ -69,20 +69,20 @@ public class CatalogResourceTest
   public static final String POST = "POST";
   public static final String DELETE = "DELETE";
 
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final JUnit5TestDerbyConnector DERBY_CONNECTOR_RULE = new JUnit5TestDerbyConnector();
 
   private CatalogTests.DbFixture dbFixture;
   private CatalogResource resource;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
-    dbFixture = new CatalogTests.DbFixture(derbyConnectorRule);
+    dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTOR_RULE);
     resource = new CatalogResource(dbFixture.storage, CatalogTests.AUTH_MAPPER);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     CatalogTests.tearDown(dbFixture);
@@ -144,6 +144,14 @@ public class CatalogResourceTest
 
     // Duplicate
     resp = resource.postTable(TableId.DRUID_SCHEMA, tableName, dsSpec, 0, false, postBy(CatalogTests.WRITER_USER));
+    assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
+
+    // Invalid column type: table-level validation failures (which raise DruidException rather than IAE) must also
+    // surface as a bad request, not an internal error.
+    TableSpec badTypeSpec = TableBuilder.datasource("badType", "P1D")
+        .column("foo", "FOO")
+        .buildSpec();
+    resp = resource.postTable(TableId.DRUID_SCHEMA, "badType", badTypeSpec, 0, false, postBy(CatalogTests.SUPER_USER));
     assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
 
     // Inline input source

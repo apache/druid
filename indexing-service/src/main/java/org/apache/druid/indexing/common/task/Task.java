@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskIdentifier;
 import org.apache.druid.indexer.TaskInfo;
@@ -41,6 +42,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseSubTask;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -76,6 +78,7 @@ import java.util.Set;
     @Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
     // for backward compatibility
     @Type(name = SinglePhaseSubTask.OLD_TYPE_NAME, value = LegacySinglePhaseSubTask.class),
+    @Type(name = HadoopIndexTaskStub.TYPE, value = HadoopIndexTaskStub.class),
     @Type(name = PartialHashSegmentGenerateTask.TYPE, value = PartialHashSegmentGenerateTask.class),
     @Type(name = PartialDimensionCardinalityTask.TYPE, value = PartialDimensionCardinalityTask.class),
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
@@ -116,7 +119,19 @@ public interface Task
    */
   default int getPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_TASK_PRIORITY);
+    return QueryContexts.getAsInt(
+        Tasks.PRIORITY_KEY,
+        getContextValue(Tasks.PRIORITY_KEY),
+        getDefaultPriority()
+    );
+  }
+
+  /**
+   * Default value for {@link Tasks#PRIORITY_KEY} if not specified in the task context.
+   */
+  default int getDefaultPriority()
+  {
+    return Tasks.DEFAULT_TASK_PRIORITY;
   }
 
   /**
@@ -175,16 +190,13 @@ public interface Task
   <T> QueryRunner<T> getQueryRunner(Query<T> query);
 
   /**
-   * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
-   * that may be needed by queries. Tasks supporting queries are also allocated processing buffers, processing threads
-   * and merge buffers. Those which do not should not assume that these resources are present and must explicitly allocate
-   * any direct buffers or processing pools if required.
-   *
-   * If true, {@link #getQueryRunner(Query)} does not necessarily return nonnull query runners. For example,
-   * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
-   * even though it is not directly queryable via HTTP.
+   * Declares which resources provided by {@link PeonProcessingModule} this task actually needs. The default
+   * implementation has all the optional items disabled.
    */
-  boolean supportsQueries();
+  default PeonProcessingModule.Config getPeonProcessingModuleConfig()
+  {
+    return new PeonProcessingModule.Config();
+  }
 
   /**
    * Returns an extra classpath that should be prepended to the default classpath when running this task. If no
@@ -232,8 +244,8 @@ public interface Task
    * - When the task is executed by an indexer, {@link org.apache.druid.indexing.overlord.ThreadingTaskRunner#shutdown}
    *   calls this method directly.
    *
-   * If the task has some resources to clean up on abnormal exit, e.g., sub tasks of parallel indexing task
-   * or Hadoop jobs spawned by Hadoop indexing tasks, those resource cleanups should be done in this method.
+   * If the task has some resources to clean up on abnormal exit, e.g., sub tasks of parallel indexing task,
+   * those resource cleanups should be done in this method.
    *
    * @param taskConfig TaskConfig for this task
    */

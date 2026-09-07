@@ -19,13 +19,12 @@
 
 package org.apache.druid.msq.exec;
 
+import com.fasterxml.jackson.databind.JavaType;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.input.table.DataServerRequestDescriptor;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.aggregation.MetricManipulationFn;
 
 import java.util.function.Function;
 
@@ -44,10 +43,10 @@ public interface DataServerQueryHandler
    * The query datasource is updated to refer to the specific segments from
    * {@link DataServerRequestDescriptor#getSegments()}.
    *
-   * Also applies {@link QueryToolChest#makePreComputeManipulatorFn(Query, MetricManipulationFn)} and reports channel
-   * metrics on the returned results.
+   * Reports channel metrics on the returned results.
    *
    * @param query           query to run
+   * @param queryResultType Jackson type for deserializing individual query results
    * @param mappingFunction function to apply to results
    * @param closer          will register query canceler with this closer
    * @param <QueryType>     result return type for the query from the data server
@@ -55,6 +54,7 @@ public interface DataServerQueryHandler
    */
   <RowType, QueryType> ListenableFuture<DataServerQueryResult<RowType>> fetchRowsFromDataServer(
       Query<QueryType> query,
+      JavaType queryResultType,
       Function<Sequence<QueryType>, Sequence<RowType>> mappingFunction,
       Closer closer
   );

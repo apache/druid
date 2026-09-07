@@ -22,8 +22,8 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -40,7 +40,7 @@ public class MonitorUtilsTest
 
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
-    Assert.assertEquals(builder.getDimension("dim1"), ImmutableList.of("value1"));
-    Assert.assertEquals(builder.getDimension("dim2"), ImmutableList.of("value2.1", "value2.2"));
+    Assertions.assertEquals(builder.getDimension("dim1"), ImmutableList.of("value1"));
+    Assertions.assertEquals(builder.getDimension("dim2"), ImmutableList.of("value2.1", "value2.2"));
   }
 }

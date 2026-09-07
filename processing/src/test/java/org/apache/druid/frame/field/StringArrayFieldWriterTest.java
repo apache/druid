@@ -26,15 +26,15 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import javax.annotation.Nullable;
@@ -42,12 +42,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
 {
   private static final long MEMORY_POSITION = 1;
-
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
 
   @Mock
   public BaseObjectColumnValueSelector<Object[]> selector;
@@ -55,14 +54,14 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
   private WritableMemory memory;
   private FieldWriter fieldWriter;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
     fieldWriter = new StringArrayFieldWriter(selector, false);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     fieldWriter.close();
@@ -110,7 +109,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
 
     final long written = writeToMemory(fieldWriter);
     final Object valuesRead = readFromMemory(written);
-    Assert.assertEquals("values read", values, valuesRead);
+    Assertions.assertEquals(values, valuesRead, "values read");
   }
 
   private void mockSelector(@Nullable final List<String> values)
@@ -125,7 +124,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
     for (long maxSize = 0; maxSize < memory.getCapacity() - MEMORY_POSITION; maxSize++) {
       final long written = writer.writeTo(memory, MEMORY_POSITION, maxSize);
       if (written > 0) {
-        Assert.assertEquals("bytes written", maxSize, written);
+        Assertions.assertEquals(maxSize, written, "bytes written");
         return written;
       }
     }

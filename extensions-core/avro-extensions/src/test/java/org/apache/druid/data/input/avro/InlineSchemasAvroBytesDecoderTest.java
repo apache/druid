@@ -27,12 +27,12 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.DatumWriter;
 import org.apache.avro.io.EncoderFactory;
 import org.apache.avro.specific.SpecificDatumWriter;
-import org.apache.druid.data.input.AvroStreamInputRowParserTest;
+import org.apache.druid.data.input.AvroStreamInputFormatTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -82,14 +82,14 @@ public class InlineSchemasAvroBytesDecoderTest
         AvroBytesDecoder.class
     );
 
-    Assert.assertEquals(actual.getSchemas().get("5").get("name"), "name5");
-    Assert.assertEquals(actual.getSchemas().get("8").get("name"), "name8");
+    Assertions.assertEquals(actual.getSchemas().get("5").get("name"), "name5");
+    Assertions.assertEquals(actual.getSchemas().get("8").get("name"), "name8");
   }
 
   @Test
   public void testParse() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -105,13 +105,13 @@ public class InlineSchemasAvroBytesDecoderTest
             schema
         )
     ).parse(ByteBuffer.wrap(out.toByteArray()));
-    Assert.assertEquals(someAvroDatum.get("id"), actual.get("id"));
+    Assertions.assertEquals(someAvroDatum.get("id"), actual.get("id"));
   }
 
   @Test
   public void testParseInvalidVersion() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -119,7 +119,7 @@ public class InlineSchemasAvroBytesDecoderTest
     DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    ParseException parseException = Assert.assertThrows(
+    ParseException parseException = Assertions.assertThrows(
         ParseException.class,
         () -> new InlineSchemasAvroBytesDecoder(
             ImmutableMap.of(
@@ -128,13 +128,13 @@ public class InlineSchemasAvroBytesDecoderTest
             )
         ).parse(ByteBuffer.wrap(out.toByteArray()))
     );
-    Assert.assertTrue(parseException.getMessage().contains("Found record of arbitrary version"));
+    Assertions.assertTrue(parseException.getMessage().contains("Found record of arbitrary version"));
   }
 
   @Test
   public void testParseInvalidSchemaId() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -143,7 +143,7 @@ public class InlineSchemasAvroBytesDecoderTest
     DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    ParseException parseException = Assert.assertThrows(
+    ParseException parseException = Assertions.assertThrows(
         ParseException.class,
         () -> new InlineSchemasAvroBytesDecoder(
             ImmutableMap.of(
@@ -152,13 +152,13 @@ public class InlineSchemasAvroBytesDecoderTest
             )
         ).parse(ByteBuffer.wrap(out.toByteArray()))
     );
-    Assert.assertTrue(parseException.getMessage().contains("Failed to find schema for id"));
+    Assertions.assertTrue(parseException.getMessage().contains("Failed to find schema for id"));
   }
 
   @Test
   public void testParseInvalidData() throws Exception
   {
-    GenericRecord someAvroDatum = AvroStreamInputRowParserTest.buildSomeAvroDatum();
+    GenericRecord someAvroDatum = AvroStreamInputFormatTest.buildSomeAvroDatum();
     Schema schema = SomeAvroDatum.getClassSchema();
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -169,7 +169,7 @@ public class InlineSchemasAvroBytesDecoderTest
     DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    ParseException parseException = Assert.assertThrows(
+    ParseException parseException = Assertions.assertThrows(
         ParseException.class,
         () -> new InlineSchemasAvroBytesDecoder(
             ImmutableMap.of(
@@ -178,6 +178,6 @@ public class InlineSchemasAvroBytesDecoderTest
             )
         ).parse(ByteBuffer.wrap(out.toByteArray()))
     );
-    Assert.assertTrue(parseException.getMessage().contains("Failed to read Avro message with schema id[10]"));
+    Assertions.assertTrue(parseException.getMessage().contains("Failed to read Avro message with schema id[10]"));
   }
 }

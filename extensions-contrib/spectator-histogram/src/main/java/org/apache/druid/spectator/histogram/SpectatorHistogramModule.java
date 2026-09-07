@@ -27,6 +27,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.spectator.histogram.sql.SpectatorHistogramCountSqlAggregator;
+import org.apache.druid.spectator.histogram.sql.SpectatorHistogramPercentileSqlAggregator;
+import org.apache.druid.sql.guice.SqlBindings;
 
 import java.util.List;
 
@@ -78,6 +81,10 @@ public class SpectatorHistogramModule implements DruidModule
             new NamedType(
                 SpectatorHistogramPercentilesPostAggregator.class,
                 SpectatorHistogramPercentilesPostAggregator.TYPE_NAME
+            ),
+            new NamedType(
+                SpectatorHistogramCountPostAggregator.class,
+                SpectatorHistogramCountPostAggregator.TYPE_NAME
             )
         ).addSerializer(SpectatorHistogram.class, new SpectatorHistogramJsonSerializer())
     );
@@ -87,5 +94,8 @@ public class SpectatorHistogramModule implements DruidModule
   public void configure(Binder binder)
   {
     registerSerde();
+
+    SqlBindings.addAggregator(binder, SpectatorHistogramPercentileSqlAggregator.class);
+    SqlBindings.addAggregator(binder, SpectatorHistogramCountSqlAggregator.class);
   }
 }

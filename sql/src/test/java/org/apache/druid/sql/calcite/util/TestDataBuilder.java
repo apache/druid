@@ -92,6 +92,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
@@ -592,7 +593,7 @@ public class TestDataBuilder
     try {
       final File directory = new File(tmpDir, StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
       final IncrementalIndex index = TestIndex.makeWikipediaIncrementalIndex();
-      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.getDefault(), null);
       return TestIndex.INDEX_IO.loadIndex(directory);
     }
     catch (IOException e) {
@@ -714,7 +715,8 @@ public class TestDataBuilder
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,
       final QueryScheduler scheduler,
-      final JoinableFactoryWrapper joinableFactoryWrapper)
+      final JoinableFactoryWrapper joinableFactoryWrapper
+  )
   {
     SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
         injector,
@@ -723,17 +725,18 @@ public class TestDataBuilder
         joinableFactoryWrapper,
         scheduler
     );
-    return addDataSetsToWalker(tmpDir, walker);
+    return addDataSetsToWalker(tmpDir, walker, injector.getInstance(ObjectMapper.class));
   }
 
   @SuppressWarnings("resource")
   public static SpecificSegmentsQuerySegmentWalker addDataSetsToWalker(
       final File tmpDir,
-      SpecificSegmentsQuerySegmentWalker walker
+      SpecificSegmentsQuerySegmentWalker walker,
+      ObjectMapper jsonMapper
   )
   {
     final QueryableIndex index1 = IndexBuilder
-        .create()
+        .create(jsonMapper)
         .tmpDir(new File(tmpDir, "1"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(INDEX_SCHEMA)
@@ -848,6 +851,12 @@ public class TestDataBuilder
                   .build(),
        index1
    ).add(
+        DataSegment.builder(SegmentId.of(CalciteTests.READ_ONLY_DATASOURCE, index1.getDataInterval(), "1", 0))
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        index1
+    ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
                    .interval(forbiddenIndex.getDataInterval())
@@ -860,6 +869,10 @@ public class TestDataBuilder
         TestDataSet.NUMFOO,
         TestHelper.JSON_MAPPER,
         new File(tmpDir, "3")
+    ).add(
+        TestDataSet.LARRY,
+        TestHelper.JSON_MAPPER,
+        new File(tmpDir, "larry")
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE4)
@@ -1024,7 +1037,7 @@ public class TestDataBuilder
     List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
                                                     .getDimensions()
                                                     .stream()
-                                                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                    .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                     .collect(Collectors.toList());
     QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE = segmentGenerator.generate(
         dataSegment,

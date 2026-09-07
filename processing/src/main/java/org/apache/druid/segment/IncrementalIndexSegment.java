@@ -52,6 +52,7 @@ public class IncrementalIndexSegment implements Segment
     return index.getInterval();
   }
 
+  @SuppressWarnings("deprecation")
   @Nullable
   @Override
   public <T> T as(final Class<T> clazz)
@@ -64,7 +65,9 @@ public class IncrementalIndexSegment implements Segment
       return (T) new IncrementalIndexMaxIngestedEventTimeInspector(index);
     } else if (Metadata.class.equals(clazz)) {
       return (T) index.getMetadata();
-    } else if (PhysicalSegmentInspector.class.equals(clazz)) {
+    } else if (RowCountInspector.class.equals(clazz)
+               || PhysicalSegmentColumnInspector.class.equals(clazz)
+               || PhysicalSegmentInspector.class.equals(clazz)) {
       return (T) new IncrementalIndexPhysicalSegmentInspector(index);
     } else if (TopNOptimizationInspector.class.equals(clazz)) {
       return (T) new SimpleTopNOptimizationInspector(true);

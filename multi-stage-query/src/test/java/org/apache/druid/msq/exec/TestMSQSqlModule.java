@@ -21,8 +21,11 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.TestDruidModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
@@ -39,6 +42,12 @@ import org.apache.druid.sql.avatica.MSQDruidMeta;
 
 public class TestMSQSqlModule extends TestDruidModule
 {
+  @Override
+  public void configure(Binder binder)
+  {
+    binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class).in(LazySingleton.class);
+  }
+
   @Provides
   @MultiStageQuery
   @LazySingleton

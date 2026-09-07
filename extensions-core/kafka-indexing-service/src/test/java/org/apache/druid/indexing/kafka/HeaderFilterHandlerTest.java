@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HeaderFilterHandlerTest
 {
@@ -38,24 +38,24 @@ public class HeaderFilterHandlerTest
     HeaderFilterHandler handler = HeaderFilterHandlerFactory.forFilter(filter);
 
     // Verify it's the correct type
-    Assert.assertTrue("Handler should be InDimFilterHandler", handler instanceof InDimFilterHandler);
+    Assertions.assertTrue(handler instanceof InDimFilterHandler, "Handler should be InDimFilterHandler");
 
     // Test header name extraction
-    Assert.assertEquals("environment", handler.getHeaderName());
+    Assertions.assertEquals("environment", handler.getHeaderName());
 
     // Test matching values
-    Assert.assertTrue("Production should be included", handler.shouldInclude("production"));
-    Assert.assertTrue("Staging should be included", handler.shouldInclude("staging"));
+    Assertions.assertTrue(handler.shouldInclude("production"), "Production should be included");
+    Assertions.assertTrue(handler.shouldInclude("staging"), "Staging should be included");
 
     // Test non-matching values
-    Assert.assertFalse("Development should be excluded", handler.shouldInclude("development"));
-    Assert.assertFalse("Test should be excluded", handler.shouldInclude("test"));
+    Assertions.assertFalse(handler.shouldInclude("development"), "Development should be excluded");
+    Assertions.assertFalse(handler.shouldInclude("test"), "Test should be excluded");
 
     // Test description
     String description = handler.getDescription();
-    Assert.assertTrue("Description should contain filter type", description.contains("InDimFilter"));
-    Assert.assertTrue("Description should contain header name", description.contains("environment"));
-    Assert.assertTrue("Description should contain value count", description.contains("2"));
+    Assertions.assertTrue(description.contains("InDimFilter"), "Description should contain filter type");
+    Assertions.assertTrue(description.contains("environment"), "Description should contain header name");
+    Assertions.assertTrue(description.contains("2"), "Description should contain value count");
   }
 
   @Test
@@ -67,13 +67,13 @@ public class HeaderFilterHandlerTest
     // Should throw IllegalArgumentException
     try {
       HeaderFilterHandlerFactory.forFilter(unsupportedFilter);
-      Assert.fail("Should have thrown IllegalArgumentException for unsupported filter type");
+      Assertions.fail("Should have thrown IllegalArgumentException for unsupported filter type");
     }
     catch (IllegalArgumentException e) {
-      Assert.assertTrue("Error message should mention unsupported type",
-                       e.getMessage().contains("Unsupported filter type"));
-      Assert.assertTrue("Error message should mention True",
-                       e.getMessage().contains("True"));
+      Assertions.assertTrue(
+                       e.getMessage().contains("Unsupported filter type"), "Error message should mention unsupported type");
+      Assertions.assertTrue(
+                       e.getMessage().contains("True"), "Error message should mention True");
     }
   }
 }

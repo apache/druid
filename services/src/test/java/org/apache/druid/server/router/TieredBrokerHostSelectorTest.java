@@ -44,10 +44,10 @@ import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -69,7 +69,7 @@ public class TieredBrokerHostSelectorTest
   private DiscoveryDruidNode node2;
   private DiscoveryDruidNode node3;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
@@ -146,7 +146,7 @@ public class TieredBrokerHostSelectorTest
     brokerSelector.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     brokerSelector.stop();
@@ -166,16 +166,16 @@ public class TieredBrokerHostSelectorTest
                                   .build();
 
     Pair<String, Server> p = brokerSelector.select(query);
-    Assert.assertEquals("coldBroker", p.lhs);
-    Assert.assertEquals("coldHost1:8080", p.rhs.getHost());
+    Assertions.assertEquals("coldBroker", p.lhs);
+    Assertions.assertEquals("coldHost1:8080", p.rhs.getHost());
 
     p = brokerSelector.select(query);
-    Assert.assertEquals("coldBroker", p.lhs);
-    Assert.assertEquals("coldHost2:8080", p.rhs.getHost());
+    Assertions.assertEquals("coldBroker", p.lhs);
+    Assertions.assertEquals("coldHost2:8080", p.rhs.getHost());
 
     p = brokerSelector.select(query);
-    Assert.assertEquals("coldBroker", p.lhs);
-    Assert.assertEquals("coldHost1:8080", p.rhs.getHost());
+    Assertions.assertEquals("coldBroker", p.lhs);
+    Assertions.assertEquals("coldHost1:8080", p.rhs.getHost());
   }
 
 
@@ -191,8 +191,8 @@ public class TieredBrokerHostSelectorTest
               .build()
     );
 
-    Assert.assertEquals("hotBroker", p.lhs);
-    Assert.assertEquals("hotHost:8080", p.rhs.getHost());
+    Assertions.assertEquals("hotBroker", p.lhs);
+    Assertions.assertEquals("hotHost:8080", p.rhs.getHost());
   }
 
   @Test
@@ -207,7 +207,7 @@ public class TieredBrokerHostSelectorTest
               .build()
     ).lhs;
 
-    Assert.assertEquals("hotBroker", brokerName);
+    Assertions.assertEquals("hotBroker", brokerName);
   }
 
   @Test
@@ -228,7 +228,7 @@ public class TieredBrokerHostSelectorTest
               ).build()
     ).lhs;
 
-    Assert.assertEquals("coldBroker", brokerName);
+    Assertions.assertEquals("coldBroker", brokerName);
   }
 
   @Test
@@ -249,7 +249,7 @@ public class TieredBrokerHostSelectorTest
               ).build()
     ).lhs;
 
-    Assert.assertEquals("coldBroker", brokerName);
+    Assertions.assertEquals("coldBroker", brokerName);
   }
 
   @Test
@@ -272,7 +272,7 @@ public class TieredBrokerHostSelectorTest
               .build()
     ).lhs;
 
-    Assert.assertEquals("hotBroker", brokerName);
+    Assertions.assertEquals("hotBroker", brokerName);
   }
 
   @Test
@@ -295,7 +295,7 @@ public class TieredBrokerHostSelectorTest
               .build()
     ).lhs;
 
-    Assert.assertEquals("hotBroker", brokerName);
+    Assertions.assertEquals("hotBroker", brokerName);
   }
 
   @Test
@@ -311,11 +311,11 @@ public class TieredBrokerHostSelectorTest
                   )
               );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         brokerSelector.getDefaultServiceName(),
         brokerSelector.select(queryBuilder.build()).lhs
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "hotBroker",
         brokerSelector.select(
             queryBuilder
@@ -323,7 +323,7 @@ public class TieredBrokerHostSelectorTest
                 .build()
         ).lhs
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "coldBroker",
         brokerSelector.select(
             queryBuilder
@@ -336,13 +336,13 @@ public class TieredBrokerHostSelectorTest
   @Test
   public void testSelectForSql()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         brokerSelector.getDefaultServiceName(),
         brokerSelector.selectForSql(
             createSqlQueryWithContext(null)
         ).lhs
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "hotBroker",
         brokerSelector.selectForSql(
             createSqlQueryWithContext(
@@ -350,7 +350,7 @@ public class TieredBrokerHostSelectorTest
             )
         ).lhs
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "coldBroker",
         brokerSelector.selectForSql(
             createSqlQueryWithContext(
@@ -363,7 +363,7 @@ public class TieredBrokerHostSelectorTest
   @Test
   public void testGetAllBrokers()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             "mediumBroker", ImmutableList.of(),
             "coldBroker", ImmutableList.of("coldHost1:8080", "coldHost2:8080"),

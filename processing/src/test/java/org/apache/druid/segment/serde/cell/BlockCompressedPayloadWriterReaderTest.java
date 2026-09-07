@@ -50,7 +50,7 @@ public class BlockCompressedPayloadWriterReaderTest extends BytesReadWriteTestBa
             )
             .setTestCaseValue(BytesReadWriteTest::testOutliersInNormalDataCompressablePayloads, TestCaseResult.of(5997))
             .setTestCaseValue(BytesReadWriteTest::testSingleUncompressableBlock, TestCaseResult.of(65715))
-            .setTestCaseValue(BytesReadWriteTest::testSingleWriteByteBufferZSTD, TestCaseResult.of(796))
+            .setTestCaseValue(BytesReadWriteTest::testSingleWriteByteBufferZSTD, TestCaseResult.of(599))
             .setTestCaseValue(
                 BytesReadWriteTest::testSingleWriteByteBufferAlternateByteBufferProvider,
                 TestCaseResult.of(1077)

@@ -21,10 +21,12 @@ package org.apache.druid.storage.google;
 
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class GoogleByteSourceTest extends EasyMockSupport
 {
@@ -47,21 +49,23 @@ public class GoogleByteSourceTest extends EasyMockSupport
     verifyAll();
   }
 
-  @Test(expected = IOException.class)
-  public void openStreamWithRecoverableErrorTest() throws IOException
+  @Test
+  public void openStreamWithRecoverableErrorTest()
   {
-    final String bucket = "bucket";
-    final String path = "/path/to/file";
-    GoogleStorage storage = createMock(GoogleStorage.class);
+    assertThrows(IOException.class, () -> {
+      final String bucket = "bucket";
+      final String path = "/path/to/file";
+      GoogleStorage storage = createMock(GoogleStorage.class);
 
-    EasyMock.expect(storage.getInputStream(bucket, path)).andThrow(new IOException(""));
+      EasyMock.expect(storage.getInputStream(bucket, path)).andThrow(new IOException(""));
 
-    replayAll();
+      replayAll();
 
-    GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, path);
+      GoogleByteSource byteSource = new GoogleByteSource(storage, bucket, path);
 
-    byteSource.openStream();
+      byteSource.openStream();
 
-    verifyAll();
+      verifyAll();
+    });
   }
 }

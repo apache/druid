@@ -44,6 +44,11 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
         value: 'engine',
         documentation: 'Engine used for running compaction tasks (native or msq)',
       },
+      {
+        value: 'storeCompactionStatePerSegment',
+        documentation:
+          'Whether to persist the full compaction state in segment metadata (default: true)',
+      },
     ],
   },
   // compactionTaskSlotRatio values
@@ -71,16 +76,49 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
       { value: '2147483647', documentation: 'Maximum value (default)' },
     ],
   },
-  // compactionPolicy object properties
+  // compactionPolicy object properties (newestSegmentFirst)
   {
     path: '$.compactionPolicy',
     isObject: true,
+    condition: obj => !obj.type || obj.type === 'newestSegmentFirst',
     completions: [
-      {
-        value: 'type',
-        documentation: 'Policy type (currently only newestSegmentFirst is supported)',
-      },
+      { value: 'type', documentation: 'Policy type' },
       { value: 'priorityDatasource', documentation: 'Datasource to prioritize for compaction' },
+    ],
+  },
+  // compactionPolicy object properties (mostFragmentedFirst)
+  {
+    path: '$.compactionPolicy',
+    isObject: true,
+    condition: obj => obj.type === 'mostFragmentedFirst',
+    completions: [
+      { value: 'type', documentation: 'Policy type' },
+      { value: 'priorityDatasource', documentation: 'Datasource to prioritize for compaction' },
+      {
+        value: 'minUncompactedCount',
+        documentation:
+          'Minimum number of uncompacted segments in an interval to be eligible for compaction (default: 100)',
+      },
+      {
+        value: 'minUncompactedBytes',
+        documentation:
+          'Minimum total bytes of uncompacted segments in an interval (default: 10 MiB)',
+      },
+      {
+        value: 'maxAverageUncompactedBytesPerSegment',
+        documentation:
+          'Maximum average size of uncompacted segments eligible for compaction (default: 2 GiB)',
+      },
+      {
+        value: 'minUncompactedBytesPercentForFullCompaction',
+        documentation:
+          'Threshold percentage of uncompacted bytes below which minor compaction is used (default: 0)',
+      },
+      {
+        value: 'minUncompactedRowsPercentForFullCompaction',
+        documentation:
+          'Threshold percentage of uncompacted rows below which minor compaction is used (default: 0)',
+      },
     ],
   },
   // compactionPolicy.type values
@@ -90,6 +128,11 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
       {
         value: 'newestSegmentFirst',
         documentation: 'Prioritizes segments with more recent intervals for compaction',
+      },
+      {
+        value: 'mostFragmentedFirst',
+        documentation:
+          'Experimental: Prioritizes intervals with the largest number of small uncompacted segments',
       },
     ],
   },
@@ -115,5 +158,19 @@ export const COMPACTION_DYNAMIC_CONFIG_COMPLETIONS: JsonCompletionRule[] = [
     path: '$.engine',
     condition: obj => !obj.useSupervisors,
     completions: [{ value: 'native', documentation: 'Native indexing engine (default)' }],
+  },
+  {
+    path: '$.storeCompactionStatePerSegment',
+    completions: [
+      {
+        value: 'true',
+        documentation: 'Store full compaction state in segment metadata (legacy behavior, default)',
+      },
+      {
+        value: 'false',
+        documentation:
+          'Store only fingerprint reference in segment metadata (reduces storage overhead)',
+      },
+    ],
   },
 ];

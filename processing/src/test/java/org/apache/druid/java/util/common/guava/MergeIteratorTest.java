@@ -21,8 +21,8 @@ package org.apache.druid.java.util.common.guava;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -42,7 +42,7 @@ public class MergeIteratorTest
         Ordering.natural()
     );
 
-    Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9), Lists.newArrayList(iter));
+    Assertions.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9), Lists.newArrayList(iter));
   }
 
   @Test
@@ -57,6 +57,6 @@ public class MergeIteratorTest
         Ordering.natural()
     );
 
-    Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 4, 6, 7, 8, 9), Lists.newArrayList(iter));
+    Assertions.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 4, 6, 7, 8, 9), Lists.newArrayList(iter));
   }
 }

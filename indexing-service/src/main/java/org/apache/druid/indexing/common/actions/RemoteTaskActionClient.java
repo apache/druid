@@ -19,12 +19,13 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.RequestBuilder;
@@ -32,7 +33,6 @@ import org.apache.druid.rpc.ServiceClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 public class RemoteTaskActionClient implements TaskActionClient
@@ -63,19 +63,17 @@ public class RemoteTaskActionClient implements TaskActionClient
       // We're using a ServiceClient directly here instead of OverlordClient, because OverlordClient does
       // not have access to the TaskAction class. (OverlordClient is in the druid-server package, and TaskAction
       // is in the druid-indexing-service package.)
-      final Map<String, Object> response = jsonMapper.readValue(
+      return jsonMapper.<TaskActionResponse<RetType>>readValue(
           client.request(
               new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/action")
                   .jsonContent(jsonMapper, new TaskActionHolder(task, taskAction)),
-              new BytesFullResponseHandler()
-          ).getContent(),
-          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-      );
-
-      return jsonMapper.convertValue(
-          response.get("result"),
-          taskAction.getReturnTypeReference()
-      );
+              new InputStreamResponseHandler()
+          ),
+          jsonMapper.getTypeFactory().constructParametricType(
+              TaskActionResponse.class,
+              jsonMapper.getTypeFactory().constructType(taskAction.getReturnTypeReference())
+          )
+      ).getResult();
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -93,6 +91,23 @@ public class RemoteTaskActionClient implements TaskActionClient
       }
 
       throw new IOException(e.getCause());
+    }
+  }
+
+  public static class TaskActionResponse<RetType>
+  {
+    private final RetType result;
+
+    @JsonCreator
+    public TaskActionResponse(@JsonProperty("result") RetType result)
+    {
+      this.result = result;
+    }
+
+    @JsonProperty
+    public RetType getResult()
+    {
+      return result;
     }
   }
 }

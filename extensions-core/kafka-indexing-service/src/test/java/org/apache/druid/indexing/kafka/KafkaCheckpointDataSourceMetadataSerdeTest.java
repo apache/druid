@@ -27,9 +27,9 @@ import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.common.actions.CheckPointDataSourceMetadataAction;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -37,7 +37,7 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
 {
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     objectMapper = new DefaultObjectMapper();
@@ -75,7 +75,7 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
         serialized,
         CheckPointDataSourceMetadataAction.class
     );
-    Assert.assertEquals(checkpointAction, deserialized);
+    Assertions.assertEquals(checkpointAction, deserialized);
   }
 
   @Test
@@ -104,7 +104,7 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
         serialized,
         CheckPointDataSourceMetadataAction.class
     );
-    Assert.assertEquals(checkpointAction, deserialized);
+    Assertions.assertEquals(checkpointAction, deserialized);
   }
 
   @Test
@@ -196,6 +196,6 @@ public class KafkaCheckpointDataSourceMetadataSerdeTest
         kafkaDataSourceMetadata,
         kafkaDataSourceMetadata
     );
-    Assert.assertEquals(checkpointAction, actual);
+    Assertions.assertEquals(checkpointAction, actual);
   }
 }

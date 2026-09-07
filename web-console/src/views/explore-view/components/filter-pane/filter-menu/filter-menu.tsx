@@ -432,7 +432,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
             intent={Intent.PRIMARY}
             text="Apply"
             disabled={tab === 'sql' && formula === ''}
-            data-tooltip={issue ? `Issue: ${issue}` : undefined}
+            data-tooltip={issue}
             onClick={() => {
               if (tab === 'compose') {
                 if (issue) {

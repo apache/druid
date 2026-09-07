@@ -21,7 +21,11 @@ package org.apache.druid.segment.incremental;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 
+import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class RowIngestionMetersTotals
@@ -30,6 +34,7 @@ public class RowIngestionMetersTotals
   private final long processedBytes;
   private final long processedWithError;
   private final long thrownAway;
+  private final Map<String, Long> thrownAwayByReason;
   private final long unparseable;
   private final long filtered;
 
@@ -39,14 +44,84 @@ public class RowIngestionMetersTotals
       @JsonProperty("processedBytes") long processedBytes,
       @JsonProperty("processedWithError") long processedWithError,
       @JsonProperty("thrownAway") long thrownAway,
+      @JsonProperty("thrownAwayByReason") @Nullable Map<String, Long> thrownAwayByReason,
       @JsonProperty("unparseable") long unparseable,
       @JsonProperty("filtered") long filtered
+  )
+  {
+    this(
+        processed,
+        processedBytes,
+        processedWithError,
+        Configs.valueOrDefault(thrownAwayByReason, getBackwardsCompatibleThrownAwayByReason(thrownAway)),
+        unparseable,
+        filtered
+    );
+  }
+
+  /**
+   * Backwards-compatible overload without {@code filtered} (defaults to 0), retained so that existing callers and
+   * external implementations compiled against the previous signature keep working.
+   */
+  public RowIngestionMetersTotals(
+      long processed,
+      long processedBytes,
+      long processedWithError,
+      long thrownAway,
+      long unparseable
+  )
+  {
+    this(processed, processedBytes, processedWithError, thrownAway, unparseable, 0);
+  }
+
+  /**
+   * Backwards-compatible overload without {@code filtered} (defaults to 0), retained so that existing callers and
+   * external implementations compiled against the previous signature keep working.
+   */
+  public RowIngestionMetersTotals(
+      long processed,
+      long processedBytes,
+      long processedWithError,
+      Map<String, Long> thrownAwayByReason,
+      long unparseable
+  )
+  {
+    this(processed, processedBytes, processedWithError, thrownAwayByReason, unparseable, 0);
+  }
+
+  public RowIngestionMetersTotals(
+      long processed,
+      long processedBytes,
+      long processedWithError,
+      long thrownAway,
+      long unparseable,
+      long filtered
+  )
+  {
+    this(
+        processed,
+        processedBytes,
+        processedWithError,
+        getBackwardsCompatibleThrownAwayByReason(thrownAway),
+        unparseable,
+        filtered
+    );
+  }
+
+  public RowIngestionMetersTotals(
+      long processed,
+      long processedBytes,
+      long processedWithError,
+      Map<String, Long> thrownAwayByReason,
+      long unparseable,
+      long filtered
   )
   {
     this.processed = processed;
     this.processedBytes = processedBytes;
     this.processedWithError = processedWithError;
-    this.thrownAway = thrownAway;
+    this.thrownAway = thrownAwayByReason.values().stream().reduce(0L, Long::sum);
+    this.thrownAwayByReason = thrownAwayByReason;
     this.unparseable = unparseable;
     this.filtered = filtered;
   }
@@ -76,6 +151,12 @@ public class RowIngestionMetersTotals
   }
 
   @JsonProperty
+  public Map<String, Long> getThrownAwayByReason()
+  {
+    return thrownAwayByReason;
+  }
+
+  @JsonProperty
   public long getUnparseable()
   {
     return unparseable;
@@ -101,6 +182,7 @@ public class RowIngestionMetersTotals
            && processedBytes == that.processedBytes
            && processedWithError == that.processedWithError
            && thrownAway == that.thrownAway
+           && thrownAwayByReason.equals(that.thrownAwayByReason)
            && unparseable == that.unparseable
            && filtered == that.filtered;
   }
@@ -108,7 +190,7 @@ public class RowIngestionMetersTotals
   @Override
   public int hashCode()
   {
-    return Objects.hash(processed, processedBytes, processedWithError, thrownAway, unparseable, filtered);
+    return Objects.hash(processed, processedBytes, processedWithError, thrownAway, thrownAwayByReason, unparseable, filtered);
   }
 
   @Override
@@ -119,8 +201,22 @@ public class RowIngestionMetersTotals
            ", processedBytes=" + processedBytes +
            ", processedWithError=" + processedWithError +
            ", thrownAway=" + thrownAway +
+           ", thrownAwayByReason=" + thrownAwayByReason +
            ", unparseable=" + unparseable +
            ", filtered=" + filtered +
            '}';
+  }
+
+  /**
+   * For backwards compatibility, key by {@link InputRowFilterResult} in case of lack of thrownAwayByReason input during rolling Druid upgrades.
+   * This can occur when tasks running on older Druid versions return ingest statistic payloads to an overlord running on a newer Druid version.
+   */
+  private static Map<String, Long> getBackwardsCompatibleThrownAwayByReason(long thrownAway)
+  {
+    Map<String, Long> results = new HashMap<>();
+    if (thrownAway > 0) {
+      results.put(InputRowFilterResult.UNKNOWN.getReason(), thrownAway);
+    }
+    return results;
   }
 }

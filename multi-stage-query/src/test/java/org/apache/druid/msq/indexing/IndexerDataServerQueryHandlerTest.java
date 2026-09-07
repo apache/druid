@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DataServerClient;
-import org.apache.druid.discovery.DruidServiceTestUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -41,30 +40,26 @@ import org.apache.druid.msq.querykit.InputNumberDataSource;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.FilteredDataSource;
-import org.apache.druid.query.MapQueryToolChestWarehouse;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.rpc.RpcException;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -78,7 +73,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class IndexerDataServerQueryHandlerTest
 {
   private static final String DATASOURCE1 = "dataSource1";
@@ -87,6 +82,7 @@ public class IndexerDataServerQueryHandlerTest
       "host1:5050",
       null,
       100L,
+      null,
       ServerType.REALTIME,
       "tier1",
       0
@@ -96,6 +92,7 @@ public class IndexerDataServerQueryHandlerTest
       "host2:5050",
       null,
       100L,
+      null,
       ServerType.REALTIME,
       "tier1",
       0
@@ -118,7 +115,7 @@ public class IndexerDataServerQueryHandlerTest
   private ScanQuery query;
   private IndexerDataServerQueryHandler target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     dataServerClient1 = mock(DataServerClient.class);
@@ -131,11 +128,6 @@ public class IndexerDataServerQueryHandlerTest
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .context(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 1, MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE, SegmentSource.REALTIME.toString()))
         .build();
-    QueryToolChestWarehouse queryToolChestWarehouse = new MapQueryToolChestWarehouse(
-        ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                    .put(ScanQuery.class, new ScanQueryQueryToolChest(null))
-                    .build()
-    );
     target = spy(
         new IndexerDataServerQueryHandler(
             1,
@@ -143,9 +135,9 @@ public class IndexerDataServerQueryHandlerTest
             new ChannelCounters(),
             mock(ServiceClientFactory.class),
             coordinatorClient,
-            DruidServiceTestUtils.newJsonMapper(),
-            queryToolChestWarehouse,
-            new DataServerRequestDescriptor(DRUID_SERVER_1, ImmutableList.of(SEGMENT_1, SEGMENT_2))
+            TestHelper.makeJsonMapper(),
+            new DataServerRequestDescriptor(DRUID_SERVER_1, ImmutableList.of(SEGMENT_1, SEGMENT_2)),
+            IndexerDataServerRetryPolicy.noRetries()
         )
     );
     doAnswer(invocationOnMock -> {
@@ -178,16 +170,17 @@ public class IndexerDataServerQueryHandlerTest
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
+        ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
         ScanQueryFrameProcessor::mappingFunction,
         Closer.create()
     ).get();
 
-    Assert.assertTrue(dataServerQueryResult.getHandedOffSegments().getDescriptors().isEmpty());
+    Assertions.assertTrue(dataServerQueryResult.getHandedOffSegments().getDescriptors().isEmpty());
     List<List<Object>> events = (List<List<Object>>) scanResultValue.getEvents();
     Yielder<Object[]> yielder = dataServerQueryResult.getResultsYielders().get(0);
     events.forEach(
         event -> {
-          Assert.assertArrayEquals(event.toArray(), yielder.get());
+          Assertions.assertArrayEquals(event.toArray(), yielder.get());
           yielder.next(null);
         }
     );
@@ -244,16 +237,17 @@ public class IndexerDataServerQueryHandlerTest
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
+        ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
         ScanQueryFrameProcessor::mappingFunction,
         Closer.create()
     ).get();
 
-    Assert.assertTrue(dataServerQueryResult.getHandedOffSegments().getDescriptors().isEmpty());
+    Assertions.assertTrue(dataServerQueryResult.getHandedOffSegments().getDescriptors().isEmpty());
 
     Yielder<Object[]> yielder1 = dataServerQueryResult.getResultsYielders().get(0);
     ((List<List<Object>>) scanResultValue1.getEvents()).forEach(
         event -> {
-          Assert.assertArrayEquals(event.toArray(), yielder1.get());
+          Assertions.assertArrayEquals(event.toArray(), yielder1.get());
           yielder1.next(null);
         }
     );
@@ -261,7 +255,7 @@ public class IndexerDataServerQueryHandlerTest
     Yielder<Object[]> yielder2 = dataServerQueryResult.getResultsYielders().get(1);
     ((List<List<Object>>) scanResultValue2.getEvents()).forEach(
         event -> {
-          Assert.assertArrayEquals(event.toArray(), yielder2.get());
+          Assertions.assertArrayEquals(event.toArray(), yielder2.get());
           yielder2.next(null);
         }
     );
@@ -289,12 +283,13 @@ public class IndexerDataServerQueryHandlerTest
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
+        ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
         ScanQueryFrameProcessor::mappingFunction,
         Closer.create()
     ).get();
 
-    Assert.assertEquals(ImmutableList.of(SEGMENT_1, SEGMENT_2), dataServerQueryResult.getHandedOffSegments().getDescriptors());
-    Assert.assertTrue(dataServerQueryResult.getResultsYielders().isEmpty());
+    Assertions.assertEquals(ImmutableList.of(SEGMENT_1, SEGMENT_2), dataServerQueryResult.getHandedOffSegments().getDescriptors());
+    Assertions.assertTrue(dataServerQueryResult.getResultsYielders().isEmpty());
   }
 
   @Test
@@ -311,15 +306,16 @@ public class IndexerDataServerQueryHandlerTest
     ScanQuery queryWithRetry =
         query.withOverriddenContext(ImmutableMap.of(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, 3));
 
-    Assert.assertThrows(DruidException.class, () ->
+    Assertions.assertThrows(DruidException.class, () ->
         target.fetchRowsFromDataServer(
             queryWithRetry,
+            ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
             ScanQueryFrameProcessor::mappingFunction,
             Closer.create()
         )
     );
 
-    verify(dataServerClient1, times(5)).run(any(), any(), any(), any());
+    verify(dataServerClient1, times(1)).run(any(), any(), any(), any());
   }
 
   @Test
@@ -338,12 +334,13 @@ public class IndexerDataServerQueryHandlerTest
 
     DataServerQueryResult<Object[]> dataServerQueryResult = target.fetchRowsFromDataServer(
         query,
+        ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
         ScanQueryFrameProcessor::mappingFunction,
         Closer.create()
     ).get();
 
-    Assert.assertEquals(ImmutableList.of(SEGMENT_1, SEGMENT_2), dataServerQueryResult.getHandedOffSegments().getDescriptors());
-    Assert.assertTrue(dataServerQueryResult.getResultsYielders().isEmpty());
+    Assertions.assertEquals(ImmutableList.of(SEGMENT_1, SEGMENT_2), dataServerQueryResult.getHandedOffSegments().getDescriptors());
+    Assertions.assertTrue(dataServerQueryResult.getResultsYielders().isEmpty());
   }
 
   @Test
@@ -358,9 +355,10 @@ public class IndexerDataServerQueryHandlerTest
     }).when(dataServerClient1).run(any(), any(), any(), any());
     doReturn(Futures.immediateFuture(Boolean.FALSE)).when(coordinatorClient).isHandoffComplete(DATASOURCE1, segmentDescriptorWithFullInterval);
 
-    Assert.assertThrows(DruidException.class, () ->
+    Assertions.assertThrows(DruidException.class, () ->
         target.fetchRowsFromDataServer(
             query,
+            ScanQueryFrameProcessor.SCAN_RESULT_VALUE_TYPE,
             ScanQueryFrameProcessor::mappingFunction,
             Closer.create()
         )

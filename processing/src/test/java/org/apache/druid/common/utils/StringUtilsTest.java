@@ -20,8 +20,8 @@
 package org.apache.druid.common.utils;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -54,7 +54,7 @@ public class StringUtilsTest
   public void binaryLengthAsUTF8Test()
   {
     for (String string : TEST_STRINGS) {
-      Assert.assertEquals(StringUtils.toUtf8(string).length, StringUtils.estimatedBinaryLengthAsUTF8(string));
+      Assertions.assertEquals(StringUtils.toUtf8(string).length, StringUtils.estimatedBinaryLengthAsUTF8(string));
     }
   }
 
@@ -63,34 +63,34 @@ public class StringUtilsTest
   {
     // we can fix this but looks trivial case, imho
     String invalid = "\uD841";  // high only
-    Assert.assertEquals(1, StringUtils.toUtf8(invalid).length);
-    Assert.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
+    Assertions.assertEquals(1, StringUtils.toUtf8(invalid).length);
+    Assertions.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
 
     invalid = "\uD841\uD841";  // high + high
-    Assert.assertEquals(2, StringUtils.toUtf8(invalid).length);
-    Assert.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
+    Assertions.assertEquals(2, StringUtils.toUtf8(invalid).length);
+    Assertions.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
 
     invalid = "\uD841\u0050";  // high + char
-    Assert.assertEquals(2, StringUtils.toUtf8(invalid).length);
-    Assert.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
+    Assertions.assertEquals(2, StringUtils.toUtf8(invalid).length);
+    Assertions.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
 
     invalid = "\uDEE2\uD841";  // low + high
-    Assert.assertEquals(2, StringUtils.toUtf8(invalid).length);
-    Assert.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
+    Assertions.assertEquals(2, StringUtils.toUtf8(invalid).length);
+    Assertions.assertEquals(4, StringUtils.estimatedBinaryLengthAsUTF8(invalid));
   }
 
   @Test
   public void testToUtf8ByteBuffer()
   {
-    Assert.assertNull(StringUtils.toUtf8ByteBuffer(null));
-    Assert.assertEquals(ByteBuffer.allocate(0), StringUtils.toUtf8ByteBuffer(""));
-    Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("foo")), StringUtils.toUtf8ByteBuffer("foo"));
-    Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("🙂")), StringUtils.toUtf8ByteBuffer("🙂"));
+    Assertions.assertNull(StringUtils.toUtf8ByteBuffer(null));
+    Assertions.assertEquals(ByteBuffer.allocate(0), StringUtils.toUtf8ByteBuffer(""));
+    Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("foo")), StringUtils.toUtf8ByteBuffer("foo"));
+    Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("🙂")), StringUtils.toUtf8ByteBuffer("🙂"));
   }
 
   @Test
   public void testEscapeHtml()
   {
-    Assert.assertEquals("invalid&lt;script&gt;SegmentId", StringUtils.escapeHtml("invalid<script>SegmentId"));
+    Assertions.assertEquals("invalid&lt;script&gt;SegmentId", StringUtils.escapeHtml("invalid<script>SegmentId"));
   }
 }

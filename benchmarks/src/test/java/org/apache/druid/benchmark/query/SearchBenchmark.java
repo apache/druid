@@ -397,7 +397,7 @@ public class SearchBenchmark
         File indexFile = INDEX_MERGER_V9.persist(
             incIndex,
             new File(qIndexesDir, String.valueOf(i)),
-            IndexSpec.DEFAULT,
+            IndexSpec.getDefault(),
             null
         );
         incIndex.close();

@@ -22,7 +22,7 @@ package org.apache.druid.testing.embedded.schema;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.compact.CompactionSparseColumnTest;
 import org.apache.druid.testing.embedded.compact.CompactionTaskTest;
-import org.apache.druid.testing.embedded.indexing.KafkaDataFormatsTest;
+import org.apache.druid.testing.embedded.indexing.KafkaIndexDataFormatsTest;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 
@@ -40,13 +40,14 @@ public class CentralizedSchemaMetadataQueryDisabledTest
            .addCommonProperty("druid.centralizedDatasourceSchema.backFillPeriod", "500")
            .addCommonProperty("druid.coordinator.segmentMetadata.disableSegmentMetadataQueries", "true")
            .addCommonProperty("druid.coordinator.segmentMetadata.metadataRefreshPeriod", "PT0.1s")
-           .addCommonProperty("druid.manager.segments.useIncrementalCache", "always");
+           .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
+           .useDefaultTimeoutForLatchableEmitter(60);
 
     return cluster;
   }
 
   @Nested
-  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
+  @Disabled("Disabled due to test crossing timeouts")
   public class CompactionSparseColumn extends CompactionSparseColumnTest
   {
     @Override
@@ -57,7 +58,7 @@ public class CentralizedSchemaMetadataQueryDisabledTest
   }
 
   @Nested
-  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
+  @Disabled("Disabled due to test crossing timeouts")
   public class CompactionTask extends CompactionTaskTest
   {
     @Override
@@ -68,8 +69,8 @@ public class CentralizedSchemaMetadataQueryDisabledTest
   }
 
   @Nested
-  @Disabled("Disabled due to issues with compaction task not publishing schema to broker")
-  public class KafkaDataFormats extends KafkaDataFormatsTest
+  @Disabled("Disabled due to test crossing timeouts")
+  public class KafkaDataFormats extends KafkaIndexDataFormatsTest
   {
     @Override
     public EmbeddedDruidCluster createCluster()

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -95,6 +96,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Nullable
   private final ParallelCombiner<KeyType> parallelCombiner;
   private final boolean mergeThreadLocal;
+  private final long minSpillFileSize;
   private final GroupByStatsProvider.PerQueryStats perQueryStats;
 
   private volatile boolean initialized = false;
@@ -141,6 +143,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         groupByQueryConfig.getIntermediateCombineDegree(),
         groupByQueryConfig.getNumParallelCombineThreads(),
         groupByQueryConfig.isMergeThreadLocal(),
+        groupByQueryConfig.getMinSpillFileSize(),
         perQueryStats
     );
   }
@@ -167,6 +170,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final int intermediateCombineDegree,
       final int numParallelCombineThreads,
       final boolean mergeThreadLocal,
+      final long minSpillFileSize,
       final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
@@ -217,6 +221,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
 
     this.mergeThreadLocal = mergeThreadLocal;
+    this.minSpillFileSize = minSpillFileSize;
     this.perQueryStats = perQueryStats;
   }
 
@@ -245,6 +250,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                 limitSpec,
                 sortHasNonGroupingFields,
                 sliceSize,
+                minSpillFileSize,
                 perQueryStats
             );
             grouper.init();
@@ -332,7 +338,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       throw new ISE("Grouper is closed");
     }
 
-    groupers.forEach(Grouper::reset);
+    groupers.forEach(SpillingGrouper::reset);
   }
 
   @Override
@@ -452,7 +458,9 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
     catch (ExecutionException e) {
       GuavaUtils.cancelAll(true, future, futures);
-      throw new RuntimeException(e.getCause());
+      Throwable cause = e.getCause();
+      Throwables.throwIfUnchecked(cause);
+      throw new RuntimeException(cause);
     }
   }
 
@@ -496,7 +504,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   {
     if (!closed) {
       closed = true;
-      groupers.forEach(Grouper::close);
+      groupers.forEach(SpillingGrouper::close);
     }
   }
 

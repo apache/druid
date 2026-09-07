@@ -21,8 +21,8 @@ package org.apache.druid.collections.bitmap;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.roaringbitmap.IntIterator;
 
 import java.util.Arrays;
@@ -45,10 +45,10 @@ public class RoaringBitmapFactoryTest
     int numRow = 5104234;
     ImmutableBitmap bitmap = bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), numRow);
     ImmutableBitmap notBitmap = bitmapFactory.complement(bitmap, numRow);
-    Assert.assertTrue(notBitmap.size() == 0);
-    Assert.assertTrue(notBitmap.isEmpty());
+    Assertions.assertTrue(notBitmap.size() == 0);
+    Assertions.assertTrue(notBitmap.isEmpty());
     IntIterator intIter = notBitmap.iterator();
-    Assert.assertFalse(intIter.hasNext());
+    Assertions.assertFalse(intIter.hasNext());
   }
 
   @Test
@@ -70,7 +70,7 @@ public class RoaringBitmapFactoryTest
         )
     );
 
-    Assert.assertEquals(0, bitmap.size());
+    Assertions.assertEquals(0, bitmap.size());
   }
 
   @Test
@@ -90,6 +90,6 @@ public class RoaringBitmapFactoryTest
         )
     );
 
-    Assert.assertEquals(3, bitmap.size());
+    Assertions.assertEquals(3, bitmap.size());
   }
 }

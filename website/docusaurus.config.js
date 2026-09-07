@@ -40,9 +40,11 @@ module.exports={
     "disableHeaderTitle": true
   },
   "onBrokenLinks": "log",
-  "onBrokenMarkdownLinks": "throw",
   markdown: {
     mermaid: true,
+    hooks: {
+      onBrokenMarkdownLinks: "throw"
+    }
   },
   "presets": [
     [
@@ -155,10 +157,15 @@ module.exports={
     "image": "img/druid_nav.png",
     "footer": {
       "links": [],
-      "copyright": "Copyright © 2025 Apache Software Foundation",
+      "copyright": "Copyright © 2026 Apache Software Foundation",
       "logo": {
         "src": "img/favicon.png"
       }
     },
-  }
+  },
+  future: {
+    v4: {
+      fasterByDefault: true,
+      removeLegacyPostBuildHeadAttribute: true
+    }}    
 }

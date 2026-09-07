@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment.serde.cell;
 
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilder;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.utils.CloseableUtils;
@@ -164,12 +164,12 @@ public class CellWriter implements Serializer, Closeable
   }
 
   @Override
-  public void writeTo(WritableByteChannel channel, @Nullable FileSmoosher smoosher) throws IOException
+  public void writeTo(WritableByteChannel channel, @Nullable SegmentFileBuilder fileBuilder) throws IOException
   {
     channel.write(intSerializer.serialize(cellIndexWriter.getSerializedSize()));
-    cellIndexWriter.writeTo(channel, smoosher);
+    cellIndexWriter.writeTo(channel, fileBuilder);
     channel.write(intSerializer.serialize(payloadWriter.getSerializedSize()));
-    payloadWriter.writeTo(channel, smoosher);
+    payloadWriter.writeTo(channel, fileBuilder);
   }
 
   @Override

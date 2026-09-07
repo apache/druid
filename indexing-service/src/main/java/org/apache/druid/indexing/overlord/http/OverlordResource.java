@@ -124,7 +124,7 @@ public class OverlordResource
 
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
   private static final Set<String> AUDITED_TASK_TYPES
-      = ImmutableSet.of("index", "index_parallel", "compact", "index_hadoop", "kill");
+      = ImmutableSet.of("index", "index_parallel", "compact", "kill");
 
   @Inject
   public OverlordResource(

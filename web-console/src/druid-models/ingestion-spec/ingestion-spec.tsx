@@ -77,12 +77,12 @@ const CURRENT_YEAR = new Date().getUTCFullYear();
 
 export interface IngestionSpec {
   readonly type: IngestionType;
+  readonly id?: string;
   readonly spec: IngestionSpecInner;
   readonly context?: { useConcurrentLocks?: boolean };
   readonly suspended?: boolean;
 
   // Added by the server
-  readonly id?: string;
   readonly groupId?: string;
   readonly resource?: any;
 }
@@ -439,11 +439,12 @@ export function getPossibleSystemFieldsForInputSource(inputSource: InputSource):
     case 'azureStorage':
       return ['__file_uri', '__file_bucket', '__file_path'];
 
+    case 'http':
     case 'hdfs':
     case 'local':
       return ['__file_uri', '__file_path'];
 
-    default:
+    default: // 'inline', 'druid', 'delta', 'sql', 'combining'
       return [];
   }
 }

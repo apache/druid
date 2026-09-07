@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.test.utils.TestSegmentManager;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -28,39 +29,27 @@ import java.net.URI;
 import java.util.Map;
 
 /**
- * Data Segment pusher which populates the {@link MSQTestSegmentManager}
+ * Data Segment pusher which records generated segments in {@link TestSegmentManager}.
  */
 public class MSQTestDelegateDataSegmentPusher implements DataSegmentPusher
 {
   private final DataSegmentPusher delegate;
-  private final MSQTestSegmentManager segmentManager;
+  private final TestSegmentManager testSegmentManager;
 
   public MSQTestDelegateDataSegmentPusher(
       DataSegmentPusher dataSegmentPusher,
-      MSQTestSegmentManager segmentManager
+      TestSegmentManager testSegmentManager
   )
   {
     this.delegate = dataSegmentPusher;
-    this.segmentManager = segmentManager;
-  }
-
-  @Override
-  public String getPathForHadoop(String dataSource)
-  {
-    return delegate.getPathForHadoop(dataSource);
-  }
-
-  @Override
-  public String getPathForHadoop()
-  {
-    return delegate.getPathForHadoop();
+    this.testSegmentManager = testSegmentManager;
   }
 
   @Override
   public DataSegment push(File file, DataSegment segment, boolean useUniquePath) throws IOException
   {
     final DataSegment dataSegment = delegate.push(file, segment, useUniquePath);
-    segmentManager.addTestGeneratedDataSegment(dataSegment);
+    testSegmentManager.recordGeneratedSegment(dataSegment);
     return dataSegment;
   }
 

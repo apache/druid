@@ -29,6 +29,9 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
@@ -36,15 +39,20 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
 public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
+  private static final Logger log = new Logger(NoopTask.class);
+
   public static final String TYPE = "noop";
+  public static final String EVENT_STARTED = "task/noop/started";
   private static final int DEFAULT_RUN_TIME = 2500;
 
-  @JsonIgnore
+  private final CountDownLatch isShutdown = new CountDownLatch(1);
   private final long runTime;
 
   @JsonCreator
@@ -97,19 +105,25 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
+    isShutdown.countDown();
   }
 
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
-    Thread.sleep(runTime);
-    return TaskStatus.success(getId());
+    log.info("Running task[%s] for [%d] millis", getId(), runTime);
+    emitMetric(toolbox.getEmitter(), EVENT_STARTED, 1);
+    if (isShutdown.await(runTime, TimeUnit.MILLISECONDS)) {
+      return TaskStatus.failure(getId(), "Canceled");
+    } else {
+      return TaskStatus.success(getId());
+    }
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
   }
 
   @Override
@@ -133,5 +147,17 @@ public class NoopTask extends AbstractTask implements PendingSegmentAllocatingTa
     final Map<String, Object> context = new HashMap<>();
     context.put(Tasks.PRIORITY_KEY, priority);
     return new NoopTask(null, null, null, 0, 0, context);
+  }
+
+  @Override
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return LookupLoadingSpec.NONE;
+  }
+
+  @Override
+  public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+  {
+    return BroadcastDatasourceLoadingSpec.NONE;
   }
 }

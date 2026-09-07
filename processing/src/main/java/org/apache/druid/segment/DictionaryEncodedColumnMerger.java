@@ -31,8 +31,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -54,6 +52,8 @@ import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarMultiIntsSerializer;
+import org.apache.druid.segment.file.SegmentFileBuilder;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -161,7 +161,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir));
+    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir, segmentBaseDir));
   }
 
   @Override
@@ -581,8 +581,8 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
   private boolean allNull(Indexed<T> dimValues)
   {
-    for (int i = 0, size = dimValues.size(); i < size; i++) {
-      if (dimValues.get(i) != null) {
+    for (T dimValue : dimValues) {
+      if (dimValue != null) {
         return false;
       }
     }
@@ -769,7 +769,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
 
     @Override
-    public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+    public void writeTo(WritableByteChannel channel, SegmentFileBuilder fileBuilder) throws IOException
     {
       // currently no support for id conversion buffers larger than 2gb
       buffer.position(0);
@@ -789,11 +789,13 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected static class PersistedIdConversions implements Closeable
   {
     private final File tempDir;
+    private final File baseDir;
     private final Closer closer;
 
-    protected PersistedIdConversions(File tempDir)
+    protected PersistedIdConversions(File tempDir, File baseDir)
     {
       this.tempDir = tempDir;
+      this.baseDir = baseDir;
       this.closer = Closer.create();
     }
 
@@ -813,7 +815,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
         closer.close();
       }
       finally {
-        FileUtils.deleteDirectory(tempDir);
+        // tempDir may be nested under baseDir (its name can carry a bundle prefix such as "__base/<col>", so mkdirp
+        // created intermediate directories). Delete tempDir and any now-empty intermediate directories up to baseDir
+        // so no empty scratch directory is left behind in the finalized segment directory.
+        FileUtils.deleteDirectoryAndEmptyAncestors(tempDir, baseDir);
       }
     }
   }
@@ -829,7 +834,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected static class PersistedIdConversion implements Closeable
   {
     private final File idConversionFile;
-    private final SmooshedFileMapper bufferMapper;
+    private final SegmentFileMapper bufferMapper;
     private final IntBuffer buffer;
 
     private boolean isClosed;

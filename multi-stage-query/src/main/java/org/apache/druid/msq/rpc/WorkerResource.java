@@ -34,13 +34,12 @@ import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.serde.ClusterByStatisticsSnapshotSerde;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
-import javax.servlet.AsyncEvent;
-import javax.servlet.AsyncListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -109,33 +108,13 @@ public class WorkerResource
 
     asyncContext.setTimeout(GET_CHANNEL_DATA_TIMEOUT);
     asyncContext.addListener(
-        new AsyncListener()
-        {
-          @Override
-          public void onComplete(AsyncEvent event)
-          {
+        ServletResourceUtils.createAsyncTimeoutListener(event -> {
+          if (responseResolved.compareAndSet(false, true)) {
+            HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+            response.setStatus(HttpServletResponse.SC_OK);
+            event.getAsyncContext().complete();
           }
-
-          @Override
-          public void onTimeout(AsyncEvent event)
-          {
-            if (responseResolved.compareAndSet(false, true)) {
-              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-              response.setStatus(HttpServletResponse.SC_OK);
-              event.getAsyncContext().complete();
-            }
-          }
-
-          @Override
-          public void onError(AsyncEvent event)
-          {
-          }
-
-          @Override
-          public void onStartAsync(AsyncEvent event)
-          {
-          }
-        }
+        })
     );
 
     // Save these items, since "req" becomes inaccessible in future exception handlers.

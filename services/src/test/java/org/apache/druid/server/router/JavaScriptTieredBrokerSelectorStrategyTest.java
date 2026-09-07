@@ -30,19 +30,13 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 
 public class JavaScriptTieredBrokerSelectorStrategyTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final TieredBrokerSelectorStrategy STRATEGY = new JavaScriptTieredBrokerSelectorStrategy(
       "function (config, query) { if (query.getAggregatorSpecs && query.getDimensionSpec && query.getDimensionSpec().getDimension() == 'bigdim' && query.getAggregatorSpecs().size() >= 3) { var size = config.getTierToBrokerMap().values().size(); if (size > 0) { return config.getTierToBrokerMap().values().toArray()[size-1] } else { return config.getDefaultBrokerServiceName() } } else { return null } }",
       JavaScriptConfig.getEnabledInstance()
@@ -59,7 +53,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         STRATEGY,
         mapper.readValue(
             mapper.writeValueAsString(STRATEGY),
@@ -81,11 +75,12 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
 
     final String strategyString = mapper.writeValueAsString(STRATEGY);
 
-    expectedException.expect(JsonMappingException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IllegalStateException.class));
-    expectedException.expectMessage("JavaScript is disabled");
-
-    mapper.readValue(strategyString, JavaScriptTieredBrokerSelectorStrategy.class);
+    final JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(strategyString, JavaScriptTieredBrokerSelectorStrategy.class)
+    );
+    Assertions.assertInstanceOf(IllegalStateException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("JavaScript is disabled"));
   }
 
   @Test
@@ -117,7 +112,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
                                                                 .threshold(1)
                                                                 .aggregators(new CountAggregatorFactory("count"));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
@@ -126,7 +121,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
     );
 
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
@@ -134,7 +129,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of("druid/slowBroker"),
         STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,
@@ -148,7 +143,7 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
 
     // in absence of tiers, expect the default
     tierBrokerMap.clear();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of("druid/broker"),
         STRATEGY.getBrokerServiceName(
             tieredBrokerConfig,

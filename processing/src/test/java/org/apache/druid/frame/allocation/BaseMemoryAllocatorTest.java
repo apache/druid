@@ -21,8 +21,8 @@ package org.apache.druid.frame.allocation;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.collections.ResourceHolder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
@@ -40,7 +40,7 @@ public abstract class BaseMemoryAllocatorTest
   {
     MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
     Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional = memoryAllocator.allocate(ALLOCATOR_SIZE);
-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
+    Assertions.assertTrue(memoryResourceHolderOptional.isPresent());
     ResourceHolder<WritableMemory> memoryResourceHolder = memoryResourceHolderOptional.get();
     WritableMemory memory = memoryResourceHolder.get();
     for (int i = 0; i < ALLOCATOR_SIZE; ++i) {
@@ -55,12 +55,12 @@ public abstract class BaseMemoryAllocatorTest
 
     Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional1 = memoryAllocator.allocate(ALLOCATOR_SIZE
                                                                                                       - 4);
-    Assert.assertTrue(memoryResourceHolderOptional1.isPresent());
+    Assertions.assertTrue(memoryResourceHolderOptional1.isPresent());
     ResourceHolder<WritableMemory> memoryResourceHolder1 = memoryResourceHolderOptional1.get();
     WritableMemory memory1 = memoryResourceHolder1.get();
 
     Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional2 = memoryAllocator.allocate(4);
-    Assert.assertTrue(memoryResourceHolderOptional2.isPresent());
+    Assertions.assertTrue(memoryResourceHolderOptional2.isPresent());
     ResourceHolder<WritableMemory> memoryResourceHolder2 = memoryResourceHolderOptional2.get();
     WritableMemory memory2 = memoryResourceHolder2.get();
 
@@ -72,10 +72,10 @@ public abstract class BaseMemoryAllocatorTest
     }
     // Readback to ensure that value hasn't been overwritten
     for (int i = 0; i < ALLOCATOR_SIZE - 4; ++i) {
-      Assert.assertEquals((byte) 0xFF, memory1.getByte(i));
+      Assertions.assertEquals((byte) 0xFF, memory1.getByte(i));
     }
     for (int i = 0; i < 4; ++i) {
-      Assert.assertEquals((byte) 0xFE, memory2.getByte(i));
+      Assertions.assertEquals((byte) 0xFE, memory2.getByte(i));
     }
   }
 
@@ -87,21 +87,21 @@ public abstract class BaseMemoryAllocatorTest
 
     final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
     final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
-    Assert.assertTrue(holder1.isPresent());
-    Assert.assertTrue(holder2.isPresent());
-    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
+    Assertions.assertTrue(holder1.isPresent());
+    Assertions.assertTrue(holder2.isPresent());
+    Assertions.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
 
     // Release the second allocation.
     holder2.get().close();
-    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
+    Assertions.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
 
     // Release again-- does nothing.
     holder2.get().close();
-    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
+    Assertions.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
 
     // Release the first allocation.
     holder1.get().close();
-    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
+    Assertions.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
   }
 
   @Test
@@ -112,17 +112,17 @@ public abstract class BaseMemoryAllocatorTest
 
     final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
     final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
-    Assert.assertTrue(holder1.isPresent());
-    Assert.assertTrue(holder2.isPresent());
-    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
+    Assertions.assertTrue(holder1.isPresent());
+    Assertions.assertTrue(holder2.isPresent());
+    Assertions.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
 
     // Release the second allocation.
     holder2.get().close();
-    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
+    Assertions.assertEquals(ALLOCATOR_SIZE - allocationSize, memoryAllocator.available());
 
     // Release the first allocation.
     holder1.get().close();
-    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
+    Assertions.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
   }
 
   @Test
@@ -133,16 +133,16 @@ public abstract class BaseMemoryAllocatorTest
 
     final Optional<ResourceHolder<WritableMemory>> holder1 = memoryAllocator.allocate(allocationSize);
     final Optional<ResourceHolder<WritableMemory>> holder2 = memoryAllocator.allocate(allocationSize);
-    Assert.assertTrue(holder1.isPresent());
-    Assert.assertTrue(holder2.isPresent());
-    Assert.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
+    Assertions.assertTrue(holder1.isPresent());
+    Assertions.assertTrue(holder2.isPresent());
+    Assertions.assertEquals(ALLOCATOR_SIZE - allocationSize * 2, memoryAllocator.available());
 
     // Don't check memoryAllocator.available() after holder1 is closed; behavior is not consistent between arena
     // and heap. Arena won't reclaim this allocation because it wasn't the final one; heap will reclaim it.
     // They converge to fully-reclaimed once all allocations are closed.
     holder1.get().close();
     holder2.get().close();
-    Assert.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
+    Assertions.assertEquals(ALLOCATOR_SIZE, memoryAllocator.available());
   }
 
   @Test
@@ -151,7 +151,7 @@ public abstract class BaseMemoryAllocatorTest
     MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
     Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
         memoryAllocator.allocate(ALLOCATOR_SIZE + 1);
-    Assert.assertFalse(memoryResourceHolderOptional.isPresent());
+    Assertions.assertFalse(memoryResourceHolderOptional.isPresent());
   }
 
   @Test
@@ -160,7 +160,7 @@ public abstract class BaseMemoryAllocatorTest
     MemoryAllocator memoryAllocator = makeAllocator(ALLOCATOR_SIZE);
     Optional<ResourceHolder<WritableMemory>> memoryResourceHolderOptional =
         memoryAllocator.allocate(ALLOCATOR_SIZE - 4);
-    Assert.assertTrue(memoryResourceHolderOptional.isPresent());
-    Assert.assertFalse(memoryAllocator.allocate(5).isPresent());
+    Assertions.assertTrue(memoryResourceHolderOptional.isPresent());
+    Assertions.assertFalse(memoryAllocator.allocate(5).isPresent());
   }
 }

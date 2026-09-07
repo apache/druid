@@ -26,9 +26,10 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -86,7 +87,10 @@ public class SegmentLoadStatusFetcherTest
         OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
-        IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
+        IntStream.range(0, 5)
+                 .boxed()
+                 .map(partitionNum -> createTestDataSegment("version1", partitionNum))
+                 .collect(Collectors.toSet()),
         false
     );
     segmentLoadWaiter.waitForSegmentsToLoad();
@@ -125,7 +129,10 @@ public class SegmentLoadStatusFetcherTest
         OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
-        IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
+        IntStream.range(0, 5)
+                 .boxed()
+                 .map(partitionNum -> createTestDataSegment("version1", partitionNum))
+                 .collect(Collectors.toSet()),
         false
     );
     segmentLoadWaiter.waitForSegmentsToLoad();
@@ -167,7 +174,10 @@ public class SegmentLoadStatusFetcherTest
         OBJECT_MAPPER,
         "id",
         TEST_DATASOURCE,
-        IntStream.range(0, 5).boxed().map(partitionNum -> createTestDataSegment("version1", partitionNum)).collect(Collectors.toSet()),
+        IntStream.range(0, 5)
+                 .boxed()
+                 .map(partitionNum -> createTestDataSegment("version1", partitionNum))
+                 .collect(Collectors.toSet()),
         true
     );
 
@@ -176,24 +186,16 @@ public class SegmentLoadStatusFetcherTest
     // call close from main thread
     segmentLoadWaiter.close();
     t.join(1000);
-    Assert.assertFalse(t.isAlive());
+    Assertions.assertFalse(t.isAlive());
 
-    Assert.assertTrue(segmentLoadWaiter.status().getState().isFinished());
-    Assert.assertTrue(segmentLoadWaiter.status().getState() == SegmentLoadStatusFetcher.State.FAILED);
+    Assertions.assertTrue(segmentLoadWaiter.status().getState().isFinished());
+    Assertions.assertTrue(segmentLoadWaiter.status().getState() == SegmentLoadStatusFetcher.State.FAILED);
   }
 
   private static DataSegment createTestDataSegment(String version, int partitionNumber)
   {
-    return new DataSegment(
-        TEST_DATASOURCE,
-        Intervals.ETERNITY,
-        version,
-        null,
-        null,
-        null,
-        new NumberedShardSpec(partitionNumber, 1),
-        0,
-        0
-    );
+    return DataSegment.builder(SegmentId.of(TEST_DATASOURCE, Intervals.ETERNITY, version, 0))
+                      .shardSpec(new NumberedShardSpec(partitionNumber, 1))
+                      .build();
   }
 }

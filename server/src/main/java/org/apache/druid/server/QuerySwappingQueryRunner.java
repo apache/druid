@@ -29,7 +29,7 @@ import org.apache.druid.query.context.ResponseContext;
 
 /**
  * A {@link QueryRunner} which validates that a *specific* query is passed in, and then swaps it with another one.
- * Useful in passing the modified query to the underlying runners, since the {@link QuerySegmentWalker#}
+ * Useful in passing the modified query to the underlying runners, since the {@link QuerySegmentWalker}
  * Useful since walkers might need to enrich the query with additional parameters and the callers actually calling the
  * `run()` won't know about this modification.
  *

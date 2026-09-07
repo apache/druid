@@ -41,13 +41,7 @@ public class MapInputSliceReader implements InputSliceReader
   }
 
   @Override
-  public int numReadableInputs(InputSlice slice)
-  {
-    return getReader(slice.getClass()).numReadableInputs(slice);
-  }
-
-  @Override
-  public ReadableInputs attach(
+  public PhysicalInputSlice attach(
       int inputNumber,
       InputSlice slice,
       CounterTracker counters,

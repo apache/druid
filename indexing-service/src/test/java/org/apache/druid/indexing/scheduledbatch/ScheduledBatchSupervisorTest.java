@@ -31,11 +31,11 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ScheduledBatchSupervisorTest
 {
@@ -44,7 +44,7 @@ public class ScheduledBatchSupervisorTest
   private ScheduledBatchTaskManager scheduler;
   private ClientSqlQuery query;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     brokerClient = Mockito.mock(BrokerClient.class);

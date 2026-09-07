@@ -20,10 +20,9 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.query.Query;
 
-import javax.validation.constraints.Min;
 import java.util.List;
 
 public class CacheConfig
@@ -54,8 +53,12 @@ public class CacheConfig
   @JsonProperty
   private int maxEntrySize = 1_000_000;
 
+  /*
+    Disable segment/result-level caching for types:
+      - [scan]: scan query results can be large and fill up small result/segment caches, so disabled by default.
+  */
   @JsonProperty
-  private List<String> unCacheable = ImmutableList.of();
+  private List<String> unCacheable = List.of(Query.SCAN);
 
   @JsonProperty
   private int resultLevelCacheLimit = Integer.MAX_VALUE;

@@ -23,14 +23,14 @@ title: "Aggregations"
   -->
 
 :::info
-Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 This document describes the native
 language. For information about aggregators available in SQL, refer to the
 [SQL documentation](sql-aggregations.md).
 :::
 
 You can use aggregations:
--  in the ingestion spec during ingestion to summarize data before it enters Apache Druid.
+-  in the ingestion spec during ingestion to summarize data before it enters Apache&circledR; Druid.
 -  at query time to summarize result data.
 
 The following sections list the available aggregate functions. Unless otherwise noted, aggregations are available at both ingestion and query time.
@@ -471,7 +471,11 @@ For these reasons, we have deprecated this aggregator and recommend using the Da
 
 ### Expression aggregator
 
-Aggregator applicable only at query time. Aggregates results using [Druid expressions](./math-expr.md) functions to facilitate building custom functions.
+Aggregates results using [Druid expressions](./math-expr.md) functions to facilitate building custom functions.
+
+The expression aggregator can be used at query time with any intermediate type. It can also be used at ingest time, but
+only when the type of `initialValue` is a primitive numeric type (`LONG` or `DOUBLE`) and matches the type of
+`initialCombineValue`. Other intermediate types, such as strings, arrays, and complex types, are query-time only.
 
 | Property | Description | Required |
 | --- | --- | --- |

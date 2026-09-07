@@ -24,6 +24,8 @@ import com.google.inject.Injector;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
+import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -31,6 +33,7 @@ import org.apache.druid.server.DruidNode;
 
 import java.io.Closeable;
 import java.io.File;
+import java.util.List;
 
 /**
  * Context used by multi-stage query workers.
@@ -58,10 +61,10 @@ public interface WorkerContext extends Closeable
   Injector injector();
 
   /**
-   * Emit the metric in the {@link MSQMetriceEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
+   * Emit the metric in the {@link MSQMetricEventBuilder} using a {@link ServiceEmitter}. Might sets up addtional
    * context dependant dimensions.
    */
-  void emitMetric(MSQMetriceEventBuilder metricBuilder);
+  void emitMetric(MSQMetricEventBuilder metricBuilder);
 
   /**
    * Callback from the worker implementation to "register" the worker. Used in
@@ -97,14 +100,28 @@ public interface WorkerContext extends Closeable
   File tempDir();
 
   /**
-   * Create a context with useful objects required by {@link StageProcessor#makeProcessors}.
+   * Create a context with useful objects required by {@link StageProcessor#execute(ExecutionContext)}.
    */
   FrameContext frameContext(WorkOrder workOrder);
 
   /**
-   * Number of available processing threads.
+   * Number of available processing threads. Workers must not use more than this number of threads.
    */
   int threadCount();
+
+  /**
+   * Effective number of segments to load ahead of when they are needed while processing the given {@code workOrder},
+   * used to size the segment prefetch in {@link org.apache.druid.msq.querykit.ReadableInputQueue}.
+   *
+   * The default honors {@link MultiStageQueryContext#CTX_SEGMENT_LOAD_AHEAD_COUNT} from the work order's context
+   * (set by the controller from client and broker-default context), and otherwise falls back to
+   * {@code 2 * threadCount()}. Implementations may override to layer in worker-local configuration.
+   */
+  default int segmentLoadAheadCount(WorkOrder workOrder)
+  {
+    final Integer fromContext = MultiStageQueryContext.getSegmentLoadAheadCount(workOrder.getWorkerContext());
+    return fromContext != null ? fromContext : threadCount() * 2;
+  }
 
   /**
    * Fetch node info about self.
@@ -112,14 +129,23 @@ public interface WorkerContext extends Closeable
   DruidNode selfNode();
 
   /**
-   * Returns the factory for {@link DataServerQueryHandler} from the context. Used to query realtime tasks.
-   */
-  DataServerQueryHandlerFactory dataServerQueryHandlerFactory();
-
-  /**
    * Whether to include all counters in reports. See {@link MultiStageQueryContext#CTX_INCLUDE_ALL_COUNTERS} for detail.
    */
   boolean includeAllCounters();
+
+  /**
+   * Whether to log full stack traces for all errors.
+   */
+  boolean isDebug();
+
+  /**
+   * Extension point for additional {@link InputSlice} beyond those provided by
+   * {@link RunWorkOrder#makeInputSliceReader()}.
+   */
+  default List<InputSliceReaderProvider> inputSliceReaderProviders()
+  {
+    return List.of();
+  }
 
   @Override
   void close();

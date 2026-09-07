@@ -23,13 +23,13 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.eclipse.jetty.client.Response;
+import org.eclipse.jetty.http.HttpField;
+import org.eclipse.jetty.http.HttpFields;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
@@ -46,19 +46,25 @@ public class StandardResponseHeaderFilterHolderTest
   public HttpServletResponse httpResponse;
   public FilterChain filterChain;
 
-  @Before
+  public HttpServletResponse proxyResponse;
+  public Response clientResponse;
+
+  @BeforeEach
   public void setUp()
   {
     serverConfig = EasyMock.strictMock(ServerConfig.class);
     httpRequest = EasyMock.strictMock(HttpServletRequest.class);
     httpResponse = EasyMock.strictMock(HttpServletResponse.class);
     filterChain = EasyMock.strictMock(FilterChain.class);
+
+    proxyResponse = EasyMock.strictMock(HttpServletResponse.class);
+    clientResponse = EasyMock.strictMock(Response.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
-    EasyMock.verify(serverConfig, httpRequest, httpResponse, filterChain);
+    EasyMock.verify(serverConfig, httpRequest, httpResponse, filterChain, proxyResponse, clientResponse);
   }
 
   @Test
@@ -120,14 +126,46 @@ public class StandardResponseHeaderFilterHolderTest
 
     replayAllMocks();
 
-    final RuntimeException e = Assert.assertThrows(RuntimeException.class, this::makeFilter);
+    final RuntimeException e = Assertions.assertThrows(RuntimeException.class, this::makeFilter);
 
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Content-Security-Policy header value must be fully ASCII")
-        )
-    );
+    Assertions.assertNotNull(e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("Content-Security-Policy header value must be fully ASCII"));
+  }
+
+  @Test
+  public void test_deduplicateHeadersInProxyServlet_withDuplicates()
+  {
+    EasyMock.expect(proxyResponse.containsHeader("Cache-Control")).andReturn(true).once();
+    proxyResponse.setHeader("Cache-Control", null);
+    EasyMock.expectLastCall().once();
+    EasyMock.expect(proxyResponse.containsHeader("Strict-Transport-Security")).andReturn(false).once();
+
+    EasyMock.expect(clientResponse.getHeaders())
+            .andReturn(
+                HttpFields.from(new HttpField("Cache-Control", "true"), new HttpField("Strict-Transport-Security", "true"))
+            ).times(3);
+
+    replayAllMocks();
+
+    StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, clientResponse);
+  }
+
+  @Test
+  public void test_duplicateHeadersInProxyServlet_withNoDuplicates()
+  {
+    EasyMock.expect(proxyResponse.containsHeader("Cache-Control")).andReturn(false).once();
+    EasyMock.expect(proxyResponse.containsHeader("Strict-Transport-Security")).andReturn(false).once();
+
+    EasyMock.expect(clientResponse.getHeaders())
+            .andReturn(HttpFields.from(
+                new HttpField("Cache-Control", "true"),
+                new HttpField("Strict-Transport-Security", "true")
+            ))
+            .times(3);
+
+    replayAllMocks();
+
+    StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, clientResponse);
   }
 
   private StandardResponseHeaderFilterHolder.StandardResponseHeaderFilter makeFilter()
@@ -157,12 +195,16 @@ public class StandardResponseHeaderFilterHolderTest
     filter.doFilter(httpRequest, httpResponse, filterChain);
 
     for (final Map.Entry<String, String> entry : expectedHeaders.entrySet()) {
-      Assert.assertEquals(entry.getKey(), entry.getValue(), captureMap.get(entry.getKey()).getValue());
+      Assertions.assertEquals(
+          entry.getValue(),
+          captureMap.get(entry.getKey()).getValue(),
+          entry.getKey()
+      );
     }
   }
 
   private void replayAllMocks()
   {
-    EasyMock.replay(serverConfig, httpRequest, httpResponse, filterChain);
+    EasyMock.replay(serverConfig, httpRequest, httpResponse, filterChain, proxyResponse, clientResponse);
   }
 }

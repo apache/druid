@@ -219,7 +219,12 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     }
 
     IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
-    return retVal;
+
+    if (toolbox.shouldFailSegmentPublishImmediately(retVal, task, supervisorId, startMetadata)) {
+      return SegmentPublishResult.fail(retVal.getErrorMsg());
+    } else {
+      return retVal;
+    }
   }
 
   @Override

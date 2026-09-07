@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,8 +52,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -84,6 +84,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
       "hostName:9092",
       null,
       2,
+      null,
       ServerType.REALTIME,
       "tier1",
       2
@@ -119,7 +120,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                 "foo"
             )
         )).when(dataServerQueryHandler)
-          .fetchRowsFromDataServer(any(), any(), any());
+          .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt, dim1 from foo")
@@ -131,7 +132,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
                            .columnTypes(resultSignature.getColumnTypes())
-                           .context(defaultScanQueryContext(REALTIME_QUERY_CTX, resultSignature))
+                           .context(REALTIME_QUERY_CTX)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -166,7 +167,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         invocationOnMock -> {
           ScanQuery query = invocationOnMock.getArgument(0);
           ScanQuery.verifyOrderByForNativeExecution(query);
-          Assert.assertEquals(Long.MAX_VALUE, query.getScanRowsLimit());
+          Assertions.assertEquals(Long.MAX_VALUE, query.getScanRowsLimit());
           return Futures.immediateFuture(
               new DataServerQueryResult<>(
                   ImmutableList.of(
@@ -185,7 +186,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         }
     )
         .when(dataServerQueryHandler)
-        .fetchRowsFromDataServer(any(), any(), any());
+        .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt, dim1 from foo order by dim1")
@@ -198,7 +199,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                            .columns("cnt", "dim1")
                            .columnTypes(resultSignature.getColumnTypes())
                            .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
-                           .context(defaultScanQueryContext(REALTIME_QUERY_CTX, resultSignature))
+                           .context(REALTIME_QUERY_CTX)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
@@ -246,7 +247,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         )
     )
         .when(dataServerQueryHandler)
-        .fetchRowsFromDataServer(any(), any(), any());
+        .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo group by cnt")
@@ -308,7 +309,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         )
     )
         .when(dataServerQueryHandler)
-        .fetchRowsFromDataServer(any(), any(), any());
+        .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")
@@ -357,7 +358,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         new ISE("Segment could not be found on data server, but segment was not handed off.")
     )
         .when(dataServerQueryHandler)
-        .fetchRowsFromDataServer(any(), any(), any());
+        .fetchRowsFromDataServer(any(), any(), any(), any());
 
     testSelectQuery()
         .setSql("select cnt,count(*) as cnt1 from foo where (TIMESTAMP '2003-01-01 00:00:00' <= \"__time\" AND \"__time\" < TIMESTAMP '2005-01-01 00:00:00') group by cnt")
@@ -390,7 +391,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         )
         .setQueryContext(REALTIME_QUERY_CTX)
         .setExpectedRowSignature(rowSignature)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.instanceOf(ISE.class))
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class))
         .verifyExecutionError();
   }
 }

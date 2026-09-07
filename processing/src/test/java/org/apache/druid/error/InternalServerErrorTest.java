@@ -21,7 +21,7 @@ package org.apache.druid.error;
 
 import org.apache.druid.matchers.DruidMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -47,7 +47,7 @@ public class InternalServerErrorTest
 
     ErrorResponse recomposed = ErrorResponse.fromMap(asMap);
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         recomposed.getUnderlyingException(),
         new DruidExceptionMatcher(
             DruidException.Persona.OPERATOR,

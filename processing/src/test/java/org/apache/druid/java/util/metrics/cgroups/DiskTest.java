@@ -22,28 +22,28 @@ package org.apache.druid.java.util.metrics.cgroups;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.Map;
 
 public class DiskTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File blkioDir = new File(
@@ -59,27 +59,25 @@ public class DiskTest
   @Test
   public void testWontCrash()
   {
-    final Disk disk = new Disk((cgroup) -> {
-      throw new RuntimeException("shouldContinue");
-    });
+    final Disk disk = new Disk(TestUtils.exceptionThrowingDiscoverer());
     final Map<String, Disk.Metrics> stats = disk.snapshot();
-    Assert.assertEquals(ImmutableMap.of(), stats);
+    Assertions.assertEquals(ImmutableMap.of(), stats);
   }
 
   @Test
   public void testSimpleSnapshot()
   {
     final Map<String, Disk.Metrics> stats = new Disk(discoverer).snapshot();
-    Assert.assertEquals(ImmutableSet.of("259:0", "259:7"), stats.keySet());
+    Assertions.assertEquals(ImmutableSet.of("259:0", "259:7"), stats.keySet());
 
-    Assert.assertEquals(stats.get("259:0").getReadCount(), 98L);
-    Assert.assertEquals(stats.get("259:0").getWriteCount(), 756L);
-    Assert.assertEquals(stats.get("259:0").getReadBytes(), 55000L);
-    Assert.assertEquals(stats.get("259:0").getWriteBytes(), 6208512L);
+    Assertions.assertEquals(stats.get("259:0").getReadCount(), 98L);
+    Assertions.assertEquals(stats.get("259:0").getWriteCount(), 756L);
+    Assertions.assertEquals(stats.get("259:0").getReadBytes(), 55000L);
+    Assertions.assertEquals(stats.get("259:0").getWriteBytes(), 6208512L);
 
-    Assert.assertEquals(stats.get("259:7").getReadCount(), 26L);
-    Assert.assertEquals(stats.get("259:7").getWriteCount(), 0L);
-    Assert.assertEquals(stats.get("259:7").getReadBytes(), 1773568L);
-    Assert.assertEquals(stats.get("259:7").getWriteBytes(), 0L);
+    Assertions.assertEquals(stats.get("259:7").getReadCount(), 26L);
+    Assertions.assertEquals(stats.get("259:7").getWriteCount(), 0L);
+    Assertions.assertEquals(stats.get("259:7").getReadBytes(), 1773568L);
+    Assertions.assertEquals(stats.get("259:7").getWriteBytes(), 0L);
   }
 }

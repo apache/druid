@@ -34,7 +34,6 @@ import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -69,6 +68,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -243,7 +243,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       }
       this.authorizerMapper = toolbox.getAuthorizerMapper();
 
-      toolbox.getChatHandlerProvider().register(getId(), this, false);
+      toolbox.getChatHandlerProvider().register(getId(), this);
 
       rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
       parseExceptionHandler = new ParseExceptionHandler(
@@ -311,7 +311,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals
+        intervals,
+        SegmentDetail.none()
     );
   }
 
@@ -362,7 +363,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     final TaskRealtimeMetricsMonitor metricsMonitor =
-        TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, rowIngestionMeters);
+        new TaskRealtimeMetricsMonitor(segmentGenerationMetrics, rowIngestionMeters, getMetricBuilder());
     toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();

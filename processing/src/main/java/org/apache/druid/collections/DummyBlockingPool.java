@@ -22,16 +22,16 @@ package org.apache.druid.collections;
 import java.util.List;
 
 /**
- * BlockingPool with 0 maxSize, all take*() methods immediately throw {@link UnsupportedOperationException}.
+ * BlockingPool with 0 maxSize, all {@code takeBatch} methods immediately throw {@link UnsupportedOperationException}.
  */
-public final class DummyBlockingPool<T> implements BlockingPool<T>
+public final class DummyBlockingPool implements BlockingPool<Object>
 {
   private static final DummyBlockingPool INSTANCE = new DummyBlockingPool();
 
   @SuppressWarnings("unchecked")
   public static <T> BlockingPool<T> instance()
   {
-    return INSTANCE;
+    return (BlockingPool<T>) INSTANCE;
   }
 
   private DummyBlockingPool()
@@ -45,13 +45,13 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
-  public List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum, long timeoutMs)
+  public List<ReferenceCountingResourceHolder<Object>> takeBatch(int elementNum, long timeoutMs)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public List<ReferenceCountingResourceHolder<T>> takeBatch(int elementNum)
+  public List<ReferenceCountingResourceHolder<Object>> takeBatch(int elementNum)
   {
     throw new UnsupportedOperationException();
   }

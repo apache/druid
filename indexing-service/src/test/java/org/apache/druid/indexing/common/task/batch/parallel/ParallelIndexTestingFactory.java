@@ -100,7 +100,6 @@ class ParallelIndexTestingFactory
                      .withTimestamp(timestampSpec)
                      .withDimensions(dimensionsSpec)
                      .withGranularity(granularitySpec)
-                     .withObjectMapper(NESTED_OBJECT_MAPPER)
                      .build();
   }
 

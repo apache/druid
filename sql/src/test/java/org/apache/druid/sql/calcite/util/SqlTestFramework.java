@@ -35,6 +35,7 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.guice.CatalogCoreModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
@@ -80,7 +81,6 @@ import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.LocalQuerySegmentWalker;
@@ -110,12 +110,12 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.DruidSchemaProvider;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchemaProvider;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
@@ -126,6 +126,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.inject.Named;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -200,7 +201,10 @@ public class SqlTestFramework
 
     Class<? extends SqlEngine> getSqlEngineClass();
 
-    SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker);
+    SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    );
 
     /**
      * Should return a module which provides the core Druid components.
@@ -279,9 +283,12 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
-      return delegate.addSegmentsToWalker(walker);
+      return delegate.addSegmentsToWalker(walker, jsonMapper);
     }
 
     @Override
@@ -409,6 +416,7 @@ public class SqlTestFramework
           new LookylooModule(),
           new SegmentWranglerModule(),
           new ExpressionModule(),
+          new CatalogCoreModule(),
           DruidModule.override(
               new QueryRunnerFactoryModule(),
               new Module()
@@ -441,16 +449,9 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                public TopNQueryConfig makeTopNQueryConfig(Builder builder)
+                public TopNQueryConfig makeTopNQueryConfig()
                 {
-                  return new TopNQueryConfig()
-                  {
-                    @Override
-                    public int getMinTopNThreshold()
-                    {
-                      return builder.minTopNThreshold;
-                    }
-                  };
+                  return new TopNQueryConfig();
                 }
 
                 @Provides
@@ -506,19 +507,23 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private DruidSchema makeDruidSchema(
+                private DruidSchemaProvider makeDruidSchemaProvider(
                     final Injector injector,
                     QueryRunnerFactoryConglomerate conglomerate,
                     QuerySegmentWalker walker,
                     Builder builder,
+                    PlannerConfig plannerConfig,
+                    AuthorizerMapper authorizerMapper,
                     TimelineServerView timelineServerView
                 )
                 {
-                  return QueryFrameworkUtils.createMockSchema(
+                  return QueryFrameworkUtils.createMockSchemaProvider(
                       injector,
                       conglomerate,
                       (SpecificSegmentsQuerySegmentWalker) walker,
                       builder.componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
+                      plannerConfig,
+                      authorizerMapper,
                       builder.catalogResolver,
                       timelineServerView
                   );
@@ -526,12 +531,19 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private SystemSchema makeSystemSchema(
+                private SystemSchemaProvider makeSystemSchema(
+                    DruidSchemaProvider druidSchemaProvider,
+                    TimelineServerView timelineServerView,
                     AuthorizerMapper authorizerMapper,
-                    DruidSchema druidSchema,
-                    TimelineServerView timelineServerView)
+                    PlannerConfig plannerConfig
+                )
                 {
-                  return CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
+                  return CalciteTests.createMockSystemSchemaProvider(
+                      druidSchemaProvider.getSegmentMetadataCache(),
+                      timelineServerView,
+                      authorizerMapper,
+                      plannerConfig
+                  );
                 }
 
                 @Provides
@@ -550,26 +562,25 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private DruidSchemaCatalog makeCatalog(
-                    final PlannerConfig plannerConfig,
+                private DruidSchemaCatalogProvider makeCatalogProvider(
                     final ViewManager viewManager,
                     AuthorizerMapper authorizerMapper,
-                    DruidSchema druidSchema,
-                    SystemSchema systemSchema,
+                    DruidSchemaProvider druidSchemaProvider,
+                    SystemSchemaProvider systemSchemaProvider,
                     LookupSchema lookupSchema,
-                    DruidOperatorTable createOperatorTable
+                    DruidOperatorTable createOperatorTable,
+                    PlannerConfig plannerConfig
                 )
                 {
-                  final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
-                      plannerConfig,
+                  return QueryFrameworkUtils.createMockRootSchemaProvider(
                       viewManager,
                       authorizerMapper,
-                      druidSchema,
-                      systemSchema,
+                      druidSchemaProvider,
+                      systemSchemaProvider,
                       lookupSchema,
-                      createOperatorTable
+                      createOperatorTable,
+                      plannerConfig
                   );
-                  return rootSchema;
                 }
               }
           ),
@@ -603,9 +614,12 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(
+        SpecificSegmentsQuerySegmentWalker walker,
+        ObjectMapper jsonMapper
+    )
     {
-      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker);
+      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker, jsonMapper);
     }
 
     @Override
@@ -746,7 +760,6 @@ public class SqlTestFramework
   public static class Builder
   {
     private final QueryComponentSupplier componentSupplier;
-    private int minTopNThreshold = TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
     private List<Module> overrideModules = new ArrayList<>();
@@ -756,12 +769,6 @@ public class SqlTestFramework
     public Builder(QueryComponentSupplier componentSupplier)
     {
       this.componentSupplier = componentSupplier;
-    }
-
-    public Builder minTopNThreshold(int minTopNThreshold)
-    {
-      this.minTopNThreshold = minTopNThreshold;
-      return this;
     }
 
     public Builder mergeBufferCount(int mergeBufferCount)
@@ -829,7 +836,7 @@ public class SqlTestFramework
     )
     {
       this.viewManager = componentSupplier.createViewManager();
-      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+      final DruidSchemaCatalogProvider schemaProvider = QueryFrameworkUtils.createMockRootSchemaProvider(
           framework.injector,
           framework.conglomerate(),
           framework.walker(),
@@ -842,7 +849,7 @@ public class SqlTestFramework
       );
 
       this.plannerFactory = new PlannerFactory(
-          rootSchema,
+          schemaProvider,
           framework.operatorTable(),
           framework.macroTable(),
           plannerConfig,
@@ -914,7 +921,7 @@ public class SqlTestFramework
     @Provides
     ChatHandlerProvider getChatHandlerProvider()
     {
-      return new NoopChatHandlerProvider();
+      return new ChatHandlerProvider();
     }
 
     @Override
@@ -1054,7 +1061,7 @@ public class SqlTestFramework
     {
       builder.resourceCloser.register(walker);
       if (testDataSets.isEmpty()) {
-        builder.componentSupplier.addSegmentsToWalker(walker);
+        builder.componentSupplier.addSegmentsToWalker(walker, jsonMapper);
       } else {
         for (TestDataSet testDataSet : testDataSets) {
           walker.add(testDataSet, jsonMapper, builder.componentSupplier.getTempDirProducer().newTempFolder());

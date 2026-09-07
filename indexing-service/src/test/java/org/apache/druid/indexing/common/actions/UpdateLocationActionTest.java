@@ -19,12 +19,16 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.base.Optional;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
-import org.junit.Test;
+import org.apache.druid.segment.TestHelper;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -67,5 +71,25 @@ public class UpdateLocationActionTest
     when(toolbox.getTaskRunner()).thenReturn(Optional.absent());
     action.perform(task, toolbox);
     verify(runner, never()).updateStatus(any(), any());
+  }
+
+  @Test
+  public void testSerde() throws JsonProcessingException
+  {
+    final UpdateLocationAction original = new UpdateLocationAction(
+        TaskLocation.create("host", 1000, -1, false, "pod")
+    );
+    final String json = TestHelper.JSON_MAPPER.writeValueAsString(original);
+    final TaskAction<?> deserialized = TestHelper.JSON_MAPPER.readValue(json, TaskAction.class);
+    Assertions.assertEquals(original, deserialized);
+  }
+
+  @Test
+  public void test_actionWithNullLocation_throwsException()
+  {
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> new UpdateLocationAction(null)
+    );
   }
 }

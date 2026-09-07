@@ -79,14 +79,15 @@ import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.FixedIndexed;
-import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.SegmentFileMapperV10;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.nested.CompressedNestedDataComplexColumn;
@@ -106,6 +107,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -124,7 +126,8 @@ public class DumpSegment extends GuiceRunnable
     ROWS,
     METADATA,
     BITMAPS,
-    NESTED
+    NESTED,
+    METADATA_V10
   }
 
   public DumpSegment()
@@ -191,6 +194,11 @@ public class DumpSegment extends GuiceRunnable
     }
     catch (Exception e) {
       throw new IAE("Not a valid dump type: %s", dumpTypeString);
+    }
+
+    if (dumpType == DumpType.METADATA_V10) {
+      dumpV10Metadata(injector, directory, outputFileName);
+      return;
     }
 
     try (final QueryableIndex index = indexIO.loadIndex(new File(directory))) {
@@ -456,11 +464,11 @@ public class DumpSegment extends GuiceRunnable
               jg.writeFieldName(columnName);
               jg.writeStartObject();
               {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                final BaseColumnHolder columnHolder = index.getColumnHolder(columnName);
                 final BaseColumn baseColumn = columnHolder.getColumn();
                 Preconditions.checkArgument(baseColumn instanceof CompressedNestedDataComplexColumn);
-                final CompressedNestedDataComplexColumn<?> nestedDataColumn =
-                    (CompressedNestedDataComplexColumn<?>) baseColumn;
+                final CompressedNestedDataComplexColumn<?, ?> nestedDataColumn =
+                    (CompressedNestedDataComplexColumn<?, ?>) baseColumn;
 
                 jg.writeFieldName("fields");
                 jg.writeStartArray();
@@ -480,21 +488,21 @@ public class DumpSegment extends GuiceRunnable
                 }
                 jg.writeEndArray();
 
-                Indexed<ByteBuffer> globalStringDictionary = nestedDataColumn.getUtf8BytesDictionary();
-                Indexed<Long> globalLongDictionary = nestedDataColumn.getLongDictionary();
-                Indexed<Double> globalDoubleDictionary = nestedDataColumn.getDoubleDictionary();
+                Iterator<ByteBuffer> globalStringIterator = nestedDataColumn.getUtf8BytesDictionary().iterator();
+                Iterator<Long> globalLongIterator = nestedDataColumn.getLongDictionary().iterator();
+                Iterator<Double> globalDoubleIterator = nestedDataColumn.getDoubleDictionary().iterator();
                 jg.writeFieldName("dictionaries");
                 jg.writeStartObject();
                 {
                   int globalId = 0;
                   jg.writeFieldName("strings");
                   jg.writeStartArray();
-                  for (int i = 0; i < globalStringDictionary.size(); i++, globalId++) {
+                  while (globalStringIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
-                    jg.writeNumber(globalId);
+                    jg.writeNumber(globalId++);
                     jg.writeFieldName("value");
-                    final ByteBuffer val = globalStringDictionary.get(i);
+                    final ByteBuffer val = globalStringIterator.next();
                     if (val == null) {
                       jg.writeNull();
                     } else {
@@ -506,24 +514,24 @@ public class DumpSegment extends GuiceRunnable
 
                   jg.writeFieldName("longs");
                   jg.writeStartArray();
-                  for (int i = 0; i < globalLongDictionary.size(); i++, globalId++) {
+                  while (globalLongIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
-                    jg.writeNumber(globalId);
+                    jg.writeNumber(globalId++);
                     jg.writeFieldName("value");
-                    jg.writeNumber(globalLongDictionary.get(i));
+                    jg.writeNumber(globalLongIterator.next());
                     jg.writeEndObject();
                   }
                   jg.writeEndArray();
 
                   jg.writeFieldName("doubles");
                   jg.writeStartArray();
-                  for (int i = 0; i < globalDoubleDictionary.size(); i++, globalId++) {
+                  while (globalDoubleIterator.hasNext()) {
                     jg.writeStartObject();
                     jg.writeFieldName("globalId");
-                    jg.writeNumber(globalId);
+                    jg.writeNumber(globalId++);
                     jg.writeFieldName("value");
-                    jg.writeNumber(globalDoubleDictionary.get(i));
+                    jg.writeNumber(globalDoubleIterator.next());
                     jg.writeEndObject();
                   }
                   jg.writeEndArray();
@@ -587,7 +595,7 @@ public class DumpSegment extends GuiceRunnable
               jg.writeFieldName(columnName);
               jg.writeStartObject();
               {
-                final ColumnHolder columnHolder = index.getColumnHolder(columnName);
+                final BaseColumnHolder columnHolder = index.getColumnHolder(columnName);
                 final BaseColumn column = columnHolder.getColumn();
                 Preconditions.checkArgument(column instanceof CompressedNestedDataComplexColumn);
                 final CompressedNestedDataComplexColumn nestedDataColumn = (CompressedNestedDataComplexColumn) column;
@@ -601,11 +609,8 @@ public class DumpSegment extends GuiceRunnable
 
                 SimpleAscendingOffset offset = new SimpleAscendingOffset(index.getNumRows());
                 final ColumnValueSelector rawSelector = nestedDataColumn.makeColumnValueSelector(offset);
-                final DimensionSelector fieldSelector = nestedDataColumn.makeDimensionSelector(
-                    pathParts,
-                    offset,
-                    null
-                );
+                final DimensionSelector fieldSelector =
+                    nestedDataColumn.makeDimensionSelector(pathParts, null, null, offset);
                 if (indexSupplier == null) {
                   jg.writeNullField(path);
                 } else {
@@ -691,6 +696,28 @@ public class DumpSegment extends GuiceRunnable
         },
         outputFileName
     );
+  }
+  @VisibleForTesting
+  public static void dumpV10Metadata(Injector injector, String segmentFile, String output)
+  {
+    final ObjectMapper objectMapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    try (SegmentFileMapperV10 fileMapperV10 = SegmentFileMapperV10.create(new File(segmentFile), objectMapper)) {
+      withOutputStream(
+          (Function<OutputStream, Object>) outStream -> {
+            try {
+              objectMapper.writeValue(outStream, fileMapperV10.getSegmentFileMetadata());
+            }
+            catch (IOException e) {
+              throw new RuntimeException(e);
+            }
+            return null;
+          },
+          output
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @VisibleForTesting

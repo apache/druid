@@ -22,10 +22,12 @@ package org.apache.druid.compressedbigdecimal.aggregator.min;
 import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorTestBase;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.easymock.EasyMock;
+import org.junit.jupiter.api.Test;
 
 public class CompressedBigDecimalMinAggregatorTest extends CompressedBigDecimalAggregatorTestBase
 {
   @Override
+  @Test
   public void testNoData()
   {
     CompressedBigDecimalMinAggregator aggregator = new CompressedBigDecimalMinAggregator(

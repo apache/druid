@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.frame.Frame;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.ArrayList;
@@ -103,7 +103,7 @@ public class ComposingReadableFrameChannel implements ReadableFrameChannel
   }
 
   @Override
-  public Frame read()
+  public RowsAndColumns read()
   {
     return currentChannel.read();
   }

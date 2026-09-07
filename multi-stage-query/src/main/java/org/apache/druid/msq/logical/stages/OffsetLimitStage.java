@@ -54,6 +54,12 @@ public class OffsetLimitStage extends AbstractFrameProcessorStage
   }
 
   @Override
+  public boolean isSingleWorker()
+  {
+    return true;
+  }
+
+  @Override
   public RowSignature getLogicalRowSignature()
   {
     return inputSpecs.get(0).getRowSignature();

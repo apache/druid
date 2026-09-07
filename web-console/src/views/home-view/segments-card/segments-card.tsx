@@ -51,6 +51,7 @@ export const SegmentsCard = React.memo(function SegmentsCard(props: SegmentsCard
   COUNT(*) FILTER (WHERE is_realtime = 1) AS "realtime"
 FROM sys.segments
 WHERE is_active = 1`,
+            context: { engine: 'native' },
           },
           signal,
         );

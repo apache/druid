@@ -28,9 +28,9 @@ import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -46,7 +46,7 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
   private float[] floats = {1.1897f, 0.001f, 86.23f, 166.228f};
   private Float[] objects = {2.1897f, 1.001f, 87.23f, 167.228f};
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     floatAnyAggFactory = new FloatAnyAggregatorFactory("billy", "nilly");
@@ -71,9 +71,9 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
 
     Float result = (Float) agg.get();
 
-    Assert.assertEquals((Float) floats[0], result);
-    Assert.assertEquals((long) floats[0], agg.getLong());
-    Assert.assertEquals(floats[0], agg.getFloat(), 0.0001);
+    Assertions.assertEquals((Float) floats[0], result);
+    Assertions.assertEquals((long) floats[0], agg.getLong());
+    Assertions.assertEquals(floats[0], agg.getFloat(), 0.0001);
   }
 
   @Test
@@ -92,9 +92,9 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
 
     Float result = (Float) agg.get(buffer, 0);
 
-    Assert.assertEquals(floats[0], result, 0.0001);
-    Assert.assertEquals((long) floats[0], agg.getLong(buffer, 0));
-    Assert.assertEquals(floats[0], agg.getFloat(buffer, 0), 0.0001);
+    Assertions.assertEquals(floats[0], result, 0.0001);
+    Assertions.assertEquals((long) floats[0], agg.getLong(buffer, 0));
+    Assertions.assertEquals(floats[0], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -102,7 +102,7 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
   {
     Float f1 = 3.0f;
     Float f2 = 4.0f;
-    Assert.assertEquals(f1, floatAnyAggFactory.combine(f1, f2));
+    Assertions.assertEquals(f1, floatAnyAggFactory.combine(f1, f2));
   }
 
   @Test
@@ -111,10 +111,10 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
     Float f1 = 3.0f;
     Float f2 = null;
     Comparator comparator = floatAnyAggFactory.getComparator();
-    Assert.assertEquals(1, comparator.compare(f1, f2));
-    Assert.assertEquals(0, comparator.compare(f1, f1));
-    Assert.assertEquals(0, comparator.compare(f2, f2));
-    Assert.assertEquals(-1, comparator.compare(f2, f1));
+    Assertions.assertEquals(1, comparator.compare(f1, f2));
+    Assertions.assertEquals(0, comparator.compare(f1, f1));
+    Assertions.assertEquals(0, comparator.compare(f2, f2));
+    Assertions.assertEquals(-1, comparator.compare(f2, f1));
   }
 
   @Test
@@ -123,9 +123,9 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
     Long n1 = 3L;
     Float n2 = 4.0f;
     Comparator comparator = floatAnyAggFactory.getComparator();
-    Assert.assertEquals(0, comparator.compare(n1, n1));
-    Assert.assertEquals(-1, comparator.compare(n1, n2));
-    Assert.assertEquals(1, comparator.compare(n2, n1));
+    Assertions.assertEquals(0, comparator.compare(n1, n1));
+    Assertions.assertEquals(-1, comparator.compare(n1, n2));
+    Assertions.assertEquals(1, comparator.compare(n2, n1));
   }
 
   @Test
@@ -140,9 +140,9 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
 
     Float result = (Float) agg.get();
 
-    Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0].longValue(), agg.getLong());
-    Assert.assertEquals(objects[0], agg.getFloat(), 0.0001);
+    Assertions.assertEquals(objects[0], result, 0.0001);
+    Assertions.assertEquals(objects[0].longValue(), agg.getLong());
+    Assertions.assertEquals(objects[0], agg.getFloat(), 0.0001);
   }
 
   @Test
@@ -161,9 +161,9 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
 
     Float result = (Float) agg.get(buffer, 0);
 
-    Assert.assertEquals(objects[0], result, 0.0001);
-    Assert.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(objects[0], agg.getFloat(buffer, 0), 0.0001);
+    Assertions.assertEquals(objects[0], result, 0.0001);
+    Assertions.assertEquals(objects[0].longValue(), agg.getLong(buffer, 0));
+    Assertions.assertEquals(objects[0], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -171,7 +171,7 @@ public class FloatAnyAggregationTest extends InitializedNullHandlingTest
   {
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String floatSpecJson = "{\"type\":\"floatAny\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
-    Assert.assertEquals(floatAnyAggFactory, mapper.readValue(floatSpecJson, AggregatorFactory.class));
+    Assertions.assertEquals(floatAnyAggFactory, mapper.readValue(floatSpecJson, AggregatorFactory.class));
   }
 
   private void aggregate(

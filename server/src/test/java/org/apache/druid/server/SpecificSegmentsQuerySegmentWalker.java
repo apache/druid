@@ -37,7 +37,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.InlineSegmentWrangler;
@@ -197,14 +196,6 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
   public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final Segment segment)
   {
-    return add(new CompleteSegment(descriptor, segment));
-  }
-
-  public SpecificSegmentsQuerySegmentWalker add(CompleteSegment completeSegment)
-  {
-    DataSegment descriptor = completeSegment.getDataSegment();
-    Segment segment = completeSegment.getSegment();
-
     final ReferenceCountedSegmentProvider referenceCountingSegment = ReferenceCountedSegmentProvider.of(segment);
     final VersionedIntervalTimeline<String, DataSegment> timeline = timelines.computeIfAbsent(
         descriptor.getDataSource(),
@@ -216,7 +207,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         descriptor.getShardSpec().createChunk(descriptor)
     );
     referenceProviders.put(descriptor, referenceCountingSegment);
-    segments.add(completeSegment);
+    segments.add(new CompleteSegment(descriptor, segment));
     return this;
   }
 
@@ -232,7 +223,12 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
 
   public List<DataSegment> getSegments()
   {
-    return Lists.transform(segments, CompleteSegment::getDataSegment);
+    return Lists.transform(segments, completeSegment -> completeSegment.dataSegment);
+  }
+
+  public List<CompleteSegment> getCompleteSegments()
+  {
+    return segments;
   }
 
   @Override
@@ -250,8 +246,8 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   @Override
   public void close() throws IOException
   {
-    for (Closeable closeable : segments) {
-      Closeables.close(closeable, true);
+    for (CompleteSegment completeSegment : segments) {
+      Closeables.close(completeSegment.segment, true);
     }
   }
 
@@ -274,7 +270,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   {
     List<CompleteSegment> matches = new ArrayList<>(1);
     for (CompleteSegment s : segments) {
-      SegmentId id = s.getDataSegment().getId();
+      SegmentId id = s.dataSegment.getId();
       if (id.equals(segmentId)) {
         matches.add(s);
       }
@@ -287,5 +283,17 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       );
     }
     return matches.get(0);
+  }
+
+  public static class CompleteSegment
+  {
+    public final DataSegment dataSegment;
+    public final Segment segment;
+
+    public CompleteSegment(DataSegment dataSegment, Segment segment)
+    {
+      this.dataSegment = dataSegment;
+      this.segment = segment;
+    }
   }
 }

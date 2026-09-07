@@ -23,13 +23,13 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -53,25 +53,25 @@ public final class DictionaryIdLookup implements Closeable
   @Nullable
   private final DictionaryWriter<String> stringDictionaryWriter;
   private File stringDictionaryFile = null;
-  private SmooshedFileMapper stringBufferMapper = null;
+  private SegmentFileMapper stringBufferMapper = null;
   private Indexed<ByteBuffer> stringDictionary = null;
 
   @Nullable
   private final DictionaryWriter<Long> longDictionaryWriter;
   private File longDictionaryFile = null;
-  private SmooshedFileMapper longBufferMapper = null;
+  private SegmentFileMapper longBufferMapper = null;
   private FixedIndexed<Long> longDictionary = null;
 
   @Nullable
   private final DictionaryWriter<Double> doubleDictionaryWriter;
   private File doubleDictionaryFile = null;
-  SmooshedFileMapper doubleBufferMapper = null;
+  SegmentFileMapper doubleBufferMapper = null;
   FixedIndexed<Double> doubleDictionary = null;
 
   @Nullable
   private final DictionaryWriter<int[]> arrayDictionaryWriter;
   private File arrayDictionaryFile = null;
-  private SmooshedFileMapper arrayBufferMapper = null;
+  private SegmentFileMapper arrayBufferMapper = null;
   private FrontCodedIntArrayIndexed arrayDictionary = null;
   private final Closer closer = Closer.create();
 
@@ -158,25 +158,25 @@ public final class DictionaryIdLookup implements Closeable
   }
 
   @Nullable
-  public SmooshedFileMapper getStringBufferMapper()
+  public SegmentFileMapper getStringBufferMapper()
   {
     return stringBufferMapper;
   }
 
   @Nullable
-  public SmooshedFileMapper getLongBufferMapper()
+  public SegmentFileMapper getLongBufferMapper()
   {
     return longBufferMapper;
   }
 
   @Nullable
-  public SmooshedFileMapper getDoubleBufferMapper()
+  public SegmentFileMapper getDoubleBufferMapper()
   {
     return doubleBufferMapper;
   }
 
   @Nullable
-  public SmooshedFileMapper getArrayBufferMapper()
+  public SegmentFileMapper getArrayBufferMapper()
   {
     return arrayBufferMapper;
   }

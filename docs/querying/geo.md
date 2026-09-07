@@ -23,11 +23,11 @@ title: "Spatial filters"
   -->
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](../querying/sql.md) and [native queries](../querying/querying.md).
  This document describes a feature that is only available in the native language.
 :::
 
-Apache Druid supports filtering spatially indexed columns based on an origin and a bound.
+Apache&circledR; Druid supports filtering spatially indexed columns based on an origin and a bound.
 
 This topic explains how to ingest and query spatial filters.
 For information on other filters supported by Druid, see [Query filters](../querying/filters.md).
@@ -40,45 +40,29 @@ Spatial dimensions are string columns that contain coordinates separated by a co
 In the ingestion spec, you configure spatial dimensions in the `dimensionsSpec` object of the `dataSchema` component.
 
 You can provide spatial dimensions in any of the [data formats](../ingestion/data-formats.md) supported by Druid.
-The following example shows an ingestion spec with a spatial dimension named `coordinates`, which is constructed from the input fields `x` and `y`:
+The following example shows dimension spec with a spatial dimension named `coordinates`, which is constructed from the input fields `x` and `y`:
 
 ```json
 {
-  "type": "hadoop",
-  "dataSchema": {
-    "dataSource": "DatasourceName",
-    "parser": {
-      "type": "string",
-      "parseSpec": {
-        "format": "json",
-        "timestampSpec": {
-          "column": "timestamp",
-          "format": "auto"
-        },
-        "dimensionsSpec": {
-          "dimensions": [
-            {
-              "type": "double",
-              "name": "x"
-            },
-            {
-              "type": "double",
-              "name": "y"
-            }
-          ],
-          "spatialDimensions": [
-            {
-              "dimName": "coordinates",
-              "dims": [
-                "x",
-                "y"
-              ]
-            }
-          ]
-        }
-      }
-    }
+ "dimensions": [
+  {
+   "type": "double",
+   "name": "x"
+  },
+  {
+   "type": "double",
+   "name": "y"
   }
+ ],
+ "spatialDimensions": [
+  {
+   "dimName": "coordinates",
+   "dims": [
+    "x",
+    "y"
+   ]
+  }
+ ]
 }
 ```
 

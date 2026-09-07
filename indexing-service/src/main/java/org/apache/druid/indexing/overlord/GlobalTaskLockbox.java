@@ -80,6 +80,11 @@ public class GlobalTaskLockbox
    * Syncs the current in-memory state with the {@link TaskStorage}.
    * This method should be called only from {@link TaskQueue#start()}.
    * If the sync fails, no other operation can be performed on this lockbox.
+   * <p>
+   * The sync does not restore a lock, if it is associated with a dummy task ID
+   * that is not persisted in the task storage (e.g. embedded kill tasks).
+   * This is okay since the sync happens only when Overlord becomes leader, at
+   * which point there wouldn't be any embedded (kill) tasks running anyway.
    *
    * @return SyncResult which needs to be processed by the caller
    */
@@ -277,14 +282,11 @@ public class GlobalTaskLockbox
   }
 
   /**
-   * Cleans up pending segments associated with the given task, if any.
+   * Creates a new {@link TaskLockbox} for the given datasource.
    */
-  protected void cleanupPendingSegments(Task task)
+  protected TaskLockbox createLockbox(String dataSource)
   {
-    executeForTask(
-        task,
-        lockbox -> lockbox.cleanupPendingSegments(task)
-    );
+    return new TaskLockbox(dataSource, taskStorage, metadataStorageCoordinator);
   }
 
   /**
@@ -484,9 +486,7 @@ public class GlobalTaskLockbox
         (ds, existingResource) -> {
           final DatasourceLockboxResource resource = Objects.requireNonNullElseGet(
               existingResource,
-              () -> new DatasourceLockboxResource(
-                  new TaskLockbox(ds, taskStorage, metadataStorageCoordinator)
-              )
+              () -> new DatasourceLockboxResource(createLockbox(datasource))
           );
 
           // Verify sync is complete before acquiring the resource

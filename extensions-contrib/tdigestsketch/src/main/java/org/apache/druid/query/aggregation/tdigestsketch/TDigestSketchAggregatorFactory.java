@@ -19,11 +19,14 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.tdunning.math.stats.MergingDigest;
 import com.tdunning.math.stats.TDigest;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -60,6 +63,7 @@ import java.util.Objects;
 @JsonTypeName(TDigestSketchAggregatorFactory.TYPE_NAME)
 public class TDigestSketchAggregatorFactory extends AggregatorFactory
 {
+  private static final Logger log = new Logger(TDigestSketchAggregatorFactory.class);
 
   // Default compression
   public static final int DEFAULT_COMPRESSION = 100;
@@ -74,6 +78,8 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   @Nonnull
   private final byte cacheTypeId;
 
+  private final TDigestConfig tDigestConfig;
+
   public static final String TYPE_NAME = "tDigestSketch";
   public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
 
@@ -81,22 +87,34 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   public TDigestSketchAggregatorFactory(
       @JsonProperty("name") final String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("compression") @Nullable final Integer compression
+      @JsonProperty("compression") @Nullable final Integer compression,
+      @JacksonInject final TDigestConfig tDigestConfig
   )
   {
-    this(name, fieldName, compression, AggregatorUtil.TDIGEST_BUILD_SKETCH_CACHE_TYPE_ID);
+    this(name, fieldName, compression, AggregatorUtil.TDIGEST_BUILD_SKETCH_CACHE_TYPE_ID, tDigestConfig);
   }
 
   TDigestSketchAggregatorFactory(
       final String name,
       final String fieldName,
       @Nullable final Integer compression,
-      final byte cacheTypeId
+      final byte cacheTypeId,
+      final TDigestConfig tDigestConfig
   )
   {
     this.name = Objects.requireNonNull(name, "Must have a valid, non-null aggregator name");
     this.fieldName = Objects.requireNonNull(fieldName, "Parameter fieldName must be specified");
-    this.compression = compression == null ? DEFAULT_COMPRESSION : compression;
+    this.tDigestConfig = tDigestConfig;
+    if (tDigestConfig.getMaxCompression() != null && compression != null && compression > tDigestConfig.getMaxCompression()) {
+      log.warn(
+          "Compression value [%d] is greater than the max allowed compression value [%d]. Setting it to max allowed value",
+          compression,
+          tDigestConfig.getMaxCompression()
+      );
+      this.compression = tDigestConfig.getMaxCompression();
+    } else {
+      this.compression = Configs.valueOrDefault(compression, DEFAULT_COMPRESSION);
+    }
     this.cacheTypeId = cacheTypeId;
   }
 
@@ -149,7 +167,7 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new TDigestSketchAggregatorFactory(name, name, compression);
+    return new TDigestSketchAggregatorFactory(name, name, compression, tDigestConfig);
   }
 
   @Override
@@ -224,7 +242,7 @@ public class TDigestSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new TDigestSketchAggregatorFactory(newName, getFieldName(), getCompression(), cacheTypeId);
+    return new TDigestSketchAggregatorFactory(newName, getFieldName(), getCompression(), cacheTypeId, tDigestConfig);
   }
 
   @Override

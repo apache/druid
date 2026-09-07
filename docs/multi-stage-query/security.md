@@ -23,21 +23,17 @@ sidebar_label: Security
   ~ under the License.
   -->
 
-:::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
-:::
-
-All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API if the
-extension is loaded. However, without additional permissions, users are not able to issue queries that read or write
-Druid datasources or external data. The permission needed depends on what the user is trying to do.
+All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API. However,
+without additional permissions, users are not able to issue queries that read or write Druid datasources or external
+data. The permission needed depends on what the user is trying to do.
 
 To submit a query:
 
 - SELECT from a Druid datasource requires the READ DATASOURCE permission on that datasource.
-- [INSERT](reference.md#insert) or [REPLACE](reference.md#replace) into a Druid datasource requires the WRITE DATASOURCE
-  permission on that datasource.
+- [INSERT](reference.md#insert) or [REPLACE](reference.md#replace) into a Druid datasource require the WRITE DATASOURCE
+  and READ DATASOURCE permissions on the target datasource. (Special case: if
+  [`druid.sql.planner.authorizeTableVisibility = false`](../configuration/index.md#sql) is set, only WRITE DATASOURCE
+  is required.)
 - [EXTERN](reference.md#extern-function) and the input-source-specific table functions require READ permission on a
   resource named "EXTERNAL" with type "EXTERNAL". Users without the correct
   permission encounter a 403 error when trying to run queries that include `EXTERN`.
@@ -83,4 +79,3 @@ The MSQ task engine needs the following permissions for pushing, fetching, and r
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete files when they're no longer needed.
 
 <!--TBD GCS-->
-

@@ -30,8 +30,8 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ResultRowTest
 {
@@ -40,8 +40,8 @@ public class ResultRowTest
   {
     final ResultRow row = ResultRow.of(1, 2, 3);
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-    Assert.assertEquals(row, objectMapper.readValue("[1, 2, 3]", ResultRow.class));
-    Assert.assertEquals(row, objectMapper.readValue(objectMapper.writeValueAsBytes(row), ResultRow.class));
+    Assertions.assertEquals(row, objectMapper.readValue("[1, 2, 3]", ResultRow.class));
+    Assertions.assertEquals(row, objectMapper.readValue(objectMapper.writeValueAsBytes(row), ResultRow.class));
   }
 
   @Test
@@ -70,12 +70,12 @@ public class ResultRowTest
     MapBasedRow mapBasedRow = row.toMapBasedRow(query);
 
     // Let's make sure values are there as expected
-    Assert.assertEquals("1", mapBasedRow.getRaw("dim1"));
-    Assert.assertEquals("2", mapBasedRow.getRaw("dim2"));
-    Assert.assertNull(mapBasedRow.getRaw("dim3"));
+    Assertions.assertEquals("1", mapBasedRow.getRaw("dim1"));
+    Assertions.assertEquals("2", mapBasedRow.getRaw("dim2"));
+    Assertions.assertNull(mapBasedRow.getRaw("dim3"));
 
     // Also, let's make sure that the dimension with null value is actually present in the map
-    Assert.assertTrue(mapBasedRow.getEvent().containsKey("dim3"));
+    Assertions.assertTrue(mapBasedRow.getEvent().containsKey("dim3"));
   }
 
 }

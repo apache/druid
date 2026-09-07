@@ -85,10 +85,10 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -161,7 +161,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         .build();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     tmpDir = FileUtils.createTempDir();
@@ -200,7 +200,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final File fileA = INDEX_MERGER_V9.persist(
         indexA,
         new File(tmpDir, "A"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
     QueryableIndex qindexA = INDEX_IO.loadIndex(fileA);
@@ -236,7 +236,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final File fileB = INDEX_MERGER_V9.persist(
         indexB,
         new File(tmpDir, "B"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
     QueryableIndex qindexB = INDEX_IO.loadIndex(fileB);
@@ -271,7 +271,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final File fileC = INDEX_MERGER_V9.persist(
         indexC,
         new File(tmpDir, "C"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
     QueryableIndex qindexC = INDEX_IO.loadIndex(fileC);
@@ -307,7 +307,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final File fileD = INDEX_MERGER_V9.persist(
         indexD,
         new File(tmpDir, "D"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
     QueryableIndex qindexD = INDEX_IO.loadIndex(fileD);
@@ -422,7 +422,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final File fileE = INDEX_MERGER_V9.persist(
         indexE,
         new File(tmpDir, "E"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
     QueryableIndex qindexE = INDEX_IO.loadIndex(fileE);
@@ -517,7 +517,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final File fileF = INDEX_MERGER_V9.persist(
         indexF,
         new File(tmpDir, "F"),
-        IndexSpec.DEFAULT,
+        IndexSpec.getDefault(),
         null
     );
     QueryableIndex qindexF = INDEX_IO.loadIndex(fileF);
@@ -538,10 +538,10 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
 
     resourceCloser.register(() -> {
       // Verify that all objects have been returned to the pools.
-      Assert.assertEquals(0, bufferPool.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePoolBroker.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePoolHistorical.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePoolHistorical2.getOutstandingObjectCount());
+      Assertions.assertEquals(0, bufferPool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, mergePoolBroker.getOutstandingObjectCount());
+      Assertions.assertEquals(0, mergePoolHistorical.getOutstandingObjectCount());
+      Assertions.assertEquals(0, mergePoolHistorical2.getOutstandingObjectCount());
     });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
@@ -634,7 +634,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     for (IncrementalIndex incrementalIndex : incrementalIndices) {
@@ -789,11 +789,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         "a0", 2L
     );
     System.out.println(results);
-    Assert.assertEquals(4, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
-    Assert.assertEquals(expectedRow1, results.get(1));
-    Assert.assertEquals(expectedRow2, results.get(2));
-    Assert.assertEquals(expectedRow3, results.get(3));
+    Assertions.assertEquals(4, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(expectedRow1, results.get(1));
+    Assertions.assertEquals(expectedRow2, results.get(2));
+    Assertions.assertEquals(expectedRow3, results.get(3));
   }
 
   @Test
@@ -919,11 +919,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         "metASum", 7726L
     );
 
-    Assert.assertEquals(4, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
-    Assert.assertEquals(expectedRow1, results.get(1));
-    Assert.assertEquals(expectedRow2, results.get(2));
-    Assert.assertEquals(expectedRow3, results.get(3));
+    Assertions.assertEquals(4, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(expectedRow1, results.get(1));
+    Assertions.assertEquals(expectedRow2, results.get(2));
+    Assertions.assertEquals(expectedRow3, results.get(3));
   }
 
   @Test
@@ -945,8 +945,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         ResultRow.of("orange", "raw", 11)
     );
 
-    Assert.assertEquals(expectedResults.toString(), resultsWithoutLimitPushDown.toString());
-    Assert.assertEquals(expectedResults.toString(), resultsWithLimitPushDown.toString());
+    Assertions.assertEquals(expectedResults.toString(), resultsWithoutLimitPushDown.toString());
+    Assertions.assertEquals(expectedResults.toString(), resultsWithLimitPushDown.toString());
   }
 
   private List<ResultRow> testForcePushLimitDownAccuracyWhenSortHasNonGroupingFieldsHelper(Map<String, Object> context)

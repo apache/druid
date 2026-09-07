@@ -21,8 +21,8 @@ package org.apache.druid.query.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -38,14 +38,14 @@ public class RegexSearchQueryTest
     String json = JSON_MAPPER.writeValueAsString(spec);
     RegexSearchQuerySpec serdeQuery = (RegexSearchQuerySpec) JSON_MAPPER.readValue(json, RegexSearchQuerySpec.class);
 
-    Assert.assertEquals(spec, serdeQuery);
+    Assertions.assertEquals(spec, serdeQuery);
   }
 
   @Test
   public void testRegexCompare()
   {
     RegexSearchQuerySpec rsq = new RegexSearchQuerySpec("^a.*b");
-    Assert.assertTrue(rsq.accept("aabb"));
-    Assert.assertFalse(rsq.accept("babba"));
+    Assertions.assertTrue(rsq.accept("aabb"));
+    Assertions.assertFalse(rsq.accept("babba"));
   }
 }

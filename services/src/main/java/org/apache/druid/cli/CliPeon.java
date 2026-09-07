@@ -43,7 +43,6 @@ import io.netty.util.SuppressForbidden;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.client.cache.CacheConfig;
-import org.apache.druid.curator.ZkEnablementConfig;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.CacheModule;
@@ -62,13 +61,13 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Parent;
 import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexer.HadoopIndexTaskModule;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReportFileWriter;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
@@ -94,6 +93,7 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.LocalIntermediaryDataManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -114,8 +114,6 @@ import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.ServiceAnnouncingChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
@@ -124,13 +122,11 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordination.ZkCoordinator;
 import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.initialization.jetty.ChatHandlerServerModule;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
+import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.tasklogs.TaskPayloadManager;
@@ -173,8 +169,6 @@ public class CliPeon extends GuiceRunnable
   @Option(name = "--nodeType", title = "nodeType", description = "Set the node type to expose on ZK")
   public String serverType = "indexer-executor";
 
-  private boolean isZkEnabled = true;
-
   /**
    * <p> This option is deprecated, see {@link #loadBroadcastDatasourcesMode} option. </p>
    *
@@ -212,7 +206,6 @@ public class CliPeon extends GuiceRunnable
   public void configure(Properties properties)
   {
     this.properties = properties;
-    isZkEnabled = ZkEnablementConfig.isEnabled(properties);
   }
 
   @Override
@@ -225,6 +218,7 @@ public class CliPeon extends GuiceRunnable
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new IndexingServiceTaskLogsModule(properties),
+        new RegexEngineModule(),
         new Module()
         {
           @SuppressForbidden(reason = "System#out, System#err")
@@ -260,6 +254,9 @@ public class CliPeon extends GuiceRunnable
             ExecutorLifecycleConfig executorLifecycleConfig = new ExecutorLifecycleConfig()
                 .setTaskFile(Paths.get(taskDirPath, "task.json").toFile())
                 .setStatusFile(Paths.get(taskDirPath, "attempt", attemptId, "status.json").toFile());
+
+            binder.bind(TaskHolder.class).to(PeonTaskHolder.class).in(LazySingleton.class);
+            binder.bind(LoadSpecHolder.class).to(PeonLoadSpecHolder.class).in(LazySingleton.class);
 
             binder.bind(Properties.class).toInstance(properties);
             if (properties.getProperty("druid.indexer.runner.type", "").contains("k8s")) {
@@ -331,38 +328,6 @@ public class CliPeon extends GuiceRunnable
 
           @Provides
           @LazySingleton
-          @Named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)
-          public String getDataSourceFromTask(final Task task)
-          {
-            return task.getDataSource();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(DataSourceTaskIdHolder.TASK_ID_BINDING)
-          public String getTaskIDFromTask(final Task task)
-          {
-            return task.getId();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(DataSourceTaskIdHolder.LOOKUPS_TO_LOAD_FOR_TASK)
-          public LookupLoadingSpec getLookupsToLoad(final Task task)
-          {
-            return task.getLookupLoadingSpec();
-          }
-
-          @Provides
-          @LazySingleton
-          @Named(DataSourceTaskIdHolder.BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
-          public BroadcastDatasourceLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
-          {
-            return task.getBroadcastDatasourceLoadingSpec();
-          }
-
-          @Provides
-          @LazySingleton
           public LocalTmpStorageConfig getLocalTmpStorage()
           {
             File tmpDir = new File(taskDirPath, "tmp");
@@ -380,7 +345,6 @@ public class CliPeon extends GuiceRunnable
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
-        new HadoopIndexTaskModule(),
         new ChatHandlerServerModule(properties),
         new LookupModule(),
         new MSQIndexingModule(),
@@ -455,24 +419,7 @@ public class CliPeon extends GuiceRunnable
 
   static void bindChatHandler(Binder binder)
   {
-    PolyBind.createChoice(
-        binder,
-        "druid.indexer.task.chathandler.type",
-        Key.get(ChatHandlerProvider.class),
-        Key.get(ServiceAnnouncingChatHandlerProvider.class)
-    );
-    final MapBinder<String, ChatHandlerProvider> handlerProviderBinder =
-        PolyBind.optionBinder(binder, Key.get(ChatHandlerProvider.class));
-    handlerProviderBinder
-        .addBinding("announce")
-        .to(ServiceAnnouncingChatHandlerProvider.class)
-        .in(LazySingleton.class);
-    handlerProviderBinder
-        .addBinding("noop")
-        .to(NoopChatHandlerProvider.class)
-        .in(LazySingleton.class);
-    binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
-    binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
+    binder.bind(ChatHandlerProvider.class).in(LazySingleton.class);
   }
 
   static void bindPeonDataSegmentHandlers(Binder binder)
@@ -592,12 +539,8 @@ public class CliPeon extends GuiceRunnable
     public void configure(Binder binder)
     {
       binder.bind(SegmentManager.class).in(LazySingleton.class);
-      binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
       Jerseys.addResource(binder, HistoricalResource.class);
 
-      if (isZkEnabled) {
-        LifecycleModule.register(binder, ZkCoordinator.class);
-      }
       LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
     }
 

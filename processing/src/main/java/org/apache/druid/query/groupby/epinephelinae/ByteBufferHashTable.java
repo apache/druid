@@ -26,6 +26,14 @@ import javax.annotation.Nullable;
 
 import java.nio.ByteBuffer;
 
+/**
+ * A fixed-width, open-addressing hash table that lives inside a caller-provided byte buffer.
+ * <p>
+ * The table uses a contiguous slice of the input {@link ByteBuffer} as its backing store. Each bucket holds
+ * at most one entry, and occupies {@code bucketSizeWithHash} number of bytes. Collisions are resolved by continuously
+ * probing the next bucket to find an empty bucket to slot the new entry. The current table view {@code tableBuffer}
+ * is maintained as a {@link ByteBuffer} slice that moves and grows within the arena as the table expands.
+ */
 public class ByteBufferHashTable
 {
   public static int calculateTableArenaSizeWithPerBucketAdditionalSize(
@@ -79,6 +87,20 @@ public class ByteBufferHashTable
   @Nullable
   protected BucketUpdateHandler bucketUpdateHandler;
 
+  // Tracks maximum bytes used for the entire lifecycle of this hash table.
+  protected long maxMergeBufferUsedBytes;
+
+  // Peak {@code size / terminalRegrowthThreshold} over this table's lifetime, in [0.0, 1.0]; the denominator is the
+  // fixed bucket-count ceiling of the final growth level (see {@link #getSpillRegrowthThreshold()}). A fixed denominator
+  // over monotonically-growing size makes this rise smoothly to exactly 1.0 at the real spill trigger; dividing by the
+  // CURRENT level's threshold would instead sawtooth and pin near (N-1)/N after any growth. Preserved across
+  // {@link #reset()} so a grouper that spilled still reads 1.0 after size returns to 0.
+  protected double maxSpillProximity;
+
+  // Cached denominator for {@link #maxSpillProximity} (terminal-level regrowthThreshold). Zero = not yet computed;
+  // {@link #maxSizeForBuckets} is always >= 1, so zero is a safe sentinel. Depends only on final geometry, so cached.
+  private int spillRegrowthThreshold;
+
   public ByteBufferHashTable(
       float maxLoadFactor,
       int initialBuckets,
@@ -97,6 +119,9 @@ public class ByteBufferHashTable
     this.maxSizeForTesting = maxSizeForTesting;
     this.tableArenaSize = buffer.capacity();
     this.bucketUpdateHandler = bucketUpdateHandler;
+    this.maxMergeBufferUsedBytes = 0;
+    this.maxSpillProximity = 0.0;
+    this.spillRegrowthThreshold = 0;
   }
 
   public void reset()
@@ -115,34 +140,17 @@ public class ByteBufferHashTable
     }
 
     // Start table part-way through the buffer so the last growth can start from zero and thereby use more space.
-    tableStart = tableArenaSize - maxBuckets * bucketSizeWithHash;
-    int nextBuckets = maxBuckets * 2;
-    while (true) {
-      long nextBucketsSize = (long) nextBuckets * bucketSizeWithHash;
-      if (nextBucketsSize > Integer.MAX_VALUE) {
-        break;
-      }
-      final int nextTableStart = tableStart - nextBuckets * bucketSizeWithHash;
-      if (nextTableStart > tableArenaSize / 2) {
-        tableStart = nextTableStart;
-        nextBuckets = nextBuckets * 2;
-      } else {
-        break;
-      }
-    }
-
-    if (tableStart < tableArenaSize / 2) {
-      tableStart = 0;
-    }
+    tableStart = initialTableStart(maxBuckets);
 
     final ByteBuffer bufferDup = buffer.duplicate();
     bufferDup.position(tableStart);
     bufferDup.limit(tableStart + maxBuckets * bucketSizeWithHash);
     tableBuffer = bufferDup.slice();
+    updateMaxMergeBufferUsedBytes();
 
     // Clear used bits of new table
     for (int i = 0; i < maxBuckets; i++) {
-      tableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+      tableBuffer.putInt(i * bucketSizeWithHash, 0);
     }
   }
 
@@ -153,20 +161,10 @@ public class ByteBufferHashTable
       return;
     }
 
-    final int newBuckets;
-    final int newMaxSize;
-    final int newTableStart;
-
-    if (((long) maxBuckets * 3 * bucketSizeWithHash) > (long) tableArenaSize - tableStart) {
-      // Not enough space to grow upwards, start back from zero
-      newTableStart = 0;
-      newBuckets = tableStart / bucketSizeWithHash;
-      newMaxSize = maxSizeForBuckets(newBuckets);
-    } else {
-      newTableStart = tableStart + tableBuffer.limit();
-      newBuckets = maxBuckets * 2;
-      newMaxSize = maxSizeForBuckets(newBuckets);
-    }
+    final GrowthLevel next = nextGrowthLevel(tableStart, maxBuckets);
+    final int newTableStart = next.tableStart;
+    final int newBuckets = next.buckets;
+    final int newMaxSize = maxSizeForBuckets(newBuckets);
 
     if (newBuckets < maxBuckets) {
       throw new ISE("newBuckets[%,d] < maxBuckets[%,d]", newBuckets, maxBuckets);
@@ -181,7 +179,7 @@ public class ByteBufferHashTable
 
     // Clear used bits of new table
     for (int i = 0; i < newBuckets; i++) {
-      newTableBuffer.put(i * bucketSizeWithHash, (byte) 0);
+      newTableBuffer.putInt(i * bucketSizeWithHash, 0);
     }
 
     // Loop over old buckets and copy to new table
@@ -202,7 +200,7 @@ public class ByteBufferHashTable
         keyBuffer.limit(entryBuffer.position() + HASH_SIZE + keySize);
         keyBuffer.position(entryBuffer.position() + HASH_SIZE);
 
-        final int keyHash = entryBuffer.getInt(entryBuffer.position()) & 0x7fffffff;
+        final int keyHash = entryBuffer.getInt(entryBuffer.position()) & Groupers.USED_FLAG_MASK;
         final int newBucket = findBucket(true, newBuckets, newTableBuffer, keyBuffer, keyHash);
 
         if (newBucket < 0) {
@@ -245,6 +243,7 @@ public class ByteBufferHashTable
     tableBuffer.putInt(Groupers.getUsedFlag(keyHash));
     tableBuffer.put(keyBuffer);
     size++;
+    updateMaxMergeBufferUsedBytes();
 
     if (bucketUpdateHandler != null) {
       bucketUpdateHandler.handleNewBucket(offset);
@@ -276,6 +275,12 @@ public class ByteBufferHashTable
       }
     }
 
+    if (bucket < 0) {
+      // Spill trigger: no bucket even after attempting to grow. Pin proximity to 1.0 (also covers a rejection before
+      // size reaches the terminal threshold, e.g. a full-probe wraparound). See {@link #maxSpillProximity}.
+      maxSpillProximity = 1.0;
+    }
+
     return bucket;
   }
 
@@ -300,35 +305,81 @@ public class ByteBufferHashTable
     final int startBucket = keyHash % buckets;
     int bucket = startBucket;
 
-    outer:
+    // Pre-compute hash with used flag for comparison.
+    final int keyHashWithUsedFlag = Groupers.getUsedFlag(keyHash);
+    final int keyBufferPosition = keyBuffer.position();
+
     while (true) {
       final int bucketOffset = bucket * bucketSizeWithHash;
+      final int storedHashWithUsedFlag = targetTableBuffer.getInt(bucketOffset);
 
-      if ((targetTableBuffer.get(bucketOffset) & 0x80) == 0) {
+      if ((storedHashWithUsedFlag & Groupers.USED_FLAG_BIT) == 0) {
         // Found unused bucket before finding our key
         return allowNewBucket ? bucket : -1;
       }
 
-      for (int i = bucketOffset + HASH_SIZE, j = keyBuffer.position(); j < keyBuffer.position() + keySize; i++, j++) {
-        if (targetTableBuffer.get(i) != keyBuffer.get(j)) {
-          bucket += 1;
-          if (bucket == buckets) {
-            bucket = 0;
-          }
-
-          if (bucket == startBucket) {
-            // Came back around to the start without finding a free slot, that was a long trip!
-            // Should never happen unless buckets == regrowthThreshold.
-            return -1;
-          }
-
-          continue outer;
-        }
+      if (storedHashWithUsedFlag == keyHashWithUsedFlag &&
+          keysEqual(targetTableBuffer, bucketOffset + HASH_SIZE, keyBuffer, keyBufferPosition, keySize)) {
+        // Found our key in a used bucket
+        return bucket;
       }
 
-      // Found our key in a used bucket
-      return bucket;
+      // Move to next bucket (linear probing)
+      bucket += 1;
+      if (bucket == buckets) {
+        bucket = 0;
+      }
+
+      if (bucket == startBucket) {
+        // Came back around to the start without finding a free slot, that was a long trip!
+        // Should never happen unless buckets == regrowthThreshold.
+        return -1;
+      }
     }
+  }
+
+  /**
+   * Compare keys using long/int comparisons for better performance than byte-by-byte.
+   */
+  private static boolean keysEqual(
+      final ByteBuffer tableBuffer,
+      int tableOffset,
+      final ByteBuffer keyBuffer,
+      int keyOffset,
+      int length
+  )
+  {
+    // Compare 8 bytes at a time
+    while (length >= Long.BYTES) {
+      if (tableBuffer.getLong(tableOffset) != keyBuffer.getLong(keyOffset)) {
+        return false;
+      }
+      tableOffset += Long.BYTES;
+      keyOffset += Long.BYTES;
+      length -= Long.BYTES;
+    }
+
+    // Compare 4 bytes if remaining
+    if (length >= Integer.BYTES) {
+      if (tableBuffer.getInt(tableOffset) != keyBuffer.getInt(keyOffset)) {
+        return false;
+      }
+      tableOffset += Integer.BYTES;
+      keyOffset += Integer.BYTES;
+      length -= Integer.BYTES;
+    }
+
+    // Compare remaining 1-3 bytes
+    while (length > 0) {
+      if (tableBuffer.get(tableOffset) != keyBuffer.get(keyOffset)) {
+        return false;
+      }
+      tableOffset++;
+      keyOffset++;
+      length--;
+    }
+
+    return true;
   }
 
   protected boolean canAllowNewBucket()
@@ -379,6 +430,160 @@ public class ByteBufferHashTable
   public int getGrowthCount()
   {
     return growthCount;
+  }
+
+  /**
+   * Called whenever {@link #size} or {@link #bucketSizeWithHash} changes, to track {@link #maxMergeBufferUsedBytes} and
+   * the {@link #maxSpillProximity} peak. Proximity is recorded while {@code size < regrowthThreshold} (the transient hit
+   * at intermediate growth boundaries is skipped, since the table then grows); at the terminal level, parking at the
+   * threshold is the spill point and pins 1.0. Trim-and-swap tables ({@link #recordsFillProximity()} == false) skip
+   * proximity entirely — see {@link #findBucketWithAutoGrowth} for their only spill signal.
+   */
+  protected void updateMaxMergeBufferUsedBytes()
+  {
+    maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, (long) size * bucketSizeWithHash);
+    if (!recordsFillProximity()) {
+      return;
+    }
+    final int denominator = getSpillRegrowthThreshold();
+    if (denominator <= 0) {
+      return;
+    }
+    if (size < regrowthThreshold) {
+      // size < regrowthThreshold <= terminal denominator keeps this below 1.0; the clamp is defensive.
+      final double ratio = Math.min(1.0, (double) size / denominator);
+      if (ratio > maxSpillProximity) {
+        maxSpillProximity = ratio;
+      }
+    } else if (isTerminalTableLevel()) {
+      // At the load-factor limit with no room to grow: parking here IS the spill point.
+      maxSpillProximity = 1.0;
+    }
+  }
+
+  /**
+   * Denominator for {@link #maxSpillProximity}: the {@code regrowthThreshold} at the terminal growth level, where
+   * {@link #findBucketWithAutoGrowth} can no longer allocate a bucket. Computed once from fixed geometry and cached.
+   */
+  private int getSpillRegrowthThreshold()
+  {
+    if (spillRegrowthThreshold == 0) {
+      spillRegrowthThreshold = computeSpillRegrowthThreshold();
+    }
+    return spillRegrowthThreshold;
+  }
+
+  /**
+   * Replays the arena geometry to the terminal growth level — via the same {@link #initialTableStart} /
+   * {@link #nextGrowthLevel} primitives {@link #reset()} and {@link #adjustTableWhenFull()} use — and returns
+   * {@link #maxSizeForBuckets} of its bucket count. Allocates no buffers.
+   *
+   * <p>Valid only for the standard grow-by-doubling layout. Fixed-layout variants (the alternating limit-pushdown
+   * table) never reach this — guaranteed by {@link #recordsFillProximity()} == false — so one that ever needs a spill
+   * denominator would have to revisit this method.
+   */
+  private int computeSpillRegrowthThreshold()
+  {
+    int buckets = Math.min(tableArenaSize / bucketSizeWithHash, initialBuckets);
+    int start = initialTableStart(buckets);
+    while (start != 0) {
+      final GrowthLevel next = nextGrowthLevel(start, buckets);
+      start = next.tableStart;
+      buckets = next.buckets;
+    }
+    return maxSizeForBuckets(buckets);
+  }
+
+  /**
+   * Placement of the initial (smallest) table: far enough from the front that successive doublings stack above it and
+   * the final growth can wrap to offset 0. Pure geometry, shared by {@link #reset()} and
+   * {@link #computeSpillRegrowthThreshold()}. Returns 0 when no upward doublings fit.
+   */
+  private int initialTableStart(int initialMaxBuckets)
+  {
+    int start = tableArenaSize - initialMaxBuckets * bucketSizeWithHash;
+    int nextBuckets = initialMaxBuckets * 2;
+    while (true) {
+      final long nextBucketsSize = (long) nextBuckets * bucketSizeWithHash;
+      if (nextBucketsSize > Integer.MAX_VALUE) {
+        break;
+      }
+      final int nextTableStart = start - nextBuckets * bucketSizeWithHash;
+      if (nextTableStart > tableArenaSize / 2) {
+        start = nextTableStart;
+        nextBuckets = nextBuckets * 2;
+      } else {
+        break;
+      }
+    }
+    return start < tableArenaSize / 2 ? 0 : start;
+  }
+
+  /**
+   * The next growth level given the current start offset and bucket count — the pure decision shared by
+   * {@link #adjustTableWhenFull()} and {@link #computeSpillRegrowthThreshold()}. Doubles upward while the arena has room
+   * for the next 3x, else wraps to offset 0 as the final level ({@code tableStart == 0}).
+   */
+  private GrowthLevel nextGrowthLevel(int curTableStart, int curBuckets)
+  {
+    if (((long) curBuckets * 3 * bucketSizeWithHash) > (long) tableArenaSize - curTableStart) {
+      // Not enough space to grow upwards; start back from zero.
+      return new GrowthLevel(0, curTableStart / bucketSizeWithHash);
+    } else {
+      // curBuckets * bucketSizeWithHash is the current table's byte length (== tableBuffer.limit()).
+      return new GrowthLevel(curTableStart + curBuckets * bucketSizeWithHash, curBuckets * 2);
+    }
+  }
+
+  /**
+   * A growth level's placement: the table's start offset within the arena and its bucket count. {@code tableStart == 0}
+   * marks the terminal (final) level.
+   */
+  private static final class GrowthLevel
+  {
+    private final int tableStart;
+    private final int buckets;
+
+    GrowthLevel(int tableStart, int buckets)
+    {
+      this.tableStart = tableStart;
+      this.buckets = buckets;
+    }
+  }
+
+  /**
+   * True when the table can't grow further ({@link #tableStart} at the front of the arena), matching
+   * {@link #adjustTableWhenFull()}'s early return. Overridden by trim-and-swap variants whose "table full" is not a
+   * spill.
+   */
+  protected boolean isTerminalTableLevel()
+  {
+    return tableStart == 0;
+  }
+
+  /**
+   * Whether {@code size / terminalRegrowthThreshold} is a meaningful proximity-to-spill signal. True for the base
+   * grow-by-doubling table (spills when it can't grow). Overridden false by trim-and-swap variants (the alternating
+   * limit-pushdown table), which never spill via fill and would otherwise saturate near 1.0; for those, only a
+   * rejection in {@link #findBucketWithAutoGrowth} pins 1.0.
+   */
+  protected boolean recordsFillProximity()
+  {
+    return true;
+  }
+
+  public long getMaxMergeBufferUsedBytes()
+  {
+    return maxMergeBufferUsedBytes;
+  }
+
+  /**
+   * Peak fraction of the way to a spill over this table's lifetime, in [0.0, 1.0]; equals 1.0 iff the table actually
+   * spilled. See {@link #maxSpillProximity} for how it is computed.
+   */
+  public double getMaxSpillProximity()
+  {
+    return maxSpillProximity;
   }
 
   public interface BucketUpdateHandler

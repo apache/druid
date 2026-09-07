@@ -51,8 +51,8 @@ import java.util.Map.Entry;
  */
 class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogical
 {
-  private PlannerContext plannerContext;
-  private DartQueryMaker dartQueryMaker;
+  private final PlannerContext plannerContext;
+  private final DartQueryMaker dartQueryMaker;
 
   public PrePlannedDartQueryMaker(PlannerContext plannerContext, DartQueryMaker queryMaker)
   {
@@ -75,9 +75,7 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
 
     QueryContext context = plannerContext.queryContext();
     ColumnMappings columnMappings = QueryUtils.buildColumnMappings(dartQueryMaker.fieldMapping, logicalStage.getLogicalRowSignature());
-    QueryDefMSQSpec querySpec = MSQTaskQueryMaker.makeQueryDefMSQSpec(
-        null,
-        context,
+    QueryDefMSQSpec querySpec = MSQTaskQueryMaker.buildQueryDefMSQSpec(
         columnMappings,
         plannerContext,
         null,
@@ -97,8 +95,7 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
     QueryContext queryContext = druidQuery.getQuery().context();
     ResultsContext resultsContext = DartQueryMaker.makeResultsContext(druidQuery, dartQueryMaker.fieldMapping, plannerContext);
     QueryDefMSQSpec msqSpec = buildMSQSpec(druidQuery, dartQueryMaker.fieldMapping, queryContext, resultsContext);
-    QueryResponse<Object[]> response = dartQueryMaker.runQueryDefMSQSpec(msqSpec, queryContext, resultsContext);
-    return response;
+    return dartQueryMaker.runQueryDefMSQSpec(msqSpec, queryContext, resultsContext);
   }
 
   private QueryDefMSQSpec buildMSQSpec(
@@ -108,10 +105,9 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
       ResultsContext resultsContext)
   {
     ColumnMappings columnMappings = QueryUtils.buildColumnMappings(fieldMapping, druidQuery.getOutputRowSignature());
-    LegacyMSQSpec querySpec = MSQTaskQueryMaker.makeLegacyMSQSpec(
+    LegacyMSQSpec querySpec = MSQTaskQueryMaker.buildLegacyMSQSpec(
         null,
         druidQuery,
-        druidQuery.getQuery().context(),
         columnMappings,
         plannerContext,
         null
@@ -125,17 +121,14 @@ class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogica
         querySpec.getQuery(),
         plannerContext.getJsonMapper(),
         dartQueryMaker.queryKitSpecFactory.makeQueryKitSpec(
-            QueryKitBasedMSQPlanner
-                .makeQueryControllerToolKit(querySpec.getContext(), plannerContext.getJsonMapper()),
+            dartQueryMaker.queryKit,
             dartQueryId,
             querySpec.getTuningConfig(),
             querySpec.getContext()
         )
     ).makeQueryDefinition();
 
-    return MSQTaskQueryMaker.makeQueryDefMSQSpec(
-        null,
-        druidQuery.getQuery().context(),
+    return MSQTaskQueryMaker.buildQueryDefMSQSpec(
         columnMappings,
         plannerContext,
         null,

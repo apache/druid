@@ -39,7 +39,7 @@ import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV10Factory;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -47,7 +47,6 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.AuthConfig;
@@ -68,6 +67,7 @@ public class TestUtils
 
   private final ObjectMapper jsonMapper;
   private final IndexMergerV9Factory indexMergerV9Factory;
+  private final IndexMergerV10Factory indexMergerV10Factory;
   private final IndexIO indexIO;
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
 
@@ -80,6 +80,11 @@ public class TestUtils
         indexIO,
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
+    this.indexMergerV10Factory = new IndexMergerV10Factory(
+        jsonMapper,
+        indexIO,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance()
+    );
 
     this.rowIngestionMetersFactory = new DropwizardRowIngestionMetersFactory();
 
@@ -88,7 +93,7 @@ public class TestUtils
             .addValue(ExprMacroTable.class, LookupEnabledTestExprMacroTable.INSTANCE)
             .addValue(IndexIO.class, indexIO)
             .addValue(ObjectMapper.class, jsonMapper)
-            .addValue(ChatHandlerProvider.class, new NoopChatHandlerProvider())
+            .addValue(ChatHandlerProvider.class, new ChatHandlerProvider())
             .addValue(AuthConfig.class, new AuthConfig())
             .addValue(AuthorizerMapper.class, null)
             .addValue(RowIngestionMetersFactory.class, rowIngestionMetersFactory)
@@ -121,14 +126,14 @@ public class TestUtils
     return jsonMapper;
   }
 
-  public IndexMergerV9 getTestIndexMergerV9()
-  {
-    return indexMergerV9Factory.create(true);
-  }
-
   public IndexMergerV9Factory getIndexMergerV9Factory()
   {
     return indexMergerV9Factory;
+  }
+
+  public IndexMergerV10Factory getIndexMergerV10Factory()
+  {
+    return indexMergerV10Factory;
   }
 
   public IndexIO getTestIndexIO()

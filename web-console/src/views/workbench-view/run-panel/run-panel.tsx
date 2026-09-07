@@ -478,6 +478,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         text="Documentation"
                         href={`${getLink('DOCS')}/querying/arrays#arrayingestmode`}
                         target="_blank"
+                        rel="noopener noreferrer"
                       />
                     </MenuItem>
                     <MenuBoolean

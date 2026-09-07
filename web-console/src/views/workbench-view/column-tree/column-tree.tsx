@@ -213,7 +213,8 @@ export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
     const { columnMetadata, defaultSchema, defaultWhere, onQueryChange, highlightTable } = props;
-    const { searchString, searchMode, expandedTables, prevExpandedTables } = state;
+    const { searchString, searchMode, expandedTables, prevExpandedTables, selectedTreeIndex } =
+      state;
     const searchHash = computeSearchHash(searchString, searchMode);
 
     if (
@@ -561,22 +562,22 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
         }),
       );
 
-      let selectedTreeIndex = -1;
-      if (defaultSchema && columnTree) {
-        selectedTreeIndex = columnTree.findIndex(x => {
+      let newSelectedTreeIndex = selectedTreeIndex;
+      if (newSelectedTreeIndex === -1 && defaultSchema && columnTree) {
+        newSelectedTreeIndex = columnTree.findIndex(x => {
           return x.id === defaultSchema;
         });
       }
 
       if (!columnTree) return null;
       const currentSchemaSubtree =
-        columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
+        columnTree[newSelectedTreeIndex > -1 ? newSelectedTreeIndex : 0].childNodes;
       if (!currentSchemaSubtree) return null;
 
       return {
         prevColumnMetadata: columnMetadata,
         columnTree,
-        selectedTreeIndex,
+        selectedTreeIndex: newSelectedTreeIndex,
         currentSchemaSubtree,
         prevSearchHash: searchHash,
         prevExpandedTables: expandedTables,

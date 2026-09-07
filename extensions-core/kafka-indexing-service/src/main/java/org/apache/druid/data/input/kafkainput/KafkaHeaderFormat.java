@@ -25,7 +25,7 @@ import org.apache.kafka.common.header.Headers;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
-        @JsonSubTypes.Type(name = "string", value = KafkaStringHeaderFormat.class)
+    @JsonSubTypes.Type(name = "string", value = KafkaStringHeaderFormat.class)
 })
 
 public interface KafkaHeaderFormat

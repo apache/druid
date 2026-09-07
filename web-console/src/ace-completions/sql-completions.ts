@@ -99,6 +99,10 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   NEXT: ['ROW', 'ROWS'],
   ROWS: ['ONLY'],
   ROW: ['ONLY'],
+  IS: ['NOT', 'DISTINCT'],
+  DISTINCT: ['FROM'],
+  BY: ['GROUPING', 'ROLLUP', 'CUBE', 'ALL', 'HOUR', 'DAY', 'MONTH', 'YEAR'],
+  ALL: ['TIME'],
 
   // Keywords that cannot be followed by any other keyword
   AS: [],
@@ -110,8 +114,6 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   SET: [],
   VALUES: [],
   ONLY: [],
-  DISTINCT: [],
-  ALL: [],
   WHERE: [],
   HAVING: [],
   USING: [],

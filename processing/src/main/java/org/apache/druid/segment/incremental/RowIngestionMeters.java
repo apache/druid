@@ -40,6 +40,7 @@ public interface RowIngestionMeters extends InputStats
   String PROCESSED_WITH_ERROR = "processedWithError";
   String UNPARSEABLE = "unparseable";
   String THROWN_AWAY = "thrownAway";
+  String THROWN_AWAY_BY_REASON = "thrownAwayByReason";
   String FILTERED = "filtered";
 
   /**
@@ -74,10 +75,38 @@ public interface RowIngestionMeters extends InputStats
   void incrementUnparseable();
 
   long getThrownAway();
-  void incrementThrownAway();
 
-  long getFiltered();
-  void incrementFiltered();
+  /**
+   * Increments the thrown away counter for the specified {@link InputRowFilterResult} reason.
+   */
+  void incrementThrownAway(InputRowFilterResult reason);
+
+  /**
+   * Returns the count of thrown away events for each reason.
+   * Keyed by {@link InputRowFilterResult#getReason()}.
+   */
+  Map<String, Long> getThrownAwayByReason();
+
+  /**
+   * Number of records dropped by pre-ingestion filtering (for example, Kafka header-based filtering) before parsing.
+   * These are tracked separately from {@link #getThrownAway()}, which counts rows dropped after parsing.
+   *
+   * <p>Provided as a default method so that pre-existing external {@link RowIngestionMeters} implementations remain
+   * source- and binary-compatible with this {@link ExtensionPoint}.
+   */
+  default long getFiltered()
+  {
+    return 0;
+  }
+
+  /**
+   * Increments the counter of records dropped by pre-ingestion filtering. See {@link #getFiltered()}.
+   *
+   * <p>Provided as a no-op default method to preserve backwards compatibility for external implementations.
+   */
+  default void incrementFiltered()
+  {
+  }
 
   RowIngestionMetersTotals getTotals();
 

@@ -20,8 +20,8 @@
 package org.apache.druid.security.pac4j;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class OIDCConfigTest
 {
@@ -41,11 +41,12 @@ public class OIDCConfigTest
         jsonMapper.writeValueAsString(jsonMapper.readValue(jsonStr, OIDCConfig.class)),
         OIDCConfig.class
     );
-    Assert.assertEquals("testid", conf.getClientID());
-    Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
-    Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
-    Assert.assertEquals("name", conf.getOidcClaim());
-    Assert.assertEquals("testscope", conf.getScope());
+    Assertions.assertEquals("testid", conf.getClientID());
+    Assertions.assertEquals("testsecret", conf.getClientSecret().getPassword());
+    Assertions.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assertions.assertEquals("name", conf.getOidcClaim());
+    Assertions.assertEquals("testscope", conf.getScope());
+    Assertions.assertNull(conf.getClientAuthenticationMethod());
   }
 
   @Test
@@ -66,10 +67,37 @@ public class OIDCConfigTest
         OIDCConfig.class
     );
 
-    Assert.assertEquals("testid", conf.getClientID());
-    Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
-    Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
-    Assert.assertEquals("email", conf.getOidcClaim());
-    Assert.assertEquals("testscope", conf.getScope());
+    Assertions.assertEquals("testid", conf.getClientID());
+    Assertions.assertEquals("testsecret", conf.getClientSecret().getPassword());
+    Assertions.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assertions.assertEquals("email", conf.getOidcClaim());
+    Assertions.assertEquals("testscope", conf.getScope());
+  }
+
+  @Test
+  public void testSerdeWithClientAuthenticationMethod() throws Exception
+  {
+    ObjectMapper jsonMapper = new ObjectMapper();
+
+    String jsonStr = "{\n"
+                     + "  \"clientID\": \"testid\",\n"
+                     + "  \"clientSecret\": \"testsecret\",\n"
+                     + "  \"discoveryURI\": \"testdiscoveryuri\",\n"
+                     + "  \"oidcClaim\": \"email\",\n"
+                     + "  \"scope\": \"testscope\",\n"
+                     + "  \"clientAuthenticationMethod\": \"client_secret_post\"\n"
+                     + "}\n";
+
+    OIDCConfig conf = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(jsonMapper.readValue(jsonStr, OIDCConfig.class)),
+        OIDCConfig.class
+    );
+
+    Assertions.assertEquals("testid", conf.getClientID());
+    Assertions.assertEquals("testsecret", conf.getClientSecret().getPassword());
+    Assertions.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assertions.assertEquals("email", conf.getOidcClaim());
+    Assertions.assertEquals("testscope", conf.getScope());
+    Assertions.assertEquals("client_secret_post", conf.getClientAuthenticationMethod());
   }
 }

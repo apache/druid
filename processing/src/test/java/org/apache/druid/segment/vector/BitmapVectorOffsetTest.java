@@ -21,10 +21,8 @@ package org.apache.druid.segment.vector;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -33,9 +31,6 @@ public class BitmapVectorOffsetTest
 {
   private static final int VECTOR_SIZE = 128;
   private static final int ROWS = VECTOR_SIZE * VECTOR_SIZE;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testContiguousGetOffsetsIsExplode()
@@ -48,9 +43,11 @@ public class BitmapVectorOffsetTest
     ImmutableBitmap bitmap = new WrappedImmutableRoaringBitmap(wrapped.toImmutableRoaringBitmap());
     BitmapVectorOffset offset = new BitmapVectorOffset(VECTOR_SIZE, bitmap, 0, ROWS);
 
-    expectedException.expect(UnsupportedOperationException.class);
-    expectedException.expectMessage("is contiguous");
-    offset.getOffsets();
+    UnsupportedOperationException e = Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        offset::getOffsets
+    );
+    Assertions.assertTrue(e.getMessage().contains("is contiguous"));
   }
 
   @Test
@@ -66,9 +63,11 @@ public class BitmapVectorOffsetTest
     ImmutableBitmap bitmap = new WrappedImmutableRoaringBitmap(wrapped.toImmutableRoaringBitmap());
     BitmapVectorOffset offset = new BitmapVectorOffset(VECTOR_SIZE, bitmap, 0, ROWS);
 
-    expectedException.expect(UnsupportedOperationException.class);
-    expectedException.expectMessage("not contiguous");
-    offset.getStartOffset();
+    UnsupportedOperationException e = Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        offset::getStartOffset
+    );
+    Assertions.assertTrue(e.getMessage().contains("not contiguous"));
   }
 
   @Test
@@ -86,7 +85,7 @@ public class BitmapVectorOffsetTest
 
       while (!offset.isDone()) {
         if (offset.getCurrentVectorSize() > 1) {
-          Assert.assertTrue(offset.isContiguous());
+          Assertions.assertTrue(offset.isContiguous());
         }
         offset.advance();
       }
@@ -107,7 +106,7 @@ public class BitmapVectorOffsetTest
     for (int startOffset = 0; startOffset < ROWS; startOffset++) {
       BitmapVectorOffset offset = new BitmapVectorOffset(VECTOR_SIZE, bitmap, startOffset, ROWS);
       while (!offset.isDone()) {
-        Assert.assertFalse(offset.isContiguous());
+        Assertions.assertFalse(offset.isContiguous());
         offset.advance();
       }
     }
@@ -157,10 +156,10 @@ public class BitmapVectorOffsetTest
       }
     }
 
-    Assert.assertTrue(contiguousCount > 0);
-    Assert.assertTrue(nonContiguousCount > 0);
+    Assertions.assertTrue(contiguousCount > 0);
+    Assertions.assertTrue(nonContiguousCount > 0);
     // depending on the distribution of set bits and starting offset, there are some which are never contiguous
-    Assert.assertTrue(noContiguous > 0);
-    Assert.assertEquals(0, allContiguous);
+    Assertions.assertTrue(noContiguous > 0);
+    Assertions.assertEquals(0, allContiguous);
   }
 }

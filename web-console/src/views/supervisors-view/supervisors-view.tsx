@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { Icon, Intent, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
 import type { JSX } from 'react';
 import React, { createContext, useContext } from 'react';
-import type { Column, Filter, SortingRule } from 'react-table';
+import type { Column, SortingRule } from 'react-table';
 import ReactTable from 'react-table';
 
 import type { TableColumnSelectorColumn } from '../../components';
@@ -43,10 +43,13 @@ import {
   AsyncActionDialog,
   SpecDialog,
   SupervisorResetOffsetsDialog,
+  SupervisorResetToLatestDialog,
   SupervisorTableActionDialog,
   TaskGroupHandoffDialog,
 } from '../../dialogs';
 import type {
+  CompactionConfig,
+  ConsoleViewId,
   IngestionSpec,
   QueryWithContext,
   RowStatsKey,
@@ -54,12 +57,15 @@ import type {
   SupervisorStatus,
   SupervisorStatusTask,
 } from '../../druid-models';
-import { getConsoleViewIcon, getTotalSupervisorStats } from '../../druid-models';
+import {
+  formatCompactionInfo,
+  getConsoleViewIcon,
+  getTotalSupervisorStats,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
-  sqlQueryCustomTableFilters,
   suggestibleFilterInput,
 } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
@@ -90,6 +96,7 @@ import {
   twoLines,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { TableFilters } from '../../utils/table-filters';
 
 import './supervisors-view.scss';
 
@@ -101,7 +108,7 @@ const SUPERVISOR_TABLE_COLUMNS: TableColumnSelectorColumn[] = [
   'Status',
   'Configured tasks',
   { text: 'Running tasks', label: 'status API' },
-  { text: 'Aggregate lag', label: 'status API' },
+  { text: 'Details', label: 'status API' },
   { text: 'Stats', label: 'stats API' },
   { text: 'Recent errors', label: 'status API' },
 ];
@@ -176,13 +183,12 @@ function HeaderStatsKeySelector({ changeStatsKey }: HeaderStatsKeySelectorProps)
 }
 
 export interface SupervisorsViewProps {
-  filters: Filter[];
-  onFiltersChange(filters: Filter[]): void;
+  filters: TableFilters;
+  onFiltersChange(filters: TableFilters): void;
   openSupervisorDialog: boolean | undefined;
-  goToDatasource(datasource: string): void;
+  goToView(tab: ConsoleViewId, filters?: TableFilters): void;
   goToQuery(queryWithContext: QueryWithContext): void;
   goToStreamingDataLoader(supervisorId: string): void;
-  goToTasks(supervisorId: string, type: string | undefined): void;
   capabilities: Capabilities;
 }
 
@@ -195,6 +201,7 @@ export interface SupervisorsViewState {
   handoffSupervisorId?: string;
   resetOffsetsSupervisorInfo?: { id: string; type: string };
   resetSupervisorId?: string;
+  resetToLatestSupervisorId?: string;
   terminateSupervisorId?: string;
 
   showResumeAllSupervisors: boolean;
@@ -282,13 +289,13 @@ export class SupervisorsView extends React.PureComponent<
       processQuery: async (
         { capabilities, visibleColumns, filtered, sorted, page, pageSize },
         signal,
-        setIntermediateQuery,
+        { setIntermediateQuery },
       ) => {
         let supervisors: SupervisorQueryResultRow[];
         let count = -1;
         const auxiliaryQueries: AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo>[] = [];
         if (capabilities.hasSql()) {
-          const whereExpression = sqlQueryCustomTableFilters(filtered);
+          const whereExpression = filtered.toSqlExpression();
 
           let filterClause = '';
           if (whereExpression.toString() !== 'TRUE') {
@@ -302,7 +309,9 @@ export class SupervisorsView extends React.PureComponent<
             '  "type",',
             '  "source",',
             `  CASE WHEN "suspended" = 0 THEN "detailed_state" ELSE 'SUSPENDED' END AS "detailed_state",`,
-            visibleColumns.shown('Configured tasks') ? '  "spec",' : undefined,
+            visibleColumns.shown('Configured tasks') || visibleColumns.shown('Details')
+              ? '  "spec",'
+              : undefined,
             '  "suspended" = 1 AS "suspended"',
             'FROM "sys"."supervisors")',
             'SELECT *',
@@ -317,6 +326,7 @@ export class SupervisorsView extends React.PureComponent<
             await queryDruidSql<SupervisorQueryResultRow>(
               {
                 query: sqlQuery,
+                context: { engine: 'native' },
               },
               signal,
             )
@@ -336,6 +346,7 @@ export class SupervisorsView extends React.PureComponent<
               await queryDruidSql<{ cnt: number }>(
                 {
                   query: sqlQuery,
+                  context: { engine: 'native' },
                 },
                 signal,
               )
@@ -351,7 +362,10 @@ export class SupervisorsView extends React.PureComponent<
               return {
                 supervisor_id: deepGet(sup, 'id'),
                 datasource: deepGet(sup, 'dataSource'),
-                type: deepGet(sup, 'spec.tuningConfig.type'),
+                type:
+                  deepGet(sup, 'spec.type') ||
+                  deepGet(sup, 'spec.ioConfig.type') ||
+                  deepGet(sup, 'spec.tuningConfig.type'),
                 source:
                   deepGet(sup, 'spec.ioConfig.topic') ||
                   deepGet(sup, 'spec.ioConfig.stream') ||
@@ -380,7 +394,7 @@ export class SupervisorsView extends React.PureComponent<
         }
 
         if (capabilities.hasOverlordAccess()) {
-          if (visibleColumns.shown('Running tasks', 'Aggregate lag', 'Recent errors')) {
+          if (visibleColumns.shown('Running tasks', 'Details', 'Recent errors')) {
             auxiliaryQueries.push(
               ...supervisors.map(
                 (supervisor): AuxiliaryQueryFn<SupervisorsWithAuxiliaryInfo> =>
@@ -462,7 +476,7 @@ export class SupervisorsView extends React.PureComponent<
     const { filters } = this.props;
     const { page, pageSize, sorted } = this.state;
     if (
-      !sqlQueryCustomTableFilters(filters).equals(sqlQueryCustomTableFilters(prevProps.filters)) ||
+      !filters.toSqlExpression().equals(prevProps.filters.toSqlExpression()) ||
       page !== prevState.page ||
       pageSize !== prevState.pageSize ||
       sortedToOrderByClause(sorted) !== sortedToOrderByClause(prevState.sorted)
@@ -484,7 +498,7 @@ export class SupervisorsView extends React.PureComponent<
     });
   };
 
-  private readonly handleFilterChange = (filters: Filter[]) => {
+  private readonly handleFilterChange = (filters: TableFilters) => {
     this.goToFirstPage();
     this.props.onFiltersChange(filters);
   };
@@ -521,15 +535,15 @@ export class SupervisorsView extends React.PureComponent<
 
   private getSupervisorActions(supervisor: SupervisorQueryResultRow): BasicAction[] {
     const { supervisor_id, datasource, suspended, type } = supervisor;
-    const { goToDatasource, goToStreamingDataLoader } = this.props;
+    const { goToView, goToStreamingDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
-    if (oneOf(type, 'kafka', 'kinesis')) {
+    if (oneOf(type, 'kafka', 'kinesis', 'rabbit')) {
       actions.push(
         {
           icon: IconNames.MULTI_SELECT,
           title: 'Go to datasource',
-          onAction: () => goToDatasource(datasource),
+          onAction: () => goToView('datasources', TableFilters.eq({ datasource })),
         },
         {
           icon: IconNames.CLOUD_UPLOAD,
@@ -574,6 +588,12 @@ export class SupervisorsView extends React.PureComponent<
         title: 'Hard reset',
         intent: Intent.DANGER,
         onAction: () => this.setState({ resetSupervisorId: supervisor_id }),
+      },
+      {
+        icon: IconNames.FAST_FORWARD,
+        title: 'Reset to latest and backfill',
+        intent: Intent.DANGER,
+        onAction: () => this.setState({ resetToLatestSupervisorId: supervisor_id }),
       },
       {
         icon: IconNames.CROSS,
@@ -722,6 +742,23 @@ export class SupervisorsView extends React.PureComponent<
     );
   }
 
+  renderResetToLatestSupervisorAction() {
+    const { resetToLatestSupervisorId } = this.state;
+    if (!resetToLatestSupervisorId) return;
+
+    return (
+      <SupervisorResetToLatestDialog
+        supervisorId={resetToLatestSupervisorId}
+        onClose={() => {
+          this.setState({ resetToLatestSupervisorId: undefined });
+        }}
+        onSuccess={() => {
+          this.supervisorQueryManager.rerunLastQuery();
+        }}
+      />
+    );
+  }
+
   renderTerminateSupervisorAction() {
     const { terminateSupervisorId } = this.state;
     if (!terminateSupervisorId) return;
@@ -778,29 +815,43 @@ export class SupervisorsView extends React.PureComponent<
   }
 
   private goToTasksForSupervisor(supervisor: SupervisorQueryResultRow) {
-    const { goToTasks } = this.props;
+    const { goToView } = this.props;
     switch (supervisor.type) {
       case 'kafka':
       case 'kinesis':
-        goToTasks(
-          `index_${supervisor.type}_${supervisor.supervisor_id}`,
-          `index_${supervisor.type}`,
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            group_id: `index_${supervisor.type}_${supervisor.supervisor_id}`,
+            type: `index_${supervisor.type}`,
+          }),
         );
         return;
 
       case 'autocompact':
-        goToTasks(supervisor.supervisor_id.replace(/^autocompact__/, ''), 'compact');
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            datasource: supervisor.supervisor_id.replace(/^autocompact__/, ''),
+            type: 'compact',
+          }),
+        );
         return;
 
       case 'scheduled_batch':
-        goToTasks(
-          supervisor.supervisor_id.replace(/^scheduled_batch__/, '').replace(/__[0-9a-f-]+$/, ''),
-          'query_controller',
+        goToView(
+          'tasks',
+          TableFilters.eq({
+            datasource: supervisor.supervisor_id
+              .replace(/^scheduled_batch__/, '')
+              .replace(/__[0-9a-f-]+$/, ''),
+            type: 'query_controller',
+          }),
         );
         return;
 
       default:
-        goToTasks(supervisor.supervisor_id, undefined);
+        goToView('tasks', TableFilters.eq({ group_id: supervisor.supervisor_id }));
         return;
     }
   }
@@ -823,14 +874,14 @@ export class SupervisorsView extends React.PureComponent<
             pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000} // We are hiding the page selector
             loading={supervisorsState.loading}
             noDataText={
-              supervisorsState.isEmpty()
+              supervisorsState.data?.supervisors.length === 0
                 ? 'No supervisors'
                 : supervisorsState.getErrorMessage() || ''
             }
             manual
             filterable
-            filtered={filters}
-            onFilteredChange={this.handleFilterChange}
+            filtered={filters.toFilters()}
+            onFilteredChange={filters => this.handleFilterChange(TableFilters.fromFilters(filters))}
             sorted={sorted}
             onSortedChange={sorted => this.setState({ sorted })}
             page={page}
@@ -851,7 +902,7 @@ export class SupervisorsView extends React.PureComponent<
   private readonly getTableColumns = memoize(
     (
       visibleColumns: LocalStorageBackedVisibility,
-      filters: Filter[],
+      filters: TableFilters,
     ): Column<SupervisorQueryResultRow>[] => {
       return [
         {
@@ -939,20 +990,23 @@ export class SupervisorsView extends React.PureComponent<
             if (!value) return null;
             const taskCount = deepGet(value, 'spec.ioConfig.taskCount');
             const replicas = deepGet(value, 'spec.ioConfig.replicas');
-            if (typeof taskCount !== 'number' || typeof replicas !== 'number') return null;
-            return (
-              <div>
-                <div>{formatInteger(taskCount * replicas)}</div>
-                <div className="detail-line">
-                  {replicas === 1
-                    ? '(no replication)'
-                    : `(${pluralIfNeeded(taskCount, 'task')} × ${pluralIfNeeded(
-                        replicas,
-                        'replica',
-                      )})`}
+            if (typeof taskCount === 'number' && typeof replicas === 'number') {
+              return (
+                <div>
+                  <div>{formatInteger(taskCount * replicas)}</div>
+                  <div className="detail-line">
+                    {replicas === 1
+                      ? '(no replication)'
+                      : `(${pluralIfNeeded(taskCount, 'task')} × ${pluralIfNeeded(
+                          replicas,
+                          'replica',
+                        )})`}
+                  </div>
                 </div>
-              </div>
-            );
+              );
+            }
+
+            return null;
           },
           show: visibleColumns.shown('Configured tasks'),
         },
@@ -995,17 +1049,35 @@ export class SupervisorsView extends React.PureComponent<
           show: visibleColumns.shown('Running tasks'),
         },
         {
-          Header: 'Aggregate lag',
+          Header: 'Details',
+          id: 'details',
           accessor: 'supervisor_id',
-          width: 200,
+          width: 250,
           filterable: false,
           sortable: false,
           className: 'padded',
-          show: visibleColumns.shown('Aggregate lag'),
-          Cell: ({ value }) => {
+          show: visibleColumns.shown('Details'),
+          Cell: ({ value, original }) => {
             const status = useContext(StatusContext);
-            const aggregateLag = status[value]?.payload?.aggregateLag;
-            return isNumberLike(aggregateLag) ? formatInteger(aggregateLag) : null;
+            const supervisorStatusPayload: SupervisorStatus['payload'] | undefined =
+              status[value]?.payload;
+            if (oneOf(original.type, 'kafka', 'kinesis', 'rabbit')) {
+              const aggregateLag = supervisorStatusPayload?.aggregateLag;
+              return isNumberLike(aggregateLag) ? (
+                <span data-tooltip="Aggregate lag across all tasks">{`Lag: ${formatInteger(
+                  aggregateLag,
+                )}`}</span>
+              ) : null;
+            } else if (original.type === 'autocompact') {
+              const compactionConfig: CompactionConfig | undefined = original.spec?.spec;
+              if (!supervisorStatusPayload || !compactionConfig) return null;
+              return formatCompactionInfo({
+                status: supervisorStatusPayload,
+                config: compactionConfig,
+              });
+            } else {
+              return null;
+            }
           },
         },
         {
@@ -1086,6 +1158,7 @@ export class SupervisorsView extends React.PureComponent<
         },
         {
           Header: 'Recent errors',
+          id: 'recent_errors',
           accessor: 'supervisor_id',
           width: 150,
           filterable: false,
@@ -1146,11 +1219,6 @@ export class SupervisorsView extends React.PureComponent<
               }}
             />
           )}
-          <MenuItem
-            icon={IconNames.MANUALLY_ENTERED_DATA}
-            text="Submit JSON supervisor"
-            onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
-          />
           <MenuItem
             icon={IconNames.PLAY}
             text="Resume all supervisors"
@@ -1272,6 +1340,20 @@ export class SupervisorsView extends React.PureComponent<
               this.supervisorQueryManager.rerunLastQuery(auto);
             }}
           />
+          <Popover
+            position={Position.BOTTOM_LEFT}
+            content={
+              <Menu>
+                <MenuItem
+                  icon={IconNames.MANUALLY_ENTERED_DATA}
+                  text="Submit JSON supervisor"
+                  onClick={() => this.setState({ supervisorSpecDialogOpen: true })}
+                />
+              </Menu>
+            }
+          >
+            <Button icon={IconNames.PLUS} text="Create" />
+          </Popover>
           {this.renderBulkSupervisorActions()}
           <TableColumnSelector
             columns={SUPERVISOR_TABLE_COLUMNS}
@@ -1290,6 +1372,7 @@ export class SupervisorsView extends React.PureComponent<
         {this.renderTaskGroupHandoffAction()}
         {this.renderResetOffsetsSupervisorAction()}
         {this.renderResetSupervisorAction()}
+        {this.renderResetToLatestSupervisorAction()}
         {this.renderTerminateSupervisorAction()}
         {supervisorSpecDialogOpen && (
           <SpecDialog

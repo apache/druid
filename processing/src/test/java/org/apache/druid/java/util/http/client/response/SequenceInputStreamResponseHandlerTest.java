@@ -25,10 +25,10 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -45,7 +45,7 @@ public class SequenceInputStreamResponseHandlerTest
   private static final Random RANDOM = new Random(378134789L);
   private static byte[] allBytes = new byte[TOTAL_BYTES];
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp()
   {
     final ByteBuffer buffer = ByteBuffer.wrap(allBytes);
@@ -57,7 +57,7 @@ public class SequenceInputStreamResponseHandlerTest
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown()
   {
     BYTE_LIST.clear();
@@ -76,7 +76,7 @@ public class SequenceInputStreamResponseHandlerTest
     }
   }
 
-  @Test(expected = TesterException.class)
+  @Test
   public void testExceptionalChunkedStream() throws IOException
   {
     Iterator<byte[]> it = BYTE_LIST.iterator();
@@ -103,18 +103,18 @@ public class SequenceInputStreamResponseHandlerTest
       );
       clientResponse = responseHandler.handleChunk(clientResponse, chunk, ++chunkNum);
     }
-    clientResponse = responseHandler.done(clientResponse);
+    final ClientResponse<InputStream> finalResponse = responseHandler.done(clientResponse);
 
-    final InputStream stream = clientResponse.getObj();
+    final InputStream stream = finalResponse.getObj();
     final byte[] buff = new byte[allBytes.length];
-    fillBuff(stream, buff);
+    Assertions.assertThrows(TesterException.class, () -> fillBuff(stream, buff));
   }
 
   public static class TesterException extends RuntimeException
   {
   }
 
-  @Test(expected = TesterException.class)
+  @Test
   public void testExceptionalSingleStream() throws IOException
   {
     SequenceInputStreamResponseHandler responseHandler = new SequenceInputStreamResponseHandler();
@@ -138,7 +138,7 @@ public class SequenceInputStreamResponseHandlerTest
 
     final InputStream stream = clientResponse.getObj();
     final byte[] buff = new byte[allBytes.length];
-    fillBuff(stream, buff);
+    Assertions.assertThrows(TesterException.class, () -> fillBuff(stream, buff));
   }
 
   @Test
@@ -165,10 +165,10 @@ public class SequenceInputStreamResponseHandlerTest
       final byte[] actualBytes = new byte[expectedBytes.length];
       fillBuff(stream, actualBytes);
       fillBuff(expectedStream, expectedBytes);
-      Assert.assertArrayEquals(expectedBytes, actualBytes);
+      Assertions.assertArrayEquals(expectedBytes, actualBytes);
       read += expectedBytes.length;
     }
-    Assert.assertEquals(allBytes.length, responseHandler.getByteCount());
+    Assertions.assertEquals(allBytes.length, responseHandler.getByteCount());
   }
 
 
@@ -196,10 +196,10 @@ public class SequenceInputStreamResponseHandlerTest
       final byte[] actualBytes = new byte[expectedBytes.length];
       fillBuff(stream, actualBytes);
       fillBuff(expectedStream, expectedBytes);
-      Assert.assertArrayEquals(expectedBytes, actualBytes);
-      Assert.assertArrayEquals(expectedBytes, bytes);
+      Assertions.assertArrayEquals(expectedBytes, actualBytes);
+      Assertions.assertArrayEquals(expectedBytes, bytes);
     }
-    Assert.assertEquals(allBytes.length, responseHandler.getByteCount());
+    Assertions.assertEquals(allBytes.length, responseHandler.getByteCount());
   }
 
   @Test
@@ -220,10 +220,10 @@ public class SequenceInputStreamResponseHandlerTest
       final byte[] actualBytes = new byte[expectedBytes.length];
       fillBuff(stream, actualBytes);
       fillBuff(expectedStream, expectedBytes);
-      Assert.assertArrayEquals(expectedBytes, actualBytes);
+      Assertions.assertArrayEquals(expectedBytes, actualBytes);
       read += expectedBytes.length;
     }
-    Assert.assertEquals(allBytes.length, responseHandler.getByteCount());
+    Assertions.assertEquals(allBytes.length, responseHandler.getByteCount());
   }
 
 }

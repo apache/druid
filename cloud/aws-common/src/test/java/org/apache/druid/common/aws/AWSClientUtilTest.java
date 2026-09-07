@@ -19,12 +19,11 @@
 
 package org.apache.druid.common.aws;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.google.common.collect.ImmutableList;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkClientException;
 
 import java.io.IOException;
 
@@ -33,75 +32,106 @@ public class AWSClientUtilTest
   @Test
   public void testRecoverableException_IOException()
   {
-    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(new AmazonClientException(new IOException())));
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(SdkClientException.builder().cause(new IOException()).build()));
   }
 
   @Test
   public void testRecoverableException_RequestTimeout()
   {
-    AmazonServiceException ex = new AmazonServiceException(null);
-    ex.setErrorCode("RequestTimeout");
-    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+    AwsServiceException ex = AwsServiceException.builder()
+        .message("RequestTimeout")
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .errorCode("RequestTimeout")
+            .build())
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
   }
 
   @Test
   public void testRecoverableException_500()
   {
-    AmazonServiceException ex = new AmazonServiceException(null);
-    ex.setStatusCode(500);
-    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+    AwsServiceException ex = AwsServiceException.builder()
+        .message("Internal Server Error")
+        .statusCode(500)
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
   }
 
   @Test
   public void testRecoverableException_502()
   {
-    AmazonServiceException ex = new AmazonServiceException(null);
-    ex.setStatusCode(502);
-    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+    AwsServiceException ex = AwsServiceException.builder()
+        .message("Bad Gateway")
+        .statusCode(502)
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
   }
 
   @Test
   public void testRecoverableException_503()
   {
-    AmazonServiceException ex = new AmazonServiceException(null);
-    ex.setStatusCode(503);
-    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+    AwsServiceException ex = AwsServiceException.builder()
+        .message("Service Unavailable")
+        .statusCode(503)
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
   }
 
   @Test
   public void testRecoverableException_ProvisionedThroughputExceededException()
   {
-    AmazonServiceException ex = new AmazonServiceException(null);
-    ex.setErrorCode("ProvisionedThroughputExceededException");
-    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+    AwsServiceException ex = AwsServiceException.builder()
+        .message("ProvisionedThroughputExceededException")
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .errorCode("ProvisionedThroughputExceededException")
+            .build())
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_CredentialsProviderChain()
+  {
+    final SdkClientException ex = SdkClientException.builder()
+        .message("Unable to load credentials from any of the providers in the chain AwsCredentialsProviderChain")
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_FileSessionCredentialsRefresh()
+  {
+    final SdkClientException ex = SdkClientException.builder()
+        .message("LazyFileSessionCredentialsProvider(): cannot refresh AWS credentials")
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_InstanceProfileCredentials()
+  {
+    final SdkClientException ex = SdkClientException.builder()
+        .message("InstanceProfileCredentialsProvider(): Failed to load credentials from IMDS.")
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
   }
 
   @Test
   public void testRecoverableException_ClockSkewedError()
   {
-    AmazonServiceException ex = new AmazonServiceException(null);
-    ex.setErrorCode("RequestExpired");
-    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
-  }
-
-  @Test
-  public void testRecoverableException_MultiObjectDeleteException()
-  {
-    MultiObjectDeleteException.DeleteError retryableError = new MultiObjectDeleteException.DeleteError();
-    retryableError.setCode("RequestLimitExceeded");
-    MultiObjectDeleteException.DeleteError nonRetryableError = new MultiObjectDeleteException.DeleteError();
-    nonRetryableError.setCode("nonRetryableError");
-    MultiObjectDeleteException ex = new MultiObjectDeleteException(
-        ImmutableList.of(retryableError, nonRetryableError),
-        ImmutableList.of()
-    );
-    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+    AwsServiceException ex = AwsServiceException.builder()
+        .message("RequestExpired")
+        .awsErrorDetails(AwsErrorDetails.builder()
+            .errorCode("RequestExpired")
+            .build())
+        .build();
+    Assertions.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
   }
 
   @Test
   public void testNonRecoverableException_RuntimeException()
   {
-    AmazonClientException ex = new AmazonClientException(new RuntimeException());
-    Assert.assertFalse(AWSClientUtil.isClientExceptionRecoverable(ex));
+    SdkClientException ex = SdkClientException.builder().cause(new RuntimeException()).build();
+    Assertions.assertFalse(AWSClientUtil.isClientExceptionRecoverable(ex));
   }
 }

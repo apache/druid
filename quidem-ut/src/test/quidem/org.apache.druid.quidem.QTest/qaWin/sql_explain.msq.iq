@@ -65,15 +65,7 @@ WHERE client_ip IN ('107.13.54.103',
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_win",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
-      "filter" : {
-        "type" : "inType",
-        "column" : "client_ip",
-        "matchValueType" : "STRING",
-        "sortedValues" : [ "107.13.54.103", "99.9.55.22" ]
-      },
-      "filterFields" : [ "client_ip" ]
+      "dataSource" : "test_win"
     } ],
     "processor" : {
       "type" : "groupByPreShuffle",
@@ -499,7 +491,13 @@ WHERE client_ip IN ('107.13.54.103',
             "processors" : [ {
               "type" : "first",
               "inputColumn" : "d2",
-              "outputColumn" : "w0"
+              "outputColumn" : "w0",
+              "frame" : {
+                "type" : "groups",
+                "lowerOffset" : null,
+                "upperOffset" : 0,
+                "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
+              }
             }, {
               "type" : "offset",
               "inputColumn" : "d2",
@@ -568,7 +566,13 @@ WHERE client_ip IN ('107.13.54.103',
           "processors" : [ {
             "type" : "first",
             "inputColumn" : "d2",
-            "outputColumn" : "w0"
+            "outputColumn" : "w0",
+            "frame" : {
+              "type" : "groups",
+              "lowerOffset" : null,
+              "upperOffset" : 0,
+              "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
+            }
           }, {
             "type" : "offset",
             "inputColumn" : "d2",
@@ -725,15 +729,7 @@ WHERE client_ip IN ('107.13.54.103',
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_win",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
-      "filter" : {
-        "type" : "inType",
-        "column" : "client_ip",
-        "matchValueType" : "STRING",
-        "sortedValues" : [ "107.13.54.103", "99.9.55.22" ]
-      },
-      "filterFields" : [ "client_ip" ]
+      "dataSource" : "test_win"
     } ],
     "processor" : {
       "type" : "groupByPreShuffle",
@@ -1159,7 +1155,13 @@ WHERE client_ip IN ('107.13.54.103',
             "processors" : [ {
               "type" : "first",
               "inputColumn" : "d2",
-              "outputColumn" : "w0"
+              "outputColumn" : "w0",
+              "frame" : {
+                "type" : "groups",
+                "lowerOffset" : null,
+                "upperOffset" : 0,
+                "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
+              }
             }, {
               "type" : "offset",
               "inputColumn" : "d2",
@@ -1228,7 +1230,13 @@ WHERE client_ip IN ('107.13.54.103',
           "processors" : [ {
             "type" : "first",
             "inputColumn" : "d2",
-            "outputColumn" : "w0"
+            "outputColumn" : "w0",
+            "frame" : {
+              "type" : "groups",
+              "lowerOffset" : null,
+              "upperOffset" : 0,
+              "orderByColumns" : [ "d0", "p2", "p3", "d2", "p0" ]
+            }
           }, {
             "type" : "offset",
             "inputColumn" : "d2",
@@ -1379,15 +1387,7 @@ GROUP BY server_ip,
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_win",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
-      "filter" : {
-        "type" : "inType",
-        "column" : "client_ip",
-        "matchValueType" : "STRING",
-        "sortedValues" : [ "107.13.54.103", "99.9.55.22" ]
-      },
-      "filterFields" : [ "client_ip" ]
+      "dataSource" : "test_win"
     } ],
     "processor" : {
       "type" : "groupByPreShuffle",
@@ -1795,7 +1795,13 @@ GROUP BY server_ip,
             "processors" : [ {
               "type" : "first",
               "inputColumn" : "d2",
-              "outputColumn" : "w0"
+              "outputColumn" : "w0",
+              "frame" : {
+                "type" : "groups",
+                "lowerOffset" : null,
+                "upperOffset" : 0,
+                "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
+              }
             }, {
               "type" : "offset",
               "inputColumn" : "d2",
@@ -1864,7 +1870,13 @@ GROUP BY server_ip,
           "processors" : [ {
             "type" : "first",
             "inputColumn" : "d2",
-            "outputColumn" : "w0"
+            "outputColumn" : "w0",
+            "frame" : {
+              "type" : "groups",
+              "lowerOffset" : null,
+              "upperOffset" : 0,
+              "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
+            }
           }, {
             "type" : "offset",
             "inputColumn" : "d2",
@@ -2016,15 +2028,7 @@ GROUP BY server_ip,
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "test_win",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
-      "filter" : {
-        "type" : "inType",
-        "column" : "client_ip",
-        "matchValueType" : "STRING",
-        "sortedValues" : [ "107.13.54.103", "99.9.55.22" ]
-      },
-      "filterFields" : [ "client_ip" ]
+      "dataSource" : "test_win"
     } ],
     "processor" : {
       "type" : "groupByPreShuffle",
@@ -2432,7 +2436,13 @@ GROUP BY server_ip,
             "processors" : [ {
               "type" : "first",
               "inputColumn" : "d2",
-              "outputColumn" : "w0"
+              "outputColumn" : "w0",
+              "frame" : {
+                "type" : "groups",
+                "lowerOffset" : null,
+                "upperOffset" : 0,
+                "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
+              }
             }, {
               "type" : "offset",
               "inputColumn" : "d2",
@@ -2501,7 +2511,13 @@ GROUP BY server_ip,
           "processors" : [ {
             "type" : "first",
             "inputColumn" : "d2",
-            "outputColumn" : "w0"
+            "outputColumn" : "w0",
+            "frame" : {
+              "type" : "groups",
+              "lowerOffset" : null,
+              "upperOffset" : 0,
+              "orderByColumns" : [ "d0", "p1", "p2", "d2", "d3" ]
+            }
           }, {
             "type" : "offset",
             "inputColumn" : "d2",

@@ -23,12 +23,11 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,19 +35,17 @@ import java.util.List;
 
 public class CgroupV2MemoryMonitorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupV2Discoverer(procDir.toPath());
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
 
@@ -62,10 +59,13 @@ public class CgroupV2MemoryMonitorTest
   @Test
   public void testMonitor()
   {
-    final CgroupMemoryMonitor monitor = new CgroupV2MemoryMonitor(discoverer);
+    final CgroupV2MemoryMonitor monitor = new CgroupV2MemoryMonitor(
+        discoverer,
+        FeedDefiningMonitor.DEFAULT_METRICS_FEED
+    );
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
-    Assert.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertTrue(monitor.doMonitor(emitter));
     final List<Event> actualEvents = emitter.getEvents();
-    Assert.assertEquals(46, actualEvents.size());
+    Assertions.assertEquals(46, actualEvents.size());
   }
 }

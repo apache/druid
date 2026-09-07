@@ -19,7 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -33,9 +32,10 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.util.Map;
 
@@ -75,7 +75,8 @@ public class S3DataSegmentArchiverTest
   private static final S3DataSegmentPusherConfig PUSHER_CONFIG = new S3DataSegmentPusherConfig();
   private static final Supplier<ServerSideEncryptingAmazonS3> S3_SERVICE = Suppliers.ofInstance(
       new ServerSideEncryptingAmazonS3(
-          EasyMock.createStrictMock(AmazonS3Client.class),
+          EasyMock.createStrictMock(S3Client.class),
+          null,
           new NoopServerSideEncryption(),
           new S3TransferConfig()
       )
@@ -99,7 +100,7 @@ public class S3DataSegmentArchiverTest
       .size(0)
       .build();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpStatic()
   {
     PUSHER_CONFIG.setBaseKey("push_base");
@@ -126,7 +127,7 @@ public class S3DataSegmentArchiverTest
         return archivedSegment;
       }
     };
-    Assert.assertEquals(archivedSegment, archiver.archive(SOURCE_SEGMENT));
+    Assertions.assertEquals(archivedSegment, archiver.archive(SOURCE_SEGMENT));
   }
 
   @Test
@@ -140,7 +141,7 @@ public class S3DataSegmentArchiverTest
         return SOURCE_SEGMENT;
       }
     };
-    Assert.assertNull(archiver.archive(SOURCE_SEGMENT));
+    Assertions.assertNull(archiver.archive(SOURCE_SEGMENT));
   }
 
   @Test
@@ -163,7 +164,7 @@ public class S3DataSegmentArchiverTest
         return archivedSegment;
       }
     };
-    Assert.assertEquals(archivedSegment, archiver.restore(SOURCE_SEGMENT));
+    Assertions.assertEquals(archivedSegment, archiver.restore(SOURCE_SEGMENT));
   }
 
   @Test
@@ -177,6 +178,6 @@ public class S3DataSegmentArchiverTest
         return SOURCE_SEGMENT;
       }
     };
-    Assert.assertNull(archiver.restore(SOURCE_SEGMENT));
+    Assertions.assertNull(archiver.restore(SOURCE_SEGMENT));
   }
 }

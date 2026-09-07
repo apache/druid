@@ -20,8 +20,8 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DefaultPasswordProviderTest
 {
@@ -32,14 +32,14 @@ public class DefaultPasswordProviderTest
   public void testExplicitConstruction()
   {
     DefaultPasswordProvider pp = new DefaultPasswordProvider(PWD);
-    Assert.assertEquals(PWD, pp.getPassword());
+    Assertions.assertEquals(PWD, pp.getPassword());
   }
   
   @Test
   public void testFromStringConstruction()
   {
     DefaultPasswordProvider pp = DefaultPasswordProvider.fromString(PWD);
-    Assert.assertEquals(PWD, pp.getPassword());
+    Assertions.assertEquals(PWD, pp.getPassword());
   }
 
   @Test
@@ -47,7 +47,7 @@ public class DefaultPasswordProviderTest
   {
     PasswordProvider pp = JSON_MAPPER.readValue("\"" + PWD + "\"",
         PasswordProvider.class);
-    Assert.assertEquals(PWD, pp.getPassword());
+    Assertions.assertEquals(PWD, pp.getPassword());
   }
 
   @Test
@@ -56,7 +56,7 @@ public class DefaultPasswordProviderTest
     PasswordProvider pp = JSON_MAPPER.readValue(
         "{\"type\": \"default\", \"password\": \"" + PWD + "\"}",
         PasswordProvider.class);
-    Assert.assertEquals(PWD, pp.getPassword());
+    Assertions.assertEquals(PWD, pp.getPassword());
   }
 
   @Test
@@ -65,6 +65,6 @@ public class DefaultPasswordProviderTest
     DefaultPasswordProvider pp = new DefaultPasswordProvider(PWD);
     JSON_MAPPER.addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
     String valueAsString = JSON_MAPPER.writeValueAsString(pp);
-    Assert.assertEquals("{\"type\":\"default\"}", valueAsString);
+    Assertions.assertEquals("{\"type\":\"default\"}", valueAsString);
   }
 }

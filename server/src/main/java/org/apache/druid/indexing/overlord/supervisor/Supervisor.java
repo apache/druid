@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
@@ -66,6 +67,10 @@ public interface Supervisor
 
   SupervisorStateManager.State getState();
 
+  /**
+   * Returns all stats from stream consumer. If {@code includeOnlyStreamConsumerStats} is true,
+   * returns only stream platform stats, like Kafka metrics.
+   */
   default Map<String, Map<String, Object>> getStats()
   {
     return ImmutableMap.of();
@@ -80,6 +85,11 @@ public interface Supervisor
   default Boolean isHealthy()
   {
     return null; // default implementation for interface compatability; returning null since true or false is misleading
+  }
+
+  default SupervisorTaskAutoScaler createAutoscaler(SupervisorSpec spec)
+  {
+    return spec.createAutoscaler(this);
   }
 
   /**

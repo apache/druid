@@ -24,9 +24,9 @@ import com.google.common.primitives.Ints;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -46,7 +46,7 @@ public class HttpPostEmitterTest
 
   private final MockHttpClient httpClient = new MockHttpClient();
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     httpClient.setGoHandler(new GoHandler()
@@ -92,7 +92,7 @@ public class HttpPostEmitterTest
 
       emitter.flush();
 
-      Assert.assertEquals(2, emitter.getTotalEmittedEvents());
+      Assertions.assertEquals(2, emitter.getTotalEmittedEvents());
     }
   }
 }

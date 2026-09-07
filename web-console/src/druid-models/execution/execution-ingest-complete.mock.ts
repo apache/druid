@@ -55,6 +55,7 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
               workerId: 'query-346b9ac6-4912-46e4-9b98-75f11071af87-worker0_0',
               state: 'SUCCESS',
               durationMs: 8789,
+              pendingMs: 123,
             },
           ],
         },

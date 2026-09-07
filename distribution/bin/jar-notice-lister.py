@@ -36,13 +36,6 @@ def main():
     command = "cp -r {}/* {}".format(lib_path, tmp_lib_path)
     subprocess.check_output(command, shell=True).decode('UTF-8')
 
-    # copy hadoop deps to the staging dir
-    hdeps_path = druid_path + "/hadoop-dependencies"
-    tmp_hdeps_path = tmp_path + "/2-hdeps"
-    os.mkdir(tmp_hdeps_path)
-    command = "cp -r {}/* {}".format(hdeps_path, tmp_hdeps_path)
-    subprocess.check_output(command, shell=True).decode('UTF-8')
-
 
     # copy all extension folders to the staging dir
     ext_path = druid_path + "/extensions"
@@ -82,10 +75,10 @@ def get_notices(tmp_jar_path):
         for line in outstr.splitlines():
             try:
                 command = "jar xf {} {}".format(jar_file, line)
-                outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+                subprocess.check_output(command, shell=True)
 
                 command = "mv {} {}.NOTICE-FILE".format(line, jar_file)
-                outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+                subprocess.check_output(command, shell=True)
 
                 command = "cat {}.NOTICE-FILE".format(jar_file)
                 outstr = subprocess.check_output(command, shell=True).decode('UTF-8')

@@ -27,8 +27,8 @@ import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -57,17 +57,17 @@ public class SegmentSchemaMappingTest
     byte[] bytes = mapper.writeValueAsBytes(segmentSchemaMapping);
     SegmentSchemaMapping deserialized = mapper.readValue(bytes, SegmentSchemaMapping.class);
 
-    Assert.assertEquals(segmentSchemaMapping, deserialized);
+    Assertions.assertEquals(segmentSchemaMapping, deserialized);
 
     SegmentSchemaMapping copy = new SegmentSchemaMapping(1);
     copy.merge(segmentSchemaMapping);
 
-    Assert.assertEquals(segmentSchemaMapping, copy);
+    Assertions.assertEquals(segmentSchemaMapping, copy);
 
     SegmentSchemaMapping copy2 = new SegmentSchemaMapping(1);
     copy2.addSchema(segmentId, schemaPayloadPlus, "fp1");
 
-    Assert.assertEquals(segmentSchemaMapping, copy2);
+    Assertions.assertEquals(segmentSchemaMapping, copy2);
   }
 
   @Test
@@ -92,7 +92,7 @@ public class SegmentSchemaMappingTest
         0
     );
 
-    Assert.assertNotEquals(segmentSchemaMapping, segmentSchemaMappingWithDifferentVersion);
+    Assertions.assertNotEquals(segmentSchemaMapping, segmentSchemaMappingWithDifferentVersion);
 
     SegmentSchemaMapping segmentSchemaMappingWithDifferentPayload = new SegmentSchemaMapping(
         Collections.emptyMap(),
@@ -100,6 +100,6 @@ public class SegmentSchemaMappingTest
         0
     );
 
-    Assert.assertNotEquals(segmentSchemaMapping, segmentSchemaMappingWithDifferentPayload);
+    Assertions.assertNotEquals(segmentSchemaMapping, segmentSchemaMappingWithDifferentPayload);
   }
 }

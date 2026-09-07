@@ -152,9 +152,9 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
   }
 
   @Override
-  public boolean needsDeterminePartitions(boolean useForHadoopTask)
+  public boolean needsDeterminePartitions()
   {
-    return useForHadoopTask ? maxRowsPerSegment != null : numShards == null;
+    return numShards == null;
   }
 
   @Nullable

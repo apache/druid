@@ -23,7 +23,7 @@ title: "Segments"
   -->
 
 
-Apache Druid stores its data and indexes in *segment files* partitioned by time. Druid creates a segment for each segment interval that contains data. If an interval is empty—that is, containing no rows—no segment exists for that time interval. Druid may create multiple segments for the same interval if you ingest data for that period via different ingestion jobs. [Compaction](../data-management/compaction.md) is the Druid process that attempts to combine these segments into a single segment per interval for optimal performance.
+Apache&circledR; Druid stores its data and indexes in *segment files* partitioned by time. Druid creates a segment for each segment interval that contains data. If an interval is empty—that is, containing no rows—no segment exists for that time interval. Druid may create multiple segments for the same interval if you ingest data for that period via different ingestion jobs. [Compaction](../data-management/compaction.md) is the Druid process that attempts to combine these segments into a single segment per interval for optimal performance.
 
 The time interval is configurable in the `segmentGranularity` parameter of the [`granularitySpec`](../ingestion/ingestion-spec.md#granularityspec).
 
@@ -34,7 +34,7 @@ changing the granularity of the segment time interval or partitioning your
 data and/or adjusting the `targetRowsPerSegment` in your `partitionsSpec`.
 A good starting point for this parameter is 5 million rows.
 See the Sharding section below and the "Partitioning specification" section of
-the [Batch ingestion](../ingestion/hadoop.md#partitionsspec) documentation
+the [Batch ingestion](../ingestion/native-batch.md#partitionsspec) documentation
 for more guidance.
 
 ## Segment file structure

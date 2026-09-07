@@ -71,6 +71,16 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("cloneLoad", "segment/clone/assigned/count");
     public static final CoordinatorStat DROPPED_FROM_CLONE
         = CoordinatorStat.toDebugAndEmit("cloneDrop", "segment/clone/dropped/count");
+
+    // Partial-load reconciliation in a run
+    public static final CoordinatorStat PARTIAL_ASSIGNED
+        = CoordinatorStat.toDebugAndEmit("partialAssigned", "segment/partial/assigned/count");
+    public static final CoordinatorStat PARTIAL_STALE_DROPPED
+        = CoordinatorStat.toDebugAndEmit("partialStaleDropped", "segment/partial/staleDropped/count");
+    public static final CoordinatorStat PARTIAL_STALE_CANCELLED
+        = CoordinatorStat.toDebugAndEmit("partialStaleCancelled", "segment/partial/staleCancelled/count");
+    public static final CoordinatorStat PARTIAL_RULE_REVERTED
+        = CoordinatorStat.toDebugAndEmit("partialRuleReverted", "segment/partial/ruleReverted/count");
   }
 
   public static class SegmentQueue
@@ -100,6 +110,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("reqdCap", "tier/required/capacity");
     public static final CoordinatorStat TOTAL_CAPACITY
         = CoordinatorStat.toDebugAndEmit("totalCap", "tier/total/capacity");
+    public static final CoordinatorStat STORAGE_CAPACITY
+        = CoordinatorStat.toDebugAndEmit("storageCap", "tier/storage/capacity");
     public static final CoordinatorStat REPLICATION_FACTOR
         = CoordinatorStat.toDebugAndEmit("maxRepFactor", "tier/replication/factor");
     public static final CoordinatorStat HISTORICAL_COUNT
@@ -110,8 +122,17 @@ public class Stats
 
   public static class Compaction
   {
+    public static final CoordinatorStat JOB_CREATION_TIME
+        = CoordinatorStat.toDebugAndEmit("jobCreationTime", "compact/createJobs/time");
+    public static final CoordinatorStat CREATED_JOBS
+        = CoordinatorStat.toDebugAndEmit("jobQueueSize", "compact/createJobs/count");
+    public static final CoordinatorStat SCHEDULER_RUN_TIME
+        = CoordinatorStat.toDebugAndEmit("schedulerRunTime", "compact/runScheduler/time");
+
     public static final CoordinatorStat SUBMITTED_TASKS
         = CoordinatorStat.toDebugAndEmit("compactTasks", "compact/task/count");
+    public static final CoordinatorStat CANCELLED_TASKS
+        = CoordinatorStat.toDebugAndEmit("compactCancelled", "compactTask/cancelled/count");
     public static final CoordinatorStat MAX_SLOTS
         = CoordinatorStat.toDebugAndEmit("compactMaxSlots", "compactTask/maxSlot/count");
     public static final CoordinatorStat AVAILABLE_SLOTS

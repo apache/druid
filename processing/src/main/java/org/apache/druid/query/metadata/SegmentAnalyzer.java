@@ -31,10 +31,12 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.BaseColumn;
+import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -53,6 +55,7 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -80,20 +83,21 @@ public class SegmentAnalyzer
 
   public long numRows(Segment segment)
   {
-    return Preconditions.checkNotNull(segment.as(PhysicalSegmentInspector.class), "PhysicalSegmentInspector")
+    return Preconditions.checkNotNull(segment.as(RowCountInspector.class), "RowCountInspector")
                         .getNumRows();
   }
 
   public Map<String, ColumnAnalysis> analyze(Segment segment)
   {
     Preconditions.checkNotNull(segment, "segment");
-    final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
+    final RowCountInspector rowCountInspector = segment.as(RowCountInspector.class);
+    final PhysicalSegmentColumnInspector columnInspector = segment.as(PhysicalSegmentColumnInspector.class);
 
-    // index is null for incremental-index-based segments, but segmentInspector should always be available
+    // index is null for incremental-index-based segments, but the inspectors should always be available
     final QueryableIndex index = segment.as(QueryableIndex.class);
     final CursorFactory cursorFactory = Objects.requireNonNull(segment.as(CursorFactory.class));
 
-    final int numRows = segmentInspector != null ? segmentInspector.getNumRows() : 0;
+    final int numRows = rowCountInspector != null ? rowCountInspector.getNumRows() : 0;
 
     // Use LinkedHashMap to preserve column order.
     final Map<String, ColumnAnalysis> columns = new LinkedHashMap<>();
@@ -102,8 +106,8 @@ public class SegmentAnalyzer
     for (String columnName : rowSignature.getColumnNames()) {
       final ColumnCapabilities capabilities;
 
-      if (segmentInspector != null) {
-        capabilities = segmentInspector.getColumnCapabilities(columnName);
+      if (columnInspector != null) {
+        capabilities = columnInspector.getColumnCapabilities(columnName);
       } else {
         capabilities = null;
       }
@@ -130,17 +134,18 @@ public class SegmentAnalyzer
             analysis = analyzeNumericColumn(capabilities, numRows, Double.BYTES);
             break;
           case STRING:
-            if (index != null) {
-              analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
+            final BaseColumnHolder stringHolder = index != null ? index.getColumnHolder(columnName) : null;
+            if (stringHolder != null) {
+              analysis = analyzeStringColumn(capabilities, stringHolder);
             } else {
-              analysis = analyzeStringColumn(capabilities, segmentInspector, cursorFactory, columnName);
+              analysis = analyzeStringColumn(capabilities, columnInspector, cursorFactory, columnName);
             }
             break;
           case ARRAY:
             analysis = analyzeArrayColumn(capabilities);
             break;
           case COMPLEX:
-            final ColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
+            final BaseColumnHolder columnHolder = index != null ? index.getColumnHolder(columnName) : null;
             analysis = analyzeComplexColumn(capabilities, numRows, columnHolder);
             break;
           default:
@@ -198,7 +203,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      final ColumnHolder columnHolder
+      final BaseColumnHolder columnHolder
   )
   {
     Comparable min = null;
@@ -211,11 +216,14 @@ public class SegmentAnalyzer
     if (valueIndex != null) {
       cardinality = valueIndex.getCardinality();
       if (analyzingSize()) {
-        for (int i = 0; i < cardinality; ++i) {
-          String value = valueIndex.getValue(i);
+        final Iterator<String> valueIterator = valueIndex.getValueIterator();
+        int i = 0;
+        while (valueIterator.hasNext()) {
+          final String value = valueIterator.next();
           if (value != null) {
             size += StringUtils.estimatedBinaryLengthAsUTF8(value) * ((long) valueIndex.getBitmap(i).size());
           }
+          i++;
         }
       }
       if (analyzingMinMax() && cardinality > 0) {
@@ -255,7 +263,7 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      @Nullable final PhysicalSegmentInspector analysisInspector,
+      @Nullable final PhysicalSegmentColumnInspector analysisInspector,
       final CursorFactory cursorFactory,
       final String columnName
   )
@@ -309,7 +317,7 @@ public class SegmentAnalyzer
   private ColumnAnalysis analyzeComplexColumn(
       final ColumnCapabilities capabilities,
       final int numCells,
-      @Nullable final ColumnHolder columnHolder
+      @Nullable final BaseColumnHolder columnHolder
   )
   {
     final TypeSignature<ValueType> typeSignature = capabilities == null ? ColumnType.UNKNOWN_COMPLEX : capabilities;

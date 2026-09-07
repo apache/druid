@@ -67,4 +67,13 @@ public class PreferredTierSelectorStrategyConfig
   {
     this.priority = priority;
   }
+
+  @Override
+  public String toString()
+  {
+    return "PreferredTierSelectorStrategyConfig{" +
+           "tier='" + tier + '\'' +
+           ", priority='" + priority + '\'' +
+           '}';
+  }
 }

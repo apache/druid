@@ -25,23 +25,23 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 
 public class IPv4AddressMatchExprMacroTest extends MacroTestBase
 {
-  private static final Expr IPV4 = ExprEval.of("192.168.0.1").toExpr();
+  private static final Expr IPV4 = ExprEval.ofString("192.168.0.1").toExpr();
   private static final Expr IPV4_LONG = ExprEval.of(3232235521L).toExpr();
-  private static final Expr IPV4_UINT = ExprEval.of("3232235521").toExpr();
-  private static final Expr IPV4_NETWORK = ExprEval.of("192.168.0.0").toExpr();
-  private static final Expr IPV4_BROADCAST = ExprEval.of("192.168.255.255").toExpr();
-  private static final Expr IPV6_COMPATIBLE = ExprEval.of("::192.168.0.1").toExpr();
-  private static final Expr IPV6_MAPPED = ExprEval.of("::ffff:192.168.0.1").toExpr();
-  private static final Expr SUBNET_192_168 = ExprEval.of("192.168.0.0/16").toExpr();
-  private static final Expr SUBNET_10 = ExprEval.of("10.0.0.0/8").toExpr();
+  private static final Expr IPV4_UINT = ExprEval.ofString("3232235521").toExpr();
+  private static final Expr IPV4_NETWORK = ExprEval.ofString("192.168.0.0").toExpr();
+  private static final Expr IPV4_BROADCAST = ExprEval.ofString("192.168.255.255").toExpr();
+  private static final Expr IPV6_COMPATIBLE = ExprEval.ofString("::192.168.0.1").toExpr();
+  private static final Expr IPV6_MAPPED = ExprEval.ofString("::ffff:192.168.0.1").toExpr();
+  private static final Expr SUBNET_192_168 = ExprEval.ofString("192.168.0.0/16").toExpr();
+  private static final Expr SUBNET_10 = ExprEval.ofString("10.0.0.0/8").toExpr();
   private static final Expr NOT_LITERAL = Parser.parse("\"notliteral\"", ExprMacroTable.nil());
 
   public IPv4AddressMatchExprMacroTest()
@@ -52,156 +52,164 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   @Test
   public void testTooFewArgs()
   {
-    expectException(ExpressionValidationException.class, "requires 2 arguments");
-
-    apply(Collections.emptyList());
+    assertException(
+        ExpressionValidationException.class,
+        "requires 2 arguments",
+        () -> apply(Collections.emptyList())
+    );
   }
 
   @Test
   public void testTooManyArgs()
   {
-    expectException(ExpressionValidationException.class, "requires 2 arguments");
-
-    apply(Arrays.asList(IPV4, SUBNET_192_168, NOT_LITERAL));
+    assertException(
+        ExpressionValidationException.class,
+        "requires 2 arguments",
+        () -> apply(Arrays.asList(IPV4, SUBNET_192_168, NOT_LITERAL))
+    );
   }
 
   @Test
   public void testSubnetArgNotLiteral()
   {
-    expectException(ExpressionValidationException.class, "subnet argument must be a literal");
-
-    apply(Arrays.asList(IPV4, NOT_LITERAL));
+    assertException(
+        ExpressionValidationException.class,
+        "subnet argument must be a literal",
+        () -> apply(Arrays.asList(IPV4, NOT_LITERAL))
+    );
   }
 
   @Test
   public void testSubnetArgInvalid()
   {
-    expectException(IllegalArgumentException.class, "subnet arg has an invalid format");
-
-    Expr invalidSubnet = ExprEval.of("192.168.0.1/invalid").toExpr();
-    apply(Arrays.asList(IPV4, invalidSubnet));
+    final Expr invalidSubnet = ExprEval.ofString("192.168.0.1/invalid").toExpr();
+    assertException(
+        IllegalArgumentException.class,
+        "subnet arg has an invalid format",
+        () -> apply(Arrays.asList(IPV4, invalidSubnet))
+    );
   }
 
   @Test
   public void testNullStringArg()
   {
-    Expr nullString = ExprEval.of(null).toExpr();
-    Assert.assertFalse(eval(nullString, SUBNET_192_168));
+    Expr nullString = ExprEval.ofString(null).toExpr();
+    Assertions.assertFalse(eval(nullString, SUBNET_192_168));
   }
 
   @Test
   public void testNullLongArg()
   {
     Expr nullLong = ExprEval.ofLong(null).toExpr();
-    Assert.assertFalse(eval(nullLong, SUBNET_192_168));
+    Assertions.assertFalse(eval(nullLong, SUBNET_192_168));
   }
 
   @Test
   public void testInvalidArgType()
   {
     Expr longArray = ExprEval.ofLongArray(new Long[]{1L, 2L}).toExpr();
-    Assert.assertFalse(eval(longArray, SUBNET_192_168));
+    Assertions.assertFalse(eval(longArray, SUBNET_192_168));
   }
 
   @Test
   public void testMatchingStringArgIPv4()
   {
-    Assert.assertTrue(eval(IPV4, SUBNET_192_168));
+    Assertions.assertTrue(eval(IPV4, SUBNET_192_168));
   }
 
   @Test
   public void testNotMatchingStringArgIPv4()
   {
-    Assert.assertFalse(eval(IPV4, SUBNET_10));
+    Assertions.assertFalse(eval(IPV4, SUBNET_10));
   }
 
   @Test
   public void testMatchingStringArgIPv6Mapped()
   {
-    Assert.assertFalse(eval(IPV6_MAPPED, SUBNET_192_168));
+    Assertions.assertFalse(eval(IPV6_MAPPED, SUBNET_192_168));
   }
 
   @Test
   public void testNotMatchingStringArgIPv6Mapped()
   {
-    Assert.assertFalse(eval(IPV6_MAPPED, SUBNET_10));
+    Assertions.assertFalse(eval(IPV6_MAPPED, SUBNET_10));
   }
 
   @Test
   public void testMatchingStringArgIPv6Compatible()
   {
-    Assert.assertFalse(eval(IPV6_COMPATIBLE, SUBNET_192_168));
+    Assertions.assertFalse(eval(IPV6_COMPATIBLE, SUBNET_192_168));
   }
 
   @Test
   public void testNotMatchingStringArgIPv6Compatible()
   {
-    Assert.assertFalse(eval(IPV6_COMPATIBLE, SUBNET_10));
+    Assertions.assertFalse(eval(IPV6_COMPATIBLE, SUBNET_10));
   }
 
   @Test
   public void testNotIpAddress()
   {
-    Expr notIpAddress = ExprEval.of("druid.apache.org").toExpr();
-    Assert.assertFalse(eval(notIpAddress, SUBNET_192_168));
+    Expr notIpAddress = ExprEval.ofString("druid.apache.org").toExpr();
+    Assertions.assertFalse(eval(notIpAddress, SUBNET_192_168));
   }
 
   @Test
   public void testMatchingLongArg()
   {
-    Assert.assertTrue(eval(IPV4_LONG, SUBNET_192_168));
+    Assertions.assertTrue(eval(IPV4_LONG, SUBNET_192_168));
   }
 
   @Test
   public void testNotMatchingLongArg()
   {
-    Assert.assertFalse(eval(IPV4_LONG, SUBNET_10));
+    Assertions.assertFalse(eval(IPV4_LONG, SUBNET_10));
   }
 
   @Test
   public void testMatchingStringArgUnsignedInt()
   {
-    Assert.assertFalse(eval(IPV4_UINT, SUBNET_192_168));
+    Assertions.assertFalse(eval(IPV4_UINT, SUBNET_192_168));
   }
 
   @Test
   public void testNotMatchingStringArgUnsignedInt()
   {
-    Assert.assertFalse(eval(IPV4_UINT, SUBNET_10));
+    Assertions.assertFalse(eval(IPV4_UINT, SUBNET_10));
   }
 
   @Test
   public void testInclusive()
   {
     Expr subnet = SUBNET_192_168;
-    Assert.assertTrue(eval(IPV4_NETWORK, subnet));
-    Assert.assertTrue(eval(IPV4, subnet));
-    Assert.assertTrue(eval(IPV4_BROADCAST, subnet));
+    Assertions.assertTrue(eval(IPV4_NETWORK, subnet));
+    Assertions.assertTrue(eval(IPV4, subnet));
+    Assertions.assertTrue(eval(IPV4_BROADCAST, subnet));
   }
 
   @Test
   public void testMatchesPrefix()
   {
-    Assert.assertTrue(eval(ExprEval.of("192.168.1.250").toExpr(), ExprEval.of("192.168.1.251/31").toExpr()));
-    Assert.assertFalse(eval(ExprEval.of("192.168.1.240").toExpr(), ExprEval.of("192.168.1.251/31").toExpr()));
-    Assert.assertFalse(eval(ExprEval.of("192.168.1.250").toExpr(), ExprEval.of("192.168.1.251/32").toExpr()));
-    Assert.assertTrue(eval(ExprEval.of("192.168.1.251").toExpr(), ExprEval.of("192.168.1.251/32").toExpr()));
+    Assertions.assertTrue(eval(ExprEval.ofString("192.168.1.250").toExpr(), ExprEval.ofString("192.168.1.251/31").toExpr()));
+    Assertions.assertFalse(eval(ExprEval.ofString("192.168.1.240").toExpr(), ExprEval.ofString("192.168.1.251/31").toExpr()));
+    Assertions.assertFalse(eval(ExprEval.ofString("192.168.1.250").toExpr(), ExprEval.ofString("192.168.1.251/32").toExpr()));
+    Assertions.assertTrue(eval(ExprEval.ofString("192.168.1.251").toExpr(), ExprEval.ofString("192.168.1.251/32").toExpr()));
 
-    Assert.assertTrue(eval(
+    Assertions.assertTrue(eval(
         ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.250").longValue()).toExpr(),
-        ExprEval.of("192.168.1.251/31").toExpr()
+        ExprEval.ofString("192.168.1.251/31").toExpr()
     ));
-    Assert.assertFalse(eval(
+    Assertions.assertFalse(eval(
         ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.240").longValue()).toExpr(),
-        ExprEval.of("192.168.1.251/31").toExpr()
+        ExprEval.ofString("192.168.1.251/31").toExpr()
     ));
-    Assert.assertFalse(eval(
+    Assertions.assertFalse(eval(
         ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.250").longValue()).toExpr(),
-        ExprEval.of("192.168.1.251/32").toExpr()
+        ExprEval.ofString("192.168.1.251/32").toExpr()
     ));
-    Assert.assertTrue(eval(
+    Assertions.assertTrue(eval(
         ExprEval.of(IPv4AddressExprUtils.parse("192.168.1.251").longValue()).toExpr(),
-        ExprEval.of("192.168.1.251/32").toExpr()
+        ExprEval.ofString("192.168.1.251/32").toExpr()
     ));
   }
 

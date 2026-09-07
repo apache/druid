@@ -19,8 +19,8 @@
 
 package org.apache.druid.data.input;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -45,6 +45,6 @@ public class InputFormatTest
   public void test_getWeightedSize_withoutCompression()
   {
     final long unweightedSize = 100L;
-    Assert.assertEquals(unweightedSize, INPUT_FORMAT.getWeightedSize("file.json", unweightedSize));
+    Assertions.assertEquals(unweightedSize, INPUT_FORMAT.getWeightedSize("file.json", unweightedSize));
   }
 }

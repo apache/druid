@@ -19,13 +19,11 @@
 
 package org.apache.druid.indexing.common.task.batch.parallel;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -45,9 +43,10 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -92,16 +91,17 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
   public RangePartitionTaskKillTest()
   {
-    super(LockGranularity.SEGMENT, true, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
+    super(LockGranularity.SEGMENT, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     inputDir = temporaryFolder.newFolder("data");
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsFirstPhase() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
@@ -109,7 +109,6 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         newTask(TIMESTAMP_SPEC,
                 DIMENSIONS_SPEC,
                 INPUT_FORMAT,
-                null,
                 INTERVAL_TO_INDEX,
                 inputDir,
                 TEST_FILE_NAME_PREFIX + "*",
@@ -128,20 +127,21 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
 
     TaskStatus taskStatus = task.runRangePartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-1]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsSecondPhase() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
@@ -149,7 +149,6 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         newTask(TIMESTAMP_SPEC,
                 DIMENSIONS_SPEC,
                 INPUT_FORMAT,
-                null,
                 INTERVAL_TO_INDEX,
                 inputDir,
                 TEST_FILE_NAME_PREFIX + "*",
@@ -168,20 +167,21 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
 
     TaskStatus taskStatus = task.runRangePartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-2]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsThirdPhase() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
@@ -189,7 +189,6 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         newTask(TIMESTAMP_SPEC,
                 DIMENSIONS_SPEC,
                 INPUT_FORMAT,
-                null,
                 INTERVAL_TO_INDEX,
                 inputDir,
                 TEST_FILE_NAME_PREFIX + "*",
@@ -208,14 +207,14 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
     task.setToolbox(toolbox);
     TaskStatus taskStatus = task.runRangePartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-3]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
@@ -297,7 +296,6 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
       @Nullable TimestampSpec timestampSpec,
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable InputFormat inputFormat,
-      @Nullable ParseSpec parseSpec,
       Interval interval,
       File inputDir,
       String filter,
@@ -319,16 +317,13 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         !appendToExisting
     );
 
-    final ParallelIndexIngestionSpec ingestionSpec;
-
-    Preconditions.checkArgument(parseSpec == null);
     ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
         new LocalInputSource(inputDir, filter),
         inputFormat,
         appendToExisting,
         null
     );
-    ingestionSpec = new ParallelIndexIngestionSpec(
+    ParallelIndexIngestionSpec ingestionSpec = new ParallelIndexIngestionSpec(
         DataSchema.builder()
                   .withDataSource(DATASOURCE)
                   .withTimestamp(timestampSpec)

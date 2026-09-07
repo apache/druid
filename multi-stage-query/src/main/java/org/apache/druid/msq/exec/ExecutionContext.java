@@ -61,6 +61,11 @@ public interface ExecutionContext
   ListenableFuture<ClusterByPartitions> globalClusterByPartitions();
 
   /**
+   * Factory for reading stage input channels.
+   */
+  InputChannelFactory inputChannelFactory();
+
+  /**
    * Factory for generating stage output channels.
    */
   OutputChannelFactory outputChannelFactory();
@@ -85,6 +90,13 @@ public interface ExecutionContext
    * Number of threads available in {@link #executor()}.
    */
   int threadCount();
+
+  /**
+   * Effective segment load-ahead count for {@link #workOrder()}, resolved by
+   * {@link WorkerContext#segmentLoadAheadCount(WorkOrder)}. Used to size the segment prefetch in
+   * {@link org.apache.druid.msq.querykit.ReadableInputQueue}.
+   */
+  int segmentLoadAheadCount();
 
   /**
    * Cancellation ID that must be provided to {@link FrameProcessorExecutor} when running work.

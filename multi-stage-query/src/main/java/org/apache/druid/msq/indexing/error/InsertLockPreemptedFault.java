@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 
 @JsonTypeName(InsertLockPreemptedFault.CODE)
 public class InsertLockPreemptedFault extends BaseMSQFault
@@ -35,6 +36,15 @@ public class InsertLockPreemptedFault extends BaseMSQFault
         "Lock preempted while trying to ingest the data. This can occur if there are higher priority tasks, such as "
         + "real-time ingestion, running on the same time chunks."
     );
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.CONFLICT)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @JsonCreator

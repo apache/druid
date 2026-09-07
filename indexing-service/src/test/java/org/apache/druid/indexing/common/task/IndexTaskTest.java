@@ -21,22 +21,18 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
-import org.apache.druid.data.input.impl.JSONParseSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
-import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
@@ -57,6 +53,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIOConfig;
 import org.apache.druid.indexing.common.task.IndexTask.IndexIngestionSpec;
 import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -85,12 +82,14 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.handoff.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
+import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.realtime.WindowedCursorFactory;
@@ -110,16 +109,12 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -139,24 +134,14 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "{0}")
+@MethodSource("constructorFeeder")
 public class IndexTaskTest extends IngestionTestBase
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   private static final String DATASOURCE = "test";
   private static final TimestampSpec DEFAULT_TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
   private static final DimensionsSpec DEFAULT_DIMENSIONS_SPEC = new DimensionsSpec(
       DimensionsSpec.getDefaultSchemas(Arrays.asList("ts", "dim"))
-  );
-  private static final ParseSpec DEFAULT_PARSE_SPEC = new CSVParseSpec(
-      DEFAULT_TIMESTAMP_SPEC,
-      DEFAULT_DIMENSIONS_SPEC,
-      null,
-      Arrays.asList("ts", "dim", "val"),
-      false,
-      0
   );
   private static final InputFormat DEFAULT_INPUT_FORMAT = new CsvInputFormat(
       Arrays.asList("ts", "dim", "val"),
@@ -186,53 +171,43 @@ public class IndexTaskTest extends IngestionTestBase
                 )
                 .build();
 
-  @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK, false},
-        new Object[]{LockGranularity.TIME_CHUNK, true},
-        new Object[]{LockGranularity.SEGMENT, true}
+        new Object[]{LockGranularity.TIME_CHUNK},
+        new Object[]{LockGranularity.SEGMENT}
     );
   }
 
-  private static final IndexSpec INDEX_SPEC = IndexSpec.DEFAULT;
+  private static final IndexSpec INDEX_SPEC = IndexSpec.getDefault();
   private final ObjectMapper jsonMapper;
   private final IndexIO indexIO;
   private final LockGranularity lockGranularity;
-  private final boolean useInputFormatApi;
 
   private SegmentCacheManager segmentCacheManager;
   private TestTaskRunner taskRunner;
   private File tmpDir;
 
-  public IndexTaskTest(LockGranularity lockGranularity, boolean useInputFormatApi)
+  public IndexTaskTest(LockGranularity lockGranularity)
   {
     this.jsonMapper = getObjectMapper();
     this.indexIO = getIndexIO();
     this.lockGranularity = lockGranularity;
-    this.useInputFormatApi = useInputFormatApi;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
-    final File cacheDir = temporaryFolder.newFolder();
-    tmpDir = temporaryFolder.newFolder();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(cacheDir, null, null)
-        );
-      }
-    };
+    final File cacheDir = FileUtils.createTempDirInLocation(temporaryFolder.getRoot().toPath(), "cache");
+    tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.getRoot().toPath(), "input");
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(cacheDir, null, null))
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     segmentCacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         jsonMapper
@@ -257,7 +232,7 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
                 LocalInputSource.TYPE_KEY,
@@ -290,14 +265,12 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    Assert.assertFalse(indexTask.supportsQueries());
-
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
-    Assert.assertEquals(ImmutableList.of("ts", "dim", "valDim"), segments.get(0).getDimensions());
-    Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
+    Assertions.assertEquals(1, segments.size());
+    Assertions.assertEquals(ImmutableList.of("ts", "dim", "valDim"), segments.get(0).getDimensions());
+    Assertions.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
 
     verifySchemaAndAggFactory(
         segmentWithSchemas,
@@ -335,14 +308,12 @@ public class IndexTaskTest extends IngestionTestBase
         ImmutableMap.of(Tasks.STORE_EMPTY_COLUMNS_KEY, false)
     );
 
-    Assert.assertFalse(indexTask.supportsQueries());
-
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
     // only empty string dimensions are ignored currently
-    Assert.assertEquals(ImmutableList.of("ts", "valDim"), segments.get(0).getDimensions());
-    Assert.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
+    Assertions.assertEquals(ImmutableList.of("ts", "valDim"), segments.get(0).getDimensions());
+    Assertions.assertEquals(ImmutableList.of("valMet"), segments.get(0).getMetrics());
 
     verifySchemaAndAggFactory(
         segmentWithSchemas,
@@ -375,35 +346,33 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    Assert.assertFalse(indexTask.supportsQueries());
-
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
-    Assert.assertEquals(2, segments.size());
+    Assertions.assertEquals(2, segments.size());
 
-    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
-    Assert.assertEquals(2, segments.get(0).getShardSpec().getNumCorePartitions());
-    Assert.assertEquals(
+    Assertions.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assertions.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assertions.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(2, segments.get(0).getShardSpec().getNumCorePartitions());
+    Assertions.assertEquals(
         HashPartitionFunction.MURMUR3_32_ABS,
         ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
     );
 
-    Assert.assertEquals(DATASOURCE, segments.get(1).getDataSource());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
-    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
-    Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
-    Assert.assertEquals(2, segments.get(1).getShardSpec().getNumCorePartitions());
-    Assert.assertEquals(
+    Assertions.assertEquals(DATASOURCE, segments.get(1).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
+    Assertions.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
+    Assertions.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(2, segments.get(1).getShardSpec().getNumCorePartitions());
+    Assertions.assertEquals(
         HashPartitionFunction.MURMUR3_32_ABS,
         ((HashBasedNumberedShardSpec) segments.get(1).getShardSpec()).getPartitionFunction()
     );
 
-    Assert.assertEquals(2, segmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
-    Assert.assertEquals(1, segmentWithSchemas.getSegmentSchemaMapping().getSchemaFingerprintToPayloadMap().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(2, segmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
+    Assertions.assertEquals(1, segmentWithSchemas.getSegmentSchemaMapping().getSchemaFingerprintToPayloadMap().size());
+    Assertions.assertEquals(
         RowSignature.builder()
                     .add("__time", ColumnType.LONG)
                     .add("ts", ColumnType.STRING)
@@ -418,7 +387,7 @@ public class IndexTaskTest extends IngestionTestBase
                         .get()
                         .getRowSignature()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonMap("val", new LongSumAggregatorFactory("val", "val")),
         segmentWithSchemas.getSegmentSchemaMapping()
                         .getSchemaFingerprintToPayloadMap()
@@ -469,39 +438,25 @@ public class IndexTaskTest extends IngestionTestBase
         )
     );
     final IndexTuningConfig tuningConfig = createTuningConfigWithMaxRowsPerSegment(2, false);
-    final IndexIngestionSpec indexIngestionSpec;
-    if (useInputFormatApi) {
-      indexIngestionSpec = createIngestionSpec(
-          DEFAULT_TIMESTAMP_SPEC,
-          dimensionsSpec,
-          new CsvInputFormat(columns, listDelimiter, null, false, 0, null),
-          transformSpec,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      indexIngestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, dimensionsSpec, listDelimiter, columns, false, 0),
-          transformSpec,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
+    final IndexIngestionSpec indexIngestionSpec = createIngestionSpec(
+        DEFAULT_TIMESTAMP_SPEC,
+        dimensionsSpec,
+        new CsvInputFormat(columns, listDelimiter, null, false, 0, null),
+        transformSpec,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
 
     IndexTask indexTask = createIndexTask(indexIngestionSpec, null);
 
-    Assert.assertEquals(indexTask.getId(), indexTask.getGroupId());
+    Assertions.assertEquals(indexTask.getId(), indexTask.getGroupId());
 
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
     DataSegment segment = segments.get(0);
     segmentCacheManager.load(segment);
     final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
@@ -541,16 +496,16 @@ public class IndexTaskTest extends IngestionTestBase
       transforms.add(row);
       cursor.advance();
 
-      Assert.assertEquals(1, transforms.size());
-      Assert.assertEquals("bb", transforms.get(0).get("dimt"));
-      Assert.assertEquals(ImmutableList.of("b", "b"), transforms.get(0).get("dimtarray1"));
-      Assert.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
-      Assert.assertEquals(ImmutableList.of("6.0", "7.0"), transforms.get(0).get("dimtnum_array"));
+      Assertions.assertEquals(1, transforms.size());
+      Assertions.assertEquals("bb", transforms.get(0).get("dimt"));
+      Assertions.assertEquals(ImmutableList.of("b", "b"), transforms.get(0).get("dimtarray1"));
+      Assertions.assertEquals(ImmutableList.of("anotherfoo", "arrayfoo"), transforms.get(0).get("dimtarray2"));
+      Assertions.assertEquals(ImmutableList.of("6.0", "7.0"), transforms.get(0).get("dimtnum_array"));
 
-      Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
-      Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
-      Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
-      Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+      Assertions.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+      Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+      Assertions.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+      Assertions.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
       verifySchemaAndAggFactory(
           segmentWithSchemas,
@@ -596,7 +551,7 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
 
     invokeApi(req -> indexTask.getLiveReports(req, null));
     invokeApi(req -> indexTask.getLiveReports(req, "full"));
@@ -629,7 +584,7 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
   }
 
   @Test
@@ -654,13 +609,13 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
 
-    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
-    Assert.assertEquals(
+    Assertions.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assertions.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assertions.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(
         HashPartitionFunction.MURMUR3_32_ABS,
         ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
     );
@@ -690,13 +645,13 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
 
-    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
-    Assert.assertEquals(
+    Assertions.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assertions.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assertions.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(
         HashPartitionFunction.MURMUR3_32_ABS,
         ((HashBasedNumberedShardSpec) segments.get(0).getShardSpec()).getPartitionFunction()
     );
@@ -724,14 +679,14 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(2, segments.size());
+    Assertions.assertEquals(2, segments.size());
 
     for (DataSegment segment : segments) {
-      Assert.assertEquals(DATASOURCE, segment.getDataSource());
-      Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
-      Assert.assertEquals(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+      Assertions.assertEquals(DATASOURCE, segment.getDataSource());
+      Assertions.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
+      Assertions.assertEquals(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
       final HashBasedNumberedShardSpec hashBasedNumberedShardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-      Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, hashBasedNumberedShardSpec.getPartitionFunction());
+      Assertions.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, hashBasedNumberedShardSpec.getPartitionFunction());
 
       segmentCacheManager.load(segment);
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
@@ -759,7 +714,7 @@ public class IndexTaskTest extends IngestionTestBase
           cursor.advance();
         }
 
-        Assert.assertTrue(hashes.stream().allMatch(h -> h.intValue() == hashes.get(0)));
+        Assertions.assertTrue(hashes.stream().allMatch(h -> h.intValue() == hashes.get(0)));
       }
     }
   }
@@ -783,23 +738,23 @@ public class IndexTaskTest extends IngestionTestBase
         null
     );
 
-    Assert.assertEquals("index_append_test", indexTask.getGroupId());
+    Assertions.assertEquals("index_append_test", indexTask.getGroupId());
 
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(2, taskRunner.getTaskActionClient().getActionCount(SegmentAllocateAction.class));
-    Assert.assertEquals(2, segments.size());
+    Assertions.assertEquals(2, taskRunner.getTaskActionClient().getActionCount(SegmentAllocateAction.class));
+    Assertions.assertEquals(2, segments.size());
 
-    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
-    Assert.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assertions.assertEquals(NumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assertions.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
-    Assert.assertEquals(DATASOURCE, segments.get(1).getDataSource());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
-    Assert.assertEquals(NumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
-    Assert.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(DATASOURCE, segments.get(1).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(1).getInterval());
+    Assertions.assertEquals(NumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
+    Assertions.assertEquals(1, segments.get(1).getShardSpec().getPartitionNum());
   }
 
   @Test
@@ -828,22 +783,22 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(3, segments.size());
+    Assertions.assertEquals(3, segments.size());
 
-    Assert.assertEquals(DATASOURCE, segments.get(0).getDataSource());
-    Assert.assertEquals(Intervals.of("2014-01-01T00/PT1H"), segments.get(0).getInterval());
-    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(DATASOURCE, segments.get(0).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014-01-01T00/PT1H"), segments.get(0).getInterval());
+    Assertions.assertEquals(HashBasedNumberedShardSpec.class, segments.get(0).getShardSpec().getClass());
+    Assertions.assertEquals(0, segments.get(0).getShardSpec().getPartitionNum());
 
-    Assert.assertEquals(DATASOURCE, segments.get(1).getDataSource());
-    Assert.assertEquals(Intervals.of("2014-01-01T01/PT1H"), segments.get(1).getInterval());
-    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(1).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(DATASOURCE, segments.get(1).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014-01-01T01/PT1H"), segments.get(1).getInterval());
+    Assertions.assertEquals(HashBasedNumberedShardSpec.class, segments.get(1).getShardSpec().getClass());
+    Assertions.assertEquals(0, segments.get(1).getShardSpec().getPartitionNum());
 
-    Assert.assertEquals(DATASOURCE, segments.get(2).getDataSource());
-    Assert.assertEquals(Intervals.of("2014-01-01T02/PT1H"), segments.get(2).getInterval());
-    Assert.assertEquals(HashBasedNumberedShardSpec.class, segments.get(2).getShardSpec().getClass());
-    Assert.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
+    Assertions.assertEquals(DATASOURCE, segments.get(2).getDataSource());
+    Assertions.assertEquals(Intervals.of("2014-01-01T02/PT1H"), segments.get(2).getInterval());
+    Assertions.assertEquals(HashBasedNumberedShardSpec.class, segments.get(2).getShardSpec().getClass());
+    Assertions.assertEquals(0, segments.get(2).getShardSpec().getPartitionNum());
   }
 
   @Test
@@ -856,7 +811,7 @@ public class IndexTaskTest extends IngestionTestBase
     }
 
     // Expect exception if reingest with dropExisting and null intervals is attempted
-    Exception exception = Assert.assertThrows(
+    Exception exception = Assertions.assertThrows(
         IAE.class,
         () -> createIndexTask(
             createDefaultIngestionSpec(
@@ -872,7 +827,7 @@ public class IndexTaskTest extends IngestionTestBase
             null
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "GranularitySpec's intervals cannot be empty for replace.",
         exception.getMessage()
     );
@@ -888,30 +843,16 @@ public class IndexTaskTest extends IngestionTestBase
 
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final IndexTuningConfig tuningConfig = createTuningConfigWithMaxRowsPerSegment(2, true);
-    final IndexIngestionSpec ingestionSpec;
-    if (useInputFormatApi) {
-      ingestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, null, true, 0),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      ingestionSpec = createIngestionSpec(
-          timestampSpec,
-          DimensionsSpec.EMPTY,
-          new CsvInputFormat(null, null, null, true, 0, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
+    final IndexIngestionSpec ingestionSpec = createIngestionSpec(
+        timestampSpec,
+        DimensionsSpec.EMPTY,
+        new CsvInputFormat(null, null, null, true, 0, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
 
     IndexTask indexTask = createIndexTask(
         ingestionSpec,
@@ -921,11 +862,11 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
 
-    Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
-    Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assertions.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
+    Assertions.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
   @Test
@@ -939,30 +880,16 @@ public class IndexTaskTest extends IngestionTestBase
     final TimestampSpec timestampSpec = new TimestampSpec("time", "auto", null);
     final List<String> columns = Arrays.asList("time", "dim", "val");
     final IndexTuningConfig tuningConfig = createTuningConfigWithMaxRowsPerSegment(2, true);
-    final IndexIngestionSpec ingestionSpec;
-    if (useInputFormatApi) {
-      ingestionSpec = createIngestionSpec(
-          timestampSpec,
-          DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      ingestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
+    final IndexIngestionSpec ingestionSpec = createIngestionSpec(
+        timestampSpec,
+        DimensionsSpec.EMPTY,
+        new CsvInputFormat(columns, null, null, true, 0, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
 
     IndexTask indexTask = createIndexTask(
         ingestionSpec,
@@ -972,11 +899,11 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
 
-    Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
-    Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assertions.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
+    Assertions.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
   @Test
@@ -1011,17 +938,17 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(6, segments.size());
+    Assertions.assertEquals(6, segments.size());
 
     for (int i = 0; i < 6; i++) {
       final DataSegment segment = segments.get(i);
       final Interval expectedInterval = Intervals.of(StringUtils.format("2014-01-01T0%d/PT1H", (i / 2)));
       final int expectedPartitionNum = i % 2;
 
-      Assert.assertEquals(DATASOURCE, segment.getDataSource());
-      Assert.assertEquals(expectedInterval, segment.getInterval());
-      Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
-      Assert.assertEquals(expectedPartitionNum, segment.getShardSpec().getPartitionNum());
+      Assertions.assertEquals(DATASOURCE, segment.getDataSource());
+      Assertions.assertEquals(expectedInterval, segment.getInterval());
+      Assertions.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+      Assertions.assertEquals(expectedPartitionNum, segment.getShardSpec().getPartitionNum());
     }
   }
 
@@ -1048,16 +975,16 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(3, segments.size());
+    Assertions.assertEquals(3, segments.size());
 
     for (int i = 0; i < 3; i++) {
       final DataSegment segment = segments.get(i);
       final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
 
-      Assert.assertEquals(DATASOURCE, segment.getDataSource());
-      Assert.assertEquals(expectedInterval, segment.getInterval());
-      Assert.assertEquals(segment.getShardSpec().getClass(), HashBasedNumberedShardSpec.class);
-      Assert.assertEquals(i, segment.getShardSpec().getPartitionNum());
+      Assertions.assertEquals(DATASOURCE, segment.getDataSource());
+      Assertions.assertEquals(expectedInterval, segment.getInterval());
+      Assertions.assertEquals(segment.getShardSpec().getClass(), HashBasedNumberedShardSpec.class);
+      Assertions.assertEquals(i, segment.getShardSpec().getPartitionNum());
     }
   }
 
@@ -1084,16 +1011,16 @@ public class IndexTaskTest extends IngestionTestBase
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(5, segments.size());
+    Assertions.assertEquals(5, segments.size());
 
     final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
     for (int i = 0; i < 5; i++) {
       final DataSegment segment = segments.get(i);
 
-      Assert.assertEquals(DATASOURCE, segment.getDataSource());
-      Assert.assertEquals(expectedInterval, segment.getInterval());
-      Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
-      Assert.assertEquals(i, segment.getShardSpec().getPartitionNum());
+      Assertions.assertEquals(DATASOURCE, segment.getDataSource());
+      Assertions.assertEquals(expectedInterval, segment.getInterval());
+      Assertions.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+      Assertions.assertEquals(i, segment.getShardSpec().getPartitionNum());
     }
   }
 
@@ -1117,7 +1044,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     EasyMock.replay(mockToolbox);
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
+    Assertions.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
     EasyMock.verify(mockToolbox);
   }
 
@@ -1142,7 +1069,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     EasyMock.replay(mockToolbox);
-    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, -1));
+    Assertions.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, -1));
     EasyMock.verify(mockToolbox);
   }
 
@@ -1196,7 +1123,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
     EasyMock.replay(mockFactory, mockNotifier);
 
-    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
+    Assertions.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);
     EasyMock.verify(mockFactory, mockNotifier);
@@ -1246,7 +1173,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockToolbox);
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
 
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
+    Assertions.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);
   }
@@ -1297,7 +1224,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockToolbox);
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
 
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
+    Assertions.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
     emitter.verifyEmitted("task/segmentAvailability/wait/time", 1);
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);
@@ -1339,39 +1266,25 @@ public class IndexTaskTest extends IngestionTestBase
 
     // GranularitySpec.intervals and numShards must be null to verify reportParseException=false is respected both in
     // IndexTask.determineShardSpecs() and IndexTask.generateAndPublishSegments()
-    final IndexIngestionSpec parseExceptionIgnoreSpec;
-    if (useInputFormatApi) {
-      parseExceptionIgnoreSpec = createIngestionSpec(
-          timestampSpec,
-          DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      parseExceptionIgnoreSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
+    final IndexIngestionSpec parseExceptionIgnoreSpec = createIngestionSpec(
+        timestampSpec,
+        DimensionsSpec.EMPTY,
+        new CsvInputFormat(columns, null, null, true, 0, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
 
     IndexTask indexTask = createIndexTask(parseExceptionIgnoreSpec, null);
 
     final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
-    Assert.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
-    Assert.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
+    Assertions.assertEquals(Collections.singletonList("d"), segments.get(0).getDimensions());
+    Assertions.assertEquals(Collections.singletonList("val"), segments.get(0).getMetrics());
+    Assertions.assertEquals(Intervals.of("2014/P1D"), segments.get(0).getInterval());
   }
 
   @Test
@@ -1388,31 +1301,17 @@ public class IndexTaskTest extends IngestionTestBase
     final List<String> columns = Arrays.asList("time", "dim", "val");
     // report parse exception
     final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, false, true);
-    final IndexIngestionSpec indexIngestionSpec;
+    final IndexIngestionSpec indexIngestionSpec = createIngestionSpec(
+        timestampSpec,
+        DimensionsSpec.EMPTY,
+        new CsvInputFormat(columns, null, null, true, 0, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
     List<String> expectedMessages;
-    if (useInputFormatApi) {
-      indexIngestionSpec = createIngestionSpec(
-          timestampSpec,
-          DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      indexIngestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(timestampSpec, DimensionsSpec.EMPTY, null, columns, true, 0),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
 
     expectedMessages = ImmutableList.of(
         StringUtils.format(
@@ -1423,17 +1322,17 @@ public class IndexTaskTest extends IngestionTestBase
     IndexTask indexTask = createIndexTask(indexIngestionSpec, null);
 
     TaskStatus status = runTask(indexTask).lhs;
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
-    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
+    Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = ImmutableList.of("{time=unparseable, d=a, val=1}");
-    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+    Assertions.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1475,39 +1374,27 @@ public class IndexTaskTest extends IngestionTestBase
             new FloatDimensionSchema("dimFloat")
         )
     );
-    final IndexIngestionSpec ingestionSpec;
-    if (useInputFormatApi) {
-      ingestionSpec = createIngestionSpec(
-          timestampSpec,
-          dimensionsSpec,
-          new JsonInputFormat(null, null, null, null, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      ingestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new JSONParseSpec(timestampSpec, dimensionsSpec, null, null, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
+    final IndexIngestionSpec ingestionSpec = createIngestionSpec(
+        timestampSpec,
+        dimensionsSpec,
+        new JsonInputFormat(null, null, null, null, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
 
     IndexTask indexTask = createIndexTask(ingestionSpec, null);
 
     TaskStatus status = runTask(indexTask).lhs;
-    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
-    Assert.assertNull(status.getErrorMsg());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode());
+    Assertions.assertNull(status.getErrorMsg());
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedThrownAwayByReason = Map.of(InputRowFilterResult.CUSTOM_FILTER.getReason(), 1);
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
@@ -1516,6 +1403,7 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED_BYTES, 657,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason,
             RowIngestionMeters.FILTERED, 0
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1525,10 +1413,11 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED_BYTES, 657,
             RowIngestionMeters.UNPARSEABLE, 4,
             RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason,
             RowIngestionMeters.FILTERED, 0
         )
     );
-    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+    Assertions.assertEquals(expectedMetrics, reportData.getRowStats());
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
@@ -1553,7 +1442,7 @@ public class IndexTaskTest extends IngestionTestBase
         )
     );
 
-    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
+    Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "this is not JSON",
@@ -1564,7 +1453,7 @@ public class IndexTaskTest extends IngestionTestBase
         "{time=2014-01-01T00:00:10Z, dim=b, dimLong=notnumber, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+    Assertions.assertEquals(expectedInputs, parseExceptionReport.getInputs());
 
     parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.DETERMINE_PARTITIONS);
@@ -1585,7 +1474,7 @@ public class IndexTaskTest extends IngestionTestBase
         )
     );
 
-    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
+    Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     expectedInputs = Arrays.asList(
         "this is not JSON",
@@ -1593,7 +1482,7 @@ public class IndexTaskTest extends IngestionTestBase
         "{\"time\":9.0x,\"dim\":\"a\",\"dimLong\":2,\"dimFloat\":3.0,\"val\":1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+    Assertions.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1630,34 +1519,18 @@ public class IndexTaskTest extends IngestionTestBase
         )
     );
     final List<String> columns = Arrays.asList("time", "dim", "dimLong", "dimFloat", "val");
-    final IndexIngestionSpec ingestionSpec;
+    final IndexIngestionSpec ingestionSpec = createIngestionSpec(
+        timestampSpec,
+        dimensionsSpec,
+        new CsvInputFormat(columns, null, null, true, 0, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
 
-    List<String> expectedMessages;
-    if (useInputFormatApi) {
-      ingestionSpec = createIngestionSpec(
-          timestampSpec,
-          dimensionsSpec,
-          new CsvInputFormat(columns, null, null, true, 0, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      ingestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
-
-    expectedMessages = Arrays.asList(
+    List<String> expectedMessages = Arrays.asList(
         StringUtils.format(
             "Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 3, Line: 6)",
             tmpFile.toURI()
@@ -1677,11 +1550,14 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     TaskStatus status = runTask(indexTask).lhs;
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
+    Map<String, Integer> expectedDeterminePartitionsThrownAwayByReason = Map.of();
+    Map<String, Integer> expectedBuildSegmentsThrownAwayByReason = Map.of(InputRowFilterResult.CUSTOM_FILTER.getReason(), 1);
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
@@ -1690,6 +1566,7 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.UNPARSEABLE, 0,
             RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedDeterminePartitionsThrownAwayByReason,
             RowIngestionMeters.FILTERED, 0
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1699,22 +1576,23 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED_BYTES, 182,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedBuildSegmentsThrownAwayByReason,
             RowIngestionMeters.FILTERED, 0
         )
     );
 
-    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+    Assertions.assertEquals(expectedMetrics, reportData.getRowStats());
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
-    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
+    Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
         "{time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+    Assertions.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1751,34 +1629,18 @@ public class IndexTaskTest extends IngestionTestBase
         )
     );
     final List<String> columns = Arrays.asList("time", "dim", "dimLong", "dimFloat", "val");
-    final IndexIngestionSpec ingestionSpec;
+    final IndexIngestionSpec ingestionSpec = createIngestionSpec(
+        timestampSpec,
+        dimensionsSpec,
+        new CsvInputFormat(columns, null, null, true, 0, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
 
-    List<String> expectedMessages;
-    if (useInputFormatApi) {
-      ingestionSpec = createIngestionSpec(
-          timestampSpec,
-          dimensionsSpec,
-          new CsvInputFormat(columns, null, null, true, 0, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      ingestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(timestampSpec, dimensionsSpec, null, columns, true, 0),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
-
-    expectedMessages = Arrays.asList(
+    List<String> expectedMessages = Arrays.asList(
         StringUtils.format("Timestamp[99999999999-01-01T00:00:10Z] is unparseable! Event: {time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 3, Line: 6)", tmpFile.toURI()),
         StringUtils.format("Timestamp[9.0] is unparseable! Event: {time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 2, Line: 4)", tmpFile.toURI()),
         StringUtils.format("Timestamp[unparseable] is unparseable! Event: {time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1} (Path: %s, Record: 1, Line: 2)", tmpFile.toURI())
@@ -1789,11 +1651,13 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     TaskStatus status = runTask(indexTask).lhs;
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    Map<String, Integer> expectedDeterminePartitionsThrownAwayByReason = Map.of(InputRowFilterResult.CUSTOM_FILTER.getReason(), 1);
+    Map<String, Integer> expectedBuildSegmentsThrownAwayByReason = Map.of();
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.DETERMINE_PARTITIONS,
         ImmutableMap.of(
@@ -1802,6 +1666,7 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED_BYTES, 182,
             RowIngestionMeters.UNPARSEABLE, 3,
             RowIngestionMeters.THROWN_AWAY, 1,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedDeterminePartitionsThrownAwayByReason,
             RowIngestionMeters.FILTERED, 0
         ),
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1811,22 +1676,23 @@ public class IndexTaskTest extends IngestionTestBase
             RowIngestionMeters.PROCESSED_BYTES, 0,
             RowIngestionMeters.UNPARSEABLE, 0,
             RowIngestionMeters.THROWN_AWAY, 0,
+            RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedBuildSegmentsThrownAwayByReason,
             RowIngestionMeters.FILTERED, 0
         )
     );
 
-    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+    Assertions.assertEquals(expectedMetrics, reportData.getRowStats());
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.DETERMINE_PARTITIONS);
-    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
+    Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{time=99999999999-01-01T00:00:10Z, dim=b, dimLong=2, dimFloat=3.0, val=1}",
         "{time=9.0, dim=a, dimLong=2, dimFloat=3.0, val=1}",
         "{time=unparseable, dim=a, dimLong=2, dimFloat=3.0, val=1}"
     );
-    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+    Assertions.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1849,30 +1715,16 @@ public class IndexTaskTest extends IngestionTestBase
 
     // report parse exception
     final IndexTuningConfig tuningConfig = createTuningConfig(2, 1, null, null, true, true);
-    final IndexIngestionSpec ingestionSpec;
-    if (useInputFormatApi) {
-      ingestionSpec = createIngestionSpec(
-          DEFAULT_TIMESTAMP_SPEC,
-          DimensionsSpec.EMPTY,
-          new CsvInputFormat(null, null, null, true, 0, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      ingestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, null, true, 0),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
+    final IndexIngestionSpec ingestionSpec = createIngestionSpec(
+        DEFAULT_TIMESTAMP_SPEC,
+        DimensionsSpec.EMPTY,
+        new CsvInputFormat(null, null, null, true, 0, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
 
     IndexTask indexTask = createIndexTask(
         ingestionSpec,
@@ -1884,8 +1736,8 @@ public class IndexTaskTest extends IngestionTestBase
 
     // the order of result segments can be changed because hash shardSpec is used.
     // the below loop is to make this test deterministic.
-    Assert.assertEquals(2, segments.size());
-    Assert.assertNotEquals(segments.get(0), segments.get(1));
+    Assertions.assertEquals(2, segments.size());
+    Assertions.assertNotEquals(segments.get(0), segments.get(1));
 
     for (DataSegment segment : segments) {
       System.out.println(segment.getDimensions());
@@ -1895,14 +1747,14 @@ public class IndexTaskTest extends IngestionTestBase
       final DataSegment segment = segments.get(i);
       final Set<String> dimensions = new HashSet<>(segment.getDimensions());
 
-      Assert.assertTrue(
-          StringUtils.format("Actual dimensions: %s", dimensions),
+      Assertions.assertTrue(
           dimensions.equals(Sets.newHashSet("column_2")) ||
-          dimensions.equals(Sets.newHashSet("dim", "column_2", "column_3"))
+          dimensions.equals(Sets.newHashSet("dim", "column_2", "column_3")),
+          StringUtils.format("Actual dimensions: %s", dimensions)
       );
 
-      Assert.assertEquals(Collections.singletonList("val"), segment.getMetrics());
-      Assert.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
+      Assertions.assertEquals(Collections.singletonList("val"), segment.getMetrics());
+      Assertions.assertEquals(Intervals.of("2014/P1D"), segment.getInterval());
     }
   }
 
@@ -1918,33 +1770,17 @@ public class IndexTaskTest extends IngestionTestBase
     final List<String> columns = Arrays.asList("ts", "", "");
     // report parse exception
     final IndexTuningConfig tuningConfig = createTuningConfig(2, null, null, null, false, true);
-    final IndexIngestionSpec ingestionSpec;
-    List<String> expectedMessages;
-    if (useInputFormatApi) {
-      ingestionSpec = createIngestionSpec(
-          DEFAULT_TIMESTAMP_SPEC,
-          DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0, null),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    } else {
-      ingestionSpec = createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          new CSVParseSpec(DEFAULT_TIMESTAMP_SPEC, DimensionsSpec.EMPTY, null, columns, true, 0),
-          null,
-          null,
-          tuningConfig,
-          false,
-          false
-      );
-    }
-
-    expectedMessages = ImmutableList.of(
+    final IndexIngestionSpec ingestionSpec = createIngestionSpec(
+        DEFAULT_TIMESTAMP_SPEC,
+        DimensionsSpec.EMPTY,
+        new CsvInputFormat(columns, null, null, true, 0, null),
+        null,
+        null,
+        tuningConfig,
+        false,
+        false
+    );
+    List<String> expectedMessages = ImmutableList.of(
         StringUtils.format(
             "Timestamp[null] is unparseable! Event: {column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1} (Path: %s, Record: 1, Line: 2)",
             tmpFile.toURI()
@@ -1956,7 +1792,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     TaskStatus status = runTask(indexTask).lhs;
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
 
     checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
@@ -1964,12 +1800,12 @@ public class IndexTaskTest extends IngestionTestBase
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
-    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
+    Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = ImmutableList.of(
         "{column_1=2014-01-01T00:00:10Z, column_2=a, column_3=1}"
     );
-    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+    Assertions.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
   @Test
@@ -1996,33 +1832,33 @@ public class IndexTaskTest extends IngestionTestBase
       final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
       final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-      Assert.assertEquals(5, segments.size());
+      Assertions.assertEquals(5, segments.size());
 
       final Interval expectedInterval = Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z");
       for (int j = 0; j < 5; j++) {
         final DataSegment segment = segments.get(j);
-        Assert.assertEquals(DATASOURCE, segment.getDataSource());
-        Assert.assertEquals(expectedInterval, segment.getInterval());
+        Assertions.assertEquals(DATASOURCE, segment.getDataSource());
+        Assertions.assertEquals(expectedInterval, segment.getInterval());
         if (i == 0) {
-          Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
-          Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
+          Assertions.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+          Assertions.assertEquals(j, segment.getShardSpec().getPartitionNum());
         } else {
           if (lockGranularity == LockGranularity.SEGMENT) {
-            Assert.assertEquals(NumberedOverwriteShardSpec.class, segment.getShardSpec().getClass());
+            Assertions.assertEquals(NumberedOverwriteShardSpec.class, segment.getShardSpec().getClass());
             final NumberedOverwriteShardSpec numberedOverwriteShardSpec =
                 (NumberedOverwriteShardSpec) segment.getShardSpec();
-            Assert.assertEquals(
+            Assertions.assertEquals(
                 j + PartitionIds.NON_ROOT_GEN_START_PARTITION_ID,
                 numberedOverwriteShardSpec.getPartitionNum()
             );
-            Assert.assertEquals(1, numberedOverwriteShardSpec.getMinorVersion());
-            Assert.assertEquals(5, numberedOverwriteShardSpec.getAtomicUpdateGroupSize());
-            Assert.assertEquals(0, numberedOverwriteShardSpec.getStartRootPartitionId());
-            Assert.assertEquals(5, numberedOverwriteShardSpec.getEndRootPartitionId());
+            Assertions.assertEquals(1, numberedOverwriteShardSpec.getMinorVersion());
+            Assertions.assertEquals(5, numberedOverwriteShardSpec.getAtomicUpdateGroupSize());
+            Assertions.assertEquals(0, numberedOverwriteShardSpec.getStartRootPartitionId());
+            Assertions.assertEquals(5, numberedOverwriteShardSpec.getEndRootPartitionId());
           } else {
-            Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+            Assertions.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
             final NumberedShardSpec numberedShardSpec = (NumberedShardSpec) segment.getShardSpec();
-            Assert.assertEquals(j, numberedShardSpec.getPartitionNum());
+            Assertions.assertEquals(j, numberedShardSpec.getPartitionNum());
           }
         }
       }
@@ -2054,17 +1890,17 @@ public class IndexTaskTest extends IngestionTestBase
       final DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
       final List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-      Assert.assertEquals(5, segments.size());
+      Assertions.assertEquals(5, segments.size());
 
       final Interval expectedInterval = i == 0
                                         ? Intervals.of("2014-01-01/2014-01-02")
                                         : Intervals.of("2014-01-01/2014-02-01");
       for (int j = 0; j < 5; j++) {
         final DataSegment segment = segments.get(j);
-        Assert.assertEquals(DATASOURCE, segment.getDataSource());
-        Assert.assertEquals(expectedInterval, segment.getInterval());
-        Assert.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
-        Assert.assertEquals(j, segment.getShardSpec().getPartitionNum());
+        Assertions.assertEquals(DATASOURCE, segment.getDataSource());
+        Assertions.assertEquals(expectedInterval, segment.getInterval());
+        Assertions.assertEquals(NumberedShardSpec.class, segment.getShardSpec().getClass());
+        Assertions.assertEquals(j, segment.getShardSpec().getPartitionNum());
       }
     }
   }
@@ -2081,11 +1917,11 @@ public class IndexTaskTest extends IngestionTestBase
         ),
         null
     );
-    Exception exception = Assert.assertThrows(
+    Exception exception = Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> task.isReady(createActionClient(task))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "partitionsSpec[org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec] is not supported",
         exception.getMessage()
     );
@@ -2118,11 +1954,11 @@ public class IndexTaskTest extends IngestionTestBase
     DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = getAllUsedSegments();
-    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    Assertions.assertEquals(1, usedSegmentsBeforeOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeOverwrite) {
-      Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+      Assertions.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
     }
 
     indexTask = createIndexTask(
@@ -2143,24 +1979,24 @@ public class IndexTaskTest extends IngestionTestBase
     segmentWithSchemas = runSuccessfulTask(indexTask);
     segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(3, segments.size());
+    Assertions.assertEquals(3, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = getAllUsedSegments();
-    Assert.assertEquals(4, usedSegmentsBeforeAfterOverwrite.size());
+    Assertions.assertEquals(4, usedSegmentsBeforeAfterOverwrite.size());
     int yearSegmentFound = 0;
     int minuteSegmentFound = 0;
     for (DataSegment segment : usedSegmentsBeforeAfterOverwrite) {
       // Used segments after overwrite will contain 1 old segment with YEAR segmentGranularity (from first ingestion)
       // and 3 new segments with MINUTE segmentGranularity (from second ingestion)
       if (usedSegmentsBeforeOverwrite.contains(segment)) {
-        Assert.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
+        Assertions.assertTrue(Granularities.YEAR.isAligned(segment.getInterval()));
         yearSegmentFound++;
       } else {
-        Assert.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
+        Assertions.assertTrue(Granularities.MINUTE.isAligned(segment.getInterval()));
         minuteSegmentFound++;
       }
     }
-    Assert.assertEquals(1, yearSegmentFound);
-    Assert.assertEquals(3, minuteSegmentFound);
+    Assertions.assertEquals(1, yearSegmentFound);
+    Assertions.assertEquals(3, minuteSegmentFound);
   }
 
   @Test
@@ -2191,11 +2027,11 @@ public class IndexTaskTest extends IngestionTestBase
     DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = getAllUsedSegments();
-    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    Assertions.assertEquals(1, usedSegmentsBeforeOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeOverwrite) {
-      Assert.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
+      Assertions.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
     }
 
     indexTask = createIndexTask(
@@ -2216,9 +2052,9 @@ public class IndexTaskTest extends IngestionTestBase
     segmentWithSchemas = runSuccessfulTask(indexTask);
     segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = getAllUsedSegments();
-    Assert.assertEquals(2, usedSegmentsBeforeAfterOverwrite.size());
+    Assertions.assertEquals(2, usedSegmentsBeforeAfterOverwrite.size());
     int segmentFound = 0;
     int tombstonesFound = 0;
     int hourSegmentFound = 0;
@@ -2230,18 +2066,18 @@ public class IndexTaskTest extends IngestionTestBase
         segmentFound++;
       }
       if (usedSegmentsBeforeOverwrite.contains(segment)) {
-        Assert.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
+        Assertions.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
         daySegmentFound++;
       } else {
-        Assert.assertTrue(Granularities.HOUR.isAligned(segment.getInterval()));
+        Assertions.assertTrue(Granularities.HOUR.isAligned(segment.getInterval()));
         hourSegmentFound++;
       }
 
     }
-    Assert.assertEquals(1, daySegmentFound);
-    Assert.assertEquals(1, hourSegmentFound);
-    Assert.assertEquals(2, segmentFound);
-    Assert.assertEquals(0, tombstonesFound);
+    Assertions.assertEquals(1, daySegmentFound);
+    Assertions.assertEquals(1, hourSegmentFound);
+    Assertions.assertEquals(2, segmentFound);
+    Assertions.assertEquals(0, tombstonesFound);
   }
 
   @Test
@@ -2272,11 +2108,11 @@ public class IndexTaskTest extends IngestionTestBase
     DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = getAllUsedSegments();
-    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    Assertions.assertEquals(1, usedSegmentsBeforeOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeOverwrite) {
-      Assert.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
+      Assertions.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
     }
 
     indexTask = createIndexTask(
@@ -2297,16 +2133,16 @@ public class IndexTaskTest extends IngestionTestBase
     segmentWithSchemas = runSuccessfulTask(indexTask);
     segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(24, segments.size());
+    Assertions.assertEquals(24, segments.size());
     Set<DataSegment> usedSegmentsBeforeAfterOverwrite = getAllUsedSegments();
-    Assert.assertEquals(24, usedSegmentsBeforeAfterOverwrite.size());
+    Assertions.assertEquals(24, usedSegmentsBeforeAfterOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeAfterOverwrite) {
       // Used segments after overwrite and drop will contain only the
       // 24 new segments with HOUR segmentGranularity (from second ingestion)
       if (usedSegmentsBeforeOverwrite.contains(segment)) {
-        Assert.fail();
+        Assertions.fail();
       } else {
-        Assert.assertTrue(Granularities.HOUR.isAligned(segment.getInterval()));
+        Assertions.assertTrue(Granularities.HOUR.isAligned(segment.getInterval()));
       }
     }
   }
@@ -2338,16 +2174,16 @@ public class IndexTaskTest extends IngestionTestBase
     DataSegmentsWithSchemas segmentWithSchemas = runSuccessfulTask(indexTask);
     List<DataSegment> segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
     Set<DataSegment> usedSegmentsBeforeOverwrite = getAllUsedSegments();
-    Assert.assertEquals(1, usedSegmentsBeforeOverwrite.size());
+    Assertions.assertEquals(1, usedSegmentsBeforeOverwrite.size());
     for (DataSegment segment : usedSegmentsBeforeOverwrite) {
-      Assert.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
+      Assertions.assertTrue(Granularities.DAY.isAligned(segment.getInterval()));
     }
 
     // create new data but with an ingestion interval appropriate to filter it all out so that only tombstones
     // are created:
-    tmpDir = temporaryFolder.newFolder();
+    tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.getRoot().toPath(), "input");
     try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");
@@ -2372,15 +2208,15 @@ public class IndexTaskTest extends IngestionTestBase
     segmentWithSchemas = runSuccessfulTask(indexTask);
     segments = new ArrayList<>(segmentWithSchemas.getSegments());
 
-    Assert.assertEquals(1, segments.size()); // one tombstone
-    Assert.assertTrue(segments.get(0).isTombstone());
+    Assertions.assertEquals(1, segments.size()); // one tombstone
+    Assertions.assertTrue(segments.get(0).isTombstone());
   }
 
 
   @Test
   public void testErrorWhenDropFlagTrueAndOverwriteFalse()
   {
-    Exception exception = Assert.assertThrows(
+    Exception exception = Assertions.assertThrows(
         IAE.class,
         () -> createIndexTask(
             createDefaultIngestionSpec(
@@ -2396,7 +2232,7 @@ public class IndexTaskTest extends IngestionTestBase
             null
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot simultaneously replace and append to existing segments."
         + " Either dropExisting or appendToExisting should be set to false",
         exception.getMessage()
@@ -2462,16 +2298,13 @@ public class IndexTaskTest extends IngestionTestBase
   public static void checkTaskStatusErrorMsgForParseExceptionsExceeded(TaskStatus status)
   {
     // full stacktrace will be too long and make tests brittle (e.g. if line # changes), just match the main message
-    MatcherAssert.assertThat(
-        status.getErrorMsg(),
-        CoreMatchers.containsString("Max parse exceptions")
-    );
+    Assertions.assertTrue(status.getErrorMsg().contains("Max parse exceptions"));
   }
 
   private DataSegmentsWithSchemas runSuccessfulTask(IndexTask task) throws Exception
   {
     Pair<TaskStatus, DataSegmentsWithSchemas> pair = runTask(task);
-    Assert.assertEquals(pair.lhs.toString(), TaskState.SUCCESS, pair.lhs.getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, pair.lhs.getStatusCode(), pair.lhs.toString());
     return pair.rhs;
   }
 
@@ -2580,35 +2413,23 @@ public class IndexTaskTest extends IngestionTestBase
       Boolean dropExisting
   )
   {
-    if (useInputFormatApi) {
-      return createIngestionSpec(
-          DEFAULT_TIMESTAMP_SPEC,
-          DEFAULT_DIMENSIONS_SPEC,
-          DEFAULT_INPUT_FORMAT,
-          null,
-          granularitySpec,
-          tuningConfig,
-          appendToExisting,
-          dropExisting
-      );
-    } else {
-      return createIngestionSpec(
-          jsonMapper,
-          tmpDir,
-          DEFAULT_PARSE_SPEC,
-          null,
-          granularitySpec,
-          tuningConfig,
-          appendToExisting,
-          dropExisting
-      );
-    }
+    return createIngestionSpec(
+        DEFAULT_TIMESTAMP_SPEC,
+        DEFAULT_DIMENSIONS_SPEC,
+        DEFAULT_INPUT_FORMAT,
+        null,
+        granularitySpec,
+        tuningConfig,
+        appendToExisting,
+        dropExisting
+    );
   }
 
   static IndexIngestionSpec createIngestionSpec(
-      ObjectMapper objectMapper,
       File baseDir,
-      @Nullable ParseSpec parseSpec,
+      TimestampSpec timestampSpec,
+      DimensionsSpec dimensionsSpec,
+      InputFormat inputFormat,
       @Nullable TransformSpec transformSpec,
       @Nullable GranularitySpec granularitySpec,
       IndexTuningConfig tuningConfig,
@@ -2616,18 +2437,28 @@ public class IndexTaskTest extends IngestionTestBase
       Boolean dropExisting
   )
   {
-    return createIngestionSpec(
-        objectMapper,
-        baseDir,
-        parseSpec,
-        null,
-        null,
-        null,
-        transformSpec,
-        granularitySpec,
-        tuningConfig,
-        appendToExisting,
-        dropExisting
+    return new IndexIngestionSpec(
+        DataSchema.builder()
+                  .withDataSource(DATASOURCE)
+                  .withTimestamp(timestampSpec)
+                  .withDimensions(dimensionsSpec)
+                  .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                  .withGranularity(
+                      granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.MINUTE,
+                          Collections.singletonList(Intervals.of("2014/2015"))
+                      )
+                  )
+                  .withTransform(transformSpec)
+                  .build(),
+        new IndexIOConfig(
+            new LocalInputSource(baseDir, "druid*"),
+            inputFormat,
+            appendToExisting,
+            dropExisting
+        ),
+        tuningConfig
     );
   }
 
@@ -2643,9 +2474,7 @@ public class IndexTaskTest extends IngestionTestBase
   )
   {
     return createIngestionSpec(
-        jsonMapper,
         tmpDir,
-        null,
         timestampSpec,
         dimensionsSpec,
         inputFormat,
@@ -2657,81 +2486,13 @@ public class IndexTaskTest extends IngestionTestBase
     );
   }
 
-  private static IndexIngestionSpec createIngestionSpec(
-      ObjectMapper objectMapper,
-      File baseDir,
-      @Nullable ParseSpec parseSpec,
-      @Nullable TimestampSpec timestampSpec,
-      @Nullable DimensionsSpec dimensionsSpec,
-      @Nullable InputFormat inputFormat,
-      @Nullable TransformSpec transformSpec,
-      @Nullable GranularitySpec granularitySpec,
-      IndexTuningConfig tuningConfig,
-      boolean appendToExisting,
-      Boolean dropExisting
-  )
-  {
-    if (inputFormat != null) {
-      Preconditions.checkArgument(parseSpec == null, "Can't use parseSpec");
-      return new IndexIngestionSpec(
-          DataSchema.builder()
-                    .withDataSource(DATASOURCE)
-                    .withTimestamp(Preconditions.checkNotNull(timestampSpec, "timestampSpec"))
-                    .withDimensions(Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec"))
-                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
-                    .withGranularity(
-                        granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
-                            Granularities.DAY,
-                            Granularities.MINUTE,
-                            Collections.singletonList(Intervals.of("2014/2015"))
-                        )
-                    )
-                    .withTransform(transformSpec)
-                    .build(),
-          new IndexIOConfig(
-              new LocalInputSource(baseDir, "druid*"),
-              inputFormat,
-              appendToExisting,
-              dropExisting
-          ),
-          tuningConfig
-      );
-    } else {
-      parseSpec = parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC;
-      return new IndexIngestionSpec(
-          DataSchema.builder()
-                    .withDataSource(DATASOURCE)
-                    .withTimestamp(parseSpec.getTimestampSpec())
-                    .withDimensions(parseSpec.getDimensionsSpec())
-                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
-                    .withGranularity(
-                        granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
-                            Granularities.DAY,
-                            Granularities.MINUTE,
-                            Collections.singletonList(Intervals.of("2014/2015"))
-                        )
-                    )
-                    .withTransform(transformSpec)
-                    .withObjectMapper(objectMapper)
-                    .build(),
-          new IndexIOConfig(
-              new LocalInputSource(baseDir, "druid*"),
-              createInputFormatFromParseSpec(parseSpec),
-              appendToExisting,
-              dropExisting
-          ),
-          tuningConfig
-      );
-    }
-  }
-
   @Test
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(IndexTuningConfig.class)
                   .withPrefabValues(
                       IndexSpec.class,
-                      IndexSpec.DEFAULT,
+                      IndexSpec.getDefault(),
                       IndexSpec.builder().withDimensionCompression(CompressionStrategy.ZSTD).build()
                   )
                   .usingGetClass()
@@ -2744,9 +2505,12 @@ public class IndexTaskTest extends IngestionTestBase
       Map<String, AggregatorFactory> aggregatorFactoryMap
   )
   {
-    Assert.assertEquals(segmentWithSchemas.getSegments().size(), segmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size());
-    Assert.assertEquals(1, segmentWithSchemas.getSegmentSchemaMapping().getSchemaFingerprintToPayloadMap().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(
+        segmentWithSchemas.getSegments().size(),
+        segmentWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size()
+    );
+    Assertions.assertEquals(1, segmentWithSchemas.getSegmentSchemaMapping().getSchemaFingerprintToPayloadMap().size());
+    Assertions.assertEquals(
         actualRowSignature,
         segmentWithSchemas.getSegmentSchemaMapping()
                           .getSchemaFingerprintToPayloadMap()
@@ -2756,7 +2520,7 @@ public class IndexTaskTest extends IngestionTestBase
                           .get()
                           .getRowSignature()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         aggregatorFactoryMap,
         segmentWithSchemas.getSegmentSchemaMapping()
                           .getSchemaFingerprintToPayloadMap()

@@ -21,12 +21,11 @@ package org.apache.druid.java.util.metrics.cgroups;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.HashMap;
@@ -34,19 +33,17 @@ import java.util.Map;
 
 public class MemoryTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File memoryDir = new File(
@@ -64,12 +61,10 @@ public class MemoryTest
   @Test
   public void testWontCrash()
   {
-    final Memory memory = new Memory((cgroup) -> {
-      throw new RuntimeException("shouldContinue");
-    });
+    final Memory memory = new Memory(TestUtils.exceptionThrowingDiscoverer());
     final Memory.MemoryStat stat = memory.snapshot("memory.usage_in_bytes", "memory.limit_in_bytes");
-    Assert.assertEquals(ImmutableMap.of(), stat.getNumaMemoryStats());
-    Assert.assertEquals(ImmutableMap.of(), stat.getMemoryStats());
+    Assertions.assertEquals(ImmutableMap.of(), stat.getNumaMemoryStats());
+    Assertions.assertEquals(ImmutableMap.of(), stat.getMemoryStats());
   }
 
   @Test
@@ -78,8 +73,8 @@ public class MemoryTest
     final Memory memory = new Memory(discoverer);
     final Memory.MemoryStat stat = memory.snapshot("memory.usage_in_bytes", "memory.limit_in_bytes");
 
-    Assert.assertEquals(5000000, stat.getUsage());
-    Assert.assertEquals(8000000, stat.getLimit());
+    Assertions.assertEquals(5000000, stat.getUsage());
+    Assertions.assertEquals(8000000, stat.getLimit());
 
     final Map<String, Long> expectedMemoryStats = new HashMap<>();
     expectedMemoryStats.put("inactive_anon", 0L);
@@ -118,7 +113,7 @@ public class MemoryTest
     expectedMemoryStats.put("pgpgout", 5975L);
     expectedMemoryStats.put("total_pgmajfault", 120L);
     expectedMemoryStats.put("total_writeback", 0L);
-    Assert.assertEquals(expectedMemoryStats, stat.getMemoryStats());
+    Assertions.assertEquals(expectedMemoryStats, stat.getMemoryStats());
 
     final Map<Long, Map<String, Long>> expectedMemoryNumaStats = new HashMap<>();
     final Map<String, Long> expectedNumaNode0Stats = new HashMap<>();
@@ -131,6 +126,6 @@ public class MemoryTest
     expectedNumaNode0Stats.put("hierarchical_anon", 432L);
     expectedNumaNode0Stats.put("hierarchical_unevictable", 0L);
     expectedMemoryNumaStats.put(0L, expectedNumaNode0Stats);
-    Assert.assertEquals(expectedMemoryNumaStats, stat.getNumaMemoryStats());
+    Assertions.assertEquals(expectedMemoryNumaStats, stat.getNumaMemoryStats());
   }
 }

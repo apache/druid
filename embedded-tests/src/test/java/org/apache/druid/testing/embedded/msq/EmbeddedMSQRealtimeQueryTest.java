@@ -26,6 +26,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -35,9 +36,6 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -145,11 +143,11 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
     // Wait for it to be loaded.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
-                      .hasDimension(DruidMetrics.DATASOURCE, Collections.singletonList(dataSource)),
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(totalRows)
     );
     broker.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/schemaCache/refresh/count")
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
   }
@@ -186,6 +184,19 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         Collections.singletonList(new Object[]{totalRows}),
         payload.getResults().getResults()
     );
+
+    // Verify that for the first stage, realtime queries were issued and no files were read (all data is realtime).
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(payload, 0);
+
+    // 2 realtime tasks running on an Indexer => 1 query that gets data from both.
+    Assertions.assertEquals(1, channelSums.queries());
+    Assertions.assertEquals(1, channelSums.totalQueries());
+    Assertions.assertEquals(0, channelSums.files());
+    Assertions.assertEquals(0, channelSums.totalFiles());
+
+    // We get 1 row back with the COUNT from both tasks.
+    Assertions.assertEquals(1, channelSums.rows());
+    Assertions.assertEquals(0, channelSums.bytes()); // Realtime queries do not report bytes
   }
 
   @Test
@@ -227,16 +238,15 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
                        + "  LIMIT 1\n"
                        + ")";
 
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            RuntimeException.class,
-            () -> msqApis.runDartSql(sql, dataSource, dataSource)
-        ),
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
-                + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
-            )
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> msqApis.runDartSql(sql, dataSource, dataSource)
+    );
+    Assertions.assertNotNull(exception.getMessage());
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
+            + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
         )
     );
   }
@@ -275,11 +285,12 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         StringUtils.format("Task[%s] has unexpected status", taskId)
     );
 
+    Assertions.assertNotNull(currentStatus.getStatus().getErrorMsg());
     Assertions.assertTrue(
-        CoreMatchers.containsString(
+        currentStatus.getStatus().getErrorMsg().contains(
             "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
             + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
-        ).matches(currentStatus.getStatus().getErrorMsg())
+        )
     );
   }
 
@@ -369,7 +380,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
 
   @Test
   @Timeout(60)
-  public void test_selectJoinwithLookup_dart()
+  public void test_selectJoinWithLookup_dart()
   {
     final String sql = StringUtils.format(
         "SELECT \n"
@@ -426,6 +437,19 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         ),
         payload.getResults().getResults()
     );
+
+    // Verify that for the first stage, realtime queries were issued and no files were read (all data is realtime).
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(payload, 0);
+
+    // 2 realtime tasks running on an Indexer => 1 query that gets data from both.
+    Assertions.assertEquals(1, channelSums.queries());
+    Assertions.assertEquals(1, channelSums.totalQueries());
+    Assertions.assertEquals(0, channelSums.files());
+    Assertions.assertEquals(0, channelSums.totalFiles());
+
+    // We get 3 rows back.
+    Assertions.assertEquals(3, channelSums.rows());
+    Assertions.assertEquals(0, channelSums.bytes()); // Realtime queries do not report bytes
   }
 
   @Test
@@ -481,7 +505,6 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         payload.getResults().getResults()
     );
   }
-
 
   @Test
   @Timeout(60)

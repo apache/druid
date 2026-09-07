@@ -21,10 +21,10 @@ package org.apache.druid.frame.processor;
 
 import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -33,13 +33,13 @@ public class ReturnOrAwaitTest
   @Test
   public void testToString()
   {
-    Assert.assertEquals("await channels=any{0, 1}", ReturnOrAwait.awaitAny(IntSet.of(0, 1)).toString());
-    Assert.assertEquals("await channels=all{0, 1}", ReturnOrAwait.awaitAll(2).toString());
-    Assert.assertEquals("return=xyzzy", ReturnOrAwait.returnObject("xyzzy").toString());
+    Assertions.assertEquals("await channels=any{0, 1}", ReturnOrAwait.awaitAny(IntSet.of(0, 1)).toString());
+    Assertions.assertEquals("await channels=all{0, 1}", ReturnOrAwait.awaitAll(2).toString());
+    Assertions.assertEquals("return=xyzzy", ReturnOrAwait.returnObject("xyzzy").toString());
 
     MatcherAssert.assertThat(
         ReturnOrAwait.awaitAllFutures(Collections.singletonList(Futures.immediateFuture(1))).toString(),
-        CoreMatchers.startsWith("await futures=[com.google.")
+        Matchers.startsWith("await futures=[com.google.")
     );
   }
 }

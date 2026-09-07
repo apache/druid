@@ -29,21 +29,34 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>35.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <iceberg.core.version>1.6.1</iceberg.core.version>
-    <awssdk.version>2.28.28</awssdk.version>
+    <hive-storage-api.version>2.8.1</hive-storage-api.version>
     <hive.version>3.1.3</hive.version>
   </properties>
   <dependencies>
     <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <version>${hadoop.compile.version}</version>
       <scope>compile</scope>
       <exclusions>
         <exclusion>
@@ -231,6 +244,10 @@
           <groupId>org.xerial.snappy</groupId>
           <artifactId>snappy-java</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.google.re2j</groupId>
+          <artifactId>re2j</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -255,6 +272,10 @@
           <groupId>io.airlift</groupId>
           <artifactId>aircompressor</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.apache.avro</groupId>
+          <artifactId>avro</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -278,22 +299,69 @@
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>glue</artifactId>
-      <version>${awssdk.version}</version>
+      <version>${aws.sdk.v2.version}</version>
+    </dependency>
+    <!-- Iceberg AWS still loads the Apache 4 client reflectively. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>apache-client</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>runtime</scope>
     </dependency>
     <!-- software/amazon/awssdk/services/sts/model/Tag needed for GlueCatalog initialize -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>sts</artifactId>
-      <version>${awssdk.version}</version>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>provided</scope>
     </dependency>
 
     <!-- software/amazon/awssdk/services/s3/model/ObjectCannedACL needed for GlueCatalog initialize -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
-      <version>${awssdk.version}</version>
+      <version>${aws.sdk.v2.version}</version>
     </dependency>
 
+    <!-- software/amazon/awssdk/services/kms/model/EncryptionAlgorithmSpec needed for AwsProperties in iceberg-aws 1.10.0 -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>kms</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+    </dependency>
+
+    <!-- Iceberg GCSFileIO for reading metadata from GCS -->
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-gcp</artifactId>
+      <version>${iceberg.core.version}</version>
+    </dependency>
+    <!-- Required: iceberg-gcp declares google-cloud-storage as compileOnly (not transitive) -->
+    <dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-storage</artifactId>
+      <version>${com.google.cloud.storage.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-api</artifactId>
+      <version>1.84.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-context</artifactId>
+      <version>1.84.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.woodstox</groupId>
+      <artifactId>woodstox-core</artifactId>
+      <version>7.2.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.woodstox</groupId>
+      <artifactId>stax2-api</artifactId>
+      <version>4.3.0</version>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.hive</groupId>
@@ -581,6 +649,14 @@
       </exclusions>
     </dependency>
 
+    <!-- Hive 3.1.3 calls APIs that were removed from Hive Storage API 4.x. -->
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-storage-api</artifactId>
+      <version>${hive-storage-api.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
@@ -611,6 +687,12 @@
           <groupId>org.jetbrains.kotlin</groupId>
           <artifactId>kotlin-stdlib-common</artifactId>
         </exclusion>
+        <!-- Hadoop 3.5.0 introduced jakarta.ws.rs-api (JAX-RS 2.x),
+             which conflicts with Jersey 1.x's UriBuilderImpl. -->
+        <exclusion>
+          <groupId>jakarta.ws.rs</groupId>
+          <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -618,7 +700,6 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-core</artifactId>
       <scope>runtime</scope>
-      <version>${hadoop.compile.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -693,8 +774,8 @@
       <scope>runtime</scope>
       <exclusions>
         <exclusion>
-          <groupId>com.amazonaws</groupId>
-          <artifactId>aws-java-sdk-bundle</artifactId>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>bundle</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -739,15 +820,10 @@
     <dependency>
       <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-column</artifactId>
-      <version>1.13.1</version>
+      <version>${parquet.version}</version>
       <scope>test</scope>
     </dependency>
 
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>nl.jqno.equalsverifier</groupId>
       <artifactId>equalsverifier</artifactId>
@@ -778,6 +854,14 @@
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:glue</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:s3</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:sts</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>software.amazon.awssdk:kms</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-gcp</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>com.google.cloud:google-cloud-storage</ignoredUnusedDeclaredDependency>
+              <!-- Transitive dependencies explicitly added to propagate aligned versions -->
+              <ignoredUnusedDeclaredDependency>io.grpc:grpc-api</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>io.grpc:grpc-context</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>com.fasterxml.woodstox:woodstox-core</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.codehaus.woodstox:stax2-api</ignoredUnusedDeclaredDependency>
             </ignoredUnusedDeclaredDependencies>
           </configuration>
         </plugin>

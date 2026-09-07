@@ -29,7 +29,8 @@ import org.apache.druid.server.coordinator.duty.CompactSegments;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "newestSegmentFirst", value = NewestSegmentFirstPolicy.class),
-    @JsonSubTypes.Type(name = "fixedIntervalOrder", value = FixedIntervalOrderPolicy.class)
+    @JsonSubTypes.Type(name = "fixedIntervalOrder", value = FixedIntervalOrderPolicy.class),
+    @JsonSubTypes.Type(name = "mostFragmentedFirst", value = MostFragmentedIntervalFirstPolicy.class)
 })
 public interface CompactionCandidateSearchPolicy
 {
@@ -37,8 +38,8 @@ public interface CompactionCandidateSearchPolicy
    * Compares between two compaction candidates. Used to determine the
    * order in which segments and intervals should be picked for compaction.
    *
-   * @return A positive value if {@code candidateA} should be picked first, a
-   * negative value if {@code candidateB} should be picked first or zero if the
+   * @return A negative value if {@code candidateA} should be picked first, a
+   * positive value if {@code candidateB} should be picked first or zero if the
    * order does not matter.
    */
   int compareCandidates(CompactionCandidate candidateA, CompactionCandidate candidateB);
@@ -47,10 +48,12 @@ public interface CompactionCandidateSearchPolicy
    * Checks if the given {@link CompactionCandidate} is eligible for compaction
    * in the current iteration. A policy may implement this method to skip
    * compacting intervals or segments that do not fulfil some required criteria.
+   *
+   * @return {@link Eligibility#FULL} only if eligible.
    */
-  boolean isEligibleForCompaction(
+  Eligibility checkEligibilityForCompaction(
       CompactionCandidate candidate,
-      CompactionStatus currentCompactionStatus,
       CompactionTaskStatus latestTaskStatus
   );
+
 }

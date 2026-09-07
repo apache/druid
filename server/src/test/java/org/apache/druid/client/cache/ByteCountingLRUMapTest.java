@@ -19,9 +19,9 @@
 
 package org.apache.druid.client.cache;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ public class ByteCountingLRUMapTest
 {
   private ByteCountingLRUMap map;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     map = new ByteCountingLRUMap(100);
@@ -52,22 +52,22 @@ public class ByteCountingLRUMapTest
     assertMapValues(0, 0, 0);
     map.put(tenKey, eightNineNineVal);
     assertMapValues(1, 99, 0);
-    Assert.assertEquals(ByteBuffer.wrap(eightNineNineVal), ByteBuffer.wrap(map.get(tenKey)));
+    Assertions.assertEquals(ByteBuffer.wrap(eightNineNineVal), ByteBuffer.wrap(map.get(tenKey)));
 
     map.put(oneByte, oneByte.array());
     assertMapValues(1, 2, 1);
-    Assert.assertNull(map.get(tenKey));
-    Assert.assertEquals(oneByte, ByteBuffer.wrap(map.get(oneByte)));
+    Assertions.assertNull(map.get(tenKey));
+    Assertions.assertEquals(oneByte, ByteBuffer.wrap(map.get(oneByte)));
 
     map.put(tenKey, eightyEightVal);
     assertMapValues(2, 100, 1);
-    Assert.assertEquals(oneByte, ByteBuffer.wrap(map.get(oneByte)));
-    Assert.assertEquals(ByteBuffer.wrap(eightyEightVal), ByteBuffer.wrap(map.get(tenKey)));
+    Assertions.assertEquals(oneByte, ByteBuffer.wrap(map.get(oneByte)));
+    Assertions.assertEquals(ByteBuffer.wrap(eightyEightVal), ByteBuffer.wrap(map.get(tenKey)));
 
     map.put(twoByte, oneByte.array());
     assertMapValues(1, 3, 3);
-    Assert.assertEquals(null, map.get(tenKey));
-    Assert.assertEquals(oneByte, ByteBuffer.wrap(map.get(twoByte)));
+    Assertions.assertEquals(null, map.get(tenKey));
+    Assertions.assertEquals(oneByte, ByteBuffer.wrap(map.get(twoByte)));
 
     Iterator<ByteBuffer> it = map.keySet().iterator();
     List<ByteBuffer> toRemove = new ArrayList<>();
@@ -101,8 +101,8 @@ public class ByteCountingLRUMapTest
 
   private void assertMapValues(final int size, final int numBytes, final int evictionCount)
   {
-    Assert.assertEquals(size, map.size());
-    Assert.assertEquals(numBytes, map.getNumBytes());
-    Assert.assertEquals(evictionCount, map.getEvictionCount());
+    Assertions.assertEquals(size, map.size());
+    Assertions.assertEquals(numBytes, map.getNumBytes());
+    Assertions.assertEquals(evictionCount, map.getEvictionCount());
   }
 }

@@ -30,6 +30,7 @@ public interface TestDataSet
   String TIMESTAMP_COLUMN = "t";
 
   MapBasedTestDataset NUMFOO = new NumFoo();
+  MapBasedTestDataset LARRY = new Larry();
   MapBasedTestDataset BROADCAST = new NumFoo("broadcast");
   MapBasedTestDataset RESTRICTED_BROADCAST = new NumFoo("restrictedBroadcastDatasource_m1_is_6");
 

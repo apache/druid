@@ -30,12 +30,12 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,10 +49,10 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
   private FrameReader frameReader;
   private FrameFile frameFile;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     final CursorFactory cursorFactory = new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
@@ -68,7 +68,7 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
     frameFile = FrameFile.open(file, null, FrameFile.Flag.DELETE_ON_CLOSE);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     frameFile.close();
@@ -77,28 +77,28 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
   @Test
   public void test_fullFile()
   {
-    final ReadableFileFrameChannel channel = new ReadableFileFrameChannel(frameFile);
-    Assert.assertTrue(channel.isEntireFile());
+    final ReadableFileFrameChannel channel = new ReadableFileFrameChannel(frameFile, null);
+    Assertions.assertTrue(channel.isEntireFile());
 
     FrameTestUtil.assertRowsEqual(
         Sequences.simple(allRows),
         FrameTestUtil.readRowsFromFrameChannel(channel, frameReader)
     );
 
-    Assert.assertFalse(channel.isEntireFile());
+    Assertions.assertFalse(channel.isEntireFile());
   }
 
   @Test
   public void test_partialFile()
   {
-    final ReadableFileFrameChannel channel = new ReadableFileFrameChannel(frameFile, 1, 2);
-    Assert.assertFalse(channel.isEntireFile());
+    final ReadableFileFrameChannel channel = new ReadableFileFrameChannel(frameFile, 1, 2, null);
+    Assertions.assertFalse(channel.isEntireFile());
 
     FrameTestUtil.assertRowsEqual(
         Sequences.simple(allRows).skip(ROWS_PER_FRAME).limit(ROWS_PER_FRAME),
         FrameTestUtil.readRowsFromFrameChannel(channel, frameReader)
     );
 
-    Assert.assertFalse(channel.isEntireFile());
+    Assertions.assertFalse(channel.isEntireFile());
   }
 }

@@ -20,16 +20,11 @@
 package org.apache.druid.java.util.common;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NonnullPairTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testEquals()
   {
@@ -39,17 +34,19 @@ public class NonnullPairTest
   @Test
   public void testConstructorWithNull()
   {
-    expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("lhs");
-    //noinspection ResultOfObjectAllocationIgnored
-    new NonnullPair<>(null, "nullTest");
+    final NullPointerException e = Assertions.assertThrows(
+        NullPointerException.class,
+        //noinspection ResultOfObjectAllocationIgnored
+        () -> new NonnullPair<>(null, "nullTest")
+    );
+    Assertions.assertTrue(e.getMessage().contains("lhs"));
   }
 
   @Test
   public void testGets()
   {
     final NonnullPair<Integer, Integer> pair = new NonnullPair<>(20, 30);
-    Assert.assertEquals(20, pair.lhs.intValue());
-    Assert.assertEquals(30, pair.rhs.intValue());
+    Assertions.assertEquals(20, pair.lhs.intValue());
+    Assertions.assertEquals(30, pair.rhs.intValue());
   }
 }

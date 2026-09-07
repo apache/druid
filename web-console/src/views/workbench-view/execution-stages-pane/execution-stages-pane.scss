@@ -144,6 +144,24 @@
     width: 80px;
   }
 
+  .rows-label {
+    display: inline-block;
+    width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+  }
+
+  .storage-label {
+    display: inline-block;
+    width: 55px;
+  }
+
+  .storage-used {
+    opacity: 0.7;
+  }
+
   .timing-value {
     position: relative;
     height: 100%;

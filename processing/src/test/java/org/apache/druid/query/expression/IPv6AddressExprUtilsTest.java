@@ -20,8 +20,8 @@
 package org.apache.druid.query.expression;
 
 import inet.ipaddr.ipv6.IPv6Address;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -56,14 +56,14 @@ public class IPv6AddressExprUtilsTest
   @Test
   public void testIsValidIPv6AddressNull()
   {
-    Assert.assertFalse(IPv6AddressExprUtils.isValidIPv6Address(null));
+    Assertions.assertFalse(IPv6AddressExprUtils.isValidIPv6Address(null));
   }
  
   @Test
   public void testIsValidIPv6Address()
   {
     for (String address : VALID_IPV6_ADDRESSES) {
-      Assert.assertTrue(getErrMsg(address), IPv6AddressExprUtils.isValidIPv6Address(address));
+      Assertions.assertTrue(IPv6AddressExprUtils.isValidIPv6Address(address), getErrMsg(address));
     }
   }
  
@@ -71,21 +71,21 @@ public class IPv6AddressExprUtilsTest
   public void testIsValidIPv6AddressNotIpAddress()
   {
     for (String address : INVALID_IPV6_ADDRESSES) {
-      Assert.assertFalse(getErrMsg(address), IPv6AddressExprUtils.isValidIPv6Address(address));
+      Assertions.assertFalse(IPv6AddressExprUtils.isValidIPv6Address(address), getErrMsg(address));
     }
   }
  
   @Test
   public void testIsValidSubnetNull()
   {
-    Assert.assertFalse(IPv6AddressExprUtils.isValidIPv6Subnet(null));
+    Assertions.assertFalse(IPv6AddressExprUtils.isValidIPv6Subnet(null));
   }
  
   @Test
   public void testIsValidIPv6SubnetValid()
   {
     for (String address : VALID_IPV6_SUBNETS) {
-      Assert.assertTrue(getErrMsg(address), IPv6AddressExprUtils.isValidIPv6Subnet(address));
+      Assertions.assertTrue(IPv6AddressExprUtils.isValidIPv6Subnet(address), getErrMsg(address));
     }
   }
  
@@ -93,20 +93,20 @@ public class IPv6AddressExprUtilsTest
   public void testIsValidIPv6SubnetInvalid()
   {
     for (String address : INVALID_IPV6_SUBNETS) {
-      Assert.assertFalse(getErrMsg(address), IPv6AddressExprUtils.isValidIPv6Subnet(address));
+      Assertions.assertFalse(IPv6AddressExprUtils.isValidIPv6Subnet(address), getErrMsg(address));
     }
   }
 
   @Test
   public void testParseNullString()
   {
-    Assert.assertNull(IPv6AddressExprUtils.parse((String) null));
+    Assertions.assertNull(IPv6AddressExprUtils.parse((String) null));
   }
   
   @Test
   public void testParseNullBytes()
   {
-    Assert.assertNull(IPv6AddressExprUtils.parse((byte[]) null));
+    Assertions.assertNull(IPv6AddressExprUtils.parse((byte[]) null));
   }
  
   @Test
@@ -115,8 +115,8 @@ public class IPv6AddressExprUtilsTest
     for (String string : VALID_IPV6_ADDRESSES) {
       String errMsg = getErrMsg(string);
       IPv6Address address = IPv6AddressExprUtils.parse(string);
-      Assert.assertNotNull(errMsg, address);
-      Assert.assertEquals(errMsg, string, address.toString());
+      Assertions.assertNotNull(address, errMsg);
+      Assertions.assertEquals(string, address.toString(), errMsg);
     }
   }
  
@@ -124,7 +124,7 @@ public class IPv6AddressExprUtilsTest
   public void testParseNotIpV6Addresses()
   {
     for (String address : INVALID_IPV6_ADDRESSES) {
-      Assert.assertNull(getErrMsg(address), IPv6AddressExprUtils.parse(address));
+      Assertions.assertNull(IPv6AddressExprUtils.parse(address), getErrMsg(address));
     }
   }
  

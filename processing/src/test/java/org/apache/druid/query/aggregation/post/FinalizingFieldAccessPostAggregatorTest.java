@@ -23,6 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DelimitedInputFormat;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -35,6 +40,8 @@ import org.apache.druid.query.aggregation.CountAggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -43,11 +50,11 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -59,10 +66,10 @@ import java.util.Map;
 
 public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final TemporaryFolder tempFoler = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFoler = TemporaryFolderExtension.testCaseScoped();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testComputeWithoutFinalizing()
   {
     String aggName = "rows";
@@ -75,7 +82,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     metricValues.put(aggName, agg.get());
 
     FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", aggName);
-    Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> postAgg.compute(metricValues));
   }
 
   @Test
@@ -93,12 +100,12 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     );
 
     // Check that the class matches exactly; see https://github.com/apache/druid/issues/6063
-    Assert.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
+    Assertions.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
 
     Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, "test");
 
-    Assert.assertEquals(new Long(3L), postAgg.compute(metricValues));
+    Assertions.assertEquals(3L, postAgg.compute(metricValues));
     EasyMock.verify(aggFactory);
   }
 
@@ -124,7 +131,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
 
     ArithmeticPostAggregator arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggsList);
 
-    Assert.assertEquals(new Double(9.0f), arithmeticPostAggregator.compute(metricValues));
+    Assertions.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
     EasyMock.verify();
   }
 
@@ -134,13 +141,13 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     String aggName = "billy";
     AggregatorFactory aggFactory = EasyMock.createMock(AggregatorFactory.class);
     EasyMock.expect(aggFactory.finalizeComputation("test_val1"))
-            .andReturn(new Long(10L))
+            .andReturn(10L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val2"))
-            .andReturn(new Long(21))
+            .andReturn(21L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val3"))
-            .andReturn(new Long(3))
+            .andReturn(3L)
             .times(1);
     EasyMock.expect(aggFactory.finalizeComputation("test_val4"))
             .andReturn(null)
@@ -163,7 +170,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val4")));
 
     Collections.sort(computedValues, postAgg.getComparator());
-    Assert.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[0]));
+    Assertions.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[0]));
     EasyMock.verify();
   }
 
@@ -189,7 +196,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val4")));
     Collections.sort(computedValues, postAgg.getComparator());
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new Object[]{null, "test_val1", "test_val2", "test_val4"},
         computedValues.toArray(new Object[0])
     );
@@ -208,47 +215,41 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
         )
     ) {
 
-      String metricSpec = "[{\"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"market\"},"
-                          + "{\"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"quality\"}]";
+      List<AggregatorFactory> metricSpec = List.of(
+          new HyperUniquesAggregatorFactory("hll_market", "market"),
+          new HyperUniquesAggregatorFactory("hll_quality", "quality")
+      );
 
-      String parseSpec = "{"
-                         + "\"type\" : \"string\","
-                         + "\"parseSpec\" : {"
-                         + "    \"format\" : \"tsv\","
-                         + "    \"timestampSpec\" : {"
-                         + "        \"column\" : \"timestamp\","
-                         + "        \"format\" : \"auto\""
-                         + "},"
-                         + "    \"dimensionsSpec\" : {"
-                         + "        \"dimensions\": [],"
-                         + "        \"dimensionExclusions\" : [],"
-                         + "        \"spatialDimensions\" : []"
-                         + "    },"
-                         + "    \"columns\": [\"timestamp\", \"market\", \"quality\", \"placement\", \"placementish\", \"index\"]"
-                         + "  }"
-                         + "}";
-
-      String query = "{"
-                     + "\"queryType\": \"groupBy\","
-                     + "\"dataSource\": \"test_datasource\","
-                     + "\"granularity\": \"ALL\","
-                     + "\"dimensions\": [],"
-                     + "\"aggregations\": ["
-                     + "  { \"type\": \"hyperUnique\", \"name\": \"hll_market\", \"fieldName\": \"hll_market\" },"
-                     + "  { \"type\": \"hyperUnique\", \"name\": \"hll_quality\", \"fieldName\": \"hll_quality\" }"
-                     + "],"
-                     + "\"postAggregations\": ["
-                     + "  { \"type\": \"arithmetic\", \"name\": \"uniq_add\", \"fn\": \"+\", \"fields\":["
-                     + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_market\", \"fieldName\": \"hll_market\" },"
-                     + "    { \"type\": \"finalizingFieldAccess\", \"name\": \"uniq_quality\", \"fieldName\": \"hll_quality\" }]"
-                     + "  }"
-                     + "],"
-                     + "\"intervals\": [ \"1970/2050\" ]"
-                     + "}";
+      GroupByQuery query = GroupByQuery.builder()
+                                       .setDataSource("test_datasource")
+                                       .setGranularity(Granularities.ALL)
+                                       .setInterval("1970/2050")
+                                       .setAggregatorSpecs(
+                                           new HyperUniquesAggregatorFactory("hll_market", "hll_market"),
+                                           new HyperUniquesAggregatorFactory("hll_quality", "hll_quality")
+                                       )
+                                       .setPostAggregatorSpecs(
+                                           new ArithmeticPostAggregator(
+                                               "uniq_add",
+                                               "+",
+                                               List.of(
+                                                   new FinalizingFieldAccessPostAggregator("uniq_market", "hll_market"),
+                                                   new FinalizingFieldAccessPostAggregator("uniq_quality", "hll_quality")
+                                               )
+                                           )
+                                       )
+                                       .build();
 
       Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("druid.sample.tsv").getFile()),
-          parseSpec,
+          new InputRowSchema(
+              TimestampSpec.DEFAULT,
+              DimensionsSpec.EMPTY,
+              ColumnsFilter.all()
+          ),
+          DelimitedInputFormat.forColumns(
+              List.of("timestamp", "market", "quality", "placement", "placementish", "index")
+          ),
           metricSpec,
           0,
           Granularities.NONE,
@@ -257,9 +258,9 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
       );
 
       final ResultRow resultRow = seq.toList().get(0);
-      Assert.assertEquals("hll_market", 3.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
-      Assert.assertEquals("hll_quality", 9.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
-      Assert.assertEquals("uniq_add", 12.0, ((Number) resultRow.get(2)).floatValue(), 0.1);
+      Assertions.assertEquals(3.0, ((Number) resultRow.get(0)).floatValue(), 0.1, "hll_market");
+      Assertions.assertEquals(9.0, ((Number) resultRow.get(1)).floatValue(), 0.1, "hll_quality");
+      Assertions.assertEquals(12.0, ((Number) resultRow.get(2)).floatValue(), 0.1, "uniq_add");
     }
   }
 
@@ -271,7 +272,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
         ImmutableMap.of("bar", new CountAggregatorFactory("bar"))
     );
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         original,
         objectMapper.readValue(objectMapper.writeValueAsString(decorated), PostAggregator.class)
     );
@@ -295,7 +296,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

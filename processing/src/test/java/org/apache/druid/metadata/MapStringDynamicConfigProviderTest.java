@@ -21,8 +21,8 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class MapStringDynamicConfigProviderTest
 {
@@ -38,7 +38,7 @@ public class MapStringDynamicConfigProviderTest
         DynamicConfigProvider.class
     );
 
-    Assert.assertEquals(1, recreated.getConfig().size());
-    Assert.assertEquals("v", recreated.getConfig().get("k"));
+    Assertions.assertEquals(1, recreated.getConfig().size());
+    Assertions.assertEquals("v", recreated.getConfig().get("k"));
   }
 }

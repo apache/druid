@@ -48,6 +48,8 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.virtual.ExpressionPlan;
+import org.apache.druid.segment.virtual.ExpressionPlanner;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVectorSelectors;
 
@@ -72,7 +74,8 @@ public class ExpressionFilter implements Filter
   @Override
   public boolean canVectorizeMatcher(ColumnInspector inspector)
   {
-    return expr.get().canVectorize(inspector);
+    ExpressionPlan plan = ExpressionPlanner.plan(inspector, expr.get());
+    return plan.is(ExpressionPlan.Trait.VECTORIZABLE);
   }
 
   @Override
@@ -172,6 +175,9 @@ public class ExpressionFilter implements Filter
               }
 
               return Arrays.stream(result).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
+            case ARRAY:
+            case COMPLEX:
+              break;
           }
         }
         return eval.asBoolean();
@@ -189,6 +195,9 @@ public class ExpressionFilter implements Filter
   @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
+    if (bindingDetails.get().isNonDeterministic()) {
+      return null;
+    }
     return expr.get().asBitmapColumnIndex(selector);
   }
 

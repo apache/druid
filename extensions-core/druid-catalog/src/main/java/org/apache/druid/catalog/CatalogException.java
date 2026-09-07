@@ -20,6 +20,8 @@
 package org.apache.druid.catalog;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.ws.rs.core.Response;
@@ -41,7 +43,7 @@ public class CatalogException extends Exception
    */
   public static class NotFoundException extends CatalogException
   {
-    public NotFoundException(String msg, Object...args)
+    public NotFoundException(String msg, Object... args)
     {
       super(NOT_FOUND_ERROR, Response.Status.NOT_FOUND, msg, args);
     }
@@ -55,7 +57,7 @@ public class CatalogException extends Exception
    */
   public static class DuplicateKeyException extends CatalogException
   {
-    public DuplicateKeyException(String msg, Object...args)
+    public DuplicateKeyException(String msg, Object... args)
     {
       super(DUPLICATE_ERROR, Response.Status.BAD_REQUEST, msg, args);
     }
@@ -68,7 +70,7 @@ public class CatalogException extends Exception
       final String errorCode,
       final Response.Status responseCode,
       final String message,
-      final Object...args
+      final Object... args
   )
   {
     super(StringUtils.format(message, args));
@@ -76,7 +78,7 @@ public class CatalogException extends Exception
     this.responseCode = responseCode;
   }
 
-  public static CatalogException badRequest(String msg, Object...args)
+  public static CatalogException badRequest(String msg, Object... args)
   {
     return new CatalogException(
         CatalogException.INVALID_ERROR,
@@ -84,6 +86,19 @@ public class CatalogException extends Exception
         msg,
         args
     );
+  }
+
+  /**
+   * Converts a table validation failure into a bad request: {@link IAE} (the traditional catalog validation
+   * exception) and invalid-input {@link DruidException}s become bad requests; a {@link DruidException} of any other
+   * category is a genuine server error, and is rethrown rather than being misreported as a problem with the request.
+   */
+  public static CatalogException validationError(RuntimeException e)
+  {
+    if (e instanceof DruidException && ((DruidException) e).getCategory() != DruidException.Category.INVALID_INPUT) {
+      throw e;
+    }
+    return badRequest(e.getMessage());
   }
 
   public Response toResponse()

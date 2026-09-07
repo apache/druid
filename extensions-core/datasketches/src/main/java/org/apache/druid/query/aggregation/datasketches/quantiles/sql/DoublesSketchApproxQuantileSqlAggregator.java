@@ -40,6 +40,7 @@ import org.apache.druid.sql.calcite.aggregation.Aggregations;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -98,7 +99,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
       return null;
     }
 
-    final float probability = ((Number) RexLiteral.value(probabilityArg)).floatValue();
+    final float probability = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(probabilityArg), NAME, "probability").floatValue();
     final int k;
 
     if (aggregateCall.getArgList().size() >= 3) {
@@ -109,7 +110,7 @@ public class DoublesSketchApproxQuantileSqlAggregator implements SqlAggregator
         return null;
       }
 
-      k = ((Number) RexLiteral.value(resolutionArg)).intValue();
+      k = DruidSqlParserUtils.getNumericLiteral(RexLiteral.value(resolutionArg), NAME, "k").intValue();
     } else {
       k = DoublesSketchAggregatorFactory.DEFAULT_K;
     }

@@ -25,7 +25,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Provider;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
@@ -41,6 +40,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.ServiceAnnouncementState;
 
 import java.lang.annotation.Annotation;
 import java.util.Collections;
@@ -120,9 +120,6 @@ public abstract class ServerRunnable extends GuiceRunnable
     private DruidNodeAnnouncer announcer;
 
     @Inject
-    private ServiceAnnouncer legacyAnnouncer;
-
-    @Inject
     private Lifecycle lifecycle;
 
     @Inject
@@ -135,21 +132,16 @@ public abstract class ServerRunnable extends GuiceRunnable
     @Inject
     private Map<NodeRole, Set<Class<? extends DruidService>>> serviceClasses;
 
-    private final boolean useLegacyAnnouncer;
+    @Inject
+    private ServiceAnnouncementState serviceAnnouncementState;
 
     public static DiscoverySideEffectsProvider create()
     {
-      return new DiscoverySideEffectsProvider(false);
+      return new DiscoverySideEffectsProvider();
     }
 
-    public static DiscoverySideEffectsProvider withLegacyAnnouncer()
+    private DiscoverySideEffectsProvider()
     {
-      return new DiscoverySideEffectsProvider(true);
-    }
-
-    private DiscoverySideEffectsProvider(final boolean useLegacyAnnouncer)
-    {
-      this.useLegacyAnnouncer = useLegacyAnnouncer;
     }
 
     @Override
@@ -177,21 +169,13 @@ public abstract class ServerRunnable extends GuiceRunnable
               public void start()
               {
                 announcer.announce(discoveryDruidNode);
-
-                if (useLegacyAnnouncer) {
-                  legacyAnnouncer.announce(discoveryDruidNode.getDruidNode());
-                }
+                serviceAnnouncementState.markReady();
               }
 
               @Override
               public void stop()
               {
-                // Reverse order vs. start().
-
-                if (useLegacyAnnouncer) {
-                  legacyAnnouncer.unannounce(discoveryDruidNode.getDruidNode());
-                }
-
+                serviceAnnouncementState.markNotReady();
                 announcer.unannounce(discoveryDruidNode);
               }
             },

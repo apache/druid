@@ -15,8 +15,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -33,7 +32,6 @@ where w1.cityName='New York';
         "resultFormat" : "compactedList",
         "columns" : [ "regionName" ],
         "context" : {
-          "scanSignature" : "[{\"name\":\"regionName\",\"type\":\"STRING\"}]",
           "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false
@@ -78,8 +76,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_1",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -96,7 +93,6 @@ where w1.cityName='New York';
         "resultFormat" : "compactedList",
         "columns" : [ "cityName", "countryName" ],
         "context" : {
-          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"}]",
           "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false
@@ -144,15 +140,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_2",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
-      "filter" : {
-        "type" : "equals",
-        "column" : "cityName",
-        "matchValueType" : "STRING",
-        "matchValue" : "New York"
-      },
-      "filterFields" : [ "cityName" ]
+      "dataSource" : "wikipedia"
     }, {
       "type" : "stage",
       "stage" : 0
@@ -212,7 +200,6 @@ where w1.cityName='New York';
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"_j0.countryName\",\"type\":\"STRING\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -276,8 +263,7 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -294,7 +280,6 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
         "resultFormat" : "compactedList",
         "columns" : [ "cityName", "regionName" ],
         "context" : {
-          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}]",
           "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false
@@ -342,8 +327,7 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
     "id" : "<taskId>_1",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -360,7 +344,6 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
         "resultFormat" : "compactedList",
         "columns" : [ "regionName" ],
         "context" : {
-          "scanSignature" : "[{\"name\":\"regionName\",\"type\":\"STRING\"}]",
           "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false
@@ -405,8 +388,7 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
     "id" : "<taskId>_2",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -423,7 +405,6 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
         "resultFormat" : "compactedList",
         "columns" : [ "cityName", "countryName" ],
         "context" : {
-          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"}]",
           "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false
@@ -532,7 +513,6 @@ LogicalJoin:[[sort_merge inheritPath:[0]]]
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"_j0.countryName\",\"type\":\"STRING\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__
@@ -592,8 +572,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_0",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -610,7 +589,6 @@ where w1.cityName='New York';
         "resultFormat" : "compactedList",
         "columns" : [ "regionName" ],
         "context" : {
-          "scanSignature" : "[{\"name\":\"regionName\",\"type\":\"STRING\"}]",
           "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false
@@ -655,8 +633,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_1",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     }, {
       "type" : "stage",
       "stage" : 0
@@ -687,7 +664,6 @@ where w1.cityName='New York';
         "resultFormat" : "compactedList",
         "columns" : [ "cityName" ],
         "context" : {
-          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"}]",
           "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false
@@ -732,8 +708,7 @@ where w1.cityName='New York';
     "id" : "<taskId>_2",
     "input" : [ {
       "type" : "table",
-      "dataSource" : "wikipedia",
-      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      "dataSource" : "wikipedia"
     } ],
     "processor" : {
       "type" : "scan",
@@ -750,7 +725,6 @@ where w1.cityName='New York';
         "resultFormat" : "compactedList",
         "columns" : [ "cityName", "countryName" ],
         "context" : {
-          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"}]",
           "sqlInsertSegmentGranularity" : null,
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false
@@ -872,7 +846,6 @@ where w1.cityName='New York';
           "finalize" : true,
           "maxParseExceptions" : 0,
           "rowBasedFrameType" : 19,
-          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"_j0.countryName\",\"type\":\"STRING\"}]",
           "sqlQueryId" : __SQL_QUERY_ID__
           "sqlStringifyArrays" : false,
           "startTime" : __TIMESTAMP__

@@ -56,7 +56,7 @@ public class DurableStorageMSQDestination implements MSQDestination
   @Override
   public ShuffleSpecFactory getShuffleSpecFactory(int targetSize)
   {
-    return ShuffleSpecFactories.getGlobalSortWithTargetSize(targetSize);
+    return ShuffleSpecFactories.globalSortWithTargetSize(targetSize);
   }
 
   @Override

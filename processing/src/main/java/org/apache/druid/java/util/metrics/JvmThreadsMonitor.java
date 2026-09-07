@@ -19,32 +19,25 @@
 
 package org.apache.druid.java.util.metrics;
 
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
-import java.util.Map;
 
 public class JvmThreadsMonitor extends FeedDefiningMonitor
 {
-  private final Map<String, String[]> dimensions;
-
   private int lastLiveThreads = 0;
   private long lastStartedThreads = 0;
 
-  public JvmThreadsMonitor(Map<String, String[]> dimensions)
+  public JvmThreadsMonitor()
   {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(DEFAULT_METRICS_FEED);
   }
 
-  public JvmThreadsMonitor(Map<String, String[]> dimensions, String feed)
+  public JvmThreadsMonitor(String feed)
   {
     super(feed);
-    Preconditions.checkNotNull(dimensions, "dimensions");
-    this.dimensions = ImmutableMap.copyOf(dimensions);
   }
 
   @Override
@@ -53,7 +46,6 @@ public class JvmThreadsMonitor extends FeedDefiningMonitor
     ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
 
     final ServiceMetricEvent.Builder builder = builder();
-    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
     // Because between next two calls on ThreadMXBean new threads can be started we can observe some inconsistency
     // in counters values and finished counter could be even negative

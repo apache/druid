@@ -32,16 +32,18 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
+ * @deprecated segment lock is deprecated, NumberedOverwriteShardSpec should be only used for backward compatibility.
+ * <p>
  * This shardSpec is used only for the segments created by overwriting tasks with segment lock enabled.
  * When the segment lock is used, there is a concept of atomic update group which is a set of segments atomically
  * becoming queryable together in Brokers. It is a similar concept to the core partition set (explained
  * {@link NumberedShardSpec}), but different in a sense that there is only one core partition set per time chunk
  * while there could be multiple atomic update groups in one time chunk.
- *
+ * <p>
  * The atomic update group has the root partition range and the minor version to determine the visibility between
  * atomic update groups; the group of the highest minor version in the same root partition range becomes queryable
  * when they have the same major version ({@link DataSegment#getVersion()}).
- *
+ * <p>
  * Note that this shardSpec is used only when you overwrite existing segments with segment lock enabled.
  * If the task doesn't overwrite segments, it will use NumberedShardSpec instead even when segment lock is used.
  * Similar to NumberedShardSpec, the size of the atomic update group is determined when the task publishes segments
@@ -51,6 +53,7 @@ import java.util.Objects;
  *
  * @see AtomicUpdateGroup
  */
+@Deprecated
 public class NumberedOverwriteShardSpec implements OverwriteShardSpec
 {
   private final int partitionId;

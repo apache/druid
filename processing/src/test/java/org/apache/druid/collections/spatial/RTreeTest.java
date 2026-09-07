@@ -19,13 +19,13 @@
 
 package org.apache.druid.collections.spatial;
 
-import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -38,7 +38,7 @@ public class RTreeTest
   private RTree tree;
   private RTree roaringtree;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     BitmapFactory bf = new ConciseBitmapFactory();
@@ -53,22 +53,22 @@ public class RTreeTest
   {
     float[] elem = new float[]{5, 5};
     tree.insert(elem, 1);
-    Assert.assertTrue(Arrays.equals(elem, tree.getRoot().getMinCoordinates()));
-    Assert.assertTrue(Arrays.equals(elem, tree.getRoot().getMaxCoordinates()));
+    Assertions.assertTrue(Arrays.equals(elem, tree.getRoot().getMinCoordinates()));
+    Assertions.assertTrue(Arrays.equals(elem, tree.getRoot().getMaxCoordinates()));
 
     tree.insert(new float[]{6, 7}, 2);
     tree.insert(new float[]{1, 3}, 3);
     tree.insert(new float[]{10, 4}, 4);
     tree.insert(new float[]{8, 2}, 5);
 
-    Assert.assertEquals(tree.getRoot().getChildren().size(), 5);
+    Assertions.assertEquals(tree.getRoot().getChildren().size(), 5);
 
     float[] expectedMin = new float[]{1, 2};
     float[] expectedMax = new float[]{10, 7};
 
-    Assert.assertTrue(Arrays.equals(expectedMin, tree.getRoot().getMinCoordinates()));
-    Assert.assertTrue(Arrays.equals(expectedMax, tree.getRoot().getMaxCoordinates()));
-    Assert.assertEquals(tree.getRoot().getArea(), 45.0d);
+    Assertions.assertTrue(Arrays.equals(expectedMin, tree.getRoot().getMinCoordinates()));
+    Assertions.assertTrue(Arrays.equals(expectedMax, tree.getRoot().getMaxCoordinates()));
+    Assertions.assertEquals(tree.getRoot().getArea(), 45.0d);
   }
 
   @Test
@@ -78,7 +78,7 @@ public class RTreeTest
     tree.insert(new float[]{1, 1}, 1);
     tree.insert(new float[]{1, 1}, 1);
 
-    Assert.assertEquals(tree.getRoot().getChildren().size(), 3);
+    Assertions.assertEquals(tree.getRoot().getChildren().size(), 3);
   }
 
   @Test
@@ -88,7 +88,7 @@ public class RTreeTest
     roaringtree.insert(new float[]{1, 1}, 1);
     roaringtree.insert(new float[]{1, 1}, 1);
 
-    Assert.assertEquals(roaringtree.getRoot().getChildren().size(), 3);
+    Assertions.assertEquals(roaringtree.getRoot().getChildren().size(), 3);
   }
 
 
@@ -100,7 +100,7 @@ public class RTreeTest
       tree.insert(new float[]{rand.nextFloat(), rand.nextFloat()}, i);
     }
 
-    Assert.assertTrue(tree.getRoot().getChildren().size() > 1);
+    Assertions.assertTrue(tree.getRoot().getChildren().size() > 1);
   }
 
   @Test
@@ -111,7 +111,7 @@ public class RTreeTest
       roaringtree.insert(new float[]{rand.nextFloat(), rand.nextFloat()}, i);
     }
 
-    Assert.assertTrue(roaringtree.getRoot().getChildren().size() > 1);
+    Assertions.assertTrue(roaringtree.getRoot().getChildren().size() > 1);
   }
 
 }

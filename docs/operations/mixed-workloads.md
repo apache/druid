@@ -23,7 +23,7 @@ sidebar_label: Mixed workloads
   ~ under the License.
   -->
 
-If you frequently run concurrent, heterogeneous workloads on your Apache Druid cluster, configure Druid to properly allocate cluster resources to optimize your overall query performance.
+If you frequently run concurrent, heterogeneous workloads on your Apache&circledR; Druid cluster, configure Druid to properly allocate cluster resources to optimize your overall query performance.
 
 Each Druid query consumes a certain amount of cluster resources, such as processing threads, memory buffers for intermediate query results, and HTTP threads for communicating between Brokers and data servers.
 "Heavy" queries that return large results are more resource-intensive than short-running, "light" queries.
@@ -190,6 +190,26 @@ druid.broker.select.tier=highestPriority
 ```
 
 See [Broker configuration](../configuration/index.md#broker-process-configs) for more details on these properties.
+
+#### Restrict Broker visibility to specific tiers
+
+By default, a Broker watches all Historical tiers for segment availability. Use `druid.broker.segment.watchedTiers` to restrict a Broker to only see segments on specific tiers. This provides strict query isolation - segments on unwatched tiers are invisible to the Broker and cannot be queried by it.
+
+Example config for a Broker that only queries Historicals in a tier named "hot":
+```
+druid.broker.segment.watchedTiers=["hot"]
+```
+
+Example config for a Broker that queries multiple tiers:
+```
+druid.broker.segment.watchedTiers=["hot","_default_tier"]
+```
+
+Note the difference between `druid.broker.select.tier` and `druid.broker.segment.watchedTiers`:
+- `druid.broker.select.tier` controls **preference** among visible tiers (which tier to query first)
+- `druid.broker.segment.watchedTiers` controls **visibility** (which tiers the Broker can see at all)
+
+If a segment does not exist on the tiers watched by a Broker, it will not be aware of that segment and queries for that data will return partial or no results.
 
 #### Configure query routing
 

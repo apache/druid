@@ -25,16 +25,16 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class GroupByQueryEngineTest
 {
   private static final String DIM = "d0";
   ColumnSelectorFactory factory;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     factory = EasyMock.createMock(ColumnSelectorFactory.class);
@@ -51,7 +51,7 @@ public class GroupByQueryEngineTest
                                                                   .setDictionaryValuesUnique(true);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
-    Assert.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
+    Assertions.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     EasyMock.verify(factory);
   }
 
@@ -66,7 +66,7 @@ public class GroupByQueryEngineTest
                                                                   .setDictionaryValuesUnique(true);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
-    Assert.assertFalse(GroupByQueryEngine.canPushDownLimit(factory, DIM));
+    Assertions.assertFalse(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     EasyMock.verify(factory);
   }
 
@@ -81,7 +81,7 @@ public class GroupByQueryEngineTest
                                                                   .setDictionaryValuesUnique(false);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
-    Assert.assertFalse(GroupByQueryEngine.canPushDownLimit(factory, DIM));
+    Assertions.assertFalse(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     EasyMock.verify(factory);
   }
 
@@ -96,7 +96,7 @@ public class GroupByQueryEngineTest
                                                                   .setDictionaryValuesUnique(false);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
-    Assert.assertFalse(GroupByQueryEngine.canPushDownLimit(factory, DIM));
+    Assertions.assertFalse(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     EasyMock.verify(factory);
   }
 
@@ -111,11 +111,11 @@ public class GroupByQueryEngineTest
                                                                       .setDictionaryValuesUnique(false);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).anyTimes();
     EasyMock.replay(factory);
-    Assert.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
+    Assertions.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     capabilities.setType(ColumnType.DOUBLE);
-    Assert.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
+    Assertions.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     capabilities.setType(ColumnType.FLOAT);
-    Assert.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
+    Assertions.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     EasyMock.verify(factory);
   }
 
@@ -130,7 +130,7 @@ public class GroupByQueryEngineTest
                                                                       .setDictionaryValuesUnique(false);
     EasyMock.expect(factory.getColumnCapabilities(DIM)).andReturn(capabilities).once();
     EasyMock.replay(factory);
-    Assert.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
+    Assertions.assertTrue(GroupByQueryEngine.canPushDownLimit(factory, DIM));
     EasyMock.verify(factory);
   }
 }

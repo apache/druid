@@ -20,7 +20,8 @@
 package org.apache.druid.error;
 
 
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class InvalidInputTest
 {
@@ -30,10 +31,10 @@ public class InvalidInputTest
     InvalidInput.conditionalException(true, "This should not throw");
   }
 
-  @Test(expected = DruidException.class)
+  @Test
   public void testConditionalThrow()
   {
-    InvalidInput.conditionalException(false, "This should throw");
+    Assertions.assertThrows(DruidException.class, () -> InvalidInput.conditionalException(false, "This should throw"));
   }
 
   @Test
@@ -42,9 +43,9 @@ public class InvalidInputTest
     InvalidInput.conditionalException(true, new RuntimeException(), "This should not throw");
   }
 
-  @Test(expected = DruidException.class)
+  @Test
   public void testConditionalThrowWithCause()
   {
-    InvalidInput.conditionalException(false, new RuntimeException(), "This should throw");
+    Assertions.assertThrows(DruidException.class, () -> InvalidInput.conditionalException(false, new RuntimeException(), "This should throw"));
   }
 }

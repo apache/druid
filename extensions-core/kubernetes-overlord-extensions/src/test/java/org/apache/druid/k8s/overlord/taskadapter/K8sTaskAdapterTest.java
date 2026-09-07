@@ -31,6 +31,7 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
@@ -52,9 +53,11 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.KubernetesExecutor;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
@@ -63,7 +66,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -78,10 +80,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnableKubernetesMockClient(crud = true)
 class K8sTaskAdapterTest
@@ -121,7 +119,7 @@ class K8sTaskAdapterTest
   void testAddingLabelsAndAnnotations() throws IOException
   {
     final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
-    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace")
     {
       @SuppressWarnings("unchecked")
       @Override
@@ -138,12 +136,12 @@ class K8sTaskAdapterTest
       }
     };
 
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .withOverlordNamespace("test_different")
-        .withAnnotations(ImmutableMap.of("annotation_key", "annotation_value"))
-        .withLabels(ImmutableMap.of("label_key", "label_value"))
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .withOverlordNamespace("test_different")
+                                                                              .withAnnotations(ImmutableMap.of("annotation_key", "annotation_value"))
+                                                                              .withLabels(ImmutableMap.of("label_key", "label_value"))
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -157,27 +155,111 @@ class K8sTaskAdapterTest
     Task task = K8sTestUtils.getTask();
     Job jobFromSpec = adapter.fromTask(task);
 
-    assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
-    assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
-    assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));
-    assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
+    Assertions.assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
+    Assertions.assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
+    Assertions.assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));
+    Assertions.assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
 
-    assertTrue(jobFromSpec.getMetadata().getLabels().containsKey("label_key"));
-    assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.LABEL_KEY));
+    Assertions.assertTrue(jobFromSpec.getMetadata().getLabels().containsKey("label_key"));
+    Assertions.assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.LABEL_KEY));
 
     // SingleContainerTaskAdapter will not store OVERLORD_NAMESPACE_KEY.
-    assertFalse(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
-    assertFalse(jobFromSpec.getMetadata().getLabels().containsKey("annotation_key"));
+    Assertions.assertFalse(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
+    Assertions.assertFalse(jobFromSpec.getMetadata().getLabels().containsKey("annotation_key"));
+  }
+
+  @Test
+  void testFromTaskUsesOverlordPodSourceClient() throws IOException
+  {
+    final Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName("overlord-pod")
+        .withNamespace("overlord-namespace")
+        .endMetadata()
+        .withSpec(K8sTestUtils.getDummyPodSpec())
+        .build();
+    client.pods().inNamespace("overlord-namespace").resource(pod).create();
+    final KubernetesClientApi podSourceClient = new TestKubernetesClient(client, "overlord-namespace");
+    final KubernetesClientApi targetClient = new TestKubernetesClient(client, "remote-task-namespace")
+    {
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor)
+      {
+        throw new AssertionError("fromTask should not read the Overlord pod from the target cluster client");
+      }
+    };
+    final KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("remote-task-namespace")
+                                                                              .build();
+    final K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        podSourceClient,
+        "overlord-namespace",
+        targetClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    )
+    {
+      @Override
+      protected String getCurrentPodName()
+      {
+        return "overlord-pod";
+      }
+    };
+
+    final Job job = adapter.fromTask(K8sTestUtils.getTask());
+
+    Assertions.assertNotNull(job);
+    Assertions.assertNotNull(job.getSpec().getTemplate().getSpec());
+  }
+
+  @Test
+  void testFromTaskWithMissingOverlordPodFailsWithActionableMessage()
+  {
+    final KubernetesClientApi podSourceClient = new TestKubernetesClient(client, "overlord-namespace")
+    {
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor)
+      {
+        return null;
+      }
+    };
+    final KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("remote-task-namespace")
+                                                                              .build();
+    final K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        podSourceClient,
+        "overlord-namespace",
+        new TestKubernetesClient(client, "remote-task-namespace"),
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
+
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> adapter.fromTask(K8sTestUtils.getTask())
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Could not load Overlord pod"));
+    Assertions.assertTrue(exception.getMessage().contains("overlord-namespace"));
+    Assertions.assertTrue(exception.getMessage().contains("customTemplateAdapter"));
   }
 
   @Test
   public void serializingAndDeserializingATask() throws IOException
   {
     // given a task create a k8s job
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .build();
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "test");
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -195,24 +277,24 @@ class K8sTaskAdapterTest
     );
     client.batch().v1().jobs().inNamespace("test").create(jobFromSpec);
     JobList jobList = client.batch().v1().jobs().inNamespace("test").list();
-    assertEquals(1, jobList.getItems().size());
+    Assertions.assertEquals(1, jobList.getItems().size());
 
     // assert that the size of the pod is 1g
     Job myJob = Iterables.getOnlyElement(jobList.getItems());
     Quantity containerMemory = myJob.getSpec().getTemplate().getSpec().getContainers().get(0).getResources().getLimits().get("memory");
     String amount = containerMemory.getAmount();
-    assertEquals(2400000000L, Long.valueOf(amount));
-    assertTrue(StringUtils.isBlank(containerMemory.getFormat())); // no units specified we talk in bytes
+    Assertions.assertEquals(2400000000L, Long.valueOf(amount));
+    Assertions.assertTrue(StringUtils.isBlank(containerMemory.getFormat())); // no units specified we talk in bytes
 
     Task taskFromJob = adapter.toTask(Iterables.getOnlyElement(jobList.getItems()));
-    assertEquals(task, taskFromJob);
+    Assertions.assertEquals(task, taskFromJob);
   }
 
   @Test
   public void fromTask_dontSetTaskJSON() throws IOException
   {
     final PodSpec podSpec = K8sTestUtils.getDummyPodSpec();
-    TestKubernetesClient testClient = new TestKubernetesClient(client)
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "test")
     {
       @SuppressWarnings("unchecked")
       @Override
@@ -229,9 +311,9 @@ class K8sTaskAdapterTest
       }
     };
 
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -276,10 +358,10 @@ class K8sTaskAdapterTest
   @Test
   public void toTask_useTaskPayloadManager() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .build();
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "test");
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
     Task taskInTaskPayloadManager = K8sTestUtils.getTask();
     TaskLogs mockTestLogs = Mockito.mock(TaskLogs.class);
     Mockito.when(mockTestLogs.streamTaskPayload("ID")).thenReturn(com.google.common.base.Optional.of(
@@ -302,14 +384,14 @@ class K8sTaskAdapterTest
         .endMetadata().editSpec().addToContainers(new ContainerBuilder().withName("main").build()).endSpec().endTemplate().endSpec().build();
 
     Task taskFromJob = adapter.toTask(job);
-    assertEquals(taskInTaskPayloadManager, taskFromJob);
+    Assertions.assertEquals(taskInTaskPayloadManager, taskFromJob);
   }
 
   @Test
   public void getTaskId()
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "test");
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -324,14 +406,14 @@ class K8sTaskAdapterTest
         .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
-    assertEquals(new K8sTaskId(null, "ID"), adapter.getTaskId(job));
+    Assertions.assertEquals(new K8sTaskId(null, "ID"), adapter.getTaskId(job));
   }
 
   @Test
   public void getTaskId_noAnnotations()
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "test");
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -346,14 +428,14 @@ class K8sTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
+    Assertions.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
 
   @Test
   public void getTaskId_missingTaskIdAnnotation()
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder().build();
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "test");
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder().build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -369,19 +451,19 @@ class K8sTaskAdapterTest
         .endMetadata().endTemplate().endSpec()
         .editMetadata().withName("job").endMetadata().build();
 
-    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
+    Assertions.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
   }
   @Test
   void testGrabbingTheLastXmxValueFromACommand()
   {
     List<String> commands = Lists.newArrayList("-Xmx2g", "-Xms1g", "-Xmx4g");
     Optional<Long> value = K8sTaskAdapter.getJavaOptValueBytes("-Xmx", commands);
-    assertEquals(HumanReadableBytes.parse("4g"), value.get());
+    Assertions.assertEquals(HumanReadableBytes.parse("4g"), value.get());
 
     // one without Xmx
     commands = new ArrayList<>();
     Optional<Long> result = K8sTaskAdapter.getJavaOptValueBytes("-Xmx", commands);
-    assertFalse(result.isPresent());
+    Assertions.assertFalse(result.isPresent());
   }
 
   @Test
@@ -395,7 +477,7 @@ class K8sTaskAdapterTest
         new File("/tmp"),
         0
     );
-    assertEquals(expected, K8sTaskAdapter.getContainerMemory(context));
+    Assertions.assertEquals(expected, K8sTaskAdapter.getContainerMemory(context));
 
     context = new PeonCommandContext(
         new ArrayList<>(),
@@ -405,7 +487,7 @@ class K8sTaskAdapterTest
         0
     );
     expected = (long) ((HumanReadableBytes.parse("512m") + HumanReadableBytes.parse("1g")) * 1.2);
-    assertEquals(expected, K8sTaskAdapter.getContainerMemory(context));
+    Assertions.assertEquals(expected, K8sTaskAdapter.getContainerMemory(context));
   }
 
   @Test
@@ -451,16 +533,16 @@ class K8sTaskAdapterTest
   @Test
   void testAddingMonitors() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "test");
     PeonCommandContext context = new PeonCommandContext(
         new ArrayList<>(),
         new ArrayList<>(),
         new File("/tmp/"),
         0
     );
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
     K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -475,16 +557,16 @@ class K8sTaskAdapterTest
     Container container = new ContainerBuilder()
         .withName("container").build();
     adapter.addEnvironmentVariables(container, context, task.toString());
-    assertFalse(
+    Assertions.assertFalse(
         container.getEnv().stream().anyMatch(x -> x.getName().equals("druid_monitoring_monitors")),
         "Didn't match, envs: " + Joiner.on(',').join(container.getEnv())
     );
 
     // we have an override, but nothing in the overlord
     config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
-        .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
-        .build();
+                                             .withNamespace("test")
+                                             .withPeonMonitors(ImmutableList.of("org.apache.druid.java.util.metrics.JvmMonitor"))
+                                             .build();
     adapter = new SingleContainerTaskAdapter(
         testClient,
         config,
@@ -500,7 +582,7 @@ class K8sTaskAdapterTest
                           .filter(x -> x.getName().equals("druid_monitoring_monitors"))
                           .findFirst()
                           .get();
-    assertEquals(jsonMapper.writeValueAsString(config.getPeonMonitors()), env.getValue());
+    Assertions.assertEquals(jsonMapper.writeValueAsString(config.getPeonMonitors()), env.getValue());
 
     // we override what is in the overlord
     adapter = new SingleContainerTaskAdapter(
@@ -524,17 +606,17 @@ class K8sTaskAdapterTest
                    .filter(x -> x.getName().equals("druid_monitoring_monitors"))
                    .findFirst()
                    .get();
-    assertEquals(jsonMapper.writeValueAsString(config.getPeonMonitors()), env.getValue());
+    Assertions.assertEquals(jsonMapper.writeValueAsString(config.getPeonMonitors()), env.getValue());
   }
 
   @Test
   void testEphemeralStorageIsRespected() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("namespace")
-        .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("namespace")
+                                                                              .build();
 
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -580,11 +662,11 @@ class K8sTaskAdapterTest
   @Test
   void testProbesRemoved() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "test");
     Pod pod = K8sTestUtils.fileToResource("probesPodSpec.yaml", Pod.class);
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-                                                                  .withNamespace("test")
-                                                                  .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("test")
+                                                                              .build();
 
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -630,16 +712,16 @@ class K8sTaskAdapterTest
   @Test
   void testCPUResourceIsRespected() throws IOException
   {
-    TestKubernetesClient testClient = new TestKubernetesClient(client);
+    TestKubernetesClient testClient = new TestKubernetesClient(client, "namespace");
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
 
     List<String> javaOpts = new ArrayList<>();
     javaOpts.add("-Xms1G -Xmx2G -XX:MaxDirectMemorySize=3G");
-    KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-                                                                  .withNamespace("namespace")
-                                                                  .withJavaOptsArray(javaOpts)
-                                                                  .withCpuCore(2000)
-                                                                  .build();
+    KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("namespace")
+                                                                              .withJavaOptsArray(javaOpts)
+                                                                              .withCpuCore(2000)
+                                                                              .build();
 
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
         testClient,
@@ -695,8 +777,8 @@ class K8sTaskAdapterTest
         1000
     );
     // requests and limits will only have 2 items, cpu / memory
-    assertEquals(2, result.getLimits().size());
-    assertEquals(2, result.getRequests().size());
+    Assertions.assertEquals(2, result.getLimits().size());
+    Assertions.assertEquals(2, result.getRequests().size());
 
     // test with ephemeral storage
     ImmutableMap<String, Quantity> requestMap = ImmutableMap.of("ephemeral-storage", new Quantity("1Gi"));
@@ -708,16 +790,16 @@ class K8sTaskAdapterTest
         1000
     );
     // you will have ephemeral storage as well.
-    assertEquals(3, ephemeralResult.getLimits().size());
-    assertEquals(3, ephemeralResult.getRequests().size());
+    Assertions.assertEquals(3, ephemeralResult.getLimits().size());
+    Assertions.assertEquals(3, ephemeralResult.getRequests().size());
     // cpu and memory should be fixed
-    assertEquals(result.getRequests().get("cpu"), ephemeralResult.getRequests().get("cpu"));
-    assertEquals(result.getRequests().get("memory"), ephemeralResult.getRequests().get("memory"));
-    assertEquals("1Gi", ephemeralResult.getRequests().get("ephemeral-storage").toString());
+    Assertions.assertEquals(result.getRequests().get("cpu"), ephemeralResult.getRequests().get("cpu"));
+    Assertions.assertEquals(result.getRequests().get("memory"), ephemeralResult.getRequests().get("memory"));
+    Assertions.assertEquals("1Gi", ephemeralResult.getRequests().get("ephemeral-storage").toString());
 
-    assertEquals(result.getLimits().get("cpu"), ephemeralResult.getLimits().get("cpu"));
-    assertEquals(result.getLimits().get("memory"), ephemeralResult.getLimits().get("memory"));
-    assertEquals("10Gi", ephemeralResult.getLimits().get("ephemeral-storage").toString());
+    Assertions.assertEquals(result.getLimits().get("cpu"), ephemeralResult.getLimits().get("cpu"));
+    Assertions.assertEquals(result.getLimits().get("memory"), ephemeralResult.getLimits().get("memory"));
+    Assertions.assertEquals("10Gi", ephemeralResult.getLimits().get("ephemeral-storage").toString());
 
     // we should also preserve additional properties
     container.getResources().setAdditionalProperty("additional", "some-value");
@@ -726,6 +808,6 @@ class K8sTaskAdapterTest
         100,
         1000
     );
-    assertEquals(1, additionalProperties.getAdditionalProperties().size());
+    Assertions.assertEquals(1, additionalProperties.getAdditionalProperties().size());
   }
 }

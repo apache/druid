@@ -26,9 +26,9 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,7 +39,7 @@ public class ScanResultValueTimestampComparatorTest
 {
   private static QuerySegmentSpec intervalSpec;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup()
   {
     intervalSpec = new MultipleIntervalSegmentSpec(
@@ -63,7 +63,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ArrayList<HashMap<String, Object>> events1 = new ArrayList<>();
     HashMap<String, Object> event1 = new HashMap<>();
-    event1.put(ColumnHolder.TIME_COLUMN_NAME, new Long(42));
+    event1.put(ColumnHolder.TIME_COLUMN_NAME, 42L);
     events1.add(event1);
 
     ScanResultValue s1 = new ScanResultValue(
@@ -74,7 +74,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ArrayList<HashMap<String, Object>> events2 = new ArrayList<>();
     HashMap<String, Object> event2 = new HashMap<>();
-    event2.put(ColumnHolder.TIME_COLUMN_NAME, new Long(43));
+    event2.put(ColumnHolder.TIME_COLUMN_NAME, 43L);
     events2.add(event2);
 
     ScanResultValue s2 = new ScanResultValue(
@@ -83,7 +83,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(1, comparator.compare(s1, s2));
+    Assertions.assertEquals(1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -100,7 +100,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ArrayList<HashMap<String, Object>> events1 = new ArrayList<>();
     HashMap<String, Object> event1 = new HashMap<>();
-    event1.put(ColumnHolder.TIME_COLUMN_NAME, new Long(42));
+    event1.put(ColumnHolder.TIME_COLUMN_NAME, 42L);
     events1.add(event1);
 
     ScanResultValue s1 = new ScanResultValue(
@@ -111,7 +111,7 @@ public class ScanResultValueTimestampComparatorTest
 
     ArrayList<HashMap<String, Object>> events2 = new ArrayList<>();
     HashMap<String, Object> event2 = new HashMap<>();
-    event2.put(ColumnHolder.TIME_COLUMN_NAME, new Long(43));
+    event2.put(ColumnHolder.TIME_COLUMN_NAME, 43L);
     events2.add(event2);
 
     ScanResultValue s2 = new ScanResultValue(
@@ -120,7 +120,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(-1, comparator.compare(s1, s2));
+    Assertions.assertEquals(-1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -136,7 +136,7 @@ public class ScanResultValueTimestampComparatorTest
     ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
 
     List<List<Object>> events1 = new ArrayList<>();
-    List<Object> event1 = Collections.singletonList(new Long(42));
+    List<Object> event1 = Collections.singletonList(42L);
     events1.add(event1);
 
     ScanResultValue s1 = new ScanResultValue(
@@ -146,7 +146,7 @@ public class ScanResultValueTimestampComparatorTest
     );
 
     List<List<Object>> events2 = new ArrayList<>();
-    List<Object> event2 = Collections.singletonList(new Long(43));
+    List<Object> event2 = Collections.singletonList(43L);
     events2.add(event2);
 
     ScanResultValue s2 = new ScanResultValue(
@@ -155,7 +155,7 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(1, comparator.compare(s1, s2));
+    Assertions.assertEquals(1, comparator.compare(s1, s2));
   }
 
   @Test
@@ -171,7 +171,7 @@ public class ScanResultValueTimestampComparatorTest
     ScanResultValueTimestampComparator comparator = new ScanResultValueTimestampComparator(query);
 
     List<List<Object>> events1 = new ArrayList<>();
-    List<Object> event1 = Collections.singletonList(new Long(42));
+    List<Object> event1 = Collections.singletonList(42L);
     events1.add(event1);
 
     ScanResultValue s1 = new ScanResultValue(
@@ -181,7 +181,7 @@ public class ScanResultValueTimestampComparatorTest
     );
 
     List<List<Object>> events2 = new ArrayList<>();
-    List<Object> event2 = Collections.singletonList(new Long(43));
+    List<Object> event2 = Collections.singletonList(43L);
     events2.add(event2);
 
     ScanResultValue s2 = new ScanResultValue(
@@ -190,6 +190,6 @@ public class ScanResultValueTimestampComparatorTest
         events2
     );
 
-    Assert.assertEquals(-1, comparator.compare(s1, s2));
+    Assertions.assertEquals(-1, comparator.compare(s1, s2));
   }
 }

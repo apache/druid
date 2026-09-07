@@ -46,6 +46,18 @@ public class ClientSqlParameter
     this.value = value;
   }
 
+  @JsonProperty
+  public String getType()
+  {
+    return type;
+  }
+
+  @JsonProperty
+  public Object getValue()
+  {
+    return value;
+  }
+
   @Override
   public boolean equals(Object o)
   {

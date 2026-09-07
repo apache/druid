@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class GlobalTableDataSourceTest
 {
@@ -43,14 +43,14 @@ public class GlobalTableDataSourceTest
   public void testGlobalTableIsNotEqualsTable()
   {
     TableDataSource tbl = new TableDataSource(GLOBAL_TABLE_DATA_SOURCE.getName());
-    Assert.assertNotEquals(GLOBAL_TABLE_DATA_SOURCE, tbl);
-    Assert.assertNotEquals(tbl, GLOBAL_TABLE_DATA_SOURCE);
+    Assertions.assertNotEquals(GLOBAL_TABLE_DATA_SOURCE, tbl);
+    Assertions.assertNotEquals(tbl, GLOBAL_TABLE_DATA_SOURCE);
   }
 
   @Test
   public void testIsGlobal()
   {
-    Assert.assertTrue(GLOBAL_TABLE_DATA_SOURCE.isGlobal());
+    Assertions.assertTrue(GLOBAL_TABLE_DATA_SOURCE.isGlobal());
   }
 
   @Test
@@ -62,6 +62,6 @@ public class GlobalTableDataSourceTest
         DataSource.class
     );
 
-    Assert.assertEquals(GLOBAL_TABLE_DATA_SOURCE, deserialized);
+    Assertions.assertEquals(GLOBAL_TABLE_DATA_SOURCE, deserialized);
   }
 }

@@ -42,7 +42,6 @@ import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
-import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.PartitionedReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
@@ -141,6 +140,8 @@ public class SuperSorter
   private final int maxActiveProcessors;
   private final String cancellationId;
   private final boolean removeNullBytes;
+  @Nullable
+  private final FrameCombinerFactory combinerFactory;
   private final Object runWorkersLock = new Object();
 
   @GuardedBy("runWorkersLock")
@@ -239,7 +240,8 @@ public class SuperSorter
       final long rowLimit,
       @Nullable final String cancellationId,
       final SuperSorterProgressTracker superSorterProgressTracker,
-      final boolean removeNullBytes
+      final boolean removeNullBytes,
+      @Nullable final FrameCombinerFactory combinerFactory
   )
   {
     this.inputChannels = inputChannels;
@@ -257,6 +259,7 @@ public class SuperSorter
     this.cancellationId = cancellationId;
     this.superSorterProgressTracker = superSorterProgressTracker;
     this.removeNullBytes = removeNullBytes;
+    this.combinerFactory = combinerFactory;
 
     for (int i = 0; i < inputChannels.size(); i++) {
       inputChannelsToRead.add(i);
@@ -499,7 +502,7 @@ public class SuperSorter
     final List<ReadableFrameChannel> in = new ArrayList<>();
 
     for (final Frame frame : inputBuffer) {
-      in.add(singleReadableFrameChannel(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION)));
+      in.add(singleReadableFrameChannel(frame));
     }
 
     runMerger(0, ultimateMergersRunSoFar++, in, Collections.emptyList());
@@ -537,7 +540,7 @@ public class SuperSorter
         break;
       }
 
-      in.add(singleReadableFrameChannel(new FrameWithPartition(frame, FrameWithPartition.NO_PARTITION)));
+      in.add(singleReadableFrameChannel(frame));
     }
 
     runMerger(0, levelZeroMergersRunSoFar++, in, ImmutableList.of());
@@ -753,6 +756,7 @@ public class SuperSorter
                   removeNullBytes
               ),
               sortKey,
+              combinerFactory != null ? combinerFactory.newCombiner() : null,
               outPartitions,
               rowLimit
           );
@@ -1055,7 +1059,7 @@ public class SuperSorter
     }
   }
 
-  private static ReadableFrameChannel singleReadableFrameChannel(final FrameWithPartition frame)
+  private static ReadableFrameChannel singleReadableFrameChannel(final Frame frame)
   {
     try {
       final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();

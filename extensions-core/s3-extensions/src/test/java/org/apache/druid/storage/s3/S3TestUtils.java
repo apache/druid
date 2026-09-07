@@ -19,10 +19,6 @@
 
 package org.apache.druid.storage.s3;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.ListObjectsV2Request;
-import com.amazonaws.services.s3.model.ListObjectsV2Result;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
@@ -30,9 +26,15 @@ import org.easymock.EasyMockSupport;
 import org.easymock.IArgumentMatcher;
 import org.easymock.IExpectationSetters;
 import org.joda.time.DateTime;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.net.URI;
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,18 +55,18 @@ public class S3TestUtils extends EasyMockSupport
       {
 
         boolean matches = argument instanceof DeleteObjectsRequest
-                          && deleteObjectsRequest.getBucketName()
-                                                 .equals(((DeleteObjectsRequest) argument).getBucketName())
-                          && deleteObjectsRequest.getKeys().size() == ((DeleteObjectsRequest) argument).getKeys()
+                          && deleteObjectsRequest.bucket()
+                                                 .equals(((DeleteObjectsRequest) argument).bucket())
+                          && deleteObjectsRequest.delete().objects().size() == ((DeleteObjectsRequest) argument).delete().objects()
                                                                                                        .size();
         if (matches) {
-          Map<String, String> expectedKeysAndVersions = deleteObjectsRequest.getKeys().stream().collect(
-              Collectors.toMap(DeleteObjectsRequest.KeyVersion::getKey, x -> {
-                return x.getVersion() == null ? "null" : x.getVersion();
+          Map<String, String> expectedKeysAndVersions = deleteObjectsRequest.delete().objects().stream().collect(
+              Collectors.toMap(ObjectIdentifier::key, x -> {
+                return x.versionId() == null ? "null" : x.versionId();
               }));
-          Map<String, String> actualKeysAndVersions = ((DeleteObjectsRequest) argument).getKeys().stream().collect(
-              Collectors.toMap(DeleteObjectsRequest.KeyVersion::getKey, x -> {
-                return x.getVersion() == null ? "null" : x.getVersion();
+          Map<String, String> actualKeysAndVersions = ((DeleteObjectsRequest) argument).delete().objects().stream().collect(
+              Collectors.toMap(ObjectIdentifier::key, x -> {
+                return x.versionId() == null ? "null" : x.versionId();
               }));
           matches = expectedKeysAndVersions.equals(actualKeysAndVersions);
         }
@@ -75,9 +77,9 @@ public class S3TestUtils extends EasyMockSupport
       public void appendTo(StringBuffer buffer)
       {
         String str = "DeleteObjectsRequest(\"bucketName:\" \""
-                     + deleteObjectsRequest.getBucketName()
+                     + deleteObjectsRequest.bucket()
                      + "\", \"keys:\""
-                     + deleteObjectsRequest.getKeys()
+                     + deleteObjectsRequest.delete().objects()
                      + "\")";
         buffer.append(str);
       }
@@ -88,14 +90,13 @@ public class S3TestUtils extends EasyMockSupport
   public static void expectListObjects(
       ServerSideEncryptingAmazonS3 s3Client,
       URI prefix,
-      List<S3ObjectSummary> objectSummaries)
+      List<S3Object> objectSummaries)
   {
-    final ListObjectsV2Result result = new ListObjectsV2Result();
-    result.setBucketName(prefix.getAuthority());
-    result.setKeyCount(objectSummaries.size());
-    for (S3ObjectSummary objectSummary : objectSummaries) {
-      result.getObjectSummaries().add(objectSummary);
-    }
+    final ListObjectsV2Response result = ListObjectsV2Response.builder()
+        .keyCount(objectSummaries.size())
+        .contents(objectSummaries)
+        .isTruncated(false)
+        .build();
 
     EasyMock.expect(
         s3Client.listObjectsV2(matchListObjectsRequest(prefix))
@@ -108,16 +109,16 @@ public class S3TestUtils extends EasyMockSupport
       Map<DeleteObjectsRequest, Exception> requestToException
   )
   {
-    Map<DeleteObjectsRequest, IExpectationSetters<DeleteObjectsRequest>> requestToResultExpectationSetter = new HashMap<>();
+    Map<DeleteObjectsRequest, IExpectationSetters<DeleteObjectsResponse>> requestToResultExpectationSetter = new HashMap<>();
 
     for (Map.Entry<DeleteObjectsRequest, Exception> requestsAndErrors : requestToException.entrySet()) {
       DeleteObjectsRequest request = requestsAndErrors.getKey();
       Exception exception = requestsAndErrors.getValue();
-      IExpectationSetters<DeleteObjectsRequest> resultExpectationSetter = requestToResultExpectationSetter.get(request);
+      IExpectationSetters<DeleteObjectsResponse> resultExpectationSetter = requestToResultExpectationSetter.get(request);
       if (resultExpectationSetter == null) {
-        s3Client.deleteObjects(
-            S3TestUtils.deleteObjectsRequestArgumentMatcher(request));
-        resultExpectationSetter = EasyMock.<DeleteObjectsRequest>expectLastCall().andThrow(exception);
+        EasyMock.expect(s3Client.deleteObjects(
+            S3TestUtils.deleteObjectsRequestArgumentMatcher(request))).andThrow(exception);
+        resultExpectationSetter = EasyMock.expectLastCall();
         requestToResultExpectationSetter.put(request, resultExpectationSetter);
       } else {
         resultExpectationSetter.andThrow(exception);
@@ -125,13 +126,16 @@ public class S3TestUtils extends EasyMockSupport
     }
 
     for (DeleteObjectsRequest request : deleteRequestsExpected) {
-      IExpectationSetters<DeleteObjectsRequest> resultExpectationSetter = requestToResultExpectationSetter.get(request);
+      IExpectationSetters<DeleteObjectsResponse> resultExpectationSetter = requestToResultExpectationSetter.get(request);
       if (resultExpectationSetter == null) {
-        s3Client.deleteObjects(S3TestUtils.deleteObjectsRequestArgumentMatcher(request));
+        EasyMock.expect(s3Client.deleteObjects(S3TestUtils.deleteObjectsRequestArgumentMatcher(request)))
+            .andReturn(DeleteObjectsResponse.builder().build());
         resultExpectationSetter = EasyMock.expectLastCall();
         requestToResultExpectationSetter.put(request, resultExpectationSetter);
+      } else {
+        // Chain a successful return after the exception for retry scenarios
+        resultExpectationSetter.andReturn(DeleteObjectsResponse.builder().build());
       }
-      resultExpectationSetter.andVoid();
     }
   }
 
@@ -149,8 +153,8 @@ public class S3TestUtils extends EasyMockSupport
             }
 
             final ListObjectsV2Request request = (ListObjectsV2Request) argument;
-            return prefixUri.getAuthority().equals(request.getBucketName())
-                   && S3Utils.extractS3Key(prefixUri).equals(request.getPrefix());
+            return prefixUri.getAuthority().equals(request.bucket())
+                   && S3Utils.extractS3Key(prefixUri).equals(request.prefix());
           }
 
           @Override
@@ -164,17 +168,26 @@ public class S3TestUtils extends EasyMockSupport
     return null;
   }
 
-  public static S3ObjectSummary newS3ObjectSummary(
-      String bucket,
+  public static S3Object newS3Object(
       String key,
       long lastModifiedTimestamp)
   {
-    S3ObjectSummary objectSummary = new S3ObjectSummary();
-    objectSummary.setBucketName(bucket);
-    objectSummary.setKey(key);
-    objectSummary.setLastModified(new Date(lastModifiedTimestamp));
-    objectSummary.setETag("etag");
-    objectSummary.setSize(CONTENT.length);
-    return objectSummary;
+    return S3Object.builder()
+        .key(key)
+        .lastModified(Instant.ofEpochMilli(lastModifiedTimestamp))
+        .eTag("etag")
+        .size((long) CONTENT.length)
+        .build();
+  }
+
+  /**
+   * Alias for newS3Object for backward compatibility with tests that used v1 SDK's S3ObjectSummary.
+   * In v2 SDK, S3ObjectSummary has been replaced with S3Object.
+   */
+  public static S3Object newS3ObjectSummary(
+      String key,
+      long lastModifiedTimestamp)
+  {
+    return newS3Object(key, lastModifiedTimestamp);
   }
 }

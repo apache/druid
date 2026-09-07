@@ -23,7 +23,7 @@ description: "Defines compaction and automatic compaction (auto-compaction or au
   ~ under the License.
   -->
   
-Query performance in Apache Druid depends on optimally sized segments. Compaction is one strategy you can use to optimize segment size for your Druid database. Compaction tasks read an existing set of segments for a given time interval and combine the data into a new "compacted" set of segments. In some cases the compacted segments are larger, but there are fewer of them. In other cases the compacted segments may be smaller. Compaction tends to increase performance because optimized segments require less per-segment processing and less memory overhead for ingestion and for querying paths.
+Query performance in Apache&circledR; Druid depends on optimally sized segments. Compaction is one strategy you can use to optimize segment size for your Druid database. Compaction tasks read an existing set of segments for a given time interval and combine the data into a new "compacted" set of segments. In some cases the compacted segments are larger, but there are fewer of them. In other cases the compacted segments may be smaller. Compaction tends to increase performance because optimized segments require less per-segment processing and less memory overhead for ingestion and for querying paths.
 
 ## Compaction guidelines
 
@@ -59,9 +59,11 @@ In cases where you require more control over compaction, you can manually submit
 
 See [Setting up a manual compaction task](./manual-compaction.md#setting-up-manual-compaction) for more about manual compaction tasks.
 
+For advanced data lifecycle management where you need different compaction configurations at different data ages — such as coarsening segment granularity, deleting old rows, or changing compression over time — see [Cascading reindexing](./cascading-reindexing.md).
+
 ## Data handling with compaction
 
-During compaction, Druid overwrites the original set of segments with the compacted set. Druid also locks the segments for the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.
+During compaction, Druid overwrites the original set of segments with the compacted set. Druid also locks the time interval being compacted to ensure data consistency. By default, compaction tasks do not modify the underlying data. You can configure the compaction task to change the query granularity or add or remove dimensions in the compaction task. This means that the only changes to query results should be the result of intentional, not automatic, changes.
 
 You can set `dropExisting` in `ioConfig` to "true" in the compaction task to configure Druid to replace all existing segments fully contained by the interval. See the suggestion for reindexing with finer granularity under [Implementation considerations](../ingestion/native-batch.md#implementation-considerations) for an example.
 :::info

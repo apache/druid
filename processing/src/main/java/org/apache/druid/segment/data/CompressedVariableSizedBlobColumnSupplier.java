@@ -20,7 +20,7 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.file.SegmentFileMapper;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,7 +36,7 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
       ByteBuffer buffer,
       ByteOrder compressionOrder,
       ByteOrder valueOrder,
-      SmooshedFileMapper mapper
+      SegmentFileMapper mapper
   ) throws IOException
   {
     return fromByteBuffer(filenameBase, buffer, compressionOrder, valueOrder, false, mapper);
@@ -48,7 +48,7 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
       ByteOrder compressionOrder,
       ByteOrder valueOrder,
       boolean copyValuesOnRead,
-      SmooshedFileMapper mapper
+      SegmentFileMapper mapper
   ) throws IOException
   {
     byte versionFromBuffer = buffer.get();

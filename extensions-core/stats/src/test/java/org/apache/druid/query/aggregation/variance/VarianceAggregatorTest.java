@@ -26,9 +26,9 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -63,7 +63,7 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     selector = new TestFloatColumnSelector(values);
@@ -91,14 +91,14 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
 
   private void assertValues(VarianceAggregatorCollector holder, long count, double sum, double nvariance)
   {
-    Assert.assertEquals(count, holder.count);
-    Assert.assertEquals(sum, holder.sum, 0.0001);
-    Assert.assertEquals(nvariance, holder.nvariance, 0.0001);
+    Assertions.assertEquals(count, holder.count);
+    Assertions.assertEquals(sum, holder.sum, 0.0001);
+    Assertions.assertEquals(nvariance, holder.nvariance, 0.0001);
     if (count == 0) {
-      Assert.assertNull(holder.getVariance(false));
+      Assertions.assertNull(holder.getVariance(false));
     } else {
-      Assert.assertEquals(variances_pop[(int) count - 1], holder.getVariance(true), 0.0001);
-      Assert.assertEquals(variances_samp[(int) count - 1], holder.getVariance(false), 0.0001);
+      Assertions.assertEquals(variances_pop[(int) count - 1], holder.getVariance(true), 0.0001);
+      Assertions.assertEquals(variances_samp[(int) count - 1], holder.getVariance(false), 0.0001);
     }
   }
 
@@ -157,7 +157,7 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
     VarianceAggregatorCollector holder1 = new VarianceAggregatorCollector().add(1.1f).add(2.7f);
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector().add(3.5f).add(1.3f);
     VarianceAggregatorCollector expected = new VarianceAggregatorCollector(4, 8.6d, 3.95d);
-    Assert.assertTrue(expected.equalsWithEpsilon((VarianceAggregatorCollector) aggFactory.combine(holder1, holder2), 0.00001));
+    Assertions.assertTrue(expected.equalsWithEpsilon((VarianceAggregatorCollector) aggFactory.combine(holder1, holder2), 0.00001));
   }
 
   @Test
@@ -167,10 +167,10 @@ public class VarianceAggregatorTest extends InitializedNullHandlingTest
     VarianceAggregatorFactory oneMore = new VarianceAggregatorFactory("name1", "fieldName1");
     VarianceAggregatorFactory two = new VarianceAggregatorFactory("name2", "fieldName2");
 
-    Assert.assertEquals(one.hashCode(), oneMore.hashCode());
+    Assertions.assertEquals(one.hashCode(), oneMore.hashCode());
 
-    Assert.assertTrue(one.equals(oneMore));
-    Assert.assertFalse(one.equals(two));
+    Assertions.assertTrue(one.equals(oneMore));
+    Assertions.assertFalse(one.equals(two));
   }
 
   private void aggregate(TestFloatColumnSelector selector, VarianceAggregator agg)

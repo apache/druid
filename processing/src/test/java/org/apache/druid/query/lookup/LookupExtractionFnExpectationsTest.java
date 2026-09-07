@@ -21,8 +21,8 @@ package org.apache.druid.query.lookup;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.extraction.MapLookupExtractor;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test suite clarifies some behavior around specific corner cases
@@ -39,7 +39,7 @@ public class LookupExtractionFnExpectationsTest
         false,
         false
     );
-    Assert.assertNull(lookupExtractionFn.apply(null));
+    Assertions.assertNull(lookupExtractionFn.apply(null));
   }
 
   @Test
@@ -52,7 +52,7 @@ public class LookupExtractionFnExpectationsTest
         false,
         false
     );
-    Assert.assertEquals("REPLACE", lookupExtractionFn.apply(null));
+    Assertions.assertEquals("REPLACE", lookupExtractionFn.apply(null));
   }
 
   @Test
@@ -65,7 +65,7 @@ public class LookupExtractionFnExpectationsTest
         false,
         false
     );
-    Assert.assertEquals("REPLACE", lookupExtractionFn.apply(null));
+    Assertions.assertEquals("REPLACE", lookupExtractionFn.apply(null));
   }
 
   @Test
@@ -78,6 +78,6 @@ public class LookupExtractionFnExpectationsTest
         false,
         false
     );
-    Assert.assertEquals("REPLACE", lookupExtractionFn.apply(null));
+    Assertions.assertEquals("REPLACE", lookupExtractionFn.apply(null));
   }
 }

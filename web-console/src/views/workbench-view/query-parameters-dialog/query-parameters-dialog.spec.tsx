@@ -29,6 +29,23 @@ describe('QueryParametersDialog', () => {
           { type: 'TIMESTAMP', value: '2022-02-02 01:02:03' },
           { type: 'BIGINT', value: 42 },
           { type: 'DOUBLE', value: 1.618 },
+          { type: 'ARRAY', value: [-25.7, null, 36.85] },
+        ]}
+        onQueryParametersChange={() => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    expect(comp).toMatchSnapshot();
+  });
+
+  it('handles ARRAY type parameters correctly', () => {
+    const comp = shallow(
+      <QueryParametersDialog
+        queryParameters={[
+          { type: 'ARRAY', value: [1, 2, 3] },
+          { type: 'ARRAY', value: ['a', 'b', null] },
+          { type: 'ARRAY', value: [] },
         ]}
         onQueryParametersChange={() => {}}
         onClose={() => {}}

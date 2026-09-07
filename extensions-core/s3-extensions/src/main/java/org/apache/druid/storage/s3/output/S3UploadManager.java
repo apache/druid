@@ -19,8 +19,6 @@
 
 package org.apache.druid.storage.s3.output;
 
-import com.amazonaws.services.s3.model.UploadPartRequest;
-import com.amazonaws.services.s3.model.UploadPartResult;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.druid.guice.ManageLifecycle;
@@ -35,6 +33,9 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.apache.druid.utils.RuntimeInfo;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import java.io.File;
 import java.util.concurrent.ExecutorService;
@@ -98,7 +99,7 @@ public class S3UploadManager
   /**
    * Queues a chunk of a file for upload to S3 as part of a multipart upload.
    */
-  public Future<UploadPartResult> queueChunkForUpload(
+  public Future<UploadPartResponse> queueChunkForUpload(
       ServerSideEncryptingAmazonS3 s3Client,
       String key,
       int chunkNumber,
@@ -119,7 +120,7 @@ public class S3UploadManager
       return RetryUtils.retry(
           () -> {
             log.debug("Uploading chunk[%d] for uploadId[%s].", chunkNumber, uploadId);
-            UploadPartResult uploadPartResult = uploadPartIfPossible(
+            UploadPartResponse uploadPartResult = uploadPartIfPossible(
                 s3Client,
                 uploadId,
                 config.getBucket(),
@@ -140,7 +141,7 @@ public class S3UploadManager
   }
 
   @VisibleForTesting
-  UploadPartResult uploadPartIfPossible(
+  UploadPartResponse uploadPartIfPossible(
       ServerSideEncryptingAmazonS3 s3Client,
       String uploadId,
       String bucket,
@@ -149,18 +150,17 @@ public class S3UploadManager
       File chunkFile
   )
   {
-    final UploadPartRequest uploadPartRequest = new UploadPartRequest()
-        .withUploadId(uploadId)
-        .withBucketName(bucket)
-        .withKey(key)
-        .withFile(chunkFile)
-        .withPartNumber(chunkNumber)
-        .withPartSize(chunkFile.length());
+    UploadPartRequest.Builder requestBuilder = UploadPartRequest.builder()
+        .uploadId(uploadId)
+        .bucket(bucket)
+        .key(key)
+        .partNumber(chunkNumber)
+        .contentLength(chunkFile.length());
 
     if (log.isDebugEnabled()) {
       log.debug("Pushing chunk[%s] to bucket[%s] and key[%s].", chunkNumber, bucket, key);
     }
-    return s3Client.uploadPart(uploadPartRequest);
+    return s3Client.uploadPart(requestBuilder, RequestBody.fromFile(chunkFile));
   }
 
   private ExecutorService createExecutorService(int poolSize, int maxNumConcurrentChunks)

@@ -22,18 +22,15 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-@RunWith(MockitoJUnitRunner.class)
 public class DataSourceCompactionConfigAuditEntryTest
 {
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
   
   private final DataSourceCompactionConfigAuditEntry firstEntry = new DataSourceCompactionConfigAuditEntry(
-      new ClusterCompactionConfig(0.1, 9, null, null, null),
+      new ClusterCompactionConfig(0.1, 9, null, null, null, null),
       InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
       auditInfo,
       DateTimes.nowUtc()
@@ -43,60 +40,60 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithSameBaseConfigIsTrue()
   {
     final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, null, null, null),
+        new ClusterCompactionConfig(0.1, 9, null, null, null, null),
         InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertTrue(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertTrue(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertTrue(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertTrue(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
   public void testhasSameConfigWithDifferentClusterConfigIsFalse()
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.2, 9, null, null, null),
+        new ClusterCompactionConfig(0.2, 9, null, null, null, null),
         InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertFalse(secondEntry.hasSameConfig(firstEntry));
 
     secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 10, null, null, null),
+        new ClusterCompactionConfig(0.1, 10, null, null, null, null),
         InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
   public void testhasSameConfigWithDifferentDatasourceConfigIsFalse()
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, null, null, null),
+        new ClusterCompactionConfig(0.1, 9, null, null, null, null),
         InlineSchemaDataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
   public void testhasSameConfigWithNullDatasourceConfigIsFalse()
   {
     final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, null, null, null),
+        new ClusterCompactionConfig(0.1, 9, null, null, null, null),
         null,
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 }

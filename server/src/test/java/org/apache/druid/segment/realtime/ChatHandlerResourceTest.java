@@ -21,36 +21,36 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.base.Optional;
+import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
-import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class ChatHandlerResourceTest extends EasyMockSupport
 {
 
   @Mock
   ChatHandlerProvider handlers;
   @Mock
-  DataSourceTaskIdHolder dataSourceTaskIdHolder;
+  TaskHolder taskHolder;
   ChatHandlerResource chatHandlerResource;
 
   @Test
   public void test_noHandlerFound()
   {
     String handlerId = "handlerId";
-    EasyMock.expect(dataSourceTaskIdHolder.getTaskId()).andReturn(null);
+    EasyMock.expect(taskHolder.getTaskId()).andReturn(null);
     EasyMock.expect(handlers.get(handlerId)).andReturn(Optional.absent());
 
     replayAll();
-    chatHandlerResource = new ChatHandlerResource(handlers, dataSourceTaskIdHolder);
-    Assert.assertThrows(ServiceUnavailableException.class, () -> chatHandlerResource.doTaskChat(handlerId, null));
+    chatHandlerResource = new ChatHandlerResource(handlers, taskHolder);
+    Assertions.assertThrows(ServiceUnavailableException.class, () -> chatHandlerResource.doTaskChat(handlerId, null));
     verifyAll();
   }
 }

@@ -35,16 +35,16 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class LookupSerdeModuleTest
 {
   private Injector injector;
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
@@ -67,7 +67,7 @@ public class LookupSerdeModuleTest
         injector.getInstance(ExprMacroTable.class)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         virtualColumn,
         objectMapper.readValue(objectMapper.writeValueAsBytes(virtualColumn), VirtualColumn.class)
     );
@@ -82,7 +82,7 @@ public class LookupSerdeModuleTest
         new RegisteredLookupExtractionFn(null, "beep", false, null, null, null)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         dimensionSpec,
         objectMapper.readValue(objectMapper.writeValueAsBytes(dimensionSpec), DimensionSpec.class)
     );
@@ -97,7 +97,7 @@ public class LookupSerdeModuleTest
         new RegisteredLookupExtractionFn(null, "beep", false, null, null, null)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         filter,
         objectMapper.readValue(objectMapper.writeValueAsBytes(filter), DimFilter.class)
     );
@@ -112,7 +112,7 @@ public class LookupSerdeModuleTest
         injector.getInstance(ExprMacroTable.class)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         transform,
         objectMapper.readValue(objectMapper.writeValueAsBytes(transform), ExpressionTransform.class)
     );
@@ -123,6 +123,6 @@ public class LookupSerdeModuleTest
   {
     LookupExtractorFactoryContainerProvider instance = injector.getInstance(LookupExtractorFactoryContainerProvider.class);
     String lookupName = "lookupName1";
-    Assert.assertEquals(lookupName, instance.getCanonicalLookupName(lookupName));
+    Assertions.assertEquals(lookupName, instance.getCanonicalLookupName(lookupName));
   }
 }

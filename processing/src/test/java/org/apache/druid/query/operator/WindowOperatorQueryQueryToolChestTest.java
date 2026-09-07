@@ -41,7 +41,6 @@ import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -94,8 +93,8 @@ public class WindowOperatorQueryQueryToolChestTest extends InitializedNullHandli
         )
     ).run(QueryPlus.wrap(query)).toList();
 
-    Assert.assertTrue(results.get(0) instanceof Object[]);
-    Assert.assertEquals(3, results.size());
+    Assertions.assertInstanceOf(Object[].class, results.get(0));
+    Assertions.assertEquals(3, results.size());
     List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{1, 1},
         new Object[]{5, 2},
@@ -103,7 +102,7 @@ public class WindowOperatorQueryQueryToolChestTest extends InitializedNullHandli
     );
 
     for (int i = 0; i < 3; ++i) {
-      Assert.assertArrayEquals(expectedResults.get(i), (Object[]) results.get(i));
+      Assertions.assertArrayEquals(expectedResults.get(i), (Object[]) results.get(i));
     }
   }
 
@@ -146,8 +145,8 @@ public class WindowOperatorQueryQueryToolChestTest extends InitializedNullHandli
         )
     ).run(QueryPlus.wrap(query)).toList();
 
-    Assert.assertTrue(results.get(0) instanceof FrameSignaturePair);
-    Assert.assertEquals(1, results.size());
+    Assertions.assertInstanceOf(FrameSignaturePair.class, results.get(0));
+    Assertions.assertEquals(1, results.size());
 
     FrameReader reader = FrameReader.create(((FrameSignaturePair) results.get(0)).getRowSignature());
     List<List<Object>> resultRows = FrameTestUtil.readRowsFromCursorFactory(

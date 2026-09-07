@@ -20,8 +20,10 @@
 package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -46,17 +48,20 @@ public class CompactionTransformSpec
       return null;
     }
 
-    return new CompactionTransformSpec(transformSpec.getFilter());
+    return new CompactionTransformSpec(transformSpec.getFilter(), VirtualColumns.EMPTY);
   }
 
   @Nullable private final DimFilter filter;
+  private final VirtualColumns virtualColumns;
 
   @JsonCreator
   public CompactionTransformSpec(
-      @JsonProperty("filter") final DimFilter filter
+      @JsonProperty("filter") final DimFilter filter,
+      @JsonProperty("virtualColumns") @Nullable final VirtualColumns virtualColumns
   )
   {
     this.filter = filter;
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
   }
 
   @JsonProperty
@@ -64,6 +69,13 @@ public class CompactionTransformSpec
   public DimFilter getFilter()
   {
     return filter;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   @Override
@@ -76,13 +88,14 @@ public class CompactionTransformSpec
       return false;
     }
     CompactionTransformSpec that = (CompactionTransformSpec) o;
-    return Objects.equals(filter, that.filter);
+    return Objects.equals(filter, that.filter)
+        && Objects.equals(virtualColumns, that.virtualColumns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(filter);
+    return Objects.hash(filter, virtualColumns);
   }
 
   @Override
@@ -90,6 +103,7 @@ public class CompactionTransformSpec
   {
     return "CompactionTransformSpec{" +
            "filter=" + filter +
+           ", virtualColumns=" + virtualColumns +
            '}';
   }
 }

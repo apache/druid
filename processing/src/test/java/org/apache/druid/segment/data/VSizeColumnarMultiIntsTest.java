@@ -21,8 +21,8 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -63,7 +63,7 @@ public class VSizeColumnarMultiIntsTest
     indexed.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
-    Assert.assertEquals(indexed.getSerializedSize(), bytes.length);
+    Assertions.assertEquals(indexed.getSerializedSize(), bytes.length);
     VSizeColumnarMultiInts deserializedIndexed = VSizeColumnarMultiInts.readFromByteBuffer(ByteBuffer.wrap(bytes));
 
     assertSame(someInts, deserializedIndexed);
@@ -71,15 +71,15 @@ public class VSizeColumnarMultiIntsTest
 
   private void assertSame(List<int[]> someInts, VSizeColumnarMultiInts indexed)
   {
-    Assert.assertEquals(3, indexed.size());
+    Assertions.assertEquals(3, indexed.size());
     for (int i = 0; i < indexed.size(); ++i) {
       final int[] ints = someInts.get(i);
       final VSizeColumnarInts vSizeColumnarInts = indexed.get(i);
 
-      Assert.assertEquals(ints.length, vSizeColumnarInts.size());
-      Assert.assertEquals(1, vSizeColumnarInts.getNumBytes());
+      Assertions.assertEquals(ints.length, vSizeColumnarInts.size());
+      Assertions.assertEquals(1, vSizeColumnarInts.getNumBytes());
       for (int j = 0; j < ints.length; j++) {
-        Assert.assertEquals(ints[j], vSizeColumnarInts.get(j));
+        Assertions.assertEquals(ints[j], vSizeColumnarInts.get(j));
       }
     }
   }

@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.error;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 
 @JsonTypeName(CannotParseExternalDataFault.CODE)
 public class CannotParseExternalDataFault extends BaseMSQFault
@@ -31,5 +32,14 @@ public class CannotParseExternalDataFault extends BaseMSQFault
   public CannotParseExternalDataFault(@JsonProperty("errorMessage") String message)
   {
     super(CODE, Preconditions.checkNotNull(message, "errorMessage"));
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 }

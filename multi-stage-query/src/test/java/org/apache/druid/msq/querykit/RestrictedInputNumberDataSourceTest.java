@@ -25,12 +25,14 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.filter.FilterSegmentPruner;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.segment.VirtualColumns;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class RestrictedInputNumberDataSourceTest
 {
@@ -46,54 +48,54 @@ public class RestrictedInputNumberDataSourceTest
   @Test
   public void test_creation_failWithNullPolicy()
   {
-    Exception e = Assert.assertThrows(Exception.class, () -> new RestrictedInputNumberDataSource(1, null));
-    Assert.assertEquals(e.getMessage(), "Policy can't be null");
+    Exception e = Assertions.assertThrows(Exception.class, () -> new RestrictedInputNumberDataSource(1, null));
+    Assertions.assertEquals(e.getMessage(), "Policy can't be null");
   }
 
   @Test
   public void test_getTableNames()
   {
-    Assert.assertTrue(restrictedFooDataSource.getTableNames().isEmpty());
-    Assert.assertTrue(restrictedBarDataSource.getTableNames().isEmpty());
+    Assertions.assertTrue(restrictedFooDataSource.getTableNames().isEmpty());
+    Assertions.assertTrue(restrictedBarDataSource.getTableNames().isEmpty());
   }
 
   @Test
   public void test_getChildren()
   {
-    Assert.assertTrue(restrictedFooDataSource.getChildren().isEmpty());
-    Assert.assertTrue(restrictedBarDataSource.getChildren().isEmpty());
+    Assertions.assertTrue(restrictedFooDataSource.getChildren().isEmpty());
+    Assertions.assertTrue(restrictedBarDataSource.getChildren().isEmpty());
   }
 
   @Test
   public void test_isCacheable()
   {
-    Assert.assertFalse(restrictedFooDataSource.isCacheable(true));
+    Assertions.assertFalse(restrictedFooDataSource.isCacheable(true));
   }
 
   @Test
   public void test_isGlobal()
   {
-    Assert.assertFalse(restrictedFooDataSource.isGlobal());
+    Assertions.assertFalse(restrictedFooDataSource.isGlobal());
   }
 
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(restrictedFooDataSource.isProcessable());
+    Assertions.assertTrue(restrictedFooDataSource.isProcessable());
   }
 
   @Test
   public void test_withChildren()
   {
-    IllegalArgumentException exception = Assert.assertThrows(
+    IllegalArgumentException exception = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> restrictedFooDataSource.withChildren(ImmutableList.of(new TableDataSource("foo")))
     );
-    Assert.assertEquals(exception.getMessage(), "Cannot accept children");
+    Assertions.assertEquals(exception.getMessage(), "Cannot accept children");
 
     RestrictedInputNumberDataSource newRestrictedDataSource = (RestrictedInputNumberDataSource) restrictedFooDataSource.withChildren(
         ImmutableList.of());
-    Assert.assertTrue(newRestrictedDataSource.getChildren().isEmpty());
+    Assertions.assertTrue(newRestrictedDataSource.getChildren().isEmpty());
   }
 
   @Test
@@ -114,7 +116,7 @@ public class RestrictedInputNumberDataSourceTest
         RestrictedInputNumberDataSource.class
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         deserializedRestrictedDataSource,
         restrictedBarDataSource
     );
@@ -126,7 +128,7 @@ public class RestrictedInputNumberDataSourceTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final String s = jsonMapper.writeValueAsString(restrictedFooDataSource);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"type\":\"restrictedInputNumber\",\"inputNumber\":0,\"policy\":{\"type\":\"row\",\"rowFilter\":{\"type\":\"true\"}}}",
         s
     );
@@ -135,7 +137,7 @@ public class RestrictedInputNumberDataSourceTest
   @Test
   public void testStringRep()
   {
-    Assert.assertNotEquals(restrictedFooDataSource.toString(), restrictedBarDataSource.toString());
+    Assertions.assertNotEquals(restrictedFooDataSource.toString(), restrictedBarDataSource.toString());
   }
 
   @Test
@@ -149,9 +151,18 @@ public class RestrictedInputNumberDataSourceTest
         RowFilterPolicy.from(TrueDimFilter.instance())
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         dataSource,
         mapper.readValue(mapper.writeValueAsString(dataSource), DataSource.class)
+    );
+  }
+
+  @Test
+  public void test_createSegmentPruner_withRowFilterPolicy()
+  {
+    Assertions.assertEquals(
+        new FilterSegmentPruner(TrueDimFilter.instance(), null, VirtualColumns.EMPTY),
+        restrictedFooDataSource.createSegmentPruner()
     );
   }
 }

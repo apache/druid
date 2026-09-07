@@ -477,7 +477,7 @@ public class DruidException extends RuntimeException
      *
      * @return the builder
      */
-    DruidExceptionBuilder wasDeserialized()
+    public DruidExceptionBuilder wasDeserialized()
     {
       this.deserialized = true;
       return this;

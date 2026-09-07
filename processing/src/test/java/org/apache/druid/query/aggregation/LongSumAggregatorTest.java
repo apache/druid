@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 
@@ -40,17 +40,17 @@ public class LongSumAggregatorTest
     final TestLongColumnSelector selector = new TestLongColumnSelector(new long[]{24L, 20L});
     LongSumAggregator agg = new LongSumAggregator(selector);
 
-    Assert.assertEquals(0L, agg.get());
-    Assert.assertEquals(0L, agg.get());
-    Assert.assertEquals(0L, agg.get());
+    Assertions.assertEquals(0L, agg.get());
+    Assertions.assertEquals(0L, agg.get());
+    Assertions.assertEquals(0L, agg.get());
     aggregate(selector, agg);
-    Assert.assertEquals(24L, agg.get());
-    Assert.assertEquals(24L, agg.get());
-    Assert.assertEquals(24L, agg.get());
+    Assertions.assertEquals(24L, agg.get());
+    Assertions.assertEquals(24L, agg.get());
+    Assertions.assertEquals(24L, agg.get());
     aggregate(selector, agg);
-    Assert.assertEquals(44L, agg.get());
-    Assert.assertEquals(44L, agg.get());
-    Assert.assertEquals(44L, agg.get());
+    Assertions.assertEquals(44L, agg.get());
+    Assertions.assertEquals(44L, agg.get());
+    Assertions.assertEquals(44L, agg.get());
   }
 
   @Test
@@ -64,9 +64,9 @@ public class LongSumAggregatorTest
 
     Comparator comp = new LongSumAggregatorFactory("null", "null").getComparator();
 
-    Assert.assertEquals(-1, comp.compare(first, agg.get()));
-    Assert.assertEquals(0, comp.compare(first, first));
-    Assert.assertEquals(0, comp.compare(agg.get(), agg.get()));
-    Assert.assertEquals(1, comp.compare(agg.get(), first));
+    Assertions.assertEquals(-1, comp.compare(first, agg.get()));
+    Assertions.assertEquals(0, comp.compare(first, first));
+    Assertions.assertEquals(0, comp.compare(agg.get(), agg.get()));
+    Assertions.assertEquals(1, comp.compare(agg.get(), first));
   }
 }

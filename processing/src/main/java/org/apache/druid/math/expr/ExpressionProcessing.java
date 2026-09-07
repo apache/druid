@@ -51,11 +51,11 @@ public class ExpressionProcessing
   @VisibleForTesting
   public static void initializeForHomogenizeNullMultiValueStrings()
   {
-    INSTANCE = new ExpressionProcessingConfig(null, null, true, null);
+    INSTANCE = new ExpressionProcessingConfig(null, true, null, null);
   }
 
   @VisibleForTesting
-  public static void initializeForFallback()
+  public static void initializeForVectorApiTests()
   {
     INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
   }
@@ -85,6 +85,18 @@ public class ExpressionProcessing
   {
     checkInitialized();
     return INSTANCE.allowVectorizeFallback();
+  }
+
+  /**
+   * Whether {@link org.apache.druid.math.expr.vector.ExprVectorProcessor} implementations may dispatch to specialized
+   * {@code jdk.incubator.vector} (SIMD) variants for supported math operations. Off by default; opt-in via
+   * {@link ExpressionProcessingConfig#USE_VECTOR_API}. Requires the JVM to be started with
+   * {@code --add-modules=jdk.incubator.vector}, which Druid already adds to its standard launch arguments.
+   */
+  public static boolean useVectorApi()
+  {
+    checkInitialized();
+    return INSTANCE.useVectorApi();
   }
 
   private static void checkInitialized()

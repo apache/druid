@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation;
 
 import org.apache.druid.segment.serde.cell.RandomStringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 
@@ -105,8 +105,8 @@ public class SerializablePairLongStringDeltaEncodedStagedSerdeTest
   )
   {
     byte[] bytes = serde.serialize(value);
-    Assert.assertEquals(size, bytes.length);
+    Assertions.assertEquals(size, bytes.length);
     SerializablePairLongString deserialized = serde.deserialize(bytes);
-    Assert.assertEquals(value, deserialized);
+    Assertions.assertEquals(value, deserialized);
   }
 }

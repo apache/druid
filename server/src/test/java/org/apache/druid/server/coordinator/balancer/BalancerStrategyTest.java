@@ -27,26 +27,29 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "{index}: BalancerStrategy:{0}")
+@MethodSource("data")
 public class BalancerStrategyTest
 {
   private final BalancerStrategy balancerStrategy;
   private DataSegment proposedDataSegment;
   private List<ServerHolder> serverHolders;
 
-  @Parameterized.Parameters(name = "{index}: BalancerStrategy:{0}")
   public static Iterable<Object[]> data()
   {
     return Arrays.asList(
@@ -62,7 +65,7 @@ public class BalancerStrategyTest
     this.balancerStrategy = balancerStrategy;
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     this.proposedDataSegment = new DataSegment(
@@ -83,9 +86,18 @@ public class BalancerStrategyTest
   public void findNewSegmentHomeReplicatorNotEnoughSpace()
   {
     final ServerHolder serverHolder = new ServerHolder(
-        new DruidServer("server1", "host1", null, 10L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
+        new DruidServer(
+            "server1",
+            "host1",
+            null,
+            10L,
+            null,
+            ServerType.HISTORICAL,
+            DruidServer.DEFAULT_TIER,
+            0
+        ).addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new TestLoadQueuePeon());
-    Assert.assertFalse(
+    Assertions.assertFalse(
         balancerStrategy.findServersToLoadSegment(
             proposedDataSegment,
             Collections.singletonList(serverHolder)
@@ -93,16 +105,17 @@ public class BalancerStrategyTest
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void findNewSegmentHomeReplicatorNotEnoughNodesForReplication()
   {
     final ServerHolder serverHolder1 = new ServerHolder(
-        new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+        new DruidServer("server1", "host1", null, 1000L, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
             .addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new TestLoadQueuePeon());
 
     final ServerHolder serverHolder2 = new ServerHolder(
-        new DruidServer("server2", "host2", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
+        new DruidServer("server2", "host2", null, 1000L, null, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0)
             .addDataSegment(proposedDataSegment).toImmutableDruidServer(),
         new TestLoadQueuePeon());
 
@@ -111,20 +124,29 @@ public class BalancerStrategyTest
     serverHolders.add(serverHolder2);
 
     // since there is not enough nodes to load 3 replicas of segment
-    Assert.assertFalse(balancerStrategy.findServersToLoadSegment(proposedDataSegment, serverHolders).hasNext());
+    Assertions.assertFalse(balancerStrategy.findServersToLoadSegment(proposedDataSegment, serverHolders).hasNext());
   }
 
   @Test
   public void findNewSegmentHomeReplicatorEnoughSpace()
   {
     final ServerHolder serverHolder = new ServerHolder(
-        new DruidServer("server1", "host1", null, 1000L, ServerType.HISTORICAL, DruidServer.DEFAULT_TIER, 0).toImmutableDruidServer(),
+        new DruidServer(
+            "server1",
+            "host1",
+            null,
+            1000L,
+            null,
+            ServerType.HISTORICAL,
+            DruidServer.DEFAULT_TIER,
+            0
+        ).toImmutableDruidServer(),
         new TestLoadQueuePeon());
     serverHolders = new ArrayList<>();
     serverHolders.add(serverHolder);
     final ServerHolder foundServerHolder = balancerStrategy
         .findServersToLoadSegment(proposedDataSegment, serverHolders).next();
     // since there is enough space on server it should be selected
-    Assert.assertEquals(serverHolder, foundServerHolder);
+    Assertions.assertEquals(serverHolder, foundServerHolder);
   }
 }

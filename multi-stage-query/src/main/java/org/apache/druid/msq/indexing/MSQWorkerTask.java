@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -174,17 +175,18 @@ public class MSQWorkerTask extends AbstractTask
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
   }
 
   @Override
-  public boolean supportsQueries()
+  public PeonProcessingModule.Config getPeonProcessingModuleConfig()
   {
-    // Even though we don't have a QueryResource, we do embed a query stack, and so we need preloaded resources
-    // such as broadcast tables.
-    return true;
+    // No merge buffers needed.
+    return new PeonProcessingModule.Config()
+        .withProcessingBuffers()
+        .withProcessingThreads();
   }
 
   @Override

@@ -59,6 +59,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
       "dummy",
       null,
       0,
+      null,
       ServerType.HISTORICAL,
       "dummy",
       0
@@ -68,6 +69,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
       "dummy2",
       null,
       0,
+      null,
       ServerType.INDEXER_EXECUTOR,
       "dummy",
       0
@@ -77,6 +79,7 @@ public class TestCoordinatorServerView extends CoordinatorServerView
       "dummy3",
       null,
       0,
+      null,
       ServerType.BROKER,
       "dummy",
       0
