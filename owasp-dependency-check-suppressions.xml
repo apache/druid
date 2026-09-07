@@ -818,4 +818,74 @@
     <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-.*@.*$</packageUrl>
     <cve>CVE-2026-33186</cve> <!-- Only applicable to gRPC Go (google.golang.org/grpc < 1.79.3), not gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2026-33186 -->
   </suppress>
+
+  <suppress>
+    <!-- These findings come from Jackson versions embedded in third-party shaded JARs.
+         Druid's normal Jackson dependency management cannot replace those copies. The
+         selectors are restricted to the two affected embedded JARs. Revisit when Hadoop
+         or Parquet ships a build containing the fixed Jackson version. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
+                 parquet-jackson-1.18.0.jar (shaded jackson-databind 2.22.1)
+    ]]></notes>
+    <filePath regex="true">.*(hadoop-client-runtime-3\.5\.0|parquet-jackson-1\.18\.0)\.jar.*</filePath>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson-databind@(2\.18\.6|2\.22\.1)$</packageUrl>
+    <cve>CVE-2026-54512</cve>
+    <cve>CVE-2026-54513</cve>
+    <cve>CVE-2026-68497</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Hadoop shades Jetty 9.4.58 for its own internal HTTP components. Druid uses
+         Jetty for its server and does not expose Hadoop's embedded Jetty server or
+         Digest authentication. Keep the selectors limited to the Hadoop shaded JAR. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jetty-http/jetty-io 9.4.58.v20250814)
+    ]]></notes>
+    <filePath regex="true">.*hadoop-client-runtime-3\.5\.0\.jar.*</filePath>
+    <packageUrl regex="true">^pkg:maven/org\.eclipse\.jetty/jetty-(http|io)@9\.4\.58.*$</packageUrl>
+    <cve>CVE-2026-2332</cve>
+    <cve>CVE-2026-10050</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Hadoop shades JLine for its interactive CLI. Druid does not expose a JLine
+         Telnet server endpoint. Keep this scoped to Hadoop's shaded copy. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jline 3.9.0)
+    ]]></notes>
+    <filePath regex="true">.*hadoop-client-runtime-3\.5\.0\.jar.*</filePath>
+    <packageUrl regex="true">^pkg:maven/org\.jline/jline@3\.9\.0$</packageUrl>
+    <cve>CVE-2026-56741</cve>
+    <cve>CVE-2026-56740</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Dependency-Check matches the Java GCP resource provider to OpenTelemetry Go
+         advisories. Druid uses the Java artifact only for GCP resource detection. -->
+    <notes><![CDATA[
+      file name: opentelemetry-gcp-resources-1.37.0-alpha.jar
+      The reported CVEs affect opentelemetry-go, not this Java artifact.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.opentelemetry\.contrib/opentelemetry-gcp-resources@1\.37\.0-alpha$</packageUrl>
+    <cve>CVE-2026-24051</cve>
+    <cve>CVE-2026-39883</cve>
+    <cve>CVE-2026-29181</cve>
+  </suppress>
+
+  <suppress>
+    <!-- docker-java-transport-zerodep embeds these HttpComponents versions. Druid uses
+         this dependency for container-based test infrastructure; normal Druid-managed
+         HttpClient versions cannot replace the relocated copies. Keep the suppression
+         limited to the exact embedded transport JAR and versions. -->
+    <notes><![CDATA[
+      file name: docker-java-transport-zerodep-3.7.1.jar (shaded httpclient5 5.5.1 and httpcore5 5.3.6)
+    ]]></notes>
+    <filePath regex="true">.*docker-java-transport-zerodep-3\.7\.1\.jar.*</filePath>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.(client5/httpclient5@5\.5\.1|core5/httpcore5@5\.3\.6)$</packageUrl>
+    <cve>CVE-2026-40542</cve>
+    <cve>CVE-2026-71290</cve>
+    <cve>CVE-2026-54399</cve>
+    <cve>CVE-2026-54428</cve>
+  </suppress>
 </suppressions>
