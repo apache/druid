@@ -453,7 +453,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/moveSkipped/count`|Number of segments that were chosen for balancing but could not be moved. This can occur when segments are already optimally placed.|`dataSource`, `server`, `tier`, `description`|Varies|
 |`segment/dropSkipped/count`|Number of segments that could not be dropped from any server.|`dataSource`, `server`, `tier`, `description`|Varies|
 |`segment/clone/assigned/count`|Number of segments assigned to be loaded on a historical clone.|`dataSource`, `server`, `tier`|Varies|
-|`segment/clone/dropped/count`|Number of segments assigned to be loaded on a historical clone.|`dataSource`, `server`, `tier`|Varies|
+|`segment/clone/dropped/count`|Number of segments dropped from a historical clone.|`dataSource`, `server`, `tier`|Varies|
 |`segment/clone/pendingSync/count`|Number of segments that still need to be loaded on a historical clone but are already loaded on its source server.|`server`, `tier`|Varies|
 |`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|

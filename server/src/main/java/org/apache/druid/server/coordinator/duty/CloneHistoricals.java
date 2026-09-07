@@ -123,10 +123,8 @@ public class CloneHistoricals implements CoordinatorDuty
       // different parts of it.
       for (DataSegment segment : sourceProjectedSegments) {
         final PartialLoadProfile sourceProfile = sourceServer.getProjectedProfile(segment);
-        if (shouldLoadSegmentOnTargetServer(segment, sourceProfile, targetServer, targetProjectedSegments)) {
-          loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
-          cloningStats.incrementMissingSegmentCount(sourceServer.isServingSegment(segment));
-        } else if (targetServer.isLoadingSegment(segment)) {
+        if (shouldLoadSegmentOnTargetServer(segment, sourceProfile, targetServer, targetProjectedSegments)
+            && loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params)) {
           cloningStats.incrementMissingSegmentCount(sourceServer.isServingSegment(segment));
         }
       }
@@ -153,8 +151,11 @@ public class CloneHistoricals implements CoordinatorDuty
   /**
    * Queues a load of {@code segment} on the clone target, asking for the same parts of the segment that the source
    * holds. A null {@code sourceProfile} means the source holds the whole segment, which is the regular full load.
+   *
+   * @return true if the given segment is a "used" segment and has started loading
+   * on the target server
    */
-  private void loadSegmentOnTargetServer(
+  private boolean loadSegmentOnTargetServer(
       DataSegment segment,
       @Nullable PartialLoadProfile sourceProfile,
       ServerHolder targetServer,
@@ -173,6 +174,7 @@ public class CloneHistoricals implements CoordinatorDuty
           rowKey.and(Dimension.DESCRIPTION, "Segment not found in metadata cache"),
           1L
       );
+      return false;
     } else if (loadQueueManager.loadSegment(
         loadableSegment,
         targetServer,
@@ -185,6 +187,8 @@ public class CloneHistoricals implements CoordinatorDuty
           1L
       );
     }
+
+    return targetServer.isLoadingSegment(loadableSegment);
   }
 
   @Nullable
@@ -336,21 +340,14 @@ public class CloneHistoricals implements CoordinatorDuty
   )
   {
     final String targetServerName = server.getServer().getName();
+    final RowKey rowKey = RowKey.with(Dimension.SERVER, targetServerName)
+                                .and(Dimension.TIER, server.getServer().getTier());
     final ServerCloneStatus oldStatus = cloneStatusManager.getStatusForServer(targetServerName);
 
-    stats.add(
-        Stats.Segments.PENDING_SYNC_ON_CLONE,
-        RowKey.of(Dimension.SERVER, targetServerName),
-        newStatus.segmentsPendingSync()
-    );
+    stats.add(Stats.Segments.PENDING_SYNC_ON_CLONE, rowKey, newStatus.segmentsPendingSync());
     if (newStatus.state() == ServerCloneStatus.State.SYNCED
         && (oldStatus == null || oldStatus.state() != ServerCloneStatus.State.SYNCED)) {
-      stats.add(
-          Stats.Tier.CLONE_SYNCED,
-          RowKey.with(Dimension.SERVER, targetServerName)
-                .and(Dimension.TIER, server.getServer().getTier()),
-          1L
-      );
+      stats.add(Stats.Tier.CLONE_SYNCED, rowKey, 1L);
     }
   }
 
