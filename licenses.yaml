@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.54.7
+version: 2.54.10
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -1322,7 +1322,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -1332,7 +1332,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -1918,7 +1918,7 @@ name: jackson-jq
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.2
+version: 1.6.3
 libraries:
   - net.thisptr: jackson-jq
 
@@ -2606,7 +2606,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.6.0
+version: 7.6.1
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -3299,7 +3299,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -3557,7 +3557,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.18.0
+version: 1.18.1
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3639,7 +3639,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 4.2.2
+version: 4.2.3
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
@@ -3899,7 +3899,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 4.36.0
+version: 4.36.1
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4566,7 +4566,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.83.1
+version: 1.84.0
 libraries:
   - io.grpc: grpc-api
 
@@ -4576,7 +4576,7 @@ name: grpc-context
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.83.1
+version: 1.84.0
 libraries:
   - io.grpc: grpc-context
 
