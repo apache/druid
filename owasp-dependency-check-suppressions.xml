@@ -914,4 +914,111 @@
     <packageUrl regex="true">^pkg:maven/org\.jetbrains\.kotlin/kotlin-stdlib@.*$</packageUrl>
     <cve>CVE-2026-53914</cve>
   </suppress>
+
+  <suppress>
+    <!-- CVE-2026-33117: Vulnerability in Azure SDK for Java's Key Vault Keys local cryptographic verification path.
+         Druid's azure-extensions use azure-core/azure-identity for blob storage auth only; Druid does not use
+         azure-keyvault-keys or the local cryptography client path that contains the vulnerability. -->
+    <notes><![CDATA[
+      file name: azure-core-1.58.1.jar azure-core-http-netty-1.16.5.jar azure-identity-1.18.4.jar azure-json-1.5.1.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.azure/azure-.*@.*$</packageUrl>
+    <cve>CVE-2026-33117</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-49845: SQL injection in Hive Metastore partition-name resolution.
+         CVE-2026-53561: SAML bearer-token authentication bypass in HiveServer2.
+         CVE-2026-55976: SSRF via avro.schema.url in Avro SerDe schema resolution.
+         All three affect Apache Hive server components (Metastore, HiveServer2).
+         Druid uses hive-storage-api only for the Murmur3 hash utility
+         (BloomKFilter.java) and ORC/Parquet column type definitions — it does not
+         run or connect to a Hive Metastore or HiveServer2. -->
+    <notes><![CDATA[
+      file name: hive-storage-api-4.2.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@.*$</packageUrl>
+    <cve>CVE-2026-49845</cve>
+    <cve>CVE-2026-53561</cve>
+    <cve>CVE-2026-55976</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-54512, CVE-2026-54513: PolymorphicTypeValidator bypass in jackson-databind when
+         polymorphic typing is enabled with generic type parameters or array subtypes.
+         These CVEs affect jackson-databind shaded inside hadoop-client-runtime-3.5.0.jar and
+         parquet-jackson-1.18.0.jar — not Druid's own jackson-databind (2.22.x). Druid cannot
+         upgrade the jackson version inside these third-party shaded jars. Druid's own usage of
+         @JsonTypeInfo uses a custom StrictTypeIdResolver that is not affected by these bypass paths.
+         CVE-2026-68497: Not yet published in NVD; suppressed as appearing only inside shaded
+         hadoop/parquet jars that Druid cannot control. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
+                 parquet-jackson-1.18.0.jar (shaded jackson-databind 2.22.1)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson-databind@(2\.18\.|2\.22\.).*$</packageUrl>
+    <cve>CVE-2026-54512</cve>
+    <cve>CVE-2026-54513</cve>
+    <cve>CVE-2026-68497</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-2332: Jetty HTTP/1.1 request smuggling via chunk extension quoted strings.
+         CVE-2026-10050: Jetty Digest auth password encoding using ISO-8859-1.
+         Both affect Jetty shaded inside hadoop-client-runtime-3.5.0.jar. Druid cannot upgrade
+         the Jetty version inside this shaded jar. The shaded Jetty is used only for Hadoop's
+         internal HTTP server (WebHDFS, etc.), not for Druid's own HTTP server (Jetty 12.x).
+         Druid does not use Hadoop's embedded Jetty server or Digest auth. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jetty-http/jetty-io 9.4.58.v20250814)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.eclipse\.jetty/jetty-(http|io)@9\.4\.58.*$</packageUrl>
+    <cve>CVE-2026-2332</cve>
+    <cve>CVE-2026-10050</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-56741, CVE-2026-56740: DoS via JLine Telnet server (NAWS terminal dimensions and
+         NEW-ENVIRON flooding). JLine is shaded inside hadoop-client-runtime-3.5.0.jar and is used
+         only for Hadoop's interactive CLI shell. Druid does not expose a JLine Telnet server endpoint. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jline 3.9.0)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jline/jline@.*$</packageUrl>
+    <cve>CVE-2026-56741</cve>
+    <cve>CVE-2026-56740</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-24051, CVE-2026-39883, CVE-2026-29181: All three affect the OpenTelemetry Go SDK
+         (opentelemetry-go), not any Java library. The scanner matches opentelemetry-gcp-resources
+         (a Java artifact) against the Go SDK CPE due to the shared "opentelemetry" product name.
+         Druid's google-extensions use the Java opentelemetry-gcp-resources for GCP resource
+         detection; the vulnerable PATH hijacking and baggage-header amplification code exists
+         only in the Go implementation. -->
+    <notes><![CDATA[
+      file name: opentelemetry-gcp-resources-1.37.0-alpha.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.opentelemetry\.contrib/opentelemetry-gcp-resources@.*$</packageUrl>
+    <cve>CVE-2026-24051</cve>
+    <cve>CVE-2026-39883</cve>
+    <cve>CVE-2026-29181</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-40542, CVE-2026-71290: Vulnerabilities in Apache HttpClient 5 (SCRAM mutual auth
+         and async hostname verification). CVE-2026-54399, CVE-2026-54428: DoS in Apache HttpComponents
+         Core 5 (excessive headers and HTTP/2 HPACK). All four affect httpclient5/httpcore5 shaded
+         inside docker-java-transport-zerodep-3.7.1.jar (a test-scoped dependency used only by
+         druid-testcontainers for Docker container management in tests). These are not present in
+         Druid's production runtime classpath. -->
+    <notes><![CDATA[
+      file name: docker-java-transport-zerodep-3.7.1.jar (shaded httpclient5 5.5.1 and httpcore5 5.3.6)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.(client5/httpclient5|core5/httpcore5)@.*$</packageUrl>
+    <cve>CVE-2026-40542</cve>
+    <cve>CVE-2026-71290</cve>
+    <cve>CVE-2026-54399</cve>
+    <cve>CVE-2026-54428</cve>
+  </suppress>
 </suppressions>
