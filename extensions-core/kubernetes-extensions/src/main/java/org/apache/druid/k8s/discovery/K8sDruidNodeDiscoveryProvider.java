@@ -255,8 +255,7 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
     {
       String nextResourceVersion = resourceVersion;
 
-      while (lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS)) {
-
+      while (lifecycleLock.isStarted()) {
         try (WatchResult iter = k8sApiClient.watchPods(podInfo.getPodNamespace(), labelSelector, nextResourceVersion, nodeRole)) {
           if (iter == null) {
             // history not available, we need to start from scratch
@@ -295,6 +294,10 @@ public class K8sDruidNodeDiscoveryProvider extends DruidNodeDiscoveryProvider
         }
         catch (ChannelResetException ex) {
           LOGGER.debug("Watch stream terminated normally for role[%s], restarting", this.nodeRole);
+          // Apply the same backoff as other retry paths below: a persistently reset stream
+          // (flaky proxy, LB idle timeout shorter than expected) would otherwise cause an
+          // unbounded relist/watch loop against the API server.
+          sleep(watcherErrorRetryWaitMS);
           return;
         }
         catch (SocketTimeoutException ex) {
