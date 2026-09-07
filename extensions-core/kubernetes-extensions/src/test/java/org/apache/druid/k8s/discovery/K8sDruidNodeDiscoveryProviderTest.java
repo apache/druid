@@ -552,6 +552,57 @@ public class K8sDruidNodeDiscoveryProviderTest
     discoveryProvider.stop();
   }
 
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
+  public void testPersistentChannelResetAppliesBackoffBetweenRelists() throws Exception
+  {
+    String labelSelector =
+      "druidDiscoveryAnnouncement-cluster-identifier=druid-cluster,druidDiscoveryAnnouncement-router=true";
+    K8sApiClient mockK8sApiClient = EasyMock.createMock(K8sApiClient.class);
+
+    // Three consecutive watch attempts are immediately reset, followed by a clean one. Without
+    // backoff on the ChannelResetException path, these three relist/watch cycles would complete
+    // almost instantly; with backoff, each reset costs watcherErrorRetryWaitMS.
+    for (int i = 0; i < 3; i++) {
+      EasyMock.expect(mockK8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, NodeRole.ROUTER))
+              .andReturn(new DiscoveryDruidNodeList("v1", ImmutableMap.of()));
+      EasyMock.expect(mockK8sApiClient.watchPods(podInfo.getPodNamespace(), labelSelector, "v1", NodeRole.ROUTER))
+              .andReturn(new MockWatchResult(Collections.emptyList(), false, false, true));
+    }
+
+    EasyMock.expect(mockK8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, NodeRole.ROUTER))
+            .andReturn(new DiscoveryDruidNodeList(
+              "v2", ImmutableMap.of(testNode1.getDruidNode().getHostAndPortToUse(), testNode1)));
+    EasyMock.expect(mockK8sApiClient.watchPods(podInfo.getPodNamespace(), labelSelector, "v2", NodeRole.ROUTER))
+            .andReturn(new MockWatchResult(Collections.emptyList(), false, false));
+
+    EasyMock.replay(mockK8sApiClient);
+
+    long watcherErrorRetryWaitMS = 1500;
+    K8sDruidNodeDiscoveryProvider discoveryProvider =
+      new K8sDruidNodeDiscoveryProvider(podInfo, discoveryConfig, mockK8sApiClient, watcherErrorRetryWaitMS);
+    discoveryProvider.start();
+
+    K8sDruidNodeDiscoveryProvider.NodeRoleWatcher nodeDiscovery =
+      discoveryProvider.getForNodeRole(NodeRole.ROUTER, false);
+
+    MockListener testListener =
+      new MockListener(ImmutableList.of(MockListener.Event.inited(), MockListener.Event.added(testNode1)));
+    nodeDiscovery.registerListener(testListener);
+
+    long start = System.currentTimeMillis();
+    nodeDiscovery.start();
+    testListener.assertSuccess();
+    long elapsed = System.currentTimeMillis() - start;
+
+    discoveryProvider.stop();
+
+    Assertions.assertTrue(
+      elapsed >= 3 * watcherErrorRetryWaitMS,
+      "Expected at least 3 backoff waits (" + (3 * watcherErrorRetryWaitMS) + "ms) for 3 persistent "
+      + "channel resets, but only " + elapsed + "ms elapsed");
+  }
+
   private static class MockListener implements DruidNodeDiscovery.Listener
   {
     List<Event> events;
