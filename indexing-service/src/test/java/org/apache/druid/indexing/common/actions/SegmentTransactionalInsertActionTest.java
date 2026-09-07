@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -36,18 +35,18 @@ import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.assertj.core.api.Assertions;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class SegmentTransactionalInsertActionTest
 {
-  @Rule
+  @RegisterExtension
   public TaskActionTestKit actionTestKit = new TaskActionTestKit();
 
   private static final String DATA_SOURCE = "none";
@@ -116,7 +115,7 @@ public class SegmentTransactionalInsertActionTest
         task,
         actionTestKit.getTaskActionToolbox()
     );
-    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
+    Assertions.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
 
     SegmentPublishResult result2 = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT2),
@@ -129,14 +128,14 @@ public class SegmentTransactionalInsertActionTest
         task,
         actionTestKit.getTaskActionToolbox()
     );
-    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
+    Assertions.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
 
-    Assertions.assertThat(
+    assertThat(
         actionTestKit.getMetadataStorageCoordinator()
                      .retrieveUsedSegmentsForInterval(DATA_SOURCE, INTERVAL, Segments.ONLY_VISIBLE)
     ).containsExactlyInAnyOrder(SEGMENT1, SEGMENT2);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new ObjectMetadata(ImmutableList.of(2)),
         actionTestKit.getMetadataStorageCoordinator().retrieveDataSourceMetadata(SUPERVISOR_ID)
     );
@@ -160,7 +159,7 @@ public class SegmentTransactionalInsertActionTest
         task,
         actionTestKit.getTaskActionToolbox()
     );
-    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
+    Assertions.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT1)), result1);
 
     SegmentPublishResult result2 = SegmentTransactionalInsertAction.appendAction(
         ImmutableSet.of(SEGMENT2),
@@ -173,14 +172,14 @@ public class SegmentTransactionalInsertActionTest
         task,
         actionTestKit.getTaskActionToolbox()
     );
-    Assert.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
+    Assertions.assertEquals(SegmentPublishResult.ok(ImmutableSet.of(SEGMENT2)), result2);
 
-    Assertions.assertThat(
+    assertThat(
         actionTestKit.getMetadataStorageCoordinator()
                      .retrieveUsedSegmentsForInterval(DATA_SOURCE, INTERVAL, Segments.ONLY_VISIBLE)
     ).containsExactlyInAnyOrder(SEGMENT1, SEGMENT2);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new ObjectMetadata(ImmutableList.of(2)),
         actionTestKit.getMetadataStorageCoordinator().retrieveDataSourceMetadata(SUPERVISOR_ID)
     );
@@ -208,7 +207,7 @@ public class SegmentTransactionalInsertActionTest
         actionTestKit.getTaskActionToolbox()
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentPublishResult.fail(
             "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
             + " ahead of the last committed end state[null]. Try resetting the supervisor."
@@ -226,12 +225,13 @@ public class SegmentTransactionalInsertActionTest
     actionTestKit.getTaskLockbox().add(task);
     acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, INTERVAL, 5000);
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> action.perform(task, actionTestKit.getTaskActionToolbox())
-        ),
-        DruidExceptionMatcher.conflict().expectMessageContains("are not covered by locks")
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> action.perform(task, actionTestKit.getTaskActionToolbox())
     );
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.CONFLICT, exception.getCategory());
+    Assertions.assertEquals("general", exception.getErrorCode());
+    assertThat(exception.getMessage()).contains("are not covered by locks");
   }
 }

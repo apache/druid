@@ -36,6 +36,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.timeline.CompactionState;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -79,6 +80,11 @@ public interface DataSourceCompactionConfig
   Integer getMaxRowsPerSegment();
 
   Period getSkipOffsetFromLatest();
+
+  /**
+   * Intervals to skip from compaction. A compaction interval overlapping any of these will be skipped.
+   */
+  List<Interval> getSkipIntervals();
 
   @Nullable
   UserCompactionTaskQueryTuningConfig getTuningConfig();

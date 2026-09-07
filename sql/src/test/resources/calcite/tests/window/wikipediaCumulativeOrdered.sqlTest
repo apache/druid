@@ -30,7 +30,7 @@ expectedOperators:
       processors:
         - { "type": "offset", "inputColumn": "d1", "outputColumn": "w1", "offset": -2 }
         - { "type": "offset", "inputColumn": "d1", "outputColumn": "w2", "offset": 1 }
-        - { "type": "first", "inputColumn": "a0", "outputColumn": "w3" }
+        - { "type": "first", "inputColumn": "a0", "outputColumn": "w3", "frame": { "type": "groups", "upperOffset": 0, "orderByColumns": ["a0"] } }
         - { "type": "offset", "inputColumn": "a0", "outputColumn": "w4", "offset": 0 }
         - { "type": "percentile", "outputColumn": "w5", "numBuckets": 3 }
         - { "type": "rank", "group": [ "a0" ], "outputColumn": "w6", "asPercent": false }

@@ -51,7 +51,6 @@ import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.http.ResultFormat;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ScheduledExecutorService;
@@ -266,8 +265,10 @@ public class EmbeddedServiceClient
 
     try {
       StatusResponseHolder response = serviceClient.request(requestBuilder, responseHandler);
-      if (!response.getStatus().equals(HttpResponseStatus.OK)
-          && !response.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+
+      // Handle all success status codes
+      final int statusCode = response.getStatus().getCode();
+      if (statusCode < 200 || statusCode >= 300) {
         throw new ISE(
             "Request[%s] failed with status[%s] content[%s].",
             requestBuilder.toString(),

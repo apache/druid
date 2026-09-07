@@ -30,10 +30,10 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -49,7 +49,7 @@ public class IntervalsResourceTest
   private List<DataSegment> dataSegmentList;
   private HttpServletRequest request;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     inventoryView = EasyMock.createStrictMock(InventoryView.class);
@@ -128,15 +128,15 @@ public class IntervalsResourceTest
 
     Response response = intervalsResource.getIntervals(request);
     TreeMap<Interval, Map<String, Map<String, Object>>> actualIntervals = (TreeMap) response.getEntity();
-    Assert.assertEquals(2, actualIntervals.size());
-    Assert.assertEquals(expectedIntervals.get(1), actualIntervals.firstKey());
-    Assert.assertEquals(10L, actualIntervals.get(expectedIntervals.get(1)).get("datasource1").get("size"));
-    Assert.assertEquals(1, actualIntervals.get(expectedIntervals.get(1)).get("datasource1").get("count"));
-    Assert.assertEquals(expectedIntervals.get(0), actualIntervals.lastKey());
-    Assert.assertEquals(20L, actualIntervals.get(expectedIntervals.get(0)).get("datasource1").get("size"));
-    Assert.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource1").get("count"));
-    Assert.assertEquals(5L, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("size"));
-    Assert.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("count"));
+    Assertions.assertEquals(2, actualIntervals.size());
+    Assertions.assertEquals(expectedIntervals.get(1), actualIntervals.firstKey());
+    Assertions.assertEquals(10L, actualIntervals.get(expectedIntervals.get(1)).get("datasource1").get("size"));
+    Assertions.assertEquals(1, actualIntervals.get(expectedIntervals.get(1)).get("datasource1").get("count"));
+    Assertions.assertEquals(expectedIntervals.get(0), actualIntervals.lastKey());
+    Assertions.assertEquals(20L, actualIntervals.get(expectedIntervals.get(0)).get("datasource1").get("size"));
+    Assertions.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource1").get("count"));
+    Assertions.assertEquals(5L, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("size"));
+    Assertions.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("count"));
 
   }
 
@@ -165,10 +165,10 @@ public class IntervalsResourceTest
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", "simple", null, request);
     Map<Interval, Map<String, Object>> actualIntervals = (Map) response.getEntity();
-    Assert.assertEquals(1, actualIntervals.size());
-    Assert.assertTrue(actualIntervals.containsKey(expectedIntervals.get(0)));
-    Assert.assertEquals(25L, actualIntervals.get(expectedIntervals.get(0)).get("size"));
-    Assert.assertEquals(2, actualIntervals.get(expectedIntervals.get(0)).get("count"));
+    Assertions.assertEquals(1, actualIntervals.size());
+    Assertions.assertTrue(actualIntervals.containsKey(expectedIntervals.get(0)));
+    Assertions.assertEquals(25L, actualIntervals.get(expectedIntervals.get(0)).get("size"));
+    Assertions.assertEquals(2, actualIntervals.get(expectedIntervals.get(0)).get("count"));
 
   }
 
@@ -197,12 +197,12 @@ public class IntervalsResourceTest
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, "full", request);
     TreeMap<Interval, Map<String, Map<String, Object>>> actualIntervals = (TreeMap) response.getEntity();
-    Assert.assertEquals(1, actualIntervals.size());
-    Assert.assertEquals(expectedIntervals.get(0), actualIntervals.firstKey());
-    Assert.assertEquals(20L, actualIntervals.get(expectedIntervals.get(0)).get("datasource1").get("size"));
-    Assert.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource1").get("count"));
-    Assert.assertEquals(5L, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("size"));
-    Assert.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("count"));
+    Assertions.assertEquals(1, actualIntervals.size());
+    Assertions.assertEquals(expectedIntervals.get(0), actualIntervals.firstKey());
+    Assertions.assertEquals(20L, actualIntervals.get(expectedIntervals.get(0)).get("datasource1").get("size"));
+    Assertions.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource1").get("count"));
+    Assertions.assertEquals(5L, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("size"));
+    Assertions.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("count"));
 
   }
 
@@ -229,12 +229,12 @@ public class IntervalsResourceTest
 
     Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, null, request);
     Map<String, Object> actualIntervals = (Map) response.getEntity();
-    Assert.assertEquals(2, actualIntervals.size());
-    Assert.assertEquals(25L, actualIntervals.get("size"));
-    Assert.assertEquals(2, actualIntervals.get("count"));
+    Assertions.assertEquals(2, actualIntervals.size());
+    Assertions.assertEquals(25L, actualIntervals.get("size"));
+    Assertions.assertEquals(2, actualIntervals.get("count"));
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(inventoryView);

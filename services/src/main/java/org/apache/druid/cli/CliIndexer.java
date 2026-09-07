@@ -47,6 +47,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
@@ -243,7 +244,8 @@ public class CliIndexer extends ServerRunnable
         new MSQIndexingModule(),
         new MSQDurableStorageModule(),
         new MSQExternalDataSourceModule(),
-        new IndexerMemoryManagementModule()
+        new IndexerMemoryManagementModule(),
+        new RegexEngineModule()
     );
   }
 }

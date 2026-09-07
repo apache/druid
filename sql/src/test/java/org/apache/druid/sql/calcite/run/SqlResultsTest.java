@@ -28,13 +28,10 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTimeZone;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,7 +43,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
 
   private ObjectMapper jsonMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     jsonMapper = TestHelper.JSON_MAPPER;
@@ -227,10 +224,10 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   {
     try {
       assertCoerce("", new byte[1], SqlTypeName.BIGINT);
-      Assert.fail("Should throw an exception");
+      Assertions.fail("Should throw an exception");
     }
     catch (Exception e) {
-      Assert.assertEquals("Cannot coerce field [fieldName] from type [Byte Array] to type [BIGINT]", e.getMessage());
+      Assertions.assertEquals("Cannot coerce field [fieldName] from type [Byte Array] to type [BIGINT]", e.getMessage());
     }
   }
 
@@ -243,7 +240,7 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   @Test
   public void testMayNotCoerceList()
   {
-    Assert.assertEquals("hello", SqlResults.coerceArrayToList("hello", false));
+    Assertions.assertEquals("hello", SqlResults.coerceArrayToList("hello", false));
   }
 
   @Test
@@ -254,27 +251,27 @@ public class SqlResultsTest extends InitializedNullHandlingTest
 
   private void assertCoerce(Object expected, Object toCoerce, SqlTypeName typeName)
   {
-    Assert.assertEquals(
-        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName),
+    Assertions.assertEquals(
         expected,
-        SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, "fieldName")
+        SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, "fieldName"),
+        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName)
     );
   }
 
   private void assertCannotCoerce(Object toCoerce, SqlTypeName typeName)
   {
-    final DruidException e = Assert.assertThrows(
-        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName),
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
-        () -> SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, "")
+        () -> SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, typeName, ""),
+        StringUtils.format("Coerce [%s] to [%s]", toCoerce, typeName)
     );
 
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot coerce")));
+    Assertions.assertTrue(e.getMessage().contains("Cannot coerce"));
   }
 
   private void assertCoerceArrayToList(Object expected, Object toCoerce)
   {
     Object coerced = SqlResults.coerce(jsonMapper, DEFAULT_CONTEXT, toCoerce, SqlTypeName.ARRAY, "");
-    Assert.assertEquals(expected, coerced);
+    Assertions.assertEquals(expected, coerced);
   }
 }

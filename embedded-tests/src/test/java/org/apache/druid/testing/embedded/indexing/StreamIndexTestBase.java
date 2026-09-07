@@ -19,9 +19,11 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
@@ -31,6 +33,7 @@ import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -47,8 +50,10 @@ import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
 import org.apache.druid.testing.embedded.tools.StreamGenerator;
 import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
 import org.joda.time.Period;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -79,6 +84,27 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
         .addServer(broker)
         .addServer(historical)
         .addServer(new EmbeddedRouter());
+  }
+
+  /**
+   * Terminates every supervisor and cancels every active task. The cluster is shared across all tests
+   * in the class (see {@link EmbeddedClusterTestBase}), so a task left running by one test would potentially
+   * interfere with the next test.
+   */
+  @AfterEach
+  protected void terminateLeftoverSupervisorsAndTasks()
+  {
+    final List<SupervisorStatus> supervisors = ImmutableList.copyOf(
+        cluster.callApi().onLeaderOverlord(OverlordClient::supervisorStatuses)
+    );
+    for (SupervisorStatus supervisor : supervisors) {
+      cluster.callApi().onLeaderOverlord(o -> o.terminateSupervisor(supervisor.getId()));
+    }
+
+    cluster.callApi()
+           .waitForResult(this::cancelAllTasks, count -> count == 0)
+           .withTimeoutMillis(60_000)
+           .go();
   }
 
   protected KafkaSupervisorSpecBuilder createKafkaSupervisor(KafkaResource kafkaServer)
@@ -206,5 +232,22 @@ public abstract class StreamIndexTestBase extends EmbeddedClusterTestBase
       getStreamIngestResource().publishRecordsToTopicWithoutTransaction(topic, records);
     }
     return records.size();
+  }
+
+  /**
+   * Cancels every task that has not completed yet and returns how many such tasks there were.
+   */
+  private int cancelAllTasks()
+  {
+    final List<TaskStatusPlus> tasks = new ArrayList<>();
+    for (String taskState : List.of("running", "pending", "waiting")) {
+      tasks.addAll(cluster.callApi().getTasks(null, taskState));
+    }
+
+    for (TaskStatusPlus task : tasks) {
+      cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
+    }
+
+    return tasks.size();
   }
 }

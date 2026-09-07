@@ -23,8 +23,8 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.sql.SQLException;
 
@@ -43,15 +43,15 @@ public class SQLServerConnectorTest
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    Assert.assertTrue(connector.isTransientException(new SQLException("Resource Failure!", "08DIE")));
-    Assert.assertTrue(connector.isTransientException(new SQLException("Resource Failure as well!", "53RES")));
-    Assert.assertTrue(connector.isTransientException(new SQLException("Transient Failures", "JW001")));
-    Assert.assertTrue(connector.isTransientException(new SQLException("Transient Rollback", "40001")));
+    Assertions.assertTrue(connector.isTransientException(new SQLException("Resource Failure!", "08DIE")));
+    Assertions.assertTrue(connector.isTransientException(new SQLException("Resource Failure as well!", "53RES")));
+    Assertions.assertTrue(connector.isTransientException(new SQLException("Transient Failures", "JW001")));
+    Assertions.assertTrue(connector.isTransientException(new SQLException("Transient Rollback", "40001")));
 
-    Assert.assertFalse(connector.isTransientException(new SQLException("SQLException with reason only")));
-    Assert.assertFalse(connector.isTransientException(new SQLException()));
-    Assert.assertFalse(connector.isTransientException(new Exception("Exception with reason only")));
-    Assert.assertFalse(connector.isTransientException(new Throwable("Throwable with reason only")));
+    Assertions.assertFalse(connector.isTransientException(new SQLException("SQLException with reason only")));
+    Assertions.assertFalse(connector.isTransientException(new SQLException()));
+    Assertions.assertFalse(connector.isTransientException(new Exception("Exception with reason only")));
+    Assertions.assertFalse(connector.isTransientException(new Throwable("Throwable with reason only")));
   }
 
   @Test
@@ -66,22 +66,22 @@ public class SQLServerConnectorTest
     );
 
     // SQL Server integrity_constraint_violation SQL state (23000)
-    Assert.assertTrue(connector.isUniqueConstraintViolation(
+    Assertions.assertTrue(connector.isUniqueConstraintViolation(
         new SQLException("Violation of UNIQUE KEY constraint", "23000")
     ));
 
     // Different SQL state should return false
-    Assert.assertFalse(connector.isUniqueConstraintViolation(
+    Assertions.assertFalse(connector.isUniqueConstraintViolation(
         new SQLException("some other error", "42000")
     ));
 
     // SQLException wrapped in another exception (tests cause chain traversal)
-    Assert.assertTrue(connector.isUniqueConstraintViolation(
+    Assertions.assertTrue(connector.isUniqueConstraintViolation(
         new RuntimeException(new SQLException("Duplicate key", "23000"))
     ));
 
     // Non-SQLException exception
-    Assert.assertFalse(connector.isUniqueConstraintViolation(new Exception("not a SQLException")));
+    Assertions.assertFalse(connector.isUniqueConstraintViolation(new Exception("not a SQLException")));
   }
 
   @Test
@@ -94,6 +94,6 @@ public class SQLServerConnectorTest
         ),
         CentralizedDatasourceSchemaConfig.create()
     );
-    Assert.assertEquals("FETCH NEXT 100 ROWS ONLY", connector.limitClause(100));
+    Assertions.assertEquals("FETCH NEXT 100 ROWS ONLY", connector.limitClause(100));
   }
 }

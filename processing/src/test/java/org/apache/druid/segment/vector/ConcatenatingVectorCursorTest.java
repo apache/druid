@@ -36,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 class ConcatenatingVectorCursorTest
 {
@@ -58,7 +59,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         List.of(holderSupplier(a), holderSupplier(b)),
         List.of(new Object[]{"acme"}, new Object[]{"globex"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     VectorObjectSelector tenant = c.getColumnSelectorFactory().makeObjectSelector("tenant");
@@ -105,7 +107,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         List.of(holderSupplier(empty), holderSupplier(full)),
         List.of(new Object[]{"a"}, new Object[]{"b"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     VectorObjectSelector tenant = c.getColumnSelectorFactory().makeObjectSelector("tenant");
@@ -133,7 +136,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         List.of(holderSupplier(full), holderSupplier(empty)),
         List.of(new Object[]{"a"}, new Object[]{"b"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     VectorObjectSelector tenant = c.getColumnSelectorFactory().makeObjectSelector("tenant");
@@ -158,7 +162,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         List.of(holderSupplier(e1), holderSupplier(e2)),
         List.of(new Object[]{"a"}, new Object[]{"b"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     Assertions.assertTrue(c.isDone());
@@ -179,7 +184,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         List.of(holderSupplier(only)),
         List.<Object[]>of(new Object[]{"a"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     VectorObjectSelector tenant = c.getColumnSelectorFactory().makeObjectSelector("tenant");
@@ -210,7 +216,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         List.of(holderSupplier(a), holderSupplier(b)),
         List.of(new Object[]{"acme"}, new Object[]{"globex"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     VectorObjectSelector tenant = c.getColumnSelectorFactory().makeObjectSelector("tenant");
@@ -245,7 +252,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         List.of(holderSupplier(a), holderSupplier(b)),
         List.of(new Object[]{"x"}, new Object[]{"y"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     c.getColumnSelectorFactory();
@@ -279,7 +287,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         suppliers,
         List.of(new Object[]{"a"}, new Object[]{"b"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     c.getColumnSelectorFactory();
@@ -307,7 +316,8 @@ class ConcatenatingVectorCursorTest
     ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
         List.of(holderSupplier(a)),
         List.<Object[]>of(new Object[]{"acme"}),
-        wrapper
+        wrapper,
+        Map.of()
     );
 
     // Pre-init.

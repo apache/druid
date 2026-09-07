@@ -47,7 +47,6 @@ import java.util.Properties;
  */
 public class CliIndexerServerModule implements Module
 {
-  public static final String SERVER_HTTP_NUM_THREADS_PROPERTY = "druid.server.http.numThreads";
   private final Properties properties;
 
   public CliIndexerServerModule(Properties properties)
@@ -62,12 +61,7 @@ public class CliIndexerServerModule implements Module
     LifecycleModule.register(binder, ChatHandlerResource.class);
 
     // Use an equal number of threads for chat handler and non-chat handler requests.
-    int serverHttpNumThreads;
-    if (properties.getProperty(SERVER_HTTP_NUM_THREADS_PROPERTY) == null) {
-      serverHttpNumThreads = ServerConfig.getDefaultNumThreads();
-    } else {
-      serverHttpNumThreads = Integer.parseInt(properties.getProperty(SERVER_HTTP_NUM_THREADS_PROPERTY));
-    }
+    int serverHttpNumThreads = ServerConfig.getNumThreadsFromProperties(properties);
 
     JettyBindings.addQosFilter(
         binder,

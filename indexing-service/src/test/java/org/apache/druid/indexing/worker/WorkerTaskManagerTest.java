@@ -63,12 +63,15 @@ import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -78,11 +81,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("getParameters")
 public class WorkerTaskManagerTest
 {
   private final TaskLocation location = TaskLocation.create("localhost", 1, 2);
@@ -91,22 +96,24 @@ public class WorkerTaskManagerTest
   private final IndexMergerV9Factory indexMergerV9Factory;
   private final IndexIO indexIO;
 
-  private final boolean restoreTasksOnRestart;
+  @TempDir
+  private File tempDir;
+
+  @Parameter(0)
+  public boolean restoreTasksOnRestart;
 
   private WorkerTaskManager workerTaskManager;
   private OverlordClient overlordClient;
 
-  public WorkerTaskManagerTest(boolean restoreTasksOnRestart)
+  public WorkerTaskManagerTest()
   {
     testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     TestTasks.registerSubtypes(jsonMapper);
     indexMergerV9Factory = testUtils.getIndexMergerV9Factory();
     indexIO = testUtils.getTestIndexIO();
-    this.restoreTasksOnRestart = restoreTasksOnRestart;
   }
 
-  @Parameterized.Parameters(name = "restoreTasksOnRestart = {0}")
   public static Collection<Object[]> getParameters()
   {
     Object[][] parameters = new Object[][]{{false}, {true}};
@@ -116,7 +123,7 @@ public class WorkerTaskManagerTest
 
   private WorkerTaskManager createWorkerTaskManager()
   {
-    return createWorkerTaskManager(FileUtils.createTempDir(), new WorkerConfig());
+    return createWorkerTaskManager(tempDir, new WorkerConfig());
   }
 
   private WorkerTaskManager createWorkerTaskManager(File baseDir)
@@ -195,19 +202,20 @@ public class WorkerTaskManagerTest
     );
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     workerTaskManager = createWorkerTaskManager();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     workerTaskManager.stop();
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testTaskRun() throws Exception
   {
     EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
@@ -233,30 +241,30 @@ public class WorkerTaskManagerTest
     );
     workerTaskManager.start();
 
-    Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task2.getId()).getTaskStatus().isSuccess());
+    Assertions.assertTrue(workerTaskManager.getCompletedTasks().get(task2.getId()).getTaskStatus().isSuccess());
 
     while (!workerTaskManager.getCompletedTasks().containsKey(task1.getId())) {
       Thread.sleep(100);
     }
-    Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task1.getId()).getTaskStatus().isSuccess());
-    Assert.assertTrue(new File(workerTaskManager.getCompletedTaskDir(), task1.getId()).exists());
-    Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDir(), task1.getId()).exists());
+    Assertions.assertTrue(workerTaskManager.getCompletedTasks().get(task1.getId()).getTaskStatus().isSuccess());
+    Assertions.assertTrue(new File(workerTaskManager.getCompletedTaskDir(), task1.getId()).exists());
+    Assertions.assertFalse(new File(workerTaskManager.getAssignedTaskDir(), task1.getId()).exists());
 
     ChangeRequestsSnapshot<WorkerHistoryItem> baseHistory = workerTaskManager
         .getChangesSince(new ChangeRequestHistory.Counter(-1, 0))
         .get();
 
-    Assert.assertFalse(baseHistory.isResetCounter());
-    Assert.assertEquals(3, baseHistory.getRequests().size());
-    Assert.assertFalse(((WorkerHistoryItem.Metadata) baseHistory.getRequests().get(0)).isDisabled());
+    Assertions.assertFalse(baseHistory.isResetCounter());
+    Assertions.assertEquals(3, baseHistory.getRequests().size());
+    Assertions.assertFalse(((WorkerHistoryItem.Metadata) baseHistory.getRequests().get(0)).isDisabled());
 
     WorkerHistoryItem.TaskUpdate baseUpdate1 = (WorkerHistoryItem.TaskUpdate) baseHistory.getRequests().get(1);
     WorkerHistoryItem.TaskUpdate baseUpdate2 = (WorkerHistoryItem.TaskUpdate) baseHistory.getRequests().get(2);
 
-    Assert.assertTrue(baseUpdate1.getTaskAnnouncement().getTaskStatus().isSuccess());
-    Assert.assertTrue(baseUpdate2.getTaskAnnouncement().getTaskStatus().isSuccess());
+    Assertions.assertTrue(baseUpdate1.getTaskAnnouncement().getTaskStatus().isSuccess());
+    Assertions.assertTrue(baseUpdate2.getTaskAnnouncement().getTaskStatus().isSuccess());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(task1.getId(), task2.getId()),
         ImmutableSet.of(
             baseUpdate1.getTaskAnnouncement().getTaskStatus().getId(),
@@ -271,37 +279,38 @@ public class WorkerTaskManagerTest
       Thread.sleep(100);
     }
 
-    Assert.assertTrue(workerTaskManager.getCompletedTasks().get(task3.getId()).getTaskStatus().isSuccess());
-    Assert.assertTrue(new File(workerTaskManager.getCompletedTaskDir(), task3.getId()).exists());
-    Assert.assertFalse(new File(workerTaskManager.getAssignedTaskDir(), task3.getId()).exists());
+    Assertions.assertTrue(workerTaskManager.getCompletedTasks().get(task3.getId()).getTaskStatus().isSuccess());
+    Assertions.assertTrue(new File(workerTaskManager.getCompletedTaskDir(), task3.getId()).exists());
+    Assertions.assertFalse(new File(workerTaskManager.getAssignedTaskDir(), task3.getId()).exists());
 
     ChangeRequestsSnapshot<WorkerHistoryItem> changes = workerTaskManager.getChangesSince(baseHistory.getCounter())
                                                                          .get();
-    Assert.assertFalse(changes.isResetCounter());
-    Assert.assertEquals(4, changes.getRequests().size());
+    Assertions.assertFalse(changes.isResetCounter());
+    Assertions.assertEquals(4, changes.getRequests().size());
 
     WorkerHistoryItem.TaskUpdate update1 = (WorkerHistoryItem.TaskUpdate) changes.getRequests().get(0);
-    Assert.assertEquals(task3.getId(), update1.getTaskAnnouncement().getTaskStatus().getId());
-    Assert.assertTrue(update1.getTaskAnnouncement().getTaskStatus().isRunnable());
-    Assert.assertNull(update1.getTaskAnnouncement().getTaskLocation().getHost());
+    Assertions.assertEquals(task3.getId(), update1.getTaskAnnouncement().getTaskStatus().getId());
+    Assertions.assertTrue(update1.getTaskAnnouncement().getTaskStatus().isRunnable());
+    Assertions.assertNull(update1.getTaskAnnouncement().getTaskLocation().getHost());
 
     WorkerHistoryItem.TaskUpdate update2 = (WorkerHistoryItem.TaskUpdate) changes.getRequests().get(1);
-    Assert.assertEquals(task3.getId(), update2.getTaskAnnouncement().getTaskStatus().getId());
-    Assert.assertTrue(update2.getTaskAnnouncement().getTaskStatus().isRunnable());
-    Assert.assertNull(update2.getTaskAnnouncement().getTaskLocation().getHost());
+    Assertions.assertEquals(task3.getId(), update2.getTaskAnnouncement().getTaskStatus().getId());
+    Assertions.assertTrue(update2.getTaskAnnouncement().getTaskStatus().isRunnable());
+    Assertions.assertNull(update2.getTaskAnnouncement().getTaskLocation().getHost());
 
     WorkerHistoryItem.TaskUpdate update3 = (WorkerHistoryItem.TaskUpdate) changes.getRequests().get(2);
-    Assert.assertEquals(task3.getId(), update3.getTaskAnnouncement().getTaskStatus().getId());
-    Assert.assertTrue(update3.getTaskAnnouncement().getTaskStatus().isRunnable());
-    Assert.assertNotNull(update3.getTaskAnnouncement().getTaskLocation().getHost());
+    Assertions.assertEquals(task3.getId(), update3.getTaskAnnouncement().getTaskStatus().getId());
+    Assertions.assertTrue(update3.getTaskAnnouncement().getTaskStatus().isRunnable());
+    Assertions.assertNotNull(update3.getTaskAnnouncement().getTaskLocation().getHost());
 
     WorkerHistoryItem.TaskUpdate update4 = (WorkerHistoryItem.TaskUpdate) changes.getRequests().get(3);
-    Assert.assertEquals(task3.getId(), update4.getTaskAnnouncement().getTaskStatus().getId());
-    Assert.assertTrue(update4.getTaskAnnouncement().getTaskStatus().isSuccess());
-    Assert.assertNotNull(update4.getTaskAnnouncement().getTaskLocation().getHost());
+    Assertions.assertEquals(task3.getId(), update4.getTaskAnnouncement().getTaskStatus().getId());
+    Assertions.assertTrue(update4.getTaskAnnouncement().getTaskStatus().isSuccess());
+    Assertions.assertNotNull(update4.getTaskAnnouncement().getTaskLocation().getHost());
   }
 
-  @Test(timeout = 30_000L)
+  @Test
+  @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
   public void testTaskStatusWhenTaskRunnerFutureThrowsException() throws Exception
   {
     Task task = new NoopTask("id", null, null, 100, 0, ImmutableMap.of(Tasks.PRIORITY_KEY, 0))
@@ -321,17 +330,18 @@ public class WorkerTaskManagerTest
       Thread.sleep(10);
     } while (completeTasks.isEmpty());
 
-    Assert.assertEquals(1, completeTasks.size());
+    Assertions.assertEquals(1, completeTasks.size());
     TaskAnnouncement announcement = completeTasks.get(task.getId());
-    Assert.assertNotNull(announcement);
-    Assert.assertEquals(TaskState.FAILED, announcement.getStatus());
-    Assert.assertEquals(
+    Assertions.assertNotNull(announcement);
+    Assertions.assertEquals(TaskState.FAILED, announcement.getStatus());
+    Assertions.assertEquals(
         "Failed to run task with an exception. See middleManager or indexer logs for more details.",
         announcement.getTaskStatus().getErrorMsg()
     );
   }
 
-  @Test(timeout = 30_000L)
+  @Test
+  @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
   public void test_completedTasksCleanup_running() throws Exception
   {
     final Task task = setUpCompletedTasksCleanupTest();
@@ -342,12 +352,13 @@ public class WorkerTaskManagerTest
     EasyMock.replay(overlordClient);
 
     workerTaskManager.doCompletedTasksCleanup();
-    Assert.assertEquals(1, workerTaskManager.getCompletedTasks().size());
+    Assertions.assertEquals(1, workerTaskManager.getCompletedTasks().size());
 
     EasyMock.verify(overlordClient);
   }
 
-  @Test(timeout = 30_000L)
+  @Test
+  @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
   public void test_completedTasksCleanup_noStatus() throws Exception
   {
     final Task task = setUpCompletedTasksCleanupTest();
@@ -360,12 +371,13 @@ public class WorkerTaskManagerTest
     // Missing status (empty map) means we clean up the task. The idea is that this means the Overlord has *never*
     // heard of it, so we should forget about it.
     workerTaskManager.doCompletedTasksCleanup();
-    Assert.assertEquals(0, workerTaskManager.getCompletedTasks().size());
+    Assertions.assertEquals(0, workerTaskManager.getCompletedTasks().size());
 
     EasyMock.verify(overlordClient);
   }
 
-  @Test(timeout = 30_000L)
+  @Test
+  @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
   public void test_completedTasksCleanup_success() throws Exception
   {
     final Task task = setUpCompletedTasksCleanupTest();
@@ -376,12 +388,13 @@ public class WorkerTaskManagerTest
     EasyMock.replay(overlordClient);
 
     workerTaskManager.doCompletedTasksCleanup();
-    Assert.assertEquals(0, workerTaskManager.getCompletedTasks().size());
+    Assertions.assertEquals(0, workerTaskManager.getCompletedTasks().size());
 
     EasyMock.verify(overlordClient);
   }
 
-  @Test(timeout = 30_000L)
+  @Test
+  @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
   public void test_completedTasksCleanup_404error() throws Exception
   {
     final Task task = setUpCompletedTasksCleanupTest();
@@ -403,12 +416,13 @@ public class WorkerTaskManagerTest
     // Ending size zero, because 404 means we assume the Overlord does not have the taskStatuses API. In this case
     // we remove all completed task statuses periodically regardless of Overlord confirmation.
     workerTaskManager.doCompletedTasksCleanup();
-    Assert.assertEquals(0, workerTaskManager.getCompletedTasks().size());
+    Assertions.assertEquals(0, workerTaskManager.getCompletedTasks().size());
 
     EasyMock.verify(overlordClient);
   }
 
-  @Test(timeout = 30_000L)
+  @Test
+  @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
   public void test_completedTasksCleanup_500error() throws Exception
   {
     final Task task = setUpCompletedTasksCleanupTest();
@@ -429,12 +443,13 @@ public class WorkerTaskManagerTest
 
     // HTTP 500 is ignored and no cleanup happens.
     workerTaskManager.doCompletedTasksCleanup();
-    Assert.assertEquals(1, workerTaskManager.getCompletedTasks().size());
+    Assertions.assertEquals(1, workerTaskManager.getCompletedTasks().size());
 
     EasyMock.verify(overlordClient);
   }
 
-  @Test(timeout = 30_000L)
+  @Test
+  @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
   public void test_completedTasksCleanup_ioException() throws Exception
   {
     final Task task = setUpCompletedTasksCleanupTest();
@@ -446,7 +461,7 @@ public class WorkerTaskManagerTest
 
     // IOException is ignored and no cleanup happens.
     workerTaskManager.doCompletedTasksCleanup();
-    Assert.assertEquals(1, workerTaskManager.getCompletedTasks().size());
+    Assertions.assertEquals(1, workerTaskManager.getCompletedTasks().size());
 
     EasyMock.verify(overlordClient);
   }
@@ -496,10 +511,10 @@ public class WorkerTaskManagerTest
       Thread.sleep(10);
     } while (completeTasks.isEmpty());
 
-    Assert.assertEquals(1, completeTasks.size());
+    Assertions.assertEquals(1, completeTasks.size());
     TaskAnnouncement announcement = completeTasks.get(task.getId());
-    Assert.assertNotNull(announcement);
-    Assert.assertEquals(TaskState.SUCCESS, announcement.getStatus());
+    Assertions.assertNotNull(announcement);
+    Assertions.assertEquals(TaskState.SUCCESS, announcement.getStatus());
 
     EasyMock.reset(overlordClient);
     return task;
@@ -517,7 +532,7 @@ public class WorkerTaskManagerTest
 
     workerTaskManager.start();
     // befor assigning tasks we should get no running tasks
-    Assert.assertEquals(workerTaskManager.getWorkerRunningTasks().size(), 0L);
+    Assertions.assertEquals(workerTaskManager.getWorkerRunningTasks().size(), 0L);
 
     workerTaskManager.assignTask(task1);
     workerTaskManager.assignTask(task2);
@@ -525,7 +540,7 @@ public class WorkerTaskManagerTest
 
     Thread.sleep(25);
     //should return all 3 tasks as running
-    Assert.assertEquals(workerTaskManager.getWorkerRunningTasks(), ImmutableMap.of(
+    Assertions.assertEquals(workerTaskManager.getWorkerRunningTasks(), ImmutableMap.of(
         "wikipedia", 2L,
         "animals", 1L
     ));
@@ -539,17 +554,17 @@ public class WorkerTaskManagerTest
     // When running tasks are empty all task should be reported as completed and
     // one of the task for animals datasource should fail and other 2 tasks in
     // the wikipedia datasource should succeed
-    Assert.assertEquals(workerTaskManager.getWorkerCompletedTasks(), ImmutableMap.of(
+    Assertions.assertEquals(workerTaskManager.getWorkerCompletedTasks(), ImmutableMap.of(
         "wikipedia", 2L,
         "animals", 1L
     ));
-    Assert.assertEquals(workerTaskManager.getWorkerFailedTasks(), ImmutableMap.of(
+    Assertions.assertEquals(workerTaskManager.getWorkerFailedTasks(), ImmutableMap.of(
             "animals", 1L
     ));
-    Assert.assertEquals(workerTaskManager.getWorkerSuccessfulTasks(), ImmutableMap.of(
+    Assertions.assertEquals(workerTaskManager.getWorkerSuccessfulTasks(), ImmutableMap.of(
             "wikipedia", 2L
     ));
-    Assert.assertEquals(workerTaskManager.getWorkerAssignedTasks().size(), 0L);
+    Assertions.assertEquals(workerTaskManager.getWorkerAssignedTasks().size(), 0L);
   }
 
   @Test
@@ -558,23 +573,23 @@ public class WorkerTaskManagerTest
     EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
     EasyMock.replay(overlordClient);
 
-    final File baseTaskDir = FileUtils.createTempDir();
+    final File baseTaskDir = tempDir;
 
     workerTaskManager = createWorkerTaskManager(baseTaskDir);
     workerTaskManager.start();
-    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assertions.assertTrue(workerTaskManager.isWorkerEnabled());
     workerTaskManager.workerDisabled();
-    Assert.assertFalse(workerTaskManager.isWorkerEnabled());
-    Assert.assertTrue(workerTaskManager.getStateFile().exists());
+    Assertions.assertFalse(workerTaskManager.isWorkerEnabled());
+    Assertions.assertTrue(workerTaskManager.getStateFile().exists());
     workerTaskManager.stop();
 
     workerTaskManager = createWorkerTaskManager(baseTaskDir);
     workerTaskManager.start();
-    Assert.assertFalse(workerTaskManager.isWorkerEnabled());
+    Assertions.assertFalse(workerTaskManager.isWorkerEnabled());
 
     final ChangeRequestsSnapshot<WorkerHistoryItem> history =
         workerTaskManager.getChangesSince(new ChangeRequestHistory.Counter(-1, 0)).get();
-    Assert.assertTrue(((WorkerHistoryItem.Metadata) history.getRequests().get(0)).isDisabled());
+    Assertions.assertTrue(((WorkerHistoryItem.Metadata) history.getRequests().get(0)).isDisabled());
   }
 
   @Test
@@ -583,18 +598,18 @@ public class WorkerTaskManagerTest
     EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
     EasyMock.replay(overlordClient);
 
-    final File baseTaskDir = FileUtils.createTempDir();
+    final File baseTaskDir = tempDir;
 
     workerTaskManager = createWorkerTaskManager(baseTaskDir);
     workerTaskManager.start();
     workerTaskManager.workerDisabled();
     workerTaskManager.workerEnabled();
-    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assertions.assertTrue(workerTaskManager.isWorkerEnabled());
     workerTaskManager.stop();
 
     workerTaskManager = createWorkerTaskManager(baseTaskDir);
     workerTaskManager.start();
-    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assertions.assertTrue(workerTaskManager.isWorkerEnabled());
   }
 
   @Test
@@ -604,7 +619,7 @@ public class WorkerTaskManagerTest
     EasyMock.replay(overlordClient);
 
     workerTaskManager.start();
-    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assertions.assertTrue(workerTaskManager.isWorkerEnabled());
   }
 
   @Test
@@ -619,7 +634,7 @@ public class WorkerTaskManagerTest
     Files.write(stateFile.toPath(), "not valid json".getBytes(StandardCharsets.UTF_8));
 
     workerTaskManager.start();
-    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assertions.assertTrue(workerTaskManager.isWorkerEnabled());
   }
 
   @Test
@@ -628,13 +643,13 @@ public class WorkerTaskManagerTest
     EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
     EasyMock.replay(overlordClient);
 
-    final File baseTaskDir = FileUtils.createTempDir();
+    final File baseTaskDir = tempDir;
 
     workerTaskManager = createWorkerTaskManager(baseTaskDir);
     workerTaskManager.start();
     workerTaskManager.workerDisabled();
-    Assert.assertFalse(workerTaskManager.isWorkerEnabled());
-    Assert.assertTrue(workerTaskManager.getStateFile().exists());
+    Assertions.assertFalse(workerTaskManager.isWorkerEnabled());
+    Assertions.assertTrue(workerTaskManager.getStateFile().exists());
     workerTaskManager.stop();
 
     final WorkerConfig workerConfig = new WorkerConfig().cloneBuilder()
@@ -642,8 +657,8 @@ public class WorkerTaskManagerTest
         .build();
     workerTaskManager = createWorkerTaskManager(baseTaskDir, workerConfig);
     workerTaskManager.start();
-    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
-    Assert.assertFalse(workerTaskManager.getStateFile().exists());
+    Assertions.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assertions.assertFalse(workerTaskManager.getStateFile().exists());
   }
 
   @Test
@@ -655,10 +670,10 @@ public class WorkerTaskManagerTest
     final WorkerConfig workerConfig = new WorkerConfig().cloneBuilder()
         .setStartAlwaysEnabled(true)
         .build();
-    workerTaskManager = createWorkerTaskManager(FileUtils.createTempDir(), workerConfig);
+    workerTaskManager = createWorkerTaskManager(tempDir, workerConfig);
     workerTaskManager.start();
-    Assert.assertTrue(workerTaskManager.isWorkerEnabled());
-    Assert.assertFalse(workerTaskManager.getStateFile().exists());
+    Assertions.assertTrue(workerTaskManager.isWorkerEnabled());
+    Assertions.assertFalse(workerTaskManager.getStateFile().exists());
   }
 
   @Test
@@ -670,10 +685,10 @@ public class WorkerTaskManagerTest
     final WorkerConfig workerConfig = new WorkerConfig().cloneBuilder()
         .setStartAlwaysEnabled(true)
         .build();
-    workerTaskManager = createWorkerTaskManager(FileUtils.createTempDir(), workerConfig);
+    workerTaskManager = createWorkerTaskManager(tempDir, workerConfig);
     workerTaskManager.start();
     workerTaskManager.workerDisabled();
-    Assert.assertFalse(workerTaskManager.isWorkerEnabled());
-    Assert.assertTrue(workerTaskManager.getStateFile().exists());
+    Assertions.assertFalse(workerTaskManager.isWorkerEnabled());
+    Assertions.assertTrue(workerTaskManager.getStateFile().exists());
   }
 }

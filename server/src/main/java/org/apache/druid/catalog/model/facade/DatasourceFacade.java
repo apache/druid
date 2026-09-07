@@ -19,14 +19,18 @@
 
 package org.apache.druid.catalog.model.facade;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnType;
@@ -104,6 +108,12 @@ public class DatasourceFacade extends TableFacade
 
   private final List<ColumnFacade> columns;
   private final Map<String, ColumnFacade> columnIndex;
+  /**
+   * Memoized: facades live as long as their cached table entry and {@link #insertColumn} consults this per column,
+   * while decoding the property does a Jackson conversion each time.
+   */
+  private final Supplier<DatasourceBaseTableMetadata> baseTableMetadata =
+      Suppliers.memoize(this::decodeBaseTableMetadata);
 
   public DatasourceFacade(ResolvedTable resolved)
   {
@@ -146,7 +156,7 @@ public class DatasourceFacade extends TableFacade
       return jsonMapper().convertValue(value, ClusterKeySpec.CLUSTER_KEY_LIST_TYPE_REF);
     }
     catch (Exception e) {
-      LOG.error("Failed to convert a catalog %s property of value [%s]",
+      LOG.error("Failed to convert a catalog [%s] property of value [%s]",
           DatasourceDefn.CLUSTER_KEYS_PROPERTY,
           value
       );
@@ -176,6 +186,45 @@ public class DatasourceFacade extends TableFacade
     return columnIndex.get(name);
   }
 
+  /**
+   * Resolves a column as the target of an INSERT/REPLACE write, enforcing the catalog write rules: a column that is
+   * not declared is rejected when the table schema is {@link #isSealed() sealed}, and a column computed by a base
+   * table layout virtual column at ingest time is always rejected, its stored value is always the computed one, so
+   * the supplied values would be silently discarded. Returns the column facade for a declared column, or null for an
+   * undeclared column of a non-sealed table (the caller adds the column based on the query type).
+   *
+   * @param columnName      name of the column the query writes to
+   * @param targetTableName display name of the target table, used only in error messages. This is the table this
+   *                        facade describes, but supplied by the caller: a {@link ResolvedTable} does not know its
+   *                        own name (identity lives on {@link org.apache.druid.catalog.model.TableMetadata}), and
+   *                        SQL callers report the name as written in the query rather than the catalog identifier.
+   */
+  @Nullable
+  public ColumnFacade insertColumn(String columnName, String targetTableName)
+  {
+    final ColumnFacade definedCol = column(columnName);
+    if (definedCol == null) {
+      if (isSealed()) {
+        throw InvalidSqlInput.exception(
+            "Column [%s] is not defined in the target table [%s] strict schema",
+            columnName,
+            targetTableName
+        );
+      }
+      return null;
+    }
+    final DatasourceBaseTableMetadata baseTable = baseTableMetadata.get();
+    if (baseTable != null && baseTable.getVirtualColumns().exists(columnName)) {
+      throw InvalidSqlInput.exception(
+          "Column [%s] of target table [%s] is computed by a virtual column at ingest time and cannot be written"
+          + " directly; supply the virtual column's input columns instead",
+          columnName,
+          targetTableName
+      );
+    }
+    return definedCol;
+  }
+
   @Nullable
   public List<DatasourceProjectionMetadata> projections()
   {
@@ -188,8 +237,35 @@ public class DatasourceFacade extends TableFacade
     }
     catch (Exception e) {
       LOG.error(
-          "Failed to convert a catalog %s property of value [%s]",
+          "Failed to convert a catalog [%s] property of value [%s]",
           DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+          value
+      );
+      return null;
+    }
+  }
+
+  @Nullable
+  public DatasourceBaseTableMetadata baseTableMetadata()
+  {
+    return baseTableMetadata.get();
+  }
+
+  @Nullable
+  private DatasourceBaseTableMetadata decodeBaseTableMetadata()
+  {
+    Object value = property(DatasourceDefn.BASE_TABLE_PROPERTY);
+    if (value == null) {
+      return null;
+    }
+    try {
+      return jsonMapper().convertValue(value, DatasourceDefn.BaseTableDefn.TYPE_REF);
+    }
+    catch (Exception e) {
+      LOG.error(
+          e,
+          "Failed to convert a catalog [%s] property of value [%s]",
+          DatasourceDefn.BASE_TABLE_PROPERTY,
           value
       );
       return null;

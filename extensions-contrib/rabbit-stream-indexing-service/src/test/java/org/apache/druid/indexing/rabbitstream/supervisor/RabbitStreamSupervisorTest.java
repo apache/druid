@@ -57,11 +57,11 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -123,13 +123,13 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
                      .build();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     dataSchema = getDataSchema(DATASOURCE);
   }
 
-  @Before
+  @BeforeEach
   public void setupTest()
   {
     taskStorage = createMock(TaskStorage.class);
@@ -176,7 +176,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
     supervisorConfig = new SupervisorStateManagerConfig();
   }
 
-  @After
+  @AfterEach
   public void tearDownTest()
   {
     supervisor = null;
@@ -300,28 +300,28 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         rowIngestionMetersFactory);
 
     RabbitStreamRecordSupplier supplier = (RabbitStreamRecordSupplier) supervisor.setupRecordSupplier();
-    Assert.assertNotNull(supplier);
-    Assert.assertEquals(0, supplier.bufferSize());
-    Assert.assertEquals(Collections.emptySet(), supplier.getAssignment());
-    Assert.assertEquals(false, supplier.isRunning());
+    Assertions.assertNotNull(supplier);
+    Assertions.assertEquals(0, supplier.bufferSize());
+    Assertions.assertEquals(Collections.emptySet(), supplier.getAssignment());
+    Assertions.assertEquals(false, supplier.isRunning());
   }
 
   @Test
   public void testGetters()
   {
     supervisor = getDefaultSupervisor();
-    Assert.assertNull(supervisor.getPartitionTimeLag());
+    Assertions.assertNull(supervisor.getPartitionTimeLag());
 
-    Assert.assertNull(supervisor.getTimeLagPerPartition(null));
-    Assert.assertFalse(supervisor.isEndOfShard(null));
-    Assert.assertFalse(supervisor.isShardExpirationMarker(null));
+    Assertions.assertNull(supervisor.getTimeLagPerPartition(null));
+    Assertions.assertFalse(supervisor.isEndOfShard(null));
+    Assertions.assertFalse(supervisor.isShardExpirationMarker(null));
 
-    Assert.assertEquals(Long.valueOf(Long.MAX_VALUE), supervisor.getEndOfPartitionMarker());
+    Assertions.assertEquals(Long.valueOf(Long.MAX_VALUE), supervisor.getEndOfPartitionMarker());
 
-    Assert.assertEquals("index_rabbit", supervisor.baseTaskName());
+    Assertions.assertEquals("index_rabbit", supervisor.baseTaskName());
 
-    Assert.assertEquals(Long.valueOf(-1L), supervisor.getNotSetMarker());
-    Assert.assertEquals(false, supervisor.useExclusiveStartSequenceNumberForNonFirstSequence());
+    Assertions.assertEquals(Long.valueOf(-1L), supervisor.getNotSetMarker());
+    Assertions.assertEquals(false, supervisor.useExclusiveStartSequenceNumberForNonFirstSequence());
 
   }
 
@@ -344,7 +344,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
           RabbitStreamSupervisorTest.dataSchema,
           tuningConfig);
       for (String partition : partitions) {
-        Assert.assertEquals(partition.hashCode() % taskCount, supervisor.getTaskGroupIdForPartition(partition));
+        Assertions.assertEquals(partition.hashCode() % taskCount, supervisor.getTaskGroupIdForPartition(partition));
       }
     }
   }
@@ -364,12 +364,12 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         tuningConfig);
 
     SeekableStreamSupervisorReportPayload<String, Long> payload = supervisor.createReportPayload(1, false);
-    Assert.assertEquals(STREAM, payload.getStream());
-    Assert.assertEquals(1, payload.getPartitions());
-    Assert.assertEquals(1, payload.getReplicas());
-    Assert.assertEquals(false, payload.isSuspended());
-    Assert.assertEquals(true, payload.isHealthy());
-    Assert.assertEquals(30 * 60, payload.getDurationSeconds());
+    Assertions.assertEquals(STREAM, payload.getStream());
+    Assertions.assertEquals(1, payload.getPartitions());
+    Assertions.assertEquals(1, payload.getReplicas());
+    Assertions.assertEquals(false, payload.isSuspended());
+    Assertions.assertEquals(true, payload.isHealthy());
+    Assertions.assertEquals(30 * 60, payload.getDurationSeconds());
   }
 
   @Test
@@ -411,7 +411,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
             .build()
     );
 
-    Assert.assertEquals(30L, ioConfig.getRefreshRejectionPeriodsInMinutes().longValue());
+    Assertions.assertEquals(30L, ioConfig.getRefreshRejectionPeriodsInMinutes().longValue());
   }
 
   @Test
@@ -433,19 +433,19 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
     EasyMock.expect(rabbitTaskMatch.getSupervisorId()).andReturn("supervisorId");
     EasyMock.replay(rabbitTaskMatch);
 
-    Assert.assertTrue(supervisor.doesTaskMatchSupervisor(rabbitTaskMatch));
+    Assertions.assertTrue(supervisor.doesTaskMatchSupervisor(rabbitTaskMatch));
 
     RabbitStreamIndexTask rabbitTaskNoMatch = createMock(RabbitStreamIndexTask.class);
     EasyMock.expect(rabbitTaskNoMatch.getSupervisorId()).andReturn(dataSchema.getDataSource());
     EasyMock.replay(rabbitTaskNoMatch);
 
-    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(rabbitTaskNoMatch));
+    Assertions.assertFalse(supervisor.doesTaskMatchSupervisor(rabbitTaskNoMatch));
 
     SeekableStreamIndexTask differentTaskType = createMock(SeekableStreamIndexTask.class);
     EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
     EasyMock.replay(differentTaskType);
 
-    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(differentTaskType));
+    Assertions.assertFalse(supervisor.doesTaskMatchSupervisor(differentTaskType));
   }
 
   @Test
@@ -472,7 +472,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         .withBoundedStreamConfig(new BoundedStreamConfig(startOffsets, endOffsets))
         .build();
 
-    Assert.assertTrue(rabbitSupervisorIOConfig.isBounded());
+    Assertions.assertTrue(rabbitSupervisorIOConfig.isBounded());
 
     final RabbitStreamIndexTaskClientFactory taskClientFactory = new RabbitStreamIndexTaskClientFactory(null, OBJECT_MAPPER);
     final RabbitStreamSupervisorSpec spec = new RabbitStreamSupervisorSpec(
@@ -506,18 +506,18 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
 
     // Test type conversion methods
     String queueName = supervisor.createPartitionIdFromString("queue-0");
-    Assert.assertEquals("queue-0", queueName);
+    Assertions.assertEquals("queue-0", queueName);
 
     Long offset = supervisor.createSequenceOffsetFromObject(100);
-    Assert.assertEquals(Long.valueOf(100L), offset);
+    Assertions.assertEquals(Long.valueOf(100L), offset);
 
     offset = supervisor.createSequenceOffsetFromObject("200");
-    Assert.assertEquals(Long.valueOf(200L), offset);
+    Assertions.assertEquals(Long.valueOf(200L), offset);
 
     // Test isOffsetAtOrBeyond
-    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(500L, 100L));
-    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(100L, 100L));
-    Assert.assertFalse(supervisor.isOffsetAtOrBeyond(50L, 100L));
+    Assertions.assertTrue(supervisor.isOffsetAtOrBeyond(500L, 100L));
+    Assertions.assertTrue(supervisor.isOffsetAtOrBeyond(100L, 100L));
+    Assertions.assertFalse(supervisor.isOffsetAtOrBeyond(50L, 100L));
   }
 
   @Test
@@ -525,10 +525,10 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
   {
     supervisor = getDefaultSupervisor();
 
-    Exception e = Assert.assertThrows(
+    Exception e = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> supervisor.createSequenceOffsetFromObject(new Object())
     );
-    Assert.assertTrue(e.getMessage().contains("Cannot convert"));
+    Assertions.assertTrue(e.getMessage().contains("Cannot convert"));
   }
 }

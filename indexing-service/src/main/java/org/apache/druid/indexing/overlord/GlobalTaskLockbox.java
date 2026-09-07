@@ -80,6 +80,11 @@ public class GlobalTaskLockbox
    * Syncs the current in-memory state with the {@link TaskStorage}.
    * This method should be called only from {@link TaskQueue#start()}.
    * If the sync fails, no other operation can be performed on this lockbox.
+   * <p>
+   * The sync does not restore a lock, if it is associated with a dummy task ID
+   * that is not persisted in the task storage (e.g. embedded kill tasks).
+   * This is okay since the sync happens only when Overlord becomes leader, at
+   * which point there wouldn't be any embedded (kill) tasks running anyway.
    *
    * @return SyncResult which needs to be processed by the caller
    */

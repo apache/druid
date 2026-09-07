@@ -30,12 +30,11 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.apache.druid.server.lookup.DataFetcher;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
@@ -43,16 +42,20 @@ import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class JdbcDataFetcherTest extends InitializedNullHandlingTest
 {
   private static final String TABLE_NAME = "tableName";
   private static final String KEY_COLUMN = "keyColumn";
   private static final String VALUE_COLUMN = "valueColumn";
 
-  public static class FetchTest
+  @Nested
+  public class FetchTest
   {
-    @Rule
-    public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+    private TestDerbyConnector derbyConnector;
+    private MetadataStorageConnectorConfig derbyConnectorConfig;
 
     private Handle handle;
 
@@ -65,11 +68,21 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
         "empty string", ""
     );
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
+      derbyConnector = new TestDerbyConnector();
+      derbyConnector.createDatabase();
+      derbyConnectorConfig = new MetadataStorageConnectorConfig()
+      {
+        @Override
+        public String getConnectURI()
+        {
+          return derbyConnector.getJdbcUri();
+        }
+      };
       jdbcDataFetcher = new JdbcDataFetcher(
-          derbyConnectorRule.getMetadataConnectorConfig(),
+          derbyConnectorConfig,
           "tableName",
           "keyColumn",
           "valueColumn",
@@ -77,8 +90,8 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
           new JdbcAccessSecurityConfig()
       );
 
-      handle = derbyConnectorRule.getConnector().getDBI().open();
-      Assert.assertEquals(
+      handle = derbyConnector.getDBI().open();
+      Assertions.assertEquals(
           0,
           handle.createStatement(
               StringUtils.format(
@@ -97,17 +110,18 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
       handle.commit();
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
       handle.createStatement("DROP TABLE " + TABLE_NAME).setQueryTimeout(1).execute();
       handle.close();
+      derbyConnector.tearDown();
     }
 
     @Test
     public void testFetch()
     {
-      Assert.assertEquals("null check", null, jdbcDataFetcher.fetch("baz"));
+      Assertions.assertEquals(null, jdbcDataFetcher.fetch("baz"), "null check");
       assertMapLookup(LOOKUP_MAP, jdbcDataFetcher);
     }
 
@@ -116,7 +130,7 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
     {
       ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
       jdbcDataFetcher.fetchAll().forEach(mapBuilder::put);
-      Assert.assertEquals("maps should match", LOOKUP_MAP, mapBuilder.build());
+      Assertions.assertEquals(LOOKUP_MAP, mapBuilder.build(), "maps should match");
     }
 
     @Test
@@ -124,31 +138,31 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
     {
       ImmutableMap.Builder<String, String> mapBuilder = ImmutableMap.builder();
       jdbcDataFetcher.fetch(LOOKUP_MAP.keySet()).forEach(mapBuilder::put);
-      Assert.assertEquals(LOOKUP_MAP, mapBuilder.build());
+      Assertions.assertEquals(LOOKUP_MAP, mapBuilder.build());
     }
 
     @Test
     public void testReverseFetch()
     {
-      Assert.assertEquals(
-          "reverse lookup should match",
+      Assertions.assertEquals(
           Sets.newHashSet("foo", "bad"),
-          Sets.newHashSet(jdbcDataFetcher.reverseFetchKeys("bar"))
+          Sets.newHashSet(jdbcDataFetcher.reverseFetchKeys("bar")),
+          "reverse lookup should match"
       );
-      Assert.assertEquals(
-          "reverse lookup should match",
+      Assertions.assertEquals(
           Sets.newHashSet("how about that"),
-          Sets.newHashSet(jdbcDataFetcher.reverseFetchKeys("foo"))
+          Sets.newHashSet(jdbcDataFetcher.reverseFetchKeys("foo")),
+          "reverse lookup should match"
       );
-      Assert.assertEquals(
-          "reverse lookup should match",
+      Assertions.assertEquals(
           Sets.newHashSet("empty string"),
-          Sets.newHashSet(jdbcDataFetcher.reverseFetchKeys(""))
+          Sets.newHashSet(jdbcDataFetcher.reverseFetchKeys("")),
+          "reverse lookup should match"
       );
-      Assert.assertEquals(
-          "reverse lookup of none existing value should be empty list",
+      Assertions.assertEquals(
           Collections.emptyList(),
-          jdbcDataFetcher.reverseFetchKeys("does't exist")
+          jdbcDataFetcher.reverseFetchKeys("does't exist"),
+          "reverse lookup of none existing value should be empty list"
       );
     }
 
@@ -167,7 +181,7 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
       DefaultObjectMapper mapper = new DefaultObjectMapper();
       mapper.setInjectableValues(new Std().addValue(JdbcAccessSecurityConfig.class, securityConfig));
       String jdbcDataFetcherSer = mapper.writeValueAsString(jdbcDataFetcher);
-      Assert.assertEquals(jdbcDataFetcher, mapper.readerFor(DataFetcher.class).readValue(jdbcDataFetcherSer));
+      Assertions.assertEquals(jdbcDataFetcher, mapper.readerFor(DataFetcher.class).readValue(jdbcDataFetcherSer));
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -176,7 +190,7 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
       for (Map.Entry<String, String> entry : map.entrySet()) {
         String key = entry.getKey();
         String val = entry.getValue();
-        Assert.assertEquals("non-null check", val, dataFetcher.fetch(key));
+        Assertions.assertEquals(val, dataFetcher.fetch(key), "non-null check");
       }
     }
 
@@ -192,12 +206,13 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
           KEY_COLUMN, VALUE_COLUMN,
           key, val
       );
-      Assert.assertEquals(1, handle.createStatement(query).setQueryTimeout(1).execute());
+      Assertions.assertEquals(1, handle.createStatement(query).setQueryTimeout(1).execute());
       handle.commit();
     }
   }
 
-  public static class MissingJdbcJarTest
+  @Nested
+  public class MissingJdbcJarTest
   {
     private static final MetadataStorageConnectorConfig MISSING_METADATA_STORAGE_CONNECTOR_CONFIG =
         createMissingMetadataStorageConnectorConfig();
@@ -205,10 +220,7 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
 
     private JdbcDataFetcher target;
 
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
-
-    @Before
+    @BeforeEach
     public void setUp()
     {
       target = new JdbcDataFetcher(
@@ -247,10 +259,10 @@ public class JdbcDataFetcherTest extends InitializedNullHandlingTest
 
     private void test(Runnable runnable)
     {
-      exception.expect(IllegalStateException.class);
-      exception.expectMessage("JDBC driver JAR files missing in the classpath");
+      Throwable exception = assertThrows(IllegalStateException.class, () ->
 
-      runnable.run();
+        runnable.run());
+      assertTrue(exception.getMessage().contains("JDBC driver JAR files missing in the classpath"));
     }
 
     @SuppressWarnings("SameParameterValue")

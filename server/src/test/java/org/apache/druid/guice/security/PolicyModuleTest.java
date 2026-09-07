@@ -33,8 +33,8 @@ import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -50,8 +50,8 @@ public class PolicyModuleTest
         new ConfigModule(),
         new PolicyModule()
     ).getInstance(Key.get(PolicyEnforcer.class));
-    Assert.assertNotNull(policyEnforcer);
-    Assert.assertTrue(policyEnforcer instanceof NoopPolicyEnforcer);
+    Assertions.assertNotNull(policyEnforcer);
+    Assertions.assertTrue(policyEnforcer instanceof NoopPolicyEnforcer);
   }
 
   @Test
@@ -65,11 +65,11 @@ public class PolicyModuleTest
         new ConfigModule(),
         new PolicyModule()
     );
-    ProvisionException e = Assert.assertThrows(
+    ProvisionException e = Assertions.assertThrows(
         ProvisionException.class,
         () -> injector.getInstance(Key.get(PolicyEnforcer.class))
     );
-    Assert.assertTrue(e.getCause()
+    Assertions.assertTrue(e.getCause()
                        .getMessage()
                        .contains(
                            "Could not resolve type id 'unrecognizedType' as a subtype of `org.apache.druid.query.policy.PolicyEnforcer`"));
@@ -88,8 +88,8 @@ public class PolicyModuleTest
         new PolicyModule()
     ).getInstance(Key.get(PolicyEnforcer.class));
 
-    Assert.assertNotNull(policyEnforcer);
-    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(null), policyEnforcer);
+    Assertions.assertNotNull(policyEnforcer);
+    Assertions.assertEquals(new RestrictAllTablesPolicyEnforcer(null), policyEnforcer);
   }
 
   @Test
@@ -109,12 +109,12 @@ public class PolicyModuleTest
         new PolicyModule()
     ).getInstance(Key.get(PolicyEnforcer.class));
 
-    Assert.assertNotNull(policyEnforcer);
-    Assert.assertEquals(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
+    Assertions.assertNotNull(policyEnforcer);
+    Assertions.assertEquals(new RestrictAllTablesPolicyEnforcer(ImmutableList.of(
         "some-policy-class",
         "org.apache.druid.query.policy.NoRestrictionPolicy"
     )), policyEnforcer);
-    Assert.assertTrue(policyEnforcer.validate(NoRestrictionPolicy.instance()));
-    Assert.assertFalse(policyEnforcer.validate(RowFilterPolicy.from(new NullFilter("some-col", null))));
+    Assertions.assertTrue(policyEnforcer.validate(NoRestrictionPolicy.instance()));
+    Assertions.assertFalse(policyEnforcer.validate(RowFilterPolicy.from(new NullFilter("some-col", null))));
   }
 }

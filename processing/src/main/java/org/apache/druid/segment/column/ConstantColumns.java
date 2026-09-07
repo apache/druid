@@ -26,6 +26,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.data.ConstantColumnarInts;
 import org.apache.druid.segment.data.ConstantUtf8Indexed;
+import org.apache.druid.segment.index.ConstantColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -84,7 +85,8 @@ public final class ConstantColumns
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(type)
         .setHasMultipleValues(false)
-        .setHasNulls(value == null);
+        .setHasNulls(value == null)
+        .setIndexSupplier(new ConstantColumnIndexSupplier(type, value, numRows, bitmapFactory), true, false);
 
     if (type.is(ValueType.STRING)) {
       final ByteBuffer utf8 = value == null ? null : StringUtils.toUtf8ByteBuffer((String) value);

@@ -23,8 +23,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class MomentSketchMaxPostAggregatorTest
 {
@@ -40,9 +40,9 @@ public class MomentSketchMaxPostAggregatorTest
         MomentSketchMaxPostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
-    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
@@ -51,7 +51,7 @@ public class MomentSketchMaxPostAggregatorTest
     PostAggregator postAgg =
         new MomentSketchMaxPostAggregator("post", new ConstantPostAggregator("", 100));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "MomentSketchMaxPostAggregator{name='post', field=ConstantPostAggregator{name='', constantValue=100}}",
         postAgg.toString()
     );

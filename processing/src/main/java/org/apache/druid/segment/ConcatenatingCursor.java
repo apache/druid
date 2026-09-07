@@ -25,6 +25,7 @@ import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@link Cursor} that walks a sequence of per-group cursors back-to-back, presenting them to the caller as a single
@@ -40,6 +41,7 @@ public final class ConcatenatingCursor implements Cursor
   private final List<Supplier<CursorHolder>> holderSuppliers;
   private final List<Object[]> clusteringValuesByGroup;
   private final ClusteringColumnSelectorFactory wrapperFactory;
+  private final ColumnSelectorFactory exposedFactory;
 
   private int currentIdx;
   @Nullable
@@ -49,7 +51,8 @@ public final class ConcatenatingCursor implements Cursor
   public ConcatenatingCursor(
       List<Supplier<CursorHolder>> holderSuppliers,
       List<Object[]> clusteringValuesByGroup,
-      ClusteringColumnSelectorFactory wrapperFactory
+      ClusteringColumnSelectorFactory wrapperFactory,
+      Map<String, String> virtualColumnRemap
   )
   {
     if (holderSuppliers.size() != clusteringValuesByGroup.size()) {
@@ -65,6 +68,9 @@ public final class ConcatenatingCursor implements Cursor
     this.holderSuppliers = holderSuppliers;
     this.clusteringValuesByGroup = clusteringValuesByGroup;
     this.wrapperFactory = wrapperFactory;
+    this.exposedFactory = virtualColumnRemap.isEmpty()
+                          ? wrapperFactory
+                          : new RemapColumnSelectorFactory(wrapperFactory, virtualColumnRemap);
     this.currentIdx = -1;
   }
 
@@ -101,7 +107,7 @@ public final class ConcatenatingCursor implements Cursor
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     initializeIfNeeded();
-    return wrapperFactory;
+    return exposedFactory;
   }
 
   @Override

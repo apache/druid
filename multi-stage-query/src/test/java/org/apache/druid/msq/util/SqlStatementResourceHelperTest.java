@@ -38,8 +38,8 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportTest;
 import org.apache.druid.msq.sql.entity.PageInformation;
 import org.apache.druid.query.rowsandcols.concrete.FrameRowsAndColumns;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -334,9 +334,9 @@ public class SqlStatementResourceHelperTest
         payload,
         TaskReportMSQDestination.instance()
     );
-    Assert.assertTrue(pages.isPresent());
-    Assert.assertEquals(1, pages.get().size());
-    Assert.assertEquals(new PageInformation(0, 0L, 0L), pages.get().get(0));
+    Assertions.assertTrue(pages.isPresent());
+    Assertions.assertEquals(1, pages.get().size());
+    Assertions.assertEquals(new PageInformation(0, 0L, 0L), pages.get().get(0));
   }
 
   @Test
@@ -382,15 +382,15 @@ public class SqlStatementResourceHelperTest
             null
         )
     );
-    Assert.assertTrue(pages.isPresent());
-    Assert.assertEquals(1, pages.get().size());
-    Assert.assertEquals(new PageInformation(0, 0L, null), pages.get().get(0));
+    Assertions.assertTrue(pages.isPresent());
+    Assertions.assertEquals(1, pages.get().size());
+    Assertions.assertEquals(new PageInformation(0, 0L, null), pages.get().get(0));
   }
 
   private void validatePages(List<PageInformation> actualPageList, List<PageInformation> expectedPageList)
   {
-    Assert.assertEquals(expectedPageList.size(), actualPageList.size());
-    Assert.assertEquals(expectedPageList, actualPageList);
+    Assertions.assertEquals(expectedPageList.size(), actualPageList.size());
+    Assertions.assertEquals(expectedPageList, actualPageList);
   }
 
   private List<PageInformation> getExpectedPageInformationList(ChannelCounters... workerCounters)

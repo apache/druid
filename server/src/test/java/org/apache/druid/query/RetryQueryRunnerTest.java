@@ -28,17 +28,13 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 public class RetryQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestBase
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testNoRetry()
@@ -52,9 +48,9 @@ public class RetryQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestB
     );
     final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
-    Assert.assertEquals(0, queryRunner.getTotalNumRetries());
-    Assert.assertFalse(queryResult.isEmpty());
-    Assert.assertEquals(expectedTimeseriesResult(10), queryResult);
+    Assertions.assertEquals(0, queryRunner.getTotalNumRetries());
+    Assertions.assertFalse(queryResult.isEmpty());
+    Assertions.assertEquals(expectedTimeseriesResult(10), queryResult);
   }
 
   @Test
@@ -65,20 +61,19 @@ public class RetryQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestB
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(1, true),
         query,
-        () -> {
+        () ->
           // Let's move a segment
-          dropSegmentFromServerAndAddNewServerForSegment(servers.get(0));
-        }
+          dropSegmentFromServerAndAddNewServerForSegment(servers.get(0))
     );
     final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
 
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
-    Assert.assertEquals(1, queryRunner.getTotalNumRetries());
+    Assertions.assertEquals(1, queryRunner.getTotalNumRetries());
     // Note that we dropped a segment from a server, but it's still announced in the server view.
     // As a result, we may get the full result or not depending on what server will get the retry query.
     // If we hit the same server, the query will return incomplete result.
-    Assert.assertTrue(queryResult.size() == 9 || queryResult.size() == 10);
-    Assert.assertEquals(expectedTimeseriesResult(queryResult.size()), queryResult);
+    Assertions.assertTrue(queryResult.size() == 9 || queryResult.size() == 10);
+    Assertions.assertEquals(expectedTimeseriesResult(queryResult.size()), queryResult);
   }
 
   @Test
@@ -89,38 +84,37 @@ public class RetryQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestB
     final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
         newRetryQueryRunnerConfig(100, false), // retry up to 100
         query,
-        () -> {
+        () ->
           // Let's move a segment
-          dropSegmentFromServerAndAddNewServerForSegment(servers.get(0));
-        }
+          dropSegmentFromServerAndAddNewServerForSegment(servers.get(0))
     );
     final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
 
     final List<Result<TimeseriesResultValue>> queryResult = sequence.toList();
-    Assert.assertTrue(0 < queryRunner.getTotalNumRetries());
-    Assert.assertEquals(expectedTimeseriesResult(10), queryResult);
+    Assertions.assertTrue(0 < queryRunner.getTotalNumRetries());
+    Assertions.assertEquals(expectedTimeseriesResult(10), queryResult);
   }
 
   @Test
   public void testFailWithPartialResultsAfterRetry()
   {
-    prepareCluster(10);
-    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
-    final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
-        newRetryQueryRunnerConfig(1, false),
-        query,
-        () -> dropSegmentFromServer(servers.get(0))
-    );
-    final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
-
-    expectedException.expect(SegmentMissingException.class);
-    expectedException.expectMessage("No results found for segments");
-    try {
-      sequence.toList();
-    }
-    finally {
-      Assert.assertEquals(1, queryRunner.getTotalNumRetries());
-    }
+    Throwable exception = Assertions.assertThrows(SegmentMissingException.class, () -> {
+      prepareCluster(10);
+      final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+      final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
+          newRetryQueryRunnerConfig(1, false),
+          query,
+          () -> dropSegmentFromServer(servers.get(0))
+      );
+      final Sequence<Result<TimeseriesResultValue>> sequence = queryRunner.run(QueryPlus.wrap(query), responseContext());
+      try {
+        sequence.toList();
+      }
+      finally {
+        Assertions.assertEquals(1, queryRunner.getTotalNumRetries());
+      }
+    });
+    Assertions.assertTrue(exception.getMessage().contains("No results found for segments"));
   }
 
   /**
@@ -130,7 +124,7 @@ public class RetryQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestB
   private NonnullPair<DataSegment, QueryableIndex> dropSegmentFromServer(DruidServer fromServer)
   {
     final SimpleServerManager serverManager = httpClient.getServerManager(fromServer);
-    Assert.assertNotNull(serverManager);
+    Assertions.assertNotNull(serverManager);
     return serverManager.dropSegment();
   }
 

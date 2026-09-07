@@ -22,8 +22,8 @@ package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 
@@ -42,7 +42,7 @@ public class GlueIcebergCatalogTest
         true,
         mapper
     );
-    Assert.assertEquals("glue", glueCatalog.retrieveCatalog().name());
+    Assertions.assertEquals("glue", glueCatalog.retrieveCatalog().name());
   }
 
   @Test
@@ -53,6 +53,6 @@ public class GlueIcebergCatalogTest
         true,
         mapper
     );
-    Assert.assertEquals(true, glueCatalog.isCaseSensitive());
+    Assertions.assertEquals(true, glueCatalog.isCaseSensitive());
   }
 }

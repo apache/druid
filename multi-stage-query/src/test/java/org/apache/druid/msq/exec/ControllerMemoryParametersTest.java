@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.sql.calcite.util.TestLookupProvider;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ControllerMemoryParametersTest
 {
@@ -40,7 +40,7 @@ public class ControllerMemoryParametersTest
         WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
-    Assert.assertEquals(101_400_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assertions.assertEquals(101_400_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   @Test
@@ -52,7 +52,7 @@ public class ControllerMemoryParametersTest
         WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
-    Assert.assertEquals(104_800_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assertions.assertEquals(104_800_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   @Test
@@ -64,7 +64,7 @@ public class ControllerMemoryParametersTest
         WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
-    Assert.assertEquals(50_200_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assertions.assertEquals(50_200_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   @Test
@@ -76,13 +76,13 @@ public class ControllerMemoryParametersTest
         WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
-    Assert.assertEquals(300_000_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assertions.assertEquals(300_000_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   @Test
   public void test_notEnoughMemory()
   {
-    final MSQException e = Assert.assertThrows(
+    final MSQException e = Assertions.assertThrows(
         MSQException.class,
         () -> ControllerMemoryParameters.createProductionInstance(
             makeMemoryIntrospector(30_000_000, 1),
@@ -92,10 +92,10 @@ public class ControllerMemoryParametersTest
     );
 
     final NotEnoughMemoryFault fault = (NotEnoughMemoryFault) e.getFault();
-    Assert.assertEquals(30_000_000, fault.getServerMemory());
-    Assert.assertEquals(1, fault.getServerWorkers());
-    Assert.assertEquals(NUM_PROCESSORS_IN_JVM, fault.getServerThreads());
-    Assert.assertEquals(24_000_000, fault.getUsableMemory());
+    Assertions.assertEquals(30_000_000, fault.getServerMemory());
+    Assertions.assertEquals(1, fault.getServerWorkers());
+    Assertions.assertEquals(NUM_PROCESSORS_IN_JVM, fault.getServerThreads());
+    Assertions.assertEquals(24_000_000, fault.getUsableMemory());
   }
 
   @Test
@@ -107,7 +107,7 @@ public class ControllerMemoryParametersTest
         WorkerMemoryParameters.DEFAULT_FRAME_SIZE
     );
 
-    Assert.assertEquals(26_000_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assertions.assertEquals(26_000_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   private MemoryIntrospector makeMemoryIntrospector(

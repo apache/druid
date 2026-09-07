@@ -19,9 +19,6 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.ForwardingListeningExecutorService;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.asyncresource.AsyncResource;
@@ -30,81 +27,75 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.PartialBundleAcquirer;
 import org.apache.druid.segment.loading.external.VirtualStorageManager;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Holds the thread pool used for background loading by {@link SegmentLocalCacheManager} and
  * {@link VirtualStorageManager}.
+ * <p>
+ * <b>Submissions are not automatically concurrency-bounded.</b> The executor returned by {@link #getExecutorService()}
+ * runs submitted tasks as fast as it can (in the virtual-thread mode, one virtual thread per task). Instead, the
+ * number of concurrent <em>deep-storage reads</em> is bounded by a permit that callers acquire via
+ * {@link #acquireLoadPermit()} around <em>only</em> the actual I/O, never around lock acquisition, reservation, or
+ * deserialization. Any new load path that reads from deep storage must acquire a permit around that read, or it will
+ * be unbounded.
  */
 public class StorageLoadingThreadPool
 {
-  private static final Logger log = new Logger(StorageLoadingThreadPool.class);
-
-  private final ListeningExecutorService exec;
-
-  public StorageLoadingThreadPool(
-      @Nullable final ListeningExecutorService exec
-  )
-  {
-    this.exec = exec;
-  }
-
   public static StorageLoadingThreadPool createFromConfig(final SegmentLoaderConfig config)
   {
-    final ListeningExecutorService exec;
-
-    if (config.isVirtualStorage()) {
-      if (config.getVirtualStorageLoadThreads() <= 0) {
-        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                            .build(
-                                "virtualStorageLoadThreads must be greater than 0, got [%d]",
-                                config.getVirtualStorageLoadThreads()
-                            );
-      }
-      if (config.isVirtualStorageUseVirtualThreads()) {
-        log.info(
-            "Using virtual storage mode with virtual threads - max concurrent on demand loads: [%d].",
-            config.getVirtualStorageLoadThreads()
-        );
-        exec = new PermitBoundedListeningExecutorService(
-            MoreExecutors.listeningDecorator(
-                Executors.newThreadPerTaskExecutor(
-                    Thread.ofVirtual()
-                          .name("VirtualStorageOnDemandLoadingThread-", 0)
-                          .factory()
-                )
-            ),
-            new Semaphore(config.getVirtualStorageLoadThreads())
-        );
-      } else {
-        log.info(
-            "Using virtual storage mode with fixed platform thread pool - on demand load threads: [%d].",
-            config.getVirtualStorageLoadThreads()
-        );
-        exec = MoreExecutors.listeningDecorator(
-            Executors.newFixedThreadPool(
-                config.getVirtualStorageLoadThreads(),
-                Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
-            )
-        );
-      }
-    } else {
-      exec = null;
+    if (!config.isVirtualStorage()) {
+      return new StorageLoadingThreadPool(null, null);
     }
 
-    return new StorageLoadingThreadPool(exec);
+    if (config.getVirtualStorageLoadThreads() <= 0) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "virtualStorageLoadThreads must be greater than 0, got [%d]",
+                              config.getVirtualStorageLoadThreads()
+                          );
+    }
+
+    final ListeningExecutorService exec;
+    final Semaphore permits;
+    if (config.isVirtualStorageUseVirtualThreads()) {
+      log.info(
+          "Using virtual storage mode with virtual threads - max concurrent on demand loads: [%d].",
+          config.getVirtualStorageLoadThreads()
+      );
+      // Unbounded thread-per-virtual-thread executor; concurrency is bounded by the permit count, acquired by callers
+      // via acquireLoadPermit() around the actual deep-storage reads.
+      exec = MoreExecutors.listeningDecorator(
+          Executors.newThreadPerTaskExecutor(
+              Thread.ofVirtual()
+                    .name("VirtualStorageOnDemandLoadingThread-", 0)
+                    .factory()
+          )
+      );
+      permits = new Semaphore(config.getVirtualStorageLoadThreads());
+    } else {
+      log.info(
+          "Using virtual storage mode with fixed platform thread pool - on demand load threads: [%d].",
+          config.getVirtualStorageLoadThreads()
+      );
+      // Fixed pool: the thread count is the concurrency bound, so no separate permit is needed.
+      exec = MoreExecutors.listeningDecorator(
+          Executors.newFixedThreadPool(
+              config.getVirtualStorageLoadThreads(),
+              Execs.makeThreadFactory("VirtualStorageOnDemandLoadingThread-%s")
+          )
+      );
+      permits = null;
+    }
+    return new StorageLoadingThreadPool(exec, permits);
   }
 
   /**
@@ -112,7 +103,31 @@ public class StorageLoadingThreadPool
    */
   public static StorageLoadingThreadPool none()
   {
-    return new StorageLoadingThreadPool(null);
+    return new StorageLoadingThreadPool(null, null);
+  }
+
+  private static final Logger log = new Logger(StorageLoadingThreadPool.class);
+
+  /**
+   * A permit handle whose {@code close()} releases nothing. Returned by {@link #acquireLoadPermit()} when there is no
+   * semaphore (the fixed-thread-pool mode, where the thread count is the bound, and the "no pool" instance).
+   */
+  private static final LoadPermit NOOP_PERMIT = () -> {};
+
+  @Nullable
+  private final ListeningExecutorService exec;
+  /**
+   * Bounds concurrent on-demand deep-storage reads in the virtual-thread mode, where the executor is otherwise
+   * unbounded (one virtual thread per task). Null in the fixed-thread-pool mode (the pool size is the bound) and in
+   * the "no pool" instance.
+   */
+  @Nullable
+  private final Semaphore permits;
+
+  private StorageLoadingThreadPool(@Nullable final ListeningExecutorService exec, @Nullable final Semaphore permits)
+  {
+    this.exec = exec;
+    this.permits = permits;
   }
 
   public boolean isAvailable()
@@ -121,11 +136,8 @@ public class StorageLoadingThreadPool
   }
 
   /**
-   * Executor for on-demand load work. Concurrency is bounded by the executor itself: in the virtual-thread path it is
-   * a {@link PermitBoundedListeningExecutorService} wrapping an unbounded thread-per-virtual-thread executor (so the
-   * permit count, not the thread count, is the bound); in the fixed-pool path the pool size is the bound. Every
-   * on-demand-load submission, including those routed through {@link #submitUnmanagedAsyncResource}, is therefore
-   * bounded without callers having to acquire a permit themselves.
+   * Executor for on-demand load work. Not concurrency-bounded by itself. Callers doing deep-storage reads with this
+   * pool must bound themselves via {@link #acquireLoadPermit()} around the read.
    */
   public ListeningExecutorService getExecutorService()
   {
@@ -136,6 +148,37 @@ public class StorageLoadingThreadPool
   }
 
   /**
+   * Acquire one on-demand-load permit, returning a {@link LoadPermit} that releases it (idempotently) on close. Callers
+   * must hold the permit only around the actual deep-storage read, not around lock acquisition, reservation, or
+   * deserialization.
+   * <p>
+   * In the fixed-thread-pool mode (or the "no pool" instance) there is no semaphore and this returns a no-op handle
+   * (the thread count, or nothing, is the bound). The acquire is interruptible: if the thread is interrupted while
+   * waiting for a permit (e.g. a canceled load), the interrupt flag is restored and a {@link RuntimeException} is
+   * thrown so the load aborts before any I/O begins.
+   */
+  public LoadPermit acquireLoadPermit()
+  {
+    final Semaphore p = permits;
+    if (p == null) {
+      return NOOP_PERMIT;
+    }
+    try {
+      p.acquire();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+    final AtomicBoolean released = new AtomicBoolean(false);
+    return () -> {
+      if (released.compareAndSet(false, true)) {
+        p.release();
+      }
+    };
+  }
+
+  /**
    * Submit a task to the pool and hand back an {@link AsyncResource} that becomes ready when the task completes,
    * exposing the task's (non-null) result. The result is treated as a plain value with no lifecycle: closing the
    * returned resource does not close the result; closing it before completion cancels the task.
@@ -143,7 +186,7 @@ public class StorageLoadingThreadPool
    * <p>This is the unmanaged counterpart of {@link #submitCloseableAsyncResource}; use that when the task's result
    * owns a lifecycle.
    *
-   * @see AsyncResources#fromFutureUnmanaged(ListenableFuture)
+   * @see AsyncResources#fromFutureUnmanaged
    */
   public <T> AsyncResource<T> submitUnmanagedAsyncResource(Callable<T> task)
   {
@@ -158,7 +201,7 @@ public class StorageLoadingThreadPool
    * <p>This is the managed counterpart of {@link #submitUnmanagedAsyncResource}; use that when the task's result is a
    * plain value with no lifecycle.
    *
-   * @see AsyncResources#fromFutureCloseable(ListenableFuture)
+   * @see AsyncResources#fromFutureCloseable
    */
   public <T extends Closeable> AsyncResource<T> submitCloseableAsyncResource(Callable<T> task)
   {
@@ -174,125 +217,16 @@ public class StorageLoadingThreadPool
   }
 
   /**
-   * A {@link ListeningExecutorService} that caps the number of concurrently-running submitted tasks at a semaphore's
-   * permit count, acquiring a permit (on the worker thread) before each task body runs and releasing it after. Used to
-   * bound concurrent virtual-storage on-demand loads when the backing executor is an unbounded thread-per-virtual-thread
-   * executor: the permit count is the concurrency bound, not the thread count, and the wait for a permit parks a virtual
-   * thread rather than blocking the submitter.
-   * <p>
-   * The permit wait is <b>interruptible</b>: a task whose future is canceled with {@code mayInterruptIfRunning} (or a
-   * {@code shutdownNow}) while it is parked on the permit is interrupted out of the wait and aborts before running its
-   * body. Canceling a query stops not only its queued column downloads but also those blocked on the permit,
-   * before any deep-storage I/O begins. A task that has already passed the permit and started its body runs to
-   * completion (aborting in-flight reads is handled separately by the task itself, not here).
-   * <p>
-   * Only {@code execute}/{@code submit} are bounded; those are the only submission paths on-demand load work uses
-   * (including the {@link PartialBundleAcquirer#submitDownload} column-download path). {@code invokeAll}/
-   * {@code invokeAny} throw {@link UnsupportedOperationException} so the concurrency bound can never be silently
-   * bypassed by a future caller.
-   * <p>
-   * Callers must not submit a task that itself blocks on another task submitted to this executor while holding a
-   * permit, or all permits could be exhausted by waiters; the on-demand load tasks here never nest submissions.
+   * A handle to a held on-demand-load permit. {@link #close()} releases the permit.
+   *
+   * @see #acquireLoadPermit()
    */
-  @VisibleForTesting
-  static final class PermitBoundedListeningExecutorService extends ForwardingListeningExecutorService
+  public interface LoadPermit extends Closeable
   {
-    private final ListeningExecutorService delegate;
-    private final Semaphore permits;
-
-    PermitBoundedListeningExecutorService(ListeningExecutorService delegate, Semaphore permits)
-    {
-      this.delegate = delegate;
-      this.permits = permits;
-    }
-
+    /**
+     * Releases the permit.
+     */
     @Override
-    protected ListeningExecutorService delegate()
-    {
-      return delegate;
-    }
-
-    @Override
-    public void execute(Runnable command)
-    {
-      delegate.execute(withPermit(command));
-    }
-
-    @Override
-    public <T> ListenableFuture<T> submit(Callable<T> task)
-    {
-      return delegate.submit(withPermit(task));
-    }
-
-    @Override
-    public ListenableFuture<?> submit(Runnable task)
-    {
-      return delegate.submit(withPermit(task));
-    }
-
-    @Override
-    public <T> ListenableFuture<T> submit(Runnable task, T result)
-    {
-      return delegate.submit(withPermit(task), result);
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
-    {
-      throw new UnsupportedOperationException("invokeAll is not permit-bounded; use submit");
-    }
-
-    @Override
-    public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-    {
-      throw new UnsupportedOperationException("invokeAll is not permit-bounded; use submit");
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
-    {
-      throw new UnsupportedOperationException("invokeAny is not permit-bounded; use submit");
-    }
-
-    @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
-    {
-      throw new UnsupportedOperationException("invokeAny is not permit-bounded; use submit");
-    }
-
-    private Runnable withPermit(Runnable task)
-    {
-      return () -> {
-        try {
-          permits.acquire();
-        }
-        catch (InterruptedException e) {
-          // Interrupted while waiting for a permit (e.g. the task's future was canceled with mayInterruptIfRunning).
-          // Abort before running the body. Restore the flag and surface as a failure rather than a silent success;
-          // if the future was canceled it already reports as such, so this only matters for a stray interrupt.
-          Thread.currentThread().interrupt();
-          throw new RuntimeException(e);
-        }
-        try {
-          task.run();
-        }
-        finally {
-          permits.release();
-        }
-      };
-    }
-
-    private <T> Callable<T> withPermit(Callable<T> task)
-    {
-      return () -> {
-        permits.acquire();
-        try {
-          return task.call();
-        }
-        finally {
-          permits.release();
-        }
-      };
-    }
+    void close();
   }
 }

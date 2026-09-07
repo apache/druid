@@ -24,12 +24,12 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.ref.Reference;
 import java.util.ArrayList;
@@ -47,10 +47,10 @@ import java.util.stream.Collectors;
 
 /**
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ResourcePoolTest
 {
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Arrays.stream(ResourcePool.Implementation.values())
@@ -68,7 +68,7 @@ public class ResourcePoolTest
     this.poolImplementation = poolImplementation;
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     setUpPool(true);
@@ -113,7 +113,7 @@ public class ResourcePoolTest
    */
   private void assumeAdaptivePool()
   {
-    Assume.assumeTrue("only the adaptive pool satisfies this", isAdaptivePool());
+    Assumptions.assumeTrue(isAdaptivePool(), "only the adaptive pool satisfies this");
   }
 
   @Test
@@ -133,7 +133,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billyString = pool.take("billy");
-    Assert.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
 
     billyString.returnResource();
   }
@@ -151,12 +151,12 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billyString = pool.take("billy");
-    Assert.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
 
     billyString.returnResource();
 
     billyString = pool.take("billy");
-    Assert.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
 
     billyString.returnResource();
   }
@@ -308,8 +308,8 @@ public class ResourcePoolTest
 
     ResourceContainer<String> billyString = pool.take("billy");
     ResourceContainer<String> sallyString = pool.take("sally");
-    Assert.assertEquals("billy0", billyString.get());
-    Assert.assertEquals("sally0", sallyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("sally0", sallyString.get());
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
@@ -335,7 +335,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals(isAdaptivePool() ? "billy0" : "billy2", billy.get());
+    Assertions.assertEquals(isAdaptivePool() ? "billy0" : "billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -366,8 +366,8 @@ public class ResourcePoolTest
     catch (IllegalStateException e) {
       e1 = e;
     }
-    Assert.assertNotNull("exception", e1);
-    Assert.assertEquals("where's billy?", e1.getMessage());
+    Assertions.assertNotNull(e1, "exception");
+    Assertions.assertEquals("where's billy?", e1.getMessage());
 
     IllegalStateException e2 = null;
     try {
@@ -376,11 +376,11 @@ public class ResourcePoolTest
     catch (IllegalStateException e) {
       e2 = e;
     }
-    Assert.assertNotNull("exception", e2);
-    Assert.assertEquals("where's billy?", e2.getMessage());
+    Assertions.assertNotNull(e2, "exception");
+    Assertions.assertEquals("where's billy?", e2.getMessage());
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy2", billy.get());
+    Assertions.assertEquals("billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -423,9 +423,9 @@ public class ResourcePoolTest
     latch1.countDown();
     latch3.countDown();
 
-    Assert.assertEquals("billy1", billy1Thread.getValue());
-    Assert.assertEquals("billy0", billy0Thread.getValue());
-    Assert.assertEquals("billy0", blockedThread.getValue());
+    Assertions.assertEquals("billy1", billy1Thread.getValue());
+    Assertions.assertEquals("billy0", billy0Thread.getValue());
+    Assertions.assertEquals("billy0", blockedThread.getValue());
   }
 
   @Test
@@ -475,11 +475,11 @@ public class ResourcePoolTest
     latch1.countDown();
     latch3.countDown();
 
-    Assert.assertEquals("billy1", billy1Thread.getValue());
-    Assert.assertEquals("billy0", billy0Thread.getValue());
+    Assertions.assertEquals("billy1", billy1Thread.getValue());
+    Assertions.assertEquals("billy0", billy0Thread.getValue());
     blockedThread.join();
     // pool returns null after close
-    Assert.assertEquals(null, blockedThread.getValue());
+    Assertions.assertEquals(null, blockedThread.getValue());
   }
 
   @Test
@@ -494,7 +494,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billyString = pool.take("billy");
-    Assert.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
@@ -521,7 +521,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals(isAdaptivePool() ? "billy2" : "billy1", billy.get());
+    Assertions.assertEquals(isAdaptivePool() ? "billy2" : "billy1", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -548,8 +548,8 @@ public class ResourcePoolTest
 
     ResourceContainer<String> first = pool.take("billy");
     ResourceContainer<String> second = pool.take("billy");
-    Assert.assertEquals("billy0", first.get());
-    Assert.assertEquals("billy1", second.get());
+    Assertions.assertEquals("billy0", first.get());
+    Assertions.assertEquals("billy1", second.get());
     first.returnResource();
     second.returnResource();
 
@@ -570,7 +570,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> a = pool.take("billy");
-    Assert.assertEquals("billy2", a.get());
+    Assertions.assertEquals("billy2", a.get());
     a.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -581,7 +581,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> b = pool.take("billy");
-    Assert.assertEquals("billy2", b.get());
+    Assertions.assertEquals("billy2", b.get());
     b.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -610,7 +610,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy2", billy.get());
+    Assertions.assertEquals("billy2", billy.get());
     billy.returnResource();
 
     // Both dead resources must already be closed: one left parked would not have been.
@@ -640,7 +640,7 @@ public class ResourcePoolTest
     catch (ISE e) {
       thrown = e;
     }
-    Assert.assertNotNull("exception", thrown);
+    Assertions.assertNotNull(thrown, "exception");
 
     // billy1 was taken off the queue and handed to nobody; without close() it is leaked.
     EasyMock.verify(resourceFactory);
@@ -652,8 +652,8 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     CountDownLatch heldUntil = new CountDownLatch(1);
-    Assert.assertEquals("billy0", takeOnAnotherThread(heldUntil, "billy"));
-    Assert.assertEquals("billy2", takeOnAnotherThread(heldUntil, "billy"));
+    Assertions.assertEquals("billy0", takeOnAnotherThread(heldUntil, "billy"));
+    Assertions.assertEquals("billy2", takeOnAnotherThread(heldUntil, "billy"));
     heldUntil.countDown();
 
     EasyMock.verify(resourceFactory);
@@ -677,7 +677,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> warm = pool.take("billy");
-    Assert.assertEquals("billy0", warm.get());
+    Assertions.assertEquals("billy0", warm.get());
     warm.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -695,7 +695,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy2", billy.get());
+    Assertions.assertEquals("billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -707,8 +707,8 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     CountDownLatch heldUntil = new CountDownLatch(1);
-    Assert.assertEquals("billy2", takeOnAnotherThread(heldUntil, "billy"));
-    Assert.assertEquals("billy3", takeOnAnotherThread(heldUntil, "billy"));
+    Assertions.assertEquals("billy2", takeOnAnotherThread(heldUntil, "billy"));
+    Assertions.assertEquals("billy3", takeOnAnotherThread(heldUntil, "billy"));
     heldUntil.countDown();
 
     EasyMock.verify(resourceFactory);
@@ -736,7 +736,7 @@ public class ResourcePoolTest
     catch (Exception e) {
       thrown = e;
     }
-    Assert.assertNotNull("exception", thrown);
+    Assertions.assertNotNull(thrown, "exception");
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
@@ -763,7 +763,7 @@ public class ResourcePoolTest
     catch (Exception e) {
       thrown = e;
     }
-    Assert.assertNotNull("a null resource must fail the take", thrown);
+    Assertions.assertNotNull(thrown, "a null resource must fail the take");
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
@@ -775,8 +775,8 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     CountDownLatch heldUntil = new CountDownLatch(1);
-    Assert.assertEquals("billy1", takeOnAnotherThread(heldUntil, "billy"));
-    Assert.assertEquals("billy2", takeOnAnotherThread(heldUntil, "billy"));
+    Assertions.assertEquals("billy1", takeOnAnotherThread(heldUntil, "billy"));
+    Assertions.assertEquals("billy2", takeOnAnotherThread(heldUntil, "billy"));
     heldUntil.countDown();
 
     EasyMock.verify(resourceFactory);
@@ -797,15 +797,15 @@ public class ResourcePoolTest
 
     final ResourceContainer<String> first = pool.take("billy");
     final ResourceContainer<String> second = pool.take("billy");
-    Assert.assertEquals("billy1", first.get());
-    Assert.assertEquals("billy0", second.get());
+    Assertions.assertEquals("billy1", first.get());
+    Assertions.assertEquals("billy0", second.get());
 
     TakeAndReturnThread waiter = new TakeAndReturnThread("billy");
     waiter.start();
     waitUntilParked(waiter);
     waiter.interrupt();
 
-    Assert.assertNull("returning an interrupted take's container", waiter.failureFromTakeAndReturn());
+    Assertions.assertNull(waiter.failureFromTakeAndReturn(), "returning an interrupted take's container");
 
     keepLent(first, second);
 
@@ -831,15 +831,15 @@ public class ResourcePoolTest
 
     final ResourceContainer<String> first = pool.take("billy");
     final ResourceContainer<String> second = pool.take("billy");
-    Assert.assertEquals("billy1", first.get());
-    Assert.assertEquals("billy0", second.get());
+    Assertions.assertEquals("billy1", first.get());
+    Assertions.assertEquals("billy0", second.get());
 
     TakeAndReturnThread waiter = new TakeAndReturnThread("billy");
     waiter.start();
     waitUntilParked(waiter);
     pool.close();
 
-    Assert.assertNull("returning the container of a take unblocked by close()", waiter.failureFromTakeAndReturn());
+    Assertions.assertNull(waiter.failureFromTakeAndReturn(), "returning the container of a take unblocked by close()");
 
     keepLent(first, second);
 
@@ -861,16 +861,16 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy1", billy.get());
+    Assertions.assertEquals("billy1", billy.get());
     billy.returnResource();
     billy.returnResource();
 
-    Assert.assertThrows(IllegalStateException.class, billy::get);
+    Assertions.assertThrows(IllegalStateException.class, billy::get);
 
     CountDownLatch heldUntil = new CountDownLatch(1);
-    Assert.assertEquals("billy0", takeOnAnotherThread(heldUntil, "billy"));
-    Assert.assertEquals("billy1", takeOnAnotherThread(heldUntil, "billy"));
-    Assert.assertNull("pool must not lend more than maxPerKey", takeOnAnotherThread(heldUntil, "billy", 1));
+    Assertions.assertEquals("billy0", takeOnAnotherThread(heldUntil, "billy"));
+    Assertions.assertEquals("billy1", takeOnAnotherThread(heldUntil, "billy"));
+    Assertions.assertNull(takeOnAnotherThread(heldUntil, "billy", 1), "pool must not lend more than maxPerKey");
     heldUntil.countDown();
 
     EasyMock.verify(resourceFactory);
@@ -893,7 +893,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy1", billy.get());
+    Assertions.assertEquals("billy1", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -915,7 +915,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy0", billy.get());
+    Assertions.assertEquals("billy0", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -929,7 +929,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> sally = pool.take("sally");
-    Assert.assertEquals("sally0", sally.get());
+    Assertions.assertEquals("sally0", sally.get());
     sally.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -947,7 +947,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     billy = pool.take("billy");
-    Assert.assertEquals("billy2", billy.get());
+    Assertions.assertEquals("billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -957,7 +957,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     sally = pool.take("sally");
-    Assert.assertEquals("sally1", sally.get());
+    Assertions.assertEquals("sally1", sally.get());
     sally.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -998,12 +998,12 @@ public class ResourcePoolTest
     exec.shutdown();
     stressPool.close();
 
-    Assert.assertNull("resource misuse", factory.misuse());
-    Assert.assertTrue(
-        StringUtils.format("lent %s at once, max is %s", factory.peakLent(), maxPerKey),
-        factory.peakLent() <= maxPerKey
+    Assertions.assertNull(factory.misuse(), "resource misuse");
+    Assertions.assertTrue(
+        factory.peakLent() <= maxPerKey,
+        StringUtils.format("lent %s at once, max is %s", factory.peakLent(), maxPerKey)
     );
-    Assert.assertEquals("every generated resource is closed", factory.generated(), factory.closed());
+    Assertions.assertEquals(factory.generated(), factory.closed(), "every generated resource is closed");
   }
 
   /**
@@ -1024,7 +1024,7 @@ public class ResourcePoolTest
     for (int i = 0; i < 500 && thread.getState() != Thread.State.WAITING; i++) {
       Thread.sleep(10);
     }
-    Assert.assertEquals("thread waiting for a resource", Thread.State.WAITING, thread.getState());
+    Assertions.assertEquals(Thread.State.WAITING, thread.getState(), "thread waiting for a resource");
   }
 
   /**
@@ -1139,7 +1139,7 @@ public class ResourcePoolTest
      */
     private Throwable failureFromTakeAndReturn() throws InterruptedException
     {
-      Assert.assertTrue("take completed", done.await(5, TimeUnit.SECONDS));
+      Assertions.assertTrue(done.await(5, TimeUnit.SECONDS), "take completed");
       return failure;
     }
   }

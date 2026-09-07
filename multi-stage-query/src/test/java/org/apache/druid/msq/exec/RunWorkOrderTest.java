@@ -24,8 +24,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.counters.CounterTracker;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -97,7 +97,7 @@ public class RunWorkOrderTest
 
     final ISE exception = new ISE("oops");
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalStateException.class,
         () -> runWorkOrder.stop(exception)
     );
@@ -138,7 +138,7 @@ public class RunWorkOrderTest
             listener
         );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalStateException.class,
         () -> runWorkOrder.stop(null)
     );
@@ -176,7 +176,7 @@ public class RunWorkOrderTest
             listener
         );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalStateException.class,
         () -> runWorkOrder.stop(null)
     );

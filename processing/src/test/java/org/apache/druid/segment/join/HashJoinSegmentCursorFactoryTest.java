@@ -22,6 +22,7 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -46,8 +47,8 @@ import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -57,7 +58,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   @Test
   public void test_getInterval_factToCountry()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Intervals.of("2015-09-12/2015-09-12T05:21:00.060Z"),
         makeFactToCountrySegment().getDataInterval()
     );
@@ -66,7 +67,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   @Test
   public void test_getRowSignature_factToCountry()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             "__time",
             "channel",
@@ -93,11 +94,11 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   {
     final ColumnCapabilities capabilities = makeFactToCountrySegment().as(CursorFactory.class).getColumnCapabilities("countryIsoCode");
 
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
-    Assert.assertTrue(capabilities.hasBitmapIndexes());
-    Assert.assertTrue(capabilities.isDictionaryEncoded().isTrue());
-    Assert.assertTrue(capabilities.areDictionaryValuesSorted().isTrue());
-    Assert.assertTrue(capabilities.areDictionaryValuesUnique().isTrue());
+    Assertions.assertEquals(ValueType.STRING, capabilities.getType());
+    Assertions.assertTrue(capabilities.hasBitmapIndexes());
+    Assertions.assertTrue(capabilities.isDictionaryEncoded().isTrue());
+    Assertions.assertTrue(capabilities.areDictionaryValuesSorted().isTrue());
+    Assertions.assertTrue(capabilities.areDictionaryValuesUnique().isTrue());
   }
 
   @Test
@@ -107,11 +108,11 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryIsoCode"
     );
 
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
-    Assert.assertFalse(capabilities.hasBitmapIndexes());
-    Assert.assertFalse(capabilities.areDictionaryValuesUnique().isTrue());
-    Assert.assertFalse(capabilities.areDictionaryValuesSorted().isTrue());
-    Assert.assertTrue(capabilities.isDictionaryEncoded().isTrue());
+    Assertions.assertEquals(ValueType.STRING, capabilities.getType());
+    Assertions.assertFalse(capabilities.hasBitmapIndexes());
+    Assertions.assertFalse(capabilities.areDictionaryValuesUnique().isTrue());
+    Assertions.assertFalse(capabilities.areDictionaryValuesSorted().isTrue());
+    Assertions.assertTrue(capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Test
@@ -120,7 +121,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
     final ColumnCapabilities capabilities = makeFactToCountrySegment().as(CursorFactory.class)
         .getColumnCapabilities("nonexistent");
 
-    Assert.assertNull(capabilities);
+    Assertions.assertNull(capabilities);
   }
 
   @Test
@@ -129,13 +130,13 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
     final ColumnCapabilities capabilities = makeFactToCountrySegment().as(CursorFactory.class)
         .getColumnCapabilities(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "nonexistent");
 
-    Assert.assertNull(capabilities);
+    Assertions.assertNull(capabilities);
   }
 
   @Test
   public void test_getColumnCapabilities_complexTypeName_factToCountryFactColumn()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "hyperUnique",
         makeFactToCountrySegment().as(CursorFactory.class).getColumnCapabilities("channel_uniques").getComplexTypeName()
     );
@@ -144,7 +145,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   @Test
   public void test_getColumnCapabilities_typeString_factToCountryFactColumn()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "COMPLEX<hyperUnique>",
         makeFactToCountrySegment().as(CursorFactory.class).getColumnCapabilities("channel_uniques").asTypeString()
     );
@@ -153,7 +154,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   @Test
   public void test_getColumnCapabilities_typeString_factToCountryJoinColumn()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "STRING",
         makeFactToCountrySegment().as(CursorFactory.class)
                                   .getColumnCapabilities(FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX + "countryName")
@@ -236,7 +237,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
     ).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       expectedRows = countRows(syncHolder);
     }
-    Assert.assertTrue(expectedRows > 0);
+    Assertions.assertTrue(expectedRows > 0);
 
     // async path: the left/base holder loads on demand (mimics a partial base segment); build-side joinable is resident
     final DeferredCursorFactory base = new DeferredCursorFactory(factSegment.as(CursorFactory.class));
@@ -247,11 +248,11 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         joinFilterPreAnalysis
     ).makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
     try {
-      Assert.assertFalse("join holder must wait for the base to complete", asyncHolder.isReady());
+      Assertions.assertFalse(asyncHolder.isReady(), "join holder must wait for the base to complete");
       base.complete();
-      Assert.assertTrue("join holder becomes ready once the base completes", asyncHolder.isReady());
+      Assertions.assertTrue(asyncHolder.isReady(), "join holder becomes ready once the base completes");
       try (CursorHolder holder = asyncHolder.release()) {
-        Assert.assertEquals(expectedRows, countRows(holder));
+        Assertions.assertEquals(expectedRows, countRows(holder));
       }
     }
     finally {
@@ -274,9 +275,9 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         joinFilterPreAnalysis
     ).makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
 
-    Assert.assertFalse(asyncHolder.isReady());
+    Assertions.assertFalse(asyncHolder.isReady());
     asyncHolder.close();
-    Assert.assertTrue("closing the join holder before it's ready cancels the base load", base.canceled.get());
+    Assertions.assertTrue(base.canceled.get(), "closing the join holder before it's ready cancels the base load");
   }
 
   private static int countRows(CursorHolder holder)
@@ -1601,9 +1602,6 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   @Test
   public void test_makeCursor_errorOnNonEquiJoin()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot build hash-join matcher on non-equi-join condition: x == y");
-
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
@@ -1623,23 +1621,24 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         VirtualColumns.EMPTY
     );
 
-    JoinTestHelper.readCursor(
-        new HashJoinSegmentCursorFactory(
-            factSegment.as(CursorFactory.class),
-            null,
-            joinableClauses,
-            joinFilterPreAnalysis
-        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
-        ImmutableList.of()
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> JoinTestHelper.readCursor(
+            new HashJoinSegmentCursorFactory(
+                factSegment.as(CursorFactory.class),
+                null,
+                joinableClauses,
+                joinFilterPreAnalysis
+            ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
+            ImmutableList.of()
+        )
     );
+    Assertions.assertEquals("Cannot build hash-join matcher on non-equi-join condition: x == y", exception.getMessage());
   }
 
   @Test
   public void test_makeCursor_errorOnNonEquiJoinUsingLookup()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot join lookup with non-equi condition: x == y");
-
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
@@ -1659,23 +1658,24 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         VirtualColumns.EMPTY
     );
 
-    JoinTestHelper.readCursor(
-        new HashJoinSegmentCursorFactory(
-            factSegment.as(CursorFactory.class),
-            null,
-            joinableClauses,
-            joinFilterPreAnalysis
-        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
-        ImmutableList.of()
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> JoinTestHelper.readCursor(
+            new HashJoinSegmentCursorFactory(
+                factSegment.as(CursorFactory.class),
+                null,
+                joinableClauses,
+                joinFilterPreAnalysis
+            ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
+            ImmutableList.of()
+        )
     );
+    Assertions.assertEquals("Cannot join lookup with non-equi condition: x == y", exception.getMessage());
   }
 
   @Test
   public void test_makeCursor_errorOnNonKeyBasedJoin()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot build hash-join matcher on non-key-based condition: "
-                                    + "Equality{leftExpr=x, rightColumn='countryName', includeNull=false}");
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
@@ -1695,23 +1695,28 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         VirtualColumns.EMPTY
     );
 
-    JoinTestHelper.readCursor(
-        new HashJoinSegmentCursorFactory(
-            factSegment.as(CursorFactory.class),
-            null,
-            joinableClauses,
-            joinFilterPreAnalysis
-        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
-        ImmutableList.of()
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> JoinTestHelper.readCursor(
+            new HashJoinSegmentCursorFactory(
+                factSegment.as(CursorFactory.class),
+                null,
+                joinableClauses,
+                joinFilterPreAnalysis
+            ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
+            ImmutableList.of()
+        )
+    );
+    Assertions.assertEquals(
+        "Cannot build hash-join matcher on non-key-based condition: "
+        + "Equality{leftExpr=x, rightColumn='countryName', includeNull=false}",
+        exception.getMessage()
     );
   }
 
   @Test
   public void test_makeCursor_errorOnNonKeyBasedJoinUsingLookup()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "Cannot join lookup with condition referring to non-key column: x == \"c1.countryName");
     List<JoinableClause> joinableClauses = ImmutableList.of(
         new JoinableClause(
             FACT_TO_COUNTRY_ON_ISO_CODE_PREFIX,
@@ -1731,14 +1736,20 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         VirtualColumns.EMPTY
     );
 
-    JoinTestHelper.readCursor(
-        new HashJoinSegmentCursorFactory(
-            factSegment.as(CursorFactory.class),
-            null,
-            joinableClauses,
-            joinFilterPreAnalysis
-        ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
-        ImmutableList.of()
+    final ExceptionMatcher exceptionMatcher = new ExceptionMatcher(IllegalArgumentException.class);
+    exceptionMatcher.expectMessageContains(
+        "Cannot join lookup with condition referring to non-key column: x == \"c1.countryName"
+    );
+    exceptionMatcher.assertThrowsAndMatches(
+        () -> JoinTestHelper.readCursor(
+            new HashJoinSegmentCursorFactory(
+                factSegment.as(CursorFactory.class),
+                null,
+                joinableClauses,
+                joinFilterPreAnalysis
+            ).makeCursorHolder(CursorBuildSpec.FULL_SCAN),
+            ImmutableList.of()
+        )
     );
   }
 
@@ -2011,10 +2022,10 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
   @Test
   public void test_hasBuiltInFiltersForSingleJoinableClauseWithVariousJoinTypes()
   {
-    Assert.assertFalse(makeFactToCountrySegment(JoinType.INNER).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
-    Assert.assertTrue(makeFactToCountrySegment(JoinType.LEFT).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
-    Assert.assertFalse(makeFactToCountrySegment(JoinType.RIGHT).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
-    Assert.assertTrue(makeFactToCountrySegment(JoinType.FULL).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assertions.assertFalse(makeFactToCountrySegment(JoinType.INNER).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assertions.assertTrue(makeFactToCountrySegment(JoinType.LEFT).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assertions.assertFalse(makeFactToCountrySegment(JoinType.RIGHT).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assertions.assertTrue(makeFactToCountrySegment(JoinType.FULL).as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
     // cross join
     HashJoinSegment segment = new HashJoinSegment(
         ReferenceCountedSegmentProvider.unmanaged(factSegment).orElseThrow(),
@@ -2035,7 +2046,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         () -> {}
     );
     TopNOptimizationInspector inspector = segment.as(TopNOptimizationInspector.class);
-    Assert.assertTrue(inspector.areAllDictionaryIdsPresent());
+    Assertions.assertTrue(inspector.areAllDictionaryIdsPresent());
   }
 
   @Test
@@ -2049,7 +2060,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         () -> {}
     );
     final TopNOptimizationInspector inspector = segment.as(TopNOptimizationInspector.class);
-    Assert.assertFalse(inspector.areAllDictionaryIdsPresent());
+    Assertions.assertFalse(inspector.areAllDictionaryIdsPresent());
   }
 
   @Test
@@ -2065,7 +2076,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         null,
         () -> {}
     );
-    Assert.assertFalse(segment.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assertions.assertFalse(segment.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
 
     final HashJoinSegment segment2 = new HashJoinSegment(
         ReferenceCountedSegmentProvider.unmanaged(factSegment).orElseThrow(),
@@ -2078,7 +2089,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         null,
         () -> {}
     );
-    Assert.assertFalse(segment2.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assertions.assertFalse(segment2.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
 
     final HashJoinSegment segment3 = new HashJoinSegment(
         ReferenceCountedSegmentProvider.unmanaged(factSegment).orElseThrow(),
@@ -2090,7 +2101,7 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         null,
         () -> {}
     );
-    Assert.assertTrue(segment3.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assertions.assertTrue(segment3.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
 
     final HashJoinSegment segment4 = new HashJoinSegment(
         ReferenceCountedSegmentProvider.unmanaged(factSegment).orElseThrow(),
@@ -2111,6 +2122,6 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
         null,
         () -> {}
     );
-    Assert.assertTrue(segment4.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
+    Assertions.assertTrue(segment4.as(TopNOptimizationInspector.class).areAllDictionaryIdsPresent());
   }
 }

@@ -29,8 +29,8 @@ import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.SwitchingTaskLogs;
 import org.apache.druid.tasklogs.TaskLogs;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -55,14 +55,14 @@ public class IndexingServiceTaskLogsModuleTest
     );
 
     TaskLogs taskLogs = injector.getInstance(TaskLogs.class);
-    Assert.assertTrue(taskLogs instanceof SwitchingTaskLogs);
+    Assertions.assertTrue(taskLogs instanceof SwitchingTaskLogs);
 
     TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("switching.logPushType")));
-    Assert.assertTrue(pusher instanceof FileTaskLogs);
+    Assertions.assertTrue(pusher instanceof FileTaskLogs);
     TaskLogs reports = injector.getInstance(Key.get(TaskLogs.class, Names.named("switching.reportsType")));
-    Assert.assertTrue(reports instanceof FileTaskLogs);
+    Assertions.assertTrue(reports instanceof FileTaskLogs);
     TaskLogs stream = injector.getInstance(Key.get(TaskLogs.class, Names.named("switching.logStreamType")));
-    Assert.assertTrue(stream instanceof FileTaskLogs);
+    Assertions.assertTrue(stream instanceof FileTaskLogs);
   }
 
   @Test
@@ -86,10 +86,10 @@ public class IndexingServiceTaskLogsModuleTest
     );
 
     TaskLogs pusher = injector.getInstance(Key.get(TaskLogs.class, Names.named("switching.logPushType")));
-    Assert.assertTrue(pusher instanceof FileTaskLogs);
+    Assertions.assertTrue(pusher instanceof FileTaskLogs);
     TaskLogs reports = injector.getInstance(Key.get(TaskLogs.class, Names.named("switching.reportsType")));
-    Assert.assertTrue(reports instanceof NoopTaskLogs);
+    Assertions.assertTrue(reports instanceof NoopTaskLogs);
     TaskLogs stream = injector.getInstance(Key.get(TaskLogs.class, Names.named("switching.logStreamType")));
-    Assert.assertTrue(stream instanceof FileTaskLogs);
+    Assertions.assertTrue(stream instanceof FileTaskLogs);
   }
 }

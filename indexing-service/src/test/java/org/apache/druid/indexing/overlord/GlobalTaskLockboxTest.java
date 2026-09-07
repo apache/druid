@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import org.apache.druid.error.ExceptionMatcher;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
@@ -44,6 +44,7 @@ import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.duty.UnusedSegmentsKiller;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -55,9 +56,11 @@ import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
@@ -73,12 +76,12 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
 import org.easymock.EasyMock;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -93,8 +96,7 @@ import java.util.stream.Collectors;
 
 public class GlobalTaskLockboxTest
 {
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
+  private final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
   private TaskStorage taskStorage;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
@@ -106,9 +108,10 @@ public class GlobalTaskLockboxTest
   private final int MEDIUM_PRIORITY = 10;
   private final int LOW_PRIORITY = 5;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
+    derby.before();
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(NumberedShardSpec.class, HashBasedNumberedShardSpec.class);
     final TestDerbyConnector derbyConnector = derby.getConnector();
@@ -140,6 +143,7 @@ public class GlobalTaskLockboxTest
             derbyConnector,
             new TestDruidLeaderSelector(),
             NoopSegmentMetadataCache.instance(),
+            new SegmentsMetadataManagerConfig(null, null, null),
             NoopServiceEmitter.instance()
         ),
         objectMapper,
@@ -154,6 +158,12 @@ public class GlobalTaskLockboxTest
     lockbox.syncFromStorage();
 
     validator = new TaskLockboxValidator(lockbox, taskStorage);
+  }
+
+  @AfterEach
+  public void teardown()
+  {
+    derby.after();
   }
 
   private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval, long timeoutMs)
@@ -188,10 +198,13 @@ public class GlobalTaskLockboxTest
     );
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testLockForInactiveTask() throws InterruptedException
   {
-    acquireTimeChunkLock(TaskLockType.EXCLUSIVE, NoopTask.create(), Intervals.of("2015-01-01/2015-01-02"));
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> acquireTimeChunkLock(TaskLockType.EXCLUSIVE, NoopTask.create(), Intervals.of("2015-01-01/2015-01-02"))
+    );
   }
 
   @Test
@@ -200,11 +213,11 @@ public class GlobalTaskLockboxTest
     final Task task = NoopTask.create();
     lockbox.add(task);
     lockbox.remove(task);
-    ISE exception = Assert.assertThrows(
+    ISE exception = Assertions.assertThrows(
         ISE.class,
         () -> acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"))
     );
-    Assert.assertTrue(exception.getMessage().contains("Unable to grant lock to inactive Task"));
+    Assertions.assertTrue(exception.getMessage().contains("Unable to grant lock to inactive Task"));
   }
 
   @Test
@@ -266,32 +279,32 @@ public class GlobalTaskLockboxTest
 
     lockbox.add(lowPriorityTask);
     lockbox.add(lowPriorityTask2);
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval1).isOk());
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, lowPriorityTask, interval2).isOk());
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, lowPriorityTask2, interval2).isOk());
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval3).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval1).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, lowPriorityTask, interval2).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, lowPriorityTask2, interval2).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval3).isOk());
 
     lockbox.add(highPiorityTask);
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, highPiorityTask, interval1).isOk());
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPiorityTask, interval2).isOk());
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPiorityTask, interval3).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, highPiorityTask, interval1).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPiorityTask, interval2).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPiorityTask, interval3).isOk());
 
-    Assert.assertTrue(lockbox.findLocksForTask(lowPriorityTask).stream().allMatch(TaskLock::isRevoked));
-    Assert.assertTrue(lockbox.findLocksForTask(lowPriorityTask2).stream().allMatch(TaskLock::isRevoked));
+    Assertions.assertTrue(lockbox.findLocksForTask(lowPriorityTask).stream().allMatch(TaskLock::isRevoked));
+    Assertions.assertTrue(lockbox.findLocksForTask(lowPriorityTask2).stream().allMatch(TaskLock::isRevoked));
 
     lockbox.remove(lowPriorityTask);
     lockbox.remove(lowPriorityTask2);
     lockbox.remove(highPiorityTask);
 
     lockbox.add(highPiorityTask);
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPiorityTask, interval1).isOk());
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, highPiorityTask, interval2).isOk());
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPiorityTask, interval3).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPiorityTask, interval1).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, highPiorityTask, interval2).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPiorityTask, interval3).isOk());
 
     lockbox.add(lowPriorityTask);
-    Assert.assertFalse(tryTimeChunkLock(TaskLockType.SHARED, lowPriorityTask, interval1).isOk());
-    Assert.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval2).isOk());
-    Assert.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval3).isOk());
+    Assertions.assertFalse(tryTimeChunkLock(TaskLockType.SHARED, lowPriorityTask, interval1).isOk());
+    Assertions.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval2).isOk());
+    Assertions.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval3).isOk());
   }
 
   @Test
@@ -299,24 +312,27 @@ public class GlobalTaskLockboxTest
   {
     Task task = NoopTask.create();
     lockbox.add(task);
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-03")).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-03")).isOk());
 
     // try to take lock for task 2 for overlapping interval
     Task task2 = NoopTask.create();
     lockbox.add(task2);
-    Assert.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-02")).isOk());
+    Assertions.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-02")).isOk());
 
     // task 1 unlocks the lock
     lockbox.remove(task);
 
     // Now task2 should be able to get the lock
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-02")).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-02")).isOk());
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testTryLockForInactiveTask()
   {
-    Assert.assertFalse(tryTimeChunkLock(TaskLockType.EXCLUSIVE, NoopTask.create(), Intervals.of("2015-01-01/2015-01-02")).isOk());
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> tryTimeChunkLock(TaskLockType.EXCLUSIVE, NoopTask.create(), Intervals.of("2015-01-01/2015-01-02"))
+    );
   }
 
   @Test
@@ -326,11 +342,11 @@ public class GlobalTaskLockboxTest
     lockbox.add(task);
     lockbox.remove(task);
 
-    ISE exception = Assert.assertThrows(
+    ISE exception = Assertions.assertThrows(
         ISE.class,
         () -> tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, Intervals.of("2015-01-01/2015-01-02"))
     );
-    Assert.assertTrue(exception.getMessage().contains("Unable to grant lock to inactive Task"));
+    Assertions.assertTrue(exception.getMessage().contains("Unable to grant lock to inactive Task"));
   }
 
   @Test
@@ -341,8 +357,8 @@ public class GlobalTaskLockboxTest
 
     lockbox.add(task1);
     lockbox.add(task2);
-    Assert.assertTrue(acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task1, Intervals.of("2015-01-01/2015-01-02"), 5000).isOk());
-    Assert.assertFalse(acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-15"), 1000).isOk());
+    Assertions.assertTrue(acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task1, Intervals.of("2015-01-01/2015-01-02"), 5000).isOk());
+    Assertions.assertFalse(acquireTimeChunkLock(TaskLockType.EXCLUSIVE, task2, Intervals.of("2015-01-01/2015-01-15"), 1000).isOk());
   }
 
   @Test
@@ -355,7 +371,7 @@ public class GlobalTaskLockboxTest
       final Task task = NoopTask.create();
       taskStorage.insert(task, TaskStatus.running(task.getId()));
       originalBox.add(task);
-      Assert.assertTrue(
+      Assertions.assertTrue(
           originalBox.tryLock(
               task,
               new TimeChunkLockRequest(
@@ -375,14 +391,14 @@ public class GlobalTaskLockboxTest
     final GlobalTaskLockbox newBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     newBox.syncFromStorage();
 
-    Assert.assertEquals(originalBox.getAllLocks(), newBox.getAllLocks());
-    Assert.assertEquals(originalBox.getActiveTasks(), newBox.getActiveTasks());
+    Assertions.assertEquals(originalBox.getAllLocks(), newBox.getAllLocks());
+    Assertions.assertEquals(originalBox.getActiveTasks(), newBox.getActiveTasks());
 
     final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
                                                           .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
                                                           .collect(Collectors.toList());
 
-    Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
+    Assertions.assertEquals(beforeLocksInStorage, afterLocksInStorage);
   }
 
   @Test
@@ -406,7 +422,7 @@ public class GlobalTaskLockboxTest
                                                           .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
                                                           .collect(Collectors.toList());
 
-    Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
+    Assertions.assertEquals(beforeLocksInStorage, afterLocksInStorage);
   }
 
   @Test
@@ -437,7 +453,7 @@ public class GlobalTaskLockboxTest
                                                           .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
                                                           .collect(Collectors.toList());
 
-    Assert.assertEquals(beforeLocksInStorage, afterLocksInStorage);
+    Assertions.assertEquals(beforeLocksInStorage, afterLocksInStorage);
   }
 
   @Test
@@ -459,8 +475,8 @@ public class GlobalTaskLockboxTest
 
     final GlobalTaskLockbox lockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     TaskLockboxSyncResult result = lockbox.syncFromStorage();
-    Assert.assertEquals(1, result.getTasksToFail().size());
-    Assert.assertTrue(result.getTasksToFail().contains(task));
+    Assertions.assertEquals(1, result.getTasksToFail().size());
+    Assertions.assertTrue(result.getTasksToFail().contains(task));
   }
 
   @Test
@@ -487,6 +503,7 @@ public class GlobalTaskLockboxTest
             derbyConnector,
             new TestDruidLeaderSelector(),
             NoopSegmentMetadataCache.instance(),
+            new SegmentsMetadataManagerConfig(null, null, null),
             NoopServiceEmitter.instance()
         ),
         loadedMapper,
@@ -518,8 +535,8 @@ public class GlobalTaskLockboxTest
     theBox.syncFromStorage();
     loadedBox.syncFromStorage();
 
-    Assert.assertEquals(1, tasks.size());
-    Assert.assertEquals(2, tasksFromLoaded.size());
+    Assertions.assertEquals(1, tasks.size());
+    Assertions.assertEquals(2, tasksFromLoaded.size());
   }
 
   @Test
@@ -531,13 +548,13 @@ public class GlobalTaskLockboxTest
     final Task task1 = NoopTask.ofPriority(10);
     taskStorage.insert(task1, TaskStatus.running(task1.getId()));
     originalBox.add(task1);
-    Assert.assertTrue(originalBox.tryLock(task1, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task1, Intervals.of("2017/2018"), null)).isOk());
+    Assertions.assertTrue(originalBox.tryLock(task1, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task1, Intervals.of("2017/2018"), null)).isOk());
 
     // task2 revokes task1
     final Task task2 = NoopTask.ofPriority(100);
     taskStorage.insert(task2, TaskStatus.running(task2.getId()));
     originalBox.add(task2);
-    Assert.assertTrue(originalBox.tryLock(task2, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task2, Intervals.of("2017/2018"), null)).isOk());
+    Assertions.assertTrue(originalBox.tryLock(task2, new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task2, Intervals.of("2017/2018"), null)).isOk());
 
     final Map<String, List<TaskLock>> beforeLocksInStorage = taskStorage
         .getActiveTasks()
@@ -545,12 +562,12 @@ public class GlobalTaskLockboxTest
         .collect(Collectors.toMap(Task::getId, task -> taskStorage.getLocks(task.getId())));
 
     final List<TaskLock> task1Locks = beforeLocksInStorage.get(task1.getId());
-    Assert.assertEquals(1, task1Locks.size());
-    Assert.assertTrue(task1Locks.get(0).isRevoked());
+    Assertions.assertEquals(1, task1Locks.size());
+    Assertions.assertTrue(task1Locks.get(0).isRevoked());
 
     final List<TaskLock> task2Locks = beforeLocksInStorage.get(task1.getId());
-    Assert.assertEquals(1, task2Locks.size());
-    Assert.assertTrue(task2Locks.get(0).isRevoked());
+    Assertions.assertEquals(1, task2Locks.size());
+    Assertions.assertTrue(task2Locks.get(0).isRevoked());
 
     final GlobalTaskLockbox newBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     newBox.syncFromStorage();
@@ -559,7 +576,7 @@ public class GlobalTaskLockboxTest
                                                          .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
                                                          .collect(Collectors.toSet());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         beforeLocksInStorage.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()),
         afterLocksInStorage
     );
@@ -571,9 +588,9 @@ public class GlobalTaskLockboxTest
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
     final Task task = NoopTask.create();
     lockbox.add(task);
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, task, interval).isOk());
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, task, interval).isOk());
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.doInCriticalSection(
             task,
             Collections.singleton(interval),
@@ -589,9 +606,9 @@ public class GlobalTaskLockboxTest
     final Task task = NoopTask.create();
     lockbox.add(task);
     final TaskLock lock = tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
-    Assert.assertNotNull(lock);
+    Assertions.assertNotNull(lock);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.doInCriticalSection(
             task,
             Collections.singleton(interval),
@@ -608,9 +625,9 @@ public class GlobalTaskLockboxTest
     final Task task = NoopTask.create();
     lockbox.add(task);
     final TaskLock lock = tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval).getTaskLock();
-    Assert.assertNotNull(lock);
+    Assertions.assertNotNull(lock);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.doInCriticalSection(
             task,
             Collections.singleton(interval),
@@ -627,16 +644,16 @@ public class GlobalTaskLockboxTest
       final Task task = NoopTask.create();
       lockbox.add(task);
       taskStorage.insert(task, TaskStatus.running(task.getId()));
-      Assert.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, task, interval).isOk());
+      Assertions.assertTrue(tryTimeChunkLock(TaskLockType.SHARED, task, interval).isOk());
     }
 
     final Task highPriorityTask = NoopTask.ofPriority(100);
     lockbox.add(highPriorityTask);
     taskStorage.insert(highPriorityTask, TaskStatus.running(highPriorityTask.getId()));
     final TaskLock lock = tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPriorityTask, interval).getTaskLock();
-    Assert.assertNotNull(lock);
+    Assertions.assertNotNull(lock);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.doInCriticalSection(
             highPriorityTask,
             Collections.singleton(interval),
@@ -657,11 +674,11 @@ public class GlobalTaskLockboxTest
     taskStorage.insert(highPriorityTask, TaskStatus.running(highPriorityTask.getId()));
 
     final TaskLock lowPriorityLock = tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval).getTaskLock();
-    Assert.assertNotNull(lowPriorityLock);
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPriorityTask, interval).isOk());
-    Assert.assertTrue(Iterables.getOnlyElement(lockbox.findLocksForTask(lowPriorityTask)).isRevoked());
+    Assertions.assertNotNull(lowPriorityLock);
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPriorityTask, interval).isOk());
+    Assertions.assertTrue(Iterables.getOnlyElement(lockbox.findLocksForTask(lowPriorityTask)).isRevoked());
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         lockbox.doInCriticalSection(
             lowPriorityTask,
             Collections.singleton(interval),
@@ -670,7 +687,8 @@ public class GlobalTaskLockboxTest
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testAcquireLockAfterRevoked() throws InterruptedException
   {
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
@@ -682,17 +700,17 @@ public class GlobalTaskLockboxTest
     taskStorage.insert(highPriorityTask, TaskStatus.running(highPriorityTask.getId()));
 
     final TaskLock lowPriorityLock = acquireTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval).getTaskLock();
-    Assert.assertNotNull(lowPriorityLock);
-    Assert.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPriorityTask, interval).isOk());
-    Assert.assertTrue(Iterables.getOnlyElement(lockbox.findLocksForTask(lowPriorityTask)).isRevoked());
+    Assertions.assertNotNull(lowPriorityLock);
+    Assertions.assertTrue(tryTimeChunkLock(TaskLockType.EXCLUSIVE, highPriorityTask, interval).isOk());
+    Assertions.assertTrue(Iterables.getOnlyElement(lockbox.findLocksForTask(lowPriorityTask)).isRevoked());
 
     lockbox.unlock(highPriorityTask, interval);
 
     // Acquire again
     final LockResult lockResult = acquireTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
-    Assert.assertFalse(lockResult.isOk());
-    Assert.assertTrue(lockResult.isRevoked());
-    Assert.assertTrue(Iterables.getOnlyElement(lockbox.findLocksForTask(lowPriorityTask)).isRevoked());
+    Assertions.assertFalse(lockResult.isOk());
+    Assertions.assertTrue(lockResult.isRevoked());
+    Assertions.assertTrue(Iterables.getOnlyElement(lockbox.findLocksForTask(lowPriorityTask)).isRevoked());
   }
 
   @Test
@@ -706,7 +724,7 @@ public class GlobalTaskLockboxTest
       lowPriorityTasks.add(task);
       taskStorage.insert(task, TaskStatus.running(task.getId()));
       lockbox.add(task);
-      Assert.assertTrue(
+      Assertions.assertTrue(
           tryTimeChunkLock(
               TaskLockType.EXCLUSIVE,
               task,
@@ -721,7 +739,7 @@ public class GlobalTaskLockboxTest
       highPriorityTasks.add(task);
       taskStorage.insert(task, TaskStatus.running(task.getId()));
       lockbox.add(task);
-      Assert.assertTrue(
+      Assertions.assertTrue(
           tryTimeChunkLock(
               TaskLockType.EXCLUSIVE,
               task,
@@ -731,12 +749,12 @@ public class GlobalTaskLockboxTest
     }
 
     for (int i = 0; i < 4; i++) {
-      Assert.assertTrue(taskStorage.getLocks(lowPriorityTasks.get(i).getId()).stream().allMatch(TaskLock::isRevoked));
-      Assert.assertFalse(taskStorage.getLocks(highPriorityTasks.get(i).getId()).stream().allMatch(TaskLock::isRevoked));
+      Assertions.assertTrue(taskStorage.getLocks(lowPriorityTasks.get(i).getId()).stream().allMatch(TaskLock::isRevoked));
+      Assertions.assertFalse(taskStorage.getLocks(highPriorityTasks.get(i).getId()).stream().allMatch(TaskLock::isRevoked));
     }
 
     for (int i = 4; i < 8; i++) {
-      Assert.assertFalse(taskStorage.getLocks(lowPriorityTasks.get(i).getId()).stream().allMatch(TaskLock::isRevoked));
+      Assertions.assertFalse(taskStorage.getLocks(lowPriorityTasks.get(i).getId()).stream().allMatch(TaskLock::isRevoked));
     }
 
     for (int i = 0; i < 4; i++) {
@@ -757,7 +775,7 @@ public class GlobalTaskLockboxTest
       );
     }
 
-    Assert.assertTrue(lockbox.getAllLocks().isEmpty());
+    Assertions.assertTrue(lockbox.getAllLocks().isEmpty());
   }
 
   @Test
@@ -771,7 +789,7 @@ public class GlobalTaskLockboxTest
     lockbox.add(lowPriorityTask);
     lockbox.add(highPriorityTask);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         tryTimeChunkLock(
             TaskLockType.EXCLUSIVE,
             lowPriorityTask,
@@ -779,7 +797,7 @@ public class GlobalTaskLockboxTest
         ).isOk()
     );
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         tryTimeChunkLock(
             TaskLockType.EXCLUSIVE,
             highPriorityTask,
@@ -792,18 +810,18 @@ public class GlobalTaskLockboxTest
         Intervals.of("2018-12-16T09:00:00/2018-12-16T09:30:00")
     );
 
-    Assert.assertTrue(highLockPosse.isPresent());
-    Assert.assertTrue(highLockPosse.get().containsTask(highPriorityTask));
-    Assert.assertFalse(highLockPosse.get().getTaskLock().isRevoked());
+    Assertions.assertTrue(highLockPosse.isPresent());
+    Assertions.assertTrue(highLockPosse.get().containsTask(highPriorityTask));
+    Assertions.assertFalse(highLockPosse.get().getTaskLock().isRevoked());
 
     final Optional<TaskLockbox.TaskLockPosse> lowLockPosse = lockbox.getOnlyTaskLockPosseContainingInterval(
         lowPriorityTask,
         Intervals.of("2018-12-16T09:00:00/2018-12-16T10:00:00")
     );
 
-    Assert.assertTrue(lowLockPosse.isPresent());
-    Assert.assertTrue(lowLockPosse.get().containsTask(lowPriorityTask));
-    Assert.assertTrue(lowLockPosse.get().getTaskLock().isRevoked());
+    Assertions.assertTrue(lowLockPosse.isPresent());
+    Assertions.assertTrue(lowLockPosse.get().containsTask(lowPriorityTask));
+    Assertions.assertTrue(lowLockPosse.get().getTaskLock().isRevoked());
   }
 
   @Test
@@ -821,18 +839,18 @@ public class GlobalTaskLockboxTest
             3
         )
     );
-    Assert.assertTrue(lockResult.isOk());
-    Assert.assertNull(lockResult.getNewSegmentId());
-    Assert.assertTrue(lockResult.getTaskLock() instanceof SegmentLock);
+    Assertions.assertTrue(lockResult.isOk());
+    Assertions.assertNull(lockResult.getNewSegmentId());
+    Assertions.assertTrue(lockResult.getTaskLock() instanceof SegmentLock);
     final SegmentLock segmentLock = (SegmentLock) lockResult.getTaskLock();
-    Assert.assertEquals(TaskLockType.EXCLUSIVE, segmentLock.getType());
-    Assert.assertEquals(task.getGroupId(), segmentLock.getGroupId());
-    Assert.assertEquals(task.getDataSource(), segmentLock.getDataSource());
-    Assert.assertEquals(Intervals.of("2015-01-01/2015-01-02"), segmentLock.getInterval());
-    Assert.assertEquals("v1", segmentLock.getVersion());
-    Assert.assertEquals(3, segmentLock.getPartitionId());
-    Assert.assertEquals(task.getPriority(), segmentLock.getPriority().intValue());
-    Assert.assertFalse(segmentLock.isRevoked());
+    Assertions.assertEquals(TaskLockType.EXCLUSIVE, segmentLock.getType());
+    Assertions.assertEquals(task.getGroupId(), segmentLock.getGroupId());
+    Assertions.assertEquals(task.getDataSource(), segmentLock.getDataSource());
+    Assertions.assertEquals(Intervals.of("2015-01-01/2015-01-02"), segmentLock.getInterval());
+    Assertions.assertEquals("v1", segmentLock.getVersion());
+    Assertions.assertEquals(3, segmentLock.getPartitionId());
+    Assertions.assertEquals(task.getPriority(), segmentLock.getPriority().intValue());
+    Assertions.assertFalse(segmentLock.isRevoked());
   }
 
   @Test
@@ -844,7 +862,7 @@ public class GlobalTaskLockboxTest
     final Task task2 = NoopTask.create();
     lockbox.add(task2);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task1,
             new SpecificSegmentLockRequest(
@@ -857,7 +875,7 @@ public class GlobalTaskLockboxTest
         ).isOk()
     );
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         lockbox.tryLock(
             task2,
             new TimeChunkLockRequest(
@@ -881,7 +899,7 @@ public class GlobalTaskLockboxTest
     lockbox.add(task2);
     taskStorage.insert(task2, TaskStatus.running(task2.getId()));
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task1,
             new SpecificSegmentLockRequest(
@@ -894,7 +912,7 @@ public class GlobalTaskLockboxTest
         ).isOk()
     );
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task2,
             new TimeChunkLockRequest(
@@ -916,8 +934,8 @@ public class GlobalTaskLockboxTest
             3
         )
     );
-    Assert.assertFalse(resultOfTask1.isOk());
-    Assert.assertTrue(resultOfTask1.isRevoked());
+    Assertions.assertFalse(resultOfTask1.isOk());
+    Assertions.assertTrue(resultOfTask1.isRevoked());
   }
 
   @Test
@@ -929,7 +947,7 @@ public class GlobalTaskLockboxTest
     final Task task2 = NoopTask.create();
     lockbox.add(task2);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task1,
             new SpecificSegmentLockRequest(
@@ -942,7 +960,7 @@ public class GlobalTaskLockboxTest
         ).isOk()
     );
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         lockbox.tryLock(
             task2,
             new SpecificSegmentLockRequest(
@@ -965,7 +983,7 @@ public class GlobalTaskLockboxTest
     final Task task2 = NoopTask.create();
     lockbox.add(task2);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task1,
             new SpecificSegmentLockRequest(
@@ -978,7 +996,7 @@ public class GlobalTaskLockboxTest
         ).isOk()
     );
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task2,
             new SpecificSegmentLockRequest(
@@ -1001,7 +1019,7 @@ public class GlobalTaskLockboxTest
     final Task task2 = NoopTask.create();
     lockbox.add(task2);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task1,
             new SpecificSegmentLockRequest(
@@ -1014,7 +1032,7 @@ public class GlobalTaskLockboxTest
         ).isOk()
     );
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         lockbox.tryLock(
             task2,
             new SpecificSegmentLockRequest(
@@ -1037,12 +1055,12 @@ public class GlobalTaskLockboxTest
     allocateSegmentsAndAssert(task, "seq2", 2, new NumberedOverwritePartialShardSpec(0, 3, (short) 1));
 
     final List<TaskLock> locks = lockbox.findLocksForTask(task);
-    Assert.assertEquals(5, locks.size());
+    Assertions.assertEquals(5, locks.size());
     int expectedPartitionId = 0;
     for (TaskLock lock : locks) {
-      Assert.assertTrue(lock instanceof SegmentLock);
+      Assertions.assertTrue(lock instanceof SegmentLock);
       final SegmentLock segmentLock = (SegmentLock) lock;
-      Assert.assertEquals(expectedPartitionId++, segmentLock.getPartitionId());
+      Assertions.assertEquals(expectedPartitionId++, segmentLock.getPartitionId());
       if (expectedPartitionId == 3) {
         expectedPartitionId = PartitionIds.NON_ROOT_GEN_START_PARTITION_ID;
       }
@@ -1086,19 +1104,19 @@ public class GlobalTaskLockboxTest
       LockResult result
   )
   {
-    Assert.assertTrue(result.isOk());
-    Assert.assertNotNull(result.getTaskLock());
-    Assert.assertTrue(result.getTaskLock() instanceof SegmentLock);
-    Assert.assertNotNull(result.getNewSegmentId());
+    Assertions.assertTrue(result.isOk());
+    Assertions.assertNotNull(result.getTaskLock());
+    Assertions.assertTrue(result.getTaskLock() instanceof SegmentLock);
+    Assertions.assertNotNull(result.getNewSegmentId());
     final SegmentLock segmentLock = (SegmentLock) result.getTaskLock();
     final SegmentIdWithShardSpec segmentId = result.getNewSegmentId();
 
-    Assert.assertEquals(lockRequest.getType(), segmentLock.getType());
-    Assert.assertEquals(lockRequest.getGroupId(), segmentLock.getGroupId());
-    Assert.assertEquals(lockRequest.getDataSource(), segmentLock.getDataSource());
-    Assert.assertEquals(lockRequest.getInterval(), segmentLock.getInterval());
-    Assert.assertEquals(lockRequest.getPartialShardSpec().getShardSpecClass(), segmentId.getShardSpec().getClass());
-    Assert.assertEquals(lockRequest.getPriority(), segmentLock.getPriority().intValue());
+    Assertions.assertEquals(lockRequest.getType(), segmentLock.getType());
+    Assertions.assertEquals(lockRequest.getGroupId(), segmentLock.getGroupId());
+    Assertions.assertEquals(lockRequest.getDataSource(), segmentLock.getDataSource());
+    Assertions.assertEquals(lockRequest.getInterval(), segmentLock.getInterval());
+    Assertions.assertEquals(lockRequest.getPartialShardSpec().getShardSpecClass(), segmentId.getShardSpec().getClass());
+    Assertions.assertEquals(lockRequest.getPriority(), segmentLock.getPriority().intValue());
   }
 
   @Test
@@ -1129,10 +1147,10 @@ public class GlobalTaskLockboxTest
     TaskLockbox.TaskLockPosse taskLockPosse2 = new TaskLockbox.TaskLockPosse(taskLock2);
     TaskLockbox.TaskLockPosse taskLockPosse3 = new TaskLockbox.TaskLockPosse(taskLock1);
 
-    Assert.assertNotEquals(taskLockPosse1, null);
-    Assert.assertNotEquals(null, taskLockPosse1);
-    Assert.assertNotEquals(taskLockPosse1, taskLockPosse2);
-    Assert.assertEquals(taskLockPosse1, taskLockPosse3);
+    Assertions.assertNotEquals(taskLockPosse1, null);
+    Assertions.assertNotEquals(null, taskLockPosse1);
+    Assertions.assertNotEquals(taskLockPosse1, taskLockPosse2);
+    Assertions.assertEquals(taskLockPosse1, taskLockPosse3);
   }
 
   @Test
@@ -1144,14 +1162,14 @@ public class GlobalTaskLockboxTest
     lockbox.add(task1);
     lockbox.add(task2);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task1,
             new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task1, Intervals.of("2017/2018"), null)
         ).isOk()
     );
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task2,
             new SpecificSegmentLockRequest(TaskLockType.EXCLUSIVE, task2, Intervals.of("2017/2018"), "version", 0)
@@ -1163,20 +1181,20 @@ public class GlobalTaskLockboxTest
         .get(task1.getDataSource())
         .get(DateTimes.of("2017"))
         .get(Intervals.of("2017/2018"));
-    Assert.assertEquals(2, posses.size());
+    Assertions.assertEquals(2, posses.size());
 
-    Assert.assertEquals(LockGranularity.TIME_CHUNK, posses.get(0).getTaskLock().getGranularity());
+    Assertions.assertEquals(LockGranularity.TIME_CHUNK, posses.get(0).getTaskLock().getGranularity());
     final TimeChunkLock timeChunkLock = (TimeChunkLock) posses.get(0).getTaskLock();
-    Assert.assertEquals("none", timeChunkLock.getDataSource());
-    Assert.assertEquals("groupId", timeChunkLock.getGroupId());
-    Assert.assertEquals(Intervals.of("2017/2018"), timeChunkLock.getInterval());
+    Assertions.assertEquals("none", timeChunkLock.getDataSource());
+    Assertions.assertEquals("groupId", timeChunkLock.getGroupId());
+    Assertions.assertEquals(Intervals.of("2017/2018"), timeChunkLock.getInterval());
 
-    Assert.assertEquals(LockGranularity.SEGMENT, posses.get(1).getTaskLock().getGranularity());
+    Assertions.assertEquals(LockGranularity.SEGMENT, posses.get(1).getTaskLock().getGranularity());
     final SegmentLock segmentLock = (SegmentLock) posses.get(1).getTaskLock();
-    Assert.assertEquals("none", segmentLock.getDataSource());
-    Assert.assertEquals("groupId", segmentLock.getGroupId());
-    Assert.assertEquals(Intervals.of("2017/2018"), segmentLock.getInterval());
-    Assert.assertEquals(0, segmentLock.getPartitionId());
+    Assertions.assertEquals("none", segmentLock.getDataSource());
+    Assertions.assertEquals("groupId", segmentLock.getGroupId());
+    Assertions.assertEquals(Intervals.of("2017/2018"), segmentLock.getInterval());
+    Assertions.assertEquals(0, segmentLock.getPartitionId());
   }
 
   @Test
@@ -1188,14 +1206,14 @@ public class GlobalTaskLockboxTest
     lockbox.add(task1);
     lockbox.add(task2);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         lockbox.tryLock(
             task1,
             new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, task1, Intervals.of("2017/2018"), null)
         ).isOk()
     );
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         lockbox.tryLock(
             task2,
             new SpecificSegmentLockRequest(TaskLockType.EXCLUSIVE, task2, Intervals.of("2017/2018"), "version", 0)
@@ -1224,7 +1242,7 @@ public class GlobalTaskLockboxTest
 
     Map<String, List<Interval>> conflictingIntervals =
         lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
-    Assert.assertTrue(conflictingIntervals.isEmpty());
+    Assertions.assertTrue(conflictingIntervals.isEmpty());
   }
 
   @Test
@@ -1248,8 +1266,8 @@ public class GlobalTaskLockboxTest
 
     Map<String, List<Interval>> conflictingIntervals =
         lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
-    Assert.assertEquals(1, conflictingIntervals.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, conflictingIntervals.size());
+    Assertions.assertEquals(
         Collections.singletonList(Intervals.of("2017/2018")),
         conflictingIntervals.get(task.getDataSource())
     );
@@ -1276,7 +1294,7 @@ public class GlobalTaskLockboxTest
 
     Map<String, List<Interval>> conflictingIntervals =
         lockbox.getLockedIntervals(ImmutableList.of(requestForReplaceLowerPriorityLock));
-    Assert.assertTrue(conflictingIntervals.isEmpty());
+    Assertions.assertTrue(conflictingIntervals.isEmpty());
   }
 
   @Test
@@ -1305,7 +1323,32 @@ public class GlobalTaskLockboxTest
 
     Map<String, List<Interval>> conflictingIntervals =
         lockbox.getLockedIntervals(ImmutableList.of(requestForReplaceLowerPriorityLock));
-    Assert.assertTrue(conflictingIntervals.isEmpty());
+    Assertions.assertTrue(conflictingIntervals.isEmpty());
+  }
+
+  @Test
+  public void test_getLockedIntervals_withOngoingKill_returnsEmpty()
+  {
+    final Interval killInterval = Intervals.of("2017/2018");
+    final Task task = newEmbeddedKillTask(HIGH_PRIORITY);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.KILL,
+        task,
+        killInterval
+    );
+
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        25,
+        null,
+        null
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+    Assertions.assertTrue(conflictingIntervals.isEmpty());
   }
 
 
@@ -1347,8 +1390,8 @@ public class GlobalTaskLockboxTest
 
     Map<String, List<TaskLock>> activeLocks =
         lockbox.getActiveLocks(ImmutableList.of(policy, policyForNonExistentDatasource));
-    Assert.assertEquals(1, activeLocks.size());
-    Assert.assertEquals(expectedLocks, new HashSet<>(activeLocks.get("none")));
+    Assertions.assertEquals(1, activeLocks.size());
+    Assertions.assertEquals(expectedLocks, new HashSet<>(activeLocks.get("none")));
   }
 
   @Test
@@ -1387,8 +1430,8 @@ public class GlobalTaskLockboxTest
 
     Map<String, List<TaskLock>> activeLocks =
         lockbox.getActiveLocks(ImmutableList.of(policy, policyForNonExistentDatasource));
-    Assert.assertEquals(1, activeLocks.size());
-    Assert.assertEquals(expectedLocks, new HashSet<>(activeLocks.get("none")));
+    Assertions.assertEquals(1, activeLocks.size());
+    Assertions.assertEquals(expectedLocks, new HashSet<>(activeLocks.get("none")));
   }
 
   @Test
@@ -1427,8 +1470,8 @@ public class GlobalTaskLockboxTest
 
     Map<String, List<TaskLock>> activeLocks =
         lockbox.getActiveLocks(ImmutableList.of(policy, policyForNonExistentDatasource));
-    Assert.assertEquals(1, activeLocks.size());
-    Assert.assertEquals(expectedLocks, new HashSet<>(activeLocks.get("none")));
+    Assertions.assertEquals(1, activeLocks.size());
+    Assertions.assertEquals(expectedLocks, new HashSet<>(activeLocks.get("none")));
   }
 
   @Test
@@ -1470,8 +1513,8 @@ public class GlobalTaskLockboxTest
 
     Map<String, List<TaskLock>> activeLocks =
         lockbox.getActiveLocks(ImmutableList.of(policy, policyForNonExistentDatasource));
-    Assert.assertEquals(1, activeLocks.size());
-    Assert.assertEquals(expectedLocks, new HashSet<>(activeLocks.get("none")));
+    Assertions.assertEquals(1, activeLocks.size());
+    Assertions.assertEquals(expectedLocks, new HashSet<>(activeLocks.get("none")));
   }
 
   @Test
@@ -1849,6 +1892,199 @@ public class GlobalTaskLockboxTest
   }
 
   @Test
+  public void testKillLockCompatibility()
+  {
+    final Task killTask = newEmbeddedKillTask(MEDIUM_PRIORITY);
+    final TaskLock theLock = validator.expectKillLockCreated(killTask, Intervals.of("2017/2018"));
+
+    // A KILL lock cannot coexist with another KILL lock on an overlapping interval
+    validator.expectKillLockNotGranted(newEmbeddedKillTask(MEDIUM_PRIORITY), Intervals.of("2017-05-01/2017-06-01"));
+
+    // A KILL lock can coexist with all other lock types
+    final TaskLock exclusiveLock = validator.expectLockCreated(
+        TaskLockType.EXCLUSIVE,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY
+    );
+    validator.expectActiveLocks(theLock, exclusiveLock);
+    validator.expectRevokedLocks();
+
+    final TaskLock sharedLock = validator.expectLockCreated(
+        TaskLockType.SHARED,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY + 1
+    );
+    validator.expectActiveLocks(theLock, sharedLock);
+    validator.expectRevokedLocks(exclusiveLock);
+
+    final TaskLock replaceLock = validator.expectLockCreated(
+        TaskLockType.REPLACE,
+        Intervals.of("2017-03-01/2017-09-01"),
+        MEDIUM_PRIORITY + 2
+    );
+    final TaskLock appendLock = validator.expectLockCreated(
+        TaskLockType.APPEND,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY + 3
+    );
+    validator.expectActiveLocks(theLock, replaceLock, appendLock);
+    validator.expectRevokedLocks(exclusiveLock, sharedLock);
+  }
+
+  @Test
+  public void testKillLockCanRevokeIncompatibleKillLock()
+  {
+    final TaskLock lowPriorityKillLock = validator.expectKillLockCreated(
+        newEmbeddedKillTask(LOW_PRIORITY),
+        Intervals.of("2017-05-01/2017-06-01")
+    );
+
+    // A higher-priority KILL lock can revoke a lower-priority KILL lock
+    final TaskLock highPriorityKillLock = validator.expectKillLockCreated(
+        newEmbeddedKillTask(HIGH_PRIORITY),
+        Intervals.of("2017/2018")
+    );
+
+    validator.expectActiveLocks(highPriorityKillLock);
+    validator.expectRevokedLocks(lowPriorityKillLock);
+  }
+
+  @Test
+  public void testKillLockCannotRevokeHigherPriorityKillLock()
+  {
+    validator.expectKillLockCreated(newEmbeddedKillTask(HIGH_PRIORITY), Intervals.of("2017-05-01/2017-06-01"));
+    validator.expectKillLockNotGranted(newEmbeddedKillTask(LOW_PRIORITY), Intervals.of("2017/2018"));
+  }
+
+  @Test
+  public void testOnlyEmbeddedKillTaskCanAcquireKillLock()
+  {
+    final Task nonKillTask = NoopTask.ofPriority(MEDIUM_PRIORITY);
+    lockbox.add(nonKillTask);
+    taskStorage.insert(nonKillTask, TaskStatus.running(nonKillTask.getId()));
+
+    Assertions.assertThrows(
+        ISE.class,
+        () -> lockbox.tryLock(
+            nonKillTask,
+            new TimeChunkLockRequest(TaskLockType.KILL, nonKillTask, Intervals.of("2017/2018"), null)
+        )
+    );
+  }
+
+  @Test
+  public void testKillLockAcquireAndReleaseWithoutTaskInStorage()
+  {
+    // Acquire a KILL lock on an interval
+    final Task killTask = newEmbeddedKillTask(MEDIUM_PRIORITY);
+    final Interval lockInterval = Intervals.of("2017/2018");
+    validator.expectKillLockCreated(killTask, lockInterval);
+
+    // Verify that the lock blocks another KILL on an overlapping interval
+    validator.expectKillLockNotGranted(newEmbeddedKillTask(MEDIUM_PRIORITY), lockInterval);
+
+    // Release the original task and its lock so that other tasks can acquire a lock
+    lockbox.remove(killTask);
+    validator.expectKillLockCreated(newEmbeddedKillTask(MEDIUM_PRIORITY), lockInterval);
+  }
+
+  @Test
+  public void testKillLockNotRestoredAfterSyncFromStorage()
+  {
+    // Acquire a KILL lock for a task that was never inserted into taskStorage
+    final Interval lockInterval = Intervals.of("2017/2018");
+    final Task killTask = newEmbeddedKillTask(MEDIUM_PRIORITY);
+    final TaskLock killLock = validator.expectKillLockCreated(killTask, lockInterval);
+
+    // Verify that other tasks cannot acquire a lock on the same interval
+    validator.expectKillLockNotGranted(newEmbeddedKillTask(MEDIUM_PRIORITY), lockInterval);
+
+    // Sync from storage — the kill task was not persisted, so the lock must disappear
+    final GlobalTaskLockbox newBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    final TaskLockboxSyncResult result = newBox.syncFromStorage();
+    Assertions.assertEquals(0, result.getTaskLockCount());
+
+    // Verify that the lock is still present in storage
+    final List<TaskLock> locksInStorage = taskStorage.getLocks(killTask.getId());
+    Assertions.assertEquals(1, locksInStorage.size());
+    Assertions.assertEquals(killLock, locksInStorage.getFirst());
+
+    // A new KILL lock on the same interval should now be grantable
+    this.lockbox = newBox;
+    new TaskLockboxValidator(newBox, taskStorage)
+        .expectKillLockCreated(newEmbeddedKillTask(MEDIUM_PRIORITY), lockInterval);
+  }
+
+  @Test
+  public void testKillLockRevocationByHigherPriorityKillTaskNotInStorage()
+  {
+    // Low-priority kill task not in storage acquires a KILL lock
+    final Task lowPriorityKillTask = newEmbeddedKillTask(LOW_PRIORITY);
+    lockbox.add(lowPriorityKillTask);
+    final LockResult lowResult = lockbox.tryLock(
+        lowPriorityKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, lowPriorityKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
+    );
+    Assertions.assertTrue(lowResult.isOk());
+    Assertions.assertFalse(lowResult.getTaskLock().isRevoked());
+
+    // High-priority kill task not in storage revokes the low-priority KILL lock
+    final Task highPriorityKillTask = newEmbeddedKillTask(HIGH_PRIORITY);
+    lockbox.add(highPriorityKillTask);
+    final LockResult highResult = lockbox.tryLock(
+        highPriorityKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, highPriorityKillTask, Intervals.of("2017/2018"), null)
+    );
+    Assertions.assertTrue(highResult.isOk());
+    Assertions.assertFalse(highResult.getTaskLock().isRevoked());
+
+    // Re-acquiring the low-priority lock returns the revoked copy
+    final LockResult revokedResult = lockbox.tryLock(
+        lowPriorityKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, lowPriorityKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
+    );
+    Assertions.assertFalse(revokedResult.isOk());
+    Assertions.assertTrue(revokedResult.getTaskLock().isRevoked());
+
+    lockbox.remove(lowPriorityKillTask);
+    lockbox.remove(highPriorityKillTask);
+  }
+
+  @Test
+  public void testKillLockCoexistsWithOtherLocksNotInStorage()
+  {
+    // Acquire an EXCLUSIVE lock for a persisted task
+    final Task exclusiveTask = NoopTask.ofPriority(MEDIUM_PRIORITY);
+    lockbox.add(exclusiveTask);
+    taskStorage.insert(exclusiveTask, TaskStatus.running(exclusiveTask.getId()));
+    final LockResult exclusiveResult = lockbox.tryLock(
+        exclusiveTask,
+        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, exclusiveTask, Intervals.of("2017-05-01/2017-06-01"), null)
+    );
+    Assertions.assertTrue(exclusiveResult.isOk());
+
+    // A KILL task (not in storage) should be able to acquire a KILL lock on an overlapping interval
+    final Task killTask = newEmbeddedKillTask(MEDIUM_PRIORITY);
+    lockbox.add(killTask);
+    final LockResult killResult = lockbox.tryLock(
+        killTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, killTask, Intervals.of("2017/2018"), null)
+    );
+    Assertions.assertTrue(killResult.isOk());
+    Assertions.assertFalse(killResult.getTaskLock().isRevoked());
+
+    // Release the kill task (not persisted)
+    lockbox.remove(killTask);
+
+    // The exclusive lock should still be active
+    final List<TaskLock> exclusiveLocks = taskStorage.getLocks(exclusiveTask.getId());
+    Assertions.assertEquals(1, exclusiveLocks.size());
+    Assertions.assertFalse(exclusiveLocks.get(0).isRevoked());
+
+    lockbox.remove(exclusiveTask);
+  }
+
+  @Test
   public void testTimechunkLockTypeTransitionForSameTaskGroup()
   {
     Task task = NoopTask.create();
@@ -1886,7 +2122,7 @@ public class GlobalTaskLockboxTest
     taskStorage.insert(taskWithFailingLockAcquisition0, TaskStatus.running(taskWithFailingLockAcquisition0.getId()));
     taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
     taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
-    Assert.assertEquals(3, taskStorage.getActiveTasks().size());
+    Assertions.assertEquals(3, taskStorage.getActiveTasks().size());
 
     final TaskLock lock = new TimeChunkLock(
         null,
@@ -1904,7 +2140,7 @@ public class GlobalTaskLockboxTest
     TaskLockboxSyncResult result = testLockbox.syncFromStorage();
 
     // The tasks must be marked for failure
-    Assert.assertEquals(ImmutableSet.of(taskWithFailingLockAcquisition0, taskWithFailingLockAcquisition1),
+    Assertions.assertEquals(ImmutableSet.of(taskWithFailingLockAcquisition0, taskWithFailingLockAcquisition1),
                         result.getTasksToFail());
   }
 
@@ -1949,7 +2185,7 @@ public class GlobalTaskLockboxTest
         Intervals.of("2024-01-01/2024-01-02"),
         "v0"
     ).getTaskLock();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(taskStorage.getLocks(task.getId())),
         ImmutableSet.of(supersededLock)
     );
@@ -1961,7 +2197,7 @@ public class GlobalTaskLockboxTest
         Intervals.of("2024-01-01/2024-01-02"),
         "v0"
     ).getTaskLock();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(taskStorage.getLocks(otherTask.getId())),
         ImmutableSet.of(taskNotInPosse)
     );
@@ -1973,7 +2209,7 @@ public class GlobalTaskLockboxTest
         Intervals.of("2024-01-01/2025-01-01"),
         "v0"
     ).getTaskLock();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(taskStorage.getLocks(task.getId())),
         ImmutableSet.of(supersededLock, replaceLock)
     );
@@ -1985,7 +2221,7 @@ public class GlobalTaskLockboxTest
         Intervals.of("2024-01-11/2024-01-12"),
         "v1"
     ).getTaskLock();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(taskStorage.getLocks(task.getId())),
         ImmutableSet.of(supersededLock, replaceLock, higherVersion)
     );
@@ -1997,7 +2233,7 @@ public class GlobalTaskLockboxTest
         Intervals.of("2024-01-28/2024-02-04"),
         "v0"
     ).getTaskLock();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(taskStorage.getLocks(task.getId())),
         ImmutableSet.of(supersededLock, replaceLock, higherVersion, uncontainedInterval)
     );
@@ -2008,11 +2244,11 @@ public class GlobalTaskLockboxTest
         Intervals.of("2024-01-01/2024-02-01"),
         "v0"
     ).getTaskLock();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(taskStorage.getLocks(task.getId())),
         ImmutableSet.of(theLock, replaceLock, higherVersion, uncontainedInterval)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.copyOf(taskStorage.getLocks(otherTask.getId())),
         ImmutableSet.of(taskNotInPosse)
     );
@@ -2059,15 +2295,33 @@ public class GlobalTaskLockboxTest
   public void test_add_throwsException_ifSyncIsNotComplete()
   {
     lockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            ISE.class,
-            () -> lockbox.add(NoopTask.create())
-        ),
-        ExceptionMatcher.of(ISE.class).expectMessageIs(
-            "Cannot get TaskLockbox for datasource[none] as sync with storage has not happened yet."
-        )
+    final ISE exception = Assertions.assertThrows(
+        ISE.class,
+        () -> lockbox.add(NoopTask.create())
     );
+    Assertions.assertEquals(
+        "Cannot get TaskLockbox for datasource[none] as sync with storage has not happened yet.",
+        exception.getMessage()
+    );
+  }
+
+  private static Task newEmbeddedKillTask(int priority)
+  {
+    return new NoopTask(
+        IdUtils.getRandomId(),
+        null,
+        TestDataSource.WIKI,
+        1L,
+        1L,
+        Map.of(Tasks.PRIORITY_KEY, priority)
+    )
+    {
+      @Override
+      public String getType()
+      {
+        return UnusedSegmentsKiller.TASK_TYPE_EMBEDDED_KILL;
+      }
+    };
   }
 
   private class TaskLockboxValidator
@@ -2089,16 +2343,16 @@ public class GlobalTaskLockboxTest
     public TaskLock expectLockCreated(TaskLockType type, Task task, Interval interval)
     {
       final TaskLock lock = tryTaskLock(type, task, interval);
-      Assert.assertNotNull(lock);
-      Assert.assertFalse(lock.isRevoked());
+      Assertions.assertNotNull(lock);
+      Assertions.assertFalse(lock.isRevoked());
       return lock;
     }
 
     public TaskLock expectLockCreated(TaskLockType type, Interval interval, int priority)
     {
       final TaskLock lock = tryTaskLock(type, interval, priority);
-      Assert.assertNotNull(lock);
-      Assert.assertFalse(lock.isRevoked());
+      Assertions.assertNotNull(lock);
+      Assertions.assertFalse(lock.isRevoked());
       return lock;
     }
 
@@ -2110,23 +2364,23 @@ public class GlobalTaskLockboxTest
     public void expectLockNotGranted(TaskLockType type, Task task, Interval interval)
     {
       final TaskLock lock = tryTaskLock(type, task, interval);
-      Assert.assertNull(lock);
+      Assertions.assertNull(lock);
     }
 
     public void expectLockNotGranted(TaskLockType type, Interval interval, int priority)
     {
       final TaskLock lock = tryTaskLock(type, interval, priority);
-      Assert.assertNull(lock);
+      Assertions.assertNull(lock);
     }
 
     public void expectRevokedLocks(TaskLock... locks)
     {
       final Set<TaskLock> allLocks = getAllLocks();
       final Set<TaskLock> activeLocks = getAllActiveLocks();
-      Assert.assertEquals(allLocks.size() - activeLocks.size(), locks.length);
+      Assertions.assertEquals(allLocks.size() - activeLocks.size(), locks.length);
       for (TaskLock lock : locks) {
-        Assert.assertTrue(allLocks.contains(lock.revokedCopy()));
-        Assert.assertFalse(activeLocks.contains(lock));
+        Assertions.assertTrue(allLocks.contains(lock.revokedCopy()));
+        Assertions.assertFalse(activeLocks.contains(lock));
       }
     }
 
@@ -2134,10 +2388,10 @@ public class GlobalTaskLockboxTest
     {
       final Set<TaskLock> allLocks = getAllLocks();
       final Set<TaskLock> activeLocks = getAllActiveLocks();
-      Assert.assertEquals(activeLocks.size(), locks.length);
+      Assertions.assertEquals(activeLocks.size(), locks.length);
       for (TaskLock lock : locks) {
-        Assert.assertTrue(allLocks.contains(lock));
-        Assert.assertTrue(activeLocks.contains(lock));
+        Assertions.assertTrue(allLocks.contains(lock));
+        Assertions.assertTrue(activeLocks.contains(lock));
       }
     }
 
@@ -2145,7 +2399,9 @@ public class GlobalTaskLockboxTest
     {
       if (tasks.add(task)) {
         lockbox.add(task);
-        taskStorage.insert(task, TaskStatus.running(task.getId()));
+        if (!UnusedSegmentsKiller.TASK_TYPE_EMBEDDED_KILL.equals(task.getType())) {
+          taskStorage.insert(task, TaskStatus.running(task.getId()));
+        }
       }
       TaskLock lock = tryTimeChunkLock(type, task, interval).getTaskLock();
       if (lock != null) {
@@ -2157,6 +2413,24 @@ public class GlobalTaskLockboxTest
     private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority)
     {
       return tryTaskLock(type, NoopTask.ofPriority(priority), interval);
+    }
+
+    /**
+     * Adds the given {@code killTask} to the lockbox (but not to TaskStorage)
+     * and verifies that a kill lock is successfully granted on the specified interval.
+     */
+    public TaskLock expectKillLockCreated(Task killTask, Interval interval)
+    {
+      final TaskLock lock = tryTaskLock(TaskLockType.KILL, killTask, interval);
+      Assertions.assertNotNull(lock);
+      Assertions.assertFalse(lock.isRevoked());
+      return lock;
+    }
+
+    public void expectKillLockNotGranted(Task killTask, Interval interval)
+    {
+      final TaskLock lock = tryTaskLock(TaskLockType.KILL, killTask, interval);
+      Assertions.assertNull(lock);
     }
 
     private Set<TaskLock> getAllActiveLocks()

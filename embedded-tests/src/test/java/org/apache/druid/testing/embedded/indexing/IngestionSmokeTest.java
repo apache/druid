@@ -133,11 +133,11 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   protected EmbeddedDruidCluster addServers(EmbeddedDruidCluster cluster)
   {
     return cluster
+        .addServer(eventCollector)
         .addServer(new EmbeddedCoordinator())
         .addServer(overlord)
         .addServer(indexer)
         .addServer(broker)
-        .addServer(eventCollector)
         .addServer(new EmbeddedHistorical())
         .addServer(new EmbeddedRouter());
   }

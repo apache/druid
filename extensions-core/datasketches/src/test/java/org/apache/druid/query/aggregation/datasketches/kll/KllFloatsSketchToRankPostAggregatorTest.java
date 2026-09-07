@@ -32,8 +32,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,8 +55,8 @@ public class KllFloatsSketchToRankPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -68,7 +68,7 @@ public class KllFloatsSketchToRankPostAggregatorTest
         0
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "KllFloatsSketchToRankPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, value=0.0}",
         postAgg.toString()
     );
@@ -99,7 +99,7 @@ public class KllFloatsSketchToRankPostAggregatorTest
     );
 
     final double rank = (double) postAgg.compute(fields);
-    Assert.assertTrue(Double.isNaN(rank));
+    Assertions.assertTrue(Double.isNaN(rank));
   }
 
   @Test
@@ -125,7 +125,7 @@ public class KllFloatsSketchToRankPostAggregatorTest
     );
 
     final double rank = (double) postAgg.compute(fields);
-    Assert.assertEquals(0.5, rank, 0);
+    Assertions.assertEquals(0.5, rank, 0);
   }
 
   @Test
@@ -148,7 +148,7 @@ public class KllFloatsSketchToRankPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("sketch", null)

@@ -25,7 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.GeneratedMessageV3;
+import com.google.protobuf.GeneratedMessage;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.grpc.proto.QueryOuterClass;
@@ -749,10 +749,10 @@ public class QueryDriver
   }
 
   @SuppressWarnings("unchecked")
-  private Class<GeneratedMessageV3> getProtobufClass(final QueryRequest request)
+  private Class<GeneratedMessage> getProtobufClass(final QueryRequest request)
   {
     try {
-      return (Class<GeneratedMessageV3>) Class.forName(request.getProtobufMessageName());
+      return (Class<GeneratedMessage>) Class.forName(request.getProtobufMessageName());
     }
     catch (ClassNotFoundException e) {
       throw new RequestError(

@@ -177,11 +177,10 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   @Override
   public int computeTaskCountForRollover()
   {
-    if (config.isScaleDownOnTaskRolloverOnly()) {
-      return computeOptimalTaskCount(lastKnownMetrics);
-    } else {
-      return CANNOT_COMPUTE;
-    }
+    // Always allow scaling on task rollover.
+    // If a scaling has happened recently, the caller may not invoke this method
+    // at all or simply reject the task count returned.
+    return computeOptimalTaskCount(lastKnownMetrics);
   }
 
   public int computeTaskCountForScaleAction()
@@ -212,6 +211,24 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   public CostBasedAutoScalerConfig getConfig()
   {
     return config;
+  }
+
+  private boolean isHighLag(CostMetrics metrics)
+  {
+    final Long criticalLagThreshold = config.getCriticalLagThreshold();
+    return metrics != null && criticalLagThreshold != null
+           && metrics.getAggregateLag() >= criticalLagThreshold * WeightedCostFunction.HIGH_LAG_THRESHOLD_FRACTION;
+  }
+
+  /**
+   * Whether the last collected metrics crossed {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()},
+   * meaning the argmin search should be skipped entirely in favor of jumping to the maximum task count.
+   */
+  private boolean isCriticalLag(CostMetrics metrics)
+  {
+    final Long criticalLagThreshold = config.getCriticalLagThreshold();
+    return metrics != null && criticalLagThreshold != null
+           && metrics.getAggregateLag() >= criticalLagThreshold * WeightedCostFunction.CRITICAL_LAG_THRESHOLD_FRACTION;
   }
 
   /**
@@ -250,6 +267,24 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       return currentTaskCount;
     }
 
+    final boolean highLag = isHighLag(metrics);
+    final boolean criticalLag = isCriticalLag(metrics);
+    if (criticalLag) {
+      log.info(
+          "Supervisor[%s] aggregateLag[%.0f] crossed [%.0f%%] of criticalLagThreshold[%d]: skipping the argmin"
+          + " search and jumping straight to the maximum task count.",
+          supervisorId, metrics.getAggregateLag(), WeightedCostFunction.CRITICAL_LAG_THRESHOLD_FRACTION * 100,
+          config.getCriticalLagThreshold()
+      );
+    } else if (highLag) {
+      log.info(
+          "Supervisor[%s] aggregateLag[%.0f] crossed [%.0f%%] of criticalLagThreshold[%d]: widening scale-up"
+          + " candidates and maxing out the high-lag cost factor.",
+          supervisorId, metrics.getAggregateLag(), WeightedCostFunction.HIGH_LAG_THRESHOLD_FRACTION * 100,
+          config.getCriticalLagThreshold()
+      );
+    }
+
     // Start with the current task count as optimal
     final CostResult currentCost = costFunction.computeCost(metrics, currentTaskCount, config);
     int optimalTaskCount = currentTaskCount;
@@ -278,7 +313,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     int startIndex = 0;
     int endIndex = validTaskCounts.length - 1;
 
-    if (config.isUseTaskCountBoundariesOnScaleUp()) {
+    if (config.isUseTaskCountBoundariesOnScaleUp() && !highLag) {
       int currentTaskCountIndex = Arrays.binarySearch(validTaskCounts, currentTaskCount);
       endIndex = currentTaskCountIndex >= 0
                  ? Math.min(currentTaskCountIndex + BOUNDARY_LIMIT_IN_PARTITIONS_PER_TASK, endIndex)
@@ -292,13 +327,19 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
                    : startIndex;
     }
 
+    // Critical lag skips the argmin search entirely: evaluate only the maximum valid task count.
+    if (criticalLag) {
+      startIndex = validTaskCounts.length - 1;
+      endIndex = validTaskCounts.length - 1;
+    }
+
     for (int i = startIndex; i <= endIndex; ++i) {
       final int taskCount = validTaskCounts[i];
       CostResult costResult = costFunction.computeCost(metrics, taskCount, config);
       double cost = costResult.totalCost();
 
       costResults[i] = costResult;
-      if (cost < optimalCost.totalCost()) {
+      if (criticalLag || cost < optimalCost.totalCost()) {
         optimalTaskCount = taskCount;
         optimalCost = costResult;
       }
@@ -331,14 +372,16 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       emitter.emit(getMetricBuilder().setMetric(OPTIMAL_LAG_COST_METRIC, optimalCost.lagCost()));
       emitter.emit(getMetricBuilder().setMetric(OPTIMAL_IDLE_COST_METRIC, optimalCost.idleCost()));
 
-      final double costDropPercent
-          = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
-      if (costDropPercent < config.getMinCostDropPercentForScaling()) {
-        log.info(
-            "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
-            costDropPercent, config.getMinCostDropPercentForScaling()
-        );
-        return currentTaskCount;
+      if (!criticalLag) {
+        final double costDropPercent
+            = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
+        if (costDropPercent < config.getMinCostDropPercentForScaling()) {
+          log.info(
+              "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
+              costDropPercent, config.getMinCostDropPercentForScaling()
+          );
+          return currentTaskCount;
+        }
       }
     }
 
@@ -477,11 +520,14 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     final LagStats lagStats = supervisor.computeLagStats();
     final double avgPartitionLag;
+    final double aggregateLag;
     if (lagStats == null) {
       log.debug("Lag stats unavailable for supervisorId [%s], skipping collection", supervisorId);
       avgPartitionLag = -1;
+      aggregateLag = -1;
     } else {
       avgPartitionLag = lagStats.getAvgLag();
+      aggregateLag = lagStats.getTotalLag();
     }
 
     final int currentTaskCount = supervisor.getIoConfig().getTaskCount();
@@ -491,12 +537,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     final double movingAvgRate = extractMovingAverage(taskStats);
     final double pollIdleRatio = extractPollIdleRatio(taskStats);
 
-    if (!config.isUsePollIdleRatio() && movingAvgRate > 0) {
+    if (!config.isUsePollIdleRatio() && aggregateLag > 0 && movingAvgRate > 0) {
       processingRateSamples.add(movingAvgRate);
     }
 
     return new CostMetrics(
         avgPartitionLag,
+        aggregateLag,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,

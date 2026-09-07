@@ -36,17 +36,16 @@ import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -57,8 +56,8 @@ public class SegmentCacheBootstrapperCacheTest
 {
   private static final long MAX_SIZE = 1000L;
   private static final long SEGMENT_SIZE = 100L;
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File infoDir;
   private File cacheDir;
@@ -70,27 +69,15 @@ public class SegmentCacheBootstrapperCacheTest
   private ServiceEmitter emitter;
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     infoDir = temporaryFolder.newFolder();
     cacheDir = temporaryFolder.newFolder();
-    loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return infoDir;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(cacheDir, MAX_SIZE, null)
-        );
-      }
-    };
+    loaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(infoDir)
+        .locations(new StorageLocationConfig(cacheDir, MAX_SIZE, null))
+        .build();
 
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
@@ -116,7 +103,7 @@ public class SegmentCacheBootstrapperCacheTest
   public void testLoadStartStopWithEmptyLocations() throws IOException
   {
     final List<StorageLocation> emptyLocations = ImmutableList.of();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig();
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder().build();
     segmentManager = new SegmentManager(
         new SegmentLocalCacheManager(
             emptyLocations,
@@ -207,18 +194,19 @@ public class SegmentCacheBootstrapperCacheTest
     bootstrapper.start();
 
     // Verify the expected announcements
-    Assert.assertTrue(segmentAnnouncer.getObservedSegments().containsAll(expectedSegments));
+    Assertions.assertTrue(segmentAnnouncer.getObservedSegments().containsAll(expectedSegments));
 
     // Make sure adding segments beyond allowed size fails
     DataSegment newSegment = TestSegmentUtils.makeSegment("test", "new-segment", SEGMENT_SIZE);
     loadDropHandler.addSegment(newSegment, null, null);
-    Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(newSegment));
+    Assertions.assertFalse(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     // Clearing some segment should allow for new segments
     loadDropHandler.removeSegment(expectedSegments.get(0), null, false);
     loadDropHandler.addSegment(newSegment, null, null);
-    Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(newSegment));
+    Assertions.assertTrue(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     bootstrapper.stop();
   }
+
 }

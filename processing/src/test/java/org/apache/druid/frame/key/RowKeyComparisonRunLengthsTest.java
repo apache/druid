@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,7 +41,7 @@ public class RowKeyComparisonRunLengthsTest
     final List<KeyColumn> keyColumns = Collections.emptyList();
     final RowSignature signature = RowSignature.empty();
     final RowKeyComparisonRunLengths runLengths = RowKeyComparisonRunLengths.create(keyColumns, signature);
-    Assert.assertEquals(0, runLengths.getRunLengthEntries().length);
+    Assertions.assertEquals(0, runLengths.getRunLengthEntries().length);
   }
 
   @Test
@@ -51,7 +51,7 @@ public class RowKeyComparisonRunLengthsTest
     final RowSignature signature = RowSignature.builder()
                                                .add("a", ColumnType.LONG)
                                                .build();
-    Assert.assertThrows(DruidException.class, () -> RowKeyComparisonRunLengths.create(keyColumns, signature));
+    Assertions.assertThrows(DruidException.class, () -> RowKeyComparisonRunLengths.create(keyColumns, signature));
   }
 
   @Test
@@ -59,7 +59,7 @@ public class RowKeyComparisonRunLengthsTest
   {
     final List<KeyColumn> keyColumns = Collections.singletonList(new KeyColumn("a", KeyOrder.NONE));
     final RowSignature signature = RowSignature.empty();
-    Assert.assertThrows(DruidException.class, () -> RowKeyComparisonRunLengths.create(keyColumns, signature));
+    Assertions.assertThrows(DruidException.class, () -> RowKeyComparisonRunLengths.create(keyColumns, signature));
   }
 
   @Test
@@ -69,12 +69,12 @@ public class RowKeyComparisonRunLengthsTest
     final RowSignature signature1 = RowSignature.builder()
                                                 .add("a", null)
                                                 .build();
-    Assert.assertThrows(DruidException.class, () -> RowKeyComparisonRunLengths.create(keyColumns, signature1));
+    Assertions.assertThrows(DruidException.class, () -> RowKeyComparisonRunLengths.create(keyColumns, signature1));
 
     final RowSignature signature2 = RowSignature.builder()
                                                 .add("a", ColumnType.UNKNOWN_COMPLEX)
                                                 .build();
-    Assert.assertThrows(DruidException.class, () -> RowKeyComparisonRunLengths.create(keyColumns, signature2));
+    Assertions.assertThrows(DruidException.class, () -> RowKeyComparisonRunLengths.create(keyColumns, signature2));
   }
 
   @Test
@@ -97,10 +97,10 @@ public class RowKeyComparisonRunLengthsTest
                                                  .add("a", columnType)
                                                  .build();
       final RowKeyComparisonRunLengths runLengths = RowKeyComparisonRunLengths.create(keyColumns, signature);
-      Assert.assertEquals(1, runLengths.getRunLengthEntries().length);
-      Assert.assertTrue(runLengths.getRunLengthEntries()[0].isByteComparable());
-      Assert.assertEquals(1, runLengths.getRunLengthEntries()[0].getRunLength());
-      Assert.assertEquals(KeyOrder.ASCENDING, runLengths.getRunLengthEntries()[0].getOrder());
+      Assertions.assertEquals(1, runLengths.getRunLengthEntries().length);
+      Assertions.assertTrue(runLengths.getRunLengthEntries()[0].isByteComparable());
+      Assertions.assertEquals(1, runLengths.getRunLengthEntries()[0].getRunLength());
+      Assertions.assertEquals(KeyOrder.ASCENDING, runLengths.getRunLengthEntries()[0].getOrder());
     }
   }
 
@@ -116,10 +116,10 @@ public class RowKeyComparisonRunLengthsTest
                                                  .add("a", columnType)
                                                  .build();
       final RowKeyComparisonRunLengths runLengths = RowKeyComparisonRunLengths.create(keyColumns, signature);
-      Assert.assertEquals(1, runLengths.getRunLengthEntries().length);
-      Assert.assertFalse(runLengths.getRunLengthEntries()[0].isByteComparable());
-      Assert.assertEquals(1, runLengths.getRunLengthEntries()[0].getRunLength());
-      Assert.assertEquals(KeyOrder.ASCENDING, runLengths.getRunLengthEntries()[0].getOrder());
+      Assertions.assertEquals(1, runLengths.getRunLengthEntries().length);
+      Assertions.assertFalse(runLengths.getRunLengthEntries()[0].isByteComparable());
+      Assertions.assertEquals(1, runLengths.getRunLengthEntries()[0].getRunLength());
+      Assertions.assertEquals(KeyOrder.ASCENDING, runLengths.getRunLengthEntries()[0].getOrder());
     }
   }
 
@@ -157,31 +157,31 @@ public class RowKeyComparisonRunLengthsTest
     // Output runLengthEntries would be
     // (long, string ASC) (string, long DESC) (complex DESC) (complex ASC) (complex ASC) (string ASC)
 
-    Assert.assertEquals(6, runLengthEntries.length);
+    Assertions.assertEquals(6, runLengthEntries.length);
 
-    Assert.assertTrue(runLengthEntries[0].isByteComparable());
-    Assert.assertEquals(2, runLengthEntries[0].getRunLength());
-    Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries[0].getOrder());
+    Assertions.assertTrue(runLengthEntries[0].isByteComparable());
+    Assertions.assertEquals(2, runLengthEntries[0].getRunLength());
+    Assertions.assertEquals(KeyOrder.ASCENDING, runLengthEntries[0].getOrder());
 
-    Assert.assertTrue(runLengthEntries[1].isByteComparable());
-    Assert.assertEquals(2, runLengthEntries[1].getRunLength());
-    Assert.assertEquals(KeyOrder.DESCENDING, runLengthEntries[1].getOrder());
+    Assertions.assertTrue(runLengthEntries[1].isByteComparable());
+    Assertions.assertEquals(2, runLengthEntries[1].getRunLength());
+    Assertions.assertEquals(KeyOrder.DESCENDING, runLengthEntries[1].getOrder());
 
-    Assert.assertFalse(runLengthEntries[2].isByteComparable());
-    Assert.assertEquals(1, runLengthEntries[2].getRunLength());
-    Assert.assertEquals(KeyOrder.DESCENDING, runLengthEntries[2].getOrder());
+    Assertions.assertFalse(runLengthEntries[2].isByteComparable());
+    Assertions.assertEquals(1, runLengthEntries[2].getRunLength());
+    Assertions.assertEquals(KeyOrder.DESCENDING, runLengthEntries[2].getOrder());
 
-    Assert.assertFalse(runLengthEntries[3].isByteComparable());
-    Assert.assertEquals(1, runLengthEntries[3].getRunLength());
-    Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries[3].getOrder());
+    Assertions.assertFalse(runLengthEntries[3].isByteComparable());
+    Assertions.assertEquals(1, runLengthEntries[3].getRunLength());
+    Assertions.assertEquals(KeyOrder.ASCENDING, runLengthEntries[3].getOrder());
 
-    Assert.assertFalse(runLengthEntries[4].isByteComparable());
-    Assert.assertEquals(1, runLengthEntries[4].getRunLength());
-    Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries[4].getOrder());
+    Assertions.assertFalse(runLengthEntries[4].isByteComparable());
+    Assertions.assertEquals(1, runLengthEntries[4].getRunLength());
+    Assertions.assertEquals(KeyOrder.ASCENDING, runLengthEntries[4].getOrder());
 
-    Assert.assertTrue(runLengthEntries[5].isByteComparable());
-    Assert.assertEquals(1, runLengthEntries[5].getRunLength());
-    Assert.assertEquals(KeyOrder.ASCENDING, runLengthEntries[5].getOrder());
+    Assertions.assertTrue(runLengthEntries[5].isByteComparable());
+    Assertions.assertEquals(1, runLengthEntries[5].getRunLength());
+    Assertions.assertEquals(KeyOrder.ASCENDING, runLengthEntries[5].getOrder());
   }
 
   /**
@@ -778,7 +778,7 @@ public class RowKeyComparisonRunLengthsTest
       RunLengthEntry[] actualEntries = RowKeyComparisonRunLengths
           .create(keyColumnsAndRowSignature.lhs, keyColumnsAndRowSignature.rhs)
           .getRunLengthEntries();
-      Assert.assertArrayEquals(StringUtils.format("Result %d incorrect", i), expectedResults.get(i), actualEntries);
+      Assertions.assertArrayEquals(expectedResults.get(i), actualEntries, StringUtils.format("Result %d incorrect", i));
     }
   }
 

@@ -39,9 +39,9 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,7 +80,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     super(LockGranularity.TIME_CHUNK, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     inputDir = temporaryFolder.newFolder("data");
@@ -158,7 +158,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     for (List<DataSegment> segmentsInInterval : compactedSegments.values()) {
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
       for (DataSegment segment : segmentsInInterval) {
-        Assert.assertEquals(expectedAtomicUpdateGroupSize, segment.getShardSpec().getAtomicUpdateGroupSize());
+        Assertions.assertEquals(expectedAtomicUpdateGroupSize, segment.getShardSpec().getAtomicUpdateGroupSize());
       }
     }
   }
@@ -224,7 +224,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     for (List<DataSegment> segmentsInInterval : compactedSegments.values()) {
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
       for (DataSegment segment : segmentsInInterval) {
-        Assert.assertEquals(expectedAtomicUpdateGroupSize, segment.getShardSpec().getAtomicUpdateGroupSize());
+        Assertions.assertEquals(expectedAtomicUpdateGroupSize, segment.getShardSpec().getAtomicUpdateGroupSize());
       }
     }
   }
@@ -259,7 +259,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
                         .map(segment -> segment.getId().toString())
                         .filter(segmentId -> !compactedSegmentIds.contains(segmentId))
                         .collect(Collectors.toSet());
-    Assert.assertFalse(nonCompactedSegmentIds.isEmpty());
+    Assertions.assertFalse(nonCompactedSegmentIds.isEmpty());
     final Set<String> originalSegmentIds = new HashSet<>(compactedSegmentIds);
     originalSegmentIds.addAll(nonCompactedSegmentIds);
 
@@ -278,7 +278,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
 
     // Check published segment set after compaction
     final Set<DataSegment> publishedAfterCompaction = dataSegmentsWithSchemas.getSegments();
-    Assert.assertFalse(SegmentUtils.groupSegmentsByInterval(publishedAfterCompaction).isEmpty());
+    Assertions.assertFalse(SegmentUtils.groupSegmentsByInterval(publishedAfterCompaction).isEmpty());
 
     final Set<String> finalSegmentIds = publishedAfterCompaction.stream()
                                                                 .map(segment -> segment.getId().toString())
@@ -286,18 +286,18 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
 
     final Map<String, String> upgradedFromSegmentIdMap =
         getStorageCoordinator().retrieveUpgradedFromSegmentIds(DATASOURCE, finalSegmentIds);
-    Assert.assertFalse(upgradedFromSegmentIdMap.isEmpty());
-    Assert.assertTrue(upgradedFromSegmentIdMap.values().stream().noneMatch(compactedSegmentIds::contains));
-    Assert.assertTrue(originalSegmentIds.containsAll(upgradedFromSegmentIdMap.values()));
+    Assertions.assertFalse(upgradedFromSegmentIdMap.isEmpty());
+    Assertions.assertTrue(upgradedFromSegmentIdMap.values().stream().noneMatch(compactedSegmentIds::contains));
+    Assertions.assertTrue(originalSegmentIds.containsAll(upgradedFromSegmentIdMap.values()));
     for (final String successorSegmentId : upgradedFromSegmentIdMap.keySet()) {
-      Assert.assertTrue(finalSegmentIds.contains(successorSegmentId));
+      Assertions.assertTrue(finalSegmentIds.contains(successorSegmentId));
     }
 
     // Validate new segment ids (replacements and/or upgraded replicas)
     final Set<String> newPublishedSegmentIds = new HashSet<>(finalSegmentIds);
     newPublishedSegmentIds.removeAll(originalSegmentIds);
-    Assert.assertFalse(newPublishedSegmentIds.isEmpty());
-    Assert.assertTrue(
+    Assertions.assertFalse(newPublishedSegmentIds.isEmpty());
+    Assertions.assertTrue(
         newPublishedSegmentIds.stream().anyMatch(id -> !upgradedFromSegmentIdMap.containsKey(id))
     );
 
@@ -323,19 +323,19 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
                                                                        .map(Map.Entry::getKey)
                                                                        .toList();
       if (finalSegmentIds.contains(parentSegmentId)) {
-        Assert.assertTrue(successorSegmentIds.isEmpty());
+        Assertions.assertTrue(successorSegmentIds.isEmpty());
       } else if (!successorSegmentIds.isEmpty()) {
-        Assert.assertEquals(1, successorSegmentIds.size());
-        Assert.assertTrue(finalSegmentIds.contains(successorSegmentIds.get(0)));
+        Assertions.assertEquals(1, successorSegmentIds.size());
+        Assertions.assertTrue(finalSegmentIds.contains(successorSegmentIds.get(0)));
       }
     }
 
     // Verify compacted segments have new published ID
     for (final DataSegment compactedSource : segmentsToCompact) {
       final String compactedSourceId = compactedSource.getId().toString();
-      Assert.assertFalse(finalSegmentIds.contains(compactedSourceId));
+      Assertions.assertFalse(finalSegmentIds.contains(compactedSourceId));
       final Set<String> newIdsInSameInterval = newSegmentIdsByInterval.getOrDefault(compactedSource.getInterval(), Set.of());
-      Assert.assertFalse(newIdsInSameInterval.isEmpty());
+      Assertions.assertFalse(newIdsInSameInterval.isEmpty());
     }
 
     // non-compacted parents removed from published set match retrieveUpgradedToSegmentIds
@@ -356,7 +356,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         final Set<String> coordinatorSuccessorIds =
             new HashSet<>(upgradedToSegmentIdsByParent.getOrDefault(parentSegmentId, Set.of()));
         coordinatorSuccessorIds.remove(parentSegmentId);
-        Assert.assertTrue(coordinatorSuccessorIds.containsAll(expectedSuccessorIds));
+        Assertions.assertTrue(coordinatorSuccessorIds.containsAll(expectedSuccessorIds));
       }
     }
   }

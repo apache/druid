@@ -38,7 +38,6 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -338,30 +337,32 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
         getServerUrl(broker) + "/druid/v2/datasources/auth_test"
     );
 
-    // as user that can only read auth_test
-    final String expectedMsg = "{\"Access-Check-Result\":\"" + Access.DEFAULT_ERROR_MESSAGE + "\"}";
-    verifySystemSchemaQueryIsForbidden(
+    // As a user that can only read auth_test. This cluster runs with the default
+    // druid.sql.planner.authorizeTableVisibility = true, so the sys tables are not visible to this user at all and
+    // naming one is a validation error rather than an authorization error. (With authorizeTableVisibility = false
+    // these would instead be forbidden.)
+    verifySystemSchemaQueryIsNotFound(
         datasourceOnlyUserClient,
         SYS_SCHEMA_SEGMENTS_QUERY,
-        expectedMsg
+        "segments"
     );
 
-    verifySystemSchemaQueryIsForbidden(
+    verifySystemSchemaQueryIsNotFound(
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVERS_QUERY,
-        expectedMsg
+        "servers"
     );
 
-    verifySystemSchemaQueryIsForbidden(
+    verifySystemSchemaQueryIsNotFound(
         datasourceOnlyUserClient,
         SYS_SCHEMA_SERVER_SEGMENTS_QUERY,
-        expectedMsg
+        "server_segments"
     );
 
-    verifySystemSchemaQueryIsForbidden(
+    verifySystemSchemaQueryIsNotFound(
         datasourceOnlyUserClient,
         SYS_SCHEMA_TASKS_QUERY,
-        expectedMsg
+        "tasks"
     );
   }
 
@@ -872,6 +873,28 @@ public abstract class AbstractAuthConfigurationTest extends EmbeddedClusterTestB
     StatusResponseHolder responseHolder = makeSQLQueryRequest(client, query, HttpResponseStatus.FORBIDDEN);
     Assertions.assertEquals(responseHolder.getStatus(), HttpResponseStatus.FORBIDDEN);
     Assertions.assertEquals(responseHolder.getContent(), expectedErrorMessage);
+  }
+
+  /**
+   * Verifies that a sys table is not visible to the user at all, i.e. that naming it is a validation error rather
+   * than an authorization error. This is the behavior when {@code druid.sql.planner.authorizeTableVisibility} is
+   * true (the default) and the user lacks READ on the corresponding SYSTEM_TABLE resource.
+   */
+  private void verifySystemSchemaQueryIsNotFound(
+      HttpClient client,
+      String query,
+      String expectedMissingTable
+  )
+  {
+    final StatusResponseHolder responseHolder =
+        makeSQLQueryRequest(client, query, HttpResponseStatus.BAD_REQUEST);
+    Assertions.assertEquals(HttpResponseStatus.BAD_REQUEST, responseHolder.getStatus());
+
+    final String content = responseHolder.getContent();
+    Assertions.assertTrue(
+        content.contains("Object '" + expectedMissingTable + "' not found within 'sys'"),
+        StringUtils.format("Expected [%s] to be not found within 'sys', but got[%s]", expectedMissingTable, content)
+    );
   }
 
   protected String getBrokerAvacticaUrl()

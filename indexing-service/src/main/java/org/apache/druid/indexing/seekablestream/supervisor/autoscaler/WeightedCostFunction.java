@@ -37,10 +37,30 @@ public class WeightedCostFunction
   private static final Logger log = new Logger(WeightedCostFunction.class);
 
   /**
-   * Multiplier for a lag amplification factor; it was carefully chosen
-   * during extensive testing as the most balanced multiplier for high-lag recovery.
+   * Normal-path lag amplification multiplier. Critical-lag tiers provide the
+   * urgency amplification, so normal lag uses unamplified recovery time.
    */
-  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.3;
+  static final double LAG_AMPLIFICATION_MULTIPLIER = 0.0;
+
+  /**
+   * Default cost factor used once aggregate lag crosses {@link #HIGH_LAG_THRESHOLD_FRACTION} of
+   * {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()}.
+   */
+  static final double DEFAULT_HIGH_LAG_COST_FACTOR = 6.0;
+
+  /**
+   * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which the high-lag
+   * fast path engages: the cost factor maxes out at {@link #DEFAULT_HIGH_LAG_COST_FACTOR}
+   * and the scale-up candidate boundary is bypassed.
+   */
+  static final double HIGH_LAG_THRESHOLD_FRACTION = 0.75;
+
+  /**
+   * Fraction of {@link CostBasedAutoScalerConfig#getCriticalLagThreshold()} at which the critical-lag
+   * fast path engages: the cost-minimization search is skipped entirely and the task count jumps
+   * straight to the maximum.
+   */
+  static final double CRITICAL_LAG_THRESHOLD_FRACTION = 1.0;
 
   /**
    * Exponent (< 1) for sublinear busy redistribution in the idle projection:
@@ -106,14 +126,20 @@ public class WeightedCostFunction
     }
 
     // Lag recovery time is decreasing by adding tasks and increasing by ejecting tasks.
-    // In case of increasing lag, we apply an amplification factor to reflect the urgency of addressing lag.
-    // Caution: we rely only on the metrics, the real issues may be absolutely different, up to hardware failure.
+    // High lag uses extra cost; normal lag uses raw recovery time so capacity cost remains meaningful.
+    // Once aggregate lag crosses HIGH_LAG_THRESHOLD_FRACTION of criticalLagThreshold, the cost factor is
+    // maxed out at the configured highLagCostFactor (vs unamplified normal recovery).
     final double lagRecoveryTime;
     if (metrics.getAggregateLag() <= 0) {
       lagRecoveryTime = 0;
     } else {
       final double lagPerPartition = metrics.getAggregateLag() / metrics.getPartitionCount();
-      final double amplification = Math.max(1.0, 1.0 + LAG_AMPLIFICATION_MULTIPLIER * Math.log(lagPerPartition));
+      final Long criticalLagThreshold = config.getCriticalLagThreshold();
+      final boolean highLag = criticalLagThreshold != null
+          && metrics.getAggregateLag() >= criticalLagThreshold * HIGH_LAG_THRESHOLD_FRACTION;
+
+      final double costFactor = highLag ? config.getHighLagCostFactor() : LAG_AMPLIFICATION_MULTIPLIER;
+      final double amplification = Math.max(1.0, 1.0 + costFactor * Math.log(lagPerPartition));
       final double adjustedProcessingRate = Math.max(avgProcessingRate, MIN_PROCESSING_RATE);
       lagRecoveryTime = metrics.getAggregateLag() * amplification / (proposedTaskCount * adjustedProcessingRate);
     }

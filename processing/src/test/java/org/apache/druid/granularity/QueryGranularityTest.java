@@ -48,8 +48,8 @@ import org.joda.time.Months;
 import org.joda.time.Period;
 import org.joda.time.Weeks;
 import org.joda.time.Years;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -67,7 +67,7 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     final Iterator<Interval> iterator = Granularities.NONE.getIterable(Intervals.utc(0, 1000)).iterator();
     int count = 0;
     while (iterator.hasNext()) {
-      Assert.assertEquals(count, iterator.next().getStartMillis());
+      Assertions.assertEquals(count, iterator.next().getStartMillis());
       count++;
     }
   }
@@ -700,19 +700,19 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
       );
 
       // Same as above, but using the millis form of the method.
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-01T04:50:00.000-08:00").getMillis(),
           gran.bucketStart(DateTimes.of("2012-01-01T05:00:04.123-08:00").getMillis())
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-02T05:00:00.000-08:00").getMillis(),
           gran.bucketStart(DateTimes.of("2012-01-02T07:00:04.123-08:00").getMillis())
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-02T17:05:00.000-08:00").getMillis(),
           gran.bucketStart(DateTimes.of("2012-01-03T00:20:04.123-08:00").getMillis())
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-02-03T22:25:00.000-08:00").getMillis(),
           gran.bucketStart(DateTimes.of("2012-02-03T22:25:00.000-08:00").getMillis())
       );
@@ -729,19 +729,19 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
           origin
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-01T17:05:04.123-08:00"),
           gran.increment(DateTimes.of("2012-01-01T05:00:04.123-08:00"))
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-02T19:05:04.123-08:00"),
           gran.increment(DateTimes.of("2012-01-02T07:00:04.123-08:00"))
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-03T12:25:04.123-08:00"),
           gran.increment(DateTimes.of("2012-01-03T00:20:04.123-08:00"))
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-02-04T10:30:00.000-08:00"),
           gran.increment(DateTimes.of("2012-02-03T22:25:00.000-08:00"))
       );
@@ -758,19 +758,19 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
           origin
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-01T17:05:04.123-08:00").getMillis(),
           gran.increment(DateTimes.of("2012-01-01T05:00:04.123-08:00").getMillis())
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-02T19:05:04.123-08:00").getMillis(),
           gran.increment(DateTimes.of("2012-01-02T07:00:04.123-08:00")).getMillis()
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-01-03T12:25:04.123-08:00").getMillis(),
           gran.increment(DateTimes.of("2012-01-03T00:20:04.123-08:00")).getMillis()
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           DateTimes.of("2012-02-04T10:30:00.000-08:00").getMillis(),
           gran.increment(DateTimes.of("2012-02-03T22:25:00.000-08:00")).getMillis()
       );
@@ -786,7 +786,7 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
         origin
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DateTimes.of("2012-01-01T05:00:04.123-08:00"),
         gran.toDateTime(DateTimes.of("2012-01-01T05:00:04.123-08:00").getMillis())
     );
@@ -822,18 +822,18 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
 
     String json = "{ \"type\": \"period\", \"period\": \"P1D\" }";
     Granularity gran = mapper.readValue(json, Granularity.class);
-    Assert.assertEquals(new PeriodGranularity(new Period("P1D"), null, null), gran);
+    Assertions.assertEquals(new PeriodGranularity(new Period("P1D"), null, null), gran);
 
     // Nonstandard period
     json = "{ \"type\": \"period\", \"period\": \"P2D\" }";
     gran = mapper.readValue(json, Granularity.class);
-    Assert.assertEquals(new PeriodGranularity(new Period("P2D"), null, null), gran);
+    Assertions.assertEquals(new PeriodGranularity(new Period("P2D"), null, null), gran);
 
     // Set timeZone, origin
     json = "{ \"type\": \"period\", \"period\": \"P1D\","
            + "\"timeZone\": \"America/Los_Angeles\", \"origin\": \"1970-01-01T00:00:00Z\"}";
     gran = mapper.readValue(json, Granularity.class);
-    Assert.assertEquals(new PeriodGranularity(
+    Assertions.assertEquals(new PeriodGranularity(
         new Period("P1D"),
         DateTimes.EPOCH,
         DateTimes.inferTzFromString("America/Los_Angeles")
@@ -846,12 +846,12 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     );
 
     String jsonOut = mapper.writeValueAsString(expected);
-    Assert.assertEquals(expected, mapper.readValue(jsonOut, Granularity.class));
+    Assertions.assertEquals(expected, mapper.readValue(jsonOut, Granularity.class));
 
     String illegalJson = "{ \"type\": \"period\", \"period\": \"P0D\" }";
     try {
       mapper.readValue(illegalJson, Granularity.class);
-      Assert.fail();
+      Assertions.fail();
     }
     catch (JsonMappingException e) {
     }
@@ -864,19 +864,19 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
 
     String json = "{ \"type\": \"duration\", \"duration\": \"3600000\" }";
     Granularity gran = mapper.readValue(json, Granularity.class);
-    Assert.assertEquals(new DurationGranularity(3600000, null), gran);
+    Assertions.assertEquals(new DurationGranularity(3600000, null), gran);
 
     json = "{ \"type\": \"duration\", \"duration\": \"5\", \"origin\": \"2012-09-01T00:00:00.002Z\" }";
     gran = mapper.readValue(json, Granularity.class);
-    Assert.assertEquals(new DurationGranularity(5, 2), gran);
+    Assertions.assertEquals(new DurationGranularity(5, 2), gran);
 
     DurationGranularity expected = new DurationGranularity(5, 2);
-    Assert.assertEquals(expected, mapper.readValue(mapper.writeValueAsString(expected), Granularity.class));
+    Assertions.assertEquals(expected, mapper.readValue(mapper.writeValueAsString(expected), Granularity.class));
 
     String illegalJson = "{ \"type\": \"duration\", \"duration\": \"0\" }";
     try {
       mapper.readValue(illegalJson, Granularity.class);
-      Assert.fail();
+      Assertions.fail();
     }
     catch (JsonMappingException e) {
     }
@@ -890,28 +890,28 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     for (GranularityType granularityType : GranularityType.values()) {
       final Granularity granularity = granularityType.getDefaultGranularity();
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           granularity,
           mapper.readValue("\"" + StringUtils.toUpperCase(granularityType.name()) + "\"", Granularity.class)
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           granularity,
           mapper.readValue("\"" + StringUtils.toLowerCase(granularityType.name()) + "\"", Granularity.class)
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           granularity,
           mapper.readValue(mapper.writeValueAsString(granularity), Granularity.class)
       );
 
       if (granularityType == GranularityType.ALL || granularityType == GranularityType.NONE) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             "{\"type\":\"" + StringUtils.toLowerCase(granularityType.name()) + "\"}",
             mapper.writeValueAsString(granularity)
         );
       } else {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             "\"" + StringUtils.toUpperCase(granularityType.name()) + "\"",
             mapper.writeValueAsString(granularity)
         );
@@ -922,11 +922,11 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
   @Test
   public void testMerge()
   {
-    Assert.assertNull(Granularity.mergeGranularities(null));
-    Assert.assertNull(Granularity.mergeGranularities(ImmutableList.of()));
-    Assert.assertNull(Granularity.mergeGranularities(Lists.newArrayList(null, Granularities.DAY)));
-    Assert.assertNull(Granularity.mergeGranularities(Lists.newArrayList(Granularities.DAY, null)));
-    Assert.assertNull(
+    Assertions.assertNull(Granularity.mergeGranularities(null));
+    Assertions.assertNull(Granularity.mergeGranularities(ImmutableList.of()));
+    Assertions.assertNull(Granularity.mergeGranularities(Lists.newArrayList(null, Granularities.DAY)));
+    Assertions.assertNull(Granularity.mergeGranularities(Lists.newArrayList(Granularities.DAY, null)));
+    Assertions.assertNull(
         Granularity.mergeGranularities(
             Lists.newArrayList(
                 Granularities.DAY,
@@ -935,11 +935,11 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertNull(
+    Assertions.assertNull(
         Granularity.mergeGranularities(ImmutableList.of(Granularities.ALL, Granularities.DAY))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Granularities.ALL,
         Granularity.mergeGranularities(ImmutableList.of(Granularities.ALL, Granularities.ALL))
     );
@@ -947,28 +947,28 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
 
   private void assertSameDateTime(List<DateTime> expected, Iterable<DateTime> actual)
   {
-    Assert.assertEquals(expected.size(), Iterables.size(actual));
+    Assertions.assertEquals(expected.size(), Iterables.size(actual));
     Iterator<DateTime> actualIter = actual.iterator();
     Iterator<DateTime> expectedIter = expected.iterator();
 
     while (actualIter.hasNext() && expectedIter.hasNext()) {
-      Assert.assertEquals(expectedIter.next(), actualIter.next());
+      Assertions.assertEquals(expectedIter.next(), actualIter.next());
     }
-    Assert.assertFalse("actualIter not exhausted!?", actualIter.hasNext());
-    Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
+    Assertions.assertFalse(actualIter.hasNext(), "actualIter not exhausted!?");
+    Assertions.assertFalse(expectedIter.hasNext(), "expectedIter not exhausted!?");
   }
 
   private void assertSameInterval(List<DateTime> expected, Iterable<Interval> actual)
   {
-    Assert.assertEquals(expected.size(), Iterables.size(actual));
+    Assertions.assertEquals(expected.size(), Iterables.size(actual));
     Iterator<Interval> actualIter = actual.iterator();
     Iterator<DateTime> expectedIter = expected.iterator();
 
     while (actualIter.hasNext() && expectedIter.hasNext()) {
-      Assert.assertEquals(expectedIter.next(), actualIter.next().getStart());
+      Assertions.assertEquals(expectedIter.next(), actualIter.next().getStart());
     }
-    Assert.assertFalse("actualIter not exhausted!?", actualIter.hasNext());
-    Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
+    Assertions.assertFalse(actualIter.hasNext(), "actualIter not exhausted!?");
+    Assertions.assertFalse(expectedIter.hasNext(), "expectedIter not exhausted!?");
   }
 
   @Test
@@ -1041,26 +1041,26 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
     );
 
     ExpressionVirtualColumn column = Granularities.toVirtualColumn(hour, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1H',null,'UTC')", column.getExpression());
+    Assertions.assertEquals("timestamp_floor(__time,'PT1H',null,'UTC')", column.getExpression());
     column = Granularities.toVirtualColumn(hourWithOrigin, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "timestamp_floor(__time,'PT1H','2012-01-02T13:00:00.000Z','America/Los_Angeles')",
         column.getExpression()
     );
     column = Granularities.toVirtualColumn(hourWithTz, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1H',null,'America/Los_Angeles')", column.getExpression());
+    Assertions.assertEquals("timestamp_floor(__time,'PT1H',null,'America/Los_Angeles')", column.getExpression());
     column = Granularities.toVirtualColumn(duration, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
+    Assertions.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.NONE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
+    Assertions.assertEquals(ColumnHolder.TIME_COLUMN_NAME, column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.ALL, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertNull(column);
+    Assertions.assertNull(column);
     column = Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1H',null,'UTC')", column.getExpression());
+    Assertions.assertEquals("timestamp_floor(__time,'PT1H',null,'UTC')", column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.MINUTE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT1M',null,'UTC')", column.getExpression());
+    Assertions.assertEquals("timestamp_floor(__time,'PT1M',null,'UTC')", column.getExpression());
     column = Granularities.toVirtualColumn(Granularities.FIFTEEN_MINUTE, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    Assert.assertEquals("timestamp_floor(__time,'PT15M',null,'UTC')", column.getExpression());
+    Assertions.assertEquals("timestamp_floor(__time,'PT15M',null,'UTC')", column.getExpression());
   }
 
   @Test
@@ -1110,25 +1110,25 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    Assert.assertEquals(Granularities.HOUR, Granularities.fromVirtualColumn(hourly));
-    Assert.assertEquals(Granularities.DAY, Granularities.fromVirtualColumn(day));
-    Assert.assertEquals(Granularities.HOUR, Granularities.fromVirtualColumn(hourlyNonstandardTime));
-    Assert.assertEquals(
+    Assertions.assertEquals(Granularities.HOUR, Granularities.fromVirtualColumn(hourly));
+    Assertions.assertEquals(Granularities.DAY, Granularities.fromVirtualColumn(day));
+    Assertions.assertEquals(Granularities.HOUR, Granularities.fromVirtualColumn(hourlyNonstandardTime));
+    Assertions.assertEquals(
         new PeriodGranularity(new Period("PT1H"), null, DateTimes.inferTzFromString("America/Los_Angeles")),
         Granularities.fromVirtualColumn(hourlyPacificTime)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new PeriodGranularity(new Period("PT1H"), null, DateTimes.inferTzFromString("Asia/Kolkata")),
         Granularities.fromVirtualColumn(hourlyIndianTime)
     );
-    Assert.assertNull(Granularities.fromVirtualColumn(ceilHour));
-    Assert.assertEquals(Granularities.MINUTE, Granularities.fromVirtualColumn(floorWithExpression));
+    Assertions.assertNull(Granularities.fromVirtualColumn(ceilHour));
+    Assertions.assertEquals(Granularities.MINUTE, Granularities.fromVirtualColumn(floorWithExpression));
     final DateTime origin = DateTimes.of("2012-01-02T05:00:00.000-08:00");
     final DateTimeZone tz = DateTimes.inferTzFromString("America/Los_Angeles");
     final Granularity minuteWithTz = new PeriodGranularity(new Period("PT1M"), null, tz);
     final Granularity minuteWithOrigin = new PeriodGranularity(new Period("PT1M"), origin, tz);
-    Assert.assertEquals(minuteWithTz, Granularities.fromVirtualColumn(floorWithTimezone));
-    Assert.assertEquals(minuteWithOrigin, Granularities.fromVirtualColumn(floorWithOriginTimezone));
+    Assertions.assertEquals(minuteWithTz, Granularities.fromVirtualColumn(floorWithTimezone));
+    Assertions.assertEquals(minuteWithOrigin, Granularities.fromVirtualColumn(floorWithOriginTimezone));
   }
 
   @Test
@@ -1140,27 +1140,27 @@ public class QueryGranularityTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         TestExprMacroTable.INSTANCE
     );
-    Assert.assertEquals(Granularities.ALL, Granularities.fromVirtualColumn(literalField));
+    Assertions.assertEquals(Granularities.ALL, Granularities.fromVirtualColumn(literalField));
   }
 
   private void assertBucketStart(final Granularity granularity, final DateTime in, final DateTime expectedInProperTz)
   {
-    Assert.assertEquals(
-        StringUtils.format("Granularity [%s] toDateTime(bucketStart(DateTime))", granularity),
+    Assertions.assertEquals(
         expectedInProperTz,
-        granularity.toDateTime(granularity.bucketStart(in).getMillis())
+        granularity.toDateTime(granularity.bucketStart(in).getMillis()),
+        StringUtils.format("Granularity [%s] toDateTime(bucketStart(DateTime))", granularity)
     );
 
-    Assert.assertEquals(
-        StringUtils.format("Granularity [%s] bucketStart(DateTime)", granularity),
+    Assertions.assertEquals(
         expectedInProperTz.withZone(in.getZone()),
-        granularity.bucketStart(in)
+        granularity.bucketStart(in),
+        StringUtils.format("Granularity [%s] bucketStart(DateTime)", granularity)
     );
 
-    Assert.assertEquals(
-        StringUtils.format("Granularity [%s] bucketStart(long)", granularity),
+    Assertions.assertEquals(
         expectedInProperTz.getMillis(),
-        granularity.bucketStart(in.getMillis())
+        granularity.bucketStart(in.getMillis()),
+        StringUtils.format("Granularity [%s] bucketStart(long)", granularity)
     );
   }
 }

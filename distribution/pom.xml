@@ -57,7 +57,7 @@
             <plugin>
                 <groupId>net.nicoulaj.maven.plugins</groupId>
                 <artifactId>checksum-maven-plugin</artifactId>
-                <version>1.7</version>
+                <version>1.11</version>
                 <executions>
                     <execution>
                         <id>dist-checksum</id>
@@ -86,7 +86,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-antrun-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>3.2.0</version>
                 <executions>
                     <execution>
                         <phase>prepare-package</phase>
@@ -276,18 +276,6 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>license-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>download-licenses</id>
-                                <goals>
-                                    <goal>download-licenses</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
                 </plugins>
             </build>
         </profile>
@@ -447,6 +435,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-spectator-histogram</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-rabbit-indexing-service</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-opa-authorizer</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:grpc-query</argument>
                                         <argument>-c</argument>

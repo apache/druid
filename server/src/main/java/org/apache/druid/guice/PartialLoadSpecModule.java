@@ -23,16 +23,19 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.segment.loading.CompositePartialLoadSpec;
 import org.apache.druid.segment.loading.LoadSpec;
+import org.apache.druid.segment.loading.PartialBaseTableLoadSpec;
 import org.apache.druid.segment.loading.PartialClusterGroupLoadSpec;
+import org.apache.druid.segment.loading.PartialFullSegmentLoadSpec;
 import org.apache.druid.segment.loading.PartialProjectionLoadSpec;
 
 import java.util.List;
 
 /**
- * Registers {@link PartialProjectionLoadSpec} and {@link PartialClusterGroupLoadSpec} as {@link LoadSpec} subtypes
- * for serde of partial load rules. This module is added to the always-loaded core list so they are available
- * alongside any other deep-storage load spec modules.
+ * Registers every {@link org.apache.druid.segment.loading.PartialLoadSpec} subtype as a {@link LoadSpec} subtype for
+ * serde of partial load rules. This module is added to the always-loaded core list so they are available alongside
+ * any other deep-storage load spec modules.
  */
 public class PartialLoadSpecModule implements DruidModule
 {
@@ -48,7 +51,10 @@ public class PartialLoadSpecModule implements DruidModule
     return List.of(
         new SimpleModule().registerSubtypes(
             PartialProjectionLoadSpec.class,
-            PartialClusterGroupLoadSpec.class
+            PartialClusterGroupLoadSpec.class,
+            PartialBaseTableLoadSpec.class,
+            PartialFullSegmentLoadSpec.class,
+            CompositePartialLoadSpec.class
         )
     );
   }

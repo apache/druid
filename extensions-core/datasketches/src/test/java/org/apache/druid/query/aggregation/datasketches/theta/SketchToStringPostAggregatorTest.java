@@ -31,8 +31,8 @@ import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.TestObjectColumnSelector;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,8 +53,8 @@ public class SketchToStringPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -65,7 +65,7 @@ public class SketchToStringPostAggregatorTest
         new FieldAccessPostAggregator("field", "sketch")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "SketchToStringPostAggregator{name='summary', field=FieldAccessPostAggregator{name='field', fieldName='sketch'}}",
         postAgg.toString()
     );
@@ -95,7 +95,7 @@ public class SketchToStringPostAggregatorTest
     );
     String summary1 = (String) postAgg1.compute(ImmutableMap.of());
     String summary2 = (String) postAgg2.compute(ImmutableMap.of());
-    Assert.assertEquals(0, postAgg1.getComparator().compare(summary1, summary2));
+    Assertions.assertEquals(0, postAgg1.getComparator().compare(summary1, summary2));
   }
 
   @Test
@@ -123,8 +123,8 @@ public class SketchToStringPostAggregatorTest
     );
 
     final String summary = (String) postAgg.compute(fields);
-    Assert.assertNotNull(summary);
-    Assert.assertTrue(summary.contains("SUMMARY"));
+    Assertions.assertNotNull(summary);
+    Assertions.assertTrue(summary.contains("SUMMARY"));
   }
 
 }

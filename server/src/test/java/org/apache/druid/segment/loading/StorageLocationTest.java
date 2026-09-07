@@ -33,16 +33,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 class StorageLocationTest
 {
@@ -70,16 +74,16 @@ class StorageLocationTest
     CacheEntry entry4 = new TestCacheEntry("4", 25);
     CacheEntry entry5 = new TestCacheEntry("5", 25);
 
-    location.reserveWeak(entry1);
-    location.reserveWeak(entry2);
-    location.reserveWeak(entry3);
-    location.reserveWeak(entry4);
+    registerWeak(location, entry1);
+    registerWeak(location, entry2);
+    registerWeak(location, entry3);
+    registerWeak(location, entry4);
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
-    location.reserveWeak(entry5);
+    registerWeak(location, entry5);
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -96,10 +100,10 @@ class StorageLocationTest
     CacheEntry entry3 = new TestCacheEntry("3", 25);
     CacheEntry entry4 = new TestCacheEntry("4", 25);
 
-    location.reserveWeak(entry1);
-    location.reserveWeak(entry2);
-    location.reserveWeak(entry3);
-    location.reserveWeak(entry4);
+    registerWeak(location, entry1);
+    registerWeak(location, entry2);
+    registerWeak(location, entry3);
+    registerWeak(location, entry4);
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
@@ -124,10 +128,10 @@ class StorageLocationTest
     CacheEntry entry3 = new TestCacheEntry("3", 25);
     CacheEntry entry4 = new TestCacheEntry("4", 25);
 
-    location.reserveWeak(entry1);
-    location.reserveWeak(entry2);
-    location.reserveWeak(entry3);
-    location.reserveWeak(entry4);
+    registerWeak(location, entry1);
+    registerWeak(location, entry2);
+    registerWeak(location, entry3);
+    registerWeak(location, entry4);
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
@@ -157,10 +161,10 @@ class StorageLocationTest
     entries.add(entry3);
     entries.add(entry4);
 
-    location.reserveWeak(entry1);
-    location.reserveWeak(entry2);
-    location.reserveWeak(entry3);
-    location.reserveWeak(entry4);
+    registerWeak(location, entry1);
+    registerWeak(location, entry2);
+    registerWeak(location, entry3);
+    registerWeak(location, entry4);
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
@@ -198,8 +202,8 @@ class StorageLocationTest
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry2.getId(), () -> entry2)));
     Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
     Assertions.assertEquals(50, location.getWeakStats().getHoldBytes());
-    Assertions.assertTrue(location.reserveWeak(entry3));
-    Assertions.assertTrue(location.reserveWeak(entry4));
+    Assertions.assertTrue(registerWeak(location, entry3));
+    Assertions.assertTrue(registerWeak(location, entry4));
 
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
@@ -222,7 +226,7 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
 
-    Assertions.assertTrue(location.reserveWeak(entry6));
+    Assertions.assertTrue(registerWeak(location, entry6));
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -247,11 +251,11 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
 
     // all storage is held, cannot reserve
-    Assertions.assertFalse(location.reserveWeak(entry8));
+    Assertions.assertFalse(registerWeak(location, entry8));
 
     // release holds
     CloseableUtils.closeAndWrapExceptions(closer);
-    Assertions.assertTrue(location.reserveWeak(entry8));
+    Assertions.assertTrue(registerWeak(location, entry8));
 
     Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -359,7 +363,7 @@ class StorageLocationTest
   {
     StorageLocation loc = new StorageLocation(tempDir, 1000L, null);
     final TestSegmentCacheEntry entry = makeSegmentEntry("2024/2025", 10);
-    loc.reserveWeak(entry);
+    registerWeak(loc, entry);
     entry.mount(loc);
 
     for (int i = 0; i < 1000; i++) {
@@ -397,7 +401,7 @@ class StorageLocationTest
     CacheEntry entry2 = new TestCacheEntry("2", 90);
     CacheEntry entry3 = new TestCacheEntry("3", 20);
 
-    location.reserveWeak(entry1);
+    registerWeak(location, entry1);
     // hold entry2 so it cannot be evicted by reclaim
     StorageLocation.ReservationHold<?> hold2 = location.addWeakReservationHold(
         entry2.getId(),
@@ -406,12 +410,12 @@ class StorageLocationTest
 
     // must free 20 bytes but can only evict entry1 (10). Fails and restores entry1
     // where the bug was a mismatch caused by creating a new entry in the list but re-using the old entry for the map.
-    Assertions.assertFalse(location.reserveWeak(entry3));
+    Assertions.assertFalse(registerWeak(location, entry3));
 
     // the hand pointer reaches the new entry1, removes the old entry1 from the map which is a zombie, then wraps around
     // to the same zombie entry1 again since its head — at which point the map no longer contains the ID and the defensive exception was
     // thrown.
-    Assertions.assertFalse(location.reserveWeak(entry3));
+    Assertions.assertFalse(registerWeak(location, entry3));
 
     hold2.close();
   }
@@ -423,7 +427,7 @@ class StorageLocationTest
     final UnmountTrackingCacheEntry entry = new UnmountTrackingCacheEntry("a", 30);
 
     // an unheld weak entry is removed: unlinked from the queue, unmounted, and its size reclaimed
-    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(registerWeak(location, entry));
     Assertions.assertTrue(location.isWeakReserved(entry.getId()));
     Assertions.assertEquals(30, location.currentSizeBytes());
 
@@ -474,7 +478,7 @@ class StorageLocationTest
   {
     final StorageLocation location = new StorageLocation(tempDir, 100L, null);
     final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 80);
-    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(registerWeak(location, entry));
     Assertions.assertEquals(80, location.currentWeakSizeBytes());
 
     location.adjustReservation(entry.getId(), 30);
@@ -539,7 +543,7 @@ class StorageLocationTest
   {
     final StorageLocation location = new StorageLocation(tempDir, 100L, null);
     final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 80);
-    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(registerWeak(location, entry));
 
     // Acquire a hold BEFORE shrinking. trackWeakHold records 80 bytes against currHoldBytes.
     final StorageLocation.ReservationHold<?> hold = location.addWeakReservationHold(entry.getId(), () -> entry);
@@ -547,12 +551,12 @@ class StorageLocationTest
     Assertions.assertEquals(1, location.getWeakStats().getHoldCount());
     Assertions.assertEquals(80, location.getWeakStats().getHoldBytes());
 
-    // Shrink to 30: hold-bytes contribution from the active hold must shrink in lockstep so the eventual
-    // trackWeakRelease (which subtracts the new smaller size) leaves currHoldBytes at 0.
+    // Shrink to 30. The live hold keeps contributing the 80 it was taken at - it subtracts that same 80 on release,
+    // which is what keeps the total balanced without the resize having to reach into it.
     location.adjustReservation(entry.getId(), 30);
     Assertions.assertEquals(30, entry.getSize());
     Assertions.assertEquals(30, location.currentWeakSizeBytes());
-    Assertions.assertEquals(30, location.getWeakStats().getHoldBytes());
+    Assertions.assertEquals(80, location.getWeakStats().getHoldBytes());
 
     hold.close();
     Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
@@ -564,7 +568,7 @@ class StorageLocationTest
   {
     final StorageLocation location = new StorageLocation(tempDir, 100L, null);
     final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 50);
-    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(registerWeak(location, entry));
 
     // Two concurrent holds: trackWeakHold fires twice, so currHoldBytes = 2 * 50 = 100.
     final StorageLocation.ReservationHold<?> hold1 = location.addWeakReservationHold(entry.getId(), () -> entry);
@@ -572,14 +576,228 @@ class StorageLocationTest
     Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
     Assertions.assertEquals(100, location.getWeakStats().getHoldBytes());
 
-    // Shrink by 30 (50 → 20): each of the two active holds contributes -30, so currHoldBytes drops by 60.
+    // Shrink by 30 (50 -> 20). Both holds were taken at 50 and keep contributing it, so the total is untouched here
+    // and each release takes its own 50 back off.
     location.adjustReservation(entry.getId(), 20);
-    Assertions.assertEquals(40, location.getWeakStats().getHoldBytes());
+    Assertions.assertEquals(100, location.getWeakStats().getHoldBytes());
 
     hold1.close();
-    Assertions.assertEquals(20, location.getWeakStats().getHoldBytes());
+    Assertions.assertEquals(50, location.getWeakStats().getHoldBytes());
     hold2.close();
     Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
+  }
+
+  @Test
+  public void testConcurrentResizeAndReleaseLeavesHoldBytesBalanced() throws Exception
+  {
+    // A resize racing a release: the release runs outside the location lock, so it can land either side of the
+    // resize. Whichever way it interleaves, a hold subtracts exactly what it added, so the totals return to zero.
+    for (int i = 0; i < 500; i++) {
+      final StorageLocation location = new StorageLocation(tempDir, 1000L, null);
+      final TestResizableCacheEntry entry = new TestResizableCacheEntry("a" + i, 80);
+      final StorageLocation.ReservationHold<?> reserver =
+          location.addWeakReservationHold(entry.getId(), () -> entry);
+      Assertions.assertNotNull(reserver);
+      final StorageLocation.ReservationHold<?> queryHold =
+          location.addWeakReservationHoldIfExists(entry.getId());
+      final StorageLocation.ReservationHold<?> internalHold =
+          location.addInternalWeakReservationHoldIfExists(entry.getId());
+      Assertions.assertNotNull(queryHold);
+      Assertions.assertNotNull(internalHold);
+
+      final CountDownLatch start = new CountDownLatch(1);
+      final Future<?> resizer = executorService.submit(() -> {
+        awaitUninterruptibly(start);
+        location.adjustReservation(entry.getId(), 30);
+      });
+      final Future<?> releaser = executorService.submit(() -> {
+        awaitUninterruptibly(start);
+        queryHold.close();
+        internalHold.close();
+      });
+      start.countDown();
+      resizer.get();
+      releaser.get();
+      reserver.close();
+
+      Assertions.assertEquals(0, location.getWeakStats().getHoldCount(), "iteration " + i);
+      Assertions.assertEquals(0, location.getWeakStats().getHoldBytes(), "iteration " + i);
+      Assertions.assertEquals(0, location.getWeakStats().getInternalHoldCount(), "iteration " + i);
+      Assertions.assertEquals(0, location.getWeakStats().getInternalHoldBytes(), "iteration " + i);
+    }
+  }
+
+  private static void awaitUninterruptibly(CountDownLatch latch)
+  {
+    try {
+      Assertions.assertTrue(latch.await(30, TimeUnit.SECONDS));
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+  }
+
+  @Test
+  public void testInternalHoldsAreNotCountedAsHitsButAreCountedAsPinned()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final UnmountTrackingCacheEntry entry = new UnmountTrackingCacheEntry("a", 10);
+    final StorageLocation.ReservationHold<?> reserver =
+        location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertNotNull(reserver);
+
+    // A demand hold: somebody is waiting on this entry, so it is a cache hit.
+    final StorageLocation.ReservationHold<?> query = location.addWeakReservationHoldIfExists(entry.getId());
+    Assertions.assertNotNull(query);
+    Assertions.assertEquals(1, location.getWeakStats().getHitCount());
+    Assertions.assertEquals(0, location.getWeakStats().getInternalHoldCount());
+
+    // A structural hold: another entry pinning this one. It pins against reclaim just the same, so it counts in the
+    // totals, but it is not demand and must not move the hit rate.
+    final StorageLocation.ReservationHold<?> internal =
+        location.addInternalWeakReservationHoldIfExists(entry.getId());
+    Assertions.assertNotNull(internal);
+    Assertions.assertEquals(1, location.getWeakStats().getHitCount(), "a structural hold is not a cache hit");
+    Assertions.assertEquals(3, location.getWeakStats().getHoldCount(), "but it does pin the entry");
+    Assertions.assertEquals(1, location.getWeakStats().getInternalHoldCount());
+    Assertions.assertEquals(10, location.getWeakStats().getInternalHoldBytes());
+
+    internal.close();
+    Assertions.assertEquals(0, location.getWeakStats().getInternalHoldCount());
+    Assertions.assertEquals(0, location.getWeakStats().getInternalHoldBytes());
+    Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
+
+    query.close();
+    reserver.close();
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+  }
+
+  @Test
+  public void testReleasingReserversHoldDoesNotEvictAnEntryAnotherHolderIsStillUsing()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final UnmountTrackingCacheEntry entry = new UnmountTrackingCacheEntry("a", 10);
+
+    // One acquirer reserves the entry, a second takes its own hold on the same entry, and then the first gives up
+    // before anything has managed to mount it
+    final StorageLocation.ReservationHold<?> reserver = location.addWeakReservationHold(entry.getId(), () -> entry);
+    final StorageLocation.ReservationHold<?> other = location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertNotNull(reserver);
+    Assertions.assertNotNull(other);
+    Assertions.assertFalse(entry.isMounted());
+
+    reserver.close();
+
+    // The second holder is still using the entry (e.g. mid-mount) and evicting it out from under a hold
+    // is what the hold exists to prevent: a mount that completes to find its entry unregistered rolls itself back,
+    // leaving the holder with a reference to an entry it was promised would stay alive.
+    Assertions.assertSame(entry, location.getCacheEntry(entry.getId()));
+    Assertions.assertFalse(entry.unmountCalled);
+
+    // A later acquirer for this id reuses the registered entry rather than registering a second one alongside it,
+    // which is what keeps the on-disk state two entries for the same id would share owned by exactly one of them.
+    final UnmountTrackingCacheEntry replacement = new UnmountTrackingCacheEntry("a", 10);
+    final StorageLocation.ReservationHold<?> reacquire =
+        location.addWeakReservationHold(entry.getId(), () -> replacement);
+    Assertions.assertNotNull(reacquire);
+    Assertions.assertSame(entry, reacquire.getEntry());
+    Assertions.assertFalse(replacement.unmountCalled);
+    reacquire.close();
+    Assertions.assertSame(entry, location.getCacheEntry(entry.getId()));
+
+    // Releasing that hold does not remove it either - removal is the creating hold's job - so it is left registered
+    // and unmounted, for reclaim to take when the space is wanted.
+    other.close();
+    Assertions.assertSame(entry, location.getCacheEntry(entry.getId()));
+    Assertions.assertFalse(entry.unmountCalled);
+  }
+
+  @Test
+  public void testEphemeralWeakEntryUnmountCascadeDoesNotThrowConcurrentModification()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 10_000L, null);
+    location.setAreWeakEntriesEphemeral(true);
+
+    // Parent entry (e.g. a __base bundle), held by the child for its lifetime and evicted only when the child unmounts.
+    final CascadingUnmountCacheEntry parent = new CascadingUnmountCacheEntry("parent", 100L, null);
+    final StorageLocation.ReservationHold<?> parentHold =
+        location.addWeakReservationHold(parent.getId(), () -> parent);
+    Assertions.assertNotNull(parentHold);
+    parent.mount(location);
+
+    // Child entry (a partial bundle) whose unmount() releases the parent's cache hold, re-entering StorageLocation.
+    final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 100L, parentHold);
+    final StorageLocation.ReservationHold<?> childHold =
+        location.addWeakReservationHold(child.getId(), () -> child);
+    Assertions.assertNotNull(childHold);
+    child.mount(location);
+
+    // Releasing the child's last hold evicts it (ephemeral) and fires child.unmount() -> parentHold.close() -> parent
+    // eviction, all under the location write lock. Before the fix this threw ConcurrentModificationException.
+    Assertions.assertDoesNotThrow(childHold::close);
+
+    Assertions.assertTrue(child.wasUnmounted());
+    Assertions.assertTrue(parent.wasUnmounted());
+    Assertions.assertNull(location.getCacheEntry(child.getId()));
+    Assertions.assertNull(location.getCacheEntry(parent.getId()));
+  }
+
+  @Test
+  public void testRemoveUnheldWeakEntryUnmountCascadeDoesNotThrowConcurrentModification()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 10_000L, null);
+
+    // The parent is deliberately NOT mounted: on a non-ephemeral location, releasing the child's hold on it removes it
+    // via the `isNewEntry && !isMounted` branch of createWeakEntryReleaseRunnable, and that removal (re-entering
+    // weakCacheEntries for the parent key) is what reproduces the cascade. Do NOT add parent.mount() here — a mounted,
+    // non-ephemeral parent is never removed on hold release, so no nested map mutation occurs and the test would pass
+    // even against the buggy code.
+    final CascadingUnmountCacheEntry parent = new CascadingUnmountCacheEntry("parent", 100L, null);
+    final StorageLocation.ReservationHold<?> parentHold =
+        location.addWeakReservationHold(parent.getId(), () -> parent);
+    Assertions.assertNotNull(parentHold);
+
+    // Child left registered but unheld, the shape removeUnheldWeakEntry cleans up.
+    final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 100L, parentHold);
+    Assertions.assertTrue(registerWeak(location, child));
+    child.mount(location);
+
+    Assertions.assertDoesNotThrow(() -> location.removeUnheldWeakEntry(child.getId()));
+
+    Assertions.assertTrue(child.wasUnmounted());
+    Assertions.assertTrue(parent.wasUnmounted());
+    Assertions.assertNull(location.getCacheEntry(child.getId()));
+    Assertions.assertNull(location.getCacheEntry(parent.getId()));
+  }
+
+  @Test
+  public void testReclaimUnmountCascadeDoesNotThrowConcurrentModification()
+  {
+    // Small location so the filler reservation forces reclaim of the child (parent is held, so reclaim skips it).
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+
+    // As in testRemoveUnheld..., the parent is deliberately NOT mounted so that releasing the child's hold on it
+    // removes it (the `isNewEntry && !isMounted` branch), driving the nested weakCacheEntries mutation. Adding
+    // parent.mount() would leave the parent in the map on release and defang the reproduction.
+    final CascadingUnmountCacheEntry parent = new CascadingUnmountCacheEntry("parent", 40L, null);
+    final StorageLocation.ReservationHold<?> parentHold =
+        location.addWeakReservationHold(parent.getId(), () -> parent);
+    Assertions.assertNotNull(parentHold);
+
+    // Child registered unheld and mounted, sole holder of the parent's cache hold; it is the reclaim target.
+    final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 40L, parentHold);
+    Assertions.assertTrue(registerWeak(location, child));
+    child.mount(location);
+
+    final CascadingUnmountCacheEntry filler = new CascadingUnmountCacheEntry("filler", 40L, null);
+    Assertions.assertDoesNotThrow(() -> registerWeak(location, filler));
+
+    Assertions.assertTrue(child.wasUnmounted());
+    Assertions.assertTrue(parent.wasUnmounted());
+    Assertions.assertNull(location.getCacheEntry(child.getId()));
+    Assertions.assertNull(location.getCacheEntry(parent.getId()));
+    Assertions.assertTrue(location.isWeakReserved(filler.getId()));
   }
 
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
@@ -668,6 +886,28 @@ class StorageLocationTest
     }
   }
 
+  /**
+   * Register a weak entry the way production does — reserve under a hold, mount, release the hold — leaving it
+   * registered but unheld, which is the state reclaim and {@link StorageLocation#removeUnheldWeakEntry} act on.
+   * Returns false when the location could not accept the reservation at all.
+   */
+  private static boolean registerWeak(StorageLocation location, CacheEntry entry)
+  {
+    final StorageLocation.ReservationHold<CacheEntry> hold =
+        location.addWeakReservationHold(entry.getId(), () -> entry);
+    if (hold == null) {
+      return false;
+    }
+    try {
+      entry.mount(location);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    hold.close();
+    return true;
+  }
+
   private static final class TestCacheEntry implements CacheEntry
   {
     private final StringCacheIdentifier id;
@@ -711,9 +951,6 @@ class StorageLocationTest
     }
   }
 
-  /**
-   * A {@link CacheEntry} that tracks mount/unmount so tests can assert that lifecycle hooks fired.
-   */
   private static final class UnmountTrackingCacheEntry implements CacheEntry
   {
     private final StringCacheIdentifier id;
@@ -756,6 +993,67 @@ class StorageLocationTest
     {
       unmountCalled = true;
       mounted = false;
+    }
+  }
+
+  /**
+   * A {@link CacheEntry} whose {@link #unmount()} optionally closes another {@link Closeable} (e.g. a parent bundle's
+   * {@link StorageLocation.ReservationHold}), reproducing the partial-load cascade where unmounting one weak entry
+   * re-enters {@link StorageLocation} to release a hold on a different weak entry.
+   */
+  private static final class CascadingUnmountCacheEntry implements CacheEntry
+  {
+    private final StringCacheIdentifier id;
+    private final long size;
+    @Nullable
+    private final Closeable onUnmount;
+    private boolean mounted = false;
+    private boolean unmounted = false;
+
+    private CascadingUnmountCacheEntry(String id, long size, @Nullable Closeable onUnmount)
+    {
+      this.id = new StringCacheIdentifier(id);
+      this.size = size;
+      this.onUnmount = onUnmount;
+    }
+
+    @Override
+    public StringCacheIdentifier getId()
+    {
+      return id;
+    }
+
+    @Override
+    public long getSize()
+    {
+      return size;
+    }
+
+    @Override
+    public boolean isMounted()
+    {
+      return mounted;
+    }
+
+    @Override
+    public void mount(StorageLocation location)
+    {
+      mounted = true;
+    }
+
+    @Override
+    public void unmount()
+    {
+      unmounted = true;
+      mounted = false;
+      if (onUnmount != null) {
+        CloseableUtils.closeAndWrapExceptions(onUnmount);
+      }
+    }
+
+    private boolean wasUnmounted()
+    {
+      return unmounted;
     }
   }
 

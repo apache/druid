@@ -20,8 +20,7 @@
 package org.apache.druid.storage.cassandra;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Cassandra Config

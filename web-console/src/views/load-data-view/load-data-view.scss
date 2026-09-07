@@ -201,6 +201,19 @@ $actual-icon-height: 400px;
       white-space: pre;
     }
 
+    .raw-lines {
+      overflow: auto;
+      padding-top: 8px;
+
+      .raw-line {
+        line-height: 1.4em;
+
+        &:hover {
+          background: rgba($gray3, 0.15);
+        }
+      }
+    }
+
     .table-with-control {
       position: absolute;
       width: 100%;

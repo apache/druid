@@ -27,7 +27,7 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
-Druid officially supports Java 21 and 25.
+Druid officially supports Java 25.
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including

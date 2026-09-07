@@ -27,10 +27,10 @@ import org.apache.druid.java.util.common.BufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.file.SegmentFileChannel;
-import org.hamcrest.MatcherAssert;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,18 +42,17 @@ import java.util.Arrays;
  */
 public class SmooshedFileMapperTest
 {
-  @TempDir
-  public File folder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSanity() throws Exception
   {
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = new File(folder, StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         smoosher.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -64,14 +63,13 @@ public class SmooshedFileMapperTest
   @Test
   public void testWhenFirstWriterClosedInTheMiddle() throws Exception
   {
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", 19), 4);
 
       for (int i = 0; i < 19; ++i) {
-        File tmpFile = File.createTempFile(StringUtils.format("smoosh-%s", i), ".bin");
+        final File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         smoosher.add(StringUtils.format("%d", i), tmpFile);
         if (i == 10) {
@@ -87,10 +85,9 @@ public class SmooshedFileMapperTest
   @Test
   public void testColumnSerializedSizeExceedsMaximum() throws Exception
   {
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 5)) {
-      MatcherAssert.assertThat(
+      DruidExceptionMatcher.assertThat(
           Assertions.assertThrows(
               DruidException.class,
               () -> smoosher.addWithChannel("foo", 10)
@@ -104,8 +101,7 @@ public class SmooshedFileMapperTest
   @Test
   public void testExceptionForUnClosedFiles() throws Exception
   {
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
     Assertions.assertThrows(ISE.class, () -> {
       try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
         for (int i = 0; i < 19; ++i) {
@@ -119,15 +115,14 @@ public class SmooshedFileMapperTest
   @Test
   public void testWhenFirstWriterClosedAtTheEnd() throws Exception
   {
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%d", 19), 4);
       writer.write(ByteBuffer.wrap(Ints.toByteArray(19)));
 
       for (int i = 0; i < 19; ++i) {
-        File tmpFile = File.createTempFile(StringUtils.format("smoosh-%s", i), ".bin");
+        final File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         smoosher.add(StringUtils.format("%d", i), tmpFile);
         tmpFile.delete();
@@ -141,15 +136,14 @@ public class SmooshedFileMapperTest
   public void testWhenWithPathyLookingFileNames() throws Exception
   {
     String prefix = "foo/bar/";
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       final SegmentFileChannel writer = smoosher.addWithChannel(StringUtils.format("%s%d", prefix, 19), 4);
       writer.write(ByteBuffer.wrap(Ints.toByteArray(19)));
 
       for (int i = 0; i < 19; ++i) {
-        File tmpFile = File.createTempFile(StringUtils.format("smoosh-%s", i), ".bin");
+        final File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         smoosher.add(StringUtils.format("%s%d", prefix, i), tmpFile);
         tmpFile.delete();
@@ -162,8 +156,7 @@ public class SmooshedFileMapperTest
   @Test
   public void testBehaviorWhenReportedSizesLargeAndExceptionIgnored() throws Exception
   {
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       for (int i = 0; i < 20; ++i) {
@@ -203,8 +196,7 @@ public class SmooshedFileMapperTest
   @Test
   public void testBehaviorWhenReportedSizesSmall() throws Exception
   {
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
 
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
       boolean exceptionThrown = false;
@@ -226,12 +218,11 @@ public class SmooshedFileMapperTest
   @Test
   public void testDeterministicFileUnmapping() throws IOException
   {
-    File baseDir = new File(folder, "base");
-    baseDir.mkdir();
+    File baseDir = temporaryFolder.newFolder("base");
 
     long totalMemoryUsedBeforeAddingFile = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     try (FileSmoosher smoosher = new FileSmoosher(baseDir)) {
-      File dataFile = new File(folder, "data.bin");
+      File dataFile = temporaryFolder.newFile("data.bin");
       try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
         raf.setLength(1 << 20); // 1 MiB
       }

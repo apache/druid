@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
-import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -31,23 +30,32 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.PerSegmentTimeoutConfig;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
+/**
+ * Precedence of the per-query dynamic overrides at the {@link QueryLifecycle} level: an override beats a
+ * non-client-provided value in the context, but a value the client set wins. The datasource-matching logic itself is
+ * tested in {@code org.apache.druid.server.broker.BrokerDynamicConfigTest}.
+ */
 public class PerSegmentTimeoutInjectionTest
 {
   private static final String DATASOURCE = "my_datasource";
+  private static final String KEY = QueryContexts.PER_SEGMENT_TIMEOUT_KEY;
 
   private QueryRunnerFactoryConglomerate conglomerate;
   private QuerySegmentWalker texasRanger;
@@ -55,7 +63,6 @@ public class PerSegmentTimeoutInjectionTest
   private ServiceEmitter emitter;
   private RequestLogger requestLogger;
   private AuthorizerMapper authzMapper;
-  private QueryConfigProvider queryConfig;
   private QueryToolChest toolChest;
 
   private final TimeseriesQuery baseQuery = Druids.newTimeseriesQueryBuilder()
@@ -64,146 +71,115 @@ public class PerSegmentTimeoutInjectionTest
       .aggregators(new CountAggregatorFactory("count"))
       .build();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     conglomerate = EasyMock.createMock(QueryRunnerFactoryConglomerate.class);
-    texasRanger = EasyMock.createMock(QuerySegmentWalker.class);
-    metricsFactory = EasyMock.createMock(GenericQueryMetricsFactory.class);
-    emitter = EasyMock.createMock(ServiceEmitter.class);
+    texasRanger = EasyMock.createNiceMock(QuerySegmentWalker.class);
+    metricsFactory = EasyMock.createNiceMock(GenericQueryMetricsFactory.class);
+    emitter = EasyMock.createNiceMock(ServiceEmitter.class);
     requestLogger = EasyMock.createNiceMock(RequestLogger.class);
     authzMapper = EasyMock.createNiceMock(AuthorizerMapper.class);
-    queryConfig = EasyMock.createMock(QueryConfigProvider.class);
     toolChest = EasyMock.createNiceMock(QueryToolChest.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
-    EasyMock.verify(conglomerate, queryConfig);
+    EasyMock.verify(conglomerate);
   }
 
   @Test
-  public void testPerDatasourceTimeout_applied()
+  public void testDynamicOverrideAppliedWhenClientDidNotSet()
   {
-    Map<String, PerSegmentTimeoutConfig> config = Map.of(
-        DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
-    );
-
-    expectDefaults();
-
-    QueryLifecycle lifecycle = createLifecycle(config);
+    QueryLifecycle lifecycle = createLifecycle(perSegmentTimeout(5000));
     lifecycle.initialize(baseQuery);
 
-    Assert.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+    Assertions.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
-  public void testPerDatasourceTimeout_userOverrideWins()
+  public void testDynamicOverridesNonClientValueInContext()
   {
-    Map<String, PerSegmentTimeoutConfig> config = Map.of(
-        DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
-    );
+    // SQL path: a default was merged into the context but the client did not set it, so the dynamic override wins.
+    TimeseriesQuery query = baseQuery.withOverriddenContext(Map.of(KEY, "0"));
 
-    expectDefaults();
+    QueryLifecycle lifecycle = createLifecycle(perSegmentTimeout(5000));
+    lifecycle.initialize(query, Collections.emptySet());
 
-    TimeseriesQuery queryWithUserTimeout = baseQuery.withOverriddenContext(
-        Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 2000L)
-    );
-
-    QueryLifecycle lifecycle = createLifecycle(config);
-    lifecycle.initialize(queryWithUserTimeout);
-
-    Assert.assertEquals(2000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+    Assertions.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
-  public void testPerDatasourceTimeout_monitorOnlyDoesNotInject()
+  public void testClientProvidedValueWins()
   {
-    // monitorOnly=true: config exists but should NOT be enforced
-    Map<String, PerSegmentTimeoutConfig> config = Map.of(
-        DATASOURCE, new PerSegmentTimeoutConfig(5000, true)
-    );
+    TimeseriesQuery query = baseQuery.withOverriddenContext(Map.of(KEY, 2000L));
 
-    expectDefaults();
+    QueryLifecycle lifecycle = createLifecycle(perSegmentTimeout(5000));
+    lifecycle.initialize(query, Set.of(KEY));
 
-    QueryLifecycle lifecycle = createLifecycle(config);
+    Assertions.assertEquals(2000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+  }
+
+  @Test
+  public void testDynamicOverrideBeatsStaticDefault()
+  {
+    // The bug being fixed: the static default used to shadow the per-datasource dynamic config.
+    QueryLifecycle lifecycle = createLifecycle(Map.of(KEY, 100L), perSegmentTimeout(5000));
     lifecycle.initialize(baseQuery);
 
-    Assert.assertFalse(
-        "monitorOnly should not inject perSegmentTimeout",
-        lifecycle.getQuery().context().usePerSegmentTimeout()
-    );
+    Assertions.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
-  public void testPerDatasourceTimeout_noMatchingDatasource()
+  public void testStaticDefaultUsedWhenNoDatasourceOverride()
   {
-    Map<String, PerSegmentTimeoutConfig> config = Map.of(
-        "other_datasource", new PerSegmentTimeoutConfig(5000, false)
-    );
-
-    expectDefaults();
-
-    QueryLifecycle lifecycle = createLifecycle(config);
+    QueryLifecycle lifecycle = createLifecycle(Map.of(KEY, 100L), BrokerDynamicConfig.builder().build());
     lifecycle.initialize(baseQuery);
 
-    Assert.assertFalse(lifecycle.getQuery().context().usePerSegmentTimeout());
+    Assertions.assertEquals(100L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
-  public void testPerDatasourceTimeout_overridesSystemDefault()
+  public void testMonitorOnlyIsNotEnforced()
   {
-    Map<String, PerSegmentTimeoutConfig> config = Map.of(
-        DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
-    );
+    BrokerDynamicConfig dynamicConfig =
+        BrokerDynamicConfig.builder()
+                           .withPerSegmentTimeoutConfig(Map.of(DATASOURCE, new PerSegmentTimeoutConfig(5000L, true)))
+                           .build();
 
-    // System default sets perSegmentTimeout to 10000
-    EasyMock.expect(queryConfig.getContext())
-            .andReturn(Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 10000L))
-            .anyTimes();
+    QueryLifecycle lifecycle = createLifecycle(dynamicConfig);
+    lifecycle.initialize(baseQuery);
+
+    Assertions.assertFalse(lifecycle.getQuery().context().usePerSegmentTimeout());
+  }
+
+  @Test
+  public void testNoDynamicConfigMeansNoInjection()
+  {
+    QueryLifecycle lifecycle = createLifecycle(null);
+    lifecycle.initialize(baseQuery);
+
+    Assertions.assertFalse(lifecycle.getQuery().context().usePerSegmentTimeout());
+  }
+
+  private static BrokerDynamicConfig perSegmentTimeout(long timeoutMs)
+  {
+    return BrokerDynamicConfig.builder()
+                              .withPerSegmentTimeoutConfig(Map.of(DATASOURCE, new PerSegmentTimeoutConfig(timeoutMs, false)))
+                              .build();
+  }
+
+  private QueryLifecycle createLifecycle(BrokerDynamicConfig dynamicConfig)
+  {
+    return createLifecycle(Collections.emptyMap(), dynamicConfig);
+  }
+
+  private QueryLifecycle createLifecycle(Map<String, Object> resolvedDefaultQueryContext, BrokerDynamicConfig dynamicConfig)
+  {
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
-    EasyMock.replay(conglomerate, queryConfig);
+    EasyMock.replay(conglomerate);
 
-    QueryLifecycle lifecycle = createLifecycle(config);
-    lifecycle.initialize(baseQuery);
-
-    Assert.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
-  }
-
-  @Test
-  public void testPrecedence_userOverridesPerDatasourceOverridesSystemDefault()
-  {
-    // System default: 10000, per-datasource: 5000, user: 2000 — user should win
-    Map<String, PerSegmentTimeoutConfig> config = Map.of(
-        DATASOURCE, new PerSegmentTimeoutConfig(5000, false)
-    );
-
-    EasyMock.expect(queryConfig.getContext())
-            .andReturn(Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 10000L))
-            .anyTimes();
-    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
-    EasyMock.replay(conglomerate, queryConfig);
-
-    TimeseriesQuery queryWithUserTimeout = baseQuery.withOverriddenContext(
-        Map.of(QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 2000L)
-    );
-
-    QueryLifecycle lifecycle = createLifecycle(config);
-    lifecycle.initialize(queryWithUserTimeout);
-
-    Assert.assertEquals(2000L, lifecycle.getQuery().context().getPerSegmentTimeout());
-  }
-
-  private void expectDefaults()
-  {
-    EasyMock.expect(queryConfig.getContext()).andReturn(Map.of()).anyTimes();
-    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).once();
-    EasyMock.replay(conglomerate, queryConfig);
-  }
-
-  private QueryLifecycle createLifecycle(Map<String, PerSegmentTimeoutConfig> perSegmentTimeoutConfig)
-  {
     return new QueryLifecycle(
         conglomerate,
         texasRanger,
@@ -211,11 +187,9 @@ public class PerSegmentTimeoutInjectionTest
         emitter,
         requestLogger,
         authzMapper,
-        queryConfig,
         new AuthConfig(),
         NoopPolicyEnforcer.instance(),
-        Collections.emptyList(),
-        perSegmentTimeoutConfig,
+        new QueryConfigSnapshot(resolvedDefaultQueryContext, dynamicConfig),
         System.currentTimeMillis(),
         System.nanoTime()
     );

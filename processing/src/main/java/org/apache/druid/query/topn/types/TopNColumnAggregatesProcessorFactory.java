@@ -74,6 +74,10 @@ public class TopNColumnAggregatesProcessorFactory
           return new FloatTopNColumnAggregatesProcessor(converter);
         case DOUBLE:
           return new DoubleTopNColumnAggregatesProcessor(converter);
+        case STRING:
+        case ARRAY:
+        case COMPLEX:
+          break;
       }
     }
 

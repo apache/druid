@@ -23,8 +23,8 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.server.DruidNode;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ConsulServiceIdsTest
 {
@@ -49,15 +49,15 @@ public class ConsulServiceIdsTest
 
     NodeRole role = NodeRole.PEON;
     String serviceName = ConsulServiceIds.serviceName(config, role);
-    Assert.assertEquals("druid-peon", serviceName);
+    Assertions.assertEquals("druid-peon", serviceName);
 
     DruidNode druidNode = new DruidNode("service", "host", false, 8080, null, true, false);
     DiscoveryDruidNode discoveryNode = new DiscoveryDruidNode(druidNode, role, null);
 
     String serviceId = ConsulServiceIds.serviceId(config, discoveryNode);
-    Assert.assertEquals("druid-peon-host-8080", serviceId);
+    Assertions.assertEquals("druid-peon-host-8080", serviceId);
 
     String kvKey = ConsulServiceIds.nodeKvKey(config, serviceId);
-    Assert.assertEquals("druid/nodes/druid-peon-host-8080", kvKey);
+    Assertions.assertEquals("druid/nodes/druid-peon-host-8080", kvKey);
   }
 }

@@ -30,6 +30,9 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
@@ -41,12 +44,10 @@ import org.eclipse.jetty.http.UriCompliance;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.Deflater;
 
@@ -122,6 +123,12 @@ public class ServerConfig
   public ServerConfig(boolean enableQueryRequestsQueuing)
   {
     this.enableQueryRequestsQueuing = enableQueryRequestsQueuing;
+  }
+
+  @VisibleForTesting
+  public ServerConfig(@NotNull ErrorResponseTransformStrategy errorResponseTransformStrategy)
+  {
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
   }
 
   @JsonProperty
@@ -439,6 +446,17 @@ public class ServerConfig
   public static int getDefaultNumThreads()
   {
     return Math.max(10, (JvmUtils.getRuntimeInfo().getAvailableProcessors() * 17) / 16 + 2) + 30;
+  }
+
+  public static int getNumThreadsFromProperties(Properties properties)
+  {
+    final String value = properties.getProperty("druid.server.http.numThreads");
+    return value == null ? getDefaultNumThreads() : Integer.parseInt(value);
+  }
+
+  public static int getDefaultMaxConcurrentRequests(int numThreads)
+  {
+    return Math.max(1, Math.max(numThreads - 4, (int) (numThreads * 0.8)));
   }
 
   public static class UriComplianceDeserializer extends JsonDeserializer<UriCompliance>

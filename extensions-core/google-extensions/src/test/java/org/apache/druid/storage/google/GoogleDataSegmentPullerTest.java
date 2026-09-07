@@ -27,45 +27,48 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 public class GoogleDataSegmentPullerTest extends EasyMockSupport
 {
   private static final String BUCKET = "bucket";
   private static final String PATH = "/path/to/storage/index.zip";
 
-  @Test(expected = SegmentLoadingException.class)
+  @Test
   public void testDeleteOutputDirectoryWhenErrorIsRaisedPullingSegmentFiles()
-      throws IOException, SegmentLoadingException
   {
-    final File outDir = FileUtils.createTempDir();
-    try {
-      GoogleStorage storage = createMock(GoogleStorage.class);
-      final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
-          JacksonFactory.getDefaultInstance(),
-          300,
-          "test"
-      );
-      EasyMock.expect(storage.getInputStream(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(exception);
+    assertThrows(SegmentLoadingException.class, () -> {
+      final File outDir = FileUtils.createTempDir();
+      try {
+        GoogleStorage storage = createMock(GoogleStorage.class);
+        final GoogleJsonResponseException exception = GoogleJsonResponseExceptionFactoryTesting.newMock(
+            JacksonFactory.getDefaultInstance(),
+            300,
+            "test"
+        );
+        EasyMock.expect(storage.getInputStream(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(exception);
 
-      replayAll();
+        replayAll();
 
-      GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
-      puller.getSegmentFiles(BUCKET, PATH, outDir);
+        GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
+        puller.getSegmentFiles(BUCKET, PATH, outDir);
 
-      Assert.assertFalse(outDir.exists());
+        Assertions.assertFalse(outDir.exists());
 
-      verifyAll();
-    }
-    finally {
-      FileUtils.deleteDirectory(outDir);
-    }
+        verifyAll();
+      }
+      finally {
+        FileUtils.deleteDirectory(outDir);
+      }
+    });
   }
 
   @Test
@@ -82,7 +85,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
     GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);
 
     String actual = puller.getVersion(URI.create(StringUtils.format("gs://%s/%s", bucket, prefix)));
-    Assert.assertEquals(version, actual);
+    Assertions.assertEquals(version, actual);
     EasyMock.verify(storage);
   }
 

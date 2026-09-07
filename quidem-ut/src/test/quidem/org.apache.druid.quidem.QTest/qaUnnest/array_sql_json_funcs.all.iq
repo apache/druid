@@ -365,8 +365,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (json_query(c, '$.') IS NOT NULL
        OR json_query(c, '$.') IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B4_C1_D2
@@ -380,8 +394,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (json_query(c, '$.') IS NOT NULL
        OR json_query(c, '$.') IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B4_C2_D1
@@ -395,8 +423,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (json_query(s_int, '$.') IS NOT NULL
        OR json_query(s_int, '$.') IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B4_C2_D2
@@ -410,8 +452,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (json_query(s_int, '$.') IS NOT NULL
        OR json_query(s_int, '$.') IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B5_C1_D1
@@ -541,8 +597,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (parse_json(cast(c AS char)) IS NOT NULL
        OR parse_json(cast(c AS char)) IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B6_C1_D2
@@ -556,8 +626,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (parse_json(cast(c AS char)) IS NOT NULL
        OR parse_json(cast(c AS char)) IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B6_C2_D1
@@ -571,8 +655,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (parse_json(cast(s_int AS char)) IS NOT NULL
        OR parse_json(cast(s_int AS char)) IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B6_C2_D2
@@ -586,8 +684,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (parse_json(cast(s_int AS char)) IS NOT NULL
        OR parse_json(cast(s_int AS char)) IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B7_C1_D1
@@ -601,8 +713,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (try_parse_json(cast(c AS char)) IS NOT NULL
        OR try_parse_json(cast(c AS char)) IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B7_C1_D2
@@ -616,8 +742,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (try_parse_json(cast(c AS char)) IS NOT NULL
        OR try_parse_json(cast(c AS char)) IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B7_C2_D1
@@ -631,8 +771,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (try_parse_json(cast(s_int AS char)) IS NOT NULL
        OR try_parse_json(cast(s_int AS char)) IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B7_C2_D2
@@ -646,8 +800,22 @@ WHERE (s_int IN (0,
        OR s_int IS NULL)
   AND (try_parse_json(cast(s_int AS char)) IS NOT NULL
        OR try_parse_json(cast(s_int AS char)) IS NULL);
-java.lang.IllegalArgumentException
-!error
++-----+
+| col |
++-----+
+| 1   |
+| 1   |
+| 1   |
+| 2   |
+| 2   |
+| 2   |
+|     |
+|     |
+|     |
++-----+
+(9 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_json_funcs TEST_ID: A1_B8_C1_D1

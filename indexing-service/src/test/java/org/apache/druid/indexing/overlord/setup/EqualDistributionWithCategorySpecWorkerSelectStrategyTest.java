@@ -34,8 +34,8 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -80,7 +80,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
   public void testFindWorkerForTaskWithNullWorkerTierSpec()
   {
     ImmutableWorkerInfo worker = selectWorker(null);
-    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+    Assertions.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
   @Test
@@ -100,7 +100,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo worker1 = selectWorker(workerCategorySpec1);
-    Assert.assertEquals("localhost3", worker1.getWorker().getHost());
+    Assertions.assertEquals("localhost3", worker1.getWorker().getHost());
 
     // test defaultTier == null and tierAffinity is not empty
     final WorkerCategorySpec workerCategorySpec2 = new WorkerCategorySpec(
@@ -116,7 +116,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo worker2 = selectWorker(workerCategorySpec2);
-    Assert.assertEquals("localhost3", worker2.getWorker().getHost());
+    Assertions.assertEquals("localhost3", worker2.getWorker().getHost());
 
     // test defaultTier != null and tierAffinity is empty
     final WorkerCategorySpec workerCategorySpec3 = new WorkerCategorySpec(
@@ -132,7 +132,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo worker3 = selectWorker(workerCategorySpec3);
-    Assert.assertEquals("localhost3", worker3.getWorker().getHost());
+    Assertions.assertEquals("localhost3", worker3.getWorker().getHost());
   }
 
   @Test
@@ -151,7 +151,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo worker = selectWorker(workerCategorySpec);
-    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+    Assertions.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
   @Test
@@ -170,7 +170,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo worker = selectWorker(workerCategorySpec);
-    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+    Assertions.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
   @Test
@@ -189,7 +189,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo worker = selectWorker(workerCategorySpec);
-    Assert.assertNull(worker);
+    Assertions.assertNull(worker);
   }
 
   @Test
@@ -216,9 +216,9 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
-    Assert.assertNotNull(worker);
-    Assert.assertEquals("c2", worker.getWorker().getCategory());
-    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+    Assertions.assertNotNull(worker);
+    Assertions.assertEquals("c2", worker.getWorker().getCategory());
+    Assertions.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
   @Test
@@ -245,9 +245,9 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
-    Assert.assertNotNull(worker);
-    Assert.assertEquals("c1", worker.getWorker().getCategory());
-    Assert.assertEquals("localhost1", worker.getWorker().getHost());
+    Assertions.assertNotNull(worker);
+    Assertions.assertEquals("c1", worker.getWorker().getCategory());
+    Assertions.assertEquals("localhost1", worker.getWorker().getHost());
   }
 
   @Test
@@ -275,9 +275,9 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategyTest
         WORKERS_FOR_TIER_TESTS,
         taskWithSupervisor
     );
-    Assert.assertNotNull(worker);
-    Assert.assertEquals("c2", worker.getWorker().getCategory());
-    Assert.assertEquals("localhost3", worker.getWorker().getHost());
+    Assertions.assertNotNull(worker);
+    Assertions.assertEquals("c2", worker.getWorker().getCategory());
+    Assertions.assertEquals("localhost3", worker.getWorker().getHost());
   }
 
   private ImmutableWorkerInfo selectWorker(WorkerCategorySpec workerCategorySpec)

@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -50,6 +50,6 @@ public class SegmentAllocationRequestTest
     );
     byte[] json = objectMapper.writeValueAsBytes(request);
     SegmentAllocationRequest fromJson = objectMapper.readValue(json, SegmentAllocationRequest.class);
-    Assert.assertEquals(request, fromJson);
+    Assertions.assertEquals(request, fromJson);
   }
 }

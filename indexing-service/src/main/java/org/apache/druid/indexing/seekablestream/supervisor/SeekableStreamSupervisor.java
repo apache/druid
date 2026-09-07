@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.guava.FutureUtils;
@@ -110,7 +111,6 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1456,12 +1456,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // from actively reading to pending completion, etc.
       // This is a potential silent-loss window where data will not be queryable until handoff.
       log.info(
-          "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
-          + " (upgradedFrom[%s]); it will not be re-announced until handoff.",
-          taskAllocatorId,
-          supervisorId,
-          pendingSegmentRecord.getId(),
-          pendingSegmentRecord.getUpgradedFromSegmentId()
+              "Could not find any task matching taskAllocatorId[%s] in supervisor[%s] for upgraded pending segment[%s]"
+                      + " (upgradedFrom[%s]); it will not be re-announced until handoff.",
+              taskAllocatorId,
+              supervisorId,
+              pendingSegmentRecord.getId(),
+              pendingSegmentRecord.getUpgradedFromSegmentId()
       );
       emitter.emit(
           IndexTaskUtils.setPendingSegmentDimensions(getMetricBuilder(), pendingSegmentRecord)
@@ -1923,9 +1923,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
       }
     }
-
-    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig();
-    SeekableStreamSupervisorIOConfig oo = spec.getSpec().getIOConfig();
 
     // store a limited number of parse exceptions, keeping the most recent ones
     int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxSavedParseExceptions() *
@@ -2462,6 +2459,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   getStatusAndPossiblyEndOffsets(taskId),
                   new Function<>()
                   {
+                    @Nullable
                     @Override
                     public Boolean apply(Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>> pair)
                     {
@@ -5409,11 +5407,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     StreamPartition<PartitionIdType> streamPartition = StreamPartition.of(ioConfig.getStream(), partition);
     OrderedSequenceNumber<SequenceOffsetType> sequenceNumber = makeSequenceNumber(offsetFromMetadata);
     recordSupplierLock.lock();
-    if (!recordSupplier.getAssignment().contains(streamPartition)) {
-      // this shouldn't happen, but in case it does...
-      throw new IllegalStateException("Record supplier does not match current known partitions");
-    }
     try {
+      if (!recordSupplier.getAssignment().contains(streamPartition)) {
+        // this shouldn't happen, but in case it does...
+        throw new IllegalStateException("Record supplier does not match current known partitions");
+      }
       return recordSupplier.isOffsetAvailable(streamPartition, sequenceNumber);
     }
     finally {

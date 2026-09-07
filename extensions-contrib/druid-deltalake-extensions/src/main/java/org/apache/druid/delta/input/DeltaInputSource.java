@@ -33,6 +33,7 @@ import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.engine.DefaultEngine;
 import io.delta.kernel.engine.Engine;
+import io.delta.kernel.engine.FileReadResult;
 import io.delta.kernel.exceptions.TableNotFoundException;
 import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.internal.InternalScanFileUtils;
@@ -145,7 +146,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       if (deltaSplit != null) {
         final Row scanState = deserialize(engine, deltaSplit.getStateRow());
         final StructType physicalReadSchema =
-            ScanStateRow.getPhysicalDataReadSchema(engine, scanState);
+            ScanStateRow.getPhysicalDataReadSchema(scanState);
 
         for (String file : deltaSplit.getFiles()) {
           final Row scanFile = deserialize(engine, file);
@@ -157,22 +158,22 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         final Table table = Table.forPath(engine, tablePath);
         final Snapshot snapshot = getSnapshotForTable(table, engine);
 
-        final StructType fullSnapshotSchema = snapshot.getSchema(engine);
+        final StructType fullSnapshotSchema = snapshot.getSchema();
         final StructType prunedSchema = pruneSchema(
             fullSnapshotSchema,
             inputRowSchema.getColumnsFilter()
         );
 
-        final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine);
+        final ScanBuilder scanBuilder = snapshot.getScanBuilder();
         if (filter != null) {
-          scanBuilder.withFilter(engine, filter.getFilterPredicate(fullSnapshotSchema));
+          scanBuilder.withFilter(filter.getFilterPredicate(fullSnapshotSchema));
         }
-        final Scan scan = scanBuilder.withReadSchema(engine, prunedSchema).build();
+        final Scan scan = scanBuilder.withReadSchema(prunedSchema).build();
         final CloseableIterator<FilteredColumnarBatch> scanFilesIter = scan.getScanFiles(engine);
         final Row scanState = scan.getScanState(engine);
 
         final StructType physicalReadSchema =
-            ScanStateRow.getPhysicalDataReadSchema(engine, scanState);
+            ScanStateRow.getPhysicalDataReadSchema(scanState);
 
         while (scanFilesIter.hasNext()) {
           final FilteredColumnarBatch scanFileBatch = scanFilesIter.next();
@@ -217,13 +218,13 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     catch (TableNotFoundException e) {
       throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
     }
-    final StructType fullSnapshotSchema = snapshot.getSchema(engine);
+    final StructType fullSnapshotSchema = snapshot.getSchema();
 
-    final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine);
+    final ScanBuilder scanBuilder = snapshot.getScanBuilder();
     if (filter != null) {
-      scanBuilder.withFilter(engine, filter.getFilterPredicate(fullSnapshotSchema));
+      scanBuilder.withFilter(filter.getFilterPredicate(fullSnapshotSchema));
     }
-    final Scan scan = scanBuilder.withReadSchema(engine, fullSnapshotSchema).build();
+    final Scan scan = scanBuilder.withReadSchema(fullSnapshotSchema).build();
     // scan files iterator for the current snapshot
     final CloseableIterator<FilteredColumnarBatch> scanFilesIterator = scan.getScanFiles(engine);
 
@@ -323,11 +324,13 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   {
     final FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFile);
 
-    final CloseableIterator<ColumnarBatch> physicalDataIter = engine.getParquetHandler().readParquetFiles(
-        Utils.singletonCloseableIterator(fileStatus),
-        physicalReadSchema,
-        optionalPredicate
-    );
+    final CloseableIterator<ColumnarBatch> physicalDataIter = engine.getParquetHandler()
+        .readParquetFiles(
+            Utils.singletonCloseableIterator(fileStatus),
+            physicalReadSchema,
+            optionalPredicate
+        )
+        .map(FileReadResult::getData);
 
     return Scan.transformPhysicalData(
         engine,

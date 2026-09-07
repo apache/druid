@@ -21,9 +21,10 @@ package org.apache.druid.common.exception;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.error.DruidException;
 
-import javax.validation.constraints.NotNull;
+import javax.annotation.Nullable;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -50,9 +51,24 @@ public interface ErrorResponseTransformStrategy
    * It is the callers responsibility to do so. Returns Optional.empty() if no transformation was applied.
    * The errorId is provided to be used in the transformed Exception if needed.
    */
-  default Optional<Exception> maybeTransform(DruidException exception, Optional<String> errorId)
+  default Optional<DruidException> maybeTransform(DruidException exception, Optional<String> errorId)
   {
     return Optional.empty();
+  }
+
+  /**
+   * Applies {@link #maybeTransform} and returns the exception to hand back to the caller, or {@code exception} unchanged
+   * if this strategy does not transform it.
+   * <p>
+   * A transformed exception carries only {@code errorId}, not the original message, so callers are responsible for
+   * logging {@code exception} against {@code errorId}. Note also that the transformed exception carries its own category,
+   * so the status code the caller sees may differ from {@code exception.getStatusCode()}.
+   *
+   * @param errorId id echoed back to the caller by the transformed exception; a random one is used if null
+   */
+  default DruidException sanitizeForClient(DruidException exception, @Nullable String errorId)
+  {
+    return maybeTransform(exception, Optional.ofNullable(errorId)).orElse(exception);
   }
 
   /**

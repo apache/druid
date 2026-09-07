@@ -45,10 +45,10 @@ import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -56,8 +56,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class FloatAndDoubleFilteringTest extends BaseFilterTest
 {
   private static final String FLOAT_COLUMN = "flt";
@@ -86,6 +88,12 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
       makeMapRow(SCHEMA, Map.of("ts", 6L, "dim0", "6", "flt", 6.0f, "dbl", 6.0d))
   );
 
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
+
   public FloatAndDoubleFilteringTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -108,7 +116,7 @@ public class FloatAndDoubleFilteringTest extends BaseFilterTest
     );
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(FloatAndDoubleFilteringTest.class.getName());

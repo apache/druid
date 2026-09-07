@@ -22,9 +22,9 @@ package org.apache.druid.indexing.overlord.http;
 import com.google.common.base.Optional;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
@@ -35,7 +35,7 @@ public class OverlordRedirectInfoTest
   private DruidOverlord overlord;
   private OverlordRedirectInfo redirectInfo;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     overlord = EasyMock.createMock(DruidOverlord.class);
@@ -47,10 +47,10 @@ public class OverlordRedirectInfoTest
   {
     EasyMock.expect(overlord.isLeader()).andReturn(true).anyTimes();
     EasyMock.replay(overlord);
-    Assert.assertTrue(redirectInfo.doLocal(null));
-    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
-    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
-    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
+    Assertions.assertTrue(redirectInfo.doLocal(null));
+    Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
+    Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
     EasyMock.verify(overlord);
   }
 
@@ -59,10 +59,10 @@ public class OverlordRedirectInfoTest
   {
     EasyMock.expect(overlord.isLeader()).andReturn(false).anyTimes();
     EasyMock.replay(overlord);
-    Assert.assertFalse(redirectInfo.doLocal(null));
-    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
-    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
-    Assert.assertFalse(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
+    Assertions.assertFalse(redirectInfo.doLocal(null));
+    Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
+    Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    Assertions.assertFalse(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
     EasyMock.verify(overlord);
   }
 
@@ -72,7 +72,7 @@ public class OverlordRedirectInfoTest
     EasyMock.expect(overlord.getRedirectLocation()).andReturn(Optional.absent()).anyTimes();
     EasyMock.replay(overlord);
     URL url = redirectInfo.getRedirectURL("query", "/request");
-    Assert.assertNull(url);
+    Assertions.assertNull(url);
     EasyMock.verify(overlord);
   }
 
@@ -85,7 +85,7 @@ public class OverlordRedirectInfoTest
     EasyMock.expect(overlord.getRedirectLocation()).andReturn(Optional.of(host)).anyTimes();
     EasyMock.replay(overlord);
     URL url = redirectInfo.getRedirectURL(query, request);
-    Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
+    Assertions.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
     EasyMock.verify(overlord);
   }
 
@@ -101,7 +101,7 @@ public class OverlordRedirectInfoTest
     EasyMock.expect(overlord.getRedirectLocation()).andReturn(Optional.of(host)).anyTimes();
     EasyMock.replay(overlord);
     URL url = redirectInfo.getRedirectURL(null, request);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "http://localhost/druid/indexer/v1/task/index_hadoop_datasource_2017-07-12T07%3A43%3A01.495Z/status",
         url.toString()
     );

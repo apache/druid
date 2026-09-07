@@ -21,8 +21,8 @@ package org.apache.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -33,7 +33,7 @@ public class SegmentWithStateTest
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     final byte[] bytes = objectMapper.writeValueAsBytes(SegmentWithState.SegmentState.APPEND_FINISHED);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentWithState.SegmentState.APPEND_FINISHED,
         objectMapper.readValue(bytes, SegmentWithState.SegmentState.class)
     );
@@ -43,11 +43,11 @@ public class SegmentWithStateTest
   public void testSerdeForBackwardCompatibility() throws IOException
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentWithState.SegmentState.APPENDING,
         objectMapper.readValue("\"ACTIVE\"", SegmentWithState.SegmentState.class)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentWithState.SegmentState.APPEND_FINISHED,
         objectMapper.readValue("\"INACTIVE\"", SegmentWithState.SegmentState.class)
     );

@@ -27,10 +27,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 
@@ -43,9 +41,6 @@ public class RabbitStreamIndexTaskTuningConfigTest
     mapper = new DefaultObjectMapper();
     mapper.registerModules((Iterable<Module>) new RabbitStreamIndexTaskModule().getJacksonModules());
   }
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testSerdeWithDefaults() throws Exception
@@ -61,22 +56,22 @@ public class RabbitStreamIndexTaskTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNull(config.getBasePersistDirectory());
-    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(150000, config.getMaxRowsInMemory());
-    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(0, config.getMaxPendingPersists());
-    // Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
-    Assert.assertEquals(false, config.isReportParseExceptions());
-    Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
+    Assertions.assertNull(config.getBasePersistDirectory());
+    Assertions.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
+    Assertions.assertEquals(150000, config.getMaxRowsInMemory());
+    Assertions.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
+    Assertions.assertEquals(0, config.getMaxPendingPersists());
+    // Assertions.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
+    Assertions.assertEquals(false, config.isReportParseExceptions());
+    Assertions.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
 
-    Assert.assertNull(config.getRecordBufferSizeConfigured());
-    Assert.assertEquals(10000, config.getRecordBufferSizeOrDefault(1_000_000_000));
-    Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
+    Assertions.assertNull(config.getRecordBufferSizeConfigured());
+    Assertions.assertEquals(10000, config.getRecordBufferSizeOrDefault(1_000_000_000));
+    Assertions.assertEquals(5000, config.getRecordBufferOfferTimeout());
 
-    Assert.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
-    Assert.assertFalse(config.isResetOffsetAutomatically());
+    Assertions.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
+    Assertions.assertFalse(config.isResetOffsetAutomatically());
   }
 
   @Test
@@ -106,18 +101,18 @@ public class RabbitStreamIndexTaskTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNull(config.getBasePersistDirectory());
-    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(100, config.getMaxRowsInMemory());
-    Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(100, config.getMaxPendingPersists());
-    Assert.assertTrue(config.isReportParseExceptions());
-    Assert.assertEquals(100, config.getHandoffConditionTimeout());
-    Assert.assertEquals(1000, (int) config.getRecordBufferSizeConfigured());
-    Assert.assertEquals(1000, config.getRecordBufferSizeOrDefault(1_000_000_000));
-    Assert.assertEquals(500, config.getRecordBufferOfferTimeout());
-    Assert.assertFalse(config.isResetOffsetAutomatically());
+    Assertions.assertNull(config.getBasePersistDirectory());
+    Assertions.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
+    Assertions.assertEquals(100, config.getMaxRowsInMemory());
+    Assertions.assertEquals(100, config.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
+    Assertions.assertEquals(100, config.getMaxPendingPersists());
+    Assertions.assertTrue(config.isReportParseExceptions());
+    Assertions.assertEquals(100, config.getHandoffConditionTimeout());
+    Assertions.assertEquals(1000, (int) config.getRecordBufferSizeConfigured());
+    Assertions.assertEquals(1000, config.getRecordBufferSizeOrDefault(1_000_000_000));
+    Assertions.assertEquals(500, config.getRecordBufferOfferTimeout());
+    Assertions.assertFalse(config.isResetOffsetAutomatically());
   }
 
 
@@ -189,7 +184,7 @@ public class RabbitStreamIndexTaskTuningConfigTest
                     "maxColumnsToMerge=-1}";
 
 
-    Assert.assertEquals(resStr, config.toString());
+    Assertions.assertEquals(resStr, config.toString());
   }
 
   /**

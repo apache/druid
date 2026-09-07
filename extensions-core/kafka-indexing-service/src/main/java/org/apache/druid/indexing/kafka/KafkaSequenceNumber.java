@@ -19,12 +19,13 @@
 
 package org.apache.druid.indexing.kafka;
 
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
-
-import javax.validation.constraints.NotNull;
 
 // OrderedSequenceNumber.equals() should be used instead.
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
+// Every Kafka sequence number is inclusive, so inherited equality and value-only ordering are consistent.
+// codeql[java/inconsistent-compareto-and-equals]
 public class KafkaSequenceNumber extends OrderedSequenceNumber<Long>
 {
   private KafkaSequenceNumber(Long sequenceNumber)

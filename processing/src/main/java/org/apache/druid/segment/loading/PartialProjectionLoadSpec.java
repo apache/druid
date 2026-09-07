@@ -59,10 +59,10 @@ public class PartialProjectionLoadSpec extends PartialLoadSpec
   )
   {
     return Map.of(
-        "type", TYPE,
-        "delegate", delegate,
+        TYPE_FIELD, TYPE,
+        DELEGATE_FIELD, delegate,
         "projections", projections,
-        "fingerprint", fingerprint
+        FINGERPRINT_FIELD, fingerprint
     );
   }
 

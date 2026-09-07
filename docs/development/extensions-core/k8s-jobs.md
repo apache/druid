@@ -344,6 +344,75 @@ Host: http://ROUTER_IP:ROUTER_PORT
 ```
 </details>
 
+#### Get pod template names
+
+Retrieves the names of the peon pod templates currently configured on the Overlord for the Kubernetes
+task runner. Returns a JSON array of the configured template names (the keys of the
+`druid.indexer.runner.k8s.podTemplate.*` runtime properties, such as `base` and per task type names).
+
+This endpoint is only available when the [Custom Template Pod Adapter](#custom-template-pod-adapter) is
+configured (`druid.indexer.runner.k8s.adapter.type: customTemplateAdapter`). For any other adapter it
+returns a `404` response.
+
+##### URL
+
+`GET` `/druid/indexer/v1/k8s/taskrunner/podTemplates`
+
+##### Responses
+
+<Tabs>
+
+<TabItem value="13" label="200 SUCCESS">
+
+
+*Successfully retrieved pod template names*
+
+</TabItem>
+
+<TabItem value="14" label="404 NOT FOUND">
+
+
+*The configured pod adapter is not the custom template pod adapter*
+
+</TabItem>
+</Tabs>
+
+---
+
+##### Sample request
+
+<Tabs>
+
+<TabItem value="15" label="cURL">
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/k8s/taskrunner/podTemplates"
+```
+</TabItem>
+
+<TabItem value="16" label="HTTP">
+
+```HTTP
+GET /druid/indexer/v1/k8s/taskrunner/podTemplates HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+##### Sample response
+
+<details>
+<summary>View the response</summary>
+
+```json
+[
+  "base",
+  "index_kafka"
+]
+```
+</details>
+
 ## Pod adapters
 The logic defining how the pod template is built for your Kubernetes Job depends on which pod adapter you have specified.
 
@@ -774,6 +843,14 @@ Set the `podTemplateSelectionKey` key in a task's context to pick a configured p
 ```
 
 This is gated by the runtime property `druid.indexer.runner.allowTaskPodTemplateSelection`, which defaults to `false`. If the key doesn't match any configured template, the task fails to launch.
+
+##### Pod template metrics dimension
+
+Every metric emitted by a task pod carries a `podTemplate` dimension naming the pod template the pod runs under, alongside the existing `taskType`, `dataSource`, `taskId`, and `groupId` dimensions. Use it to group metrics by task type and pod template, for example to see which task types run on which templates.
+
+The dimension reflects the template actually applied to the pod, whichever selection strategy or context override chose it. Druid passes the name to the pod through the `DRUID_POD_TEMPLATE` environment variable, sourced from the pod's own `task.jobTemplate` annotation; you don't need to declare it in your pod templates.
+
+The dimension requires `druid-kubernetes-overlord-extensions` in the task pod's `druid.extensions.loadList`. Task pods that have no pod template, such as those launched by another task adapter, omit the dimension.
 
 #### Running Task Pods in Another Namespace
 

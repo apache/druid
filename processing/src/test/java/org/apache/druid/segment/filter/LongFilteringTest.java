@@ -43,10 +43,10 @@ import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -54,8 +54,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class LongFilteringTest extends BaseFilterTest
 {
   private static final String LONG_COLUMN = "lng";
@@ -81,6 +83,11 @@ public class LongFilteringTest extends BaseFilterTest
       makeMapRow(SCHEMA, Map.of("ts", 10L, "dim0", "10", "lng", -100000001L, "dim1", "qqq"))
   );
 
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
   public LongFilteringTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -103,7 +110,8 @@ public class LongFilteringTest extends BaseFilterTest
     );
   }
 
-  @AfterClass
+
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(LongFilteringTest.class.getName());

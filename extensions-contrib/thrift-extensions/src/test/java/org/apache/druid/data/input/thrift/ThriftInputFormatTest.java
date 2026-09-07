@@ -41,9 +41,9 @@ import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -55,7 +55,7 @@ public class ThriftInputFormatTest
   private InputRowSchema schema;
   private JSONPathSpec flattenSpec;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     book = new Book()
@@ -114,8 +114,8 @@ public class ThriftInputFormatTest
 
     ThriftInputFormat format = new ThriftInputFormat(flattenSpec, "example/book.jar", THRIFT_CLASS);
     InputRow row = readSingleRow(format, bytes);
-    Assert.assertEquals("title", row.getDimension("title").get(0));
-    Assert.assertEquals("last", row.getDimension("lastName").get(0));
+    Assertions.assertEquals("title", row.getDimension("title").get(0));
+    Assertions.assertEquals("last", row.getDimension("lastName").get(0));
   }
 
   @Test
@@ -130,14 +130,14 @@ public class ThriftInputFormatTest
     String json = mapper.writeValueAsString(format);
     ThriftInputFormat deserialized = (ThriftInputFormat) mapper.readValue(json, org.apache.druid.data.input.InputFormat.class);
 
-    Assert.assertEquals(format, deserialized);
+    Assertions.assertEquals(format, deserialized);
   }
 
   @Test
   public void testIsSplittable()
   {
     ThriftInputFormat format = new ThriftInputFormat(null, null, THRIFT_CLASS);
-    Assert.assertFalse(format.isSplittable());
+    Assertions.assertFalse(format.isSplittable());
   }
 
   @Test
@@ -150,17 +150,17 @@ public class ThriftInputFormatTest
   {
     ThriftInputFormat format = new ThriftInputFormat(flattenSpec, null, THRIFT_CLASS);
     InputRow row = readSingleRow(format, bytes);
-    Assert.assertEquals("title", row.getDimension("title").get(0));
-    Assert.assertEquals("last", row.getDimension("lastName").get(0));
+    Assertions.assertEquals("title", row.getDimension("title").get(0));
+    Assertions.assertEquals("last", row.getDimension("lastName").get(0));
   }
 
   private InputRow readSingleRow(ThriftInputFormat format, byte[] bytes) throws IOException
   {
     InputEntityReader reader = format.createReader(schema, new ByteEntity(bytes), null);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       InputRow row = iterator.next();
-      Assert.assertFalse(iterator.hasNext());
+      Assertions.assertFalse(iterator.hasNext());
       return row;
     }
   }

@@ -46,11 +46,12 @@ import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.query.filter.SegmentPruner;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -85,7 +86,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(0, Collections.singletonList(new TestInputSlice(1)))
                     .put(1, Collections.singletonList(new TestInputSlice(2)))
@@ -115,7 +116,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(1, Collections.singletonList(new TestInputSlice(1)))
                     .put(3, Collections.singletonList(new TestInputSlice(2)))
@@ -145,7 +146,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(0, Collections.singletonList(new TestInputSlice()))
                     .put(1, Collections.singletonList(new TestInputSlice()))
@@ -175,7 +176,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(0, Collections.singletonList(NilInputSlice.INSTANCE))
                     .build(),
@@ -202,7 +203,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(0, Collections.singletonList(NilInputSlice.INSTANCE))
                     .build(),
@@ -230,7 +231,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(0, Collections.singletonList(new TestInputSlice()))
                     .build(),
@@ -257,7 +258,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(0, Collections.singletonList(new TestInputSlice(1, 2, 3)))
                     .build(),
@@ -287,7 +288,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(
                         0,
@@ -336,7 +337,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(
                         0,
@@ -372,7 +373,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(0, Collections.singletonList(new TestInputSlice(200_000_000L, 200_000_001L)))
                     .put(1, Collections.singletonList(new TestInputSlice(200_000_002L)))
@@ -400,7 +401,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(
                         0,
@@ -434,7 +435,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(
                         0,
@@ -470,7 +471,7 @@ public class WorkerInputsTest
     Mockito.verify(testInputSpecSlicer, times(0)).canSliceDynamic(inputSpecToSplit);
     Mockito.verify(testInputSpecSlicer, times(1)).sliceStatic(any(), any(), anyInt());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(
                         0,
@@ -515,7 +516,7 @@ public class WorkerInputsTest
     Mockito.verify(testInputSpecSlicer, times(1)).canSliceDynamic(inputSpecToSplit);
     Mockito.verify(testInputSpecSlicer, times(1)).sliceDynamic(any(), any(), anyInt(), anyInt(), anyLong());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(
                         0,
@@ -556,7 +557,7 @@ public class WorkerInputsTest
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<Integer, List<InputSlice>>builder()
                     .put(
                         0,

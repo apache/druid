@@ -468,6 +468,24 @@ public class ServerHolder implements Comparable<ServerHolder>
     return inFlightProfiles.get(segment);
   }
 
+  /**
+   * The {@link PartialLoadProfile} this server is expected to hold {@code segment} under once its queued operations
+   * finish: the profile of an in-flight load if one is queued, else the profile announced for the loaded replica.
+   * Returns null when the replica is (or is becoming) a regular full load, including an in-flight load that carries
+   * no profile.
+   * <p>
+   * Read this before {@link #cancelOperation}, which clears the in-flight profile.
+   */
+  @Nullable
+  public PartialLoadProfile getProjectedProfile(DataSegment segment)
+  {
+    final SegmentAction action = getActionOnSegment(segment);
+    if (action != null && action.isLoad()) {
+      return getInFlightProfile(segment);
+    }
+    return server.getPartialLoadProfile(segment.getId());
+  }
+
   private boolean hasSegmentLoaded(SegmentId segmentId)
   {
     return server.getSegment(segmentId) != null;

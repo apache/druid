@@ -75,10 +75,10 @@ def get_notices(tmp_jar_path):
         for line in outstr.splitlines():
             try:
                 command = "jar xf {} {}".format(jar_file, line)
-                outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+                subprocess.check_output(command, shell=True)
 
                 command = "mv {} {}.NOTICE-FILE".format(line, jar_file)
-                outstr = subprocess.check_output(command, shell=True).decode('UTF-8')
+                subprocess.check_output(command, shell=True)
 
                 command = "cat {}.NOTICE-FILE".format(jar_file)
                 outstr = subprocess.check_output(command, shell=True).decode('UTF-8')

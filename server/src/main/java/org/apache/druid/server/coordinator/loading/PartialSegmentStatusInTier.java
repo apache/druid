@@ -89,8 +89,8 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Servers with an in-flight load whose profile fingerprint matches the request. Counts toward projected matching
-   * replicas, the load is on its way to satisfying the rule.
+   * Servers with an in-flight load, or an incoming balancer move, whose profile fingerprint matches the request.
+   * Counts toward projected matching replicas, the load is on its way to satisfying the rule.
    */
   public List<ServerHolder> getMatchingInFlight()
   {
@@ -98,9 +98,10 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Servers with an in-flight load whose profile fingerprint differs from the request (e.g., the rule changed
-   * mid-flight, or an in-flight regular full-load against a partial rule). Cancel-and-replace targets when there is a
-   * matching deficit.
+   * Servers with an in-flight load, or an incoming balancer move, whose profile fingerprint differs from the request
+   * (e.g., the rule changed mid-flight, or an in-flight regular full-load against a partial rule). Cancel-and-replace
+   * targets when there is a matching deficit; an incoming move refuses the cancellation and is instead reconciled
+   * once it lands and reclassifies as stale-loaded.
    */
   public List<ServerHolder> getStaleInFlight()
   {
@@ -130,15 +131,23 @@ public class PartialSegmentStatusInTier
   /**
    * Mechanical classification of one server against the request fingerprint. Branches are mutually exclusive in
    * order: <b>loaded</b> ({@link ServerHolder#isServingSegment}: matching / stale, with stale optionally also added
-   * to {@link #eligibleForAdditiveReload}), <b>in-flight LOAD/REPLICATE</b> (matching / stale based on the peon's
-   * queued profile), <b>empty-and-loadable</b> ({@link #eligibleForFreshLoad}).
+   * to {@link #eligibleForAdditiveReload}), <b>in-flight LOAD/REPLICATE/MOVE_TO</b> (matching / stale based on the
+   * peon's queued profile), <b>empty-and-loadable</b> ({@link #eligibleForFreshLoad}).
    * <p>
-   * Servers with a queued {@link SegmentAction#DROP}, {@link SegmentAction#MOVE_TO}, or
-   * {@link SegmentAction#MOVE_FROM} fall through all branches by design, they're already accounted for in
+   * A balancer move is counted at its destination: the {@link SegmentAction#MOVE_TO} carries the profile cloned from
+   * the source, so it classifies by fingerprint like any other in-flight load, and once it lands the destination
+   * classifies as loaded. The source ({@link SegmentAction#MOVE_FROM}) is deliberately left unclassified, so that the
+   * two endpoints of a move count as the single replica they will settle into, in both phases of the move and
+   * whether the moving replica is matching or stale. Counting the move at the source instead would require the
+   * {@link SegmentReplicaCount#moveCompletedPendingDrop()} correction the full-load path uses, which cannot be
+   * applied to a fingerprint-partitioned count: it does not know whether the move it is netting out was of a
+   * matching or a stale replica.
+   * <p>
+   * Servers with a queued {@link SegmentAction#DROP} fall through all branches as well, they're accounted for in
    * {@link SegmentReplicaCount} totals and {@link StrategicSegmentAssigner}'s cross-tier drop budget.
-   * The {@code isLoaded} branch is in particular gated by {@link ServerHolder#isServingSegment}, which requires
-   * <em>no</em> action queued, so stale-loaded servers added to {@link #eligibleForAdditiveReload} are guaranteed
-   * to be action-free at snapshot time.
+   * The {@code isLoaded} branch is gated by {@link ServerHolder#isServingSegment}, which requires <em>no</em> action
+   * queued, so stale-loaded servers added to {@link #eligibleForAdditiveReload} are guaranteed to be action-free at
+   * snapshot time.
    */
   private void classify(ServerHolder server, DataSegment segment, String requestedFingerprint)
   {
@@ -155,7 +164,9 @@ public class PartialSegmentStatusInTier
           eligibleForAdditiveReload.add(server);
         }
       }
-    } else if (action == SegmentAction.LOAD || action == SegmentAction.REPLICATE) {
+    } else if (action == SegmentAction.LOAD
+               || action == SegmentAction.REPLICATE
+               || action == SegmentAction.MOVE_TO) {
       final PartialLoadProfile inFlight = server.getInFlightProfile(segment);
       if (inFlight != null && Objects.equals(inFlight.fingerprint(), requestedFingerprint)) {
         matchingInFlight.add(server);

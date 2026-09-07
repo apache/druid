@@ -35,17 +35,19 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class InvalidFilteringTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "ts";
@@ -72,6 +74,12 @@ public class InvalidFilteringTest extends BaseFilterTest
       ROW5
   );
 
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
+
   public InvalidFilteringTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -95,7 +103,7 @@ public class InvalidFilteringTest extends BaseFilterTest
     return indexBuilder.schema(schema);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(InvalidFilteringTest.class.getName());
