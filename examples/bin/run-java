@@ -26,13 +26,6 @@ fi
 
 JAVA_MAJOR="$("$JAVA_BIN" -version 2>&1 | sed -n -E 's/.* version "([^."-]*).*/\1/p')"
 
-if [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "25" ]
-then
-  # Compact object headers are a production feature starting with Java 25.
-  # Prepend the default so callers can override it with -XX:-UseCompactObjectHeaders.
-  set -- -XX:+UseCompactObjectHeaders "$@"
-fi
-
 if [ "$JAVA_MAJOR" != "" ] && [ "$JAVA_MAJOR" -ge "11" ]
 then
   # Disable strong encapsulation for certain packages on Java 11+.
