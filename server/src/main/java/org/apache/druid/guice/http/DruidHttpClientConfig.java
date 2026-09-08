@@ -78,6 +78,9 @@ public class DruidHttpClientConfig
   private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.ADAPTIVE;
 
   @JsonProperty
+  private boolean strictConnectionValidation = false;
+
+  @JsonProperty
   private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);
 
   public int getNumConnections()
@@ -140,6 +143,14 @@ public class DruidHttpClientConfig
   public ResourcePool.Implementation getPoolImplementation()
   {
     return poolImplementation;
+  }
+
+  /**
+   * Whether a request fails instead of being sent over a connection that never passed its health check.
+   */
+  public boolean isStrictConnectionValidation()
+  {
+    return strictConnectionValidation;
   }
 
   public long getClientConnectTimeout()

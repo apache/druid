@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -42,6 +43,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Lends out at most {@link ResourcePoolConfig#getMaxPerKey()} resources per key, blocking further takers until one
@@ -57,20 +59,27 @@ public class ResourcePool<K, V> implements Closeable
   private static final Logger log = new Logger(ResourcePool.class);
   private final LoadingCache<K, PooledResources<V>> pool;
   private final AtomicBoolean closed = new AtomicBoolean(false);
+  private final Counters counters = new Counters();
 
   public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config,
                       final boolean eagerInitialization)
   {
+    final ResourceFactory<K, V> countingFactory = new CountingResourceFactory<>(factory, counters);
     this.pool = CacheBuilder.newBuilder().build(
         new CacheLoader<>()
         {
           @Override
           public PooledResources<V> load(K input)
           {
-            return config.getPoolImplementation().create(config, input, factory, eagerInitialization);
+            return config.getPoolImplementation().create(config, input, countingFactory, eagerInitialization, counters);
           }
         }
     );
+  }
+
+  public Counters getCounters()
+  {
+    return counters;
   }
 
   /**
@@ -156,13 +165,119 @@ public class ResourcePool<K, V> implements Closeable
   }
 
   /**
+   * What a pool did with its resources since it was created, summed over every key it pools.
+   */
+  public static class Counters
+  {
+    private final AtomicLong opened = new AtomicLong();
+    private final AtomicLong closed = new AtomicLong();
+    private final AtomicLong errored = new AtomicLong();
+    private final AtomicLong timedOut = new AtomicLong();
+
+    public long getOpened()
+    {
+      return opened.get();
+    }
+
+    public long getClosed()
+    {
+      return closed.get();
+    }
+
+    /**
+     * Calls into the {@link ResourceFactory} that threw.
+     */
+    public long getErrored()
+    {
+      return errored.get();
+    }
+
+    /**
+     * Resources discarded for going {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()} unused.
+     */
+    public long getTimedOut()
+    {
+      return timedOut.get();
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringUtils.format(
+          "Counters{opened=%d, closed=%d, errored=%d, timedOut=%d}",
+          getOpened(),
+          getClosed(),
+          getErrored(),
+          getTimedOut()
+      );
+    }
+  }
+
+  /**
+   * Records on {@link Counters} what the {@link ResourceFactory} it wraps was asked to do, so that every
+   * {@link Implementation} is counted the same way.
+   */
+  private static class CountingResourceFactory<K, V> implements ResourceFactory<K, V>
+  {
+    private final ResourceFactory<K, V> delegate;
+    private final Counters counters;
+
+    private CountingResourceFactory(ResourceFactory<K, V> delegate, Counters counters)
+    {
+      this.delegate = delegate;
+      this.counters = counters;
+    }
+
+    @Override
+    public V generate(K key)
+    {
+      final V resource;
+      try {
+        resource = delegate.generate(key);
+      }
+      catch (Throwable t) {
+        counters.errored.incrementAndGet();
+        throw t;
+      }
+      if (resource != null) {
+        counters.opened.incrementAndGet();
+      }
+      return resource;
+    }
+
+    @Override
+    public boolean isGood(V resource)
+    {
+      try {
+        return delegate.isGood(resource);
+      }
+      catch (Throwable t) {
+        counters.errored.incrementAndGet();
+        throw t;
+      }
+    }
+
+    @Override
+    public void close(V resource)
+    {
+      try {
+        delegate.close(resource);
+      }
+      catch (Throwable t) {
+        counters.errored.incrementAndGet();
+        throw t;
+      }
+      counters.closed.incrementAndGet();
+    }
+  }
+
+  /**
    * Which implementation pools the resources of a key.
    */
   public enum Implementation
   {
     /**
-     * Follows demand: a taker discards every stale or broken resource it walks past, so the pool falls back to the
-     * size the traffic needs. Holds no lock while creating, validating or closing resources.
+     * Adaptively follows demand.
      */
     ADAPTIVE {
       @Override
@@ -170,14 +285,17 @@ public class ResourcePool<K, V> implements Closeable
           ResourcePoolConfig config,
           K key,
           ResourceFactory<K, V> factory,
-          boolean eagerInitialization
+          boolean eagerInitialization,
+          Counters counters
       )
       {
         final AdaptiveResourceHolderPerKey<K, V> resources = new AdaptiveResourceHolderPerKey<>(
             config.getMaxPerKey(),
             config.getUnusedConnectionTimeoutMillis(),
+            config.isStrictConnectionValidation(),
             key,
-            factory
+            factory,
+            counters
         );
         if (eagerInitialization) {
           resources.preload();
@@ -197,7 +315,8 @@ public class ResourcePool<K, V> implements Closeable
           ResourcePoolConfig config,
           K key,
           ResourceFactory<K, V> factory,
-          boolean eagerInitialization
+          boolean eagerInitialization,
+          Counters counters
       )
       {
         if (eagerInitialization) {
@@ -205,14 +324,16 @@ public class ResourcePool<K, V> implements Closeable
               config.getMaxPerKey(),
               config.getUnusedConnectionTimeoutMillis(),
               key,
-              factory
+              factory,
+              counters
           );
         }
         return new LazyCreationResourceHolder<>(
             config.getMaxPerKey(),
             config.getUnusedConnectionTimeoutMillis(),
             key,
-            factory
+            factory,
+            counters
         );
       }
     };
@@ -221,7 +342,8 @@ public class ResourcePool<K, V> implements Closeable
         ResourcePoolConfig config,
         K key,
         ResourceFactory<K, V> factory,
-        boolean eagerInitialization
+        boolean eagerInitialization,
+        Counters counters
     );
 
     @JsonValue
@@ -250,7 +372,8 @@ public class ResourcePool<K, V> implements Closeable
     abstract V get();
 
     /**
-     * Returns a resource taken from {@link #get()}, freeing the slot it occupied.
+     * Returns a resource taken from {@link #get()}, freeing the slot it occupied. An implementation may discard the
+     * resource instead of pooling it.
      */
     abstract void giveBack(V object);
 
@@ -267,10 +390,11 @@ public class ResourcePool<K, V> implements Closeable
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
-        ResourceFactory<K, V> factory
+        ResourceFactory<K, V> factory,
+        Counters counters
     )
     {
-      super(maxSize, unusedResourceTimeoutMillis, key, factory);
+      super(maxSize, unusedResourceTimeoutMillis, key, factory, counters);
       // Eagerly Instantiate
       for (int i = 0; i < maxSize; i++) {
         resourceHolderList.add(
@@ -292,10 +416,11 @@ public class ResourcePool<K, V> implements Closeable
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
-        ResourceFactory<K, V> factory
+        ResourceFactory<K, V> factory,
+        Counters counters
     )
     {
-      super(maxSize, unusedResourceTimeoutMillis, key, factory);
+      super(maxSize, unusedResourceTimeoutMillis, key, factory, counters);
     }
   }
 
@@ -305,6 +430,7 @@ public class ResourcePool<K, V> implements Closeable
     private final K key;
     private final ResourceFactory<K, V> factory;
     private final long unusedResourceTimeoutMillis;
+    private final Counters counters;
     // Hold previously created / returned resources
     protected final ArrayDeque<ResourceHolder<V>> resourceHolderList;
     // To keep track of resources that have been successfully returned to caller.
@@ -315,12 +441,14 @@ public class ResourcePool<K, V> implements Closeable
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
-        ResourceFactory<K, V> factory
+        ResourceFactory<K, V> factory,
+        Counters counters
     )
     {
       this.maxSize = maxSize;
       this.key = key;
       this.factory = factory;
+      this.counters = counters;
       this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
       this.resourceHolderList = new ArrayDeque<>();
     }
@@ -360,6 +488,7 @@ public class ResourcePool<K, V> implements Closeable
             poolVal = holder.getResource();
             if (System.currentTimeMillis() - holder.getLastAccessedTime() > unusedResourceTimeoutMillis) {
               expired = true;
+              counters.timedOut.incrementAndGet();
             }
           }
           numLentResources++;
@@ -453,10 +582,14 @@ public class ResourcePool<K, V> implements Closeable
 
   private static class AdaptiveResourceHolderPerKey<K, V> extends PooledResources<V>
   {
+    private static final int CREATE_ATTEMPTS = 3;
+
     private final int maxSize;
     private final K key;
     private final ResourceFactory<K, V> factory;
     private final long unusedResourceTimeoutMillis;
+    private final boolean strictConnectionValidation;
+    private final Counters counters;
     private final Semaphore permits;
     private final Deque<ResourceHolder<V>> idleResources = new ConcurrentLinkedDeque<>();
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -464,14 +597,18 @@ public class ResourcePool<K, V> implements Closeable
     private AdaptiveResourceHolderPerKey(
         int maxSize,
         long unusedResourceTimeoutMillis,
+        boolean strictConnectionValidation,
         K key,
-        ResourceFactory<K, V> factory
+        ResourceFactory<K, V> factory,
+        Counters counters
     )
     {
       this.maxSize = maxSize;
       this.key = key;
       this.factory = factory;
       this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
+      this.strictConnectionValidation = strictConnectionValidation;
+      this.counters = counters;
       this.permits = new Semaphore(maxSize);
     }
 
@@ -520,15 +657,21 @@ public class ResourcePool<K, V> implements Closeable
     {
       Preconditions.checkNotNull(object, "object");
 
-      if (closed.get()) {
-        log.info("giveBack called after being closed. key[%s]", key);
-        closeQuietly(object);
-        permits.release();
-        return;
+      try {
+        if (closed.get()) {
+          log.info("giveBack called after being closed. key[%s]", key);
+          closeQuietly(object);
+          return;
+        }
+        if (!isGood(object)) {
+          closeQuietly(object);
+          return;
+        }
+        idleResources.addLast(new ResourceHolder<>(System.currentTimeMillis(), object));
       }
-
-      idleResources.addLast(new ResourceHolder<>(System.currentTimeMillis(), object));
-      permits.release();
+      finally {
+        permits.release();
+      }
 
       if (closed.get()) {
         // close() may have drained the idle resources before this one was parked.
@@ -569,41 +712,60 @@ public class ResourcePool<K, V> implements Closeable
       final long expiredBefore = System.currentTimeMillis() - unusedResourceTimeoutMillis;
       for (ResourceHolder<V> holder = idleResources.pollFirst(); holder != null; holder = idleResources.pollFirst()) {
         final V resource = holder.getResource();
-        final boolean usable;
-        try {
-          usable = holder.getLastAccessedTime() >= expiredBefore && factory.isGood(resource);
-        }
-        catch (Throwable t) {
+        if (holder.getLastAccessedTime() < expiredBefore) {
+          counters.timedOut.incrementAndGet();
           closeQuietly(resource);
-          throw t;
-        }
-        if (usable) {
+        } else if (isGood(resource)) {
           return resource;
+        } else {
+          closeQuietly(resource);
         }
-        closeQuietly(resource);
       }
       return null;
     }
 
     /**
-     * Creates a resource, replacing it once if it arrives broken. The replacement is not validated.
+     * Creates a resource, discarding and replacing a broken one up to {@link #CREATE_ATTEMPTS} times. The last
+     * attempt is handed over even when it is broken - unless
+     * {@link ResourcePoolConfig#isStrictConnectionValidation()}, which fails the take instead.
      */
     private V createResource()
     {
-      final V resource = generate();
-      final boolean usable;
+      for (int attempt = 1; ; attempt++) {
+        final V resource = generate();
+        if (isGood(resource)) {
+          return resource;
+        }
+        if (attempt < CREATE_ATTEMPTS) {
+          closeQuietly(resource);
+          continue;
+        }
+        if (strictConnectionValidation) {
+          closeQuietly(resource);
+          throw new ISE("Could not create a good resource for key[%s] in [%d] attempts", key, CREATE_ATTEMPTS);
+        }
+        log.warn(
+            "Handing over resource[%s] at key[%s] that failed its health check in all [%d] attempts, it may be bad.",
+            resource,
+            key,
+            CREATE_ATTEMPTS
+        );
+        return resource;
+      }
+    }
+
+    /**
+     * The verdict of {@link ResourceFactory#isGood}, closing the resource if the check itself throws.
+     */
+    private boolean isGood(V resource)
+    {
       try {
-        usable = factory.isGood(resource);
+        return factory.isGood(resource);
       }
       catch (Throwable t) {
         closeQuietly(resource);
         throw t;
       }
-      if (usable) {
-        return resource;
-      }
-      closeQuietly(resource);
-      return generate();
     }
 
     private V generate()

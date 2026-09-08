@@ -84,6 +84,7 @@ public class HttpClientConfig
   private final int numConnections;
   private final boolean eagerInitialization;
   private final ResourcePool.Implementation poolImplementation;
+  private final boolean strictConnectionValidation;
   private final SSLContext sslContext;
   private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
@@ -97,6 +98,7 @@ public class HttpClientConfig
       int numConnections,
       boolean eagerInitialization,
       ResourcePool.Implementation poolImplementation,
+      boolean strictConnectionValidation,
       SSLContext sslContext,
       HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
@@ -110,6 +112,7 @@ public class HttpClientConfig
     this.numConnections = numConnections;
     this.eagerInitialization = eagerInitialization;
     this.poolImplementation = poolImplementation;
+    this.strictConnectionValidation = strictConnectionValidation;
     this.sslContext = sslContext;
     this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
@@ -133,6 +136,11 @@ public class HttpClientConfig
   public ResourcePool.Implementation getPoolImplementation()
   {
     return poolImplementation;
+  }
+
+  public boolean isStrictConnectionValidation()
+  {
+    return strictConnectionValidation;
   }
 
   public SSLContext getSslContext()
@@ -180,6 +188,7 @@ public class HttpClientConfig
     private int numConnections = 1;
     private boolean eagerInitialization = true;
     private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.ADAPTIVE;
+    private boolean strictConnectionValidation = false;
     private SSLContext sslContext = null;
     private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
@@ -208,6 +217,12 @@ public class HttpClientConfig
     public Builder withPoolImplementation(ResourcePool.Implementation poolImplementation)
     {
       this.poolImplementation = poolImplementation;
+      return this;
+    }
+
+    public Builder withStrictConnectionValidation(boolean strictConnectionValidation)
+    {
+      this.strictConnectionValidation = strictConnectionValidation;
       return this;
     }
 
@@ -259,6 +274,7 @@ public class HttpClientConfig
           numConnections,
           eagerInitialization,
           poolImplementation,
+          strictConnectionValidation,
           sslContext,
           proxyConfig,
           readTimeout,

@@ -30,8 +30,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Properties;
 
 /**
- * Covers reading {@code druid.broker.http.poolImplementation} out of runtime.properties, which is how an operator
- * moves off the default pooling implementation.
+ * Covers reading the connection pool knobs out of runtime.properties, which is how an operator moves off the default
+ * pooling implementation or turns strict connection validation on.
  */
 public class DruidHttpClientConfigTest
 {
@@ -74,6 +74,21 @@ public class DruidHttpClientConfigTest
     properties.setProperty(PROPERTY_BASE + ".poolImplementation", "invalid");
 
     Assertions.assertThrows(RuntimeException.class, () -> configure(properties));
+  }
+
+  @Test
+  public void testStrictConnectionValidationIsOffByDefault()
+  {
+    Assertions.assertFalse(configure(new Properties()).isStrictConnectionValidation());
+  }
+
+  @Test
+  public void testStrictConnectionValidationCanBeTurnedOn()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".strictConnectionValidation", "true");
+
+    Assertions.assertTrue(configure(properties).isStrictConnectionValidation());
   }
 
   private static DruidHttpClientConfig configure(Properties properties)

@@ -314,6 +314,108 @@ public class ResourcePoolTest
   }
 
   /**
+   * A resource that broke while it was lent out is closed on its way back instead of being parked for the next
+   * taker, whose health check would only discover it a moment later.
+   */
+  @Test
+  public void testAdaptiveDiscardsABrokenResourceOnGiveBack()
+  {
+    final ResourcePool<String, String> pool = createPool(ResourcePool.Implementation.ADAPTIVE, 1, NEVER_EXPIRES, false);
+    final ResourceContainer<String> lent = pool.take("billy");
+    factory.markUnhealthy("billy#0");
+
+    lent.returnResource();
+    Assertions.assertEquals(List.of("billy#0"), factory.closed());
+
+    final ResourceContainer<String> fresh = pool.take("billy");
+    Assertions.assertEquals("billy#1", fresh.get(), "the discarded resource repaid its slot");
+    fresh.returnResource();
+  }
+
+  /**
+   * A creation that arrives broken is retried, so a caller does not pay for a peer that was briefly unreachable.
+   */
+  @Test
+  public void testAdaptiveRetriesUntilACreatedResourceIsGood()
+  {
+    final ResourcePool<String, String> pool = createPool(ResourcePool.Implementation.ADAPTIVE, 2, NEVER_EXPIRES, false);
+    factory.markUnhealthy("billy#0", "billy#1");
+
+    final ResourceContainer<String> fresh = pool.take("billy");
+    Assertions.assertEquals("billy#2", fresh.get());
+    fresh.returnResource();
+
+    Assertions.assertEquals(List.of("billy#0", "billy#1"), factory.closed());
+  }
+
+  /**
+   * With every attempt broken the caller still gets the last one, as it always did, rather than a failing take.
+   */
+  @Test
+  public void testAdaptiveHandsOverAPossiblyBadResourceWhenEveryAttemptFails()
+  {
+    final ResourcePool<String, String> pool = createPool(ResourcePool.Implementation.ADAPTIVE, 2, NEVER_EXPIRES, false);
+    factory.markUnhealthy("billy#0", "billy#1", "billy#2");
+
+    final ResourceContainer<String> lent = pool.take("billy");
+    Assertions.assertEquals("billy#2", lent.get());
+    Assertions.assertEquals(List.of("billy#0", "billy#1"), factory.closed(), "the handed over resource stays open");
+
+    lent.returnResource();
+    Assertions.assertTrue(factory.isClosed("billy#2"), "and is discarded once it comes back");
+  }
+
+  /**
+   * Strict validation turns that last possibly bad resource into a failure, and the failed take still repays its
+   * slot - the next take must not have to wait for it.
+   */
+  @Test
+  public void testAdaptiveStrictValidationFailsTheTake()
+  {
+    final ResourcePool<String, String> pool =
+        createPool(ResourcePool.Implementation.ADAPTIVE, 1, NEVER_EXPIRES, false, true);
+    factory.markUnhealthy("billy#0", "billy#1", "billy#2");
+
+    Assertions.assertThrows(ISE.class, () -> pool.take("billy"));
+    Assertions.assertEquals(List.of("billy#0", "billy#1", "billy#2"), factory.closed(), "no attempt is leaked");
+
+    final ResourceContainer<String> fresh = pool.take("billy");
+    Assertions.assertEquals("billy#3", fresh.get());
+    fresh.returnResource();
+  }
+
+  @ParameterizedTest
+  @EnumSource(ResourcePool.Implementation.class)
+  public void testCountersRecordWhatHappenedToTheResources(ResourcePool.Implementation implementation)
+      throws Exception
+  {
+    final ResourcePool<String, String> pool = createPool(implementation, 1, EXPIRES_QUICKLY, false);
+    pool.take("billy").returnResource();
+    awaitExpiry();
+    pool.take("billy").returnResource();
+
+    final ResourcePool.Counters counters = pool.getCounters();
+    Assertions.assertEquals(2, counters.getOpened(), "opened");
+    Assertions.assertEquals(1, counters.getClosed(), "closed");
+    Assertions.assertEquals(1, counters.getTimedOut(), "timed out");
+    Assertions.assertEquals(0, counters.getErrored(), "errored");
+  }
+
+  @Test
+  public void testCountersRecordAFailingHealthCheckAsAnError()
+  {
+    final ResourcePool<String, String> pool = createPool(ResourcePool.Implementation.ADAPTIVE, 2, NEVER_EXPIRES, false);
+    pool.take("billy").returnResource();
+    factory.failHealthCheck("billy#0", new ISE("health check blew up"));
+
+    Assertions.assertThrows(ISE.class, () -> pool.take("billy"));
+
+    final ResourcePool.Counters counters = pool.getCounters();
+    Assertions.assertEquals(1, counters.getErrored(), "errored");
+    Assertions.assertEquals(1, counters.getClosed(), "the resource whose check threw is closed");
+  }
+
+  /**
    * A resource taken off the queue and handed to nobody is closed rather than leaked.
    */
   @Test
@@ -402,9 +504,20 @@ public class ResourcePoolTest
       boolean eagerInitialization
   )
   {
+    return createPool(implementation, maxPerKey, unusedResourceTimeoutMillis, eagerInitialization, false);
+  }
+
+  private ResourcePool<String, String> createPool(
+      ResourcePool.Implementation implementation,
+      int maxPerKey,
+      long unusedResourceTimeoutMillis,
+      boolean eagerInitialization,
+      boolean strictConnectionValidation
+  )
+  {
     return new ResourcePool<>(
         factory,
-        new ResourcePoolConfig(maxPerKey, unusedResourceTimeoutMillis, implementation),
+        new ResourcePoolConfig(maxPerKey, unusedResourceTimeoutMillis, implementation, strictConnectionValidation),
         eagerInitialization
     );
   }
