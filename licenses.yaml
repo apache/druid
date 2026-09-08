@@ -4562,6 +4562,18 @@ libraries:
 
 ---
 
+name: CEL Java
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.13.0
+libraries:
+  - dev.cel: common
+  - dev.cel: protobuf
+  - dev.cel: runtime
+
+---
+
 name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
