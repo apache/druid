@@ -38,9 +38,9 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.m2/build-cache
-          key: maven-build-cache-v1-${{ runner.os }}-java25-${{ github.sha }}
+          key: maven-build-cache-v2-${{ runner.os }}-java25-${{ hashFiles('pom.xml', 'web-console/**') }}
           restore-keys: |
-            maven-build-cache-v1-${{ runner.os }}-java25-
+            maven-build-cache-v2-${{ runner.os }}-java25-
       - name: Build the Druid distribution
         run: .github/scripts/build-dist
       - name: Save Maven build cache
@@ -48,7 +48,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ~/.m2/build-cache
-          key: maven-build-cache-v1-${{ runner.os }}-java25-${{ github.sha }}
+          key: maven-build-cache-v2-${{ runner.os }}-java25-${{ hashFiles('pom.xml', 'web-console/**') }}
       - name: Build the Docker image
         run: |
           DOCKER_BUILDKIT=1 docker build \

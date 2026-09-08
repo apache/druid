@@ -35,5 +35,5 @@ fi
 
 # No snapshot updates
 OPTS+=" -nsu"
-# build-dist has already installed the reactor artifacts in the local repository.
-mvn -B -pl embedded-tests $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
+# Keep upstream reactor dependencies available when the build cache restores outputs without running install.
+mvn -B -pl embedded-tests -am $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
