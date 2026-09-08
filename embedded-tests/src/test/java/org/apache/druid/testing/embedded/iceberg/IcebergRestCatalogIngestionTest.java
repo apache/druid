@@ -136,7 +136,22 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
   @Test
   public void testIngestFromIcebergRestCatalog()
   {
+    ingestFromIcebergRestCatalog(dataSource, false);
+  }
+
+  @Test
+  public void testIngestFromIcebergRestCatalogWithArrowReader()
+  {
+    ingestFromIcebergRestCatalog(dataSource + "_arrow", true);
+  }
+
+  private void ingestFromIcebergRestCatalog(final String targetDataSource, final boolean useArrowReader)
+  {
     final String catalogUri = icebergCatalog.getCatalogUri();
+    final String warehouseSource = useArrowReader ? "" : "\"warehouseSource\":{\"type\":\"local\"}";
+    final String arrowReaderOptions = useArrowReader
+                                      ? "\"useArrowReader\":true,\"arrowBatchSize\":2"
+                                      : "";
 
     final String sql = StringUtils.format(
         "INSERT INTO %s\n"
@@ -151,7 +166,7 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
         + "\"namespace\":\"%s\","
         + "\"icebergCatalog\":{\"type\":\"rest\",\"catalogUri\":\"%s\","
         + "\"catalogProperties\":{\"io-impl\":\"org.apache.iceberg.hadoop.HadoopFileIO\"}},"
-        + "\"warehouseSource\":{\"type\":\"local\"}}',\n"
+        + "%s%s}',\n"
         + "    '{\"type\":\"parquet\"}',\n"
         + "    '[{\"type\":\"string\",\"name\":\"event_time\"},"
         + "{\"type\":\"string\",\"name\":\"name\"},"
@@ -159,19 +174,21 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
         + "  )\n"
         + ")\n"
         + "PARTITIONED BY ALL TIME",
-        dataSource,
+        targetDataSource,
         ICEBERG_TABLE_NAME,
         ICEBERG_NAMESPACE,
-        catalogUri
+        catalogUri,
+        warehouseSource,
+        arrowReaderOptions
     );
 
     final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(targetDataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT __time, \"name\", \"value\" FROM %s ORDER BY __time",
-        dataSource,
+        targetDataSource,
         "2024-01-01T00:00:00.000Z,alice,100\n"
         + "2024-01-01T01:00:00.000Z,bob,200\n"
         + "2024-01-01T02:00:00.000Z,charlie,300"
