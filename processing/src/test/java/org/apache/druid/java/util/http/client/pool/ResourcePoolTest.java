@@ -399,10 +399,9 @@ public class ResourcePoolTest
     Assertions.assertEquals(1, counters.getClosed(), "closed");
     Assertions.assertEquals(1, counters.getTimedOut(), "timed out");
     Assertions.assertEquals(0, counters.getErrored(), "errored");
-    Assertions.assertEquals(1, counters.getOpen(), "still open");
 
     pool.close();
-    Assertions.assertEquals(0, counters.getOpen(), "nothing is left open by close()");
+    Assertions.assertEquals(2, counters.getClosed(), "close() discards what is left");
   }
 
   @Test

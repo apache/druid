@@ -104,12 +104,12 @@ public class HttpClientPoolMonitorTest
     pool.take("billy").returnResource();
     monitor.doMonitor(emitter);
     monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(1L, 1L), emitter.getMetricValues("httpClient/pool/open", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(1L, 1L), emitter.getMetricValues("httpClient/pool/currentlyOpen", GLOBAL_CLIENT));
 
     pool.close();
     emitter.flush();
     monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/open", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/currentlyOpen", GLOBAL_CLIENT));
   }
 
   @Test

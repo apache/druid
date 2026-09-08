@@ -557,7 +557,7 @@ client that owns the pool: `client` and `escalatedClient` are configured by `dru
 |`httpClient/pool/closed`|Number of connections closed, whether they were broken, unused for too long, or surplus.|`httpClient`|Varies|
 |`httpClient/pool/errored`|Number of failures while opening, health checking, or closing a connection.|`httpClient`|0|
 |`httpClient/pool/timedOut`|Number of connections discarded for being unused longer than `unusedConnectionTimeout`.|`httpClient`|Varies|
-|`httpClient/pool/open`|Number of connections open at the time of the emission, lent out or idle. Unlike the other metrics of this group this is a level, not a per period count.|`httpClient`|<= `druid.<service>.http.numConnections` times the number of services talked to. A value that only grows points at connections being leaked.|
+|`httpClient/pool/currentlyOpen`|Number of connections open at the time of the emission, lent out or idle. Unlike the other metrics of this group this is a level, not a per period count.|`httpClient`|<= `druid.<service>.http.numConnections` times the number of services talked to. A value that only grows points at connections being leaked.|
 
 ### JVM
 

@@ -30,8 +30,8 @@ import java.util.Map;
 
 /**
  * Emits what the connection pool of each HTTP client of this process did since the previous emission, under the
- * {@code httpClient} dimension of the client that owns the pool. {@code httpClient/pool/open} is the exception: it is
- * how many connections stand open right now, not a difference.
+ * {@code httpClient} dimension of the client that owns the pool. {@code httpClient/pool/currentlyOpen} is the
+ * exception: it is how many connections stand open right now, not a difference.
  */
 public class HttpClientPoolMonitor extends AbstractMonitor
 {
@@ -60,7 +60,7 @@ public class HttpClientPoolMonitor extends AbstractMonitor
       emitter.emit(builder.setMetric("httpClient/pool/closed", delta.closed()));
       emitter.emit(builder.setMetric("httpClient/pool/errored", delta.errored()));
       emitter.emit(builder.setMetric("httpClient/pool/timedOut", delta.timedOut()));
-      emitter.emit(builder.setMetric("httpClient/pool/open", pool.getValue().getOpen()));
+      emitter.emit(builder.setMetric("httpClient/pool/currentlyOpen", current.currentlyOpen()));
     }
     return true;
   }
@@ -75,6 +75,11 @@ public class HttpClientPoolMonitor extends AbstractMonitor
           counters.getErrored(),
           counters.getTimedOut()
       );
+    }
+
+    private long currentlyOpen()
+    {
+      return opened - closed;
     }
 
     private Snapshot since(Snapshot earlier)
