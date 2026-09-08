@@ -460,4 +460,25 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         ).trim()
     );
   }
+
+  @Test
+  @Timeout(60)
+  public void test_metricSourceFieldNotDiscoveredAsDimension()
+  {
+    // bytes_sent is a metric input consumed only by the LongSum aggregator into total_bytes. With schema
+    // discovery on, the scan transform must not re-promote it to a dimension/column after unnest expansion
+    // — otherwise IncrementalIndex would discover and store it as an extra dimension alongside total_bytes.
+    final String result = cluster.runSql(
+        StringUtils.format(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '%s' ORDER BY COLUMN_NAME",
+            dataSource
+        )
+    );
+    final Set<String> columns = new TreeSet<>(List.of(result.trim().split("\n")));
+    Assertions.assertFalse(
+        columns.contains("bytes_sent"),
+        "bytes_sent is a metric input and must not be discovered as a dimension/column: " + columns
+    );
+    Assertions.assertTrue(columns.contains("total_bytes"));
+  }
 }

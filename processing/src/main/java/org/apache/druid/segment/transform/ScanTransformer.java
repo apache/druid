@@ -169,8 +169,9 @@ public class ScanTransformer implements BaseTransformer
       return List.of();
     }
 
-    final List<String> columns = resolveColumnsForRow(inputRow);
-    final List<String> dimensionColumns = resolveDimensionColumns(inputRow, columns);
+    final Set<String> nonDimensionEventFields = resolveNonDimensionEventFields(inputRow);
+    final List<String> columns = resolveColumnsForRow(inputRow, nonDimensionEventFields);
+    final List<String> dimensionColumns = resolveDimensionColumns(inputRow, columns, nonDimensionEventFields);
     final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
 
     final List<InputRow> result = new ArrayList<>();
@@ -186,17 +187,27 @@ public class ScanTransformer implements BaseTransformer
     return result;
   }
 
-  private List<String> resolveColumnsForRow(final InputRow inputRow)
+  /**
+   * Returns the raw event fields present on {@code inputRow} that are not in {@link InputRow#getDimensions()}
+   * — e.g. metric inputs that {@code DataSchema} added to dimensionExclusions. These must still be read
+   * into the expanded rows' event maps (for aggregators), but must not be promoted to dimensions.
+   */
+  private static Set<String> resolveNonDimensionEventFields(final InputRow inputRow)
+  {
+    if (!(inputRow instanceof MapBasedInputRow)) {
+      return Set.of();
+    }
+    final Set<String> nonDimensionFields = new LinkedHashSet<>(((MapBasedInputRow) inputRow).getEvent().keySet());
+    nonDimensionFields.removeAll(inputRow.getDimensions());
+    return nonDimensionFields;
+  }
+
+  private List<String> resolveColumnsForRow(final InputRow inputRow, final Set<String> nonDimensionEventFields)
   {
     final Set<String> columns = new LinkedHashSet<>();
     columns.add(ColumnHolder.TIME_COLUMN_NAME);
     columns.addAll(inputRow.getDimensions());
-    // Include raw event fields that aren't in getDimensions() — e.g. metric inputs that DataSchema added
-    // to dimensionExclusions. Without this, fixed-dimension ingestions with metrics would read null for
-    // their metric source fields in expanded rows.
-    if (inputRow instanceof MapBasedInputRow) {
-      columns.addAll(((MapBasedInputRow) inputRow).getEvent().keySet());
-    }
+    columns.addAll(nonDimensionEventFields);
     for (final VirtualColumn vc : query.getVirtualColumns().getVirtualColumns()) {
       columns.add(vc.getOutputName());
     }
@@ -217,13 +228,14 @@ public class ScanTransformer implements BaseTransformer
 
   private static List<String> resolveDimensionColumns(
       final InputRow inputRow,
-      @Nullable final List<String> resultColumns
+      @Nullable final List<String> resultColumns,
+      final Set<String> nonDimensionEventFields
   )
   {
     final LinkedHashSet<String> dims = new LinkedHashSet<>(inputRow.getDimensions());
     if (resultColumns != null) {
       for (final String col : resultColumns) {
-        if (!ColumnHolder.TIME_COLUMN_NAME.equals(col)) {
+        if (!ColumnHolder.TIME_COLUMN_NAME.equals(col) && !nonDimensionEventFields.contains(col)) {
           dims.add(col);
         }
       }

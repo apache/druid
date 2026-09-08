@@ -415,7 +415,9 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   {
     // Simulates a fixed-dimensions ingestion with a metric: `bytes_sent` is in the raw event map
     // but excluded from getDimensions() because DataSchema added it to dimensionExclusions.
-    // The expanded rows must still carry `bytes_sent` so downstream aggregators can read it.
+    // The expanded rows must still carry `bytes_sent` so downstream aggregators can read it, but must
+    // NOT promote it to a dimension — IncrementalIndex treats getDimensions() as authoritative and
+    // would otherwise auto-discover/store the metric source field as a dimension.
     final LinkedHashMap<String, Object> event = new LinkedHashMap<>();
     event.put("user", "alice");
     event.put("tags", List.of("a", "b"));
@@ -429,8 +431,40 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     for (final InputRow row : result) {
       Assertions.assertEquals(1024L, row.getRaw("bytes_sent"));
       Assertions.assertEquals("alice", row.getRaw("user"));
+      Assertions.assertFalse(
+          row.getDimensions().contains("bytes_sent"),
+          "metric source field must not be promoted to a dimension"
+      );
+      Assertions.assertTrue(row.getDimensions().contains("user"));
+      Assertions.assertTrue(row.getDimensions().contains("tag"));
     }
     Assertions.assertEquals("a", result.get(0).getRaw("tag"));
     Assertions.assertEquals("b", result.get(1).getRaw("tag"));
+  }
+
+  @Test
+  public void testUnnestDoesNotDiscoverMetricSourceFieldAsDimension()
+  {
+    // Same scenario as above, but with multiple metric source fields (bytes_sent, latency_ms) that
+    // are never referenced by dimensions, virtual columns, or unnest output. None of them should
+    // appear in the expanded rows' dimensions.
+    final LinkedHashMap<String, Object> event = new LinkedHashMap<>();
+    event.put("host", "web-01");
+    event.put("tags", List.of("x", "y", "z"));
+    event.put("bytes_sent", 2048L);
+    event.put("latency_ms", 42L);
+    final InputRow input = new MapBasedInputRow(TIMESTAMP, List.of("host", "tags"), event);
+
+    final BaseTransformer transformer = makeTransformer(makeUnnestQuery("tags", "tag"));
+    final List<InputRow> result = transformer.transformToList(input);
+
+    Assertions.assertEquals(3, result.size());
+    for (final InputRow row : result) {
+      Assertions.assertEquals(2048L, row.getRaw("bytes_sent"));
+      Assertions.assertEquals(42L, row.getRaw("latency_ms"));
+      Assertions.assertEquals(List.of("host", "tags", "tag"), row.getDimensions());
+      Assertions.assertFalse(row.getDimensions().contains("bytes_sent"));
+      Assertions.assertFalse(row.getDimensions().contains("latency_ms"));
+    }
   }
 }
