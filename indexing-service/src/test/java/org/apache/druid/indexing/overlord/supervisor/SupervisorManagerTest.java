@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -654,15 +655,15 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
 
     final Object[] data = (Object[]) result.get("data");
-    Assert.assertEquals(200, data.length);
-    Assert.assertTrue(data[0] instanceof Map);
+    Assertions.assertEquals(200, data.length);
+    Assertions.assertInstanceOf(Map.class, data[0]);
     final Map<?, ?> firstDataPoint = (Map<?, ?>) data[0];
-    Assert.assertTrue(firstDataPoint.containsKey("lag"));
-    Assert.assertTrue(firstDataPoint.containsKey("taskCount"));
+    Assertions.assertTrue(firstDataPoint.containsKey("lag"));
+    Assertions.assertTrue(firstDataPoint.containsKey("taskCount"));
     for (Object dataPoint : data) {
-      Assert.assertTrue(dataPoint instanceof Map);
+      Assertions.assertInstanceOf(Map.class, dataPoint);
       final Number taskCount = (Number) ((Map<?, ?>) dataPoint).get("taskCount");
-      Assert.assertTrue(taskCount.intValue() >= 1 && taskCount.intValue() <= 10);
+      Assertions.assertTrue(taskCount.intValue() >= 1 && taskCount.intValue() <= 10);
     }
     EasyMock.verify(supervisor);
   }
@@ -684,8 +685,8 @@ public class SupervisorManagerTest extends EasyMockSupport
         Pair.of(supervisor, new TestBackfillSupervisorSpec(supervisorId, ingestionSpec))
     );
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DruidExceptionMatcher.assertThat(
+        Assertions.assertThrows(
             DruidException.class,
             () -> manager.simulateAutoscaling(
                 supervisorId,
