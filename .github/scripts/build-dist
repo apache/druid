@@ -18,4 +18,4 @@
 set -e
 set -x
 
-mvn -B clean install -Papache-release,dist,rat -DskipTests -Ddependency-check.skip -Dgpg.skip
+mvn -B -T1C clean install -Papache-release,dist,rat,bundle-contrib-exts -DskipTests -Ddependency-check.skip -Dgpg.skip
