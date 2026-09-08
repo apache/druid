@@ -722,7 +722,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
   }
 
   @Test
-  public void testLastSegmentRemovalEmitsMetricWithoutRefresh() throws IOException
+  public void testLastSegmentRemovalClearsRebuildState() throws IOException
   {
     final BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
@@ -736,21 +736,24 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
         CentralizedDatasourceSchemaConfig.create()
     );
     runningSchema = schema;
-    final DataSegment segment = walker.getSegments().stream()
-                                      .filter(s -> s.getDataSource().equals("foo2"))
-                                      .findFirst().orElseThrow();
-    schema.addSegment(druidServers.get(0).getMetadata(), segment);
-    schema.refresh(new HashSet<>(Set.of(segment.getId())), new HashSet<>(Set.of("foo2")));
-    Assertions.assertNotNull(schema.getDatasource("foo2"));
+    final List<DataSegment> segments = ImmutableList.of(segment1, segment2);
+    segments.forEach(segment -> schema.addSegment(druidServers.get(0).getMetadata(), segment));
+    schema.refresh(
+        segments.stream().map(DataSegment::getId).collect(Collectors.toSet()),
+        new HashSet<>(Set.of("foo"))
+    );
+    Assertions.assertNotNull(schema.getDatasource("foo"));
     emitter.flush();
 
-    // No background refresh is started: the callback itself must report successful removal.
-    schema.removeSegment(segment);
-    Assertions.assertNull(schema.getDatasource("foo2"));
-    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo2"), 1);
+    // Removing a non-last segment marks the datasource for rebuild before the last segment is removed.
+    schema.removeSegment(segments.get(0));
+    schema.removeSegment(segments.get(1));
+    Assertions.assertNull(schema.getDatasource("foo"));
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
 
-    schema.removeSegment(segment);
-    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo2"), 1);
+    // A later refresh must not process stale rebuild state and emit the removal metric again.
+    schema.refresh(new HashSet<>(), new HashSet<>());
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
   }
 
   @Test

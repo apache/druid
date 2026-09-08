@@ -605,6 +605,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               }
               removeSegmentAction(segment.getId());
               if (segmentsMap.isEmpty()) {
+                dataSourcesNeedingRebuild.remove(segment.getDataSource());
                 tables.remove(segment.getDataSource());
                 removeDataSourceAction(segment.getDataSource());
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
