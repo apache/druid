@@ -606,6 +606,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               removeSegmentAction(segment.getId());
               if (segmentsMap.isEmpty()) {
                 tables.remove(segment.getDataSource());
+                removeDataSourceAction(segment.getDataSource());
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
                 return null;
               } else {
@@ -624,6 +625,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * This method should be overridden by child classes to execute any action on segment removal.
    */
   protected abstract void removeSegmentAction(SegmentId segmentId);
+
+  /**
+   * Called under the cache lock after the last segment and its datasource table have been removed.
+   */
+  protected void removeDataSourceAction(String dataSource)
+  {
+    // No additional action by default.
+  }
 
   @VisibleForTesting
   public void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)

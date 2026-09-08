@@ -34,6 +34,7 @@ import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputRow;
@@ -718,6 +719,38 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     // SegmentMetadataCache#refreshSegmentsForDataSource
     schema.refreshSegments(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()));
     Assertions.assertEquals(5, schema.getSegmentMetadataSnapshot().size());
+  }
+
+  @Test
+  public void testLastSegmentRemovalEmitsMetricWithoutRefresh() throws IOException
+  {
+    final BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        Mockito.mock(TimelineServerView.class),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+    runningSchema = schema;
+    final DataSegment segment = walker.getSegments().stream()
+                                      .filter(s -> s.getDataSource().equals("foo2"))
+                                      .findFirst().orElseThrow();
+    schema.addSegment(druidServers.get(0).getMetadata(), segment);
+    schema.refresh(new HashSet<>(Set.of(segment.getId())), new HashSet<>(Set.of("foo2")));
+    Assertions.assertNotNull(schema.getDatasource("foo2"));
+    emitter.flush();
+
+    // No background refresh is started: the callback itself must report successful removal.
+    schema.removeSegment(segment);
+    Assertions.assertNull(schema.getDatasource("foo2"));
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo2"), 1);
+
+    schema.removeSegment(segment);
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo2"), 1);
   }
 
   @Test
