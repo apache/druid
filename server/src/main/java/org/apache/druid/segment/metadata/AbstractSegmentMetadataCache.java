@@ -591,7 +591,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       segmentsNeedingRefresh.remove(segment.getId());
       unmarkSegmentAsMutable(segment.getId());
 
-      segmentMetadataInfo.compute(
+      final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> remainingSegments = segmentMetadataInfo.compute(
           segment.getDataSource(),
           (dataSource, segmentsMap) -> {
             if (segmentsMap == null) {
@@ -605,7 +605,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               }
               removeSegmentAction(segment.getId());
               if (segmentsMap.isEmpty()) {
-                dataSourcesNeedingRebuild.remove(segment.getDataSource());
                 tables.remove(segment.getDataSource());
                 removeDataSourceAction(segment.getDataSource());
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
@@ -617,6 +616,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
             }
           }
       );
+      if (remainingSegments == null) {
+        dataSourcesNeedingRebuild.remove(segment.getDataSource());
+      }
 
       lock.notifyAll();
     }
