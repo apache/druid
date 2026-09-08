@@ -29,6 +29,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
@@ -174,11 +175,19 @@ public class ScanTransformer implements BaseTransformer
     final List<String> dimensionColumns = resolveDimensionColumns(inputRow, columns, nonDimensionEventFields);
     final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
 
+    // Selectors are lazy views over the cursor's current position — create them once per column
+    // here, then re-read via getObject() as the cursor advances, rather than reallocating a selector
+    // for every (output-row x column) pair.
+    final ColumnValueSelector<?>[] selectors = new ColumnValueSelector<?>[columns.size()];
+    for (int i = 0; i < columns.size(); i++) {
+      selectors[i] = selectorFactory.makeColumnValueSelector(columns.get(i));
+    }
+
     final List<InputRow> result = new ArrayList<>();
     while (!cursor.isDone()) {
       final Map<String, Object> event = new LinkedHashMap<>();
-      for (final String col : columns) {
-        event.put(col, selectorFactory.makeColumnValueSelector(col).getObject());
+      for (int i = 0; i < columns.size(); i++) {
+        event.put(columns.get(i), selectors[i].getObject());
       }
       result.add(new MapBasedInputRow(inputRow.getTimestampFromEpoch(), dimensionColumns, event));
       cursor.advance();
