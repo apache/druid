@@ -17,20 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.security.opa.opatypes;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 
-public class NoopSysMonitor extends SysMonitor
+public class OpaResponse
 {
-  public NoopSysMonitor()
+  private final boolean result;
+
+  @JsonCreator
+  public OpaResponse(@JsonProperty("result") JsonNode result)
   {
-    super();
+    if (result == null || !result.isBoolean()) {
+      throw new IllegalArgumentException("OPA response field [result] must be a JSON boolean");
+    }
+    this.result = result.booleanValue();
   }
 
-  @Override
-  public boolean doMonitor(ServiceEmitter emitter)
+  @JsonProperty
+  public boolean isResult()
   {
-    return false;
+    return result;
   }
 }

@@ -17,22 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.security.opa.opatypes;
 
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class SigarPidDiscovererTest
+public class OpaResource
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
+  private final String name;
+  private final String type;
 
-  @Test
-  public void simpleTest()
+  public OpaResource(
+      @JsonProperty("name") String name,
+      @JsonProperty("type") String type
+  )
   {
-    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
+    this.name = name;
+    this.type = type;
+  }
 
-    // Just make sure we don't crash
-    SigarPidDiscoverer.instance().getPid();
+  @JsonProperty
+  public String getName()
+  {
+    return name;
+  }
+
+  @JsonProperty
+  public String getType()
+  {
+    return type;
   }
 }

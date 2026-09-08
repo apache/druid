@@ -137,7 +137,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 ### Real-time
 
 :::info
-Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`, `OshiSysMonitor`, `JvmMonitor`, `JvmCpuMonitor`, `JvmThreadsMonitor` and `SysMonitor` 
+Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`, `OshiSysMonitor`, `JvmMonitor`, `JvmCpuMonitor` and `JvmThreadsMonitor`
 to represent the task ID are deprecated and will be removed in a future release. Use the `taskId` dimension instead.
 :::
 
@@ -230,6 +230,7 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |------|-----------|----------|------------|
 |`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Always `1`.|
 |`ingest/segments/count`|Count of final segments created by job (includes tombstones). | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
+|`ingest/segments/oversized`|Count of final segments created by job that were detected as being oversized, meaning the number of rows in the segment exceeded more than twice the maxRowsPerSegment in the spec. This is relevant only for hash and range partitioned ingestions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
 |`ingest/rows/published`|Number of rows successfully published by the job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
 |`ingest/tombstones/count`|Count of tombstones created by job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
 
@@ -572,32 +573,6 @@ These metrics are available only when `druid.zk.service.enabled = true`.
 |------|-----------|----------|------------|
 |`zk/connected`|Indicator of connection status. `1` for connected, `0` for disconnected. Emitted once per monitor period.|None|1|
 |`zk/reconnect/time`|Amount of time, in milliseconds, that a server was disconnected from ZooKeeper before reconnecting. Emitted on reconnection. Not emitted if connection to ZooKeeper is permanently lost, because in this case, there is no reconnection.|None|Not present|
-
-## Sys [Deprecated]
-
-> SysMonitor is now deprecated and will be removed in future releases.
-> Instead, use the new OSHI monitor called [OshiSysMonitor](#oshisysmonitor). The new monitor has a wider support for different machine architectures including ARM instances.
-
-These metrics are only available if the `SysMonitor` module is included.
-
-|Metric|Description|Dimensions|Normal value|
-|------|-----------|----------|------------|
-|`sys/swap/free`|Free swap||Varies|
-|`sys/swap/max`|Max swap||Varies|
-|`sys/swap/pageIn`|Paged in swap||Varies|
-|`sys/swap/pageOut`|Paged out swap||Varies|
-|`sys/disk/write/count`|Writes to disk|`fsDevName`, `fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/disk/read/count`|Reads from disk|`fsDevName`, `fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/disk/write/size`|Bytes written to disk. One indicator of the amount of paging occurring for segments.|`fsDevName`,`fsDirName`,`fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/disk/read/size`|Bytes read from disk. One indicator of the amount of paging occurring for segments.|`fsDevName`,`fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/net/write/size`|Bytes written to the network|`netName`, `netAddress`, `netHwaddr`|Varies|
-|`sys/net/read/size`|Bytes read from the network|`netName`, `netAddress`, `netHwaddr`|Varies|
-|`sys/fs/used`|Filesystem bytes used|`fsDevName`, `fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|< max|
-|`sys/fs/max`|Filesystem bytes max|`fsDevName`, `fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/mem/used`|Memory used||< max|
-|`sys/mem/max`|Memory max||Varies|
-|`sys/storage/used`|Disk space used|`fsDirName`|Varies|
-|`sys/cpu`|CPU used|`cpuName`, `cpuTime`|Varies|
 
 ## OshiSysMonitor
 

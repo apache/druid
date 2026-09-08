@@ -17,31 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
+//CHECKSTYLE.OFF: PackageName - Must be in RoaringBitmap to reach ImmutableRoaringBitmap.highLowContainer
 
-import com.google.common.collect.Lists;
-import com.google.inject.Inject;
-import org.apache.druid.java.util.metrics.SysMonitor;
-import org.apache.druid.segment.loading.SegmentLoaderConfig;
-import org.apache.druid.segment.loading.StorageLocationConfig;
-
-import java.util.List;
+package org.roaringbitmap.buffer;
 
 /**
+ * Exposes {@link ImmutableRoaringBitmap#highLowContainer}, which is package-private. Every method on
+ * {@link PointableRoaringArray} is public; only the field holding it is not.
  */
-public class DruidSysMonitor extends SysMonitor
+public final class DruidRoaringBufferAccess
 {
-  @Inject
-  public DruidSysMonitor(
-      SegmentLoaderConfig config
-  )
+  private DruidRoaringBufferAccess()
   {
-    final List<StorageLocationConfig> locs = config.getLocations();
-    List<String> dirs = Lists.newArrayListWithExpectedSize(locs.size());
-    for (StorageLocationConfig loc : locs) {
-      dirs.add(loc.getPath().toString());
-    }
+  }
 
-    addDirectoriesToMonitor(dirs.toArray(new String[0]));
+  public static PointableRoaringArray highLowContainer(final ImmutableRoaringBitmap bitmap)
+  {
+    return bitmap.highLowContainer;
   }
 }

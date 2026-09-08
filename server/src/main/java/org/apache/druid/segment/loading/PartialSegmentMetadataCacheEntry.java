@@ -757,6 +757,13 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     // blocked on it. adjustReservation also runs outside entryLock: StorageLocation.release goes
     // writeLock -> entryLock (via release -> unmount), so entryLock -> writeLock here would be a deadlock-prone
     // lock-order inversion.
+    // Hold this entry against reclaim for as long as the mount is establishing state. reclaim passes over held
+    // entries only, and an entry evicted mid-mount finishes into a location that no longer knows about it: the
+    // post-mount check then rolls the whole thing back, or worse commits it if a fresh entry has taken the id in the
+    // meantime, leaving a mapper nothing will ever unmount. Released before the cleanup in the catch below, which only
+    // acts on an entry no one holds.
+    final StorageLocation.ReservationHold<SegmentCacheEntry> selfHold =
+        mountLocation.addInternalWeakReservationHoldIfExists(id);
     try {
       entryLock.lock();
       try {
@@ -870,8 +877,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     catch (Throwable t) {
       // Reclaim the reservation of an entry that is still registered here but no longer held, which the rollbacks
       // above have just left with a closed mapper and no header on disk. No-op if anything holds this (including
-      // bundle entries). Runs outside entryLock (the inner blocks released it) so the writeLock -> entryLock order
-      // inside removeUnheldWeakEntry is respected.
+      // bundle entries), so the mount's own hold has to go first. Runs outside entryLock (the inner blocks released
+      // it) so the writeLock -> entryLock order inside removeUnheldWeakEntry is respected.
+      CloseableUtils.closeAndSuppressExceptions(selfHold, e -> LOG.warn(e, "Failed to release mount hold[%s]", id));
       try {
         mountLocation.removeUnheldWeakEntry(id);
       }
@@ -879,6 +887,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         t.addSuppressed(removeError);
       }
       throw t;
+    }
+    finally {
+      CloseableUtils.closeAndSuppressExceptions(selfHold, e -> LOG.warn(e, "Failed to release mount hold[%s]", id));
     }
   }
 

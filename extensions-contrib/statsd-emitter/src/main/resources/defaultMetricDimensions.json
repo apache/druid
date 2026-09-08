@@ -55,6 +55,7 @@
   "ingest/merge/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/segments/oversized" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/rows/published": { "dimensions" : ["dataSource"], "type" : "count" },
 
   "ingest/realtime/segmentUpgrade/persisted" : { "dimensions" : ["dataSource", "interval", "version"], "type" : "count" },

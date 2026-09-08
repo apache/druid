@@ -17,26 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.security.opa.opatypes;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.server.security.AuthenticationResult;
 
-public class NoopSysMonitorTest
+public class OpaMessage
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
+  private final OpaInput input;
 
-  @Test
-  public void testDoMonitor()
+  public OpaMessage(
+      @JsonProperty("authenticationResult") AuthenticationResult authenticationResult,
+      @JsonProperty("action") String action,
+      @JsonProperty("resourceName") String resourceName,
+      @JsonProperty("resourceType") String resourceType
+  )
   {
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
+    this.input = new OpaInput(authenticationResult, action, resourceName, resourceType);
+  }
 
-    ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
-    NoopSysMonitor noopSysMonitor = new NoopSysMonitor();
-
-    Assertions.assertFalse(noopSysMonitor.doMonitor(serviceEmitter));
+  @JsonProperty
+  public OpaInput getInput()
+  {
+    return input;
   }
 }

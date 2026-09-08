@@ -49,7 +49,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -57,6 +59,7 @@ class PartialSegmentMetadataCacheEntryTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private static final SegmentId SEGMENT_ID = SegmentId.of("test", Intervals.of("2025/2026"), "v1", 0);
+  private static final SegmentId OTHER_SEGMENT_ID = SegmentId.of("other", Intervals.of("2025/2026"), "v1", 0);
   private static final long ESTIMATE = 16 * 1024 * 1024L;
 
   @RegisterExtension
@@ -120,6 +123,66 @@ class PartialSegmentMetadataCacheEntryTest
     // mount failure must delete the on-disk header so a retry starts clean (matches eager SegmentCacheEntry behavior)
     final File headerFile = new File(cacheDir, IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX);
     Assertions.assertFalse(headerFile.exists(), "mount failure must delete the on-disk header file");
+  }
+
+  @Test
+  void testReclaimCannotEvictAnEntryWhileItIsMounting() throws Exception
+  {
+    // Room for one entry's reservation and no more, so a second reservation can only succeed by reclaiming the first.
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE, null);
+    final CountDownLatch entered = new CountDownLatch(1);
+    final CountDownLatch release = new CountDownLatch(1);
+    final PartialSegmentMetadataCacheEntry entry = newGatedEntry(ESTIMATE, entered, release);
+
+    final StorageLocation.ReservationHold<SegmentCacheEntry> reserver =
+        location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertNotNull(reserver);
+
+    final ExecutorService exec = Execs.multiThreaded(1, "mount-self-hold-test-%d");
+    try {
+      final Future<?> mounting = exec.submit(() -> {
+        entry.mount(location);
+        return null;
+      });
+      Assertions.assertTrue(entered.await(30, TimeUnit.SECONDS), "mount must reach the gated read");
+
+      // The acquire that started this mount gives up. Nothing outside the mount holds the entry now, which is
+      // exactly when reclaim would previously have been free to take it.
+      reserver.close();
+
+      // A reservation that only fits if this entry is evicted. It must fail rather than pull the entry out from
+      // under the mount that is still filling it.
+      final PartialSegmentMetadataCacheEntry other = new PartialSegmentMetadataCacheEntry(
+          OTHER_SEGMENT_ID,
+          cacheDir,
+          IndexIO.V10_FILE_NAME,
+          List.of(),
+          new DirectoryBackedRangeReader(segmentFile.getParentFile()),
+          JSON_MAPPER,
+          null,
+          ESTIMATE,
+          PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+          PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+      );
+      final StorageLocation.ReservationHold<SegmentCacheEntry> contender =
+          location.addWeakReservationHold(other.getId(), () -> other);
+      Assertions.assertNull(contender, "reclaim must not evict an entry whose mount is still in flight");
+      Assertions.assertNotNull(
+          location.getCacheEntry(entry.getId()),
+          "the mounting entry must still be registered"
+      );
+
+      release.countDown();
+      mounting.get(30, TimeUnit.SECONDS);
+    }
+    finally {
+      release.countDown();
+      exec.shutdownNow();
+    }
+
+    // The mount ran to completion against an entry the location still knows about.
+    Assertions.assertTrue(entry.isMounted());
+    Assertions.assertNotNull(location.getCacheEntry(entry.getId()));
   }
 
   @Test
@@ -579,6 +642,42 @@ class PartialSegmentMetadataCacheEntryTest
         entry.inferBundleDependencies(Projections.getClusterGroupBundleName(List.of(0)))
     );
     Assertions.assertEquals(List.of(), entry.inferBundleDependencies("some_projection"));
+  }
+
+  /**
+   * A range reader that parks the first read until the test lets it through, so a mount can be held mid-flight.
+   */
+  private PartialSegmentMetadataCacheEntry newGatedEntry(long estimate, CountDownLatch entered, CountDownLatch release)
+  {
+    final SegmentRangeReader delegate = new DirectoryBackedRangeReader(segmentFile.getParentFile());
+    final AtomicBoolean gated = new AtomicBoolean(false);
+    final SegmentRangeReader gatedReader = (filename, offset, length) -> {
+      if (gated.compareAndSet(false, true)) {
+        entered.countDown();
+        try {
+          if (!release.await(30, TimeUnit.SECONDS)) {
+            throw new IOException("timed out waiting for the test to release the mount");
+          }
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IOException(e);
+        }
+      }
+      return delegate.readRange(filename, offset, length);
+    };
+    return new PartialSegmentMetadataCacheEntry(
+        SEGMENT_ID,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        gatedReader,
+        JSON_MAPPER,
+        null,
+        estimate,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+    );
   }
 
   private PartialSegmentMetadataCacheEntry newEntry(long estimate)

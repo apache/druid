@@ -313,7 +313,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     doHandoff = true;
     topic = getTopicName();
     records = generateRecords(topic);
-    reportsFile = File.createTempFile("KafkaIndexTaskTestReports-" + System.currentTimeMillis(), "json");
+    reportsFile = temporaryFolder.newFile("KafkaIndexTaskTestReports.json");
     makeToolboxFactory();
   }
 

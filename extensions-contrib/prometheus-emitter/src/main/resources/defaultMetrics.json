@@ -103,6 +103,7 @@
 
   "ingest/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of 1 every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions." },
   "ingest/segments/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of final segments created by job (includes tombstones)." },
+  "ingest/segments/oversized" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of final segments created by job that were detected as being oversized, meaning the number of rows in the segment exceeded more than 2x the maxRowsPerSegment in the spec. This is relevant only for hash and range partitioned ingestions." },
   "ingest/tombstones/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Count of tombstones created by job." },
   "ingest/rows/published": { "dimensions" : ["dataSource", "taskType"], "type" : "count", "help": "Number of rows successfully published by the job." },
 

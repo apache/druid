@@ -17,29 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.security.opa;
 
-import org.hyperic.sigar.Sigar;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+import org.apache.druid.initialization.DruidModule;
 
-public class SigarLoadTest
+import java.util.List;
+
+public class OpaDruidModule implements DruidModule
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
 
-  @BeforeEach
-  public void before()
+  @Override
+  public void configure(Binder binder)
   {
-    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
   }
 
-  @Test
-  public void testSigarLoad()
+  @Override
+  public List<? extends Module> getJacksonModules()
   {
-    Sigar sigar = SigarUtil.getSigar();
-    Assertions.assertTrue(sigar.getPid() > 0);
+    return ImmutableList.of(new SimpleModule("Opa").registerSubtypes(OpaAuthorizer.class));
   }
 }
