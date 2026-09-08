@@ -291,15 +291,6 @@
             </snapshots>
         </repository>
 
-        <!-- Only used by core, but moved to root for parallel build dependency resolution -->
-        <repository>
-            <id>sigar</id>
-            <url>https://repository.mulesoft.org/nexus/content/repositories/public</url>
-            <snapshots>
-               <enabled>false</enabled>
-            </snapshots>
-        </repository>
-
         <repository>
             <id>cflt-public</id>
             <url>https://packages.confluent.io/maven/</url>
