@@ -331,6 +331,7 @@ public class ResourcePool<K, V> implements Closeable
      * Try to return a previously created resource if it isGood(). Else, generate a new resource
      */
     @Nullable
+    @Override
     V get()
     {
       final V poolVal;
@@ -391,6 +392,7 @@ public class ResourcePool<K, V> implements Closeable
       return retVal;
     }
 
+    @Override
     void giveBack(V object)
     {
       Preconditions.checkNotNull(object, "object");
