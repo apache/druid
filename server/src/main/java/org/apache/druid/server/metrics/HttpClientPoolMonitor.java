@@ -57,7 +57,7 @@ public class HttpClientPoolMonitor extends AbstractMonitor
                                                                     .setDimension(CLIENT_DIMENSION, client.getKey())
                                                                     .setDimension(
                                                                         SERVER_DIMENSION,
-                                                                        String.valueOf(pool.getKey())
+                                                                        serverOf(pool.getKey())
                                                                     );
         emitter.emit(builder.setMetric("httpClient/pool/opened", stats.opened()));
         emitter.emit(builder.setMetric("httpClient/pool/closed", stats.closed()));
@@ -70,5 +70,16 @@ public class HttpClientPoolMonitor extends AbstractMonitor
       }
     }
     return true;
+  }
+
+  /**
+   * The pool key without its scheme, so that {@code host:port} reads the same here as it does under the
+   * {@code server} dimension of the query metrics.
+   */
+  private static String serverOf(Object poolKey)
+  {
+    final String key = String.valueOf(poolKey);
+    final int schemeEnd = key.indexOf("://");
+    return schemeEnd < 0 ? key : key.substring(schemeEnd + 3);
   }
 }

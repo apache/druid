@@ -680,6 +680,8 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`(number of cores) * 3 / 2 + 1`|
 |`druid.global.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.global.http.poolImplementation`|How the connection pool follows demand. With `adaptive`, a request discards every stale or broken connection it walks past, so the pool falls back to the size the traffic needs. With `retaining`, the pool keeps every connection it has opened, replacing a stale or broken one by a fresh one, one for one.|`adaptive`|
+|`druid.global.http.strictConnectionValidation`|Whether a request fails instead of being sent over a connection that never passed its health check. A new connection is validated and replaced up to three times; if all attempts fail, the last one is used anyway and a warning is logged, unless this is `true`. Only used with `poolImplementation` `adaptive`.|`false`|
 
 ### Common endpoints configuration
 
@@ -1815,6 +1817,8 @@ client has the following configuration options.
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context-reference.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
 |`druid.broker.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.broker.http.poolImplementation`|How the connection pool follows demand. With `adaptive`, a query discards every stale or broken connection it walks past, so the pool falls back to the size the traffic needs. With `retaining`, the pool keeps every connection it has opened, replacing a stale or broken one by a fresh one, one for one.|`adaptive`|
+|`druid.broker.http.strictConnectionValidation`|Whether a query fails instead of being sent over a connection that never passed its health check. A new connection is validated and replaced up to three times; if all attempts fail, the last one is used anyway and a warning is logged, unless this is `true`. Only used with `poolImplementation` `adaptive`.|`false`|
 
 
 ##### Retry policy
@@ -2330,6 +2334,9 @@ Supported query contexts:
 |`druid.router.http.numConnections`|Size of connection pool for the Router to connect to Broker processes. If there are more queries than this number that all need to speak to the same process, then they will queue up.|`20`|
 |`druid.router.http.eagerInitialization`|Indicates that http connections from Router to Broker should be eagerly initialized. If set to true, `numConnections` connections are created upon initialization|`true`|
 |`druid.router.http.readTimeout`|The timeout for data reads from Broker processes.|`PT15M`|
+|`druid.router.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.router.http.readTimeout`. Set this timeout = ~90% of `druid.router.http.readTimeout`|`PT4M`|
+|`druid.router.http.poolImplementation`|How the connection pool follows demand. With `adaptive`, a query discards every stale or broken connection it walks past, so the pool falls back to the size the traffic needs. With `retaining`, the pool keeps every connection it has opened, replacing a stale or broken one by a fresh one, one for one.|`adaptive`|
+|`druid.router.http.strictConnectionValidation`|Whether a query fails instead of being sent over a connection that never passed its health check. A new connection is validated and replaced up to three times; if all attempts fail, the last one is used anyway and a warning is logged, unless this is `true`. Only used with `poolImplementation` `adaptive`.|`false`|
 |`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`(number of cores) * 3 / 2 + 1`|
 |`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|
 |`druid.router.http.requestBuffersize`|Size of the content buffer for receiving requests. These buffers are only used for active connections that have requests with bodies that will not fit within the header buffer|`8 * 1024`|

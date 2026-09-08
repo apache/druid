@@ -118,6 +118,27 @@ public class HttpClientPoolMonitorTest
     Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/idle", BILLY));
   }
 
+  /**
+   * The scheme of the pool key is left out, so that the remote end reads the same as under the {@code server}
+   * dimension of the query metrics.
+   */
+  @Test
+  public void testTheRemoteEndIsReportedWithoutItsScheme()
+  {
+    registry.register("global", pool);
+    pool.take("https://1.2.3.4:8283").returnResource();
+
+    new HttpClientPoolMonitor(registry).doMonitor(emitter);
+
+    Assertions.assertEquals(
+        List.of(1L),
+        emitter.getMetricValues(
+            "httpClient/pool/taken",
+            Map.of("httpClient", "global", "server", "1.2.3.4:8283")
+        )
+    );
+  }
+
   @Test
   public void testAClientNameIsRegisteredOnlyOnce()
   {
