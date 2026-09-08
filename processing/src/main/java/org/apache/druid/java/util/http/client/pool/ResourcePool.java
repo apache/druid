@@ -104,6 +104,7 @@ public class ResourcePool<K, V> implements Closeable
     if (value == null) {
       return null;
     }
+    counters.taken.incrementAndGet();
 
     return new ResourceContainer<>()
     {
@@ -122,6 +123,7 @@ public class ResourcePool<K, V> implements Closeable
         if (returned.getAndSet(true)) {
           log.warn("Resource at key[%s] was returned multiple times?", key);
         } else {
+          counters.returned.incrementAndGet();
           holder.giveBack(value);
         }
       }
@@ -173,6 +175,8 @@ public class ResourcePool<K, V> implements Closeable
     private final AtomicLong closed = new AtomicLong();
     private final AtomicLong errored = new AtomicLong();
     private final AtomicLong timedOut = new AtomicLong();
+    private final AtomicLong taken = new AtomicLong();
+    private final AtomicLong returned = new AtomicLong();
 
     public long getOpened()
     {
@@ -200,15 +204,33 @@ public class ResourcePool<K, V> implements Closeable
       return timedOut.get();
     }
 
+    /**
+     * Resources handed to a caller by {@link #take}.
+     */
+    public long getTaken()
+    {
+      return taken.get();
+    }
+
+    /**
+     * Resources a caller gave back through {@link ResourceContainer#returnResource()}.
+     */
+    public long getReturned()
+    {
+      return returned.get();
+    }
+
     @Override
     public String toString()
     {
       return StringUtils.format(
-          "Counters{opened=%d, closed=%d, errored=%d, timedOut=%d}",
+          "Counters{opened=%d, closed=%d, errored=%d, timedOut=%d, taken=%d, returned=%d}",
           getOpened(),
           getClosed(),
           getErrored(),
-          getTimedOut()
+          getTimedOut(),
+          getTaken(),
+          getReturned()
       );
     }
   }

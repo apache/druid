@@ -557,7 +557,10 @@ client that owns the pool: `client` and `escalatedClient` are configured by `dru
 |`httpClient/pool/closed`|Number of connections closed, whether they were broken, unused for too long, or surplus.|`httpClient`|Varies|
 |`httpClient/pool/errored`|Number of failures while opening, health checking, or closing a connection.|`httpClient`|0|
 |`httpClient/pool/timedOut`|Number of connections discarded for being unused longer than `unusedConnectionTimeout`.|`httpClient`|Varies|
-|`httpClient/pool/currentlyOpen`|Number of connections open at the time of the emission, lent out or idle. Unlike the other metrics of this group this is a level, not a per period count.|`httpClient`|<= `druid.<service>.http.numConnections` times the number of services talked to. A value that only grows points at connections being leaked.|
+|`httpClient/pool/taken`|Number of connections handed to a caller, that is, the number of requests that got a connection.|`httpClient`|Varies|
+|`httpClient/pool/returned`|Number of connections given back by a caller.|`httpClient`|Close to `httpClient/pool/taken`|
+|`httpClient/pool/currentlyOpen`|Number of connections open at the time of the emission, lent out or idle. A level, not a per period count.|`httpClient`|<= `druid.<service>.http.numConnections` times the number of services talked to. A value that only grows points at connections being leaked.|
+|`httpClient/pool/currentlyUsed`|Number of connections in the hands of callers at the time of the emission, that is, the requests in flight over this client. A level, not a per period count.|`httpClient`|<= `druid.<service>.http.numConnections` times the number of services talked to. Sitting at that ceiling means requests are waiting for a connection.|
 
 ### JVM
 

@@ -30,8 +30,8 @@ import java.util.Map;
 
 /**
  * Emits what the connection pool of each HTTP client of this process did since the previous emission, under the
- * {@code httpClient} dimension of the client that owns the pool. {@code httpClient/pool/currentlyOpen} is the
- * exception: it is how many connections stand open right now, not a difference.
+ * {@code httpClient} dimension of the client that owns the pool. The {@code currentlyOpen} and {@code currentlyUsed}
+ * metrics are the exception: they are levels, not differences.
  */
 public class HttpClientPoolMonitor extends AbstractMonitor
 {
@@ -60,12 +60,15 @@ public class HttpClientPoolMonitor extends AbstractMonitor
       emitter.emit(builder.setMetric("httpClient/pool/closed", delta.closed()));
       emitter.emit(builder.setMetric("httpClient/pool/errored", delta.errored()));
       emitter.emit(builder.setMetric("httpClient/pool/timedOut", delta.timedOut()));
+      emitter.emit(builder.setMetric("httpClient/pool/taken", delta.taken()));
+      emitter.emit(builder.setMetric("httpClient/pool/returned", delta.returned()));
       emitter.emit(builder.setMetric("httpClient/pool/currentlyOpen", current.currentlyOpen()));
+      emitter.emit(builder.setMetric("httpClient/pool/currentlyUsed", current.currentlyUsed()));
     }
     return true;
   }
 
-  private record Snapshot(long opened, long closed, long errored, long timedOut)
+  private record Snapshot(long opened, long closed, long errored, long timedOut, long taken, long returned)
   {
     private static Snapshot of(ResourcePool.Counters counters)
     {
@@ -73,13 +76,20 @@ public class HttpClientPoolMonitor extends AbstractMonitor
           counters.getOpened(),
           counters.getClosed(),
           counters.getErrored(),
-          counters.getTimedOut()
+          counters.getTimedOut(),
+          counters.getTaken(),
+          counters.getReturned()
       );
     }
 
     private long currentlyOpen()
     {
       return opened - closed;
+    }
+
+    private long currentlyUsed()
+    {
+      return taken - returned;
     }
 
     private Snapshot since(Snapshot earlier)
@@ -91,7 +101,9 @@ public class HttpClientPoolMonitor extends AbstractMonitor
           opened - earlier.opened,
           closed - earlier.closed,
           errored - earlier.errored,
-          timedOut - earlier.timedOut
+          timedOut - earlier.timedOut,
+          taken - earlier.taken,
+          returned - earlier.returned
       );
     }
   }

@@ -20,6 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.http.client.pool.ResourceContainer;
 import org.apache.druid.java.util.http.client.pool.ResourceFactory;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.java.util.http.client.pool.ResourcePoolConfig;
@@ -89,6 +90,29 @@ public class HttpClientPoolMonitorTest
     emitter.flush();
     monitor.doMonitor(emitter);
     Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/closed", GLOBAL_CLIENT));
+  }
+
+  /**
+   * The connections in the hands of callers are reported while they are held, which is what the load over a client
+   * looks like, and go back to zero once they are given back.
+   */
+  @Test
+  public void testUsedConnectionsAreReportedWhileTheyAreHeld()
+  {
+    registry.register("global", pool.getCounters());
+    final HttpClientPoolMonitor monitor = new HttpClientPoolMonitor(registry);
+
+    final ResourceContainer<String> lent = pool.take("billy");
+    monitor.doMonitor(emitter);
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/taken", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/returned", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/currentlyUsed", GLOBAL_CLIENT));
+
+    lent.returnResource();
+    emitter.flush();
+    monitor.doMonitor(emitter);
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/returned", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/currentlyUsed", GLOBAL_CLIENT));
   }
 
   /**
