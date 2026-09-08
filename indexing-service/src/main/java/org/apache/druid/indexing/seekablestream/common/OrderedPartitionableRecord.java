@@ -54,6 +54,21 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
     this(stream, partitionId, sequenceNumber, data, null, false);
   }
 
+  /**
+   * Backwards-compatible overload without {@code filtered} (defaults to false), retained so that existing
+   * stream extensions compiled against the previous signature keep working.
+   */
+  public OrderedPartitionableRecord(
+      String stream,
+      PartitionIdType partitionId,
+      SequenceOffsetType sequenceNumber,
+      List<RecordType> data,
+      Long timestamp
+  )
+  {
+    this(stream, partitionId, sequenceNumber, data, timestamp, false);
+  }
+
   public OrderedPartitionableRecord(
       String stream,
       PartitionIdType partitionId,

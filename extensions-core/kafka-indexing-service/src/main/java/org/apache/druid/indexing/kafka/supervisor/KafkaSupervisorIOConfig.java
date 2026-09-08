@@ -240,7 +240,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            && Objects.equals(consumerProperties, that.consumerProperties)
            && Objects.equals(configOverrides, that.configOverrides)
            && Objects.equals(topic, that.topic)
-           && Objects.equals(topicPattern, that.topicPattern);
+           && Objects.equals(topicPattern, that.topicPattern)
+           && Objects.equals(headerBasedFilterConfig, that.headerBasedFilterConfig);
   }
 
   @Override
@@ -253,7 +254,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         configOverrides,
         topic,
         topicPattern,
-        emitTimeLagMetrics
+        emitTimeLagMetrics,
+        headerBasedFilterConfig
     );
   }
 

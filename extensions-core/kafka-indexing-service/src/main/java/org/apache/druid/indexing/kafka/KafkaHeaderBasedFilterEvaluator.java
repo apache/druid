@@ -156,7 +156,9 @@ public class KafkaHeaderBasedFilterEvaluator
     }
     catch (Exception e) {
       // Includes UncheckedIOException wrapping CharacterCodingException for malformed/unmappable input.
-      log.warn(e, "Failed to decode header bytes, treating as null");
+      // Logged at debug because this is on the per-record path: a high-rate topic with bad bytes or an
+      // encoding mismatch would otherwise flood logs. The record is still included (permissive behavior).
+      log.debug(e, "Failed to decode header bytes, treating as null");
       return null;
     }
   }

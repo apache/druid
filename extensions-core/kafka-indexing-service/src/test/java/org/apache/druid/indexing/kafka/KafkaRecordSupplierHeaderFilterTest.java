@@ -483,6 +483,6 @@ public class KafkaRecordSupplierHeaderFilterTest
       TopicPartition tp = new TopicPartition(record.topic(), record.partition());
       recordsMap.computeIfAbsent(tp, k -> new ArrayList<>()).add(record);
     }
-    return new ConsumerRecords<>(recordsMap);
+    return new ConsumerRecords<>(recordsMap, Map.of());
   }
 }
