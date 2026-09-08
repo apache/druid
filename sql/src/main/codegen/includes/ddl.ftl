@@ -74,15 +74,17 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
 }
 
 // A table element is either a column declaration or a projection definition. A column may legitimately be named
-// "projection" (the keyword is non-reserved) and may have a bare-identifier type, so two tokens are not enough to
-// tell the two apart: a projection definition is distinguished by its third token, which is always '(' or AS.
+// "projection" (the keyword is non-reserved), and its type may itself start with a non-reserved keyword and a
+// parenthesis: "projection TYPE('COMPLEX<json>')" is a column. So neither two nor three tokens are enough to tell
+// the two apart. A projection is recognized by what follows its name: AS, or a parenthesized body starting with
+// SELECT; a column's TYPE(...) parenthesis holds a string literal, never SELECT.
 void AddDruidTableElement(List<SqlNode> columns, List<SqlNode> projections) :
 {
   final DruidSqlColumnDeclaration column;
   final SqlProjectionSpec projection;
 }
 {
-  LOOKAHEAD(3)
+  LOOKAHEAD(<PROJECTION> SimpleIdentifier() ( <AS> | <LPAREN> <SELECT> ))
   projection = DruidProjectionDefinition()
   {
     projections.add(projection);

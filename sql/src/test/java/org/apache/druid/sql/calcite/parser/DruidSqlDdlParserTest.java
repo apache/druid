@@ -218,6 +218,29 @@ public class DruidSqlDdlParserTest
   }
 
   @Test
+  public void testColumnNamedProjectionWithTypeEscapeHatch()
+  {
+    final DruidSqlCreateTable create = parseCreate(
+        "CREATE TABLE t (projection TYPE('COMPLEX<json>'), a VARCHAR)"
+    );
+    assertEquals(0, create.getProjectionList().size());
+    assertEquals("projection `COMPLEX<json>`, a VARCHAR", columnsOf(create));
+  }
+
+  @Test
+  public void testProjectionNamedType()
+  {
+    assertEquals(
+        1,
+        parseCreate("CREATE TABLE t (a VARCHAR, PROJECTION type AS (SELECT a GROUP BY a))").getProjectionList().size()
+    );
+    assertEquals(
+        1,
+        parseCreate("CREATE TABLE t (a VARCHAR, PROJECTION type (SELECT a GROUP BY a))").getProjectionList().size()
+    );
+  }
+
+  @Test
   public void testCreateTableMultipleProjections()
   {
     final DruidSqlCreateTable create = parseCreate(
