@@ -4384,7 +4384,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.72.0
+version: 2.73.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -4518,7 +4518,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.84.0
+version: 2.85.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4627,7 +4627,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.74.0
+version: 2.75.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
