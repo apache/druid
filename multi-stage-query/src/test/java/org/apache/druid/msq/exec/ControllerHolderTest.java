@@ -32,6 +32,7 @@ import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.test.NoopQueryListener;
@@ -434,7 +435,7 @@ public class ControllerHolderTest
       Assertions.assertSame(holder, registry.getController("test-query"));
       Assertions.assertSame(
           finalPayload,
-          registry.getQueryDetailsBySqlQueryId("sql-1").getReportMap().get("multiStageQuery").getPayload()
+          registry.getQueryDetailsBySqlQueryId("sql-1").getReportMap().get(MSQTaskReport.REPORT_KEY).getPayload()
       );
       // Publication must not disable cancellation while the completion callback is still executing.
       Assertions.assertEquals(ControllerHolder.State.RUNNING, holder.getState());
