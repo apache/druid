@@ -36,6 +36,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -43,6 +44,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -59,27 +61,33 @@ public class ResourcePool<K, V> implements Closeable
   private static final Logger log = new Logger(ResourcePool.class);
   private final LoadingCache<K, PooledResources<V>> pool;
   private final AtomicBoolean closed = new AtomicBoolean(false);
-  private final Counters counters = new Counters();
 
   public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config,
                       final boolean eagerInitialization)
   {
-    final ResourceFactory<K, V> countingFactory = new CountingResourceFactory<>(factory, counters);
     this.pool = CacheBuilder.newBuilder().build(
         new CacheLoader<>()
         {
           @Override
           public PooledResources<V> load(K input)
           {
-            return config.getPoolImplementation().create(config, input, countingFactory, eagerInitialization, counters);
+            return config.getPoolImplementation().create(config, input, factory, eagerInitialization);
           }
         }
     );
   }
 
-  public Counters getCounters()
+  /**
+   * The {@link Stats} of every key this pool has resources for, resetting the counted events as it reads them, so
+   * that each call reports what happened since the previous one. Meant for a single caller.
+   */
+  public Map<K, Stats> drainStats()
   {
-    return counters;
+    final Map<K, Stats> stats = new HashMap<>();
+    for (Map.Entry<K, PooledResources<V>> e : pool.asMap().entrySet()) {
+      stats.put(e.getKey(), e.getValue().drainStats());
+    }
+    return stats;
   }
 
   /**
@@ -104,7 +112,7 @@ public class ResourcePool<K, V> implements Closeable
     if (value == null) {
       return null;
     }
-    counters.taken.incrementAndGet();
+    holder.counters.taken.incrementAndGet();
 
     return new ResourceContainer<>()
     {
@@ -123,7 +131,7 @@ public class ResourcePool<K, V> implements Closeable
         if (returned.getAndSet(true)) {
           log.warn("Resource at key[%s] was returned multiple times?", key);
         } else {
-          counters.returned.incrementAndGet();
+          holder.counters.returned.incrementAndGet();
           holder.giveBack(value);
         }
       }
@@ -167,9 +175,33 @@ public class ResourcePool<K, V> implements Closeable
   }
 
   /**
-   * What a pool did with its resources since it was created, summed over every key it pools.
+   * What happened to the resources of one key since the previous {@link #drainStats()}, and what the key holds right
+   * now.
+   *
+   * @param errored  calls into the {@link ResourceFactory} that threw
+   * @param timedOut resources discarded for going {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()} unused
+   * @param taken    resources handed to a caller by {@link #take}
+   * @param returned resources given back through {@link ResourceContainer#returnResource()}
+   * @param used     resources in the hands of callers at the time of the call
+   * @param idle     resources waiting for the next caller at the time of the call
    */
-  public static class Counters
+  public record Stats(
+      long opened,
+      long closed,
+      long errored,
+      long timedOut,
+      long taken,
+      long returned,
+      int used,
+      int idle
+  )
+  {
+  }
+
+  /**
+   * The counted events of one key, drained on read.
+   */
+  private static class Counters
   {
     private final AtomicLong opened = new AtomicLong();
     private final AtomicLong closed = new AtomicLong();
@@ -178,59 +210,17 @@ public class ResourcePool<K, V> implements Closeable
     private final AtomicLong taken = new AtomicLong();
     private final AtomicLong returned = new AtomicLong();
 
-    public long getOpened()
+    private Stats drain(int used, int idle)
     {
-      return opened.get();
-    }
-
-    public long getClosed()
-    {
-      return closed.get();
-    }
-
-    /**
-     * Calls into the {@link ResourceFactory} that threw.
-     */
-    public long getErrored()
-    {
-      return errored.get();
-    }
-
-    /**
-     * Resources discarded for going {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()} unused.
-     */
-    public long getTimedOut()
-    {
-      return timedOut.get();
-    }
-
-    /**
-     * Resources handed to a caller by {@link #take}.
-     */
-    public long getTaken()
-    {
-      return taken.get();
-    }
-
-    /**
-     * Resources a caller gave back through {@link ResourceContainer#returnResource()}.
-     */
-    public long getReturned()
-    {
-      return returned.get();
-    }
-
-    @Override
-    public String toString()
-    {
-      return StringUtils.format(
-          "Counters{opened=%d, closed=%d, errored=%d, timedOut=%d, taken=%d, returned=%d}",
-          getOpened(),
-          getClosed(),
-          getErrored(),
-          getTimedOut(),
-          getTaken(),
-          getReturned()
+      return new Stats(
+          opened.getAndSet(0),
+          closed.getAndSet(0),
+          errored.getAndSet(0),
+          timedOut.getAndSet(0),
+          taken.getAndSet(0),
+          returned.getAndSet(0),
+          used,
+          idle
       );
     }
   }
@@ -307,8 +297,7 @@ public class ResourcePool<K, V> implements Closeable
           ResourcePoolConfig config,
           K key,
           ResourceFactory<K, V> factory,
-          boolean eagerInitialization,
-          Counters counters
+          boolean eagerInitialization
       )
       {
         final AdaptiveResourceHolderPerKey<K, V> resources = new AdaptiveResourceHolderPerKey<>(
@@ -316,8 +305,7 @@ public class ResourcePool<K, V> implements Closeable
             config.getUnusedConnectionTimeoutMillis(),
             config.isStrictConnectionValidation(),
             key,
-            factory,
-            counters
+            factory
         );
         if (eagerInitialization) {
           resources.preload();
@@ -337,8 +325,7 @@ public class ResourcePool<K, V> implements Closeable
           ResourcePoolConfig config,
           K key,
           ResourceFactory<K, V> factory,
-          boolean eagerInitialization,
-          Counters counters
+          boolean eagerInitialization
       )
       {
         if (eagerInitialization) {
@@ -346,16 +333,14 @@ public class ResourcePool<K, V> implements Closeable
               config.getMaxPerKey(),
               config.getUnusedConnectionTimeoutMillis(),
               key,
-              factory,
-              counters
+              factory
           );
         }
         return new LazyCreationResourceHolder<>(
             config.getMaxPerKey(),
             config.getUnusedConnectionTimeoutMillis(),
             key,
-            factory,
-            counters
+            factory
         );
       }
     };
@@ -364,8 +349,7 @@ public class ResourcePool<K, V> implements Closeable
         ResourcePoolConfig config,
         K key,
         ResourceFactory<K, V> factory,
-        boolean eagerInitialization,
-        Counters counters
+        boolean eagerInitialization
     );
 
     @JsonValue
@@ -387,11 +371,29 @@ public class ResourcePool<K, V> implements Closeable
    */
   private abstract static class PooledResources<V> implements Closeable
   {
+    final Counters counters = new Counters();
+
     /**
      * Takes a resource, blocking until one is free. Null if closed or interrupted.
      */
     @Nullable
     abstract V get();
+
+    /**
+     * Resources handed to a caller and not given back yet.
+     */
+    abstract int getUsedCount();
+
+    /**
+     * Resources parked for the next caller.
+     */
+    abstract int getIdleCount();
+
+    final Stats drainStats()
+    {
+      return counters.drain(getUsedCount(), getIdleCount());
+    }
+
 
     /**
      * Returns a resource taken from {@link #get()}, freeing the slot it occupied. An implementation may discard the
@@ -412,18 +414,17 @@ public class ResourcePool<K, V> implements Closeable
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
-        ResourceFactory<K, V> factory,
-        Counters counters
+        ResourceFactory<K, V> factory
     )
     {
-      super(maxSize, unusedResourceTimeoutMillis, key, factory, counters);
+      super(maxSize, unusedResourceTimeoutMillis, key, factory);
       // Eagerly Instantiate
       for (int i = 0; i < maxSize; i++) {
         resourceHolderList.add(
             new ResourceHolder<>(
                 System.currentTimeMillis(),
                 Preconditions.checkNotNull(
-                    factory.generate(key),
+                    this.factory.generate(key),
                     "factory.generate(key)"
                 )
             )
@@ -438,21 +439,19 @@ public class ResourcePool<K, V> implements Closeable
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
-        ResourceFactory<K, V> factory,
-        Counters counters
+        ResourceFactory<K, V> factory
     )
     {
-      super(maxSize, unusedResourceTimeoutMillis, key, factory, counters);
+      super(maxSize, unusedResourceTimeoutMillis, key, factory);
     }
   }
 
   private static class ResourceHolderPerKey<K, V> extends PooledResources<V>
   {
     protected final int maxSize;
+    protected final ResourceFactory<K, V> factory;
     private final K key;
-    private final ResourceFactory<K, V> factory;
     private final long unusedResourceTimeoutMillis;
-    private final Counters counters;
     // Hold previously created / returned resources
     protected final ArrayDeque<ResourceHolder<V>> resourceHolderList;
     // To keep track of resources that have been successfully returned to caller.
@@ -463,14 +462,12 @@ public class ResourcePool<K, V> implements Closeable
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
-        ResourceFactory<K, V> factory,
-        Counters counters
+        ResourceFactory<K, V> factory
     )
     {
       this.maxSize = maxSize;
       this.key = key;
-      this.factory = factory;
-      this.counters = counters;
+      this.factory = new CountingResourceFactory<>(factory, counters);
       this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
       this.resourceHolderList = new ArrayDeque<>();
     }
@@ -585,6 +582,18 @@ public class ResourcePool<K, V> implements Closeable
       }
     }
 
+    @Override
+    synchronized int getUsedCount()
+    {
+      return numLentResources;
+    }
+
+    @Override
+    synchronized int getIdleCount()
+    {
+      return resourceHolderList.size();
+    }
+
     private boolean holderListContains(V object)
     {
       return resourceHolderList.stream().anyMatch(a -> a.getResource().equals(object));
@@ -611,26 +620,24 @@ public class ResourcePool<K, V> implements Closeable
     private final ResourceFactory<K, V> factory;
     private final long unusedResourceTimeoutMillis;
     private final boolean strictConnectionValidation;
-    private final Counters counters;
     private final Semaphore permits;
     private final Deque<ResourceHolder<V>> idleResources = new ConcurrentLinkedDeque<>();
     private final AtomicBoolean closed = new AtomicBoolean(false);
+    private final AtomicInteger lentResources = new AtomicInteger();
 
     private AdaptiveResourceHolderPerKey(
         int maxSize,
         long unusedResourceTimeoutMillis,
         boolean strictConnectionValidation,
         K key,
-        ResourceFactory<K, V> factory,
-        Counters counters
+        ResourceFactory<K, V> factory
     )
     {
       this.maxSize = maxSize;
       this.key = key;
-      this.factory = factory;
+      this.factory = new CountingResourceFactory<>(factory, counters);
       this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
       this.strictConnectionValidation = strictConnectionValidation;
-      this.counters = counters;
       this.permits = new Semaphore(maxSize);
     }
 
@@ -665,6 +672,7 @@ public class ResourcePool<K, V> implements Closeable
           resource = createResource();
         }
         lent = true;
+        lentResources.incrementAndGet();
         return resource;
       }
       finally {
@@ -672,6 +680,18 @@ public class ResourcePool<K, V> implements Closeable
           permits.release();
         }
       }
+    }
+
+    @Override
+    int getUsedCount()
+    {
+      return lentResources.get();
+    }
+
+    @Override
+    int getIdleCount()
+    {
+      return idleResources.size();
     }
 
     @Override
@@ -692,6 +712,7 @@ public class ResourcePool<K, V> implements Closeable
         idleResources.addLast(new ResourceHolder<>(System.currentTimeMillis(), object));
       }
       finally {
+        lentResources.decrementAndGet();
         permits.release();
       }
 

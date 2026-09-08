@@ -145,7 +145,7 @@ public class HttpClientModule implements Module
           builder.build(),
           getLifecycleProvider().get()
       );
-      poolRegistry.register(clientName(), client.getPoolCounters());
+      poolRegistry.register(clientName(), client.getPool());
       HttpClient clientWithUserAgent = new AbstractHttpClient()
       {
         @Override

@@ -36,7 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class HttpClientPoolMonitorTest
 {
-  private static final Map<String, Object> GLOBAL_CLIENT = Map.of("httpClient", "global");
+  private static final Map<String, Object> BILLY = Map.of("httpClient", "global", "server", "billy");
+  private static final Map<String, Object> SALLY = Map.of("httpClient", "global", "server", "sally");
 
   private HttpClientPoolRegistry registry;
   private StubServiceEmitter emitter;
@@ -49,103 +50,95 @@ public class HttpClientPoolMonitorTest
     emitter = new StubServiceEmitter("service", "host");
     pool = new ResourcePool<>(
         new TestResourceFactory(),
-        new ResourcePoolConfig(1, TimeUnit.MINUTES.toMillis(5)),
+        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(5)),
         false
     );
   }
 
+  /**
+   * Every remote end gets its own row, tagged with the client that talks to it, so that nothing has to be summed up
+   * before it is emitted.
+   */
   @Test
-  public void testPoolsAreReportedUnderTheirClientName()
+  public void testEveryRemoteEndIsReportedOnItsOwn()
   {
-    registry.register("global", pool.getCounters());
+    registry.register("global", pool);
     pool.take("billy").returnResource();
+    pool.take("sally").returnResource();
+    pool.take("sally").returnResource();
 
     new HttpClientPoolMonitor(registry).doMonitor(emitter);
 
-    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/opened", GLOBAL_CLIENT));
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/closed", GLOBAL_CLIENT));
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/errored", GLOBAL_CLIENT));
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/timedOut", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/taken", BILLY));
+    Assertions.assertEquals(List.of(2L), emitter.getMetricValues("httpClient/pool/taken", SALLY));
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/opened", BILLY));
+    Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/idle", SALLY));
   }
 
   /**
-   * Each emission reports what happened since the previous one, so a pool that opened nothing new reports zero
-   * rather than the total it reported before.
+   * The counted events are drained as they are emitted, so a quiet remote end reports zeroes rather than the totals
+   * of the previous emission, while what it holds keeps being reported.
    */
   @Test
   public void testEmissionsReportWhatHappenedSinceThePreviousOne()
   {
-    registry.register("global", pool.getCounters());
+    registry.register("global", pool);
     final HttpClientPoolMonitor monitor = new HttpClientPoolMonitor(registry);
 
     pool.take("billy").returnResource();
     monitor.doMonitor(emitter);
     emitter.flush();
 
-    pool.take("billy").returnResource();
     monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/opened", GLOBAL_CLIENT));
-
-    pool.close();
-    emitter.flush();
-    monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/closed", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/opened", BILLY));
+    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/taken", BILLY));
+    Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/idle", BILLY));
   }
 
   /**
-   * The connections in the hands of callers are reported while they are held, which is what the load over a client
-   * looks like, and go back to zero once they are given back.
+   * The connections in the hands of callers are reported while they are held, which is what the load over one remote
+   * end looks like, and go back to zero once they are given back.
    */
   @Test
   public void testUsedConnectionsAreReportedWhileTheyAreHeld()
   {
-    registry.register("global", pool.getCounters());
+    registry.register("global", pool);
     final HttpClientPoolMonitor monitor = new HttpClientPoolMonitor(registry);
 
     final ResourceContainer<String> lent = pool.take("billy");
     monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/taken", GLOBAL_CLIENT));
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/returned", GLOBAL_CLIENT));
-    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/currentlyUsed", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/used", BILLY));
+    Assertions.assertEquals(List.of(0), emitter.getMetricValues("httpClient/pool/idle", BILLY));
 
     lent.returnResource();
     emitter.flush();
     monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/returned", GLOBAL_CLIENT));
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/currentlyUsed", GLOBAL_CLIENT));
-  }
-
-  /**
-   * The open connections are a level rather than a per emission count: every emission reports what stands open, and
-   * closing the pool takes it back to zero.
-   */
-  @Test
-  public void testOpenConnectionsAreReportedAtEveryEmission()
-  {
-    registry.register("global", pool.getCounters());
-    final HttpClientPoolMonitor monitor = new HttpClientPoolMonitor(registry);
-
-    pool.take("billy").returnResource();
-    monitor.doMonitor(emitter);
-    monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(1L, 1L), emitter.getMetricValues("httpClient/pool/currentlyOpen", GLOBAL_CLIENT));
-
-    pool.close();
-    emitter.flush();
-    monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/currentlyOpen", GLOBAL_CLIENT));
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/returned", BILLY));
+    Assertions.assertEquals(List.of(0), emitter.getMetricValues("httpClient/pool/used", BILLY));
+    Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/idle", BILLY));
   }
 
   @Test
   public void testAClientNameIsRegisteredOnlyOnce()
   {
-    registry.register("global", pool.getCounters());
-    Assertions.assertThrows(ISE.class, () -> registry.register("global", pool.getCounters()));
+    registry.register("global", pool);
+    Assertions.assertThrows(ISE.class, () -> registry.register("global", pool));
   }
 
   @Test
   public void testNothingIsEmittedWithoutARegisteredPool()
   {
+    new HttpClientPoolMonitor(registry).doMonitor(emitter);
+    Assertions.assertEquals(List.of(), emitter.getMetricEvents("httpClient/pool/opened"));
+  }
+
+  /**
+   * A registered client that has not talked to anybody yet has no key to report.
+   */
+  @Test
+  public void testNothingIsEmittedForAnUntouchedPool()
+  {
+    registry.register("global", pool);
     new HttpClientPoolMonitor(registry).doMonitor(emitter);
     Assertions.assertEquals(List.of(), emitter.getMetricEvents("httpClient/pool/opened"));
   }

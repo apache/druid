@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -386,28 +387,58 @@ public class ResourcePoolTest
 
   @ParameterizedTest
   @EnumSource(ResourcePool.Implementation.class)
-  public void testCountersRecordWhatHappenedToTheResources(ResourcePool.Implementation implementation)
+  public void testStatsRecordWhatHappenedToTheResourcesOfAKey(ResourcePool.Implementation implementation)
       throws Exception
   {
     final ResourcePool<String, String> pool = createPool(implementation, 1, EXPIRES_QUICKLY, false);
     pool.take("billy").returnResource();
     awaitExpiry();
     pool.take("billy").returnResource();
+    pool.take("sally").returnResource();
 
-    final ResourcePool.Counters counters = pool.getCounters();
-    Assertions.assertEquals(2, counters.getOpened(), "opened");
-    Assertions.assertEquals(1, counters.getClosed(), "closed");
-    Assertions.assertEquals(1, counters.getTimedOut(), "timed out");
-    Assertions.assertEquals(0, counters.getErrored(), "errored");
-    Assertions.assertEquals(2, counters.getTaken(), "taken");
-    Assertions.assertEquals(2, counters.getReturned(), "returned");
+    final Map<String, ResourcePool.Stats> stats = pool.drainStats();
+    Assertions.assertEquals(Set.of("billy", "sally"), stats.keySet(), "one entry per key");
 
-    pool.close();
-    Assertions.assertEquals(2, counters.getClosed(), "close() discards what is left");
+    final ResourcePool.Stats billy = stats.get("billy");
+    Assertions.assertEquals(2, billy.opened(), "opened");
+    Assertions.assertEquals(1, billy.closed(), "closed");
+    Assertions.assertEquals(1, billy.timedOut(), "timed out");
+    Assertions.assertEquals(0, billy.errored(), "errored");
+    Assertions.assertEquals(2, billy.taken(), "taken");
+    Assertions.assertEquals(2, billy.returned(), "returned");
+    Assertions.assertEquals(0, billy.used(), "nothing is lent out");
+    Assertions.assertEquals(1, billy.idle(), "the returned resource waits for the next caller");
+
+    Assertions.assertEquals(1, stats.get("sally").opened(), "keys are counted apart");
+  }
+
+  /**
+   * The counted events are drained as they are read, so an idle key reports zeroes rather than the totals it
+   * reported before, while what it holds keeps being reported.
+   */
+  @ParameterizedTest
+  @EnumSource(ResourcePool.Implementation.class)
+  public void testDrainedStatsCoverOnlyWhatHappenedSinceThePreviousDrain(ResourcePool.Implementation implementation)
+  {
+    final ResourcePool<String, String> pool = createPool(implementation, 2, NEVER_EXPIRES, false);
+    final ResourceContainer<String> lent = pool.take("billy");
+    pool.drainStats();
+
+    final ResourcePool.Stats idle = pool.drainStats().get("billy");
+    Assertions.assertEquals(0, idle.opened(), "opened");
+    Assertions.assertEquals(0, idle.taken(), "taken");
+    Assertions.assertEquals(1, idle.used(), "the lent resource is still out");
+    Assertions.assertEquals(0, idle.idle(), "and is not parked");
+
+    lent.returnResource();
+    final ResourcePool.Stats afterReturn = pool.drainStats().get("billy");
+    Assertions.assertEquals(1, afterReturn.returned(), "returned");
+    Assertions.assertEquals(0, afterReturn.used(), "used");
+    Assertions.assertEquals(1, afterReturn.idle(), "idle");
   }
 
   @Test
-  public void testCountersRecordAFailingHealthCheckAsAnError()
+  public void testStatsRecordAFailingHealthCheckAsAnError()
   {
     final ResourcePool<String, String> pool = createPool(ResourcePool.Implementation.ADAPTIVE, 2, NEVER_EXPIRES, false);
     pool.take("billy").returnResource();
@@ -415,9 +446,9 @@ public class ResourcePoolTest
 
     Assertions.assertThrows(ISE.class, () -> pool.take("billy"));
 
-    final ResourcePool.Counters counters = pool.getCounters();
-    Assertions.assertEquals(1, counters.getErrored(), "errored");
-    Assertions.assertEquals(1, counters.getClosed(), "the resource whose check threw is closed");
+    final ResourcePool.Stats stats = pool.drainStats().get("billy");
+    Assertions.assertEquals(1, stats.errored(), "errored");
+    Assertions.assertEquals(1, stats.closed(), "the resource whose check threw is closed");
   }
 
   /**

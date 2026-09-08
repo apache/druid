@@ -25,20 +25,21 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Emits what the connection pool of each HTTP client of this process did since the previous emission, under the
- * {@code httpClient} dimension of the client that owns the pool. The {@code currentlyOpen} and {@code currentlyUsed}
- * metrics are the exception: they are levels, not differences.
+ * Emits one row per remote end that an HTTP client of this process pools connections for: what happened since the
+ * previous emission, plus what that remote end holds right now. Aggregating the rows of a client is left to whoever
+ * receives them.
+ *
+ * This monitor drains the counters of the pools it reads, so it must be the only reader of them.
  */
 public class HttpClientPoolMonitor extends AbstractMonitor
 {
   private static final String CLIENT_DIMENSION = "httpClient";
+  private static final String SERVER_DIMENSION = "server";
 
   private final HttpClientPoolRegistry registry;
-  private final Map<String, Snapshot> previous = new HashMap<>();
 
   @Inject
   public HttpClientPoolMonitor(HttpClientPoolRegistry registry)
@@ -49,62 +50,25 @@ public class HttpClientPoolMonitor extends AbstractMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    for (Map.Entry<String, ResourcePool.Counters> pool : registry.getPools().entrySet()) {
-      final String clientName = pool.getKey();
-      final Snapshot current = Snapshot.of(pool.getValue());
-      final Snapshot delta = current.since(previous.put(clientName, current));
-
-      final ServiceMetricEvent.Builder builder =
-          ServiceMetricEvent.builder().setDimension(CLIENT_DIMENSION, clientName);
-      emitter.emit(builder.setMetric("httpClient/pool/opened", delta.opened()));
-      emitter.emit(builder.setMetric("httpClient/pool/closed", delta.closed()));
-      emitter.emit(builder.setMetric("httpClient/pool/errored", delta.errored()));
-      emitter.emit(builder.setMetric("httpClient/pool/timedOut", delta.timedOut()));
-      emitter.emit(builder.setMetric("httpClient/pool/taken", delta.taken()));
-      emitter.emit(builder.setMetric("httpClient/pool/returned", delta.returned()));
-      emitter.emit(builder.setMetric("httpClient/pool/currentlyOpen", current.currentlyOpen()));
-      emitter.emit(builder.setMetric("httpClient/pool/currentlyUsed", current.currentlyUsed()));
+    for (Map.Entry<String, ResourcePool<?, ?>> client : registry.getPools().entrySet()) {
+      for (Map.Entry<?, ResourcePool.Stats> pool : client.getValue().drainStats().entrySet()) {
+        final ResourcePool.Stats stats = pool.getValue();
+        final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder()
+                                                                    .setDimension(CLIENT_DIMENSION, client.getKey())
+                                                                    .setDimension(
+                                                                        SERVER_DIMENSION,
+                                                                        String.valueOf(pool.getKey())
+                                                                    );
+        emitter.emit(builder.setMetric("httpClient/pool/opened", stats.opened()));
+        emitter.emit(builder.setMetric("httpClient/pool/closed", stats.closed()));
+        emitter.emit(builder.setMetric("httpClient/pool/errored", stats.errored()));
+        emitter.emit(builder.setMetric("httpClient/pool/timedOut", stats.timedOut()));
+        emitter.emit(builder.setMetric("httpClient/pool/taken", stats.taken()));
+        emitter.emit(builder.setMetric("httpClient/pool/returned", stats.returned()));
+        emitter.emit(builder.setMetric("httpClient/pool/used", stats.used()));
+        emitter.emit(builder.setMetric("httpClient/pool/idle", stats.idle()));
+      }
     }
     return true;
-  }
-
-  private record Snapshot(long opened, long closed, long errored, long timedOut, long taken, long returned)
-  {
-    private static Snapshot of(ResourcePool.Counters counters)
-    {
-      return new Snapshot(
-          counters.getOpened(),
-          counters.getClosed(),
-          counters.getErrored(),
-          counters.getTimedOut(),
-          counters.getTaken(),
-          counters.getReturned()
-      );
-    }
-
-    private long currentlyOpen()
-    {
-      return opened - closed;
-    }
-
-    private long currentlyUsed()
-    {
-      return taken - returned;
-    }
-
-    private Snapshot since(Snapshot earlier)
-    {
-      if (earlier == null) {
-        return this;
-      }
-      return new Snapshot(
-          opened - earlier.opened,
-          closed - earlier.closed,
-          errored - earlier.errored,
-          timedOut - earlier.timedOut,
-          taken - earlier.taken,
-          returned - earlier.returned
-      );
-    }
   }
 }

@@ -94,9 +94,9 @@ public class NettyHttpClient extends AbstractHttpClient
     }
   }
 
-  public ResourcePool.Counters getPoolCounters()
+  public ResourcePool<String, ChannelFuture> getPool()
   {
-    return pool.getCounters();
+    return pool;
   }
 
   @LifecycleStart

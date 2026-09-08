@@ -1988,7 +1988,7 @@ The following table lists available monitors and the respective services where t
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
-|`org.apache.druid.server.metrics.HttpClientPoolMonitor`|Reports connection churn of the HTTP client connection pools used for service to service communication, per emission period.|Any|
+|`org.apache.druid.server.metrics.HttpClientPoolMonitor`|Reports connection churn and usage of the HTTP client connection pools used for service to service communication, per remote end, per emission period.|Any|
 
 For example, if you only wanted monitors on all services for system and JVM information, you'd add the following to `common.runtime.properties`:
 

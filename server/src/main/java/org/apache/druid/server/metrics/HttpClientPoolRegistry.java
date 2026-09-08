@@ -34,16 +34,16 @@ import java.util.concurrent.ConcurrentHashMap;
 @LazySingleton
 public class HttpClientPoolRegistry
 {
-  private final Map<String, ResourcePool.Counters> pools = new ConcurrentHashMap<>();
+  private final Map<String, ResourcePool<?, ?>> pools = new ConcurrentHashMap<>();
 
-  public void register(String clientName, ResourcePool.Counters counters)
+  public void register(String clientName, ResourcePool<?, ?> pool)
   {
-    if (pools.putIfAbsent(clientName, counters) != null) {
+    if (pools.putIfAbsent(clientName, pool) != null) {
       throw new ISE("Client[%s] is already registered", clientName);
     }
   }
 
-  public Map<String, ResourcePool.Counters> getPools()
+  public Map<String, ResourcePool<?, ?>> getPools()
   {
     return Collections.unmodifiableMap(pools);
   }
