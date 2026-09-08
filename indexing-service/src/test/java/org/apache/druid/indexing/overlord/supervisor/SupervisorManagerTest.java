@@ -656,12 +656,12 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     final Object[] data = (Object[]) result.get("data");
     Assertions.assertEquals(200, data.length);
-    Assertions.assertTrue(data[0] instanceof Map);
+    Assertions.assertInstanceOf(Map.class, data[0]);
     final Map<?, ?> firstDataPoint = (Map<?, ?>) data[0];
     Assertions.assertTrue(firstDataPoint.containsKey("lag"));
     Assertions.assertTrue(firstDataPoint.containsKey("taskCount"));
     for (Object dataPoint : data) {
-      Assertions.assertTrue(dataPoint instanceof Map);
+      Assertions.assertInstanceOf(Map.class, dataPoint);
       final Number taskCount = (Number) ((Map<?, ?>) dataPoint).get("taskCount");
       Assertions.assertTrue(taskCount.intValue() >= 1 && taskCount.intValue() <= 10);
     }
