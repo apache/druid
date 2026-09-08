@@ -142,6 +142,24 @@ public class SegmentManager
   }
 
   /**
+   * Whether this server is already serving {@code dataSegment}, i.e. it is in its datasource's timeline and so is
+   * queryable right now. A load request for such a segment is a reload rather than a new load, which is how a
+   * partial-load rule is applied, swapped, or released, see {@code StrategicSegmentAssigner}.
+   */
+  public boolean isSegmentLoaded(final DataSegment dataSegment)
+  {
+    final DataSourceState dataSourceState = dataSources.get(dataSegment.getDataSource());
+    if (dataSourceState == null) {
+      return false;
+    }
+    return dataSourceState.getTimeline().findChunk(
+        dataSegment.getInterval(),
+        dataSegment.getVersion(),
+        dataSegment.getShardSpec().getPartitionNum()
+    ) != null;
+  }
+
+  /**
    * Given a list of {@link DataSegmentAndDescriptor} produce a {@link LeafSegmentsBundle} which partitions segments
    * into cached, loadable, or missing segments. This gives callers the flexibilty to decide to perform operations
    * on segments which are already cached prior to or alongside the operation to load any segments which are not already
@@ -325,12 +343,18 @@ public class SegmentManager
    */
   public DataSegment loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
+    // A load of a segment we already serve is a reload, so the cache state this would drop on failure is the live
+    // (stale) replica's, not half-materialized state from this attempt. Leave it alone and keep serving; the
+    // coordinator sees the old announcement, treats the replica as stale and asks again on a later run.
+    final boolean isReload = isSegmentLoaded(dataSegment);
     final DataSegment loaded;
     try {
       loaded = cacheManager.load(dataSegment);
     }
     catch (SegmentLoadingException e) {
-      cacheManager.drop(dataSegment);
+      if (!isReload) {
+        cacheManager.drop(dataSegment);
+      }
       throw e;
     }
     // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a

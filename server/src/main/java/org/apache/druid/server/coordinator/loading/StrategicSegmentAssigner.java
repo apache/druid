@@ -503,6 +503,18 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
    * are left empty by the cancellation. {@link ServerHolder#cancelOperation} clears the queued action and restores the
    * projected size, so those can take a fresh load; {@link #serversToLoadSegment} orders them by the balancer strategy
    * (or round robin).
+   * <p>
+   * A reload the historical <em>fails</em> is retried in place on later runs rather than handed to a fresh server: the
+   * failure is asynchronous, so this run only ever learns that the request was queued, and the replica stays serving
+   * under its previous profile either way (see
+   * {@link org.apache.druid.server.coordination.SegmentLoadDropHandler#addSegment}), so the tier is never short a
+   * copy while it retries. Repeated failure does not need a fallback to break out of, because the way for one to
+   * persist is a historical too full to pin the new bundles, and that resolves itself: disk-usage balancing moves
+   * segments off the fullest server in the tier
+   * ({@code SegmentToMoveCalculator.computeSegmentsToMoveToBalanceDiskUsage}) until the reload fits, and a tier with
+   * nowhere left to move to is a cluster-wide capacity problem stalling far more than this one segment. Every failed
+   * attempt is alerted by the historical and logged by {@code HttpLoadQueuePeon.onRequestFailed}, so a retry loop
+   * that is not making progress is visible rather than silent.
    */
   private int loadPartialReplicas(
       int numToLoad,

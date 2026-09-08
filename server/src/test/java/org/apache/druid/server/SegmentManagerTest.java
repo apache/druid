@@ -55,6 +55,7 @@ import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager.DataSourceState;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
@@ -307,6 +308,43 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     segmentManager.loadSegment(SEGMENTS.get(0));
 
     assertResult(SEGMENTS);
+  }
+
+  @Test
+  public void testFailedReloadDoesNotDropTheCachedSegment() throws SegmentLoadingException, IOException
+  {
+    final TestSegmentCacheManager failingCacheManager = new TestSegmentCacheManager();
+    failingCacheManager.failLoadsAfter(1);
+    final SegmentManager manager = new SegmentManager(failingCacheManager);
+    final DataSegment segment = SEGMENTS.get(0);
+
+    manager.loadSegment(segment);
+    Assertions.assertTrue(manager.isSegmentLoaded(segment));
+
+    Assertions.assertThrows(SegmentLoadingException.class, () -> manager.loadSegment(segment));
+
+    Assertions.assertTrue(manager.isSegmentLoaded(segment), "the replica stays in the timeline");
+    Assertions.assertFalse(
+        failingCacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId()),
+        "a failed reload must not drop the live replica's cached data"
+    );
+  }
+
+  @Test
+  public void testFailedFirstLoadDropsTheCachedSegment()
+  {
+    final TestSegmentCacheManager failingCacheManager = new TestSegmentCacheManager();
+    failingCacheManager.failLoadsAfter(0);
+    final SegmentManager manager = new SegmentManager(failingCacheManager);
+    final DataSegment segment = SEGMENTS.get(0);
+
+    Assertions.assertThrows(SegmentLoadingException.class, () -> manager.loadSegment(segment));
+
+    Assertions.assertFalse(manager.isSegmentLoaded(segment));
+    Assertions.assertTrue(
+        failingCacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId()),
+        "a failed new load is cleaned up"
+    );
   }
 
   @Test

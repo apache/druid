@@ -188,6 +188,63 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
+  public void testFailedReloadKeepsTheSegmentServing()
+  {
+    final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
+    cacheManager.failLoadsAfter(1);
+    final SegmentManager segmentManager = new SegmentManager(cacheManager);
+    final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
+
+    final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
+
+    handler.addSegment(segment, DataSegmentChangeCallback.NOOP, null);
+    Assertions.assertTrue(segmentManager.isSegmentLoaded(segment));
+    Assertions.assertTrue(segmentAnnouncer.getObservedSegments().contains(segment));
+
+    // Second request for the same segment is a reload, and this cache manager fails it.
+    handler.addSegment(segment, DataSegmentChangeCallback.NOOP, null);
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+
+    Assertions.assertTrue(
+        segmentManager.isSegmentLoaded(segment),
+        "a failed reload must leave the replica in the timeline, still queryable"
+    );
+    Assertions.assertTrue(
+        segmentAnnouncer.getObservedSegments().contains(segment),
+        "a failed reload must not unannounce the replica, the coordinator still counts it and asks again"
+    );
+    Assertions.assertFalse(
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId()),
+        "a failed reload must not drop the replica's cached data"
+    );
+  }
+
+  @Test
+  public void testFailedFirstLoadIsStillCleanedUp()
+  {
+    final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
+    cacheManager.failLoadsAfter(0);
+    final SegmentManager segmentManager = new SegmentManager(cacheManager);
+    final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
+
+    final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
+
+    handler.addSegment(segment, DataSegmentChangeCallback.NOOP, null);
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+
+    Assertions.assertFalse(segmentManager.isSegmentLoaded(segment));
+    Assertions.assertFalse(segmentAnnouncer.getObservedSegments().contains(segment));
+    Assertions.assertTrue(
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId()),
+        "a failed new load is cleaned up"
+    );
+  }
+
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testProcessBatch() throws Exception
   {

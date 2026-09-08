@@ -575,6 +575,63 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
+  public void testFreshLoadCoversTheDeficitWhenTheInPlaceReloadCannotBeQueued()
+  {
+    // The in-place reload is preferred, but if queueing it on the stale server fails the deficit is still real and a
+    // fresh candidate has to cover it. Without the fall-through the tier would sit under-replicated for the run while
+    // an idle server was available.
+    final DataSegment segment = createSegment();
+    final DruidServer staleServer = createDruidServer(TIER1);
+    staleServer.addDataSegment(segment, null);
+    final ServerHolder stale =
+        new ServerHolder(staleServer.toImmutableDruidServer(), new RefusingLoadQueuePeon());
+    final ServerHolder empty = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, stale, empty).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertTrue(
+        empty.getLoadingSegments().contains(segment),
+        "the fresh candidate covers the deficit the refused in-place reload left"
+    );
+    Assertions.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) empty.getPeon()).getProfileFor(segment));
+    Assertions.assertTrue(
+        stale.getPeon().getSegmentsToDrop().isEmpty(),
+        "the stale replica keeps serving until the replacement lands"
+    );
+  }
+
+  @Test
+  public void testLoadQueueFullStaleServerIsReplacedByFreshLoad()
+  {
+    // A stale server already at its per-run load-queue budget is not an in-place candidate, so the empty server takes
+    // the replacement instead of the tier stalling on a server that cannot accept the request.
+    final DataSegment segment = createSegment();
+    final DataSegment other = createSegment(Intervals.of("2020/2021"));
+    final ServerHolder stale = createServerWithLoadedAndQueueLimit(TIER1, 1, null, segment);
+    // Consume the server's single load-queue slot so canReloadInPlace rejects it.
+    stale.getPeon().loadSegment(other, SegmentAction.LOAD, null);
+    Assertions.assertTrue(stale.startOperation(SegmentAction.LOAD, other));
+    Assertions.assertTrue(stale.isLoadQueueFull());
+
+    final ServerHolder empty = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, stale, empty).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertTrue(empty.getLoadingSegments().contains(segment));
+    Assertions.assertNull(((TestLoadQueuePeon) stale.getPeon()).getProfileFor(segment));
+  }
+
+  @Test
   public void testDecommissioningStaleServerIsReplacedByFreshLoad()
   {
     // A decommissioning stale replica is on its way out, so reloading it in place would be wasted work. The fresh
@@ -1174,6 +1231,25 @@ public class StrategicSegmentAssignerPartialTest
         .projections(projections)
         .size(0)
         .build();
+  }
+
+  /**
+   * Peon that refuses every load, the way the real peon surfaces an error while queueing. {@link
+   * SegmentLoadQueueManager#loadSegment} catches it, rolls the operation back off the {@link ServerHolder} and
+   * reports the destination as unusable.
+   */
+  private static class RefusingLoadQueuePeon extends TestLoadQueuePeon
+  {
+    @Override
+    public void loadSegment(
+        DataSegment segment,
+        SegmentAction action,
+        @Nullable PartialLoadProfile profile,
+        @Nullable LoadPeonCallback callback
+    )
+    {
+      throw new IllegalStateException("Cannot queue segment[" + segment.getId() + "]");
+    }
   }
 
   /**
