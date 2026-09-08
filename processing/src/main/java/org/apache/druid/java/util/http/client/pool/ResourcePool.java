@@ -185,6 +185,16 @@ public class ResourcePool<K, V> implements Closeable
     }
 
     /**
+     * Resources the pool opened and has not closed - lent out, idle, or leaked.
+     */
+    public long getOpen()
+    {
+      // closed first: the other order can observe closes of resources that the opened read missed, and go negative.
+      final long closedNow = closed.get();
+      return opened.get() - closedNow;
+    }
+
+    /**
      * Calls into the {@link ResourceFactory} that threw.
      */
     public long getErrored()
@@ -204,9 +214,10 @@ public class ResourcePool<K, V> implements Closeable
     public String toString()
     {
       return StringUtils.format(
-          "Counters{opened=%d, closed=%d, errored=%d, timedOut=%d}",
+          "Counters{opened=%d, closed=%d, open=%d, errored=%d, timedOut=%d}",
           getOpened(),
           getClosed(),
+          getOpen(),
           getErrored(),
           getTimedOut()
       );
@@ -683,7 +694,7 @@ public class ResourcePool<K, V> implements Closeable
     public void close()
     {
       if (closed.compareAndSet(false, true)) {
-        permits.release(maxSize);
+        permits.release(Integer.MAX_VALUE / 2);
         closeIdleResources();
       }
     }

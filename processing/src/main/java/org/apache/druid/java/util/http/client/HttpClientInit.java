@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpClientInit
 {
-  public static HttpClient createClient(HttpClientConfig config, Lifecycle lifecycle)
+  public static NettyHttpClient createClient(HttpClientConfig config, Lifecycle lifecycle)
   {
     try {
       // We need to use the full constructor in order to set a ThreadNameDeterminer. The other parameters are taken

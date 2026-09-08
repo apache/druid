@@ -544,6 +544,21 @@ These metrics are emitted when `druid.auth.emitAuthMetrics` is set to `true`.
 |`segment/rowCount/avg`| The average number of rows per segment on a historical. `SegmentStatsMonitor` must be enabled.| `dataSource`, `tier`, `priority`|Varies. See [segment optimization](../operations/segment-optimization.md) for guidance on optimal segment sizes. |
 |`segment/rowCount/range/count`| The number of segments in a bucket. `SegmentStatsMonitor` must be enabled.| `dataSource`, `tier`, `priority`, `range`|Varies|
 
+### HTTP client connection pools
+
+These metrics are only available if the `HttpClientPoolMonitor` module is included in `druid.monitoring.monitors`.
+They cover the connection pools that Druid services use to talk to each other. The `httpClient` dimension names the
+client that owns the pool: `client` and `escalatedClient` are configured by `druid.broker.http`, `global` and
+`escalatedGlobal` by `druid.global.http`.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`httpClient/pool/opened`|Number of connections opened.|`httpClient`|Varies. Steady churn on an idle cluster points at connections being discarded too eagerly.|
+|`httpClient/pool/closed`|Number of connections closed, whether they were broken, unused for too long, or surplus.|`httpClient`|Varies|
+|`httpClient/pool/errored`|Number of failures while opening, health checking, or closing a connection.|`httpClient`|0|
+|`httpClient/pool/timedOut`|Number of connections discarded for being unused longer than `unusedConnectionTimeout`.|`httpClient`|Varies|
+|`httpClient/pool/open`|Number of connections open at the time of the emission, lent out or idle. Unlike the other metrics of this group this is a level, not a per period count.|`httpClient`|<= `druid.<service>.http.numConnections` times the number of services talked to. A value that only grows points at connections being leaked.|
+
 ### JVM
 
 These metrics are only available if the `JvmMonitor` module is included in `druid.monitoring.monitors`.

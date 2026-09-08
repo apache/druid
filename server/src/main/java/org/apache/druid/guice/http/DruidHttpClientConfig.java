@@ -41,7 +41,7 @@ public class DruidHttpClientConfig
   private static final Logger LOG = new Logger(DruidHttpClientConfig.class);
 
   @JsonProperty
-  @Min(0)
+  @Min(1)
   private int numConnections = 20;
 
   @JsonProperty

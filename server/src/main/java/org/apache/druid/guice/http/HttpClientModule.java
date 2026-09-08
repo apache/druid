@@ -37,9 +37,11 @@ import org.apache.druid.java.util.http.client.AbstractHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
+import org.apache.druid.java.util.http.client.NettyHttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.metrics.HttpClientPoolRegistry;
 import org.apache.druid.server.security.Escalator;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.joda.time.Duration;
@@ -92,23 +94,27 @@ public class HttpClientModule implements Module
 
   public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
+    private final Class<? extends Annotation> annotationClazz;
     private final boolean isEscalated;
     private final boolean eagerByDefault;
     private Escalator escalator;
     private DruidNode node;
+    private HttpClientPoolRegistry poolRegistry;
 
     public HttpClientProvider(Class<? extends Annotation> annotationClazz, boolean isEscalated, boolean eagerByDefault)
     {
       super(annotationClazz);
+      this.annotationClazz = annotationClazz;
       this.isEscalated = isEscalated;
       this.eagerByDefault = eagerByDefault;
     }
 
     @Inject
-    public void inject(Escalator escalator, @Self DruidNode node)
+    public void inject(Escalator escalator, @Self DruidNode node, HttpClientPoolRegistry poolRegistry)
     {
       this.escalator = escalator;
       this.node = node;
+      this.poolRegistry = poolRegistry;
     }
 
     @Override
@@ -135,10 +141,11 @@ public class HttpClientModule implements Module
         builder.withSslContext(sslContextBinding.getProvider().get());
       }
 
-      HttpClient client = HttpClientInit.createClient(
+      NettyHttpClient client = HttpClientInit.createClient(
           builder.build(),
           getLifecycleProvider().get()
       );
+      poolRegistry.register(clientName(), client.getPoolCounters());
       HttpClient clientWithUserAgent = new AbstractHttpClient()
       {
         @Override
@@ -158,6 +165,16 @@ public class HttpClientModule implements Module
       } else {
         return clientWithUserAgent;
       }
+    }
+
+    /**
+     * The binding annotation of this client, which is what tells its pool apart from the pools of the other clients
+     * of the same process - {@code druid.global.http} backs two of them.
+     */
+    private String clientName()
+    {
+      final String simpleName = annotationClazz.getSimpleName();
+      return StringUtils.toLowerCase(simpleName.substring(0, 1)) + simpleName.substring(1);
     }
   }
 }
