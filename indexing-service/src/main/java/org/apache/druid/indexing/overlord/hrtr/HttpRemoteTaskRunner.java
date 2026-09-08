@@ -289,6 +289,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
   private ImmutableWorkerInfo findWorkerToRunTask(Task task)
   {
+    return findWorkerToRunTask(task, ImmutableMap.copyOf(getWorkersEligibleToRunTasks()));
+  }
+
+  private ImmutableWorkerInfo findWorkerToRunTask(
+      Task task,
+      ImmutableMap<String, ImmutableWorkerInfo> eligibleWorkers
+  )
+  {
     WorkerBehaviorConfig workerConfig = workerConfigRef.get();
     WorkerSelectStrategy strategy;
     if (workerConfig == null || workerConfig.getSelectStrategy() == null) {
@@ -300,7 +308,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
 
     return strategy.findWorkerForTask(
         config,
-        ImmutableMap.copyOf(getWorkersEligibleToRunTasks()),
+        eligibleWorkers,
         task
     );
   }
@@ -1097,6 +1105,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         ImmutableWorkerInfo immutableWorker = null;
 
         synchronized (statusLock) {
+          // Compute the eligible-worker snapshot ONCE per pass instead of rebuilding it for every
+          // pending task. Within a single synchronized(statusLock) pass no worker reservation is made
+          // until the break below, so getWorkersEligibleToRunTasks() is invariant across the inner
+          // loop. Rebuilding it per pending task made this loop O(pendingTasks x workers x
+          // tasksPerWorker) and held statusLock for long periods under a large pending backlog,
+          // which stalled TaskQueue.add/manage and task submission cluster-wide.
+          final ImmutableMap<String, ImmutableWorkerInfo> eligibleWorkers =
+              ImmutableMap.copyOf(getWorkersEligibleToRunTasks());
           Iterator<String> iter = pendingTaskIds.iterator();
           while (iter.hasNext()) {
             String taskId = iter.next();
@@ -1123,7 +1139,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
               break;
             }
 
-            immutableWorker = findWorkerToRunTask(ti.getTask());
+            immutableWorker = findWorkerToRunTask(ti.getTask(), eligibleWorkers);
             if (immutableWorker == null) {
               continue;
             }
