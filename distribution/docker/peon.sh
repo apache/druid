@@ -79,9 +79,9 @@ setKey() {
     service_conf=$(getConfPath $service)/runtime.properties
     # Delete from all
     sed -ri "/$key=/d" $COMMON_CONF_DIR/common.runtime.properties
-    [ -f $service_conf ] && sed -ri "/$key=/d" $service_conf
-    [ -f $service_conf ] && printf '\n%s=%s\n' "$key" "$value" >>$service_conf
-    [ -f $service_conf ] || printf '\n%s=%s\n' "$key" "$value" >>$COMMON_CONF_DIR/common.runtime.properties
+    [ -f "$service_conf" ] && sed -ri "/$key=/d" $service_conf
+    [ -f "$service_conf" ] && printf '\n%s=%s\n' "$key" "$value" >> "$service_conf"
+    [ -f "$service_conf" ] || printf '\n%s=%s\n' "$key" "$value" >> "$COMMON_CONF_DIR/common.runtime.properties"
 
     echo "Setting $key=$value in $service_conf"
 }
