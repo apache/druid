@@ -58,7 +58,7 @@ public class Pac4jSessionStore implements SessionStore
 
   public static final String PAC4J_SESSION_PREFIX = "pac4j.session.";
 
-  private final JEESessionStore delegate = JEESessionStore.INSTANCE;
+  private final JEESessionStore delegate = new JEESessionStore();
   private final CryptoService cryptoService;
 
   public Pac4jSessionStore(String cookiePassphrase)

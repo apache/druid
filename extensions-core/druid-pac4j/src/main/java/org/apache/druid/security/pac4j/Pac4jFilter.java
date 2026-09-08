@@ -27,6 +27,7 @@ import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
 import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.jee.context.JEEContext;
+import org.pac4j.jee.context.JEEFrameworkParameters;
 import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
 import javax.servlet.Filter;
@@ -62,6 +63,7 @@ public class Pac4jFilter implements Filter
     this.name = name;
     this.authorizerName = authorizerName;
     this.sessionStore = new Pac4jSessionStore(cookiePassphrase);
+    this.pac4jConfig.setSessionStoreFactory(parameters -> sessionStore);
   }
 
   @Override
@@ -90,22 +92,18 @@ public class Pac4jFilter implements Filter
       String redirectUrl = originalUrl != null ? originalUrl : "/";
 
       callbackLogic.perform(
-              context,
-              sessionStore,
               pac4jConfig,
-              JEEHttpActionAdapter.INSTANCE,
               redirectUrl,                      // Redirect to original URL or root
               null,
-              null
+              null,
+              new JEEFrameworkParameters(request, response)
       );
     } else {
       DefaultSecurityLogic securityLogic = new DefaultSecurityLogic();
       try {
         securityLogic.perform(
-            context,
-            sessionStore,
             pac4jConfig,
-            (ctx, session, profiles, parameters) -> {
+            (ctx, session, profiles) -> {
               try {
                 // Extract user ID from pac4j profiles and create AuthenticationResult
                 if (profiles != null && !profiles.isEmpty()) {
@@ -125,10 +123,10 @@ public class Pac4jFilter implements Filter
               }
               return null;
             },
-            JEEHttpActionAdapter.INSTANCE,
             null,
             "none",  // Use "none" instead of authorizerName to avoid CSRF issues
-            null
+            null,
+            new JEEFrameworkParameters(request, response)
         );
       }
       catch (HttpAction e) {
