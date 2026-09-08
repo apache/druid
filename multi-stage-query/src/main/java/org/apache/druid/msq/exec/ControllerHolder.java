@@ -67,6 +67,10 @@ public class ControllerHolder
 
   private final DateTime startTime;
 
+  // Published before notifying the result listener, so report readers see final counters once results end.
+  @Nullable
+  private volatile TaskReport.ReportMap finalReport;
+
   @GuardedBy("this")
   private State state = State.ACCEPTED;
 
@@ -101,6 +105,14 @@ public class ControllerHolder
   public Controller getController()
   {
     return controller;
+  }
+
+  /** Returns the final report once available, or a live snapshot while the query is running. */
+  @Nullable
+  public TaskReport.ReportMap getReports()
+  {
+    final TaskReport.ReportMap report = finalReport;
+    return report == null ? controller.liveReports() : report;
   }
 
   @Nullable
@@ -169,7 +181,15 @@ public class ControllerHolder
       Thread.currentThread().setName(makeThreadName());
 
       try {
-        final CaptureReportQueryListener reportListener = new CaptureReportQueryListener(listener);
+        final CaptureReportQueryListener reportListener = new CaptureReportQueryListener(listener)
+        {
+          @Override
+          public void onQueryComplete(final MSQTaskReportPayload report)
+          {
+            finalReport = TaskReport.buildTaskReports(new MSQTaskReport(controller.queryId(), report));
+            super.onQueryComplete(report);
+          }
+        };
 
         try {
           if (transitionToRunning()) {

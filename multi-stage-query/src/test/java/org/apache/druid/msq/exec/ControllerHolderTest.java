@@ -28,6 +28,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.controller.ControllerThreadPool;
+import org.apache.druid.msq.dart.controller.DartControllerRegistry;
+import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
@@ -35,6 +37,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.test.NoopQueryListener;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -374,6 +377,72 @@ public class ControllerHolderTest
 
     Assertions.assertTrue(registered.get(), "Should have been registered");
     Assertions.assertTrue(deregistered.get(), "Should have been deregistered");
+  }
+
+  @Test
+  public void testFinalReportVisibleBeforeCompletionListenerReturns() throws Exception
+  {
+    final MSQTaskReportPayload finalPayload = makeSuccessReport();
+    final CountDownLatch listenerCalled = new CountDownLatch(1);
+    final CountDownLatch releaseListener = new CountDownLatch(1);
+    final DartControllerRegistry registry = new DartControllerRegistry(new DartControllerConfig());
+    final Controller controller = new TestController("test-query")
+    {
+      @Override
+      public void run(final QueryListener listener)
+      {
+        listener.onQueryComplete(finalPayload);
+      }
+    };
+    final ControllerHolder holder = new ControllerHolder(
+        controller,
+        "sql-1",
+        "SELECT 1",
+        new AuthenticationResult("user", null, "authn", Map.of()),
+        DateTimes.nowUtc()
+    )
+    {
+      @Override
+      public String getControllerHost()
+      {
+        return "localhost:8082";
+      }
+    };
+    final ListenableFuture<?> future = holder.runAsync(
+        new NoopQueryListener()
+        {
+          @Override
+          public void onQueryComplete(final MSQTaskReportPayload report)
+          {
+            listenerCalled.countDown();
+            try {
+              Assertions.assertTrue(releaseListener.await(10, TimeUnit.SECONDS));
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new RuntimeException(e);
+            }
+          }
+        },
+        registry,
+        controllerThreadPool
+    );
+
+    try {
+      Assertions.assertTrue(listenerCalled.await(10, TimeUnit.SECONDS));
+      // The controller is still registered: readers must get the final payload, not stale live counters.
+      Assertions.assertSame(holder, registry.getController("test-query"));
+      Assertions.assertSame(
+          finalPayload,
+          registry.getQueryDetailsBySqlQueryId("sql-1").getReportMap().get("multiStageQuery").getPayload()
+      );
+      // Publication must not disable cancellation while the completion callback is still executing.
+      Assertions.assertEquals(ControllerHolder.State.RUNNING, holder.getState());
+    }
+    finally {
+      releaseListener.countDown();
+      future.get(10, TimeUnit.SECONDS);
+    }
   }
 
   @Test
