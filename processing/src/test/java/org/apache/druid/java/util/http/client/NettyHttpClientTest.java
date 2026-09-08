@@ -36,7 +36,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.URL;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -108,7 +108,7 @@ public class NettyHttpClientTest
       final ListenableFuture<Object> future = client.go(
           new Request(
               HttpMethod.GET,
-              new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
+              URI.create(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort())).toURL()
           ),
           new ThrowingResponseHandler(expected)
       );
@@ -194,7 +194,7 @@ public class NettyHttpClientTest
       final ListenableFuture<Object> future = client.go(
           new Request(
               HttpMethod.GET,
-              new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
+              URI.create(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort())).toURL()
           ),
           handler
       );
@@ -233,7 +233,7 @@ public class NettyHttpClientTest
                   );
                   OutputStream out = clientSocket.getOutputStream()
               ) {
-                while (!in.readLine().equals("")) {
+                while (!in.readLine().isEmpty()) {
                   // skip lines
                 }
                 out.write(rawResponse.getBytes(StandardCharsets.UTF_8));
