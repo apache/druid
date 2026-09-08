@@ -20,7 +20,6 @@ set -x
 
 echo 'Running Maven install...'
 mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
-mvn -B install -q -ff -pl 'distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true
 
 mvn -B checkstyle:checkstyle --fail-at-end
 
