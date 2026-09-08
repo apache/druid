@@ -505,7 +505,7 @@
             <dependency>
                 <groupId>com.squareup.okio</groupId>
                 <artifactId>okio</artifactId>
-                <version>3.18.1</version>
+                <version>3.18.2</version>
             </dependency>
             <dependency>
                 <groupId>com.squareup.okio</groupId>
