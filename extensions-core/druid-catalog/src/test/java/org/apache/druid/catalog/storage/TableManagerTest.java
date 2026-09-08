@@ -266,6 +266,40 @@ public class TableManagerTest
   }
 
   @Test
+  public void testUpdatePropertiesFailsWhenTableIsDeletedConcurrently() throws CatalogException
+  {
+    final TableSpec spec = new TableSpec(
+        DatasourceDefn.TABLE_TYPE,
+        ImmutableMap.of(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "P1D"),
+        null
+    );
+    final TableMetadata table = TableMetadata.newTable(TableId.datasource("deleting"), spec);
+    manager.create(table);
+
+    // The deletion lands between the edit's read and its write.
+    assertThrows(
+        CatalogException.class,
+        () -> manager.updateProperties(table.id(), t -> {
+          try {
+            manager.markDeleting(table.id());
+          }
+          catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+          final Map<String, Object> updated = new HashMap<>(t.spec().properties());
+          updated.put("mine", "written");
+          return t.spec().withProperties(updated);
+        })
+    );
+
+    // The deleting row was not rewritten, and a fresh edit sees no active table at all.
+    assertThrows(
+        NotFoundException.class,
+        () -> manager.updateProperties(table.id(), t -> t.spec())
+    );
+  }
+
+  @Test
   public void testUpdateColumns() throws CatalogException
   {
     Map<String, Object> props = ImmutableMap.of(

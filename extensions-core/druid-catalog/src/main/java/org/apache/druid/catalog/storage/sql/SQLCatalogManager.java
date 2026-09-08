@@ -358,6 +358,7 @@ public class SQLCatalogManager implements CatalogManager
       "  updateTime = :updateTime\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
+      "  AND state = 'A'\n" +
       "  AND updateTime = :oldVersion";
 
   @Override
@@ -393,6 +394,7 @@ public class SQLCatalogManager implements CatalogManager
       "  updateTime = :updateTime\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
+      "  AND state = 'A'\n" +
       "  AND updateTime = :oldVersion";
 
   @Override
