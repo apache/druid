@@ -23,6 +23,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.ServerCloneStatus;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 
@@ -114,6 +115,11 @@ public interface CoordinatorSimulation
      * callbacks on the coordinator.
      */
     void loadQueuedSegments();
+
+    /**
+     * Gets the segments currently in the load queue of the given server.
+     */
+    List<SegmentHolder> getQueuedSegments(DruidServer server);
 
     /**
      * Finishes load of all the segments that were queued in the previous

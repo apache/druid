@@ -27,6 +27,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerCloneStatus;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
@@ -126,6 +127,12 @@ public abstract class CoordinatorSimulationBaseTest implements
   public void loadQueuedSegments()
   {
     sim.cluster().loadQueuedSegments();
+  }
+
+  @Override
+  public List<SegmentHolder> getQueuedSegments(DruidServer server)
+  {
+    return sim.cluster().getQueuedSegments(server);
   }
 
   @Override

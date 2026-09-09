@@ -5658,7 +5658,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                   null,
                   StringUtils.toUtf8(StringUtils.format("event-%d", j))
               )
-          ).get();
+          );
           time = time.plus(5, ChronoUnit.SECONDS);
         }
       }

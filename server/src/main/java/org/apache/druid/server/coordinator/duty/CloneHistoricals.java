@@ -203,7 +203,7 @@ public class CloneHistoricals implements CoordinatorDuty
   )
   {
     if (targetServer.isLoadingSegment(segment)) {
-      targetServer.cancelOperation(SegmentAction.LOAD, segment);
+      targetServer.cancelLoad(segment);
     } else if (loadQueueManager.dropSegment(segment, targetServer)) {
       final RowKey rowKey = RowKey
           .with(Dimension.SERVER, targetServer.getServer().getName())
