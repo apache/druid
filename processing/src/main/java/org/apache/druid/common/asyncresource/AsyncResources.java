@@ -134,9 +134,11 @@ public class AsyncResources
   }
 
   /**
-   * Returns an {@link AsyncResource} that collects a list of underlying resources into a single lifecycle.
-   * Calling {@link AsyncResource#close()} on the returned async resource causes the underlying async resource
-   * to be closed.
+   * Returns an {@link AsyncResource} whose value is the result of calling {@code function} on an underlying resource.
+   *
+   * <p>Once this method returns, the returned {@link AsyncResource} is the caller's to close, and closing it also
+   * closes {@code sourceResource}, so the caller must not close {@code sourceResource} itself. If this method throws,
+   * nothing has been taken over and the caller still owns {@code sourceResource}.
    *
    * <p>The transformation generally happens eagerly in the thread that provides the source resource, so it is
    * important that it run quickly.
@@ -155,8 +157,10 @@ public class AsyncResources
 
   /**
    * Returns an {@link AsyncResource} that collects a list of underlying resources into a single lifecycle.
-   * Calling {@link AsyncResource#close()} on the returned async resource causes the underlying async resources
-   * to also be closed.
+   *
+   * <p>Once this method returns, the returned {@link AsyncResource} is the caller's to close, and closing it also
+   * closes every resource in {@code asyncResources}, so the caller must not close them itself. If this method throws,
+   * nothing has been taken over and the caller still owns all of them.
    */
   public static <T> AsyncResource<List<T>> collect(final List<AsyncResource<T>> asyncResources)
   {
@@ -174,8 +178,10 @@ public class AsyncResources
    * <p>The {@code recoverFn} is not called when the source was canceled by {@link AsyncResource#close()}: there is
    * no consumer left to recover for.
    *
-   * <p>When recovery happens, the {@code sourceResource} is closed immediately. Otherwise, the {@code sourceResoruce}
-   * is closed when the resource returned by this function is closed.
+   * <p>Once this method returns, the returned {@link AsyncResource} is the caller's to close and the caller must not
+   * close {@code sourceResource} itself: it is closed immediately when recovery happens, and otherwise when the
+   * returned resource is closed. If this method throws, nothing has been taken over and the caller still owns
+   * {@code sourceResource}.
    *
    * <p>The target of {@code function} need not be {@link Closeable}, and even if it is {@link Closeable}, it
    * is not closed (only the source is closed). This transform utility is meant for transformations that do

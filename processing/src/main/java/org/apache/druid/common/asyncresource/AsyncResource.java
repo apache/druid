@@ -70,15 +70,19 @@ import java.util.concurrent.TimeoutException;
  * cancellation, and in this case, the resource becomes eligible for GC without completing the future and therefore
  * without being closed.
  *
- * <p>AsyncResource handles this problem by automatically closing the resource in
- * {@link SettableAsyncResource#set(ResourceHolder)} when the {@link SettableAsyncResource} has been canceled.
+ * <p>AsyncResource handles this problem by reporting the race to the producer instead of dropping the resource: once
+ * this {@link AsyncResource} has been closed, {@link SettableAsyncResource#set(ResourceHolder)} becomes a no-op and
+ * returns false, which tells the producer that the object it was handing over is orphaned and that closing it is now
+ * the producer's job. Acquisition can also be canceled on the producer side, via
+ * {@link SettableAsyncResource#setCanceler(Runnable)}.
  */
 public interface AsyncResource<T> extends Closeable
 {
   /**
-   * Whether resource acquisition has completed (successfully, with failure, or canceled by {@link #close()}). To wait
-   * for this to become true asynchronously, use {@link #addReadyCallback(Runnable)}. To block until readiness, use
-   * {@link #await()} or {@link #await(long)}.
+   * Whether resource acquisition is no longer in progress, i.e. it succeeded, failed, was canceled by
+   * {@link #close()}, or was released by {@link SettableAsyncResource#release()}. Never goes back to false once true;
+   * use {@link #get()} to find out which of those happened. To wait for this to become true asynchronously, use
+   * {@link #addReadyCallback(Runnable)}. To block until readiness, use {@link #await()} or {@link #await(long)}.
    */
   boolean isReady();
 
@@ -147,6 +151,8 @@ public interface AsyncResource<T> extends Closeable
    * {@link #addReadyCallback(Runnable)} callbacks fire so that waiting consumers learn acquisition was aborted
    * instead of waiting for a completion that will never come. {@link #isReady()} then returns true and
    * {@link #get()} throws {@link AsyncResourceCanceledException}.
+   *
+   * <p>Only the owner of this resource (the consumer) should call this method.
    *
    * <p>Despite {@link Closeable} requiring this method to be idempotent, it is not necessarily
    * going to be idempotent. Do not close more than once.

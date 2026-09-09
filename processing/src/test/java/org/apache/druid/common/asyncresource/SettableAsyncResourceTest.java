@@ -222,6 +222,31 @@ public class SettableAsyncResourceTest
   }
 
   @Test
+  public void testSetExceptionRejectsTheCancellationType()
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+
+    // Only close() may cancel a resource; a producer claiming cancellation would make the type useless to consumers.
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> resource.setException(new AsyncResourceCanceledException("not the producer's to throw"))
+    );
+    Assertions.assertFalse(resource.isReady(), "a rejected setException must not complete the resource");
+  }
+
+  @Test
+  public void testSetExceptionWithTheCancellationTypeIsDroppedAfterClose()
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.close();
+
+    // Wrappers propagate a closed source's cancellation to their own already-closed target on ordinary cancel paths.
+    // That has to stay a silent no-op rather than an exception thrown from inside a ready callback.
+    resource.setException(new AsyncResourceCanceledException("propagated from a closed source"));
+    Assertions.assertThrows(AsyncResourceCanceledException.class, resource::get);
+  }
+
+  @Test
   public void testCloseBeforeReadyCompletesAsCanceled()
   {
     final SettableAsyncResource<String> resource = new SettableAsyncResource<>();

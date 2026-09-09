@@ -181,7 +181,8 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
    * learned that acquisition was canceled when {@link #close()} fired the pending callbacks.
    *
    * <p>Throws {@link DruidException} if this resource was already completed from a prior call to this method or
-   * {@link #set}).
+   * {@link #set}, or if {@code t} is an {@link AsyncResourceCanceledException} (only {@link #close()} may cancel a
+   * resource, so that consumers can use that type to recognize their own cancellation).
    */
   public void setException(Throwable t)
   {
@@ -191,8 +192,9 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
   @Override
   public synchronized boolean isReady()
   {
-    // a closed resource is complete too (acquisition is over and get() reports why)
-    return state == State.READY || state == State.CLOSED;
+    // anything but NEW means acquisition is over, whether it succeeded, failed, was canceled, or was released; get()
+    // reports which. Once true this stays true, so a consumer waiting on it can never be sent back to waiting.
+    return state != State.NEW;
   }
 
   @Override
@@ -312,6 +314,14 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
     final List<Runnable> callbacksToFire;
 
     synchronized (this) {
+      // only close() may cancel a resource
+      if (state == State.NEW && value.isError() && value.error() instanceof AsyncResourceCanceledException) {
+        throw DruidException.defensive(
+            "Cannot complete a resource with exception of class[%s], which is reserved for cancellation by close()",
+            AsyncResourceCanceledException.class.getSimpleName()
+        );
+      }
+
       didSet = switch (state) {
         case NEW -> {
           if (value.isError()) {
