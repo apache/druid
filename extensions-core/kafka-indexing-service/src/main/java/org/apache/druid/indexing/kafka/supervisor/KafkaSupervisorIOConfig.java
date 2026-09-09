@@ -121,6 +121,64 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   }
 
   /**
+   * Backwards-compatible overload without {@code headerBasedFilterConfig} (defaults to null), retained so that
+   * callers compiled against the previous signature keep working.
+   */
+  public KafkaSupervisorIOConfig(
+      String topic,
+      String topicPattern,
+      InputFormat inputFormat,
+      Integer replicas,
+      Integer taskCount,
+      Period taskDuration,
+      Map<String, Object> consumerProperties,
+      @Nullable AutoScalerConfig autoScalerConfig,
+      @Nullable LagAggregator lagAggregator,
+      Long pollTimeout,
+      Period startDelay,
+      Period period,
+      Boolean useEarliestOffset,
+      Period completionTimeout,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      DateTime lateMessageRejectionStartDateTime,
+      KafkaConfigOverrides configOverrides,
+      IdleConfig idleConfig,
+      Integer stopTaskCount,
+      @Nullable Boolean emitTimeLagMetrics,
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable BoundedStreamConfig boundedStreamConfig
+  )
+  {
+    this(
+        topic,
+        topicPattern,
+        inputFormat,
+        replicas,
+        taskCount,
+        taskDuration,
+        consumerProperties,
+        autoScalerConfig,
+        lagAggregator,
+        pollTimeout,
+        startDelay,
+        period,
+        useEarliestOffset,
+        completionTimeout,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        lateMessageRejectionStartDateTime,
+        configOverrides,
+        null,
+        idleConfig,
+        stopTaskCount,
+        emitTimeLagMetrics,
+        serverPriorityToReplicas,
+        boundedStreamConfig
+    );
+  }
+
+  /**
    * Only used in testing or serialization/deserialization
    */
   @JsonProperty
