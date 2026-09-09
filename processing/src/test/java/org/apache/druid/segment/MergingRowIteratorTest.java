@@ -84,12 +84,18 @@ public class MergingRowIteratorTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testMarkHandlingAcrossEqualAndChangingTimestamps()
+  public void testMarkHandlingAcrossAllPossible4ElementSequences()
   {
-    // These inputs merge to [1, 1, 2, 2, 2, 3, 3, 4, 4, 5], covering equal timestamps from both
-    // the same iterator and different iterators, as well as transitions to a new timestamp. testMerge()
-    // places the mark at every output position, exercising mark handling without the exhaustive cross-product above.
-    testMerge(Longs.asList(1, 2, 2, 4), Longs.asList(1, 3, 4), Longs.asList(2, 3, 5));
+    // Keep systematic coverage of mark handling across different heap layouts while limiting its cross-product.
+    List<List<Long>> possibleSequences = new ArrayList<>();
+    populateSequences(possibleSequences, new ArrayDeque<>(), 1, 6, 4);
+    for (int i1 = 0; i1 < possibleSequences.size(); i1++) {
+      for (int i2 = i1; i2 < possibleSequences.size(); i2++) {
+        for (int i3 = i2; i3 < possibleSequences.size(); i3++) {
+          testMerge(possibleSequences.get(i1), possibleSequences.get(i2), possibleSequences.get(i3));
+        }
+      }
+    }
   }
 
   private static void populateSequences(
