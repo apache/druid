@@ -912,9 +912,12 @@
                real cross-node HTTP traffic exercises the migrated HttpClient code paths (chunked
                responses, long-poll syncs, TLS, ByteBuf-bearing handlers). The Stage 1 CI workers
                that happen to run embedded-tests classes pay a small overhead per class; in exchange
-               we catch ref-count regressions immediately rather than as a flaky off-heap leak. -->
+               we catch ref-count regressions immediately rather than as a flaky off-heap leak.
+               The custom detector escalates a leak to a non-zero JVM exit so the build fails —
+               Netty's default detector only logs. -->
           <systemPropertyVariables>
             <io.netty.leakDetection.level>PARANOID</io.netty.leakDetection.level>
+            <io.netty.customResourceLeakDetector>org.apache.druid.testing.embedded.junit5.FailFastLeakDetector</io.netty.customResourceLeakDetector>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -963,6 +966,7 @@
                 -Daws.region=us-east-1
                 -Ddruid.test.stupidPool.poison=true
                 -Dio.netty.leakDetection.level=PARANOID
+                -Dio.netty.customResourceLeakDetector=org.apache.druid.testing.embedded.junit5.FailFastLeakDetector
               </argLine>
             </configuration>
             <executions>
