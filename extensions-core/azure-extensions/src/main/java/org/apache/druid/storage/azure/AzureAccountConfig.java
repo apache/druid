@@ -20,9 +20,9 @@
 package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
 
 /**
  * Stores the configuration for an Azure account.

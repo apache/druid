@@ -27,8 +27,8 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -47,7 +47,7 @@ public class InlineInputSliceTest
 
     final InlineInputSlice slice = new InlineInputSlice(dataSource);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         slice,
         mapper.readValue(mapper.writeValueAsString(slice), InputSlice.class)
     );

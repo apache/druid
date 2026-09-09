@@ -25,6 +25,7 @@ import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.engine.DefaultEngine;
 import io.delta.kernel.engine.Engine;
+import io.delta.kernel.engine.FileReadResult;
 import io.delta.kernel.exceptions.TableNotFoundException;
 import io.delta.kernel.internal.InternalScanFileUtils;
 import io.delta.kernel.internal.data.ScanStateRow;
@@ -73,7 +74,7 @@ public class DeltaInputRowTest
     final Scan scan = DeltaTestUtils.getScan(engine, deltaTablePath);
 
     final Row scanState = scan.getScanState(engine);
-    final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(engine, scanState);
+    final StructType physicalReadSchema = ScanStateRow.getPhysicalDataReadSchema(scanState);
 
     final CloseableIterator<FilteredColumnarBatch> scanFileIter = scan.getScanFiles(engine);
     int totalRecordCount = 0;
@@ -85,11 +86,13 @@ public class DeltaInputRowTest
         final Row scanFile = scanFileRows.next();
         final FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFile);
 
-        final CloseableIterator<ColumnarBatch> physicalDataIter = engine.getParquetHandler().readParquetFiles(
-            Utils.singletonCloseableIterator(fileStatus),
-            physicalReadSchema,
-            Optional.empty()
-        );
+        final CloseableIterator<ColumnarBatch> physicalDataIter = engine.getParquetHandler()
+            .readParquetFiles(
+                Utils.singletonCloseableIterator(fileStatus),
+                physicalReadSchema,
+                Optional.empty()
+            )
+            .map(FileReadResult::getData);
         final CloseableIterator<FilteredColumnarBatch> dataIter = Scan.transformPhysicalData(
             engine,
             scanState,

@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.collect.Maps;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
@@ -40,18 +41,16 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -70,8 +69,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   private static final int NUM_ROWS = 128;
   private static final String TIMESTAMP_STRING = "2019-01-01";
 
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testRead() throws IOException
@@ -89,7 +88,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         inputFormat,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null)
+        temporaryFolder.newFolder()
     );
 
     int read = 0;
@@ -123,7 +122,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         inputFormat,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null)
+        temporaryFolder.newFolder()
     );
 
     int read = 0;

@@ -33,8 +33,8 @@ import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Properties;
@@ -67,15 +67,15 @@ public class ForkingTaskRunnerConfigTest
         "not found",
         ForkingTaskRunnerConfig.class
     );
-    Assert.assertEquals("", forkingTaskRunnerConfig.getJavaOpts());
-    Assert.assertEquals(ImmutableList.of(), forkingTaskRunnerConfig.getJavaOptsArray());
+    Assertions.assertEquals("", forkingTaskRunnerConfig.getJavaOpts());
+    Assertions.assertEquals(ImmutableList.of(), forkingTaskRunnerConfig.getJavaOptsArray());
   }
 
   @Test
   public void testSimpleStringJavaOpts()
   {
     final String javaOpts = "some string";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         javaOpts,
         buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, javaOpts).getJavaOpts()
     );
@@ -98,7 +98,7 @@ public class ForkingTaskRunnerConfigTest
                             + "            \"\\\"\\\"\",\n"
                             + "            \"AndMaybeEmptyQuotes\",\n"
                             + "            \"keep me around\"";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         javaOpts,
         buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, javaOpts).getJavaOpts()
     );
@@ -108,7 +108,7 @@ public class ForkingTaskRunnerConfigTest
   public void testSimpleJavaOptArray() throws JsonProcessingException
   {
     final List<String> javaOpts = ImmutableList.of("option1", "option \"2\"");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         javaOpts,
         buildFromProperties(
             ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY,
@@ -136,7 +136,7 @@ public class ForkingTaskRunnerConfigTest
         "AndMaybeEmptyQuotes",
         "keep me around"
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         javaOpts,
         buildFromProperties(
             ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY,
@@ -149,7 +149,7 @@ public class ForkingTaskRunnerConfigTest
   public void testPorts() throws JsonProcessingException
   {
     final List<Integer> ports = ImmutableList.of(1024, 1025);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ports,
         buildFromProperties(
             IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".ports",
@@ -158,34 +158,49 @@ public class ForkingTaskRunnerConfigTest
     );
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testExceptionalPorts()
   {
-    buildFromProperties(IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".ports", "not an Integer");
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> buildFromProperties(IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".ports", "not an Integer")
+    );
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testExceptionalPorts2()
   {
-    buildFromProperties(IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".ports", "1024"); // not an array
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> buildFromProperties(IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".ports", "1024")
+    ); // not an array
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testExceptionalJavaOptArray()
   {
-    buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY, "not an array");
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY, "not an array")
+    );
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testExceptionalJavaOpt()
   {
-    buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, "[\"not a string\"]");
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, "[\"not a string\"]")
+    );
   }
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testExceptionalJavaOpt2()
   {
-    buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, "{\"not a string\":\"someVal\"}");
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> buildFromProperties(ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY, "{\"not a string\":\"someVal\"}")
+    );
   }
 
   private ForkingTaskRunnerConfig buildFromProperties(String key, String value)

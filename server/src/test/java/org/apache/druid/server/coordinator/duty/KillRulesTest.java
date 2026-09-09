@@ -25,16 +25,15 @@ import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
-@RunWith(MockitoJUnitRunner.class)
 public class KillRulesTest
 {
   @Mock
@@ -45,12 +44,20 @@ public class KillRulesTest
 
   private KillRules killRules;
   private CoordinatorRunStats runStats;
+  private AutoCloseable mocks;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
+    mocks = MockitoAnnotations.openMocks(this);
     runStats = new CoordinatorRunStats();
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception
+  {
+    mocks.close();
   }
 
   @Test
@@ -71,6 +78,6 @@ public class KillRulesTest
     killRules = new KillRules(config, mockRuleManager);
     killRules.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockRuleManager).removeRulesForEmptyDatasourcesOlderThan(ArgumentMatchers.anyLong());
-    Assert.assertTrue(runStats.hasStat(Stats.Kill.RULES));
+    Assertions.assertTrue(runStats.hasStat(Stats.Kill.RULES));
   }
 }

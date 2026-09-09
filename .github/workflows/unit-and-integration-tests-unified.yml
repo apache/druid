@@ -56,7 +56,6 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   docker-tests:
-    needs: [unit-tests]
     uses: ./.github/workflows/docker-tests.yml
 
   actions-timeline:

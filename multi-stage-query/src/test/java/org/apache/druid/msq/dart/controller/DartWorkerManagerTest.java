@@ -32,7 +32,6 @@ import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerStats;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -124,7 +123,7 @@ public class DartWorkerManagerTest
     Assertions.assertTrue(workerManager.launchWorkersIfNeeded(0).isEmpty()); // Does nothing, less than WORKERS.size()
     Assertions.assertTrue(workerManager.launchWorkersIfNeeded(1).isEmpty()); // Does nothing, less than WORKERS.size()
     Assertions.assertTrue(workerManager.launchWorkersIfNeeded(2).isEmpty()); // Does nothing, equal to WORKERS.size()
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> workerManager.launchWorkersIfNeeded(3)
     );

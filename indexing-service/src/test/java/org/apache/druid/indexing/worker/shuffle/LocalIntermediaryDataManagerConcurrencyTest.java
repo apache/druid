@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -41,7 +42,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,8 +70,8 @@ public class LocalIntermediaryDataManagerConcurrencyTest
   private static final int CALLS_PER_THREAD = 200;
   private static final String SUPERVISOR_TASK_ID = "supervisorTaskId";
 
-  @TempDir
-  private File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private File sharedSegmentDir;
@@ -81,7 +82,9 @@ public class LocalIntermediaryDataManagerConcurrencyTest
     final WorkerConfig workerConfig = new WorkerConfig();
     final ImmutableList.Builder<StorageLocationConfig> locations = ImmutableList.builder();
     for (int i = 0; i < LOCATION_COUNT; i++) {
-      locations.add(new StorageLocationConfig(newTempDir("loc_" + i), LOCATION_CAPACITY_BYTES, null));
+      locations.add(
+          new StorageLocationConfig(temporaryFolder.newFolder("loc_" + i), LOCATION_CAPACITY_BYTES, null)
+      );
     }
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(locations.build())
@@ -90,7 +93,7 @@ public class LocalIntermediaryDataManagerConcurrencyTest
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     intermediaryDataManager.start();
     // Pre-built shared input dir keeps per-call work small so the race window dominates wall time.
-    sharedSegmentDir = newTempDir("shared_input");
+    sharedSegmentDir = temporaryFolder.newFolder("shared_input");
     FileUtils.write(new File(sharedSegmentDir, "data.txt"), "x", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(sharedSegmentDir, "version.bin"), Ints.toByteArray(9));
   }
@@ -132,13 +135,6 @@ public class LocalIntermediaryDataManagerConcurrencyTest
     }
     executor.shutdown();
     Assertions.assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
-  }
-
-  private File newTempDir(String name) throws IOException
-  {
-    final File directory = new File(tempDir, name);
-    org.apache.druid.java.util.common.FileUtils.mkdirp(directory);
-    return directory;
   }
 
   private DataSegment newSegment(Interval interval, int bucketId)

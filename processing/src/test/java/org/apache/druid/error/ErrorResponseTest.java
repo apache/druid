@@ -51,7 +51,7 @@ public class ErrorResponseTest
 
     ErrorResponse recomposed = ErrorResponse.fromMap(asMap);
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         recomposed.getUnderlyingException(),
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("bad sql!")
     );
@@ -101,7 +101,7 @@ public class ErrorResponseTest
 
     ErrorResponse recomposed = ErrorResponse.fromMap(asMap);
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         recomposed.getUnderlyingException(),
         new DruidExceptionMatcher(DruidException.Persona.OPERATOR, DruidException.Category.TIMEOUT, "legacyQueryException")
             .expectMessageIs("Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.")

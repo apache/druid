@@ -51,16 +51,14 @@ import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.utils.CollectionUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import static org.junit.Assert.fail;
 
 public class MSQTasksTest
 {
@@ -72,7 +70,7 @@ public class MSQTasksTest
   @Test
   public void test_makeErrorReport_allNull()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         MSQErrorReport.fromFault(
             CONTROLLER_ID,
             CONTROLLER_HOST,
@@ -93,7 +91,7 @@ public class MSQTasksTest
         null
     );
 
-    Assert.assertEquals(controllerReport, MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, controllerReport, null));
+    Assertions.assertEquals(controllerReport, MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, controllerReport, null));
   }
 
   @Test
@@ -106,7 +104,7 @@ public class MSQTasksTest
         null
     );
 
-    Assert.assertEquals(workerReport, MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, null, workerReport));
+    Assertions.assertEquals(workerReport, MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, null, workerReport));
   }
 
   @Test
@@ -126,7 +124,7 @@ public class MSQTasksTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         controllerReport,
         MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, controllerReport, workerReport)
     );
@@ -149,7 +147,7 @@ public class MSQTasksTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         workerReport,
         MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, controllerReport, workerReport)
     );
@@ -172,7 +170,7 @@ public class MSQTasksTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         workerReport,
         MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, controllerReport, workerReport)
     );
@@ -195,7 +193,7 @@ public class MSQTasksTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         workerReport,
         MSQTasks.makeErrorReport(WORKER_ID, WORKER_HOST, controllerReport, workerReport)
     );
@@ -205,19 +203,19 @@ public class MSQTasksTest
   @Test
   public void test_getWorkerFromTaskId()
   {
-    Assert.assertEquals(1, MSQTasks.workerFromTaskId("xxxx-worker1_0"));
-    Assert.assertEquals(10, MSQTasks.workerFromTaskId("xxxx-worker10_0"));
-    Assert.assertEquals(0, MSQTasks.workerFromTaskId("xxdsadxx-worker0_0"));
-    Assert.assertEquals(90, MSQTasks.workerFromTaskId("dx-worker90_0"));
-    Assert.assertEquals(9, MSQTasks.workerFromTaskId("12dsa1-worker9_0"));
+    Assertions.assertEquals(1, MSQTasks.workerFromTaskId("xxxx-worker1_0"));
+    Assertions.assertEquals(10, MSQTasks.workerFromTaskId("xxxx-worker10_0"));
+    Assertions.assertEquals(0, MSQTasks.workerFromTaskId("xxdsadxx-worker0_0"));
+    Assertions.assertEquals(90, MSQTasks.workerFromTaskId("dx-worker90_0"));
+    Assertions.assertEquals(9, MSQTasks.workerFromTaskId("12dsa1-worker9_0"));
 
-    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker-0"));
-    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("worker-0"));
-    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker1-0"));
-    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker0-"));
-    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worr1_0"));
-    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker-1-0"));
-    Assert.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xx"));
+    Assertions.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker-0"));
+    Assertions.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("worker-0"));
+    Assertions.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker1-0"));
+    Assertions.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker0-"));
+    Assertions.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worr1_0"));
+    Assertions.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xxxx-worker-1-0"));
+    Assertions.assertThrows(ISE.class, () -> MSQTasks.workerFromTaskId("xx"));
   }
 
   @Test
@@ -240,10 +238,10 @@ public class MSQTasksTest
     try {
       msqWorkerTaskLauncher.start();
       msqWorkerTaskLauncher.launchWorkersIfNeeded(numTasks);
-      fail();
+      Assertions.fail();
     }
     catch (Exception e) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           MSQFaultUtils.generateMessageWithErrorCode(new TaskStartTimeoutFault(5, numTasks + 1, 5000)),
           MSQFaultUtils.generateMessageWithErrorCode(((MSQException) e.getCause()).getFault())
       );
@@ -253,28 +251,28 @@ public class MSQTasksTest
   @Test
   public void test_getPrimaryTimestampFromObjectForInsert_longValue()
   {
-    Assert.assertEquals(100, MSQTasks.primaryTimestampFromObjectForInsert(100L));
+    Assertions.assertEquals(100, MSQTasks.primaryTimestampFromObjectForInsert(100L));
   }
 
   @Test
   public void test_getPrimaryTimestampFromObjectForInsert_nullValueShouldThrowError()
   {
-    final MSQException e = Assert.assertThrows(
+    final MSQException e = Assertions.assertThrows(
         MSQException.class,
         () -> MSQTasks.primaryTimestampFromObjectForInsert(null)
     );
-    Assert.assertEquals(InsertTimeNullFault.INSTANCE, e.getFault());
+    Assertions.assertEquals(InsertTimeNullFault.INSTANCE, e.getFault());
   }
 
   @Test
   public void test_getPrimaryTimestampFromObjectForInsert_DoubleValueShouldThrowError()
   {
     final Object timestamp = 1.693837200123456E15;
-    final MSQException e = Assert.assertThrows(
+    final MSQException e = Assertions.assertThrows(
         MSQException.class,
         () -> MSQTasks.primaryTimestampFromObjectForInsert(timestamp)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         UnknownFault.forMessage(
             StringUtils.format(
                 "Incorrect type for column [%s]. Expected LONG but got type [%s]. Please ensure that the value is cast to LONG.",

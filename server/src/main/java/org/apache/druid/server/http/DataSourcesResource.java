@@ -923,7 +923,7 @@ public class DataSourcesResource
   )
   {
     try {
-      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(dataSourceName);
+      final List<Rule> rules = metadataRuleManager.getRulesSnapshot().getEffectiveRules(dataSourceName);
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();

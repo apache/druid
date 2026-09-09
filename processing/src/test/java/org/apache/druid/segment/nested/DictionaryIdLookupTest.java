@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.AutoTypeColumnMerger;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -30,19 +29,19 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
-import java.nio.file.Path;
 
 public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testIdLookup() throws IOException
@@ -65,7 +64,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 
     // setup dictionary writers
     SegmentWriteOutMedium medium = TmpFileSegmentWriteOutMediumFactory.instance()
-                                                                      .makeSegmentWriteOutMedium(FileUtils.createTempDirInLocation(tempDir, "medium"));
+                                                                      .makeSegmentWriteOutMedium(temporaryFolder.newFolder("medium"));
     DictionaryWriter<String> stringWriter = StringEncodingStrategies.getStringDictionaryWriter(
         new StringEncodingStrategy.FrontCoded(4, (byte) 1),
         medium,
@@ -91,7 +90,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
         4
     );
 
-    File dictTempDir = FileUtils.createTempDirInLocation(tempDir, "dict");
+    File dictTempDir = temporaryFolder.newFolder("dict");
 
     // make lookup with references to writers
     DictionaryIdLookup idLookup = new DictionaryIdLookup(

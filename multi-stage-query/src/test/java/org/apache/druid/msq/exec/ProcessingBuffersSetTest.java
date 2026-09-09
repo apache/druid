@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.utils.CloseableUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,12 +35,12 @@ public class ProcessingBuffersSetTest
   @Test
   public void test_empty_acquire()
   {
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> ProcessingBuffersSet.EMPTY.acquire(1)
     );
 
-    Assert.assertEquals("Processing buffers not available", e.getMessage());
+    Assertions.assertEquals("Processing buffers not available", e.getMessage());
   }
 
   @Test
@@ -64,17 +64,17 @@ public class ProcessingBuffersSetTest
     final ResourceHolder<ProcessingBuffers> holder2 = buffersSet.acquire(1);
     final ResourceHolder<ProcessingBuffers> holder3 = buffersSet.acquire(1);
 
-    Assert.assertNotNull(holder1.get());
-    Assert.assertNotNull(holder2.get());
-    Assert.assertNotNull(holder3.get());
+    Assertions.assertNotNull(holder1.get());
+    Assertions.assertNotNull(holder2.get());
+    Assertions.assertNotNull(holder3.get());
 
     // Verify each has a buffer pool and bouncer
-    Assert.assertNotNull(holder1.get().getBufferPool());
-    Assert.assertNotNull(holder1.get().getBouncer());
-    Assert.assertNotNull(holder2.get().getBufferPool());
-    Assert.assertNotNull(holder2.get().getBouncer());
-    Assert.assertNotNull(holder3.get().getBufferPool());
-    Assert.assertNotNull(holder3.get().getBouncer());
+    Assertions.assertNotNull(holder1.get().getBufferPool());
+    Assertions.assertNotNull(holder1.get().getBouncer());
+    Assertions.assertNotNull(holder2.get().getBufferPool());
+    Assertions.assertNotNull(holder2.get().getBouncer());
+    Assertions.assertNotNull(holder3.get().getBufferPool());
+    Assertions.assertNotNull(holder3.get().getBouncer());
 
     // Clean up
     CloseableUtils.closeAll(holder1, holder2, holder3);

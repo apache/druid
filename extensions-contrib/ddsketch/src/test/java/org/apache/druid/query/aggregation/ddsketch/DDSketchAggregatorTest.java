@@ -71,7 +71,7 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
   {
     DDSketchModule module = new DDSketchModule();
     DDSketchModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
   }
 

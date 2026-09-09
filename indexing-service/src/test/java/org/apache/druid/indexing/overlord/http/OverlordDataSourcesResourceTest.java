@@ -33,9 +33,9 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -57,7 +57,7 @@ public class OverlordDataSourcesResourceTest
 
   private OverlordDataSourcesResource dataSourcesResource;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     AuditManager auditManager = EasyMock.createStrictMock(AuditManager.class);
@@ -91,8 +91,8 @@ public class OverlordDataSourcesResourceTest
         TestDataSource.WIKI,
         "some<script>Segment"
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         "Could not parse Segment ID[some&lt;script&gt;Segment] for DataSource[wiki]",
         response.getEntity()
     );
@@ -195,8 +195,8 @@ public class OverlordDataSourcesResourceTest
         TestDataSource.WIKI,
         "some<script>Segment"
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         "Could not parse Segment ID[some&lt;script&gt;Segment] for DataSource[wiki]",
         response.getEntity()
     );
@@ -229,9 +229,9 @@ public class OverlordDataSourcesResourceTest
 
     final Collection<DataSegment> usedSegments =
         storageCoordinator.retrieveAllUsedSegments(TestDataSource.WIKI, Segments.INCLUDING_OVERSHADOWED);
-    Assert.assertEquals(10, usedSegments.size());
+    Assertions.assertEquals(10, usedSegments.size());
     for (DataSegment segment : usedSegments) {
-      Assert.assertEquals(version2, segment.getVersion());
+      Assertions.assertEquals(version2, segment.getVersion());
     }
   }
 
@@ -304,8 +304,8 @@ public class OverlordDataSourcesResourceTest
   {
     final Response response
         = dataSourcesResource.markNonOvershadowedSegmentsAsUsed(TestDataSource.WIKI, null);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
         + " Optionally, include 'versions' only when 'interval' is provided.",
         response.getEntity()
@@ -325,38 +325,38 @@ public class OverlordDataSourcesResourceTest
         TestDataSource.WIKI,
         new SegmentsToUpdateFilter(null, null, null)
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(expectedErrorMessage, response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(expectedErrorMessage, response.getEntity());
 
     // interval is null and segmentIds is empty
     response = dataSourcesResource.markNonOvershadowedSegmentsAsUsed(
         TestDataSource.WIKI,
         new SegmentsToUpdateFilter(null, Collections.emptySet(), null)
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(expectedErrorMessage, response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(expectedErrorMessage, response.getEntity());
 
     // Both interval and segmentIds are specified
     response = dataSourcesResource.markNonOvershadowedSegmentsAsUsed(
         TestDataSource.WIKI,
         new SegmentsToUpdateFilter(Intervals.of("1000/2000"), Collections.singleton(segmentId), null)
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(expectedErrorMessage, response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(expectedErrorMessage, response.getEntity());
 
     // versions are specified with segmentIds
     response = dataSourcesResource.markNonOvershadowedSegmentsAsUsed(
         TestDataSource.WIKI,
         new SegmentsToUpdateFilter(null, Collections.singleton(segmentId), Collections.singletonList("v1"))
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(expectedErrorMessage, response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(expectedErrorMessage, response.getEntity());
   }
 
   private void verifyNumSegmentsUpdated(int expectedUpdatedCount, Response response)
   {
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new SegmentUpdateResponse(expectedUpdatedCount), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(new SegmentUpdateResponse(expectedUpdatedCount), response.getEntity());
   }
 
   private static HttpServletRequest createHttpServletRequest()

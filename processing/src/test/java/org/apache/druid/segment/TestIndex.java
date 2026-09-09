@@ -270,8 +270,8 @@ public class TestIndex
       IncrementalIndex top = makeSampleNumericTopIncrementalIndex();
       IncrementalIndex bottom = makeSampleNumericBottomIncrementalIndex();
 
-      File tmpFile = File.createTempFile("yay", "who");
-      tmpFile.delete();
+      final File tmpFile = FileUtils.createTempDir("test-index-merge");
+      tmpFile.deleteOnExit();
 
       File topFile = new File(tmpFile, "top");
       File bottomFile = new File(tmpFile, "bottom");
@@ -520,9 +520,10 @@ public class TestIndex
   public static QueryableIndex persistAndMemoryMap(IncrementalIndex index, IndexSpec indexSpec)
   {
     try {
-      File someTmpFile = File.createTempFile("billy", "yay");
-      someTmpFile = persist(index, indexSpec, someTmpFile);
-      return INDEX_IO.loadIndex(someTmpFile);
+      final File temporaryFolder = FileUtils.createTempDir("test-index");
+      temporaryFolder.deleteOnExit();
+      final File persistedFile = persist(index, indexSpec, new File(temporaryFolder, "index"));
+      return INDEX_IO.loadIndex(persistedFile);
     }
     catch (IOException e) {
       throw new RuntimeException(e);

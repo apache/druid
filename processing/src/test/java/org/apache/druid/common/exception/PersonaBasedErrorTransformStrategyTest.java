@@ -22,7 +22,6 @@ package org.apache.druid.common.exception;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,7 +52,7 @@ public class PersonaBasedErrorTransformStrategyTest
   {
     DruidException druidException = DruidException.defensive().build("Test Defensive exception");
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         target.maybeTransform(druidException, Optional.of("the-error")).get(),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,
@@ -70,7 +69,7 @@ public class PersonaBasedErrorTransformStrategyTest
   {
     DruidException druidException = DruidException.defensive().build("Test Defensive exception");
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         target.maybeTransform(druidException, Optional.empty()).get(),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,

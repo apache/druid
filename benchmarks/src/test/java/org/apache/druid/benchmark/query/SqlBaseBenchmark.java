@@ -100,7 +100,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
@@ -480,8 +480,8 @@ public class SqlBaseBenchmark
     ObjectMapper injected = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     injected.registerModules(new HllSketchModule().getJacksonModules());
 
-    final DruidSchemaCatalog rootSchema =
-        QueryFrameworkUtils.createMockRootSchema(
+    final DruidSchemaCatalogProvider schemaProvider =
+        QueryFrameworkUtils.createMockRootSchemaProvider(
             injector,
             conglomerate,
             walker,
@@ -492,7 +492,7 @@ public class SqlBaseBenchmark
     final SqlEngine engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        schemaProvider,
         createOperatorTable(injector),
         injector.getInstance(ExprMacroTable.class),
         plannerConfig,

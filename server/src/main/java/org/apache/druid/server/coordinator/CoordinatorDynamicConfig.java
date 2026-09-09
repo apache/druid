@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
@@ -34,7 +35,6 @@ import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;

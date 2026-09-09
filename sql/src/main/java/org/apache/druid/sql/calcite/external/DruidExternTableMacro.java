@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.external;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.validation.constraints.NotNull;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlCharStringLiteral;
 import org.apache.calcite.sql.SqlNode;
@@ -29,7 +30,6 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
-import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;

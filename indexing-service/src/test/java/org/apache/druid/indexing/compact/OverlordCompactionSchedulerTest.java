@@ -388,19 +388,12 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void test_validateCompactionConfig_delegatesToCascadingReindexingTemplate()
   {
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        dataSource,
-        null,
-        null,
-        InlineReindexingRuleProvider.builder().build(),
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(null, null),
-        null,
-        null
-    );
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource(dataSource)
+        .withRuleProvider(InlineReindexingRuleProvider.builder().build())
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        .build();
 
     final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(template);
     Assertions.assertTrue(result.isValid());

@@ -30,7 +30,6 @@ import org.apache.druid.segment.loading.PartialBaseTableLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -62,7 +61,7 @@ public class WildcardProjectionPartialLoadMatcherTest
   @Test
   void testConstructorRejectsNullPatterns()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new WildcardProjectionPartialLoadMatcher(null, null)
@@ -74,7 +73,7 @@ public class WildcardProjectionPartialLoadMatcherTest
   @Test
   void testConstructorRejectsEmptyPatterns()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new WildcardProjectionPartialLoadMatcher(Collections.emptyList(), null)
@@ -287,7 +286,7 @@ public class WildcardProjectionPartialLoadMatcherTest
   @Test
   void testRejectsTrailingBackslash()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new WildcardProjectionPartialLoadMatcher(List.of("foo\\"), null)
@@ -299,7 +298,7 @@ public class WildcardProjectionPartialLoadMatcherTest
   @Test
   void testRejectsTrailingBackslashInExcludePatterns()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new WildcardProjectionPartialLoadMatcher(List.of("*"), List.of("foo\\"))

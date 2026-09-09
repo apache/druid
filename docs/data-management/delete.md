@@ -143,7 +143,7 @@ These embedded tasks offer several advantages over auto-kill performed by the Co
 - run on the Overlord and do not take up task slots.
 - finish faster as they save on the overhead of launching a task process.
 - kill a small number of segments per task, to ensure that locks on an interval are not held for too long.
-- skip locked intervals to avoid head-of-line blocking in kill tasks.
+- use a dedicated `KILL` lock type which allows killing of segments in the background while an ingestion proceeds for the same interval.
 - require little to no configuration.
 - can keep up with a large number of unused segments in the cluster.
 - take advantage of the segment metadata cache on the Overlord.

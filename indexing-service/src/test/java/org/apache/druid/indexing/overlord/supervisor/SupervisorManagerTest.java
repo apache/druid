@@ -47,6 +47,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -59,16 +60,13 @@ import org.apache.druid.server.metrics.SupervisorStatsProvider;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import javax.annotation.Nullable;
 import java.lang.reflect.Field;
@@ -79,7 +77,7 @@ import java.util.Map;
 import java.util.OptionalInt;
 import java.util.concurrent.ConcurrentHashMap;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class SupervisorManagerTest extends EasyMockSupport
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
@@ -98,10 +96,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
   private SupervisorManager manager;
 
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setUp()
   {
     manager = new SupervisorManager(MAPPER, metadataSupervisorManager);
@@ -116,7 +111,7 @@ public class SupervisorManagerTest extends EasyMockSupport
         "id3", new TestSupervisorSpec("id3", supervisor3)
     );
 
-    Assert.assertTrue(manager.getSupervisorIds().isEmpty());
+    Assertions.assertTrue(manager.getSupervisorIds().isEmpty());
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     metadataSupervisorManager.insert("id1", spec);
@@ -127,11 +122,11 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.start();
-    Assert.assertEquals(1, manager.getSupervisorIds().size());
+    Assertions.assertEquals(1, manager.getSupervisorIds().size());
 
     manager.createOrUpdateAndStartSupervisor(spec, false);
-    Assert.assertEquals(2, manager.getSupervisorIds().size());
-    Assert.assertEquals(spec, manager.getSupervisorSpec("id1").get());
+    Assertions.assertEquals(2, manager.getSupervisorIds().size());
+    Assertions.assertEquals(spec, manager.getSupervisorSpec("id1").get());
     verifyAll();
 
     resetAll();
@@ -141,8 +136,8 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.createOrUpdateAndStartSupervisor(spec2, false);
-    Assert.assertEquals(2, manager.getSupervisorIds().size());
-    Assert.assertEquals(spec2, manager.getSupervisorSpec("id1").get());
+    Assertions.assertEquals(2, manager.getSupervisorIds().size());
+    Assertions.assertEquals(spec2, manager.getSupervisorSpec("id1").get());
     verifyAll();
 
     resetAll();
@@ -151,9 +146,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     boolean retVal = manager.stopAndRemoveSupervisor("id1");
-    Assert.assertTrue(retVal);
-    Assert.assertEquals(1, manager.getSupervisorIds().size());
-    Assert.assertEquals(Optional.absent(), manager.getSupervisorSpec("id1"));
+    Assertions.assertTrue(retVal);
+    Assertions.assertEquals(1, manager.getSupervisorIds().size());
+    Assertions.assertEquals(Optional.absent(), manager.getSupervisorSpec("id1"));
     verifyAll();
 
     resetAll();
@@ -165,7 +160,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.stop();
     verifyAll();
 
-    Assert.assertTrue(manager.getSupervisorIds().isEmpty());
+    Assertions.assertTrue(manager.getSupervisorIds().isEmpty());
   }
 
   @Test
@@ -181,7 +176,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     };
     SupervisorSpec spec2 = new TestSupervisorSpec("id1", supervisor2);
 
-    Assert.assertTrue(manager.getSupervisorIds().isEmpty());
+    Assertions.assertTrue(manager.getSupervisorIds().isEmpty());
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     metadataSupervisorManager.insert("id1", spec);
@@ -190,26 +185,30 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.start();
-    Assert.assertEquals(0, manager.getSupervisorIds().size());
+    Assertions.assertEquals(0, manager.getSupervisorIds().size());
 
     manager.createOrUpdateAndStartSupervisor(spec, false);
-    Assert.assertEquals(1, manager.getSupervisorIds().size());
-    Assert.assertEquals(spec, manager.getSupervisorSpec("id1").get());
+    Assertions.assertEquals(1, manager.getSupervisorIds().size());
+    Assertions.assertEquals(spec, manager.getSupervisorSpec("id1").get());
     verifyAll();
 
     resetAll();
-    exception.expect(DruidException.class);
     replayAll();
 
-    manager.createOrUpdateAndStartSupervisor(spec2, false);
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> manager.createOrUpdateAndStartSupervisor(spec2, false)
+    );
     verifyAll();
   }
 
   @Test
   public void testCreateOrUpdateAndStartSupervisorNotStarted()
   {
-    exception.expect(IllegalStateException.class);
-    manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id", null), false);
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id", null), false)
+    );
   }
 
   @Test
@@ -218,10 +217,11 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
 
-    exception.expect(NullPointerException.class);
-
     manager.start();
-    manager.createOrUpdateAndStartSupervisor(null, false);
+    Assertions.assertThrows(
+        NullPointerException.class,
+        () -> manager.createOrUpdateAndStartSupervisor(null, false)
+    );
     verifyAll();
   }
 
@@ -231,10 +231,11 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
 
-    exception.expect(NullPointerException.class);
-
     manager.start();
-    manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec(null, null), false);
+    Assertions.assertThrows(
+        NullPointerException.class,
+        () -> manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec(null, null), false)
+    );
     verifyAll();
   }
 
@@ -249,8 +250,8 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
     manager.start();
     final SupervisorSpecUpdateResult result = manager.createOrUpdateAndStartSupervisor(spec, true);
-    Assert.assertFalse(result.isModified());
-    Assert.assertFalse(result.isRestarted());
+    Assertions.assertFalse(result.isModified());
+    Assertions.assertFalse(result.isRestarted());
     verifyAll();
   }
 
@@ -274,8 +275,8 @@ public class SupervisorManagerTest extends EasyMockSupport
     metadataSupervisorManager.insert(EasyMock.eq("id2"), EasyMock.anyObject());
     replayAll();
     final SupervisorSpecUpdateResult result = manager.createOrUpdateAndStartSupervisor(spec2, true);
-    Assert.assertTrue(result.isModified());
-    Assert.assertTrue(result.isRestarted());
+    Assertions.assertTrue(result.isModified());
+    Assertions.assertTrue(result.isRestarted());
     verifyAll();
   }
 
@@ -296,10 +297,10 @@ public class SupervisorManagerTest extends EasyMockSupport
     // version differs (byte change) but requireRestart() is false.
     final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2);
     final SupervisorSpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
-    Assert.assertTrue(updateResult.isModified());
-    Assert.assertFalse(updateResult.isRestarted());
-    Assert.assertSame(updated, capturedInsert.getValue());
-    Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
+    Assertions.assertTrue(updateResult.isModified());
+    Assertions.assertFalse(updateResult.isRestarted());
+    Assertions.assertSame(updated, capturedInsert.getValue());
+    Assertions.assertSame(updated, manager.getSupervisorSpec("id1").get());
     verifyAll();
   }
 
@@ -316,8 +317,8 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     final SupervisorSpecUpdateResult updateResult =
         manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id1", supervisor1), true);
-    Assert.assertFalse(updateResult.isModified());
-    Assert.assertFalse(updateResult.isRestarted());
+    Assertions.assertFalse(updateResult.isModified());
+    Assertions.assertFalse(updateResult.isRestarted());
     verifyAll();
   }
 
@@ -345,9 +346,9 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     final SupervisorSpec updated = new VersionedTestSupervisorSpec("id1", supervisor1, 2);
     final SupervisorSpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
-    Assert.assertTrue(updateResult.isModified());
-    Assert.assertTrue(updateResult.isRestarted());
-    Assert.assertSame(updated, manager.getSupervisorSpec("id1").get());
+    Assertions.assertTrue(updateResult.isModified());
+    Assertions.assertTrue(updateResult.isRestarted());
+    Assertions.assertSame(updated, manager.getSupervisorSpec("id1").get());
     verifyAll();
   }
 
@@ -366,10 +367,10 @@ public class SupervisorManagerTest extends EasyMockSupport
     final MergingVersionedTestSupervisorSpec updated =
         new MergingVersionedTestSupervisorSpec("id1", supervisor1, null);
     final SupervisorSpecUpdateResult updateResult = manager.createOrUpdateAndStartSupervisor(updated, true);
-    Assert.assertFalse(updateResult.isModified());
-    Assert.assertFalse(updateResult.isRestarted());
-    Assert.assertEquals(Integer.valueOf(1), updated.getVersion());
-    Assert.assertSame(existing, manager.getSupervisorSpec("id1").get());
+    Assertions.assertFalse(updateResult.isModified());
+    Assertions.assertFalse(updateResult.isRestarted());
+    Assertions.assertEquals(Integer.valueOf(1), updated.getVersion());
+    Assertions.assertSame(existing, manager.getSupervisorSpec("id1").get());
     verifyAll();
   }
 
@@ -392,8 +393,8 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     final SupervisorSpecUpdateResult updateResult =
         manager.createOrUpdateAndStartSupervisor(new TestSupervisorSpec("id1", supervisor1), false);
-    Assert.assertFalse(updateResult.isModified());
-    Assert.assertTrue(updateResult.isRestarted());
+    Assertions.assertFalse(updateResult.isModified());
+    Assertions.assertTrue(updateResult.isRestarted());
     verifyAll();
   }
 
@@ -415,18 +416,19 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
     EasyMock.expect(supervisor1.createAutoscaler(EasyMock.anyObject())).andReturn(null).anyTimes();
-    exception.expect(DruidException.class);
     replayAll();
     manager.start();
-    manager.createOrUpdateAndStartSupervisor(spec2, true);
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> manager.createOrUpdateAndStartSupervisor(spec2, true)
+    );
     verifyAll();
   }
 
   @Test
   public void testStopAndRemoveSupervisorNotStarted()
   {
-    exception.expect(IllegalStateException.class);
-    manager.stopAndRemoveSupervisor("id");
+    Assertions.assertThrows(IllegalStateException.class, () -> manager.stopAndRemoveSupervisor("id"));
   }
 
   @Test
@@ -435,10 +437,8 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
 
-    exception.expect(NullPointerException.class);
-
     manager.start();
-    manager.stopAndRemoveSupervisor(null);
+    Assertions.assertThrows(NullPointerException.class, () -> manager.stopAndRemoveSupervisor(null));
     verifyAll();
   }
 
@@ -453,7 +453,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     Map<String, List<VersionedSupervisorSpec>> history = manager.getSupervisorHistory();
     verifyAll();
 
-    Assert.assertEquals(supervisorHistory, history);
+    Assertions.assertEquals(supervisorHistory, history);
   }
 
   @Test
@@ -468,7 +468,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     List<VersionedSupervisorSpec> history = manager.getSupervisorHistoryForId(id, null);
     verifyAll();
 
-    Assert.assertEquals(supervisorHistory, history);
+    Assertions.assertEquals(supervisorHistory, history);
   }
 
   @Test
@@ -484,7 +484,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     List<VersionedSupervisorSpec> history = manager.getSupervisorHistoryForId(id, limit);
     verifyAll();
 
-    Assert.assertEquals(supervisorHistory, history);
+    Assertions.assertEquals(supervisorHistory, history);
   }
 
   @Test
@@ -504,8 +504,8 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    Assert.assertEquals(Optional.absent(), manager.getSupervisorStatus("non-existent-id"));
-    Assert.assertEquals(report, manager.getSupervisorStatus("id1").get());
+    Assertions.assertEquals(Optional.absent(), manager.getSupervisorStatus("non-existent-id"));
+    Assertions.assertEquals(report, manager.getSupervisorStatus("id1").get());
 
     verifyAll();
   }
@@ -519,7 +519,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
 
     Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
-    Assert.assertTrue(stats.isEmpty());
+    Assertions.assertTrue(stats.isEmpty());
 
     verifyAll();
   }
@@ -540,15 +540,15 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
 
     Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
-    Assert.assertEquals(1, stats.size());
+    Assertions.assertEquals(1, stats.size());
 
     SupervisorStatsProvider.SupervisorStats stat = stats.iterator().next();
-    Assert.assertEquals("id1", stat.getSupervisorId());
-    Assert.assertEquals("TestSupervisorSpec", stat.getType());
-    Assert.assertEquals("RUNNING", stat.getState());
-    Assert.assertEquals("id1", stat.getDataSource());
-    Assert.assertEquals("", stat.getStream());
-    Assert.assertEquals("RUNNING", stat.getDetailedState());
+    Assertions.assertEquals("id1", stat.getSupervisorId());
+    Assertions.assertEquals("TestSupervisorSpec", stat.getType());
+    Assertions.assertEquals("RUNNING", stat.getState());
+    Assertions.assertEquals("id1", stat.getDataSource());
+    Assertions.assertEquals("", stat.getStream());
+    Assertions.assertEquals("RUNNING", stat.getDetailedState());
 
     verifyAll();
   }
@@ -569,13 +569,13 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
 
     Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
-    Assert.assertEquals(1, stats.size());
+    Assertions.assertEquals(1, stats.size());
 
     SupervisorStatsProvider.SupervisorStats stat = stats.iterator().next();
-    Assert.assertEquals("id1", stat.getSupervisorId());
-    Assert.assertEquals("TestSupervisorSpec", stat.getType());
-    Assert.assertEquals("UNKNOWN", stat.getState());
-    Assert.assertEquals("UNKNOWN", stat.getDetailedState());
+    Assertions.assertEquals("id1", stat.getSupervisorId());
+    Assertions.assertEquals("TestSupervisorSpec", stat.getType());
+    Assertions.assertEquals("UNKNOWN", stat.getState());
+    Assertions.assertEquals("UNKNOWN", stat.getDetailedState());
 
     verifyAll();
   }
@@ -592,7 +592,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     supervisorsMap.put("id1", new Pair<>(null, new TestSupervisorSpec("id1", supervisor1)));
 
     final Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
-    Assert.assertTrue(stats.isEmpty());
+    Assertions.assertTrue(stats.isEmpty());
 
     verifyAll();
   }
@@ -611,11 +611,11 @@ public class SupervisorManagerTest extends EasyMockSupport
     supervisorsMap.put("id2", new Pair<>(supervisor2, new TestSupervisorSpec("id2", supervisor2)));
 
     final Collection<SupervisorStatsProvider.SupervisorStats> stats = manager.getSupervisorStats();
-    Assert.assertEquals(1, stats.size());
+    Assertions.assertEquals(1, stats.size());
 
     final SupervisorStatsProvider.SupervisorStats stat = stats.iterator().next();
-    Assert.assertEquals("id2", stat.getSupervisorId());
-    Assert.assertEquals("RUNNING", stat.getState());
+    Assertions.assertEquals("id2", stat.getSupervisorId());
+    Assertions.assertEquals("RUNNING", stat.getState());
 
     verifyAll();
   }
@@ -626,6 +626,80 @@ public class SupervisorManagerTest extends EasyMockSupport
     final Field field = SupervisorManager.class.getDeclaredField("supervisors");
     field.setAccessible(true);
     return (ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>>) field.get(manager);
+  }
+
+  @Test
+  public void testSimulateAutoscalingUsesLiveTaskCountAboveConfiguredMaximum() throws Exception
+  {
+    final String supervisorId = "supervisor";
+    final SeekableStreamSupervisor<Integer, String, ByteEntity> supervisor = EasyMock.createMock(
+        SeekableStreamSupervisor.class
+    );
+    final int partitionCount = 10;
+    EasyMock.expect(supervisor.getKnownPartitionCount()).andReturn(partitionCount);
+    EasyMock.replay(supervisor);
+
+    final TestBackfillSupervisorSpec.IngestionSpec ingestionSpec = new TestBackfillSupervisorSpec.IngestionSpec(
+        new TestBackfillSupervisorSpec.IOConfig("test-stream", null, null)
+    );
+    getSupervisorsMap().put(
+        supervisorId,
+        Pair.of(supervisor, new TestBackfillSupervisorSpec(supervisorId, ingestionSpec))
+    );
+
+    final Map<String, Object> result = manager.simulateAutoscaling(
+        supervisorId,
+        CostBasedAutoScalerConfig.forSimulation(1, 10, 0.1, null, null),
+        100,
+        null
+    );
+
+    final Object[] data = (Object[]) result.get("data");
+    Assertions.assertEquals(200, data.length);
+    Assertions.assertInstanceOf(Map.class, data[0]);
+    final Map<?, ?> firstDataPoint = (Map<?, ?>) data[0];
+    Assertions.assertTrue(firstDataPoint.containsKey("lag"));
+    Assertions.assertTrue(firstDataPoint.containsKey("taskCount"));
+    for (Object dataPoint : data) {
+      Assertions.assertInstanceOf(Map.class, dataPoint);
+      final Number taskCount = (Number) ((Map<?, ?>) dataPoint).get("taskCount");
+      Assertions.assertTrue(taskCount.intValue() >= 1 && taskCount.intValue() <= 10);
+    }
+    EasyMock.verify(supervisor);
+  }
+
+  @Test
+  public void testSimulateAutoscalingRejectsExplicitTaskCountAboveConfiguredMaximum() throws Exception
+  {
+    final String supervisorId = "supervisor";
+    final SeekableStreamSupervisor<Integer, String, ByteEntity> supervisor = EasyMock.createMock(
+        SeekableStreamSupervisor.class
+    );
+    EasyMock.replay(supervisor);
+
+    final TestBackfillSupervisorSpec.IngestionSpec ingestionSpec = new TestBackfillSupervisorSpec.IngestionSpec(
+        new TestBackfillSupervisorSpec.IOConfig("test-stream", null, null)
+    );
+    getSupervisorsMap().put(
+        supervisorId,
+        Pair.of(supervisor, new TestBackfillSupervisorSpec(supervisorId, ingestionSpec))
+    );
+
+    DruidExceptionMatcher.assertThat(
+        Assertions.assertThrows(
+            DruidException.class,
+            () -> manager.simulateAutoscaling(
+                supervisorId,
+                CostBasedAutoScalerConfig.forSimulation(1, 10, 0.1, null, null),
+                100,
+                11
+            )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Value of currentTaskCount[11] must be within taskCountMin[1] and taskCountMax[10]"
+        )
+    );
+    EasyMock.verify(supervisor);
   }
 
   @Test
@@ -644,8 +718,8 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    Assert.assertTrue(manager.handoffTaskGroupsEarly("id1", ImmutableList.of(1)));
-    Assert.assertFalse(manager.handoffTaskGroupsEarly("id2", ImmutableList.of(1)));
+    Assertions.assertTrue(manager.handoffTaskGroupsEarly("id1", ImmutableList.of(1)));
+    Assertions.assertFalse(manager.handoffTaskGroupsEarly("id2", ImmutableList.of(1)));
 
     verifyAll();
   }
@@ -665,15 +739,16 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () -> manager.handoffTaskGroupsEarly("id3", ImmutableList.of(1))),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.UNSUPPORTED,
-            "general"
-        ).expectMessageIs(
-                "Operation[handoff] is not supported by supervisor[id3] of type[TestSupervisorSpec]."
-        )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> manager.handoffTaskGroupsEarly("id3", ImmutableList.of(1))
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.UNSUPPORTED, exception.getCategory());
+    Assertions.assertEquals("general", exception.getErrorCode());
+    Assertions.assertEquals(
+        "Operation[handoff] is not supported by supervisor[id3] of type[TestSupervisorSpec].",
+        exception.getMessage()
     );
     verifyAll();
   }
@@ -684,10 +759,8 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
     replayAll();
 
-    exception.expect(IllegalStateException.class);
-
     manager.start();
-    manager.start();
+    Assertions.assertThrows(IllegalStateException.class, () -> manager.start());
   }
 
   @Test
@@ -715,8 +788,6 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void testNoPersistOnFailedStart()
   {
-    exception.expect(RuntimeException.class);
-
     Capture<TestSupervisorSpec> capturedInsert = Capture.newInstance();
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(Collections.emptyMap());
@@ -733,14 +804,14 @@ public class SupervisorManagerTest extends EasyMockSupport
     final SupervisorSpec testSpecNew = new TestSupervisorSpec("id1", supervisor2);
 
     manager.start();
-    try {
-      manager.createOrUpdateAndStartSupervisor(testSpecOld, false);
-      manager.createOrUpdateAndStartSupervisor(testSpecNew, false);
-    }
-    catch (Exception e) {
-      Assert.assertEquals(testSpecOld, capturedInsert.getValue());
-      throw e;
-    }
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () -> {
+          manager.createOrUpdateAndStartSupervisor(testSpecOld, false);
+          manager.createOrUpdateAndStartSupervisor(testSpecNew, false);
+        }
+    );
+    Assertions.assertEquals(testSpecOld, capturedInsert.getValue());
   }
 
   @Test
@@ -776,8 +847,8 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.start();
-    Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", null));
-    Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", null));
+    Assertions.assertTrue(manager.resetSupervisor("id1", null), "resetValidSupervisor");
+    Assertions.assertFalse(manager.resetSupervisor("nobody_home", null), "resetInvalidSupervisor");
 
     verifyAll();
   }
@@ -796,15 +867,16 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () -> manager.resetSupervisor("id3", null)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.UNSUPPORTED,
-            "general"
-        ).expectMessageIs(
-            "Operation[reset] is not supported by supervisor[id3] of type[TestSupervisorSpec]."
-        )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> manager.resetSupervisor("id3", null)
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.UNSUPPORTED, exception.getCategory());
+    Assertions.assertEquals("general", exception.getErrorCode());
+    Assertions.assertEquals(
+        "Operation[reset] is not supported by supervisor[id3] of type[TestSupervisorSpec].",
+        exception.getMessage()
     );
 
     verifyAll();
@@ -832,8 +904,8 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.start();
-    Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", datasourceMetadata));
-    Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", datasourceMetadata));
+    Assertions.assertTrue(manager.resetSupervisor("id1", datasourceMetadata), "resetValidSupervisor");
+    Assertions.assertFalse(manager.resetSupervisor("nobody_home", datasourceMetadata), "resetInvalidSupervisor");
 
     verifyAll();
   }
@@ -848,7 +920,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     );
 
     // mock adding a supervisor to manager with existing supervisor then suspending it
-    Assert.assertTrue(manager.getSupervisorIds().isEmpty());
+    Assertions.assertTrue(manager.getSupervisorIds().isEmpty());
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     metadataSupervisorManager.insert("id1", spec);
@@ -859,11 +931,11 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.start();
-    Assert.assertEquals(1, manager.getSupervisorIds().size());
+    Assertions.assertEquals(1, manager.getSupervisorIds().size());
 
     manager.createOrUpdateAndStartSupervisor(spec, false);
-    Assert.assertEquals(2, manager.getSupervisorIds().size());
-    Assert.assertEquals(spec, manager.getSupervisorSpec("id1").get());
+    Assertions.assertEquals(2, manager.getSupervisorIds().size());
+    Assertions.assertEquals(spec, manager.getSupervisorSpec("id1").get());
     verifyAll();
 
     // mock suspend, which stops supervisor1 and sets suspended state in metadata, flipping to supervisor2
@@ -876,9 +948,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.suspendOrResumeSupervisor("id1", true);
-    Assert.assertEquals(2, manager.getSupervisorIds().size());
-    Assert.assertEquals(capturedInsert.getValue(), manager.getSupervisorSpec("id1").get());
-    Assert.assertTrue(capturedInsert.getValue().suspended);
+    Assertions.assertEquals(2, manager.getSupervisorIds().size());
+    Assertions.assertEquals(capturedInsert.getValue(), manager.getSupervisorSpec("id1").get());
+    Assertions.assertTrue(capturedInsert.getValue().suspended);
     verifyAll();
 
     // mock resume, which stops supervisor2 and sets suspended to false in metadata, flipping to supervisor1
@@ -891,9 +963,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     manager.suspendOrResumeSupervisor("id1", false);
-    Assert.assertEquals(2, manager.getSupervisorIds().size());
-    Assert.assertEquals(capturedInsert.getValue(), manager.getSupervisorSpec("id1").get());
-    Assert.assertFalse(capturedInsert.getValue().suspended);
+    Assertions.assertEquals(2, manager.getSupervisorIds().size());
+    Assertions.assertEquals(capturedInsert.getValue(), manager.getSupervisorSpec("id1").get());
+    Assertions.assertFalse(capturedInsert.getValue().suspended);
     verifyAll();
 
     // mock stop of suspended then resumed supervisor
@@ -903,9 +975,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
 
     boolean retVal = manager.stopAndRemoveSupervisor("id1");
-    Assert.assertTrue(retVal);
-    Assert.assertEquals(1, manager.getSupervisorIds().size());
-    Assert.assertEquals(Optional.absent(), manager.getSupervisorSpec("id1"));
+    Assertions.assertTrue(retVal);
+    Assertions.assertEquals(1, manager.getSupervisorIds().size());
+    Assertions.assertEquals(Optional.absent(), manager.getSupervisorSpec("id1"));
     verifyAll();
 
     // mock manager shutdown to ensure supervisor 3 stops
@@ -918,7 +990,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.stop();
     verifyAll();
 
-    Assert.assertTrue(manager.getSupervisorIds().isEmpty());
+    Assertions.assertTrue(manager.getSupervisorIds().isEmpty());
   }
 
   @Test
@@ -1002,25 +1074,25 @@ public class SupervisorManagerTest extends EasyMockSupport
     replayAll();
     manager.start();
 
-    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("nonExistent").isEmpty());
+    Assertions.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("nonExistent").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(noopSupervisorSpec, false);
-    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("noopDS").isEmpty());
+    Assertions.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("noopDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(suspendedSpec, false);
-    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeDS").isEmpty());
+    Assertions.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(activeSpec, false);
-    Assert.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeDS").isEmpty());
+    Assertions.assertTrue(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(activeAppendSpec, false);
-    Assert.assertFalse(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeAppendDS").isEmpty());
+    Assertions.assertFalse(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeAppendDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(activeSpecWithConcurrentLocks, false);
-    Assert.assertFalse(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeConcurrentLocksDS").isEmpty());
+    Assertions.assertFalse(manager.getActiveSupervisorIdsForDatasourceWithAppendLock("activeConcurrentLocksDS").isEmpty());
 
     manager.createOrUpdateAndStartSupervisor(specWithUseConcurrentLocksFalse, false);
-    Assert.assertTrue(
+    Assertions.assertTrue(
         manager.getActiveSupervisorIdsForDatasourceWithAppendLock("dsWithUseConcurrentLocksFalse").isEmpty()
     );
 
@@ -1065,10 +1137,10 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
 
     manager.createOrUpdateAndStartSupervisor(noopSpec, false);
-    Assert.assertFalse(manager.registerUpgradedPendingSegmentOnSupervisor("noop", pendingSegment).isPresent());
+    Assertions.assertFalse(manager.registerUpgradedPendingSegmentOnSupervisor("noop", pendingSegment).isPresent());
 
     manager.createOrUpdateAndStartSupervisor(streamingSpec, false);
-    Assert.assertEquals(OptionalInt.of(1), manager.registerUpgradedPendingSegmentOnSupervisor("sss", pendingSegment));
+    Assertions.assertEquals(OptionalInt.of(1), manager.registerUpgradedPendingSegmentOnSupervisor("sss", pendingSegment));
 
     verifyAll();
   }
@@ -1076,25 +1148,27 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Test
   public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorIdIsNull()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> manager.isAnotherTaskGroupPublishingToPartitions(null, "task1", null)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs("'supervisorId' cannot be null")
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> manager.isAnotherTaskGroupPublishingToPartitions(null, "task1", null)
     );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals("'supervisorId' cannot be null", exception.getMessage());
   }
 
   @Test
   public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorNotFound()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", null)
-        ),
-        DruidExceptionMatcher.notFound().expectMessageIs("Could not find supervisor[supervisor1]")
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", null)
     );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.NOT_FOUND, exception.getCategory());
+    Assertions.assertEquals("notFound", exception.getErrorCode());
+    Assertions.assertEquals("Could not find supervisor[supervisor1]", exception.getMessage());
   }
 
   @Test
@@ -1111,7 +1185,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", null)
     );
   }
@@ -1133,14 +1207,16 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", null)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Start metadata[null] of type[null] is not valid streaming metadata"
-        )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", null)
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(
+        "Start metadata[null] of type[null] is not valid streaming metadata",
+        exception.getMessage()
     );
   }
 
@@ -1161,16 +1237,18 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", new ObjectMetadata("abc"))
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Start metadata[ObjectMetadata{theObject=abc}] of"
-            + " type[class org.apache.druid.indexing.overlord.ObjectMetadata]"
-            + " is not valid streaming metadata"
-        )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", new ObjectMetadata("abc"))
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(
+        "Start metadata[ObjectMetadata{theObject=abc}] of"
+        + " type[class org.apache.druid.indexing.overlord.ObjectMetadata]"
+        + " is not valid streaming metadata",
+        exception.getMessage()
     );
   }
 
@@ -1213,10 +1291,10 @@ public class SupervisorManagerTest extends EasyMockSupport
         "topic",
         Map.of("0", "10")
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, conflictingTaskId, startMetadata)
     );
-    Assert.assertFalse(
+    Assertions.assertFalse(
         manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, readyTaskId, startMetadata)
     );
   }
@@ -1267,7 +1345,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(streamSpec.getType()).andReturn("stream").anyTimes();
     EasyMock.replay(streamSpec);
     supervisorsMap.put("id1", Pair.of(nonStreamSupervisor, streamSpec));
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1278,7 +1356,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(streamSupervisor.getIoConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(true).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1289,7 +1367,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
     EasyMock.expect(streamSpec.getContext()).andReturn(null).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1300,7 +1378,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(ioConfig.isUseEarliestSequenceNumber()).andReturn(false).once();
     EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", false)).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1312,7 +1390,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", "true")).once();
     EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1324,7 +1402,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("taskLockType", "APPEND")).once();
     EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1336,7 +1414,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(streamSpec.getContext()).andReturn(ImmutableMap.of("useConcurrentLocks", true)).once();
     EasyMock.expect(streamSupervisor.getState()).andReturn(SupervisorStateManager.BasicState.SUSPENDED).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1351,7 +1429,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expectLastCall().once();
     EasyMock.expect(streamSupervisor.getLatestSequencesFromStream()).andReturn(ImmutableMap.of()).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalStateException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1367,7 +1445,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.expect(streamSupervisor.getLatestSequencesFromStream()).andReturn(ImmutableMap.of("0", 100L)).once();
     EasyMock.expect(streamSupervisor.getOffsetsFromMetadataStorage()).andReturn(ImmutableMap.of()).once();
     EasyMock.replay(streamSupervisor, streamSpec, ioConfig);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalStateException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
@@ -1389,19 +1467,19 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     // Without overriding taskCount
     final SupervisorSpec backfillSpec = sourceSpec.createBackfillSpec("backfill-id", boundedStreamConfig, null);
-    Assert.assertEquals("backfill-id", backfillSpec.getId());
+    Assertions.assertEquals("backfill-id", backfillSpec.getId());
     final TestBackfillSupervisorSpec backfillCast = (TestBackfillSupervisorSpec) backfillSpec;
     final BoundedStreamConfig actualConfig = backfillCast.getIoConfig().getBoundedStreamConfig();
-    Assert.assertNotNull(actualConfig);
-    Assert.assertEquals(ImmutableMap.of("0", 100L), actualConfig.getStartSequenceNumbers());
-    Assert.assertEquals(ImmutableMap.of("0", 200L), actualConfig.getEndSequenceNumbers());
-    Assert.assertEquals(1, backfillCast.getIoConfig().getTaskCount());
+    Assertions.assertNotNull(actualConfig);
+    Assertions.assertEquals(ImmutableMap.of("0", 100L), actualConfig.getStartSequenceNumbers());
+    Assertions.assertEquals(ImmutableMap.of("0", 200L), actualConfig.getEndSequenceNumbers());
+    Assertions.assertEquals(1, backfillCast.getIoConfig().getTaskCount());
 
     // With overriding taskCount
     final SupervisorSpec backfillSpecWithCount = sourceSpec.createBackfillSpec("backfill-id-2", boundedStreamConfig, 5);
-    Assert.assertEquals("backfill-id-2", backfillSpecWithCount.getId());
+    Assertions.assertEquals("backfill-id-2", backfillSpecWithCount.getId());
     final TestBackfillSupervisorSpec backfillWithCount = (TestBackfillSupervisorSpec) backfillSpecWithCount;
-    Assert.assertEquals(5, backfillWithCount.getIoConfig().getTaskCount());
+    Assertions.assertEquals(5, backfillWithCount.getIoConfig().getTaskCount());
   }
 
   private static class TestSupervisorSpec implements SupervisorSpec

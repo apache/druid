@@ -49,6 +49,7 @@ import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.builtin.MultiValueStringOperatorConversions;
 import org.apache.druid.sql.calcite.expression.builtin.TimeParseOperatorConversion;
+import org.apache.druid.sql.calcite.schema.ConstantDruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
@@ -93,11 +94,13 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       CalciteTests.createExprMacroTable(),
       CalciteTests.getJsonMapper(),
       new PlannerConfig(),
-      new DruidSchemaCatalog(
-          EasyMock.createMock(SchemaPlus.class),
-          ImmutableMap.of(
-              "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
-              NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+      new ConstantDruidSchemaCatalogProvider(
+          new DruidSchemaCatalog(
+              EasyMock.createMock(SchemaPlus.class),
+              ImmutableMap.of(
+                  "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
+                  NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+              )
           )
       ),
       CalciteTests.createJoinableFactoryWrapper(),
@@ -114,6 +117,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
       "SELECT 1", // The actual query isn't important for this test
       null, /* Don't need a SQL node */
       null, /* Don't need an engine */
+      null, /* Don't need an authentication result */
       Collections.emptySet(),
       Collections.emptyMap(),
       null

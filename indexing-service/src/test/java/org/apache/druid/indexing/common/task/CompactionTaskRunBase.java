@@ -59,7 +59,6 @@ import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -113,6 +112,7 @@ import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -126,7 +126,6 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 
@@ -189,8 +188,10 @@ public abstract class CompactionTaskRunBase
   );
   protected static final int TOTAL_TEST_ROWS = 10;
 
-  @TempDir
-  protected static File temporaryFolder;
+  //CHECKSTYLE.OFF: ConstantName
+  @RegisterExtension
+  public static final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.classScoped();
+  //CHECKSTYLE.ON: ConstantName
 
   @RegisterExtension
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
@@ -232,7 +233,7 @@ public abstract class CompactionTaskRunBase
     this.inputInterval = inputInterval;
     this.segmentGranularity = segmentGranularity;
 
-    reportsFile = new File(temporaryFolder, "reports.json");
+    reportsFile = new File(temporaryFolder.getRoot(), "reports.json");
     testUtils = new TestUtils();
     segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
 
@@ -283,18 +284,13 @@ public abstract class CompactionTaskRunBase
   public void setup() throws IOException
   {
     exec = Execs.multiThreaded(2, "compaction-task-run-test-%d");
-    localDeepStorage = newTempFolder();
+    localDeepStorage = temporaryFolder.newFolder();
   }
 
   @AfterEach
   public void teardown() throws IOException
   {
     exec.shutdownNow();
-  }
-
-  protected File newTempFolder()
-  {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "tmp");
   }
 
   @Test
@@ -1233,7 +1229,7 @@ public abstract class CompactionTaskRunBase
     Assertions.assertEquals(newCompactionState, segments.get(0).getLastCompactionState());
     Assertions.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
-    final File cacheDir = newTempFolder();
+    final File cacheDir = temporaryFolder.newFolder();
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
         cacheDir,
         null,
@@ -1347,7 +1343,7 @@ public abstract class CompactionTaskRunBase
     Assertions.assertEquals(expectedState, segments.get(0).getLastCompactionState());
     Assertions.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
-    final File cacheDir = newTempFolder();
+    final File cacheDir = temporaryFolder.newFolder();
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
         cacheDir,
         null,
@@ -1466,7 +1462,7 @@ public abstract class CompactionTaskRunBase
     Assertions.assertEquals(expectedState, compactSegment.getLastCompactionState());
     Assertions.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
 
-    final File cacheDir = newTempFolder();
+    final File cacheDir = temporaryFolder.newFolder();
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
         cacheDir,
         null,
@@ -1584,7 +1580,7 @@ public abstract class CompactionTaskRunBase
       boolean appendToExisting
   ) throws Exception
   {
-    File tmpDir = newTempFolder();
+    File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
@@ -1668,7 +1664,7 @@ public abstract class CompactionTaskRunBase
 
   protected abstract Builder compactionTaskBuilder(ClientCompactionTaskGranularitySpec granularitySpec);
 
-  private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient)
+  private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient) throws IOException
   {
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
         .locations(new StorageLocationConfig(localDeepStorage, null, null))
@@ -1694,7 +1690,7 @@ public abstract class CompactionTaskRunBase
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .segmentCacheManager(cacheManager)
         .jsonMapper(objectMapper)
-        .taskWorkDir(newTempFolder())
+        .taskWorkDir(temporaryFolder.newFolder())
         .indexIO(testUtils.getTestIndexIO())
         .handoffNotifierFactory(new NoopSegmentHandoffNotifierFactory())
         .indexMerger(testUtils.getIndexMergerV9Factory().create(true))
@@ -1713,7 +1709,7 @@ public abstract class CompactionTaskRunBase
 
   protected List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
   {
-    final File cacheDir = newTempFolder();
+    final File cacheDir = temporaryFolder.newFolder();
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
         cacheDir,
         null,

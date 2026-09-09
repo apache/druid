@@ -32,6 +32,7 @@ import org.apache.druid.utils.CompressionUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Map;
 
 public class OssDataSegmentPusher implements DataSegmentPusher
@@ -64,27 +65,29 @@ public class OssDataSegmentPusher implements DataSegmentPusher
     final String path = OssUtils.constructSegmentPath(config.getPrefix(), storageDirSuffix);
     log.debug("Copying segment[%s] to OSS at location[%s]", inSegment.getId(), path);
 
-    final File zipOutFile = File.createTempFile("druid", "index.zip");
-    final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
-
-    final DataSegment outSegment = inSegment.withSize(indexSize)
-                                            .withLoadSpec(makeLoadSpec(config.getBucket(), path))
-                                            .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
-
+    final File zipOutFile = Files.createTempFile("druid", "index.zip").toFile();
     try {
-      return OssUtils.retry(
-          () -> {
-            OssUtils.uploadFileIfPossible(client, config.getBucket(), path, zipOutFile);
+      final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
-            return outSegment;
-          }
-      );
-    }
-    catch (OSSException e) {
-      throw new IOException(e);
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+      final DataSegment outSegment = inSegment.withSize(indexSize)
+                                              .withLoadSpec(makeLoadSpec(config.getBucket(), path))
+                                              .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+
+      try {
+        return OssUtils.retry(
+            () -> {
+              OssUtils.uploadFileIfPossible(client, config.getBucket(), path, zipOutFile);
+
+              return outSegment;
+            }
+        );
+      }
+      catch (OSSException e) {
+        throw new IOException(e);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
     finally {
       log.debug("Deleting temporary cached index.zip");

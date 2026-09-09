@@ -19,10 +19,9 @@
 
 package org.apache.druid.client;
 
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
-
-import javax.validation.constraints.NotNull;
 
 /**
  * Base class for broker's view of dynamic configuration fetched from the Coordinator.

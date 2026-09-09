@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -68,8 +68,8 @@ public class LookupExtractorFactoryMapContainerTest
         ),
         LookupExtractorFactoryMapContainer.class
     );
-    Assert.assertEquals("v1", actual.getVersion());
-    Assert.assertEquals(testContainer, actual);
+    Assertions.assertEquals("v1", actual.getVersion());
+    Assertions.assertEquals(testContainer, actual);
   }
 
   @Test
@@ -80,11 +80,11 @@ public class LookupExtractorFactoryMapContainerTest
     LookupExtractorFactoryMapContainer l2 = new LookupExtractorFactoryMapContainer("V2", ImmutableMap.of());
     LookupExtractorFactoryMapContainer l3 = new LookupExtractorFactoryMapContainer("V3", ImmutableMap.of());
 
-    Assert.assertFalse(l0.replaces(l1));
-    Assert.assertFalse(l1.replaces(l2));
-    Assert.assertTrue(l2.replaces(l1));
-    Assert.assertFalse(l2.replaces(l3));
-    Assert.assertTrue(l3.replaces(l2));
+    Assertions.assertFalse(l0.replaces(l1));
+    Assertions.assertFalse(l1.replaces(l2));
+    Assertions.assertTrue(l2.replaces(l1));
+    Assertions.assertFalse(l2.replaces(l3));
+    Assertions.assertTrue(l3.replaces(l2));
   }
 
   //test interchangeability with LookupExtractorFactoryContainer
@@ -100,8 +100,8 @@ public class LookupExtractorFactoryMapContainerTest
         LookupExtractorFactoryMapContainer.class
     );
 
-    Assert.assertEquals("v1", actual.getVersion());
-    Assert.assertEquals(testContainer, actual);
+    Assertions.assertEquals("v1", actual.getVersion());
+    Assertions.assertEquals(testContainer, actual);
   }
 
   //test interchangeability with LookupExtractorFactoryContainer
@@ -117,8 +117,8 @@ public class LookupExtractorFactoryMapContainerTest
         LookupExtractorFactoryContainer.class
     );
 
-    Assert.assertEquals("v1", actual.getVersion());
-    Assert.assertEquals(
+    Assertions.assertEquals("v1", actual.getVersion());
+    Assertions.assertEquals(
         actual,
         new LookupExtractorFactoryContainer(
             "v1",

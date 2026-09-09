@@ -23,19 +23,19 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 public class CgroupMemoryMonitorTest
 {
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -43,8 +43,8 @@ public class CgroupMemoryMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File memoryDir = new File(

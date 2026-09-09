@@ -43,10 +43,11 @@ import org.apache.druid.segment.file.CountingRangeReader;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.Closeable;
 import java.io.File;
@@ -77,13 +78,13 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
   private static final String ACME_BUNDLE = "__base$0";
   private static final String GLOBEX_BUNDLE = "__base$1";
 
-  @TempDir
-  static File sharedTempDir;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File segmentDir;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
     final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
@@ -103,7 +104,7 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
                               .withRollup(false)
                               .withClusterSpec(clusterSpec)
                               .build();
-    final File tmpDir = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmpDir)

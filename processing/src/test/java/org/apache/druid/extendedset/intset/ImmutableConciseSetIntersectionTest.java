@@ -19,28 +19,28 @@
 
 package org.apache.druid.extendedset.intset;
 
-import junit.framework.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("parameters")
 public class ImmutableConciseSetIntersectionTest
 {
-  @Parameterized.Parameters
-  public static List<Object[]> parameters()
+  public static List<Boolean> parameters()
   {
-    return Arrays.asList(new Object[] {false}, new Object[] {true});
+    return Arrays.asList(false, true);
   }
 
-  private boolean compact;
+  private final boolean compact;
 
-  public ImmutableConciseSetIntersectionTest(boolean compact)
+  public ImmutableConciseSetIntersectionTest(final boolean compact)
   {
     this.compact = compact;
   }
@@ -588,6 +588,6 @@ public class ImmutableConciseSetIntersectionTest
     while (itr.hasNext()) {
       actual.add(itr.next());
     }
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 }

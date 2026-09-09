@@ -29,23 +29,24 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.sql.http.SqlQuery;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+
+
+
 
 public class ManualTieredBrokerSelectorStrategyTest
 {
   private TieredBrokerConfig tieredBrokerConfig;
   private Druids.TimeseriesQueryBuilder queryBuilder;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     tieredBrokerConfig = new TieredBrokerConfig()
@@ -89,18 +90,18 @@ public class ManualTieredBrokerSelectorStrategyTest
         json,
         TieredBrokerSelectorStrategy.class
     );
-    assertTrue(strategy instanceof ManualTieredBrokerSelectorStrategy);
+    Assertions.assertTrue(strategy instanceof ManualTieredBrokerSelectorStrategy);
 
     ManualTieredBrokerSelectorStrategy queryContextStrategy =
         (ManualTieredBrokerSelectorStrategy) strategy;
-    assertNull(queryContextStrategy.getDefaultManualBrokerService());
+    Assertions.assertNull(queryContextStrategy.getDefaultManualBrokerService());
 
     json = "{\"type\":\"manual\",\"defaultManualBrokerService\":\"hotBroker\"}";
     queryContextStrategy = mapper.readValue(
         json,
         ManualTieredBrokerSelectorStrategy.class
     );
-    assertEquals(queryContextStrategy.getDefaultManualBrokerService(), "hotBroker");
+    Assertions.assertEquals(queryContextStrategy.getDefaultManualBrokerService(), "hotBroker");
   }
 
   @Test
@@ -109,11 +110,11 @@ public class ManualTieredBrokerSelectorStrategyTest
     final ManualTieredBrokerSelectorStrategy strategy =
         new ManualTieredBrokerSelectorStrategy(null);
 
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(tieredBrokerConfig, queryBuilder.build())
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -122,7 +123,7 @@ public class ManualTieredBrokerSelectorStrategyTest
                 .build()
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_HOT),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -131,7 +132,7 @@ public class ManualTieredBrokerSelectorStrategyTest
                 .build()
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_COLD),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -148,11 +149,11 @@ public class ManualTieredBrokerSelectorStrategyTest
     final ManualTieredBrokerSelectorStrategy strategy =
         new ManualTieredBrokerSelectorStrategy(Names.BROKER_SVC_MEDIUM);
 
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_MEDIUM),
         strategy.getBrokerServiceName(tieredBrokerConfig, queryBuilder.build())
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_MEDIUM),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -161,7 +162,7 @@ public class ManualTieredBrokerSelectorStrategyTest
                 .build()
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_HOT),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -178,11 +179,11 @@ public class ManualTieredBrokerSelectorStrategyTest
     final ManualTieredBrokerSelectorStrategy strategy =
         new ManualTieredBrokerSelectorStrategy("noSuchBroker");
 
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(tieredBrokerConfig, queryBuilder.build())
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -191,7 +192,7 @@ public class ManualTieredBrokerSelectorStrategyTest
                 .build()
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_HOT),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -208,11 +209,11 @@ public class ManualTieredBrokerSelectorStrategyTest
     final ManualTieredBrokerSelectorStrategy strategy =
         new ManualTieredBrokerSelectorStrategy(null);
 
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(tieredBrokerConfig, createSqlQueryWithContext(null))
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.absent(),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -221,7 +222,7 @@ public class ManualTieredBrokerSelectorStrategyTest
             )
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_HOT),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,
@@ -230,7 +231,7 @@ public class ManualTieredBrokerSelectorStrategyTest
             )
         )
     );
-    assertEquals(
+    Assertions.assertEquals(
         Optional.of(Names.BROKER_SVC_COLD),
         strategy.getBrokerServiceName(
             tieredBrokerConfig,

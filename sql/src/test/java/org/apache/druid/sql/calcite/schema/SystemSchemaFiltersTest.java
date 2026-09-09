@@ -27,9 +27,9 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Set;
@@ -54,7 +54,7 @@ public class SystemSchemaFiltersTest
   private RexNode bRef;
   private RexNode otherRef;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
@@ -71,7 +71,7 @@ public class SystemSchemaFiltersTest
   public void testEquals()
   {
     // col = 'foo'
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("foo"),
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, aRef, foo)),
@@ -84,7 +84,7 @@ public class SystemSchemaFiltersTest
   public void testEqualsReversedOperands()
   {
     // 'foo' = col
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("foo"),
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, foo, aRef)),
@@ -97,7 +97,7 @@ public class SystemSchemaFiltersTest
   public void testIn()
   {
     // col IN ('foo', 'bar') -- Calcite normalizes IN to a SEARCH over a points Sarg
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("foo", "bar"),
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeIn(aRef, ImmutableList.of(foo, bar))),
@@ -110,7 +110,7 @@ public class SystemSchemaFiltersTest
   public void testOrOfEqualities()
   {
     // col = 'foo' OR col = 'bar'
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("foo", "bar"),
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(
@@ -127,7 +127,7 @@ public class SystemSchemaFiltersTest
   public void testOrWithUnextractableDisjunctReturnsNull()
   {
     // col = 'foo' OR col > 'bar' -- one disjunct cannot bound the set, so the whole OR is unbounded
-    Assert.assertNull(
+    Assertions.assertNull(
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(
                 SqlStdOperatorTable.OR,
@@ -143,7 +143,7 @@ public class SystemSchemaFiltersTest
   public void testTopLevelConjunctsIntersect()
   {
     // A top-level filter list is implicitly ANDed: IN ('foo','bar') AND IN ('bar','baz') => {'bar'}
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("bar"),
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(
@@ -159,7 +159,7 @@ public class SystemSchemaFiltersTest
   public void testNestedAndConjunctsIntersect()
   {
     // A whole WHERE passed as a single AND(...) RexCall: IN ('foo','bar') AND IN ('bar','baz') => {'bar'}
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("bar"),
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(
@@ -176,7 +176,7 @@ public class SystemSchemaFiltersTest
   public void testAndIgnoresNonMatchingConjunct()
   {
     // col_a = 'foo' AND col_other = 'foo' => {'foo'} (the non-target conjunct is ignored)
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("foo"),
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(
@@ -193,7 +193,7 @@ public class SystemSchemaFiltersTest
   public void testAndWithNoConstraintOnColumnReturnsNull()
   {
     // AND of predicates that never touch the target column => null (full scan retained)
-    Assert.assertNull(
+    Assertions.assertNull(
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(
                 SqlStdOperatorTable.AND,
@@ -208,14 +208,14 @@ public class SystemSchemaFiltersTest
   @Test
   public void testEmptyFilterListReturnsNull()
   {
-    Assert.assertNull(SystemSchemaFilters.extractColumnValues(ImmutableList.of(), COL_A));
+    Assertions.assertNull(SystemSchemaFilters.extractColumnValues(ImmutableList.of(), COL_A));
   }
 
   @Test
   public void testRangePredicateReturnsNull()
   {
     // col > 'foo' -- a range cannot bound the value set
-    Assert.assertNull(
+    Assertions.assertNull(
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN, aRef, foo)),
             COL_A
@@ -226,7 +226,7 @@ public class SystemSchemaFiltersTest
   @Test
   public void testEqualityOnOtherColumnReturnsNull()
   {
-    Assert.assertNull(
+    Assertions.assertNull(
         SystemSchemaFilters.extractColumnValues(
             ImmutableList.of(rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, otherRef, foo)),
             COL_A
@@ -238,7 +238,7 @@ public class SystemSchemaFiltersTest
   public void testNonRexCallNodeReturnsNull()
   {
     // A bare input ref (not a RexCall) constrains nothing.
-    Assert.assertNull(SystemSchemaFilters.extractColumnValues(ImmutableList.of(aRef), COL_A));
+    Assertions.assertNull(SystemSchemaFilters.extractColumnValues(ImmutableList.of(aRef), COL_A));
   }
 
   @Test
@@ -252,7 +252,7 @@ public class SystemSchemaFiltersTest
     );
     final Map<Integer, Set<String>> result =
         SystemSchemaFilters.extractColumnValues(ImmutableList.of(filter), COL_A, COL_B);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             COL_A, ImmutableSet.of("foo"),
             COL_B, ImmutableSet.of("bar", "baz")
@@ -268,7 +268,7 @@ public class SystemSchemaFiltersTest
     final RexNode filter = rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, aRef, foo);
     final Map<Integer, Set<String>> result =
         SystemSchemaFilters.extractColumnValues(ImmutableList.of(filter), COL_A, COL_B);
-    Assert.assertEquals(ImmutableMap.of(COL_A, ImmutableSet.of("foo")), result);
-    Assert.assertFalse(result.containsKey(COL_B));
+    Assertions.assertEquals(ImmutableMap.of(COL_A, ImmutableSet.of("foo")), result);
+    Assertions.assertFalse(result.containsKey(COL_B));
   }
 }

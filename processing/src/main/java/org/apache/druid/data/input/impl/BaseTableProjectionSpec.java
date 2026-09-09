@@ -86,6 +86,11 @@ public interface BaseTableProjectionSpec
   BaseTableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity);
 
   /**
+   * Returns a copy of this spec with the given columns appended to those it already declares.
+   */
+  BaseTableProjectionSpec withAdditionalColumns(@Nullable List<DimensionSchema> additionalColumns);
+
+  /**
    * Returns true if this spec is equivalent to {@code other} for the purpose of deciding whether a segment is already
    * compacted. Segment granularity, query granularity, and rollup are each compared by their own compaction check
    * (query granularity in particular lives in {@link #getVirtualColumns()} as a granularity-carrier virtual column), so

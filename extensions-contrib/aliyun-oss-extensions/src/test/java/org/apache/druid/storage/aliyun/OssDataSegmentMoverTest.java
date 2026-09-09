@@ -28,6 +28,7 @@ import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import com.aliyun.oss.model.PutObjectResult;
 import com.aliyun.oss.model.StorageClass;
+import com.aliyun.oss.model.VoidResult;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -252,10 +253,11 @@ public class OssDataSegmentMoverTest
     }
 
     @Override
-    public void deleteObject(String bucket, String objectKey)
+    public VoidResult deleteObject(String bucket, String objectKey)
     {
       deletedOld = true;
       storage.get(bucket).remove(objectKey);
+      return new VoidResult();
     }
 
     public PutObjectResult putObject(String bucketName, String key)

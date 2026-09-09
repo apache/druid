@@ -55,6 +55,7 @@ import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
@@ -76,12 +77,13 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * An object that is used to query the segments table in the metadata store.
- * Each instance of this class is scoped to a single {@link Handle} and is meant
- * to be short-lived.
+ * Each instance of this class is scoped to a single {@link Handle} and must
+ * be used within a single transaction only.
  */
 public class SqlSegmentsMetadataQuery
 {
@@ -97,18 +99,21 @@ public class SqlSegmentsMetadataQuery
   private final Handle handle;
   private final SQLMetadataConnector connector;
   private final MetadataStorageTablesConfig dbTables;
+  private final SegmentsMetadataManagerConfig managerConfig;
   private final ObjectMapper jsonMapper;
 
   private SqlSegmentsMetadataQuery(
       final Handle handle,
       final SQLMetadataConnector connector,
       final MetadataStorageTablesConfig dbTables,
+      final SegmentsMetadataManagerConfig managerConfig,
       final ObjectMapper jsonMapper
   )
   {
     this.handle = handle;
     this.connector = connector;
     this.dbTables = dbTables;
+    this.managerConfig = managerConfig;
     this.jsonMapper = jsonMapper;
   }
 
@@ -120,10 +125,11 @@ public class SqlSegmentsMetadataQuery
       final Handle handle,
       final SQLMetadataConnector connector,
       final MetadataStorageTablesConfig dbTables,
+      final SegmentsMetadataManagerConfig managerConfig,
       final ObjectMapper jsonMapper
   )
   {
-    return new SqlSegmentsMetadataQuery(handle, connector, dbTables, jsonMapper);
+    return new SqlSegmentsMetadataQuery(handle, connector, dbTables, managerConfig, jsonMapper);
   }
 
   /**
@@ -902,6 +908,17 @@ public class SqlSegmentsMetadataQuery
 
   public boolean markSegmentAsUsed(SegmentId segmentId, DateTime updateTime)
   {
+    final List<DataSegmentPlus> targetSegments =
+        retrieveSegmentsById(segmentId.getDataSource(), Set.of(segmentId));
+    if (targetSegments.isEmpty()) {
+      // Invalid segment ID
+      return false;
+    } else if (Boolean.TRUE.equals(targetSegments.getFirst().getUsed())) {
+      // Segment is already marked as used, avoid another DB call
+      return false;
+    }
+
+    validateSegmentsForMarkingAsUsed(targetSegments);
     return markSegments(Set.of(segmentId), true, updateTime) > 0;
   }
 
@@ -928,7 +945,6 @@ public class SqlSegmentsMetadataQuery
       DateTime updateTime
   )
   {
-    final List<DataSegment> unusedSegments = new ArrayList<>();
     final SegmentTimeline timeline = new SegmentTimeline();
 
     final List<Interval> intervals =
@@ -942,12 +958,13 @@ public class SqlSegmentsMetadataQuery
       throw new RuntimeException(e);
     }
 
-    try (final CloseableIterator<DataSegment> iterator =
-             retrieveUnusedSegments(dataSourceName, intervals, versions, null, null, null, null)) {
+    final List<DataSegmentPlus> unusedSegments = new ArrayList<>();
+    try (final CloseableIterator<DataSegmentPlus> iterator =
+             retrieveUnusedSegmentsPlus(dataSourceName, intervals, versions, null, null, null, null)) {
       while (iterator.hasNext()) {
-        final DataSegment dataSegment = iterator.next();
-        timeline.add(dataSegment);
-        unusedSegments.add(dataSegment);
+        final DataSegmentPlus segmentPlus = iterator.next();
+        timeline.add(segmentPlus.getDataSegment());
+        unusedSegments.add(segmentPlus);
       }
     }
     catch (IOException e) {
@@ -958,18 +975,18 @@ public class SqlSegmentsMetadataQuery
   }
 
   private int markNonOvershadowedSegmentsAsUsed(
-      List<DataSegment> unusedSegments,
+      List<DataSegmentPlus> unusedSegments,
       SegmentTimeline timeline,
       DateTime updateTime
   )
   {
-    Set<SegmentId> nonOvershadowedSegments =
+    final Map<SegmentId, DataSegmentPlus> nonOvershadowedSegments =
         unusedSegments.stream()
-                      .filter(segment -> !timeline.isOvershadowed(segment))
-                      .map(DataSegment::getId)
-                      .collect(Collectors.toSet());
+                      .filter(segment -> !timeline.isOvershadowed(segment.getDataSegment()))
+                      .collect(Collectors.toMap(segment -> segment.getDataSegment().getId(), Function.identity()));
 
-    return markSegmentsAsUsed(nonOvershadowedSegments, updateTime);
+    validateSegmentsForMarkingAsUsed(nonOvershadowedSegments.values());
+    return markSegmentsAsUsed(nonOvershadowedSegments.keySet(), updateTime);
   }
 
   public int markNonOvershadowedSegmentsAsUsed(
@@ -978,13 +995,15 @@ public class SqlSegmentsMetadataQuery
       final DateTime updateTime
   )
   {
-    final List<DataSegment> unusedSegments = retrieveUnusedSegments(dataSource, segmentIds);
+    final List<DataSegmentPlus> unusedSegments = retrieveUnusedSegmentsPlus(dataSource, segmentIds);
     final List<Interval> unusedSegmentsIntervals = JodaUtils.condenseIntervals(
-        unusedSegments.stream().map(DataSegment::getInterval).collect(Collectors.toList())
+        unusedSegments.stream().map(s -> s.getDataSegment().getInterval()).toList()
     );
 
     // Create a timeline with all used and unused segments in this interval
-    final SegmentTimeline timeline = SegmentTimeline.forSegments(unusedSegments);
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(
+        unusedSegments.stream().map(DataSegmentPlus::getDataSegment).toList()
+    );
 
     try (CloseableIterator<DataSegment> usedSegmentsOverlappingUnusedSegmentsIntervals =
              retrieveUsedSegments(dataSource, unusedSegmentsIntervals)) {
@@ -997,7 +1016,44 @@ public class SqlSegmentsMetadataQuery
     return markNonOvershadowedSegmentsAsUsed(unusedSegments, timeline, updateTime);
   }
 
-  private List<DataSegment> retrieveUnusedSegments(
+  /**
+   * Checks that all the segments were last updated within the kill buffer period.
+   * If any segment was updated earlier than that, an exception is thrown so that
+   * none of the segments are updated to ensure atomicity.
+   */
+  private void validateSegmentsForMarkingAsUsed(Collection<DataSegmentPlus> segments)
+  {
+    if (!managerConfig.getKillUnused().isEnabled()) {
+      // Do not verify the buffer period if embedded kill tasks are not enabled
+      return;
+    }
+
+    final Period bufferPeriod = managerConfig.getKillUnused().getBufferPeriod();
+    final DateTime minAllowedUpdateTime = DateTimes.nowUtc().minus(
+        managerConfig.getKillUnused().getBufferPeriod()
+    );
+
+    final List<SegmentId> expiredSegmentIds = segments.stream().filter(
+        s -> s.getUsedStatusLastUpdatedDate() != null
+             && !s.getUsedStatusLastUpdatedDate().isAfter(minAllowedUpdateTime)
+    ).map(s -> s.getDataSegment().getId()).toList();
+
+    if (!expiredSegmentIds.isEmpty()) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.CONFLICT)
+                          .build(
+                              "Segment IDs[%s] cannot be marked as used since"
+                              + " they were last updated more than [%s] ago and"
+                              + " are now eligible for permanent deletion."
+                              + " Increase the value of runtime property"
+                              + " ['druid.manager.segments.killUnused.bufferPeriod']"
+                              + " to allow updating these segment IDs.",
+                              expiredSegmentIds, bufferPeriod
+                          );
+    }
+  }
+
+  private List<DataSegmentPlus> retrieveUnusedSegmentsPlus(
       final String dataSource,
       final Set<SegmentId> segmentIds
   )
@@ -1005,12 +1061,11 @@ public class SqlSegmentsMetadataQuery
     final List<DataSegmentPlus> retrievedSegments = retrieveSegmentsById(dataSource, segmentIds);
 
     final Set<SegmentId> unknownSegmentIds = new HashSet<>(segmentIds);
-    final List<DataSegment> unusedSegments = new ArrayList<>();
+    final List<DataSegmentPlus> unusedSegments = new ArrayList<>();
     for (DataSegmentPlus entry : retrievedSegments) {
-      final DataSegment segment = entry.getDataSegment();
-      unknownSegmentIds.remove(segment.getId());
+      unknownSegmentIds.remove(entry.getDataSegment().getId());
       if (Boolean.FALSE.equals(entry.getUsed())) {
-        unusedSegments.add(segment);
+        unusedSegments.add(entry);
       }
     }
 
@@ -1574,7 +1629,9 @@ public class SqlSegmentsMetadataQuery
       @Nullable final DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
+    if (versions != null && versions.isEmpty()) {
+      return CloseableIterators.withEmptyBaggage(Collections.emptyIterator());
+    } else if (intervals.isEmpty() || intervals.size() <= MAX_INTERVALS_PER_BATCH) {
       return CloseableIterators.withEmptyBaggage(
           retrieveSegmentsPlusInIntervalsBatch(dataSource, intervals, versions, matchMode, used, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)
       );

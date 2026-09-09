@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3.output;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
@@ -197,25 +198,37 @@ public class RetryableS3OutputStreamTest
     s3.assertCompleted(chunkSize, Integer.BYTES * 25);
   }
 
+  /**
+   * A part that fails every retry leaves the multipart upload aborted and no object at the key, so close() must report
+   * it. Returning normally would tell the caller its bytes are readable back when they no longer exist anywhere.
+   */
   @Test
-  public void testFailToUploadAfterRetries() throws IOException
+  public void testFailToUploadAfterRetries()
   {
     final TestAmazonS3 s3 = new TestAmazonS3(3);
 
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetryableS3OutputStream out =
-             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
-      for (int i = 0; i < 2; i++) {
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> {
+      try (RetryableS3OutputStream out =
+               new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
+        for (int i = 0; i < 2; i++) {
+          bb.clear();
+          bb.putInt(i);
+          out.write(bb.array());
+        }
+
         bb.clear();
-        bb.putInt(i);
+        bb.putInt(3);
         out.write(bb.array());
       }
+    });
 
-      bb.clear();
-      bb.putInt(3);
-      out.write(bb.array());
-    }
-
+    Assertions.assertTrue(e.getMessage().contains("no object was written"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains(path), e.getMessage());
+    Assertions.assertNotNull(e.getCause());
+    // An aborted upload means S3 rejected the parts, which an operator can act on, rather than a Druid defect.
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.RUNTIME_FAILURE, e.getCategory());
     s3.assertCancelled();
   }
 

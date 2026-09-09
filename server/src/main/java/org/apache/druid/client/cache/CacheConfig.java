@@ -20,9 +20,9 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.query.Query;
 
-import javax.validation.constraints.Min;
 import java.util.List;
 
 public class CacheConfig

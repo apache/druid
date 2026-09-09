@@ -296,7 +296,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         )
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("csv"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("csv"), dataSourceWrite("csv"))
         .expectTarget("csv", RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }

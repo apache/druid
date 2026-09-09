@@ -38,6 +38,7 @@ public class TestAuthorizer
    * <li>resources of type DATASOURCE with names containing "restricted" for read include a policy restriction</li>
    * <li>superuser has full access</li>
    * <li>resources with names containing "forbidden" are denied</li>
+   * <li>resources of type DATASOURCE with names containing "readOnly" are denied for write actions</li>
    * <li>external resources are denied for read actions</li>
    * <li>resources of type DATASOURCE, VIEW, QUERY_CONTEXT, and EXTERNAL are allowed</li>
    * <li>if none of the roles above matches, deny access</li>
@@ -49,6 +50,7 @@ public class TestAuthorizer
             .defaultPolicyOnReadTable(defaultPolicy)
             .allowIfSuperuser(superuserName)
             .denyIfResourceNameHasKeyword("forbidden")
+            .denyWriteIfResourceNameHasKeyword("readOnly")
             .denyExternalRead()
             .allowIfResourceTypeIs(Set.of(
                 ResourceType.DATASOURCE,
@@ -100,6 +102,17 @@ public class TestAuthorizer
       return this;
     }
     if (resource.getName().contains(keyword)) {
+      access = Optional.of(Access.DENIED);
+    }
+    return this;
+  }
+
+  public TestAuthorizer denyWriteIfResourceNameHasKeyword(String keyword)
+  {
+    if (access.isPresent()) {
+      return this;
+    }
+    if (Action.WRITE.equals(action) && resource.getName().contains(keyword)) {
       access = Optional.of(Access.DENIED);
     }
     return this;

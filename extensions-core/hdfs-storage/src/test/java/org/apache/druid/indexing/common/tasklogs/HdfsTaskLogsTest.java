@@ -22,17 +22,17 @@ package org.apache.druid.indexing.common.tasklogs;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,13 +41,13 @@ import java.util.Map;
 
 public class HdfsTaskLogsTest
 {
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testStream() throws Exception
   {
-    final File tmpDir = newFolder(tempFolder, "junit");
+    final File tmpDir = tempFolder.newFolder();
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
@@ -64,7 +64,7 @@ public class HdfsTaskLogsTest
   @Test
   public void testOverwrite() throws Exception
   {
-    final File tmpDir = newFolder(tempFolder, "junit");
+    final File tmpDir = tempFolder.newFolder();
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
@@ -81,7 +81,7 @@ public class HdfsTaskLogsTest
   @Test
   public void test_taskStatus() throws Exception
   {
-    final File tmpDir = newFolder(tempFolder, "junit");
+    final File tmpDir = tempFolder.newFolder();
     final File logDir = new File(tmpDir, "logs");
     final File statusFile = new File(tmpDir, "status.json");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
@@ -98,7 +98,7 @@ public class HdfsTaskLogsTest
   @Test
   public void test_taskPayload() throws Exception
   {
-    final File tmpDir = newFolder(tempFolder, "junit");
+    final File tmpDir = tempFolder.newFolder();
     final File logDir = new File(tmpDir, "logs");
     final File payload = new File(tmpDir, "payload.json");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
@@ -111,7 +111,7 @@ public class HdfsTaskLogsTest
   @Test
   public void testKill() throws Exception
   {
-    final File tmpDir = newFolder(tempFolder, "junit");
+    final File tmpDir = tempFolder.newFolder();
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
 
@@ -148,8 +148,4 @@ public class HdfsTaskLogsTest
     return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get()));
   }
 
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
-  }
 }

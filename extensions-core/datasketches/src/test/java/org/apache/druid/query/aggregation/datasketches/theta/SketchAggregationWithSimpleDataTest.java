@@ -89,7 +89,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     SketchModule.registerSerde();
     sm = new SketchModule();
     try (
-        final AggregationTestHelper toolchest = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+        final AggregationTestHelper toolchest = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
             sm.getJacksonModules(),
             config,
             tempFolder
@@ -140,7 +140,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
   {
     setup(config);
     try (
-        final AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+        final AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
             sm.getJacksonModules(),
             config,
             tempFolder

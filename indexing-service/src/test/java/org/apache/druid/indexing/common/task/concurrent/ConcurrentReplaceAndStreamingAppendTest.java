@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
@@ -63,6 +64,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.Capture;
@@ -96,7 +98,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>LOCK: Acquisition of a lock on an interval by a replace task</li>
  *   <li>ALLOCATE: Allocation of a pending segment by an append task</li>
  *   <li>REPLACE: Commit of segments created by a replace task</li>
- *   <li>APPEND: Commit of segments created by an append task</li>
+ *  <li>APPEND: Commit of segments created by an append task</li>
  * </ul>
  */
 public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
@@ -606,7 +608,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
 
     // Verify that segment cannot be committed since there is no lock
     final DataSegment segmentV10 = createSegment(FIRST_OF_JAN_23, SEGMENT_V0);
-    final ISE exception = Assertions.assertThrows(ISE.class, () -> commitReplaceSegments(segmentV10));
+    final DruidException exception = Assertions.assertThrows(DruidException.class, () -> commitReplaceSegments(segmentV10));
     final Throwable throwable = Throwables.getRootCause(exception);
     Assertions.assertEquals(
         StringUtils.format(
@@ -703,7 +705,8 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
           new RetrieveUsedSegmentsAction(
               TestDataSource.WIKI,
               ImmutableList.of(interval),
-              visibility
+              visibility,
+              SegmentDetail.all()
           )
       );
       Assertions.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
@@ -822,7 +825,8 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
           new RetrieveUsedSegmentsAction(
               TestDataSource.WIKI,
               ImmutableList.of(Intervals.ETERNITY),
-              Segments.INCLUDING_OVERSHADOWED
+              Segments.INCLUDING_OVERSHADOWED,
+              SegmentDetail.all()
           )
       );
     }

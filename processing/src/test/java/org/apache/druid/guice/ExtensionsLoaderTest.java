@@ -58,7 +58,7 @@ import java.util.jar.JarOutputStream;
 public class ExtensionsLoaderTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final ObjectMapper objectMapper = new ObjectMapper();
   private final Map<String, byte[]> jarFileContents = ImmutableMap.of(

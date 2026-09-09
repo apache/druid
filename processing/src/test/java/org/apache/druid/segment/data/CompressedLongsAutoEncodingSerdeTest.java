@@ -22,10 +22,10 @@ package org.apache.druid.segment.data;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
@@ -35,10 +35,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("compressionStrategies")
 public class CompressedLongsAutoEncodingSerdeTest
 {
-  @Parameterized.Parameters(name = "{0} {1} {2}")
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
@@ -109,11 +110,11 @@ public class CompressedLongsAutoEncodingSerdeTest
     serializer.open();
 
     serializer.addAll(values, 0, values.length);
-    Assert.assertEquals(values.length, serializer.size());
+    Assertions.assertEquals(values.length, serializer.size());
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     serializer.writeTo(Channels.newChannel(baos), null);
-    Assert.assertEquals(baos.size(), serializer.getSerializedSize());
+    Assertions.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedColumnarLongsSupplier supplier =
         CompressedColumnarLongsSupplier.fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
     ColumnarLongs longs = supplier.get();
@@ -125,17 +126,17 @@ public class CompressedLongsAutoEncodingSerdeTest
 
   private void assertIndexMatchesVals(ColumnarLongs indexed, long[] vals)
   {
-    Assert.assertEquals(vals.length, indexed.size());
+    Assertions.assertEquals(vals.length, indexed.size());
     for (int i = 0; i < indexed.size(); ++i) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
+          vals[i],
+          indexed.get(i),
           StringUtils.format(
               "Value [%d] at row '%d' does not match [%d]",
               indexed.get(i),
               i,
               vals[i]
-          ),
-          vals[i],
-          indexed.get(i)
+          )
       );
     }
   }
