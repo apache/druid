@@ -251,10 +251,19 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                               .withPartitionsSpec(partitionsSpec)
                               .withForceGuaranteedRollup(forceGuaranteedRollup)
                               .withMaxNumConcurrentSubTasks(maxNumConcurrentSubTasks)
-                              // Serial tests need only a short poll interval; concurrent tests retain the default.
-                              .withTaskStatusCheckPeriodMs(maxNumConcurrentSubTasks == 1 ? 100L : null)
+                              .withTaskStatusCheckPeriodMs(getTaskStatusCheckPeriodMs(maxNumConcurrentSubTasks))
                               .withMaxParseExceptions(5)
                               .build();
+  }
+
+  /**
+   * Task-status poll interval used by {@link #newTuningConfig}. Serial tests need only a short poll interval;
+   * concurrent tests retain the production default (null). Subclasses whose assertions do not depend on poll
+   * cadence can override this to cut wall-clock time without duplicating the rest of the tuning config.
+   */
+  protected Long getTaskStatusCheckPeriodMs(int maxNumConcurrentSubTasks)
+  {
+    return maxNumConcurrentSubTasks == 1 ? 100L : null;
   }
 
   protected LocalOverlordClient getIndexingServiceClient()

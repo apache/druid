@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -34,7 +33,6 @@ import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.MinorCompactionInputSpec;
 import org.apache.druid.indexing.common.task.Tasks;
-import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
@@ -74,6 +72,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       null
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
+  private static final long TASK_STATUS_CHECK_PERIOD_MS = 100L;
 
   private File inputDir;
 
@@ -84,28 +83,14 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
 
   /**
    * This test drives several rounds of parallel indexing/compaction (each with its own
-   * determine-partitions/generate/merge phases) back-to-back. The base implementation only
-   * shortens {@link ParallelIndexTuningConfig#getTaskStatusCheckPeriodMs()} for serial runs
-   * (maxNumConcurrentSubTasks == 1) and otherwise falls back to the 1-second production default,
-   * which is production-realistic but adds several seconds of avoidable polling latency per phase
-   * transition in this test. None of the assertions here depend on the poll cadence, so use a
-   * short interval unconditionally to cut wall-clock time without changing what is being tested.
+   * determine-partitions/generate/merge phases) back-to-back, always with concurrent sub-tasks, so the
+   * base implementation would poll task status at the 1-second production default and pay up to a full
+   * period per phase transition. None of the assertions here depend on the poll cadence, so poll quickly.
    */
   @Override
-  protected ParallelIndexTuningConfig newTuningConfig(
-      PartitionsSpec partitionsSpec,
-      int maxNumConcurrentSubTasks,
-      boolean forceGuaranteedRollup
-  )
+  protected Long getTaskStatusCheckPeriodMs(int maxNumConcurrentSubTasks)
   {
-    return TuningConfigBuilder.forParallelIndexTask()
-                              .withSplitHintSpec(new MaxSizeSplitHintSpec(null, 1))
-                              .withPartitionsSpec(partitionsSpec)
-                              .withForceGuaranteedRollup(forceGuaranteedRollup)
-                              .withMaxNumConcurrentSubTasks(maxNumConcurrentSubTasks)
-                              .withTaskStatusCheckPeriodMs(100L)
-                              .withMaxParseExceptions(5)
-                              .build();
+    return TASK_STATUS_CHECK_PERIOD_MS;
   }
 
   @BeforeEach
