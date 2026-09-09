@@ -298,7 +298,6 @@ public class ServerHolder implements Comparable<ServerHolder>
    * <ul>
    * <li>Contains segments present in the queue when the current coordinator run started.</li>
    * <li>Contains segments added to the queue during the current run.</li>
-   * <li>Maps replicating segments to LOAD rather than REPLICATE for simplicity.</li>
    * <li>Does not contain segments whose actions were cancelled.</li>
    * </ul>
    */
