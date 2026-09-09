@@ -41,10 +41,4 @@ public class DerbyMetadataStorageActionHandler extends SQLMetadataStorageActionH
     return sql + " FETCH FIRST :n ROWS ONLY";
   }
 
-  @Override
-  protected SqlDialect getSqlDialect()
-  {
-    return SqlDialect.DERBY;
-  }
-
 }

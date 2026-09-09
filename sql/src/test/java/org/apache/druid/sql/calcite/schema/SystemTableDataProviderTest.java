@@ -36,12 +36,6 @@ public class SystemTableDataProviderTest
   @Test
   public void testNativeTablesExposeSystemMetadata()
   {
-    final NativeTasksTable tasks = new NativeTasksTable();
-    Assertions.assertEquals("tasks", ((SystemTableDataSource) tasks.getDataSource()).getTable());
-    Assertions.assertFalse(tasks.isJoinable());
-    Assertions.assertFalse(tasks.isBroadcast());
-    Assertions.assertEquals(Schema.TableType.SYSTEM_TABLE, tasks.getJdbcTableType());
-
     final NativeServerPropertiesTable serverProperties = new NativeServerPropertiesTable();
     Assertions.assertEquals(
         "server_properties",
@@ -68,7 +62,7 @@ public class SystemTableDataProviderTest
     EasyMock.expect(bindableContext.getEngine()).andReturn(bindableEngine).once();
     EasyMock.expect(enabledContext.useNativeQueryForSystemTables()).andReturn(true).once();
     EasyMock.expect(enabledContext.getEngine()).andReturn(nativeEngine).once();
-    EasyMock.expect(table.unwrap(NativeSystemTable.class)).andReturn(NativeTasksTable::new).once();
+    EasyMock.expect(table.unwrap(NativeSystemTable.class)).andReturn(NativeServerPropertiesTable::new).once();
     EasyMock.replay(table, nativeEngine, bindableEngine, disabledContext, bindableContext, enabledContext);
 
     Assertions.assertFalse(SystemSchema.canUseNativeSystemTable(table, disabledContext));
@@ -82,10 +76,10 @@ public class SystemTableDataProviderTest
   public void testSystemSchemaGetsNativeRepresentation()
   {
     final RelOptTable table = EasyMock.createMock(RelOptTable.class);
-    EasyMock.expect(table.unwrap(NativeSystemTable.class)).andReturn(NativeTasksTable::new).once();
+    EasyMock.expect(table.unwrap(NativeSystemTable.class)).andReturn(NativeServerPropertiesTable::new).once();
     EasyMock.replay(table);
 
-    Assertions.assertInstanceOf(NativeTasksTable.class, SystemSchema.getNativeSystemTable(table));
+    Assertions.assertInstanceOf(NativeServerPropertiesTable.class, SystemSchema.getNativeSystemTable(table));
     EasyMock.verify(table);
   }
 

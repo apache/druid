@@ -39,10 +39,4 @@ public class PostgreSQLMetadataStorageActionHandler extends SQLMetadataStorageAc
     return sql + " LIMIT :n";
   }
 
-  @Override
-  protected SqlDialect getSqlDialect()
-  {
-    return SqlDialect.POSTGRESQL;
-  }
-
 }

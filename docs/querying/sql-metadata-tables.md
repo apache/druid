@@ -147,7 +147,7 @@ The native SQL engine can plan supported system tables as native datasources. To
 
 ```json
 {
-  "query": "SELECT COUNT(DISTINCT task_id) FROM sys.tasks",
+  "query": "SELECT COUNT(DISTINCT server) FROM sys.server_properties",
   "context": {
     "useNativeQueryForSystemTables": true
   }
@@ -159,7 +159,7 @@ execution with `SET`:
 
 ```sql
 SET useNativeQueryForSystemTables = 'true';
-SELECT COUNT(DISTINCT datasource) FROM sys.tasks;
+SELECT COUNT(DISTINCT server) FROM sys.server_properties;
 ```
 
 Native system-table execution is available when the resolved SQL engine is `native`. You don't need to explicitly set
@@ -168,12 +168,16 @@ execution:
 
 |Table|Source of rows|
 |-----|--------------|
-|[`sys.tasks`](#tasks-table)|The Overlord that owns task state. Supported filters are pushed into task storage when the configured task storage implementation supports filter pushdown.|
 |[`sys.server_properties`](#server_properties-table)|The Druid server processes discovered in the cluster. Filters on `server` and `service_name` can avoid reading properties from nodes that don't match.|
 
 After Druid retrieves the system-table rows, the native engine applies the remaining filters, expressions,
 aggregations, sorting, and result processing. A system table that doesn't advertise native query support continues to
 use its existing SQL-layer execution path, even when `useNativeQueryForSystemTables` is `true`.
+
+The parameter defaults to `false`. During a rolling upgrade, leave it disabled until the Broker and all nodes
+that serve the native system tables have been upgraded. After the upgrade, you can enable it by query or set
+`druid.query.default.context.useNativeQueryForSystemTables=true` on Brokers as the cluster-wide default. For more
+information, see [SQL query context](sql-query-context.md).
 
 Native system-table queries sent to the Router use distributed Broker execution by default. To execute a native
 system-table Scan against only the contacted node, set the HTTP header
@@ -181,11 +185,6 @@ system-table Scan against only the contacted node, set the HTTP header
 authorization rules. The Broker uses the same header for remote node fan-out requests. If the Broker itself is
 one of the selected nodes, it executes that node Scan in-process without an HTTP request. The header
 controls routing and doesn't grant additional permissions.
-
-The parameter defaults to `false`. During a rolling upgrade, leave it disabled until the Broker and all nodes
-that serve the native system tables have been upgraded. After the upgrade, you can enable it by query or set
-`druid.query.default.context.useNativeQueryForSystemTables=true` on Brokers as the cluster-wide default. For more
-information, see [SQL query context](sql-query-context.md).
 
 ### SEGMENTS table
 
