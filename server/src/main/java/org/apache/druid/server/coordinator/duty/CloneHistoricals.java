@@ -292,7 +292,7 @@ public class CloneHistoricals implements CoordinatorDuty
             stats.percentPendingSync(),
             bytesLeft
         );
-        collectMetricsIfStateChanged(targetServer, newStatus, params.getCoordinatorStats());
+        collectMetrics(targetServer, newStatus, params.getCoordinatorStats());
       }
       newStatusMap.put(targetServerName, newStatus);
     }
@@ -330,24 +330,21 @@ public class CloneHistoricals implements CoordinatorDuty
   }
 
   /**
-   * Adds metrics to the run stats if the state has changed to SYNCED in this run.
+   * Adds metrics for this clone to the run stats.
    */
-  private void collectMetricsIfStateChanged(
-      ServerHolder server,
+  private void collectMetrics(
+      ServerHolder targetServer,
       ServerCloneStatus newStatus,
       CoordinatorRunStats stats
   )
   {
-    final String targetServerName = server.getServer().getName();
+    final String targetServerName = targetServer.getServer().getName();
     final RowKey rowKey = RowKey.with(Dimension.SERVER, targetServerName)
-                                .and(Dimension.TIER, server.getServer().getTier());
-    final ServerCloneStatus oldStatus = cloneStatusManager.getStatusForServer(targetServerName);
-
+                                .and(Dimension.TIER, targetServer.getServer().getTier());
     stats.add(Stats.Segments.PENDING_SYNC_ON_CLONE, rowKey, newStatus.segmentsPendingSync());
-    if (newStatus.state() == ServerCloneStatus.State.SYNCED
-        && (oldStatus == null || oldStatus.state() != ServerCloneStatus.State.SYNCED)) {
-      stats.add(Stats.Tier.CLONE_SYNCED, rowKey, 1L);
-    }
+
+    final boolean isSynced = newStatus.state() == ServerCloneStatus.State.SYNCED;
+    stats.add(Stats.Tier.CLONE_SYNCED, rowKey, isSynced ? 1L : 0L);
   }
 
   private static class CloningStats
