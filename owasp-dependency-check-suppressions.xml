@@ -843,7 +843,7 @@
       file name: hadoop-client-runtime-3.5.0.jar (shaded jetty-http/jetty-io 9.4.58.v20250814)
     ]]></notes>
     <filePath regex="true">.*hadoop-client-runtime-3\.5\.0\.jar.*</filePath>
-    <packageUrl regex="true">^pkg:maven/org\.eclipse\.jetty/jetty-(http|io)@9\.4\.58.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.eclipse\.jetty(\.[^/]+)?/.*@9\.4\.58.*$</packageUrl>
     <cve>CVE-2026-2332</cve>
     <cve>CVE-2026-10050</cve>
   </suppress>
@@ -855,7 +855,7 @@
       file name: hadoop-client-runtime-3.5.0.jar (shaded jline 3.9.0)
     ]]></notes>
     <filePath regex="true">.*hadoop-client-runtime-3\.5\.0\.jar.*</filePath>
-    <packageUrl regex="true">^pkg:maven/org\.jline/jline@3\.9\.0$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.jline/jline.*@.*$</packageUrl>
     <cve>CVE-2026-56741</cve>
     <cve>CVE-2026-56740</cve>
   </suppress>
