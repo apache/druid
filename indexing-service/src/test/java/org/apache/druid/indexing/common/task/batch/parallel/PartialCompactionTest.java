@@ -72,7 +72,6 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       null
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
-  private static final long TASK_STATUS_CHECK_PERIOD_MS = 100L;
 
   private File inputDir;
 
@@ -88,9 +87,9 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
    * period per phase transition. None of the assertions here depend on the poll cadence, so poll quickly.
    */
   @Override
-  protected Long getTaskStatusCheckPeriodMs(int maxNumConcurrentSubTasks)
+  protected Long getTaskStatusCheckPeriodMs(int ignoredMaxNumConcurrentSubTasks)
   {
-    return TASK_STATUS_CHECK_PERIOD_MS;
+    return SHORT_TASK_STATUS_CHECK_PERIOD_MS;
   }
 
   @BeforeEach
