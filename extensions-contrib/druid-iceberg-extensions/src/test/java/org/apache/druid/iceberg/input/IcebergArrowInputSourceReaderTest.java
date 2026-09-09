@@ -162,9 +162,11 @@ public class IcebergArrowInputSourceReaderTest
         IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
-    // iceberg-arrow may dict-encode repeated string columns; assert row count only.
     final List<InputRow> rows = readAll(reader);
     Assertions.assertEquals(3, rows.size());
+    Assertions.assertEquals("alice", rows.get(0).getDimension("name").get(0));
+    Assertions.assertEquals("bob", rows.get(1).getDimension("name").get(0));
+    Assertions.assertEquals("alice", rows.get(2).getDimension("name").get(0));
   }
 
   @Test

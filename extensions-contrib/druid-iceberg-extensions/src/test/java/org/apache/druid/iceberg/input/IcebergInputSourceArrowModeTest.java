@@ -38,6 +38,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DataFile;
+import org.apache.iceberg.FileFormat;
+import org.apache.iceberg.FileMetadata;
+import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.Files;
 import org.apache.iceberg.PartitionKey;
 import org.apache.iceberg.PartitionSpec;
@@ -49,6 +52,7 @@ import org.apache.iceberg.data.GenericRecord;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.data.parquet.GenericParquetWriter;
 import org.apache.iceberg.io.DataWriter;
+import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
@@ -191,6 +195,51 @@ public class IcebergInputSourceArrowModeTest
 
     final InputSourceReader reader = src.reader(inputRowSchema, null, FileUtils.createTempDir());
     reader.read().close();
+  }
+
+  @Test
+  public void testArrowReaderRejectsSnapshotWithDeleteFiles() throws IOException
+  {
+    final Table table = testCatalog.retrieveTable(NAMESPACE, TABLENAME);
+    final String deletePath = warehouseDir.getAbsolutePath() + "/" + UUID.randomUUID() + ".parquet";
+    final String dataPath;
+    try (CloseableIterable<FileScanTask> tasks = table.newScan().planFiles()) {
+      dataPath = tasks.iterator().next().file().location();
+    }
+    final org.apache.iceberg.DeleteFile deleteFile = FileMetadata.deleteFileBuilder(table.spec())
+                                                                  .ofPositionDeletes()
+                                                                  .withPath(deletePath)
+                                                                  .withFormat(FileFormat.PARQUET)
+                                                                  .withRecordCount(1)
+                                                                  .withFileSizeInBytes(1)
+                                                                  .withReferencedDataFile(dataPath)
+                                                                  .build();
+    final org.apache.iceberg.DeleteFile equalityDeleteFile = FileMetadata.deleteFileBuilder(table.spec())
+                                                                         .ofEqualityDeletes(2)
+                                                                         .withPath(
+                                                                             warehouseDir.getAbsolutePath()
+                                                                             + "/"
+                                                                             + UUID.randomUUID()
+                                                                             + ".parquet"
+                                                                         )
+                                                                         .withFormat(FileFormat.PARQUET)
+                                                                         .withRecordCount(1)
+                                                                         .withFileSizeInBytes(1)
+                                                                         .build();
+    table.newRowDelta().addDeletes(deleteFile).addDeletes(equalityDeleteFile).commit();
+
+    final IcebergInputSource src = arrowSource(null, null, null);
+    final InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec(null, null, DateTimes.utc(0L)),
+        DimensionsSpec.builder().build(),
+        ColumnsFilter.all()
+    );
+
+    final UnsupportedOperationException ex = Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> src.reader(inputRowSchema, null, FileUtils.createTempDir()).read()
+    );
+    Assertions.assertEquals("Cannot read files that require applying delete files", ex.getMessage());
   }
 
   @Test
