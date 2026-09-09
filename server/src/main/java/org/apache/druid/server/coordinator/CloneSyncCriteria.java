@@ -26,7 +26,7 @@ import org.apache.druid.error.InvalidInput;
 import javax.annotation.Nullable;
 
 /**
- * Criteria definining when a clone historical should be considered as
+ * Criteria defining when a clone historical should be considered as
  * {@link ServerCloneStatus.State#SYNCED} to its source server. The criteria is
  * a function of the number and percentage of segments "pending sync", i.e.
  * segments already loaded on the source server but still loading on the target
