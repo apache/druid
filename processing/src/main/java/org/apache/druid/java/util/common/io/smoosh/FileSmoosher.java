@@ -356,10 +356,9 @@ public class FileSmoosher implements SegmentFileBuilder
         if (numBytesWritten > bytesLeft()) {
           throw new ISE("Wrote more bytes[%,d] than available[%,d]. Don't do that.", numBytesWritten, bytesLeft());
         }
-        final int numBytesWrittenInt = Ints.checkedCast(numBytesWritten);
-        currOffset = Math.addExact(currOffset, numBytesWrittenInt);
+        currOffset += numBytesWritten;
 
-        return numBytesWrittenInt;
+        return Ints.checkedCast(numBytesWritten);
       }
 
       @Override
@@ -492,10 +491,9 @@ public class FileSmoosher implements SegmentFileBuilder
       if (numBytesWritten > bytesLeft()) {
         throw new ISE("Wrote more bytes[%,d] than available[%,d]. Don't do that.", numBytesWritten, bytesLeft());
       }
-      final int numBytesWrittenInt = Ints.checkedCast(numBytesWritten);
-      currOffset = Math.addExact(currOffset, numBytesWrittenInt);
+      currOffset += numBytesWritten;
 
-      return numBytesWrittenInt;
+      return Ints.checkedCast(numBytesWritten);
     }
 
     @Override

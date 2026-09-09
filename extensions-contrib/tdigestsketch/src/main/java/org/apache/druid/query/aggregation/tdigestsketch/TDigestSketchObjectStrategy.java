@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch;
 
-import com.google.common.base.Preconditions;
 import com.tdunning.math.stats.MergingDigest;
 import org.apache.druid.segment.data.ObjectStrategy;
 
@@ -42,14 +41,8 @@ public class TDigestSketchObjectStrategy implements ObjectStrategy<MergingDigest
     if (numBytes == 0) {
       return null;
     }
-    Preconditions.checkArgument(
-        numBytes > 0 && numBytes <= buffer.remaining(),
-        "numBytes[%s] exceeds buffer remaining[%s]",
-        numBytes,
-        buffer.remaining()
-    );
-    final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-    readOnlyBuffer.limit(Math.addExact(buffer.position(), numBytes));
+    ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+    readOnlyBuffer.limit(buffer.position() + numBytes);
     return MergingDigest.fromBytes(readOnlyBuffer);
   }
 

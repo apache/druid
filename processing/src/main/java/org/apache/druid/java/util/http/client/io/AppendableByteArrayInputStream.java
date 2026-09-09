@@ -19,7 +19,6 @@
 
 package org.apache.druid.java.util.http.client.io;
 
-import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
@@ -138,7 +137,7 @@ public class AppendableByteArrayInputStream extends InputStream
               break;
             }
             try {
-              available = Math.subtractExact(available, Ints.checkedCast(numPulled));
+              available -= numPulled;
               numPulled = 0;
               singleByteReaderDoer.wait();
             }
@@ -169,12 +168,12 @@ public class AppendableByteArrayInputStream extends InputStream
       final long numToPullFromCurr = Math.min(curr.length - currIndex, numToScan - numScanned);
       doer.doSomethingWithByteArray((int) numToPullFromCurr);
       numScanned += numToPullFromCurr;
-      currIndex = Math.addExact(currIndex, Ints.checkedCast(numToPullFromCurr));
+      currIndex += numToPullFromCurr;
       numPulled += numToPullFromCurr;
     }
 
     synchronized (singleByteReaderDoer) {
-      available = Math.subtractExact(available, Ints.checkedCast(numPulled));
+      available -= numPulled;
     }
 
     return numScanned;

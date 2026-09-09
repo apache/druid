@@ -115,13 +115,8 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
       int endOffset
   )
   {
-    if (startOffset < 0 || endOffset < startOffset || endOffset > rows.size()) {
-      throw new ISE(
-          "Invalid row range startOffset[%,d], endOffset[%,d], rows.size()[%,d]",
-          startOffset,
-          endOffset,
-          rows.size()
-      );
+    if (endOffset - startOffset < 0) {
+      throw new ISE("endOffset[%,d] - startOffset[%,d] was somehow negative!?", endOffset, startOffset);
     }
     this.rows = rows;
     this.rowAdapter = rowAdapter;
@@ -141,7 +136,7 @@ public class ArrayListRowsAndColumns<RowType> implements AppendableRowsAndColumn
   @Override
   public int numRows()
   {
-    return Math.subtractExact(endOffset, startOffset);
+    return endOffset - startOffset;
   }
 
   @Override

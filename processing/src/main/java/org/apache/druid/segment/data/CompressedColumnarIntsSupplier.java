@@ -61,8 +61,6 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
       CompressionStrategy compression
   )
   {
-    Preconditions.checkArgument(totalSize >= 0, "totalSize must be nonnegative");
-    Preconditions.checkArgument(sizePer > 0, "sizePer must be positive");
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseIntBuffers = baseIntBuffers;
@@ -73,7 +71,7 @@ public class CompressedColumnarIntsSupplier implements WritableSupplier<Columnar
   public ColumnarInts get()
   {
     final int div = Integer.numberOfTrailingZeros(sizePer);
-    final int rem = Math.subtractExact(sizePer, 1);
+    final int rem = sizePer - 1;
     final boolean isPowerOf2 = sizePer == (1 << div);
     if (isPowerOf2) {
       return new CompressedColumnarInts()

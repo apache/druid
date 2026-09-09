@@ -85,7 +85,7 @@ public class CacheKeyBuilder
 
     int byteSize()
     {
-      return Math.addExact(1, item.length);
+      return 1 + item.length;
     }
   }
 

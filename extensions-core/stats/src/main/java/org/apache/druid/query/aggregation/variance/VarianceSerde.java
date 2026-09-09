@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.variance;
 
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.segment.data.ObjectStrategy;
@@ -91,13 +90,7 @@ public class VarianceSerde extends ComplexMetricSerde
       @Override
       public VarianceAggregatorCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        Preconditions.checkArgument(
-            numBytes >= 0 && numBytes <= buffer.remaining(),
-            "numBytes[%s] exceeds buffer remaining[%s]",
-            numBytes,
-            buffer.remaining()
-        );
-        buffer.limit(Math.addExact(buffer.position(), numBytes));
+        buffer.limit(buffer.position() + numBytes);
         return VarianceAggregatorCollector.from(buffer);
       }
 

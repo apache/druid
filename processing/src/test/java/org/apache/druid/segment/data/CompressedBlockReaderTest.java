@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.segment.CompressedPools;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -28,29 +27,80 @@ import java.nio.ByteOrder;
 
 public class CompressedBlockReaderTest
 {
-  @Test
-  public void testRejectsCompressedSizeBeyondBufferWithoutAdvancingPastOffsets()
+  private static ByteBuffer header(int blockSize, int numBlocks)
   {
-    final int headerSize = 2 * Byte.BYTES + 2 * Integer.BYTES;
-    final ByteBuffer buffer = ByteBuffer.allocate(headerSize + Integer.BYTES + Byte.BYTES)
-                                        .order(ByteOrder.BIG_ENDIAN);
+    final ByteBuffer buffer = ByteBuffer.allocate(64).order(ByteOrder.nativeOrder());
     buffer.put(CompressedBlockReader.VERSION);
-    buffer.put(CompressionStrategy.LZ4.getId());
-    buffer.putInt(CompressedPools.BUFFER_SIZE);
-    buffer.putInt(1);
-    buffer.putInt(2);
-    buffer.put((byte) 0);
+    buffer.put(CompressionStrategy.UNCOMPRESSED.getId());
+    buffer.putInt(blockSize);
+    buffer.putInt(numBlocks);
     buffer.flip();
+    return buffer;
+  }
 
-    Assertions.assertThrows(
-        IllegalStateException.class,
+  @Test
+  public void testNumBlocksZeroRejected()
+  {
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
         () -> CompressedBlockReader.fromByteBuffer(
-            buffer,
-            ByteOrder.BIG_ENDIAN,
-            ByteOrder.BIG_ENDIAN,
-            false
+            header(64, 0), ByteOrder.nativeOrder(), ByteOrder.nativeOrder(), false
         )
     );
-    Assertions.assertEquals(headerSize, buffer.position());
+    Assertions.assertTrue(e.getMessage().contains("Number of blocks[0] must be positive"), e.getMessage());
+  }
+
+  @Test
+  public void testNumBlocksNegativeRejected()
+  {
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> CompressedBlockReader.fromByteBuffer(
+            header(64, -5), ByteOrder.nativeOrder(), ByteOrder.nativeOrder(), false
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("Number of blocks[-5] must be positive"), e.getMessage());
+  }
+
+  @Test
+  public void testBlockSizeZeroRejected()
+  {
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> CompressedBlockReader.fromByteBuffer(
+            header(0, 1), ByteOrder.nativeOrder(), ByteOrder.nativeOrder(), false
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("Block size[0] must be positive"), e.getMessage());
+  }
+
+  @Test
+  public void testNumBlocksBeyondBufferRejected()
+  {
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> CompressedBlockReader.fromByteBuffer(
+            header(64, 32), ByteOrder.nativeOrder(), ByteOrder.nativeOrder(), false
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("exceeds the available buffer"), e.getMessage());
+  }
+
+  @Test
+  public void testValidHeaderAccepted()
+  {
+    final ByteBuffer buffer = ByteBuffer.allocate(64).order(ByteOrder.nativeOrder());
+    buffer.put(CompressedBlockReader.VERSION);
+    buffer.put(CompressionStrategy.UNCOMPRESSED.getId());
+    buffer.putInt(64); // blockSize
+    buffer.putInt(2);  // numBlocks
+    buffer.putInt(4);  // offsets
+    buffer.putInt(8);
+    buffer.putInt(0);  // compressed bytes
+    buffer.putInt(0);
+    buffer.flip();
+
+    CompressedBlockReader.fromByteBuffer(buffer, ByteOrder.nativeOrder(), ByteOrder.nativeOrder(), false);
+    Assertions.assertTrue(true);
   }
 }

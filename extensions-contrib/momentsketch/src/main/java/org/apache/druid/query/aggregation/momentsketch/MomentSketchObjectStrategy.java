@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.momentsketch;
 
-import com.google.common.base.Preconditions;
 import org.apache.druid.query.aggregation.momentsketch.aggregator.MomentSketchAggregatorFactory;
 import org.apache.druid.segment.data.ObjectStrategy;
 
@@ -42,13 +41,7 @@ public class MomentSketchObjectStrategy implements ObjectStrategy<MomentSketchWr
     if (numBytes == 0) {
       return null;
     }
-    Preconditions.checkArgument(
-        numBytes > 0 && numBytes <= buffer.remaining(),
-        "numBytes[%s] exceeds buffer remaining[%s]",
-        numBytes,
-        buffer.remaining()
-    );
-    buffer.limit(Math.addExact(buffer.position(), numBytes));
+    buffer.limit(buffer.position() + numBytes);
     return MomentSketchWrapper.fromBytes(buffer);
   }
 

@@ -201,9 +201,8 @@ public class SafeWritableMemory extends SafeWritableBase implements WritableMemo
   @Override
   public void copyTo(long srcOffsetBytes, WritableMemory destination, long dstOffsetBytes, long lengthBytes)
   {
-    final int offset = Ints.checkedCast(srcOffsetBytes);
-    final int length = Ints.checkedCast(lengthBytes);
-    for (int i = 0; i < length; i++) {
+    int offset = Ints.checkedCast(srcOffsetBytes);
+    for (int i = 0; i < lengthBytes; i++) {
       destination.putByte(dstOffsetBytes + i, buffer.get(offset + i));
     }
   }
