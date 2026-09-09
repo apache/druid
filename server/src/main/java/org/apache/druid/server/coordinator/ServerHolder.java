@@ -167,7 +167,7 @@ public class ServerHolder implements Comparable<ServerHolder>
       }
 
       final SegmentAction action = holder.getAction();
-      addToQueuedSegments(holder.getSegment(), simplify(action));
+      addToQueuedSegments(holder.getSegment(), action);
       if (holder.getProfile() != null) {
         inFlightProfiles.put(holder.getSegment(), holder.getProfile());
       }
@@ -298,7 +298,6 @@ public class ServerHolder implements Comparable<ServerHolder>
    * <ul>
    * <li>Contains segments present in the queue when the current coordinator run started.</li>
    * <li>Contains segments added to the queue during the current run.</li>
-   * <li>Maps replicating segments to LOAD rather than REPLICATE for simplicity.</li>
    * <li>Does not contain segments whose actions were cancelled.</li>
    * </ul>
    */
@@ -350,7 +349,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   {
     final List<DataSegment> loadingSegments = new ArrayList<>();
     queuedSegments.forEach((segment, action) -> {
-      if (action == SegmentAction.LOAD) {
+      if (action == SegmentAction.LOAD || action == SegmentAction.REPLICATE) {
         loadingSegments.add(segment);
       }
     });
@@ -376,7 +375,8 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public boolean isLoadingSegment(DataSegment segment)
   {
-    return getActionOnSegment(segment) == SegmentAction.LOAD;
+    final SegmentAction action = getActionOnSegment(segment);
+    return action == SegmentAction.LOAD || action == SegmentAction.REPLICATE;
   }
 
   public boolean isDroppingSegment(DataSegment segment)
@@ -431,7 +431,7 @@ public class ServerHolder implements Comparable<ServerHolder>
       ++totalAssignmentsInRun;
     }
 
-    addToQueuedSegments(segment, simplify(action));
+    addToQueuedSegments(segment, action);
     if (profile != null) {
       inFlightProfiles.put(segment, profile);
     }
@@ -442,7 +442,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   {
     // Cancel only if the action is currently in queue
     final SegmentAction queuedAction = queuedSegments.get(segment);
-    if (queuedAction != simplify(action)) {
+    if (queuedAction != action) {
       return false;
     }
 
@@ -455,6 +455,18 @@ public class ServerHolder implements Comparable<ServerHolder>
     } else {
       return false;
     }
+  }
+
+  /**
+   * Cancels a {@link SegmentAction#REPLICATE} or {@link SegmentAction#LOAD} if
+   * it is currently being performed on the given segment.
+   *
+   * @return true if the operation was cancelled successfully.
+   */
+  public boolean cancelLoad(DataSegment segment)
+  {
+    return cancelOperation(SegmentAction.REPLICATE, segment)
+           || cancelOperation(SegmentAction.LOAD, segment);
   }
 
   /**
@@ -495,11 +507,6 @@ public class ServerHolder implements Comparable<ServerHolder>
   {
     return server.getType() == ServerType.REALTIME
            || server.getType() == ServerType.INDEXER_EXECUTOR;
-  }
-
-  private SegmentAction simplify(SegmentAction action)
-  {
-    return action == SegmentAction.REPLICATE ? SegmentAction.LOAD : action;
   }
 
   private void addToQueuedSegments(DataSegment segment, SegmentAction action)
