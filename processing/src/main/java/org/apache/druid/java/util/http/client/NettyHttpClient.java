@@ -117,6 +117,13 @@ public class NettyHttpClient extends AbstractHttpClient
     final Channel channel;
     final String hostKey = getPoolKey(url);
     final ResourceContainer<ChannelFuture> channelResourceContainer = pool.take(hostKey);
+    // ResourcePool.take is documented as blocking, but a null return is possible on pool exhaustion or shutdown;
+    // fail fast rather than NPE on the awaitUninterruptibly() below.
+    if (channelResourceContainer == null) {
+      return Futures.immediateFailedFuture(
+          new ChannelException(StringUtils.format("Connection pool exhausted or timed out for host[%s]", hostKey))
+      );
+    }
     final ChannelFuture channelFuture = channelResourceContainer.get().awaitUninterruptibly();
     if (!channelFuture.isSuccess()) {
       channelResourceContainer.returnResource(); // Some other poor sap will have to deal with it...
@@ -303,7 +310,11 @@ public class NettyHttpClient extends AbstractHttpClient
               log.warn(ex, "[%s] Exception thrown while processing message, closing channel.", requestDesc);
 
               if (!retVal.isDone()) {
-                retVal.set(null);
+                // Propagate the real cause: a handler that throws (a byte-limit check, a query-timeout,
+                // a deserialization failure) needs the caller's future.get() to raise the exception, not
+                // return null. The subsequent throw goes to exceptionCaught → handleExceptionAndCloseChannel,
+                // which is a no-op once the future is already done.
+                retVal.setException(ex);
               }
               channel.close();
               channelResourceContainer.returnResource();

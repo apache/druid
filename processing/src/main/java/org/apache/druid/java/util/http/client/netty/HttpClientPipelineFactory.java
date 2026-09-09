@@ -34,6 +34,6 @@ public class HttpClientPipelineFactory extends ChannelInitializer<Channel>
   {
     ChannelPipeline pipeline = ch.pipeline();
     pipeline.addLast("codec", new HttpClientCodec());
-    pipeline.addLast("inflater", new HttpContentDecompressor());
+    pipeline.addLast("inflater", new HttpContentDecompressor(false, 0));
   }
 }

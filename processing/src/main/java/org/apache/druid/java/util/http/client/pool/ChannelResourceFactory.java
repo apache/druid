@@ -179,7 +179,17 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
               sslHandshakeTimeout,
               TimeUnit.MILLISECONDS
           );
-          overallConnectPromise.addListener((ChannelFuture f) -> connectTimeoutTask.cancel(false));
+          // Any failure path leaves the socket connected to the proxy. NettyHttpClient's caller returns
+          // the failed ChannelFuture to the pool via giveBack(), which retains it — factory.close() only
+          // fires on a later take() for the same key, so an unretried key would leak an open socket until
+          // pool shutdown. Close the channel here on any failure. channel.close() is idempotent, so
+          // multiple failure signals converging is safe.
+          overallConnectPromise.addListener((ChannelFuture f) -> {
+            connectTimeoutTask.cancel(false);
+            if (!f.isSuccess()) {
+              channel.close();
+            }
+          });
 
           channel.writeAndFlush(connectRequest).addListener((ChannelFuture f2) -> {
             if (!f2.isSuccess()) {

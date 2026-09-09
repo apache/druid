@@ -21,10 +21,15 @@ package org.apache.druid.java.util.http.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.http.client.response.ClientResponse;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.eclipse.jetty.server.Connector;
@@ -588,6 +593,99 @@ public class FriendlyServersTest
       }
       Assertions.assertEquals(1, hostCount, "exactly one Host header on the wire");
       Assertions.assertEquals(1, acceptEncodingCount, "exactly one Accept-Encoding header on the wire");
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  /**
+   * A response handler that throws (e.g. a byte-limit or query-timeout check tripping inside
+   * {@code handleChunk}) must fail the caller's future with the actual cause and not leave the
+   * request hanging. Regression for the pre-fix behavior where {@code retVal.set(null)} on the
+   * exception path caused {@code future.get()} to return null instead of throwing.
+   */
+  @Test
+  public void testThrowingResponseHandlerFailsRequestWithCause() throws Exception
+  {
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              String line;
+              while ((line = in.readLine()) != null && !line.isEmpty()) {
+                // skip request headers
+              }
+              out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+              out.flush();
+            }
+            catch (Exception ignored) {
+              if (serverSocket.isClosed()) {
+                return;
+              }
+            }
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final URL url = new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()));
+
+      final ListenableFuture<String> future = client.go(
+          new Request(HttpMethod.GET, url),
+          new HttpResponseHandler<String, String>()
+          {
+            @Override
+            public ClientResponse<String> handleResponse(HttpResponse response, TrafficCop trafficCop)
+            {
+              return ClientResponse.unfinished("");
+            }
+
+            @Override
+            public ClientResponse<String> handleChunk(
+                ClientResponse<String> clientResponse,
+                HttpContent chunk,
+                long chunkNum
+            )
+            {
+              throw new ISE("Handler failed on chunk[%d]", chunkNum);
+            }
+
+            @Override
+            public ClientResponse<String> done(ClientResponse<String> clientResponse)
+            {
+              return ClientResponse.finished(clientResponse.getObj());
+            }
+
+            @Override
+            public void exceptionCaught(ClientResponse<String> clientResponse, Throwable e)
+            {
+              // No-op; the assertion below is on the caller-visible future.
+            }
+          }
+      );
+
+      final ExecutionException e = Assertions.assertThrows(
+          ExecutionException.class,
+          () -> future.get(30, TimeUnit.SECONDS)
+      );
+      Assertions.assertNotNull(e.getCause(), "cause must propagate");
+      Assertions.assertTrue(
+          e.getCause().getMessage() != null && e.getCause().getMessage().contains("Handler failed on chunk"),
+          "expected handler exception in cause, got " + e.getCause()
+      );
     }
     finally {
       exec.shutdownNow();

@@ -78,7 +78,9 @@ public class AppendableByteArrayInputStream extends InputStream
     if (scanThroughBytesAndDoSomething(1, singleByteReaderDoer) == 0) {
       return -1;
     }
-    return singleByteReaderDoer.getRetVal();
+    // Mask to 0..255 per the InputStream.read() contract; without this a byte with the high bit set is
+    // returned as a negative int and callers mistake it for EOF.
+    return singleByteReaderDoer.getRetVal() & 0xff;
   }
 
   @Override
