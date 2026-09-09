@@ -28,9 +28,11 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.CombinedScanTask;
+import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.arrow.vectorized.ArrowReader;
@@ -61,7 +63,8 @@ import java.util.stream.Collectors;
  * columns and matching files are read from storage.
  *
  * Note: iceberg-arrow currently supports Parquet data files only. ORC and Avro files will throw
- * {@link UnsupportedOperationException} at read time; use the standard delegate path for those.
+ * {@link UnsupportedOperationException} at read time. Delete-file snapshots are rejected because
+ * iceberg-arrow does not apply equality or positional deletes.
  */
 public class IcebergArrowInputSourceReader implements InputSourceReader
 {
@@ -97,6 +100,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   public CloseableIterator<InputRow> read(@Nullable final InputStats inputStats) throws IOException
   {
     final TableScan scan = buildScan();
+    validateNoDeleteFiles(scan);
     final CloseableIterable<CombinedScanTask> tasks = TableScanUtil.planTasks(
         scan.planFiles(),
         scan.targetSplitSize(),
@@ -111,6 +115,22 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
         tasks,
         inputStats != null ? inputStats : new NoopInputStats()
     );
+  }
+
+  private void validateNoDeleteFiles(final TableScan scan) throws IOException
+  {
+    try (CloseableIterable<FileScanTask> fileTasks = scan.planFiles()) {
+      for (FileScanTask fileTask : fileTasks) {
+        if (!fileTask.deletes().isEmpty()) {
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.UNSUPPORTED)
+                              .build(
+                                  "Arrow reader does not support Iceberg snapshots with delete files. "
+                                  + "Use a delete-aware input path."
+                              );
+        }
+      }
+    }
   }
 
   @Override

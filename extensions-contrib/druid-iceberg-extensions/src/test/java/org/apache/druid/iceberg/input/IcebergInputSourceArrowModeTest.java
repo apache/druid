@@ -235,11 +235,11 @@ public class IcebergInputSourceArrowModeTest
         ColumnsFilter.all()
     );
 
-    final UnsupportedOperationException ex = Assertions.assertThrows(
-        UnsupportedOperationException.class,
+    final DruidException ex = Assertions.assertThrows(
+        DruidException.class,
         () -> src.reader(inputRowSchema, null, FileUtils.createTempDir()).read()
     );
-    Assertions.assertEquals("Cannot read files that require applying delete files", ex.getMessage());
+    Assertions.assertTrue(ex.getMessage().contains("does not support Iceberg snapshots with delete files"));
   }
 
   @Test
