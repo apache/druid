@@ -35,7 +35,8 @@ fi
 
 # No snapshot updates
 OPTS+=" -nsu"
-# build-dist has already installed every reactor module into the local Maven
-# repository in this job, so only embedded-tests needs to be built here.
-# Building with -am would re-run the whole reactor (including web-console) again.
-mvn -B -pl embedded-tests $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
+# Keep -am: on a Maven build-cache hit, build-dist restores module outputs but
+# skips their install execution, so upstream SNAPSHOTs (e.g. web-console, a
+# test-scoped dependency of embedded-tests) may not exist in ~/.m2/repository.
+# With -am those modules are resolved from the reactor instead.
+mvn -B -pl embedded-tests -am $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"

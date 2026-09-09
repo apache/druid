@@ -23,9 +23,15 @@ mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip
 
 mvn -B checkstyle:checkstyle --fail-at-end
 
-# License checks (RAT, license dependency reports and check-licenses.py) are
-# covered by the packaging-check job, which builds the distribution with the
-# rat and apache-release profiles. Running them here again only duplicates work.
+# Repo-wide RAT check. packaging-check also runs RAT, but it excludes the
+# benchmarks module from its reactor, so keep this standalone pass here.
+mvn -B apache-rat:check -Prat --fail-at-end \
+  -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
+  -Drat.consoleOutput=true
+
+# The license dependency reports and check-licenses.py that used to run via
+# license_checks_script.sh are covered by the packaging-check job, which builds
+# the distribution with the apache-release profile. Not repeated here.
 # ./.github/scripts/license_checks_script.sh
 
 ./.github/scripts/analyze_dependencies_script.sh
