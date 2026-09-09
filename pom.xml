@@ -85,7 +85,7 @@
         <avatica.version>1.28.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
-        <bytebuddy.version>1.18.12</bytebuddy.version>
+        <bytebuddy.version>1.18.13</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -117,7 +117,7 @@
         <postgresql.version>42.7.13</postgresql.version>
         <protobuf.version>4.36.1</protobuf.version>
         <resilience4j.version>2.4.0</resilience4j.version>
-        <slf4j.version>2.0.18</slf4j.version>
+        <slf4j.version>2.0.19</slf4j.version>
         <jna.version>5.19.1</jna.version>
         <jna-platform.version>5.19.1</jna-platform.version>
         <hadoop.compile.version>3.5.0</hadoop.compile.version>
@@ -501,7 +501,7 @@
             <dependency>
                 <groupId>com.squareup.okio</groupId>
                 <artifactId>okio-jvm</artifactId>
-                <version>3.18.1</version>
+                <version>3.18.2</version>
             </dependency>
             <dependency>
                 <groupId>redis.clients</groupId>
@@ -1111,7 +1111,7 @@
             <dependency>
                 <groupId>net.thisptr</groupId>
                 <artifactId>jackson-jq</artifactId>
-                <version>1.6.3</version>
+                <version>1.6.4</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -1121,7 +1121,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>1.6.20</version>
+                <version>1.6.21</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>
