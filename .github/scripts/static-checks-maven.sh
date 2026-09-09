@@ -23,7 +23,10 @@ mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip
 
 mvn -B checkstyle:checkstyle --fail-at-end
 
-./.github/scripts/license_checks_script.sh
+# License checks (RAT, license dependency reports and check-licenses.py) are
+# covered by the packaging-check job, which builds the distribution with the
+# rat and apache-release profiles. Running them here again only duplicates work.
+# ./.github/scripts/license_checks_script.sh
 
 ./.github/scripts/analyze_dependencies_script.sh
 

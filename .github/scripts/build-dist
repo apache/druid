@@ -18,4 +18,10 @@
 set -e
 set -x
 
-mvn -B -T1C clean install -Papache-release,dist,rat,bundle-contrib-exts -DskipTests -Ddependency-check.skip -Dgpg.skip
+# Build only what the Docker test image needs: the binary distribution tarball.
+# Release-only work (javadoc and source jars, source-release assembly, license
+# dependency reports) and the static checks (checkstyle, pmd, forbiddenapis,
+# animal-sniffer, enforcer, cyclonedx) are validated by the Static Checks CI
+# workflow (packaging-check and static-checks-maven), so they are skipped here.
+# This mirrors the flags used by the builder stage in distribution/docker/Dockerfile.
+mvn -B -T1C clean install -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests
