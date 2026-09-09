@@ -1572,9 +1572,9 @@ Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can do
 
 #### Loading segments
 
-| Property                  | Description                                                                                                                                                                                                                                                                        | Default |
-|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
-| `druid.segment.timeline.fastIntervalSearch` | Segment metadata is loaded into memory by the Historical services to serve segments. This setting enables an index based on interval trees to store that metadata in memory for faster identification and retrieval. Set it to true to speed up loading and searching of segments. | false |
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.segment.timeline.fastIntervalSearch`|(Experimental) Boolean flag to enable faster searches of segments in the timeline stored in memory. The setting when enabled uses an index based on [Interval tree](https://en.wikipedia.org/wiki/Interval_tree) to organize the timeline in-memory, for faster loading and searching of segments.|false|
 
 #### Historical query configs
 
