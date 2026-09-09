@@ -593,7 +593,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       if (canceledOut.size() >= numToCancel) {
         break;
       }
-      // Try LOAD then REPLICATE; the queued action depends on whether this was a primary or a replica.
+      // Try to cancel the load operation
+      // (either LOAD or REPLICATE, depending on whether this was a primary or a replica).
       if (server.cancelLoad(segment)) {
         canceledOut.add(server);
       }
