@@ -208,6 +208,16 @@ public class NettyHttpClient extends AbstractHttpClient
               log.debug("[%s] messageReceived: %s", requestDesc, msg);
             }
             try {
+              // Netty 4's HTTP codec does not throw on a malformed status line, headers, or chunk framing;
+              // instead it attaches a failed DecoderResult to a best-effort HttpObject (e.g. status "999 Unknown"
+              // for a status line it could not parse). Propagate the failure explicitly so the caller sees the
+              // real cause instead of a synthesized response, and so we stop processing subsequent objects on
+              // the same broken message.
+              if (msg.decoderResult().isFailure()) {
+                handleExceptionAndCloseChannel(msg.decoderResult().cause(), false);
+                return;
+              }
+
               if (msg instanceof HttpResponse httpResponse) {
                 if (didEncounterException.get()) {
                   // Don't process HttpResponse after encountering an exception.

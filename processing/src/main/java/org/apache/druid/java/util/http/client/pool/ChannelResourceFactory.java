@@ -51,6 +51,7 @@ import javax.net.ssl.SSLParameters;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -161,6 +162,25 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                 }
               }
           );
+          // Bound the wait for the CONNECT response. Bootstrap's CONNECT_TIMEOUT_MILLIS only covers the TCP
+          // handshake, and the per-request readTimeout in NettyHttpClient does not apply yet because this
+          // channel is not in the pool. A proxy that accepts TCP but never sends a CONNECT response would
+          // otherwise hang overallConnectPromise (and every future waiter on the pool) indefinitely.
+          final ScheduledFuture<?> connectTimeoutTask = channel.eventLoop().schedule(
+              () -> overallConnectPromise.tryFailure(
+                  new ChannelException(
+                      StringUtils.format(
+                          "Timed out after [%,dms] waiting for CONNECT response from proxy[%s]",
+                          sslHandshakeTimeout,
+                          proxyUri
+                      )
+                  )
+              ),
+              sslHandshakeTimeout,
+              TimeUnit.MILLISECONDS
+          );
+          overallConnectPromise.addListener((ChannelFuture f) -> connectTimeoutTask.cancel(false));
+
           channel.writeAndFlush(connectRequest).addListener((ChannelFuture f2) -> {
             if (!f2.isSuccess()) {
               overallConnectPromise.setFailure(
