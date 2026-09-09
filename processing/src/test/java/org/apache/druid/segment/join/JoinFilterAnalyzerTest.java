@@ -51,8 +51,8 @@ import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -115,7 +115,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         ImmutableSet.of()
     );
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -175,7 +175,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         ImmutableSet.of()
     );
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -237,7 +237,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -302,7 +302,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -360,7 +360,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -436,7 +436,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -493,7 +493,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -537,7 +537,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     final JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -697,7 +697,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -773,11 +773,11 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         ColumnType.STRING,
         ExprMacroTable.nil()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedFilterSplit.getBaseTableFilter(),
         actualFilterSplit.getBaseTableFilter()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedFilterSplit.getJoinTableFilter(),
         actualFilterSplit.getJoinTableFilter()
     );
@@ -820,28 +820,32 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         joinableClauses,
         VirtualColumns.EMPTY
     );
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "Cannot build hash-join matcher on non-equi-join condition: \"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode");
-
     HashJoinSegmentCursorFactory cursorFactory = new HashJoinSegmentCursorFactory(
         factSegment.as(CursorFactory.class),
         null,
         joinableClauses,
         joinFilterPreAnalysis
     );
-    JoinTestHelper.verifyCursor(
-        cursorFactory.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).build()
-        ),
-        ImmutableList.of(
-            "page",
-            FACT_TO_REGION_PREFIX + "regionName",
-            REGION_TO_COUNTRY_PREFIX + "countryName"
-        ),
-        ImmutableList.of(
-            new Object[]{"Old Anatolian Turkish", "Ainigriv", "States United"}
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> JoinTestHelper.verifyCursor(
+            cursorFactory.makeCursorHolder(
+                CursorBuildSpec.builder().setFilter(originalFilter).build()
+            ),
+            ImmutableList.of(
+                "page",
+                FACT_TO_REGION_PREFIX + "regionName",
+                REGION_TO_COUNTRY_PREFIX + "countryName"
+            ),
+            ImmutableList.of(
+                new Object[]{"Old Anatolian Turkish", "Ainigriv", "States United"}
+            )
         )
+    );
+    Assertions.assertEquals(
+        "Cannot build hash-join matcher on non-equi-join condition: "
+        + "\"r1.regionIsoCode\" == regionIsoCode && reverse(\"r1.countryIsoCode\") == countryIsoCode",
+        exception.getMessage()
     );
   }
 
@@ -933,7 +937,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1009,11 +1013,11 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedFilterSplit.getBaseTableFilter(),
         actualFilterSplit.getBaseTableFilter()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedFilterSplit.getJoinTableFilter(),
         actualFilterSplit.getJoinTableFilter()
     );
@@ -1095,11 +1099,11 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedFilterSplit.getBaseTableFilter(),
         actualFilterSplit.getBaseTableFilter()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedFilterSplit.getJoinTableFilter(),
         actualFilterSplit.getJoinTableFilter()
     );
@@ -1159,7 +1163,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1212,7 +1216,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1264,7 +1268,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1317,7 +1321,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1368,7 +1372,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1423,7 +1427,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1477,7 +1481,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1528,7 +1532,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1578,7 +1582,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1632,7 +1636,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1685,7 +1689,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1737,7 +1741,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1788,7 +1792,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1850,7 +1854,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -1917,7 +1921,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
 
@@ -1963,21 +1967,23 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
 
     // This query doesn't execute because regionName is not a key column, but we can still check the
     // filter rewrites.
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage(
-        "Cannot build hash-join matcher on non-key-based condition: "
-        + "Equality{leftExpr=user, rightColumn='regionName', includeNull=false}"
+    final IAE exception = Assertions.assertThrows(
+        IAE.class,
+        () -> JoinTestHelper.verifyCursor(
+            cursorFactory.makeCursorHolder(
+                CursorBuildSpec.builder().setFilter(originalFilter).build()
+            ),
+            ImmutableList.of(
+                "page",
+                FACT_TO_REGION_PREFIX + "regionName"
+            ),
+            ImmutableList.of()
+        )
     );
-
-    JoinTestHelper.verifyCursor(
-        cursorFactory.makeCursorHolder(
-            CursorBuildSpec.builder().setFilter(originalFilter).build()
-        ),
-        ImmutableList.of(
-            "page",
-            FACT_TO_REGION_PREFIX + "regionName"
-        ),
-        ImmutableList.of()
+    Assertions.assertEquals(
+        "Cannot build hash-join matcher on non-key-based condition: "
+        + "Equality{leftExpr=user, rightColumn='regionName', includeNull=false}",
+        exception.getMessage()
     );
 
     JoinFilterSplit expectedFilterSplit = new JoinFilterSplit(
@@ -1992,7 +1998,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -2047,7 +2053,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -2151,7 +2157,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -2400,7 +2406,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -2458,7 +2464,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
 
@@ -2528,7 +2534,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
     );
 
     JoinFilterSplit actualFilterSplit = split(joinFilterPreAnalysis);
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
   @Test
@@ -2575,7 +2581,7 @@ public class JoinFilterAnalyzerTest extends BaseHashJoinSegmentCursorFactoryTest
         joinFilterPreAnalysis,
         baseTableFilter
     );
-    Assert.assertEquals(expectedFilterSplit, actualFilterSplit);
+    Assertions.assertEquals(expectedFilterSplit, actualFilterSplit);
   }
 
 

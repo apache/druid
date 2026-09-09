@@ -20,8 +20,7 @@
 package org.apache.druid.emitter.graphite;
 
 import com.google.common.base.Preconditions;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 public class GraphiteEvent
 {

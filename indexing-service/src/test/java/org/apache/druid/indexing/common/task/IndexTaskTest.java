@@ -198,8 +198,8 @@ public class IndexTaskTest extends IngestionTestBase
   @BeforeEach
   public void setup() throws IOException
   {
-    final File cacheDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "cache");
-    tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "input");
+    final File cacheDir = FileUtils.createTempDirInLocation(temporaryFolder.getRoot().toPath(), "cache");
+    tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.getRoot().toPath(), "input");
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
         .locations(new StorageLocationConfig(cacheDir, null, null))
         .build();
@@ -2177,7 +2177,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     // create new data but with an ingestion interval appropriate to filter it all out so that only tombstones
     // are created:
-    tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "input");
+    tmpDir = FileUtils.createTempDirInLocation(temporaryFolder.getRoot().toPath(), "input");
     try (BufferedWriter writer = Files.newWriter(createTempFile(), StandardCharsets.UTF_8)) {
       writer.write("2014-01-01T00:00:10Z,a,1\n");
       writer.write("2014-01-01T01:00:20Z,b,1\n");

@@ -59,7 +59,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -79,6 +81,12 @@ public class CatalogResource
   public static final String PATH_FORMAT = "path";
   public static final String METADATA_FORMAT = "metadata";
   public static final String STATUS_FORMAT = "status";
+
+  /**
+   * Actions required for writes to the catalog. Both READ and WRITE are required to match the default
+   * set of actions required for SQL DML.
+   */
+  private static final Set<Action> ACTIONS_FOR_WRITE = EnumSet.of(Action.READ, Action.WRITE);
 
   private final CatalogStorage catalog;
   private final AuthorizerMapper authorizerMapper;
@@ -110,7 +118,7 @@ public class CatalogResource
    * @param schemaName The name of the Druid schema, which must be writable
    *                   and the user must have at least read access.
    * @param tableName  The name of the table definition to modify. The user must
-   *                   have write access to the table.
+   *                   have read and write access to the table.
    * @param spec       The new table definition.
    * @param version    the expected version of an existing table. The version must
    *                   match. If not (or if the table does not exist), returns an error.
@@ -135,7 +143,7 @@ public class CatalogResource
     try {
       final SchemaSpec schema = validateSchema(schemaName, true);
       validateTableName(tableName);
-      authorizeTable(schema, tableName, Action.WRITE, req);
+      authorizeTable(schema, tableName, ACTIONS_FOR_WRITE, req);
       validateTableSpec(schema, spec);
       final TableMetadata table = TableMetadata.newTable(TableId.of(schemaName, tableName), spec);
       try {
@@ -197,7 +205,7 @@ public class CatalogResource
   {
     try {
       final SchemaSpec schema = validateSchema(schemaName, false);
-      authorizeTable(schema, tableName, Action.READ, req);
+      authorizeTable(schema, tableName, EnumSet.of(Action.READ), req);
       final TableMetadata table = catalog.tables().read(new TableId(schemaName, tableName));
       return Response.ok().entity(table).build();
     }
@@ -212,7 +220,7 @@ public class CatalogResource
    *
    * @param schemaName The name of the schema that holds the table.
    * @param tableName  The name of the table definition to delete. The user must have
-   *                   write access.
+   *                   read and write access.
    */
   @DELETE
   @Path("/schemas/{schema}/tables/{name}")
@@ -225,7 +233,7 @@ public class CatalogResource
   {
     try {
       final SchemaSpec schema = validateSchema(schemaName, true);
-      authorizeTable(schema, tableName, Action.WRITE, req);
+      authorizeTable(schema, tableName, ACTIONS_FOR_WRITE, req);
       catalog.tables().delete(new TableId(schemaName, tableName));
       return ok();
     }
@@ -249,7 +257,7 @@ public class CatalogResource
    *
    * @param schemaName  The name of the schema that holds the table.
    * @param tableName   The name of the table definition to delete. The user must have
-   *                    write access.
+   *                    read and write access.
    * @param editRequest The operation to perform. See the classes for details.
    */
   @POST
@@ -265,7 +273,7 @@ public class CatalogResource
   {
     try {
       final SchemaSpec schema = validateSchema(schemaName, true);
-      authorizeTable(schema, tableName, Action.WRITE, req);
+      authorizeTable(schema, tableName, ACTIONS_FOR_WRITE, req);
       final long newVersion = new TableEditor(catalog, TableId.of(schemaName, tableName), editRequest).go();
       return okWithVersion(newVersion);
     }
@@ -300,7 +308,7 @@ public class CatalogResource
       switch (format) {
         case NAME_FORMAT:
           // No good resource to use: we really need finer-grain control.
-          authorizeAccess(ResourceType.STATE, "schemas", Action.READ, req);
+          authorizeResource(new Resource("schemas", ResourceType.STATE), EnumSet.of(Action.READ), req);
           return Response.ok().entity(catalog.schemaRegistry().names()).build();
         case PATH_FORMAT:
           return listTablePaths(req);
@@ -569,35 +577,30 @@ public class CatalogResource
   private void authorizeTable(
       final SchemaSpec schema,
       final String tableName,
-      final Action action,
+      final Set<Action> actions,
       final HttpServletRequest request
   ) throws CatalogException
   {
     if (Strings.isNullOrEmpty(tableName)) {
       throw CatalogException.badRequest("Table name is required");
     }
-    if (action == Action.WRITE && !schema.writable()) {
+    if (actions.contains(Action.WRITE) && !schema.writable()) {
       throw new ForbiddenException(
           "Cannot create table definitions in schema: " + schema.name());
     }
-    authorize(schema.securityResource(), tableName, action, request);
+    authorizeResource(new Resource(tableName, schema.securityResource()), actions, request);
   }
 
-  private void authorize(String resource, String key, Action action, HttpServletRequest request)
+  private void authorizeResource(Resource resource, Set<Action> actions, HttpServletRequest request)
   {
-    final AuthorizationResult authResult = authorizeAccess(resource, key, action, request);
+    final AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
+        request,
+        actions.stream().map(action -> new ResourceAction(resource, action)).toList(),
+        authorizerMapper
+    );
     if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(authResult.getErrorMessage());
     }
-  }
-
-  private AuthorizationResult authorizeAccess(String resource, String key, Action action, HttpServletRequest request)
-  {
-    return AuthorizationUtils.authorizeResourceAction(
-        request,
-        new ResourceAction(new Resource(key, resource), action),
-        authorizerMapper
-    );
   }
 
   private static Response okWithVersion(long version)

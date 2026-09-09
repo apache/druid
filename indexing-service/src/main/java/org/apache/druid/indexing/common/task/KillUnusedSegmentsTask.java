@@ -53,6 +53,7 @@ import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -61,6 +62,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -235,7 +237,8 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     RetrieveUsedSegmentsAction retrieveUsedSegmentsAction = new RetrieveUsedSegmentsAction(
             getDataSource(),
             ImmutableList.of(getInterval()),
-            Segments.INCLUDING_OVERSHADOWED
+            Segments.INCLUDING_OVERSHADOWED,
+            EnumSet.of(SegmentDetail.LOAD_SPEC)
     );
     // Fetch the load specs of all segments overlapping with the unused segment intervals
     final Set<Map<String, Object>> usedSegmentLoadSpecs = taskActionClient.submit(retrieveUsedSegmentsAction)

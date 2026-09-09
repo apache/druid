@@ -844,6 +844,14 @@ Set the `podTemplateSelectionKey` key in a task's context to pick a configured p
 
 This is gated by the runtime property `druid.indexer.runner.allowTaskPodTemplateSelection`, which defaults to `false`. If the key doesn't match any configured template, the task fails to launch.
 
+##### Pod template metrics dimension
+
+Every metric emitted by a task pod carries a `podTemplate` dimension naming the pod template the pod runs under, alongside the existing `taskType`, `dataSource`, `taskId`, and `groupId` dimensions. Use it to group metrics by task type and pod template, for example to see which task types run on which templates.
+
+The dimension reflects the template actually applied to the pod, whichever selection strategy or context override chose it. Druid passes the name to the pod through the `DRUID_POD_TEMPLATE` environment variable, sourced from the pod's own `task.jobTemplate` annotation; you don't need to declare it in your pod templates.
+
+The dimension requires `druid-kubernetes-overlord-extensions` in the task pod's `druid.extensions.loadList`. Task pods that have no pod template, such as those launched by another task adapter, omit the dimension.
+
 #### Running Task Pods in Another Namespace
 
 It is possible to run task pods in a different namespace from the rest of your Druid cluster.

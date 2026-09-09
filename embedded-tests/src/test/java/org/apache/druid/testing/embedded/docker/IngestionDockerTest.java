@@ -54,6 +54,7 @@ public class IngestionDockerTest extends IngestionSmokeTest implements LatestIma
     return cluster
         .useDefaultTimeoutForLatchableEmitter(240)
         .useContainerFriendlyHostname()
+        .addServer(eventCollector)
         .addResource(containerOverlord)
         .addResource(containerCoordinator)
         .addResource(middleManager)
@@ -61,7 +62,6 @@ public class IngestionDockerTest extends IngestionSmokeTest implements LatestIma
         .addResource(router)
         .addServer(overlord)
         .addServer(broker)
-        .addServer(eventCollector)
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","

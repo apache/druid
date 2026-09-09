@@ -36,11 +36,11 @@ import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,8 +49,8 @@ import java.util.Map;
 
 public class AvroOCFReaderTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testParse() throws Exception
@@ -198,11 +198,6 @@ public class AvroOCFReaderTest
     final AvroOCFInputFormat inputFormat = new AvroOCFInputFormat(mapper, null, readerSchema, null, null);
     final InputRowSchema schema = new InputRowSchema(TimestampSpec.DEFAULT, dimensionsSpec, ColumnsFilter.all());
     final FileEntity entity = new FileEntity(someAvroFile);
-    return inputFormat.createReader(schema, entity, newFolder(temporaryFolder, "junit"));
-  }
-
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
+    return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
   }
 }

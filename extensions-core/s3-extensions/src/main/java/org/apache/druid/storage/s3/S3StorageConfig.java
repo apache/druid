@@ -21,8 +21,7 @@ package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 /**
  * General configurations for Amazon S3 storage.

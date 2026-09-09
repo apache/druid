@@ -20,17 +20,16 @@
 package org.apache.druid.frame.processor;
 
 import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.nio.file.Path;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class FileOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
-  @TempDir
-  static Path folder;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   public FileOutputChannelFactoryTest()
   {
-    super(new FileOutputChannelFactory(folder.toFile(), 100, null, FrameTestUtil.WT_CONTEXT_LEGACY), 100);
+    super(new FileOutputChannelFactory(SHARED_TEMPORARY_FOLDER.getRoot(), 100, null, FrameTestUtil.WT_CONTEXT_LEGACY), 100);
   }
 }

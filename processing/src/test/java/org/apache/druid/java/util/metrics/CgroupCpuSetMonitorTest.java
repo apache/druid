@@ -25,22 +25,22 @@ import org.apache.druid.java.util.metrics.cgroups.CgroupVersion;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class CgroupCpuSetMonitorTest
 {
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -48,8 +48,8 @@ public class CgroupCpuSetMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
+    cgroupDir = temporaryFolder.newFolder("cgroup");
+    procDir = temporaryFolder.newFolder("proc");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File cpusetDir = new File(
@@ -83,8 +83,8 @@ public class CgroupCpuSetMonitorTest
   public void testCgroupsV2DetectionInConstructor() throws IOException
   {
     // Set up cgroups v2 structure
-    File cgroupV2Dir = FileUtils.createTempDirInLocation(tempDir, "cgroupV2");
-    File procV2Dir = FileUtils.createTempDirInLocation(tempDir, "procV2");
+    File cgroupV2Dir = temporaryFolder.newFolder("cgroupV2");
+    File procV2Dir = temporaryFolder.newFolder("procV2");
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
     
     // Create v2 cpuset files in unified hierarchy

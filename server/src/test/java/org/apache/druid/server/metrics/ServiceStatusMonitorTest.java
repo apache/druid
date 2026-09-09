@@ -21,9 +21,9 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class ServiceStatusMonitorTest
   private final Supplier<Map<String, Object>> heartbeatTagsSupplier = () -> heartbeatTags;
   private static final String HEARTBEAT_METRIC_KEY = "service/heartbeat";
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     emitter = new StubServiceEmitter();
@@ -50,7 +50,7 @@ public class ServiceStatusMonitorTest
   public void testDefaultHeartbeatReported()
   {
     monitor.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue(HEARTBEAT_METRIC_KEY, 1);
   }
 
@@ -59,7 +59,7 @@ public class ServiceStatusMonitorTest
   {
     heartbeatTags.put("leader", 1);
     monitor.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue(HEARTBEAT_METRIC_KEY, Map.of("leader", 1), 1);
   }
 
@@ -69,7 +69,7 @@ public class ServiceStatusMonitorTest
     heartbeatTags.put("leader", 1);
     heartbeatTags.put("taskRunner", "http");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue(HEARTBEAT_METRIC_KEY, Map.of("leader", 1, "taskRunner", "http"), 1);
   }
 }

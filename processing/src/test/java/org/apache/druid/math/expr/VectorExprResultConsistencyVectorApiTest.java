@@ -19,8 +19,8 @@
 
 package org.apache.druid.math.expr;
 
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Re-runs every {@link VectorExprResultConsistencyTest} case with the SIMD ({@code jdk.incubator.vector}) expression
@@ -28,13 +28,13 @@ import org.junit.Before;
  */
 public class VectorExprResultConsistencyVectorApiTest extends VectorExprResultConsistencyTest
 {
-  @Before
+  @BeforeEach
   public void enableVectorApi()
   {
     ExpressionProcessing.initializeForVectorApiTests();
   }
 
-  @After
+  @AfterEach
   public void resetExpressionProcessing()
   {
     ExpressionProcessing.initializeForTests();

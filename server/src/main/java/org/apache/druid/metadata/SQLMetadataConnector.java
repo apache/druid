@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
@@ -50,7 +51,6 @@ import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -74,8 +74,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final String PAYLOAD_TYPE = "BLOB";
   private static final String COLLATION = "";
 
-  static final int QUIET_RETRIES = 2;
-  static final int DEFAULT_MAX_TRIES = 3;
+  public static final int QUIET_RETRIES = 2;
+  public static final int DEFAULT_MAX_TRIES = 3;
 
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
@@ -1053,6 +1053,51 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (config.get().isCreateTables()) {
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
     }
+  }
+
+  /**
+   * Returns the columns of the given table, in the order reported by the database, or an empty list if the table
+   * does not exist. Throws if the database metadata cannot be read, so that a caller which acts on a table being
+   * absent does not mistake a failed lookup for an absent table.
+   *
+   * The lookup is scoped to the schema returned by {@link #getMetadataTableSchema(Connection)}, which is the schema
+   * an unqualified table name resolves to. Rather than passing the table name as a search pattern, in which '_' is a
+   * wildcard and which is case-sensitive while the database folds unquoted identifiers, the returned table names are
+   * compared to the given one ignoring case. The schema is a search pattern too, so the returned schema is compared
+   * to it as well, in case the configured schema contains a '_' or '%' which would otherwise match other schemas.
+   */
+  public List<String> getTableColumns(final String tableName)
+  {
+    return getDBI().withHandle(handle -> {
+      final List<String> columns = new ArrayList<>();
+      if (tableExists(handle, tableName)) {
+        final Connection conn = handle.getConnection();
+        final String schema = getMetadataTableSchema(conn);
+        try (ResultSet rs = conn.getMetaData().getColumns(null, schema, null, null)) {
+          while (rs.next()) {
+            if (tableName.equalsIgnoreCase(rs.getString("TABLE_NAME"))
+                && (schema == null || schema.equals(rs.getString("TABLE_SCHEM")))) {
+              columns.add(rs.getString("COLUMN_NAME"));
+            }
+          }
+        }
+      }
+      return columns;
+    });
+  }
+
+  /**
+   * Returns the schema that the Druid metadata tables live in, i.e. the schema that an unqualified
+   * table name in a Druid SQL statement resolves to, or null if the schema is unknown and lookups
+   * should not be scoped to a schema.
+   *
+   * Connectors that scope {@link #tableExists} to a configured schema must override this so that
+   * both lookups agree.
+   */
+  @Nullable
+  public String getMetadataTableSchema(final Connection connection) throws SQLException
+  {
+    return connection.getSchema();
   }
 
   @Override

@@ -21,10 +21,10 @@ package org.apache.druid.metadata;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,14 +32,14 @@ import java.util.List;
 
 public class SQLMetadataConnectorSchemaPersistenceTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     connector = derbyConnectorRule.getConnector();
@@ -80,17 +80,17 @@ public class SQLMetadataConnectorSchemaPersistenceTest
     connector.getDBI().withHandle(
         handle -> {
           for (String table : tables) {
-            Assert.assertTrue(
-                StringUtils.format("table %s was not created!", table),
-                connector.tableExists(handle, table)
+            Assertions.assertTrue(
+                connector.tableExists(handle, table),
+                StringUtils.format("table %s was not created!", table)
             );
           }
 
           String taskTable = tablesConfig.getTasksTable();
           for (String column : Arrays.asList("type", "group_id")) {
-            Assert.assertTrue(
-                StringUtils.format("Tasks table column %s was not created!", column),
-                connector.tableHasColumn(taskTable, column)
+            Assertions.assertTrue(
+                connector.tableHasColumn(taskTable, column),
+                StringUtils.format("Tasks table column %s was not created!", column)
             );
           }
 
@@ -126,15 +126,15 @@ public class SQLMetadataConnectorSchemaPersistenceTest
     derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN NUM_ROWS");
 
     connector.alterSegmentTable();
-    Assert.assertTrue(connector.tableHasColumn(
+    Assertions.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "USED_STATUS_LAST_UPDATED"
     ));
-    Assert.assertTrue(connector.tableHasColumn(
+    Assertions.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "SCHEMA_FINGERPRINT"
     ));
-    Assert.assertTrue(connector.tableHasColumn(
+    Assertions.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "NUM_ROWS"
     ));

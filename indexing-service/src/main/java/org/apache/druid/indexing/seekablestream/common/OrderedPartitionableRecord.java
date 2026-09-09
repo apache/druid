@@ -21,9 +21,9 @@ package org.apache.druid.indexing.seekablestream.common;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.impl.ByteEntity;
 
-import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;

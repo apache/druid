@@ -31,7 +31,6 @@ import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLInputSourceDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
-import org.junit.Rule;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.tweak.HandleCallback;
@@ -47,8 +46,6 @@ import java.util.stream.IntStream;
 
 public class SqlTestUtils
 {
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private final TestDerbyInputSourceConnector derbyInputSourceConnector;
   private final TestDerbyConnector derbyConnector;
 

@@ -33,8 +33,8 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -151,8 +151,8 @@ public class DiskNormalizedCostBalancerStrategyTest
         MoreExecutors.listeningDecorator(Execs.multiThreaded(4, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findServersToLoadSegment(segment, serverHolderList).next();
-    Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
-    Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
+    Assertions.assertNotNull(holder, "Should be able to find a place for new segment!!");
+    Assertions.assertEquals("BEST_SERVER", holder.getServer().getName(), "Best Server should be BEST_SERVER");
   }
 
   @Test
@@ -165,8 +165,8 @@ public class DiskNormalizedCostBalancerStrategyTest
         MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d"))
     );
     ServerHolder holder = strategy.findServersToLoadSegment(segment, serverHolderList).next();
-    Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
-    Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
+    Assertions.assertNotNull(holder, "Should be able to find a place for new segment!!");
+    Assertions.assertEquals("BEST_SERVER", holder.getServer().getName(), "Best Server should be BEST_SERVER");
   }
 
   /**
@@ -237,18 +237,18 @@ public class DiskNormalizedCostBalancerStrategyTest
     servers.add(emptier);
 
     // Pure CostBalancerStrategy picks A (it has the cheapest raw cost).
-    Assert.assertEquals(
-        "Pure CostBalancerStrategy should pick the fuller server",
+    Assertions.assertEquals(
         "A",
-        newCostStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
+        newCostStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName(),
+        "Pure CostBalancerStrategy should pick the fuller server"
     );
 
     // DiskNormalized penalizes A because its projected utilization is more than
     // the threshold above B's projected utilization.
-    Assert.assertEquals(
-        "DiskNormalizedCostBalancerStrategy must prefer the emptier server",
+    Assertions.assertEquals(
         "B",
-        newDiskNormalizedStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName()
+        newDiskNormalizedStrategy().findServersToLoadSegment(proposal, servers).next().getServer().getName(),
+        "DiskNormalizedCostBalancerStrategy must prefer the emptier server"
     );
   }
 
@@ -272,9 +272,9 @@ public class DiskNormalizedCostBalancerStrategyTest
     //   A (source, 20 segs, self-cost subtracted): 38 * K
     //   B (dest,   20 segs, no self-cost):          40 * K
     // A is cheaper by 2K, so the cluster stays skewed forever.
-    Assert.assertNull(
-        "Pure CostBalancerStrategy cannot correct the disk skew: no move from A to B",
-        newCostStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers)
+    Assertions.assertNull(
+        newCostStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers),
+        "Pure CostBalancerStrategy cannot correct the disk skew: no move from A to B"
     );
 
     // DiskNormalizedCostBalancerStrategy (default 5% utilization threshold):
@@ -283,11 +283,11 @@ public class DiskNormalizedCostBalancerStrategyTest
     // the skew.
     final ServerHolder diskNormalizedResult =
         newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, heavy, servers);
-    Assert.assertNotNull(
-        "DiskNormalized must correct the skew by moving the segment off the heavier server",
-        diskNormalizedResult
+    Assertions.assertNotNull(
+        diskNormalizedResult,
+        "DiskNormalized must correct the skew by moving the segment off the heavier server"
     );
-    Assert.assertEquals("B", diskNormalizedResult.getServer().getName());
+    Assertions.assertEquals("B", diskNormalizedResult.getServer().getName());
   }
 
   @Test
@@ -304,9 +304,9 @@ public class DiskNormalizedCostBalancerStrategyTest
 
     // Default threshold (5%): source and dest are inside the utilization
     // deadband, so normal cost decides and the segment stays put.
-    Assert.assertNull(
-        "Default threshold must block a marginal move to prevent ping-ponging",
-        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
+    Assertions.assertNull(
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers),
+        "Default threshold must block a marginal move to prevent ping-ponging"
     );
 
     // Lowering the threshold to 1% makes the same utilization difference fall
@@ -317,8 +317,8 @@ public class DiskNormalizedCostBalancerStrategyTest
     );
     final ServerHolder movedTo =
         onePercentUtilizationThreshold.findDestinationServerToMoveSegment(segmentToMove, source, servers);
-    Assert.assertNotNull("With threshold=0.01, the marginal move should fire", movedTo);
-    Assert.assertEquals("DEST", movedTo.getServer().getName());
+    Assertions.assertNotNull(movedTo, "With threshold=0.01, the marginal move should fire");
+    Assertions.assertEquals("DEST", movedTo.getServer().getName());
   }
 
   @Test
@@ -336,18 +336,18 @@ public class DiskNormalizedCostBalancerStrategyTest
     servers.add(partial);
 
     // CostBalancerStrategy picks A because raw cost 10K < 40K.
-    Assert.assertEquals(
-        "Pure CostBalancerStrategy must pick the near-full server (lower raw cost)",
+    Assertions.assertEquals(
         "A",
-        newCostStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
+        newCostStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName(),
+        "Pure CostBalancerStrategy must pick the near-full server (lower raw cost)"
     );
 
     // A's projected utilization is more than the threshold above B's, so the
     // exponential penalty makes B cheaper.
-    Assert.assertEquals(
-        "DiskNormalized must prefer the emptier server despite its higher raw cost",
+    Assertions.assertEquals(
         "B",
-        newDiskNormalizedStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName()
+        newDiskNormalizedStrategy().findServersToLoadSegment(newSegment, servers).next().getServer().getName(),
+        "DiskNormalized must prefer the emptier server despite its higher raw cost"
     );
   }
 
@@ -366,19 +366,19 @@ public class DiskNormalizedCostBalancerStrategyTest
     servers.add(moreHeadroomAfterLoad);
 
     // CostBalancerStrategy picks A because raw cost 10K < 40K.
-    Assert.assertEquals(
-        "Pure CostBalancerStrategy must pick the lower raw-cost server",
+    Assertions.assertEquals(
         "A",
-        newCostStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName()
+        newCostStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName(),
+        "Pure CostBalancerStrategy must pick the lower raw-cost server"
     );
 
     // If diskNormalized used current utilization, A and B would be inside the
     // threshold band and A would win by raw cost. With projected utilization,
     // A falls outside the band and B wins.
-    Assert.assertEquals(
-        "DiskNormalized must account for the proposal size before choosing a server",
+    Assertions.assertEquals(
         "B",
-        newDiskNormalizedStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName()
+        newDiskNormalizedStrategy().findServersToLoadSegment(largeSegment, servers).next().getServer().getName(),
+        "DiskNormalized must account for the proposal size before choosing a server"
     );
   }
 
@@ -399,14 +399,14 @@ public class DiskNormalizedCostBalancerStrategyTest
     // CostBalancerStrategy: DEST raw cost (10K) < SOURCE raw cost (38K) -> recommends the move.
     final ServerHolder costResult =
         newCostStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers);
-    Assert.assertNotNull("CostBalancerStrategy must recommend moving to the near-full DEST", costResult);
-    Assert.assertEquals("DEST", costResult.getServer().getName());
+    Assertions.assertNotNull(costResult, "CostBalancerStrategy must recommend moving to the near-full DEST");
+    Assertions.assertEquals("DEST", costResult.getServer().getName());
 
     // DEST is outside the utilization threshold band and receives an
     // exponential penalty, so the move is blocked.
-    Assert.assertNull(
-        "DiskNormalized must block the move to the near-full server",
-        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers)
+    Assertions.assertNull(
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(segmentToMove, source, servers),
+        "DiskNormalized must block the move to the near-full server"
     );
   }
 
@@ -433,27 +433,27 @@ public class DiskNormalizedCostBalancerStrategyTest
     // CostBalancerStrategy recommends the move because DEST raw cost (10K) < SOURCE raw cost (38K).
     final ServerHolder costResult =
         newCostStrategy().findDestinationServerToMoveSegment(largeSegment, source, servers);
-    Assert.assertNotNull("CostBalancerStrategy must recommend moving to the lower raw-cost DEST", costResult);
-    Assert.assertEquals("DEST", costResult.getServer().getName());
+    Assertions.assertNotNull(costResult, "CostBalancerStrategy must recommend moving to the lower raw-cost DEST");
+    Assertions.assertEquals("DEST", costResult.getServer().getName());
 
     // If diskNormalized used current utilization, DEST would be inside the
     // threshold band and win by raw cost. With projected utilization, DEST is
     // outside the band and the move is blocked.
-    Assert.assertNull(
-        "DiskNormalized must not move a large segment to a server that would become too full",
-        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(largeSegment, source, servers)
+    Assertions.assertNull(
+        newDiskNormalizedStrategy().findDestinationServerToMoveSegment(largeSegment, source, servers),
+        "DiskNormalized must not move a large segment to a server that would become too full"
     );
   }
 
   @Test
   public void testConfigUsesUtilizationThreshold()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0.05,
         new DiskNormalizedCostBalancerStrategyConfig().getUtilizationThreshold(),
         0.0
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0.01,
         new DiskNormalizedCostBalancerStrategyConfig(0.01).getUtilizationThreshold(),
         0.0
@@ -472,7 +472,7 @@ public class DiskNormalizedCostBalancerStrategyTest
           MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
           0.0
       );
-      Assert.fail("Expected IllegalArgumentException for threshold=0.0");
+      Assertions.fail("Expected IllegalArgumentException for threshold=0.0");
     }
     catch (IllegalArgumentException expected) {
       // expected
@@ -483,7 +483,7 @@ public class DiskNormalizedCostBalancerStrategyTest
           MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
           1.0
       );
-      Assert.fail("Expected IllegalArgumentException for threshold=1.0");
+      Assertions.fail("Expected IllegalArgumentException for threshold=1.0");
     }
     catch (IllegalArgumentException expected) {
       // expected
@@ -494,7 +494,7 @@ public class DiskNormalizedCostBalancerStrategyTest
           MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "DiskNormalizedCostBalancerStrategyTest-%d")),
           -0.01
       );
-      Assert.fail("Expected IllegalArgumentException for negative threshold");
+      Assertions.fail("Expected IllegalArgumentException for negative threshold");
     }
     catch (IllegalArgumentException expected) {
       // expected
@@ -505,7 +505,7 @@ public class DiskNormalizedCostBalancerStrategyTest
   {
     try {
       new DiskNormalizedCostBalancerStrategyConfig(threshold);
-      Assert.fail("Expected IllegalArgumentException for threshold=" + threshold);
+      Assertions.fail("Expected IllegalArgumentException for threshold=" + threshold);
     }
     catch (IllegalArgumentException expected) {
       // expected

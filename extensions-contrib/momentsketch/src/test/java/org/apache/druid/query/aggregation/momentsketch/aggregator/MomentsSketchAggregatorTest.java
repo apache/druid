@@ -74,7 +74,7 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
   {
     MomentSketchModule.registerSerde();
     DruidModule module = new MomentSketchModule();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
   }
 

@@ -65,6 +65,7 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
     return cluster
         .useContainerFriendlyHostname()
         .useDefaultTimeoutForLatchableEmitter(60)
+        .addServer(eventCollector)
         .addResource(containerOverlord)
         .addResource(containerCoordinator)
         .addServer(overlord)
@@ -72,7 +73,6 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
         .addServer(broker)
         .addServer(new EmbeddedHistorical())
         .addServer(new EmbeddedRouter())
-        .addServer(eventCollector)
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","

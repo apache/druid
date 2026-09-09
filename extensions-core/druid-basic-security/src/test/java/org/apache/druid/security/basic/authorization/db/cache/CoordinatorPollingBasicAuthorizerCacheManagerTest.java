@@ -40,14 +40,14 @@ import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleM
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -58,8 +58,8 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
   private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
   private static final String AUTHORIZER_NAME = "test-basic-auth";
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   // Mocks
   private Injector injector;
@@ -82,7 +82,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     final int numRetries = 1;
     manager = new CoordinatorPollingBasicAuthorizerCacheManager(
         injector,
-        new BasicAuthCommonCacheConfig(0L, 1L, newFolder(temporaryFolder, "junit").getAbsolutePath(), numRetries),
+        new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         MAPPER,
         serviceClient
     );
@@ -194,8 +194,4 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, fullPath), requestStarted, requestInterrupted);
   }
 
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
-  }
 }

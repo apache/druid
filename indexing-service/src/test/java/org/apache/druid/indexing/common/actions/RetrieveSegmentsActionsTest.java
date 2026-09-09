@@ -26,6 +26,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -100,7 +101,7 @@ public class RetrieveSegmentsActionsTest
   public void testRetrieveUsedSegmentsAction()
   {
     final RetrieveUsedSegmentsAction action =
-        new RetrieveUsedSegmentsAction(task.getDataSource(), ImmutableList.of(INTERVAL));
+        new RetrieveUsedSegmentsAction(task.getDataSource(), ImmutableList.of(INTERVAL), SegmentDetail.all());
     final Set<DataSegment> observedUsedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));
     Assertions.assertEquals(expectedUsedSegments, observedUsedSegments);
   }

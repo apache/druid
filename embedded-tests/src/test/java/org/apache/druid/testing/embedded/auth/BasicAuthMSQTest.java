@@ -42,7 +42,6 @@ import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.msq.MSQExportDirectory;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -270,7 +269,7 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
       Assertions.fail("Expected submit to fail with 403 Forbidden");
     }
     catch (Exception e) {
-      MatcherAssert.assertThat(e, forbiddenExceptionMatcher());
+      forbiddenExceptionMatcher().assertThat(e);
     }
   }
 

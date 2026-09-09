@@ -44,8 +44,8 @@ import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -92,7 +92,7 @@ public class ScanQueryQueryToolChestTest
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
               .build();
 
-    Assert.assertEquals(RowSignature.empty(), toolChest.resultArraySignature(scanQuery));
+    Assertions.assertEquals(RowSignature.empty(), toolChest.resultArraySignature(scanQuery));
   }
 
   @Test
@@ -104,7 +104,7 @@ public class ScanQueryQueryToolChestTest
               .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
               .build();
 
-    Assert.assertEquals(RowSignature.empty(), toolChest.resultArraySignature(scanQuery));
+    Assertions.assertEquals(RowSignature.empty(), toolChest.resultArraySignature(scanQuery));
   }
 
   @Test
@@ -117,7 +117,7 @@ public class ScanQueryQueryToolChestTest
               .columns("foo", "bar")
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder().add("foo", null).add("bar", null).build(),
         toolChest.resultArraySignature(scanQuery)
     );
@@ -210,7 +210,7 @@ public class ScanQueryQueryToolChestTest
         ).get().toList();
 
 
-    Assert.assertEquals(3, frames.size());
+    Assertions.assertEquals(3, frames.size());
 
     RowSignature resultRowSignature = RowSignature.builder()
                                                   .add("foo", null)
@@ -265,7 +265,7 @@ public class ScanQueryQueryToolChestTest
         ).get().toList();
 
 
-    Assert.assertEquals(5, frames.size());
+    Assertions.assertEquals(5, frames.size());
 
     RowSignature resultRowSignature = RowSignature.builder()
                                                   .add("foo", null)
@@ -328,7 +328,7 @@ public class ScanQueryQueryToolChestTest
         ).get().toList();
 
 
-    Assert.assertEquals(1, frames.size());
+    Assertions.assertEquals(1, frames.size());
 
     RowSignature resultRowSignature = RowSignature.builder()
                                                   .add("foo", null)
@@ -465,21 +465,21 @@ public class ScanQueryQueryToolChestTest
 
     CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(query, null);
 
-    Assert.assertNotNull(strategy);
-    Assert.assertTrue(strategy.isCacheable(query, true, false));
-    Assert.assertFalse(strategy.isCacheable(query, false, true));
-    Assert.assertTrue(strategy.isCacheable(query, true, true));
+    Assertions.assertNotNull(strategy);
+    Assertions.assertTrue(strategy.isCacheable(query, true, false));
+    Assertions.assertFalse(strategy.isCacheable(query, false, true));
+    Assertions.assertTrue(strategy.isCacheable(query, true, true));
 
     byte[] cacheKey = strategy.computeCacheKey(query);
-    Assert.assertNotNull(cacheKey);
-    Assert.assertTrue(cacheKey.length > 0);
+    Assertions.assertNotNull(cacheKey);
+    Assertions.assertTrue(cacheKey.length > 0);
 
     byte[] resultLevelCacheKey = strategy.computeResultLevelCacheKey(query);
-    Assert.assertNotNull(resultLevelCacheKey);
-    Assert.assertTrue(resultLevelCacheKey.length > 0);
+    Assertions.assertNotNull(resultLevelCacheKey);
+    Assertions.assertTrue(resultLevelCacheKey.length > 0);
 
     // For ScanQuery, result-level and segment-level cache keys should be the same
-    Assert.assertArrayEquals(cacheKey, resultLevelCacheKey);
+    Assertions.assertArrayEquals(cacheKey, resultLevelCacheKey);
 
     ScanResultValue testResult = new ScanResultValue(
         "test_segment",
@@ -493,7 +493,7 @@ public class ScanQueryQueryToolChestTest
     ScanResultValue cachedValue = strategy.prepareForCache(false).apply(testResult);
     ScanResultValue fromCache = strategy.pullFromCache(false).apply(cachedValue);
 
-    Assert.assertEquals(testResult, fromCache);
+    Assertions.assertEquals(testResult, fromCache);
   }
 
   @Test
@@ -513,9 +513,9 @@ public class ScanQueryQueryToolChestTest
 
     CacheStrategy<ScanResultValue, ScanResultValue, ScanQuery> strategy = toolChest.getCacheStrategy(query, null);
 
-    Assert.assertNotNull(strategy);
-    Assert.assertFalse(strategy.isCacheable(query, true, false));
-    Assert.assertFalse(strategy.isCacheable(query, false, true));
+    Assertions.assertNotNull(strategy);
+    Assertions.assertFalse(strategy.isCacheable(query, true, false));
+    Assertions.assertFalse(strategy.isCacheable(query, false, true));
   }
 
   @Test
@@ -551,9 +551,9 @@ public class ScanQueryQueryToolChestTest
     byte[] cacheKey2 = strategy.computeCacheKey(query2);
     byte[] cacheKey3 = strategy.computeCacheKey(query3);
 
-    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
-    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey3));
-    Assert.assertFalse(Arrays.equals(cacheKey2, cacheKey3));
+    Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
+    Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKey3));
+    Assertions.assertFalse(Arrays.equals(cacheKey2, cacheKey3));
   }
 
   @Test
@@ -584,7 +584,7 @@ public class ScanQueryQueryToolChestTest
     byte[] cacheKeyWithFilter = strategy.computeCacheKey(queryWithFilter);
     byte[] cacheKeyWithoutFilter = strategy.computeCacheKey(queryWithoutFilter);
 
-    Assert.assertFalse(Arrays.equals(cacheKeyWithFilter, cacheKeyWithoutFilter));
+    Assertions.assertFalse(Arrays.equals(cacheKeyWithFilter, cacheKeyWithoutFilter));
   }
 
   @Test
@@ -620,7 +620,7 @@ public class ScanQueryQueryToolChestTest
     byte[] cacheKeyWithVirtual = strategy.computeCacheKey(queryWithVirtual);
     byte[] cacheKeyWithoutVirtual = strategy.computeCacheKey(queryWithoutVirtual);
 
-    Assert.assertFalse(Arrays.equals(cacheKeyWithVirtual, cacheKeyWithoutVirtual));
+    Assertions.assertFalse(Arrays.equals(cacheKeyWithVirtual, cacheKeyWithoutVirtual));
   }
 
   @Test
@@ -661,8 +661,8 @@ public class ScanQueryQueryToolChestTest
     final byte[] cacheKeyWithoutOrderBy = strategy.computeCacheKey(queryWithoutOrderBy);
     final byte[] cacheKeyWithDifferentOrderBy = strategy.computeCacheKey(queryWithDifferentOrderBy);
 
-    Assert.assertFalse(Arrays.equals(cacheKeyWithOrderBy, cacheKeyWithoutOrderBy));
-    Assert.assertFalse(Arrays.equals(cacheKeyWithOrderBy, cacheKeyWithDifferentOrderBy));
+    Assertions.assertFalse(Arrays.equals(cacheKeyWithOrderBy, cacheKeyWithoutOrderBy));
+    Assertions.assertFalse(Arrays.equals(cacheKeyWithOrderBy, cacheKeyWithDifferentOrderBy));
   }
 
   @Test
@@ -694,7 +694,7 @@ public class ScanQueryQueryToolChestTest
     byte[] cacheKeyWithOffsetLimit = strategy.computeCacheKey(queryWithOffsetLimit);
     byte[] cacheKeyWithoutOffsetLimit = strategy.computeCacheKey(queryWithoutOffsetLimit);
 
-    Assert.assertFalse(Arrays.equals(cacheKeyWithOffsetLimit, cacheKeyWithoutOffsetLimit));
+    Assertions.assertFalse(Arrays.equals(cacheKeyWithOffsetLimit, cacheKeyWithoutOffsetLimit));
   }
 
   @Test
@@ -727,7 +727,7 @@ public class ScanQueryQueryToolChestTest
     byte[] cacheKeyWithCompactedList = strategy.computeCacheKey(queryWithCompactedList);
     byte[] cacheKeyWithResultFormatList = strategy.computeCacheKey(queryWithResultFormatList);
 
-    Assert.assertFalse(Arrays.equals(cacheKeyWithCompactedList, cacheKeyWithResultFormatList));
+    Assertions.assertFalse(Arrays.equals(cacheKeyWithCompactedList, cacheKeyWithResultFormatList));
   }
 
   @Test
@@ -758,7 +758,7 @@ public class ScanQueryQueryToolChestTest
     byte[] cacheKeyWithOrderDesc = strategy.computeCacheKey(queryWithOrderDesc);
     byte[] cacheKeyWithOrderAsc = strategy.computeCacheKey(queryWithOrderAsc);
 
-    Assert.assertFalse(Arrays.equals(cacheKeyWithOrderDesc, cacheKeyWithOrderAsc));
+    Assertions.assertFalse(Arrays.equals(cacheKeyWithOrderDesc, cacheKeyWithOrderAsc));
   }
 
   @Test
@@ -789,6 +789,6 @@ public class ScanQueryQueryToolChestTest
     byte[] cacheKeyQuery1 = strategy.computeCacheKey(query1);
     byte[] cacheKeyQuery2 = strategy.computeCacheKey(query2);
 
-    Assert.assertFalse(Arrays.equals(cacheKeyQuery1, cacheKeyQuery2));
+    Assertions.assertFalse(Arrays.equals(cacheKeyQuery1, cacheKeyQuery2));
   }
 }

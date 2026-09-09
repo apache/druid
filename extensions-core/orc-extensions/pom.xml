@@ -31,7 +31,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <properties>
-        <hive-storage-api.version>2.8.1</hive-storage-api.version>
+        <hive-storage-api.version>4.2.0</hive-storage-api.version>
         <orc.version>2.3.1</orc.version>
     </properties>
     <dependencies>

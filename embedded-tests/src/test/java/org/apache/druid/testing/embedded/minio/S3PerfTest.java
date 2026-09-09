@@ -25,6 +25,7 @@ import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -41,7 +42,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -83,6 +84,11 @@ public class S3PerfTest
 
   abstract static class PerfTestBase extends EmbeddedClusterTestBase
   {
+    //CHECKSTYLE.OFF: ConstantName
+    @RegisterExtension
+    static final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.classScoped();
+    //CHECKSTYLE.ON: ConstantName
+
     private final List<File> tempFiles = new ArrayList<>();
 
     final EmbeddedOverlord overlord = new EmbeddedOverlord();
@@ -109,8 +115,9 @@ public class S3PerfTest
     }
 
     @BeforeAll
-    void generateInputFiles(@TempDir Path tempDir) throws IOException
+    void generateInputFiles() throws IOException
     {
+      final Path tempDir = temporaryFolder.getRoot().toPath();
       final DateTime baseDay = DateTimes.of("2025-01-01");
       for (int i = 0; i < TASK_COUNT; i++) {
         final File f = generateLargeCsvFile(tempDir, baseDay.plusDays(i), ROWS_PER_TASK);

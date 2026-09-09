@@ -19,6 +19,7 @@
 
 package org.apache.druid.emitter.opentelemetry;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.StatusCode;
@@ -87,6 +88,41 @@ public class OpenTelemetryEmitterTest
                                     .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                                     .build();
     emitter = new OpenTelemetryEmitter(openTelemetry);
+  }
+
+  @Test
+  public void testModuleCreatesEmitter()
+  {
+    final String previousTracesExporter = System.getProperty("otel.traces.exporter");
+    final String previousMetricsExporter = System.getProperty("otel.metrics.exporter");
+    final String previousLogsExporter = System.getProperty("otel.logs.exporter");
+    System.setProperty("otel.traces.exporter", "none");
+    System.setProperty("otel.metrics.exporter", "none");
+    System.setProperty("otel.logs.exporter", "none");
+
+    try {
+      Assertions.assertNotNull(
+          new OpenTelemetryEmitterModule()
+              .getEmitter(new OpenTelemetryEmitterConfig(), new ObjectMapper())
+      );
+    }
+    finally {
+      if (previousTracesExporter == null) {
+        System.clearProperty("otel.traces.exporter");
+      } else {
+        System.setProperty("otel.traces.exporter", previousTracesExporter);
+      }
+      if (previousMetricsExporter == null) {
+        System.clearProperty("otel.metrics.exporter");
+      } else {
+        System.setProperty("otel.metrics.exporter", previousMetricsExporter);
+      }
+      if (previousLogsExporter == null) {
+        System.clearProperty("otel.logs.exporter");
+      } else {
+        System.setProperty("otel.logs.exporter", previousLogsExporter);
+      }
+    }
   }
 
   // Check that we don't call "emitQueryTimeEvent" method for event that is not instance of ServiceMetricEvent

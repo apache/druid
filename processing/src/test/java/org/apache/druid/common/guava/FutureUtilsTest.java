@@ -27,10 +27,6 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableCauseMatcher;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,8 +78,8 @@ public class FutureUtilsTest
         () -> FutureUtils.get(Futures.immediateFailedFuture(new ISE("oh no")), true)
     );
 
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
-    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("oh no")));
+    Assertions.assertInstanceOf(IllegalStateException.class, e.getCause());
+    Assertions.assertTrue(e.getCause().getMessage().contains("oh no"));
   }
 
   @Test
@@ -114,8 +110,8 @@ public class FutureUtilsTest
     Assertions.assertTrue(neverGoingToResolve.isCancelled());
 
     final Throwable e = exceptionFromOtherThread.get();
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(InterruptedException.class));
+    Assertions.assertInstanceOf(RuntimeException.class, e);
+    Assertions.assertInstanceOf(InterruptedException.class, e.getCause());
   }
 
   @Test
@@ -147,8 +143,8 @@ public class FutureUtilsTest
     Assertions.assertFalse(neverGoingToResolve.isDone());
 
     final Throwable e = exceptionFromOtherThread.get();
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(InterruptedException.class));
+    Assertions.assertInstanceOf(RuntimeException.class, e);
+    Assertions.assertInstanceOf(InterruptedException.class, e.getCause());
   }
 
   @Test
@@ -166,8 +162,8 @@ public class FutureUtilsTest
         () -> FutureUtils.getUnchecked(Futures.immediateFailedFuture(new ISE("oh no")), true)
     );
 
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
-    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("oh no")));
+    Assertions.assertInstanceOf(IllegalStateException.class, e.getCause());
+    Assertions.assertTrue(e.getCause().getMessage().contains("oh no"));
   }
 
   @Test
@@ -185,8 +181,8 @@ public class FutureUtilsTest
         () -> FutureUtils.getUncheckedImmediately(Futures.immediateFailedFuture(new ISE("oh no")))
     );
 
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
-    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("oh no")));
+    Assertions.assertInstanceOf(IllegalStateException.class, e.getCause());
+    Assertions.assertTrue(e.getCause().getMessage().contains("oh no"));
   }
 
   @Test
@@ -223,15 +219,8 @@ public class FutureUtilsTest
         future::get
     );
 
-    MatcherAssert.assertThat(
-        e,
-        ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(IllegalStateException.class))
-    );
-
-    MatcherAssert.assertThat(
-        e,
-        ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("oops")))
-    );
+    final Throwable cause = Assertions.assertInstanceOf(IllegalStateException.class, e.getCause());
+    Assertions.assertTrue(cause.getMessage().startsWith("oops"));
   }
 
   @Test
@@ -258,15 +247,8 @@ public class FutureUtilsTest
         f::get
     );
 
-    MatcherAssert.assertThat(
-        e,
-        ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(ISE.class))
-    );
-
-    MatcherAssert.assertThat(
-        e,
-        ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("error!")))
-    );
+    final Throwable cause = Assertions.assertInstanceOf(ISE.class, e.getCause());
+    Assertions.assertTrue(cause.getMessage().contains("error!"));
   }
 
   @Test
@@ -315,10 +297,7 @@ public class FutureUtilsTest
     Assertions.assertTrue(results.get(1).isError());
     Assertions.assertEquals(Either.value(null), results.get(2));
 
-    MatcherAssert.assertThat(
-        results.get(1).error(),
-        CoreMatchers.instanceOf(CancellationException.class)
-    );
+    Assertions.assertInstanceOf(CancellationException.class, results.get(1).error());
   }
 
   @Test
@@ -384,8 +363,8 @@ public class FutureUtilsTest
     future.setException(new ISE("error!"));
 
     final ExecutionException e = Assertions.assertThrows(ExecutionException.class, futureWithBaggage::get);
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
-    MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("error!")));
+    Assertions.assertInstanceOf(IllegalStateException.class, e.getCause());
+    Assertions.assertEquals("error!", e.getCause().getMessage());
     Assertions.assertEquals(1, baggageHandled.get());
   }
 }

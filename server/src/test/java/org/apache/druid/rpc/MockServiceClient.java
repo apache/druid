@@ -31,7 +31,7 @@ import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayDeque;
 import java.util.Map;
@@ -55,10 +55,10 @@ public class MockServiceClient implements ServiceClient
     final Expectation expectation = expectations.poll();
 
     requestNumber++;
-    Assert.assertEquals(
-        "request[" + requestNumber + "]",
+    Assertions.assertEquals(
         expectation == null ? null : expectation.request,
-        requestBuilder
+        requestBuilder,
+        "request[" + requestNumber + "]"
     );
 
     if (expectation.response.isValue()) {
@@ -156,7 +156,7 @@ public class MockServiceClient implements ServiceClient
 
   public void verify()
   {
-    Assert.assertTrue("all requests were made", expectations.isEmpty());
+    Assertions.assertTrue(expectations.isEmpty(), "all requests were made");
   }
 
   private static class Expectation

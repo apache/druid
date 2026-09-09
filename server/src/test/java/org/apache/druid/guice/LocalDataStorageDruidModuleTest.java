@@ -28,8 +28,8 @@ import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.RandomStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -40,8 +40,8 @@ public class LocalDataStorageDruidModuleTest
   {
     Injector injector = createInjector();
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
-    Assert.assertTrue(killer.getKillers().containsKey(LocalDataStorageDruidModule.SCHEME));
-    Assert.assertSame(
+    Assertions.assertTrue(killer.getKillers().containsKey(LocalDataStorageDruidModule.SCHEME));
+    Assertions.assertSame(
         killer.getKillers().get(LocalDataStorageDruidModule.SCHEME).get(),
         killer.getKillers().get(LocalDataStorageDruidModule.SCHEME).get()
     );

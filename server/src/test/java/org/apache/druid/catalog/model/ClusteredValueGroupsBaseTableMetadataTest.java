@@ -44,8 +44,8 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -84,7 +84,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     );
     final String json = mapper.writeValueAsString(metadata);
     final DatasourceBaseTableMetadata fromJson = mapper.readValue(json, DatasourceBaseTableMetadata.class);
-    Assert.assertEquals(metadata, fromJson);
+    Assertions.assertEquals(metadata, fromJson);
   }
 
   @Test
@@ -96,10 +96,10 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null
     );
     final String json = mapper.writeValueAsString(metadata);
-    Assert.assertFalse(json.contains("virtualColumns"));
-    Assert.assertFalse(json.contains("columnSchemas"));
+    Assertions.assertFalse(json.contains("virtualColumns"));
+    Assertions.assertFalse(json.contains("columnSchemas"));
     final DatasourceBaseTableMetadata fromJson = mapper.readValue(json, DatasourceBaseTableMetadata.class);
-    Assert.assertEquals(metadata, fromJson);
+    Assertions.assertEquals(metadata, fromJson);
   }
 
   @Test
@@ -116,7 +116,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     );
     final String json = mapper.writeValueAsString(metadata);
     final DatasourceBaseTableMetadata fromJson = mapper.readValue(json, DatasourceBaseTableMetadata.class);
-    Assert.assertEquals(metadata, fromJson);
+    Assertions.assertEquals(metadata, fromJson);
   }
 
   @Test
@@ -130,9 +130,9 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null
     );
     final String json = mapper.writeValueAsString(Collections.singletonMap("baseTable", metadata));
-    Assert.assertTrue(json.contains("\"type\":\"clusteredValueGroups\""));
+    Assertions.assertTrue(json.contains("\"type\":\"clusteredValueGroups\""));
     final Map<String, Object> untyped = mapper.readValue(json, new TypeReference<>() {});
-    Assert.assertEquals(
+    Assertions.assertEquals(
         metadata,
         mapper.convertValue(untyped.get("baseTable"), DatasourceBaseTableMetadata.class)
     );
@@ -148,7 +148,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     );
     // The declared column order is the physical segment order, used verbatim; types map through Columns.druidType
     // with untyped -> STRING.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
                                                    .columns(
                                                        new StringDimensionSchema("tenant"),
@@ -183,7 +183,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
         new ColumnSpec("region", Columns.SQL_VARCHAR, null)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
                                                    .virtualColumns(virtualColumns)
                                                    .columns(
@@ -213,7 +213,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
             new AutoTypeColumnSchema("value", ColumnType.DOUBLE, null)
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
                                                    .columns(
                                                        new StringDimensionSchema("tenant"),
@@ -248,7 +248,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("ratio", Columns.SQL_FLOAT, null),
         new ColumnSpec("attrs", ColumnType.NESTED_DATA.asTypeString(), null)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
                                                    .columns(
                                                        new StringDimensionSchema("tenant"),
@@ -272,8 +272,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         Collections.singletonList(AutoTypeColumnSchema.of("value"))
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(
         e.getMessage().contains("columnSchemas entry [value] is an auto column schema without a castToType")
     );
   }
@@ -286,8 +286,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         Collections.singletonList(new AutoTypeColumnSchema("region", ColumnType.LONG, null))
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(
         e.getMessage().contains("columnSchemas entry [region] of type [LONG] does not match the column's declared type [STRING]")
     );
   }
@@ -301,8 +301,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         Collections.singletonList(new NestedDataColumnSchema("region", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION))
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(
         e.getMessage().contains(
             "columnSchemas entry [region] of type [COMPLEX<json>] does not match the column's declared type [STRING]"
         )
@@ -317,8 +317,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         Collections.singletonList(new StringDimensionSchema("no_such_column"))
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(
         e.getMessage().contains("columnSchemas entry [no_such_column] does not customize a declared column")
     );
   }
@@ -331,8 +331,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         Collections.singletonList(new StringDimensionSchema("tenant", DimensionSchema.MultiValueHandling.ARRAY, false))
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(e.getMessage().contains("columnSchemas cannot customize clustering column [tenant]"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(e.getMessage().contains("columnSchemas cannot customize clustering column [tenant]"));
   }
 
   @Test
@@ -343,8 +343,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         Collections.singletonList(new LongDimensionSchema(Columns.TIME_COLUMN))
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(e.getMessage().contains("columnSchemas cannot customize [__time]"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(e.getMessage().contains("columnSchemas cannot customize [__time]"));
   }
 
   @Test
@@ -357,8 +357,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         Collections.singletonList(new LongDimensionSchema("region"))
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(
         e.getMessage().contains("columnSchemas entry [region] of type [LONG] does not match the column's declared type [STRING]")
     );
   }
@@ -370,8 +370,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         "{\"type\":\"clusteredValueGroups\",\"clusteringColumns\":[\"tenant\"],\"columnSchemas\":[null]}",
         DatasourceBaseTableMetadata.class
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(e.getMessage().contains("columnSchemas must not contain null entries"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(e.getMessage().contains("columnSchemas must not contain null entries"));
   }
 
   @Test
@@ -385,8 +385,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
             new StringDimensionSchema("region", DimensionSchema.MultiValueHandling.ARRAY, false)
         )
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(e.getMessage().contains("columnSchemas contains duplicate entries for column [region]"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(e.getMessage().contains("columnSchemas contains duplicate entries for column [region]"));
   }
 
   @Test
@@ -403,7 +403,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec(Columns.TIME_COLUMN, null, null),
         new ColumnSpec("delta", Columns.SQL_BIGINT, null)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
                                                    .columns(
                                                        new StringDimensionSchema("region"),
@@ -440,7 +440,7 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     // to the declared type (an all-null batch has no values to infer from; FLOAT ARRAY is stored as DOUBLE ARRAY by
     // the auto schema). COMPLEX<json> resolves through its dimension handler to an uncast auto column, which is how
     // json columns are stored everywhere else.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
                                                    .columns(
                                                        new StringDimensionSchema("tenant"),
@@ -476,8 +476,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec(Columns.TIME_COLUMN, null, null),
         new ColumnSpec("unique_things", "COMPLEX<hyperUnique>", null)
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
-    Assert.assertEquals(
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+    Assertions.assertEquals(
         "Complex type[hyperUnique] for dimension[unique_things] is not a valid type",
         e.getMessage()
     );
@@ -517,8 +517,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
 
     final List<DimensionSchema> specColumns = metadata.createSpec(columns).getDimensionsSpec().getDimensions();
     final DimensionSchema stored = specColumns.get(specColumns.size() - 1);
-    Assert.assertEquals("sketch", stored.getName());
-    Assert.assertEquals(ColumnType.ofComplex(typeName), stored.getColumnType());
+    Assertions.assertEquals("sketch", stored.getName());
+    Assertions.assertEquals(ColumnType.ofComplex(typeName), stored.getColumnType());
   }
 
   @Test
@@ -537,15 +537,15 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
 
     final List<DimensionSchema> specColumns = metadata.createSpec(columns).getDimensionsSpec().getDimensions();
     final DimensionSchema stored = specColumns.get(specColumns.size() - 1);
-    Assert.assertEquals(AutoTypeColumnSchema.of("payload"), stored);
-    Assert.assertEquals(ColumnType.NESTED_DATA, stored.getColumnType());
+    Assertions.assertEquals(AutoTypeColumnSchema.of("payload"), stored);
+    Assertions.assertEquals(ColumnType.NESTED_DATA, stored.getColumnType());
     // The schema a json column used to get here, retained for backwards compatibility, selects the same handler
     // (DimensionHandler has no equals, so compare the class and the dimension spec it hands out, which carries the
     // type the handler stores).
     final DimensionHandler<?, ?, ?> legacyHandler =
         new NestedDataColumnSchema("payload", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION).getDimensionHandler();
-    Assert.assertEquals(legacyHandler.getClass(), stored.getDimensionHandler().getClass());
-    Assert.assertEquals(legacyHandler.getDimensionSpec(), stored.getDimensionHandler().getDimensionSpec());
+    Assertions.assertEquals(legacyHandler.getClass(), stored.getDimensionHandler().getClass());
+    Assertions.assertEquals(legacyHandler.getDimensionSpec(), stored.getDimensionHandler().getDimensionSpec());
   }
 
   @Test
@@ -565,10 +565,10 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
           new ColumnSpec(Columns.TIME_COLUMN, null, null),
           new ColumnSpec("busted", badType, null)
       );
-      final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
-      Assert.assertTrue(
-          "expected unrecognized-type error for [" + badType + "] but got: " + e.getMessage(),
-          e.getMessage().contains("column [busted] has an unrecognized type [" + badType + "]")
+      final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+      Assertions.assertTrue(
+          e.getMessage().contains("column [busted] has an unrecognized type [" + badType + "]"),
+          "expected unrecognized-type error for [" + badType + "] but got: " + e.getMessage()
       );
     }
   }
@@ -583,8 +583,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         null
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(e.getMessage().contains("clusteringColumns must be the leading prefix of columns"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(e.getMessage().contains("clusteringColumns must be the leading prefix of columns"));
   }
 
   @Test
@@ -600,8 +600,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
         new ColumnSpec(Columns.TIME_COLUMN, null, null)
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
-    Assert.assertTrue(e.getMessage().contains("clusteringColumns must be the leading prefix of columns"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+    Assertions.assertTrue(e.getMessage().contains("clusteringColumns must be the leading prefix of columns"));
   }
 
   @Test
@@ -612,8 +612,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         null
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(e.getMessage().contains("clustering column [no_such_column] is not a declared column"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(e.getMessage().contains("clustering column [no_such_column] is not a declared column"));
   }
 
   @Test
@@ -628,8 +628,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
         new ColumnSpec("region", Columns.SQL_VARCHAR, null)
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
-    Assert.assertTrue(e.getMessage().contains("must include [__time]"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+    Assertions.assertTrue(e.getMessage().contains("must include [__time]"));
   }
 
   @Test
@@ -644,16 +644,16 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("tags", Columns.SQL_VARCHAR_ARRAY, null),
         new ColumnSpec(Columns.TIME_COLUMN, Columns.SQL_TIMESTAMP, null)
     );
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
-    Assert.assertTrue(e.getMessage().contains("unsupported type"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
+    Assertions.assertTrue(e.getMessage().contains("unsupported type"));
   }
 
   @Test
   public void testCreateSpecEmptyClusteringColumnsFails()
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(null, null, null);
-    final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
-    Assert.assertTrue(e.getMessage().contains("clusteringColumns must be non-empty"));
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> metadata.createSpec(COLUMNS));
+    Assertions.assertTrue(e.getMessage().contains("clusteringColumns must be non-empty"));
   }
 
   @Test
@@ -664,11 +664,11 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         null,
         null
     );
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> metadata.createSpec(Collections.emptyList())
     );
-    Assert.assertTrue(e.getMessage().contains("without declared columns"));
+    Assertions.assertTrue(e.getMessage().contains("without declared columns"));
   }
 
   @Test

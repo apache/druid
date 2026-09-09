@@ -24,7 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
-import io.opentelemetry.sdk.autoconfigure.OpenTelemetrySdkAutoConfiguration;
+import io.opentelemetry.sdk.autoconfigure.AutoConfiguredOpenTelemetrySdk;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.DruidModule;
@@ -55,6 +55,6 @@ public class OpenTelemetryEmitterModule implements DruidModule
   public Emitter getEmitter(OpenTelemetryEmitterConfig config, ObjectMapper mapper)
   {
     // It's a good practice to not set the GlobalOpenTelemetry since there's no need to do that
-    return new OpenTelemetryEmitter(OpenTelemetrySdkAutoConfiguration.initialize(false));
+    return new OpenTelemetryEmitter(AutoConfiguredOpenTelemetrySdk.builder().build().getOpenTelemetrySdk());
   }
 }

@@ -38,9 +38,9 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assume;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -80,7 +80,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayStringColumn()
     {
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
         /*
             dim0 .. arrayString
             "0", .. ["a", "b", "c"]
@@ -158,7 +158,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayLongColumn()
     {
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
         /*
             dim0 .. arrayLong
             "0", .. [1L, 2L, 3L]
@@ -234,7 +234,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayDoubleColumn()
     {
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
         /*
             dim0 .. arrayDouble
             "0", .. [1.1, 2.2, 3.3]
@@ -290,7 +290,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayStringColumnContainsArrays()
     {
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
       // these are not nested arrays, expect no matches
       assertFilterMatches(
           new ArrayContainsElementFilter(
@@ -317,7 +317,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayLongColumnContainsArrays()
     {
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
 
       // these are not nested arrays, expect no matches
       assertFilterMatches(
@@ -345,7 +345,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testArrayDoubleColumnContainsArrays()
     {
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
       // these are not nested arrays, expect no matches
       assertFilterMatches(
           new ArrayContainsElementFilter(
@@ -452,7 +452,7 @@ public class ArrayContainsElementFilterTests
     public void testArrayContainsNestedArray()
     {
       // only auto schema supports array columns... skip other segment types
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
       assertFilterMatches(
           new ArrayContainsElementFilter("nestedArrayLong", ColumnType.LONG_ARRAY, new Object[]{1L, 2L, 3L}, null),
           ImmutableList.of("0", "2")
@@ -498,7 +498,7 @@ public class ArrayContainsElementFilterTests
     public void testNestedArrayStringColumn()
     {
       // duplicate of testArrayStringColumn but targeting nested.arrayString
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
         /*
             dim0 .. arrayString
             "0", .. ["a", "b", "c"]
@@ -577,7 +577,7 @@ public class ArrayContainsElementFilterTests
     public void testNestedArrayLongColumn()
     {
       // duplicate of testArrayLongColumn but targeting nested.arrayLong
-      Assume.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
+      Assumptions.assumeFalse(testName.contains("frame (columnar)") || testName.contains("rowBasedWithoutTypeSignature"));
         /*
             dim0 .. arrayLong
             "0", .. [1L, 2L, 3L]
@@ -654,7 +654,7 @@ public class ArrayContainsElementFilterTests
     public void testNestedArrayDoubleColumn()
     {
       // duplicate of testArrayDoubleColumn but targeting nested.arrayDouble
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
         /*
             dim0 .. arrayDouble
             "0", .. [1.1, 2.2, 3.3]
@@ -711,7 +711,7 @@ public class ArrayContainsElementFilterTests
     public void testNestedArrayStringColumnContainsArrays()
     {
       // duplicate of testArrayStringColumnContainsArrays but targeting nested.arrayString
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
       // these are not nested arrays, expect no matches
       assertFilterMatches(
           new ArrayContainsElementFilter(
@@ -739,7 +739,7 @@ public class ArrayContainsElementFilterTests
     public void testNestedArrayLongColumnContainsArrays()
     {
       // duplicate of testArrayLongColumnContainsArrays but targeting nested.arrayLong
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
 
       // these are not nested arrays, expect no matches
       assertFilterMatches(
@@ -768,7 +768,7 @@ public class ArrayContainsElementFilterTests
     public void testNestedArrayDoubleColumnContainsArrays()
     {
       // duplicate of testArrayDoubleColumnContainsArrays but targeting nested.arrayDouble
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
       // these are not nested arrays, expect no matches
       assertFilterMatches(
           new ArrayContainsElementFilter(
@@ -795,7 +795,7 @@ public class ArrayContainsElementFilterTests
     @Test
     public void testNestedScalarColumnContains()
     {
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
 
       // duplicate of testScalarColumnContains but targeting nested columns
       assertFilterMatches(

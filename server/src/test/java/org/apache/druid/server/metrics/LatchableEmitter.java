@@ -82,8 +82,14 @@ public class LatchableEmitter extends StubServiceEmitter
   @Override
   public void emit(Event event)
   {
-    super.emit(event);
-    evaluateWaitConditions(event);
+    eventProcessingLock.lock();
+    try {
+      super.emit(event);
+      evaluateWaitConditions(event);
+    }
+    finally {
+      eventProcessingLock.unlock();
+    }
   }
 
   @Override

@@ -61,6 +61,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -77,6 +78,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -589,7 +591,8 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
         usedSegments = toolbox.getTaskActionClient()
                               .submit(new RetrieveUsedSegmentsAction(
                                   dataSource,
-                                  Collections.singletonList(interval)
+                                  Collections.singletonList(interval),
+                                  EnumSet.of(SegmentDetail.LOAD_SPEC)
                               ));
       }
       catch (IOException e) {

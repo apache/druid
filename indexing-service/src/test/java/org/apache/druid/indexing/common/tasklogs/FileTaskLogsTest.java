@@ -30,9 +30,10 @@ import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.tasklogs.TaskLogs;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,15 +42,15 @@ import java.util.Map;
 
 public class FileTaskLogsTest
 {
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSimple() throws Exception
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolder.getRoot();
     final File logDir = new File(tmpDir, "druid/logs");
-    final File logFile = new File(tmpDir, "log");
+    final File logFile = temporaryFolder.newFile("log");
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
     taskLogs.pushTaskLog("foo", logFile);
@@ -66,9 +67,9 @@ public class FileTaskLogsTest
   public void testSimpleReport() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolder.getRoot();
     final File logDir = new File(tmpDir, "druid/logs");
-    final File reportFile = new File(tmpDir, "report.json");
+    final File reportFile = temporaryFolder.newFile("report.json");
 
     final String taskId = "myTask";
     final TestTaskReport testReport = new TestTaskReport(taskId);
@@ -88,9 +89,9 @@ public class FileTaskLogsTest
   public void testSimpleStatus() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolder.getRoot();
     final File logDir = new File(tmpDir, "druid/myTask");
-    final File statusFile = new File(tmpDir, "status.json");
+    final File statusFile = temporaryFolder.newFile("status.json");
 
     final String taskId = "myTask";
     final TaskStatus taskStatus = TaskStatus.success(taskId);
@@ -109,10 +110,10 @@ public class FileTaskLogsTest
   @Test
   public void testPushTaskLogDirCreationFails() throws Exception
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolder.getRoot();
     try {
       final File logDir = new File(tmpDir, "druid/logs");
-      final File logFile = new File(tmpDir, "log");
+      final File logFile = temporaryFolder.newFile("log");
       Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
 
       if (!tmpDir.setWritable(false)) {
@@ -137,9 +138,9 @@ public class FileTaskLogsTest
   @Test
   public void testKill() throws Exception
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolder.getRoot();
     final File logDir = new File(tmpDir, "logs");
-    final File logFile = new File(tmpDir, "log");
+    final File logFile = temporaryFolder.newFile("log");
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
 
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log1content");

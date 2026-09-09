@@ -43,7 +43,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -411,7 +411,7 @@ public class MSQWarningsTest extends MSQTestBase
                      .verifyResults();
 
     // Temporary directory should not contain any controller-related folders
-    Assert.assertEquals(0, localFileStorageDir.listFiles().length);
+    Assertions.assertEquals(0, localFileStorageDir.listFiles().length);
   }
 
   @Test

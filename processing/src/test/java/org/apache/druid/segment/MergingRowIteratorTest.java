@@ -106,28 +106,39 @@ public class MergingRowIteratorTest extends InitializedNullHandlingTest
   {
     String message = Stream.of(timestampSequences).map(List::toString).collect(Collectors.joining(" "));
     int totalLength = Stream.of(timestampSequences).mapToInt(List::size).sum();
+    // The expected merge order does not depend on markIteration. Materialize it once per sequence
+    // triple so each mark iteration can focus on rebuilding the production iterator and testing mark handling.
+    List<Long> expectedTimestamps = new ArrayList<>();
+    Iterator<Long> expectedTimestampIterator = Utils.mergeSorted(
+        Stream.of(timestampSequences).map(List::iterator).collect(Collectors.toList()),
+        Comparator.naturalOrder()
+    );
+    while (expectedTimestampIterator.hasNext()) {
+      expectedTimestamps.add(expectedTimestampIterator.next());
+    }
     for (int markIteration = 0; markIteration < totalLength; markIteration++) {
-      testMerge(message, markIteration, timestampSequences);
+      testMerge(message, markIteration, expectedTimestamps, timestampSequences);
     }
   }
 
   @SafeVarargs
-  private static void testMerge(String message, int markIteration, List<Long>... timestampSequences)
+  private static void testMerge(
+      String message,
+      int markIteration,
+      List<Long> expectedTimestamps,
+      List<Long>... timestampSequences
+  )
   {
     try (MergingRowIterator mergingRowIterator = new MergingRowIterator(
         Stream.of(timestampSequences).map(TestRowIterator::new).collect(Collectors.toList())
     )) {
-      Iterator<Long> mergedTimestamps = Utils.mergeSorted(
-          Stream.of(timestampSequences).map(List::iterator).collect(Collectors.toList()),
-          Comparator.naturalOrder()
-      );
       long markedTimestamp = 0;
       long currentTimestamp = 0;
       int i = 0;
       boolean marked = false;
       boolean iterated = false;
-      while (mergedTimestamps.hasNext()) {
-        currentTimestamp = mergedTimestamps.next();
+      for (Long expectedTimestamp : expectedTimestamps) {
+        currentTimestamp = expectedTimestamp;
         Assertions.assertTrue(mergingRowIterator.moveToNext(), message);
         iterated = true;
         Assertions.assertEquals(currentTimestamp, mergingRowIterator.getPointer().timestampSelector.getLong(), message);

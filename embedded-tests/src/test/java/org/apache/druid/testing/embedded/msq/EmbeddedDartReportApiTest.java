@@ -28,6 +28,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.guice.SleepModule;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
@@ -64,9 +65,6 @@ import org.apache.druid.testing.embedded.auth.EmbeddedBasicAuthResource;
 import org.apache.druid.testing.embedded.auth.HttpUtil;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -74,7 +72,6 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -229,7 +226,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("10", result);
 
     // Now fetch the report using the SQL query ID
-    final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker1);
+    final GetQueryReportResponse reportResponse = waitForCompletedReports(sqlQueryId, broker1).get(0);
 
     // Verify the report response
     Assertions.assertNotNull(reportResponse, "Report response should not be null");
@@ -334,12 +331,12 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, sqlClients1.getAllClients().size(), "Broker1 should have 1 client (broker2)");
     Assertions.assertEquals(1, sqlClients2.getAllClients().size(), "Broker2 should have 1 client (broker1)");
 
-    // Fetch the report from both brokers, to verify cross-broker lookup is working
-    final GetQueryReportResponse reportFromBroker1 = msqApis.getDartQueryReport(sqlQueryId, broker1);
-    final GetQueryReportResponse reportFromBroker2 = msqApis.getDartQueryReport(sqlQueryId, broker2);
+    // Wait for the completed report to be available from both brokers. The SQL result can be returned
+    // before the controller is deregistered and its completed report is published.
+    final List<GetQueryReportResponse> completedReports = waitForCompletedReports(sqlQueryId, broker1, broker2);
 
     // Verify the report content
-    for (GetQueryReportResponse report : Arrays.asList(reportFromBroker1, reportFromBroker2)) {
+    for (GetQueryReportResponse report : completedReports) {
       Assertions.assertNotNull(report);
       final DartQueryInfo queryInfo = (DartQueryInfo) report.getQueryInfo();
       Assertions.assertEquals(sqlQueryId, queryInfo.getSqlQueryId());
@@ -488,11 +485,9 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(regularUserVisibleSqlQueryIds.contains(regularUserQueryId));
 
     // Regular user can get only their own query report
-    final RuntimeException e = Assertions.assertThrows(
-        RuntimeException.class,
-        () -> getReportWithClient(adminQueryId, regularUserClient)
-    );
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("404 Not Found")));
+    ThrowableMatcher.of(RuntimeException.class)
+                    .expectMessageContains("404 Not Found")
+                    .assertThrowsAndMatches(() -> getReportWithClient(adminQueryId, regularUserClient));
     Assertions.assertNotNull(getReportWithClient(regularUserQueryId, regularUserClient));
   }
 
@@ -604,6 +599,35 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
       }
     }
     throw new ISE("Timed out after[%,d] ms waiting for query to be in RUNNING state", timeout);
+  }
+
+  /**
+   * Polls the report API on the specified brokers until completed reports are available from all of them.
+   */
+  private List<GetQueryReportResponse> waitForCompletedReports(
+      final String sqlQueryId,
+      final EmbeddedBroker... targetBrokers
+  )
+  {
+    final long timeout = 30_000;
+    return cluster.callApi()
+                  .waitForResult(
+                      () -> {
+                        final List<GetQueryReportResponse> reports = new ArrayList<>(targetBrokers.length);
+                        for (final EmbeddedBroker targetBroker : targetBrokers) {
+                          reports.add(msqApis.getDartQueryReport(sqlQueryId, targetBroker));
+                        }
+                        return reports;
+                      },
+                      reports -> reports.stream().allMatch(
+                          report -> report != null
+                                    && report.getQueryInfo() instanceof DartQueryInfo queryInfo
+                                    && queryInfo.getDurationMs() != null
+                      )
+                  )
+                  .withTimeoutMillis(timeout)
+                  .withRetryMillis(100)
+                  .go();
   }
 
   /**

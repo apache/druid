@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import com.google.common.collect.Iterators;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.server.coordinator.DruidCluster;
@@ -488,10 +489,16 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   /**
-   * Queues fresh partial-load requests on up to {@code numToLoad} eligible servers. Preference order: empty
-   * (fresh-load) servers first; then servers whose stale-fingerprint in-flight loads were just canceled (their slot
-   * is now free); then stale-loaded servers (additive reload; the historical fills missing parts in place). The last
-   * fallback is what mitigates the "tier saturated with stale" stuck state.
+   * Queues fresh partial-load requests on up to {@code numToLoad} eligible servers. Preference order: servers that can
+   * take a fresh load, then stale-loaded servers (additive reload; the historical fills missing parts in place).
+   * <p>
+   * The fresh-load candidates are the classifier's empty servers together with {@code canceledStaleServers}.
+   * {@link ServerHolder#cancelOperation} clears the queued action and restores the projected size, so a server whose
+   * stale in-flight load {@link #cancelLoadsOnServers} canceled can take a fresh load. {@link #serversToLoadSegment}
+   * returns an iterator over fresh load candidates.
+   * <p>
+   * An iterator over candidates that can additive reload the segment is there for backup in case we can't fully
+   * replicate on our priority one fresh load path.
    */
   private int loadPartialReplicas(
       int numToLoad,
@@ -509,25 +516,28 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    final List<ServerHolder> destinations = new ArrayList<>(
-        status.getEligibleForFreshLoad().size()
-        + canceledStaleServers.size()
-        + status.getEligibleForAdditiveReload().size()
-    );
-    destinations.addAll(status.getEligibleForFreshLoad());
-    destinations.addAll(canceledStaleServers);
-    destinations.addAll(status.getEligibleForAdditiveReload());
+    // The classifier's list is already the complete candidate set when nothing was canceled.
+    final List<ServerHolder> freshCandidates;
+    if (canceledStaleServers.isEmpty()) {
+      freshCandidates = status.getEligibleForFreshLoad();
+    } else {
+      freshCandidates = new ArrayList<>(status.getEligibleForFreshLoad());
+      freshCandidates.addAll(canceledStaleServers);
+    }
 
-    if (destinations.isEmpty()) {
+    final Iterator<ServerHolder> destinations = Iterators.concat(
+        serversToLoadSegment(segment, tier, freshCandidates),
+        status.getEligibleForAdditiveReload().iterator()
+    );
+
+    if (!destinations.hasNext()) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No eligible server", segment, tier);
       return 0;
     }
 
     int numLoadsQueued = 0;
-    for (ServerHolder server : destinations) {
-      if (numLoadsQueued >= numToLoad) {
-        break;
-      }
+    while (numLoadsQueued < numToLoad && destinations.hasNext()) {
+      final ServerHolder server = destinations.next();
       final boolean queuedSuccessfully = isAlreadyLoadedOnTier
                                          ? replicateSegment(segment, server, profile)
                                          : loadSegment(segment, server, profile);
@@ -536,6 +546,30 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       }
     }
     return numLoadsQueued;
+  }
+
+  /**
+   * Orders {@code eligibleServers} into the sequence a load should try them in: round robin across the tier when
+   * round-robin assignment is enabled, else by the balancer strategy.
+   * <p>
+   * The round-robin branch ignores {@code eligibleServers} and derives its candidates from the tier, keeping those
+   * that pass {@link ServerHolder#canLoadSegment} at the moment each one is taken. Callers pass their complete
+   * eligible set: the two branches otherwise disagree on which servers a load may target, and an empty
+   * {@code eligibleServers} does not imply an empty iterator.
+   * <p>
+   * Consume the result lazily. {@link RoundRobinServerSelector} advances a per-tier cursor on every element taken, so
+   * draining the iterator for a segment that needs one replica advances the cursor a full lap and hands the next
+   * segment the same starting server.
+   */
+  private Iterator<ServerHolder> serversToLoadSegment(
+      DataSegment segment,
+      String tier,
+      List<ServerHolder> eligibleServers
+  )
+  {
+    return useRoundRobinAssignment
+           ? serverSelector.getServersInTierToLoadSegment(tier, segment)
+           : strategy.findServersToLoadSegment(segment, eligibleServers);
   }
 
   /**
@@ -951,10 +985,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    final Iterator<ServerHolder> serverIterator =
-        useRoundRobinAssignment
-        ? serverSelector.getServersInTierToLoadSegment(tier, segment)
-        : strategy.findServersToLoadSegment(segment, eligibleServers);
+    final Iterator<ServerHolder> serverIterator = serversToLoadSegment(segment, tier, eligibleServers);
     if (!serverIterator.hasNext()) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No strategic server", segment, tier);
       return 0;

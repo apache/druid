@@ -3966,8 +3966,10 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testTwoSemiJoinsSimultaneously(Map<String, Object> queryContext)
   {
-    // Cannot vectorize timeBoundary with maxTime (the engine will request descending order, which cannot vectorize).
-    cannotVectorize();
+    if (!isRewriteJoinToFilter(queryContext)) {
+      // Rewriting the joins to filters allows all queries to vectorize.
+      cannotVectorize();
+    }
 
     Map<String, Object> updatedQueryContext = new HashMap<>(queryContext);
     updatedQueryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);

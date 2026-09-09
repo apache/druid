@@ -19,10 +19,11 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,8 +33,8 @@ import java.nio.file.Paths;
 
 public class CpuSetV2Test
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cgroupDir;
   private File procDir;
@@ -42,10 +43,8 @@ public class CpuSetV2Test
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = new File(temporaryFolder, "cgroup");
-    cgroupDir.mkdir();
-    procDir = new File(temporaryFolder, "proc");
-    procDir.mkdir();
+    cgroupDir = temporaryFolder.newFolder("cgroup");
+    procDir = temporaryFolder.newFolder("proc");
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
     discoverer = new ProcCgroupV2Discoverer(procDir.toPath());
   }

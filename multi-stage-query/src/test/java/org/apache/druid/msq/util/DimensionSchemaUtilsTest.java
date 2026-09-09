@@ -29,14 +29,14 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class DimensionSchemaUtilsTest
 {
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
@@ -53,7 +53,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       DimensionSchema expected = new LongDimensionSchema("x");
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -62,7 +62,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new DoubleDimensionSchema("x");
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -71,7 +71,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new FloatDimensionSchema("x");
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -80,7 +80,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new StringDimensionSchema("x");
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
     }
   }
 
@@ -95,7 +95,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       DimensionSchema expected = new AutoTypeColumnSchema("x", ColumnType.LONG, null);
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -104,7 +104,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE, null);
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -113,7 +113,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT, null);
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -122,7 +122,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new AutoTypeColumnSchema("x", ColumnType.STRING, null);
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
@@ -132,7 +132,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new AutoTypeColumnSchema("x", ColumnType.LONG_ARRAY, null);
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -141,7 +141,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE_ARRAY, null);
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -150,7 +150,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT_ARRAY, null);
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -159,7 +159,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = new AutoTypeColumnSchema("x", ColumnType.STRING_ARRAY, null);
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
 
       dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
           "x",
@@ -168,7 +168,7 @@ public class DimensionSchemaUtilsTest
           mode
       );
       expected = AutoTypeColumnSchema.of("x");
-      Assert.assertEquals(expected, dimensionSchema);
+      Assertions.assertEquals(expected, dimensionSchema);
     }
   }
 
@@ -182,31 +182,31 @@ public class DimensionSchemaUtilsTest
         ArrayIngestMode.MVD
     );
     DimensionSchema expected = new StringDimensionSchema("x", DimensionSchema.MultiValueHandling.ARRAY, null);
-    Assert.assertEquals(expected, dimensionSchema);
+    Assertions.assertEquals(expected, dimensionSchema);
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.LONG_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]",
         t.getMessage()
     );
 
-    t = Assert.assertThrows(
+    t = Assertions.assertThrows(
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.DOUBLE_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]",
         t.getMessage()
     );
 
-    t = Assert.assertThrows(
+    t = Assertions.assertThrows(
         DruidException.class,
         () -> DimensionSchemaUtils.createDimensionSchema("x", ColumnType.FLOAT_ARRAY, false, ArrayIngestMode.MVD)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Numeric arrays can only be ingested when 'arrayIngestMode' is set to 'array'. Current value of the parameter is[mvd]",
         t.getMessage()
     );
@@ -222,7 +222,7 @@ public class DimensionSchemaUtilsTest
         ArrayIngestMode.ARRAY
     );
     DimensionSchema expected = new AutoTypeColumnSchema("x", ColumnType.STRING_ARRAY, null);
-    Assert.assertEquals(expected, dimensionSchema);
+    Assertions.assertEquals(expected, dimensionSchema);
 
     dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
         "x",
@@ -231,7 +231,7 @@ public class DimensionSchemaUtilsTest
         ArrayIngestMode.ARRAY
     );
     expected = new AutoTypeColumnSchema("x", ColumnType.LONG_ARRAY, null);
-    Assert.assertEquals(expected, dimensionSchema);
+    Assertions.assertEquals(expected, dimensionSchema);
 
     dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
         "x",
@@ -240,7 +240,7 @@ public class DimensionSchemaUtilsTest
         ArrayIngestMode.ARRAY
     );
     expected = new AutoTypeColumnSchema("x", ColumnType.DOUBLE_ARRAY, null);
-    Assert.assertEquals(expected, dimensionSchema);
+    Assertions.assertEquals(expected, dimensionSchema);
 
     dimensionSchema = DimensionSchemaUtils.createDimensionSchema(
         "x",
@@ -249,6 +249,6 @@ public class DimensionSchemaUtilsTest
         ArrayIngestMode.ARRAY
     );
     expected = new AutoTypeColumnSchema("x", ColumnType.FLOAT_ARRAY, null);
-    Assert.assertEquals(expected, dimensionSchema);
+    Assertions.assertEquals(expected, dimensionSchema);
   }
 }
