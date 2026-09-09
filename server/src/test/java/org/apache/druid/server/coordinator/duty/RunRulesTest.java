@@ -1126,7 +1126,7 @@ public class RunRulesTest
     final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
     Assertions.assertEquals(
         dataSegment.getSize() * numReplicants,
-        stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
+        stats.get(Stats.Tier.REQUIRED_STORAGE, tierRowKey)
     );
 
     // Verify that primary assignment failed
@@ -1181,7 +1181,7 @@ public class RunRulesTest
     final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
     Assertions.assertEquals(
         dataSegment.getSize() * numReplicants,
-        stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
+        stats.get(Stats.Tier.REQUIRED_STORAGE, tierRowKey)
     );
     Assertions.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));

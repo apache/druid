@@ -184,27 +184,27 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
                             : RowKey.with(Dimension.TIER, tier).and(Dimension.TIER_ALIAS, alias);
       stats.add(Stats.Tier.HISTORICAL_COUNT, rowKey, historicals.size());
 
-      long assignableCapacity = 0;
       long storageCapacity = 0;
-      long usedStorage = 0;
+      long cacheCapacity = 0;
+      long cacheUsed = 0;
       long cloneCount = 0;
       for (ServerHolder holder : historicals) {
         if (holder.isUnmanaged()) {
           cloneCount += 1;
         } else {
-          assignableCapacity += holder.getMaxSize();
-          storageCapacity += holder.getStorageSize();
+          storageCapacity += holder.getMaxSize();
+          cacheCapacity += holder.getStorageSize();
           // getCurrSize(), not getSizeUsed(): queued loads are counted at full segment size, which would overstate
           // disk usage on a tier serving partial loads for the duration of every load
-          usedStorage += holder.getServer().getCurrSize();
+          cacheUsed += holder.getServer().getCurrSize();
         }
       }
       stats.add(Stats.Tier.CLONE_COUNT, rowKey, cloneCount);
-      stats.add(Stats.Tier.ASSIGNABLE_CAPACITY, rowKey, assignableCapacity);
-      // Deprecated alias of tier/assignable/capacity, emitted until the deprecation period is over
-      stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, assignableCapacity);
       stats.add(Stats.Tier.STORAGE_CAPACITY, rowKey, storageCapacity);
-      stats.add(Stats.Tier.USED_STORAGE, rowKey, usedStorage);
+      // Deprecated alias of tier/storage/capacity, emitted until the deprecation period is over
+      stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, storageCapacity);
+      stats.add(Stats.Tier.CACHE_CAPACITY, rowKey, cacheCapacity);
+      stats.add(Stats.Tier.CACHE_USED, rowKey, cacheUsed);
     });
   }
 

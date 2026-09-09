@@ -80,14 +80,14 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
 
     final long expectedCapacity = SIZE_1TB << 20;
 
-    // tier/assignable/capacity is emitted per physical tier AND tagged with the alias
+    // tier/storage/capacity is emitted per physical tier AND tagged with the alias
     verifyValue(
-        Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
+        Stats.Tier.STORAGE_CAPACITY.getMetricName(),
         aliasedTier(Tier.T1),
         expectedCapacity
     );
     verifyValue(
-        Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
+        Stats.Tier.STORAGE_CAPACITY.getMetricName(),
         aliasedTier(Tier.T2),
         expectedCapacity
     );
@@ -112,7 +112,7 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
   @Test
   public void testUsedStorageReportsOnlyBytesLoadedAndAnnounced()
   {
-    // tier/storage/used does not report bytes consumed until historicals have actually loaded and announced the segments. It only reports the actual realized bytes of loaded segments.
+    // tier/segmentCache/used does not report bytes consumed until historicals have actually loaded and announced the segments. It only reports the actual realized bytes of loaded segments.
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(Segments.WIKI_10X1D)
@@ -132,13 +132,13 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
 
     runCoordinatorCycle();
-    verifyValue(Stats.Tier.USED_STORAGE.getMetricName(), aliasedTier(Tier.T1), 0L);
-    verifyValue(Stats.Tier.USED_STORAGE.getMetricName(), aliasedTier(Tier.T2), 0L);
+    verifyValue(Stats.Tier.CACHE_USED.getMetricName(), aliasedTier(Tier.T1), 0L);
+    verifyValue(Stats.Tier.CACHE_USED.getMetricName(), aliasedTier(Tier.T2), 0L);
 
     runCoordinatorCycle();
     final long loadedBytes = 10 * SEGMENT_SIZE;
-    verifyValue(Stats.Tier.USED_STORAGE.getMetricName(), aliasedTier(Tier.T1), loadedBytes);
-    verifyValue(Stats.Tier.USED_STORAGE.getMetricName(), aliasedTier(Tier.T2), loadedBytes);
+    verifyValue(Stats.Tier.CACHE_USED.getMetricName(), aliasedTier(Tier.T1), loadedBytes);
+    verifyValue(Stats.Tier.CACHE_USED.getMetricName(), aliasedTier(Tier.T2), loadedBytes);
   }
 
   private static Map<String, Object> aliasedTier(String tier)
@@ -169,12 +169,12 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
 
     // Without an alias configured, capacity is reported against the physical tier only
     verifyValue(
-        Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
+        Stats.Tier.STORAGE_CAPACITY.getMetricName(),
         filterByTier(Tier.T1),
         expectedCapacity
     );
     verifyValue(
-        Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
+        Stats.Tier.STORAGE_CAPACITY.getMetricName(),
         filterByTier(Tier.T2),
         expectedCapacity
     );
