@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
-import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.client.broker.Broker;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.broker.BrokerClientImpl;
