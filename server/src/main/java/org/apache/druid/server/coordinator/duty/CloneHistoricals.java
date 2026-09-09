@@ -123,8 +123,13 @@ public class CloneHistoricals implements CoordinatorDuty
       // different parts of it.
       for (DataSegment segment : sourceProjectedSegments) {
         final PartialLoadProfile sourceProfile = sourceServer.getProjectedProfile(segment);
-        if (shouldLoadSegmentOnTargetServer(segment, sourceProfile, targetServer, targetProjectedSegments)
-            && loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params)) {
+        if (shouldLoadSegmentOnTargetServer(segment, sourceProfile, targetServer, targetProjectedSegments)) {
+          loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
+        }
+
+        if (params.isUsedSegment(segment)
+            && targetServer.isLoadingSegment(segment)
+            && sourceServer.isServingSegment(segment)) {
           cloningStats.incrementMissingSegmentCount(sourceServer.isServingSegment(segment));
         }
       }
@@ -151,11 +156,8 @@ public class CloneHistoricals implements CoordinatorDuty
   /**
    * Queues a load of {@code segment} on the clone target, asking for the same parts of the segment that the source
    * holds. A null {@code sourceProfile} means the source holds the whole segment, which is the regular full load.
-   *
-   * @return true if the given segment is a "used" segment and has started loading
-   * on the target server
    */
-  private boolean loadSegmentOnTargetServer(
+  private void loadSegmentOnTargetServer(
       DataSegment segment,
       @Nullable PartialLoadProfile sourceProfile,
       ServerHolder targetServer,
@@ -174,7 +176,6 @@ public class CloneHistoricals implements CoordinatorDuty
           rowKey.and(Dimension.DESCRIPTION, "Segment not found in metadata cache"),
           1L
       );
-      return false;
     } else if (loadQueueManager.loadSegment(
         loadableSegment,
         targetServer,
@@ -187,8 +188,6 @@ public class CloneHistoricals implements CoordinatorDuty
           1L
       );
     }
-
-    return targetServer.isLoadingSegment(loadableSegment);
   }
 
   @Nullable
