@@ -31,24 +31,8 @@ jobs:
           distribution: 'zulu'
           java-version: 25
           cache: 'maven'
-      # setup-java caches Maven dependencies in ~/.m2/repository. This separate
-      # cache stores build outputs produced by the Maven build-cache extension.
-      - name: Restore Maven build cache
-        id: maven-build-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ~/.m2/build-cache
-          key: maven-build-cache-v2-${{ runner.os }}-java25-${{ hashFiles('pom.xml', 'web-console/**') }}
-          restore-keys: |
-            maven-build-cache-v2-${{ runner.os }}-java25-
       - name: Build the Druid distribution
         run: .github/scripts/build-dist
-      - name: Save Maven build cache
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && steps.maven-build-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
-        with:
-          path: ~/.m2/build-cache
-          key: maven-build-cache-v2-${{ runner.os }}-java25-${{ hashFiles('pom.xml', 'web-console/**') }}
       - name: Build the Docker image
         run: |
           DOCKER_BUILDKIT=1 docker build \
