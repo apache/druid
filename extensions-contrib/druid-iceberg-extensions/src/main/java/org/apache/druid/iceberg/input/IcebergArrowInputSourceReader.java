@@ -20,26 +20,7 @@
 package org.apache.druid.iceberg.input;
 
 import com.google.common.collect.Maps;
-import org.apache.arrow.vector.BigIntVector;
-import org.apache.arrow.vector.BitVector;
-import org.apache.arrow.vector.DateDayVector;
-import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.FixedSizeBinaryVector;
-import org.apache.arrow.vector.Float4Vector;
-import org.apache.arrow.vector.Float8Vector;
-import org.apache.arrow.vector.IntVector;
-import org.apache.arrow.vector.SmallIntVector;
-import org.apache.arrow.vector.TimeMicroVector;
-import org.apache.arrow.vector.TimeStampMicroTZVector;
-import org.apache.arrow.vector.TimeStampMicroVector;
-import org.apache.arrow.vector.TimeStampMilliTZVector;
-import org.apache.arrow.vector.TimeStampMilliVector;
-import org.apache.arrow.vector.TimeStampNanoTZVector;
-import org.apache.arrow.vector.TimeStampNanoVector;
-import org.apache.arrow.vector.TinyIntVector;
-import org.apache.arrow.vector.VarBinaryVector;
-import org.apache.arrow.vector.VarCharVector;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -54,14 +35,15 @@ import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.arrow.vectorized.ArrowReader;
 import org.apache.iceberg.arrow.vectorized.ColumnarBatch;
+import org.apache.iceberg.arrow.vectorized.ColumnVector;
 import org.apache.iceberg.io.CloseableIterable;
+import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
 import org.apache.iceberg.util.TableScanUtil;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -72,9 +54,8 @@ import java.util.stream.Collectors;
 /**
  * Reads an Iceberg table via iceberg-arrow's {@link ArrowReader}, yielding {@link InputRow} objects.
  *
- * Delete application (V2 equality and positional deletes), type coercion, and schema evolution are
- * handled entirely by the Iceberg library. Druid only consumes the resulting {@link ColumnarBatch}
- * batches and maps them to {@link MapBasedInputRow}.
+ * Type coercion and schema evolution are handled entirely by the Iceberg library. Druid only consumes
+ * the resulting {@link ColumnarBatch} batches and maps them to {@link MapBasedInputRow}.
  *
  * Column projection and predicate push-down are applied at scan planning time so only requested
  * columns and matching files are read from storage.
@@ -202,9 +183,10 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     final int numCols = batch.numCols();
     final Map<String, Object> event = Maps.newHashMapWithExpectedSize(numCols);
     for (int col = 0; col < numCols; col++) {
-      final FieldVector vec = batch.column(col).getFieldVector();
-      if (!vec.isNull(rowIdx)) {
-        event.put(vec.getName(), extractValue(vec, rowIdx));
+      final ColumnVector column = batch.column(col);
+      final FieldVector vec = column.getFieldVector();
+      if (!column.isNullAt(rowIdx)) {
+        event.put(vec.getName(), extractValue(column, table.schema().findField(vec.getName()).type(), rowIdx));
       }
     }
     final long timestamp = schema.getTimestampSpec().extractTimestamp(event).getMillis();
@@ -230,73 +212,42 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   }
 
   /**
-   * Type-safe extraction from Arrow vectors, avoiding getObject() boxing on the hot path.
+   * Type-safe extraction from Iceberg column accessors so physical dictionary encoding is not exposed.
    * Covers all scalar types supported by iceberg-arrow 1.10.0.
-   * Falls back to getObject() for any type added in future Arrow/Iceberg versions.
    */
-  static Object extractValue(final FieldVector vec, final int idx)
+  static Object extractValue(final ColumnVector column, final Type type, final int idx)
   {
-    if (vec instanceof BigIntVector) {
-      return ((BigIntVector) vec).get(idx);
+    switch (type.typeId()) {
+      case BOOLEAN:
+        return column.getBoolean(idx);
+      case INTEGER:
+        return column.getInt(idx);
+      case LONG:
+        return column.getLong(idx);
+      case FLOAT:
+        return (double) column.getFloat(idx);
+      case DOUBLE:
+        return column.getDouble(idx);
+      case STRING:
+        return column.getString(idx);
+      case BINARY:
+      case FIXED:
+      case UUID:
+        return column.getBinary(idx);
+      case DATE:
+        return TimeUnit.DAYS.toMillis(column.getInt(idx));
+      case TIME:
+        return TimeUnit.MICROSECONDS.toMillis(column.getLong(idx));
+      case TIMESTAMP:
+        return TimeUnit.MICROSECONDS.toMillis(column.getLong(idx));
+      case TIMESTAMP_NANO:
+        return TimeUnit.NANOSECONDS.toMillis(column.getLong(idx));
+      case DECIMAL:
+        final Types.DecimalType decimalType = (Types.DecimalType) type;
+        return column.getDecimal(idx, decimalType.precision(), decimalType.scale());
+      default:
+        throw new IllegalArgumentException("Unsupported Iceberg type: " + type);
     }
-    if (vec instanceof IntVector) {
-      return ((IntVector) vec).get(idx);
-    }
-    if (vec instanceof SmallIntVector) {
-      return (int) ((SmallIntVector) vec).get(idx);
-    }
-    if (vec instanceof TinyIntVector) {
-      return (int) ((TinyIntVector) vec).get(idx);
-    }
-    if (vec instanceof Float8Vector) {
-      return ((Float8Vector) vec).get(idx);
-    }
-    if (vec instanceof Float4Vector) {
-      return (double) ((Float4Vector) vec).get(idx);
-    }
-    if (vec instanceof BitVector) {
-      return ((BitVector) vec).get(idx) == 1;
-    }
-    if (vec instanceof VarCharVector) {
-      return new String(((VarCharVector) vec).get(idx), StandardCharsets.UTF_8);
-    }
-    if (vec instanceof VarBinaryVector) {
-      return ((VarBinaryVector) vec).get(idx);
-    }
-    if (vec instanceof DecimalVector) {
-      return ((DecimalVector) vec).getObject(idx);
-    }
-    // Timestamps: Iceberg stores timestamps as micros; convert to millis for Druid.
-    if (vec instanceof TimeStampMicroTZVector) {
-      return TimeUnit.MICROSECONDS.toMillis(((TimeStampMicroTZVector) vec).get(idx));
-    }
-    if (vec instanceof TimeStampMicroVector) {
-      return TimeUnit.MICROSECONDS.toMillis(((TimeStampMicroVector) vec).get(idx));
-    }
-    if (vec instanceof TimeStampNanoTZVector) {
-      return TimeUnit.NANOSECONDS.toMillis(((TimeStampNanoTZVector) vec).get(idx));
-    }
-    if (vec instanceof TimeStampNanoVector) {
-      return TimeUnit.NANOSECONDS.toMillis(((TimeStampNanoVector) vec).get(idx));
-    }
-    if (vec instanceof TimeStampMilliTZVector) {
-      return ((TimeStampMilliTZVector) vec).get(idx);
-    }
-    if (vec instanceof TimeStampMilliVector) {
-      return ((TimeStampMilliVector) vec).get(idx);
-    }
-    if (vec instanceof DateDayVector) {
-      // Days since epoch → millis since epoch
-      return TimeUnit.DAYS.toMillis(((DateDayVector) vec).get(idx));
-    }
-    if (vec instanceof TimeMicroVector) {
-      return TimeUnit.MICROSECONDS.toMillis(((TimeMicroVector) vec).get(idx));
-    }
-    if (vec instanceof FixedSizeBinaryVector) {
-      return ((FixedSizeBinaryVector) vec).get(idx);
-    }
-    // Safe fallback for any Arrow type not explicitly handled (dict-encoded, future types).
-    return vec.getObject(idx);
   }
 
   private static final class NoopInputStats implements InputStats
