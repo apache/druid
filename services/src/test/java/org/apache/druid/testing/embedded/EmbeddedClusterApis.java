@@ -362,7 +362,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
             "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s' AND is_available = 1",
             dataSource
         ),
-        result -> Integer.parseInt(result.trim()) >= numSegments
+        result -> parseCountOrZero(result) >= numSegments
     ).withTimeoutMillis(timeoutMillis).go();
 
     waitForResult(
@@ -372,6 +372,20 @@ public class EmbeddedClusterApis implements EmbeddedResource
         ),
         result -> "1".equals(result.trim())
     ).withTimeoutMillis(timeoutMillis).go();
+  }
+
+  /**
+   * Parses a {@code COUNT(*)} result, treating an empty or non-numeric result
+   * (e.g. while the Broker is still initializing) as zero so that polling continues.
+   */
+  private static long parseCountOrZero(String result)
+  {
+    try {
+      return Long.parseLong(result.trim());
+    }
+    catch (NumberFormatException e) {
+      return 0L;
+    }
   }
 
   /**
