@@ -92,6 +92,12 @@ public interface AsyncResource<T> extends Closeable
    * {@link #close()} cancels acquisition before the resource became available, so that a waiting consumer learns it
    * was aborted; {@link #get()} then throws {@link AsyncResourceCanceledException}.
    *
+   * <p>Firing on close looks redundant, since the same owner both registers the callbacks and does the closing, but it
+   * lets that owner cancel itself in one call: when a callback completes something downstream, such as a future
+   * holding a query's result, closing the resource runs the callback, which handles
+   * {@link AsyncResourceCanceledException} from {@link #get()} and unwinds the waiter too, with no separate
+   * cancellation step.
+   *
    * <p>Because of the fires-immediately case, the callback can run on the REGISTERING thread, not just on whatever
    * thread completes the resource, so a callback must not do blocking or expensive work (I/O, deserialization)
    * unless the registering thread can tolerate it; hand such work to an executor from inside the callback instead.
