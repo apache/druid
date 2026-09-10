@@ -197,4 +197,36 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
     Assertions.assertEquals(size, buffer.position());
     buffer.position(0);
   }
+
+  @Test
+  public void testNegativeSizeRejected()
+  {
+    final ByteBuffer buffer = ByteBuffer.allocate(16).order(order);
+    buffer.put((byte) 0);
+    buffer.put((byte) 0);
+    buffer.putInt(-5);
+    buffer.flip();
+
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES)
+    );
+    Assertions.assertTrue(e.getMessage().contains("must be non-negative"), e.getMessage());
+  }
+
+  @Test
+  public void testSizeExceedingBufferRejected()
+  {
+    final ByteBuffer buffer = ByteBuffer.allocate(20).order(order);
+    buffer.put((byte) 0);
+    buffer.put((byte) 0);
+    buffer.putInt(4); // 4 * Long.BYTES = 32 bytes claimed, but the buffer only holds 8 value bytes
+    buffer.flip();
+
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES)
+    );
+    Assertions.assertTrue(e.getMessage().contains("exceeds the available buffer"), e.getMessage());
+  }
 }
