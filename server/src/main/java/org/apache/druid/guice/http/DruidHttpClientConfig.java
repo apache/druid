@@ -86,6 +86,13 @@ public class DruidHttpClientConfig
   @JsonProperty
   private Period connectTimeout = new Period("PT10S");
 
+  /**
+   * Netty ByteBufAllocator to use for the direct-RPC HTTP client. One of "adaptive" (default, matches Netty's own
+   * picked default; adaptive between pooled and unpooled based on load), "pooled" (always pooled), or "unpooled".
+   */
+  @JsonProperty
+  private String allocator = "adaptive";
+
   public int getNumConnections()
   {
     return numConnections;
@@ -151,6 +158,11 @@ public class DruidHttpClientConfig
   public Duration getConnectTimeout()
   {
     return connectTimeout == null ? null : connectTimeout.toStandardDuration();
+  }
+
+  public String getAllocator()
+  {
+    return allocator;
   }
 
   private static HumanReadableBytes computeDefaultMaxQueuedBytes()

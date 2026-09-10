@@ -26,7 +26,12 @@ import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import io.netty.buffer.AdaptiveByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.codec.http.HttpHeaders;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedClient;
@@ -122,6 +127,7 @@ public class HttpClientModule implements Module
           .withEagerInitialization(config.isEagerInitialization(eagerByDefault))
           .withReadTimeout(config.getReadTimeout())
           .withConnectTimeout(config.getConnectTimeout())
+          .withByteBufAllocator(resolveAllocator(config.getAllocator()))
           .withWorkerCount(config.getNumMaxThreads())
           .withCompressionCodec(
               HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(config.getCompressionCodec()))
@@ -157,6 +163,37 @@ public class HttpClientModule implements Module
       } else {
         return clientWithUserAgent;
       }
+    }
+  }
+
+  /**
+   * Single shared adaptive allocator, instantiated eagerly. {@link AdaptiveByteBufAllocator} has no {@code DEFAULT}
+   * singleton of its own (the inherited {@code ByteBufAllocator.DEFAULT} constant routes through
+   * {@code -Dio.netty.allocator.type}). Instantiate one here so the "adaptive" config value really is adaptive.
+   */
+  private static final ByteBufAllocator ADAPTIVE_ALLOCATOR_INSTANCE = new AdaptiveByteBufAllocator();
+
+  /**
+   * Maps the {@link DruidHttpClientConfig#getAllocator()} string to a Netty {@link ByteBufAllocator}
+   * instance. Update this when upgrading Netty if new versions introduce additional allocators.
+   */
+  private static ByteBufAllocator resolveAllocator(String name)
+  {
+    if (name == null) {
+      return ADAPTIVE_ALLOCATOR_INSTANCE;
+    }
+    switch (StringUtils.toLowerCase(name)) {
+      case "adaptive":
+        return ADAPTIVE_ALLOCATOR_INSTANCE;
+      case "pooled":
+        return PooledByteBufAllocator.DEFAULT;
+      case "unpooled":
+        return UnpooledByteBufAllocator.DEFAULT;
+      default:
+        throw DruidException
+            .forPersona(DruidException.Persona.OPERATOR)
+            .ofCategory(DruidException.Category.INVALID_INPUT)
+            .build("Unknown allocator[%s]; expected one of adaptive, pooled, unpooled", name);
     }
   }
 }

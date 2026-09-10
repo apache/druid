@@ -22,6 +22,7 @@ package org.apache.druid.java.util.http.client;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -52,7 +53,12 @@ public class HttpClientInit
           new NettyHttpClient(
               new ResourcePool<>(
                   new ChannelResourceFactory(
-                      createBootstrap(lifecycle, config.getWorkerPoolSize(), config.getConnectTimeout()),
+                      createBootstrap(
+                          lifecycle,
+                          config.getWorkerPoolSize(),
+                          config.getConnectTimeout(),
+                          config.getByteBufAllocator()
+                      ),
                       config.getSslContext(),
                       config.getProxyConfig(),
                       config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().getMillis()
@@ -93,7 +99,12 @@ public class HttpClientInit
     }
   }
 
-  private static Bootstrap createBootstrap(Lifecycle lifecycle, int workerPoolSize, Duration connectTimeout)
+  private static Bootstrap createBootstrap(
+      Lifecycle lifecycle,
+      int workerPoolSize,
+      Duration connectTimeout,
+      ByteBufAllocator byteBufAllocator
+  )
   {
     final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(
         workerPoolSize,
@@ -108,7 +119,8 @@ public class HttpClientInit
              .channel(NioSocketChannel.class)
              .handler(new HttpClientChannelInitializer())
              .option(ChannelOption.SO_KEEPALIVE, true)
-             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(connectTimeout.getMillis()));
+             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(connectTimeout.getMillis()))
+             .option(ChannelOption.ALLOCATOR, byteBufAllocator);
 
     InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
 
