@@ -72,7 +72,13 @@ public class ScanTransformSpec implements BaseTransformSpec
   @Override
   public BaseTransformer toTransformer()
   {
-    return new ScanTransformer(query);
+    return toTransformer(Set.of());
+  }
+
+  @Override
+  public BaseTransformer toTransformer(Set<String> dimensionExclusions)
+  {
+    return new ScanTransformer(query, dimensionExclusions);
   }
 
   @Override

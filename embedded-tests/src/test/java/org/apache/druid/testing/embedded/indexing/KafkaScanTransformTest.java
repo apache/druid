@@ -162,6 +162,14 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
                       "concat(\"user\", '_', \"tag\")",
                       ColumnType.STRING,
                       ExprMacroTable.nil()
+                  ),
+                  // "rate" is scan-generated (not a raw field) and consumed only by total_rate below.
+                  // Kept out of the discovered dimension list via the dimension exclusion mechanism.
+                  new ExpressionVirtualColumn(
+                      "rate",
+                      "\"total\" / 2",
+                      ColumnType.LONG,
+                      ExprMacroTable.nil()
                   )
               )
               .eternityInterval()
@@ -176,7 +184,10 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
                 .withTimestamp(new TimestampSpec("__time", "auto", null))
                 .withGranularity(new UniformGranularitySpec(Granularities.DAY, null, null))
                 .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
-                .withAggregators(new LongSumAggregatorFactory("total_bytes", "bytes_sent"))
+                .withAggregators(
+                    new LongSumAggregatorFactory("total_bytes", "bytes_sent"),
+                    new LongSumAggregatorFactory("total_rate", "rate")
+                )
                 .withTransform(transformSpec)
         )
         .withIoConfig(
@@ -208,6 +219,8 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
     final List<Map<String, Object>> records = new ArrayList<>();
     // bytes_sent is a metric input (not a dimension). It must survive the scan transform so the
     // LongSumAggregatorFactory on total_bytes reads the real value, not zero.
+    // total is a raw field feeding the "rate" virtual column (rate = total / 2, which feeds total_rate).
+    // Only "rate" is excluded from dimension discovery; "total" itself is discovered normally.
     records.add(Map.of(
         "__time", "2024-01-01T00:00:00Z",
         "user", "alice",
@@ -216,7 +229,8 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
             Map.of("type", "web", "dc", "us-east1"),
             Map.of("type", "api", "dc", "us-west2")
         ),
-        "bytes_sent", 100
+        "bytes_sent", 100,
+        "total", 10
     ));
     records.add(Map.of(
         "__time", "2024-01-01T00:01:00Z",
@@ -227,7 +241,8 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
             Map.of("type", "cache", "dc", "eu-west1"),
             Map.of("type", "db", "dc", "us-east1")
         ),
-        "bytes_sent", 50
+        "bytes_sent", 50,
+        "total", 6
     ));
 
     // carol: explicit null values for both array columns
@@ -480,5 +495,49 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         "bytes_sent is a metric input and must not be discovered as a dimension/column: " + columns
     );
     Assertions.assertTrue(columns.contains("total_bytes"));
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_generatedVirtualColumnMetricSurvivesUnnestExpansion()
+  {
+    // "rate" (total / 2) must survive on every expanded row after unnest, or LongSum aggregates to 0.
+    // alice: rate=5 x 4 expanded rows = 20, bob: rate=3 x 3 expanded rows = 9.
+    Assertions.assertEquals(
+        "29",
+        cluster.runSql(StringUtils.format("SELECT SUM(\"total_rate\") FROM \"%s\"", dataSource)).trim()
+    );
+
+    Assertions.assertEquals(
+        "alice,20\nbob,9",
+        cluster.runSql(
+            StringUtils.format(
+                "SELECT \"user\", SUM(\"total_rate\") FROM \"%s\" GROUP BY 1 ORDER BY 1",
+                dataSource
+            )
+        ).trim()
+    );
+  }
+
+  @Test
+  @Timeout(60)
+  public void test_generatedVirtualColumnMetricNotDiscoveredAsDimension()
+  {
+    // "rate" is scan-generated and aggregator-only, so it must be excluded from schema discovery.
+    // "total" feeds "rate" but DataSchema can't see that, so (unlike "rate") it IS discovered normally.
+    final String result = cluster.runSql(
+        StringUtils.format(
+            "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '%s' ORDER BY COLUMN_NAME",
+            dataSource
+        )
+    );
+    final Set<String> columns = new TreeSet<>(List.of(result.trim().split("\n")));
+    Assertions.assertTrue(columns.contains("total"), "total is a raw field and is expected to be discovered: " + columns);
+    Assertions.assertFalse(
+        columns.contains("rate"),
+        "rate is a scan-generated metric-only virtual column and must not be discovered as a "
+        + "dimension/column: " + columns
+    );
+    Assertions.assertTrue(columns.contains("total_rate"));
   }
 }

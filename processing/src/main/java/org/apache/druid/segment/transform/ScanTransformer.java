@@ -21,6 +21,7 @@ package org.apache.druid.segment.transform;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
+import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -71,15 +72,19 @@ import java.util.Set;
 public class ScanTransformer implements BaseTransformer
 {
   private final ScanQuery query;
+  // Field names that must never be promoted to a dimension, regardless of whether they show up in this
+  // scan query's result columns. See resolveDimensionColumns() for why this can't be derived locally.
+  private final Set<String> dimensionExclusions;
   private final SettableRowCursorFactory baseCursorFactory;
   private final CursorHolder cursorHolder;
   private Cursor cursor;
 
-  ScanTransformer(final ScanQuery scanQuery)
+  ScanTransformer(final ScanQuery scanQuery, final Set<String> dimensionExclusions)
   {
     this.query = scanQuery.withOverriddenContext(
         Map.of(QueryContexts.TIMEOUT_KEY, 0)
     );
+    this.dimensionExclusions = dimensionExclusions;
 
     final RowSignature broadSignature = RowSignature.builder()
                                                      .add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG)
@@ -197,16 +202,26 @@ public class ScanTransformer implements BaseTransformer
   }
 
   /**
-   * Returns the raw event fields present on {@code inputRow} that are not in {@link InputRow#getDimensions()}
+   * Returns the raw fields present on {@code inputRow} that are not in {@link InputRow#getDimensions()}
    * — e.g. metric inputs that {@code DataSchema} added to dimensionExclusions. These must still be read
    * into the expanded rows' event maps (for aggregators), but must not be promoted to dimensions.
+   *
+   * <p>Handles both {@link MapBasedInputRow} (JSON/Kafka-style ingestion) and {@link ListBasedInputRow}
+   * (CSV/TSV/delimited ingestion, via {@code DelimitedValueReader}) — both expose their raw field names
+   * via a {@code Map}-shaped view ({@code getEvent()} / {@code asMap()}). Any other {@link InputRow}
+   * implementation has no generic way to enumerate its raw fields, so it falls back to an empty set.
    */
   private static Set<String> resolveNonDimensionEventFields(final InputRow inputRow)
   {
-    if (!(inputRow instanceof MapBasedInputRow)) {
+    final Set<String> allFields;
+    if (inputRow instanceof MapBasedInputRow) {
+      allFields = ((MapBasedInputRow) inputRow).getEvent().keySet();
+    } else if (inputRow instanceof ListBasedInputRow) {
+      allFields = ((ListBasedInputRow) inputRow).asMap().keySet();
+    } else {
       return Set.of();
     }
-    final Set<String> nonDimensionFields = new LinkedHashSet<>(((MapBasedInputRow) inputRow).getEvent().keySet());
+    final Set<String> nonDimensionFields = new LinkedHashSet<>(allFields);
     nonDimensionFields.removeAll(inputRow.getDimensions());
     return nonDimensionFields;
   }
@@ -235,7 +250,14 @@ public class ScanTransformer implements BaseTransformer
     }
   }
 
-  private static List<String> resolveDimensionColumns(
+  /**
+   * Resolves the dimension list for an expanded row: the input row's declared dimensions, plus any
+   * scan-generated result column (virtual column or unnest output) that isn't a raw non-dimension event
+   * field and isn't in {@link #dimensionExclusions} — e.g. a virtual column consumed only by an
+   * aggregator must stay out of the dimension list even though it's a "generated" column with no
+   * corresponding pre-scan event field to match against {@code nonDimensionEventFields}.
+   */
+  private List<String> resolveDimensionColumns(
       final InputRow inputRow,
       @Nullable final List<String> resultColumns,
       final Set<String> nonDimensionEventFields
@@ -244,7 +266,9 @@ public class ScanTransformer implements BaseTransformer
     final LinkedHashSet<String> dims = new LinkedHashSet<>(inputRow.getDimensions());
     if (resultColumns != null) {
       for (final String col : resultColumns) {
-        if (!ColumnHolder.TIME_COLUMN_NAME.equals(col) && !nonDimensionEventFields.contains(col)) {
+        if (!ColumnHolder.TIME_COLUMN_NAME.equals(col)
+            && !nonDimensionEventFields.contains(col)
+            && !dimensionExclusions.contains(col)) {
           dims.add(col);
         }
       }

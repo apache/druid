@@ -53,11 +53,34 @@ public interface BaseTransformSpec
   BaseTransformer toTransformer();
 
   /**
+   * Creates a {@link BaseTransformer}, given the set of field names that must never be promoted to
+   * dimensions (typically {@code DataSchema}'s computed {@code dimensionExclusions}, e.g. metric input
+   * fields). Transformers that can generate brand-new columns, like {@link ScanTransformer}'s virtual
+   * columns and unnest outputs, need this to avoid re-discovering an excluded field as a dimension.
+   *
+   * <p>{@code default} so specs without generated columns — like {@link TransformSpec} — can ignore it
+   * and fall back to {@link #toTransformer()}.
+   */
+  default BaseTransformer toTransformer(Set<String> dimensionExclusions)
+  {
+    return toTransformer();
+  }
+
+  /**
    * Wraps an {@link InputSourceReader} with this spec's transforms applied to each row.
    */
   default InputSourceReader decorate(InputSourceReader reader)
   {
     return new TransformingInputSourceReader(reader, toTransformer());
+  }
+
+  /**
+   * Wraps an {@link InputSourceReader} with this spec's transforms applied to each row, given the set of
+   * field names that must never be promoted to dimensions. See {@link #toTransformer(Set)}.
+   */
+  default InputSourceReader decorate(InputSourceReader reader, Set<String> dimensionExclusions)
+  {
+    return new TransformingInputSourceReader(reader, toTransformer(dimensionExclusions));
   }
 
   /**

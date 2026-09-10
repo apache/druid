@@ -65,7 +65,11 @@ class StreamChunkReader<RecordType extends ByteEntity>
   )
   {
     InvalidInput.notNull(inputFormat, "inputFormat");
-    final BaseTransformer transformer = transformSpec.toTransformer();
+    // Pass DataSchema's already-computed dimension exclusions so a spec that generates its own new
+    // columns (e.g. ScanTransformSpec) doesn't re-discover an excluded field as a dimension.
+    final BaseTransformer transformer = transformSpec.toTransformer(
+        inputRowSchema.getDimensionsSpec().getDimensionExclusions()
+    );
     this.byteEntityReader = new SettableByteEntityReader<>(
         inputFormat,
         inputRowSchema,
