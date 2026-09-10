@@ -22,6 +22,8 @@ package org.apache.druid.server.coordinator.simulate;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -544,6 +546,84 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     loadQueuedSegments();
     Assertions.assertEquals(historicalT11.getCurrSize(), historicalT12.getCurrSize());
+  }
+
+  @Test
+  public void testLoadQueuePrioritizesUnavailableSegment()
+  {
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withServers(historicalT11, historicalT12)
+                             .withDynamicConfig(withReplicationThrottleLimit(100))
+                             .withRules(datasource, Load.on(Tier.T1, 2).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // All but last wiki segments are loaded on historicalT11
+    addSegments(segments);
+    for (int i = 0; i < 9; ++i) {
+      historicalT11.addDataSegment(segments.get(i));
+    }
+    final DataSegment unavailableSegment = segments.getLast();
+
+    runCoordinatorCycle();
+
+    // Verify that the load queue of historicalT12 has the unavailable segment first
+    final List<SegmentHolder> queuedSegments = getQueuedSegments(historicalT12);
+    Assertions.assertEquals(10, queuedSegments.size());
+
+    final SegmentHolder firstItemInQueue = queuedSegments.getFirst();
+    Assertions.assertEquals(unavailableSegment, firstItemInQueue.getSegment());
+    Assertions.assertEquals(SegmentAction.LOAD, firstItemInQueue.getAction());
+
+    for (int i = 1; i < queuedSegments.size(); ++i) {
+      Assertions.assertEquals(SegmentAction.REPLICATE, queuedSegments.get(i).getAction());
+    }
+  }
+
+  @Test
+  public void testSegmentMovesUpTheLoadQueueWhenItBecomesUnavailable()
+  {
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withServers(historicalT11, historicalT12)
+                             .withDynamicConfig(withReplicationThrottleLimit(100))
+                             .withRules(datasource, Load.on(Tier.T1, 2).forever())
+                             .build();
+
+    startSimulation(sim);
+
+    // All wiki segments are loaded on historicalT11
+    addSegments(segments);
+    segments.forEach(historicalT11::addDataSegment);
+
+    runCoordinatorCycle();
+
+    // Verify that all segments in queue are for replication
+    final List<SegmentHolder> initialQueue = getQueuedSegments(historicalT12);
+    Assertions.assertEquals(10, initialQueue.size());
+    for (SegmentHolder holder : initialQueue) {
+      Assertions.assertEquals(SegmentAction.REPLICATE, holder.getAction());
+    }
+
+    // Now remove a couple of segments from historicalT11
+    final Set<DataSegment> missingSegments = Set.of(segments.get(1), segments.get(5));
+    missingSegments.forEach(segment -> historicalT11.removeDataSegment(segment.getId()));
+
+    runCoordinatorCycle();
+
+    // Verify that the missing segments have been moved up the queue
+    final List<SegmentHolder> updatedQueue = getQueuedSegments(historicalT12);
+    Assertions.assertEquals(10, updatedQueue.size());
+    for (int i = 0; i < 2; ++i) {
+      final SegmentHolder holder = updatedQueue.get(i);
+      Assertions.assertEquals(SegmentAction.LOAD, holder.getAction());
+      Assertions.assertTrue(missingSegments.contains(holder.getSegment()));
+    }
+    for (int i = 2; i < segments.size(); ++i) {
+      Assertions.assertEquals(SegmentAction.REPLICATE, updatedQueue.get(i).getAction());
+    }
   }
 
   @Test

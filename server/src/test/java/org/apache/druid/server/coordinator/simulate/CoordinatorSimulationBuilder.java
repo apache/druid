@@ -61,6 +61,7 @@ import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
@@ -362,6 +363,14 @@ public class CoordinatorSimulationBuilder
           env.executorFactory.loadCallbackExecutor.finishAllPendingTasks();
         }
       }
+    }
+
+    @Override
+    public List<SegmentHolder> getQueuedSegments(DruidServer server)
+    {
+      return coordinator.getLoadManagementPeons()
+                        .get(server.getName())
+                        .getSegmentsInQueue();
     }
 
     @Override

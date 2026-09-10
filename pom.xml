@@ -85,11 +85,11 @@
         <avatica.version>1.28.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
-        <bytebuddy.version>1.18.12</bytebuddy.version>
+        <bytebuddy.version>1.18.13</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
-        <calcite.version>1.41.0</calcite.version>
+        <calcite.version>1.42.0</calcite.version>
         <confluent.version>8.3.1</confluent.version>
         <cronutils.version>9.2.1</cronutils.version>
         <datasketches.version>4.2.0</datasketches.version>
@@ -98,13 +98,13 @@
         <dropwizard.metrics.version>4.2.40</dropwizard.metrics.version>
         <errorprone.annotations.version>2.50.0</errorprone.annotations.version>
         <errorprone.version>2.50.0</errorprone.version>
-        <fabric8.version>7.8.0</fabric8.version>
+        <fabric8.version>7.9.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>33.7.1-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
         <iceberg.core.version>1.11.0</iceberg.core.version>
-        <jetty.version>12.1.12</jetty.version>
+        <jetty.version>12.1.13</jetty.version>
         <jspecify.version>1.0.1</jspecify.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.22.2</jackson.version>
@@ -117,7 +117,7 @@
         <postgresql.version>42.7.13</postgresql.version>
         <protobuf.version>4.36.1</protobuf.version>
         <resilience4j.version>2.4.0</resilience4j.version>
-        <slf4j.version>2.0.18</slf4j.version>
+        <slf4j.version>2.0.19</slf4j.version>
         <jna.version>5.19.1</jna.version>
         <jna-platform.version>5.19.1</jna-platform.version>
         <hadoop.compile.version>3.5.0</hadoop.compile.version>
@@ -126,7 +126,7 @@
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
-        <aws.sdk.v2.version>2.54.10</aws.sdk.v2.version>
+        <aws.sdk.v2.version>2.54.13</aws.sdk.v2.version>
         <caffeine.version>3.2.4</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
@@ -139,7 +139,7 @@
         <com.google.apis.client.version>2.7.2</com.google.apis.client.version>
         <com.google.http.client.apis.version>2.2.0</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.cloud.storage.version>2.72.0</com.google.cloud.storage.version>
+        <com.google.cloud.storage.version>2.73.0</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine>
             <!-- Strong encapsulation parameters -->
             <!-- When updating this list, update all four locations: -->
@@ -430,6 +430,14 @@
                 <version>3.8.7</version>
             </dependency>
 
+            <!-- transitive dependency of calcite-core and avatica-core, which require different
+            versions; pinned to the higher of the two -->
+            <dependency>
+                <groupId>org.jooq</groupId>
+                <artifactId>joou-java-6</artifactId>
+                <version>0.9.5</version>
+            </dependency>
+
             <!-- transitive dependency of kafka-clients and kubernetes client
             this should get resolved with the update of above depdendencies -->
             <dependency>
@@ -496,12 +504,12 @@
             <dependency>
                 <groupId>com.squareup.okio</groupId>
                 <artifactId>okio</artifactId>
-                <version>3.18.1</version>
+                <version>3.18.2</version>
             </dependency>
             <dependency>
                 <groupId>com.squareup.okio</groupId>
                 <artifactId>okio-jvm</artifactId>
-                <version>3.18.1</version>
+                <version>3.18.2</version>
             </dependency>
             <dependency>
                 <groupId>redis.clients</groupId>
@@ -1111,7 +1119,7 @@
             <dependency>
                 <groupId>net.thisptr</groupId>
                 <artifactId>jackson-jq</artifactId>
-                <version>1.6.3</version>
+                <version>1.6.4</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -1121,7 +1129,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>1.6.20</version>
+                <version>1.6.21</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>
@@ -1714,7 +1722,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.10.4.0</version>
+                <version>4.10.4.1</version>
                 <configuration>
                     <excludeFilterFile>codestyle/spotbugs-exclude.xml</excludeFilterFile>
                     <maxHeap>768</maxHeap>
