@@ -197,11 +197,29 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         // HTTP status of the initial response, remembered so that an HTML body first seen in a later chunk of a
         // 429/503 reply is still reported as capacity-exceeded rather than as a generic HTML-instead-of-JSON error.
         private volatile int responseStatusCode = -1;
-        private final AtomicReference<String> fail = new AtomicReference<>();
-        // The original exception behind fail, when one exists (e.g. the QueryCapacityExceededException thrown by
-        // failIfNonJsonBody from a later chunk). Consulted so a typed exception isn't demoted to a plain RE/IOException
-        // once the transport layer has already moved on to exceptionCaught.
-        private final AtomicReference<Throwable> failCause = new AtomicReference<>();
+        // Message and (when available) original exception for a read failure, published together through a single
+        // reference so a reader that observes a non-null Failure also sees its cause. Publishing them as two
+        // separate AtomicReferences (a "fail" flag written before a "failCause" detail) would let a concurrent
+        // SequenceInputStream callback observe the flag before the cause and fall back to a generic RE, losing a
+        // typed exception like QueryCapacityExceededException thrown by failIfNonJsonBody from a later chunk.
+        private final AtomicReference<Failure> failure = new AtomicReference<>();
+
+        /**
+         * Immutable pairing of a failure message with its originating exception, when one exists. Published as a
+         * single unit through {@link #failure} so the message and cause are always visible together.
+         */
+        private static final class Failure
+        {
+          private final String message;
+          private final Throwable cause;
+
+          private Failure(String message, Throwable cause)
+          {
+            this.message = message;
+            this.cause = cause;
+          }
+        }
+
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
 
         private QueryMetrics<? super Query<T>> queryMetrics;
@@ -314,33 +332,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         }
 
         /**
-         * Returns up to 256 characters of {@code buffer} (read from at most its first 512 bytes) for inclusion in an
-         * error message, without consuming the buffer. Control characters, including CR/LF, are stripped so the
-         * preview can't forge extra lines into a log record or the message it's embedded in.
-         */
-        private String bodyPreview(ChannelBuffer buffer)
-        {
-          final int len = Math.min(buffer.readableBytes(), 512);
-          if (len == 0) {
-            return "";
-          }
-          final byte[] previewBytes = new byte[len];
-          buffer.getBytes(buffer.readerIndex(), previewBytes);
-          final String preview = StringUtils.fromUtf8(previewBytes);
-          final StringBuilder sanitized = new StringBuilder(Math.min(preview.length(), 256));
-          for (int i = 0; i < preview.length() && sanitized.length() < 256; i++) {
-            final char c = preview.charAt(i);
-            sanitized.append(c >= 0x20 && c != 0x7f ? c : ' ');
-          }
-          return sanitized.toString();
-        }
-
-        /**
          * Fails the query because the response body is not JSON, typically an error page produced by a load balancer
          * or reverse proxy sitting in front of the data server. A 429/503 status is reported as
          * {@link QueryCapacityExceededException} since that is what such intermediaries return when the server is
          * over capacity; any other status is reported as a {@link QueryInterruptedException}. Either way, the caller
          * gets a message that says what actually came back instead of a {@code JsonParseException} on {@code '<'}.
+         * <p>
+         * The exception message never includes the body itself. The broker-to-data-server response is not a trusted
+         * boundary (it can be an error page from any proxy sitting in between), and this message is logged by
+         * {@link JsonParserIterator} and can reach the query error/trailer, so it is limited to bounded, sanitized
+         * metadata: HTTP status, Content-Type when present, and the body length.
          *
          * @param statusCode  HTTP status of the initial response
          * @param contentType Content-Type header of the initial response, possibly null
@@ -356,31 +357,34 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             boolean isHtml
         )
         {
-          final String preview = bodyPreview(buffer);
           final String where = chunkNum > 0 ? StringUtils.format(" (detected in chunk[%d])", chunkNum) : "";
+          final String bodyInfo = StringUtils.format(
+              "contentType[%s] bodyLength[%d]",
+              contentType,
+              buffer.readableBytes()
+          );
           if (statusCode == 429 || statusCode == 503) {
             throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
                 StringUtils.format(
-                    "Query[%s] url[%s] failed with status[%s]%s: %s",
+                    "Query[%s] url[%s] failed with status[%s]%s %s",
                     query.getId(),
                     url,
                     statusCode,
                     where,
-                    preview
+                    bodyInfo
                 )
             );
           }
           throw new QueryInterruptedException(
               QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
               StringUtils.format(
-                  "Query[%s] url[%s] returned %s response instead of JSON with status[%s] contentType[%s]%s preview[%s]",
+                  "Query[%s] url[%s] returned %s response instead of JSON with status[%s]%s %s",
                   query.getId(),
                   url,
                   isHtml ? "HTML" : "non-JSON",
                   statusCode,
-                  contentType,
                   where,
-                  preview
+                  bodyInfo
               ),
               QueryInterruptedException.class.getName(),
               host
@@ -454,7 +458,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       if (discard.get()) {
                         return false;
                       }
-                      if (fail.get() != null) {
+                      if (failure.get() != null) {
                         throw failureException();
                       }
                       checkQueryTimeout();
@@ -469,7 +473,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     @Override
                     public InputStream nextElement()
                     {
-                      if (fail.get() != null) {
+                      if (failure.get() != null) {
                         throw failureException();
                       }
 
@@ -599,8 +603,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private void setupResponseReadFailure(String msg, Throwable th)
         {
           emitNodeMetrics(System.nanoTime() - requestStartTimeNs);
-          fail.set(msg);
-          failCause.set(th);
+          // Publish message and cause together as one Failure so a reader that observes a non-null failure()
+          // always sees the cause that goes with it; see the field comment on failure.
+          failure.set(new Failure(msg, th));
           queue.clear();
           queue.offer(
               InputStreamHolder.fromStream(
@@ -629,17 +634,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         /**
          * Returns the exception to surface for a failure recorded by {@link #setupResponseReadFailure}. Rethrows the
-         * original {@link #failCause} directly when it is already an unchecked exception (e.g. the
+         * original cause directly when it is already an unchecked exception (e.g. the
          * {@link QueryCapacityExceededException} thrown from {@link #handleChunk} on a later chunk) so its concrete
-         * type survives to the caller instead of being flattened into a plain {@link RE}.
+         * type survives to the caller instead of being flattened into a plain {@link RE}. Only called after
+         * confirming {@link #failure} is non-null, so the message and cause it reads are always the ones from the
+         * same {@link Failure} publication.
          */
         private RuntimeException failureException()
         {
-          final Throwable cause = failCause.get();
-          if (cause instanceof RuntimeException) {
-            return (RuntimeException) cause;
+          final Failure f = failure.get();
+          if (f.cause instanceof RuntimeException) {
+            return (RuntimeException) f.cause;
           }
-          return new RE(fail.get());
+          return new RE(f.message);
         }
 
         // Emit exactly once, regardless of whether we reach this via done() or setupResponseReadFailure().

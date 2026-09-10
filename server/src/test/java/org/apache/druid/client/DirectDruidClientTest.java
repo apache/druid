@@ -429,7 +429,8 @@ public class DirectDruidClientTest
         () -> client.run(queryPlus, responseContext)
     );
     Assertions.assertTrue(e.getMessage().contains("status[503]"), e.getMessage());
-    Assertions.assertTrue(e.getMessage().contains("<html>"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("contentType[text/html]"), e.getMessage());
+    Assertions.assertFalse(e.getMessage().contains("<html>"), e.getMessage());
   }
 
   @Test
@@ -470,7 +471,9 @@ public class DirectDruidClientTest
   @Test
   public void testPlainText503IsCapacityExceeded()
   {
-    // Not every proxy error page is HTML: Envoy, for one, returns a plain-text body with a 503.
+    // Not every proxy error page is HTML: Envoy, for one, returns a plain-text body with a 503. The body itself is
+    // never echoed into the message (see testNonJsonBodyMessageContainsNoRawBodyBytes); this checks the status and
+    // Content-Type metadata that stands in for it.
     final DirectDruidClient client = makeDirectDruidClient(
         new ScriptedHttpClient(HttpResponseStatus.SERVICE_UNAVAILABLE, "text/plain", "upstream connect error or disconnect/reset before headers")
     );
@@ -480,19 +483,23 @@ public class DirectDruidClientTest
         QueryCapacityExceededException.class,
         () -> client.run(queryPlus, responseContext)
     );
-    Assertions.assertTrue(e.getMessage().contains("upstream connect error"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("status[503]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("contentType[text/plain]"), e.getMessage());
+    Assertions.assertFalse(e.getMessage().contains("upstream connect error"), e.getMessage());
   }
 
   @Test
-  public void testBodyPreviewStripsControlCharacters()
+  public void testNonJsonBodyMessageContainsNoRawBodyBytes()
   {
-    // The preview embedded in the exception message must not let CR/LF (or other control bytes) from the upstream
-    // body forge extra lines into a log record or the message itself.
+    // The exception message must never echo the upstream body itself: the broker-to-data-server response is not a
+    // trusted boundary, and this message is logged by JsonParserIterator and can reach the query error/trailer. It
+    // is limited to bounded sanitized metadata instead: HTTP status, Content-Type, and body length.
+    final String body = "upstream down\r\nX-Injected: evil\nsecond line";
     final DirectDruidClient client = makeDirectDruidClient(
         new ScriptedHttpClient(
             HttpResponseStatus.SERVICE_UNAVAILABLE,
             "text/plain",
-            "upstream down\r\nX-Injected: evil\nsecond line"
+            body
         )
     );
 
@@ -501,10 +508,17 @@ public class DirectDruidClientTest
         QueryCapacityExceededException.class,
         () -> client.run(queryPlus, responseContext)
     );
+    Assertions.assertFalse(e.getMessage().contains("upstream down"), e.getMessage());
+    Assertions.assertFalse(e.getMessage().contains("X-Injected"), e.getMessage());
+    Assertions.assertFalse(e.getMessage().contains("second line"), e.getMessage());
     Assertions.assertFalse(e.getMessage().contains("\r"), e.getMessage());
     Assertions.assertFalse(e.getMessage().contains("\n"), e.getMessage());
-    Assertions.assertTrue(e.getMessage().contains("upstream down"), e.getMessage());
-    Assertions.assertTrue(e.getMessage().contains("X-Injected: evil"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("status[503]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("contentType[text/plain]"), e.getMessage());
+    Assertions.assertTrue(
+        e.getMessage().contains("bodyLength[" + StringUtils.toUtf8(body).length + "]"),
+        e.getMessage()
+    );
   }
 
   @Test
