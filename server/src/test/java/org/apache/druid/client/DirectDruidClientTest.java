@@ -20,6 +20,8 @@
 package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -84,6 +86,7 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
@@ -481,6 +484,30 @@ public class DirectDruidClientTest
   }
 
   @Test
+  public void testBodyPreviewStripsControlCharacters()
+  {
+    // The preview embedded in the exception message must not let CR/LF (or other control bytes) from the upstream
+    // body forge extra lines into a log record or the message itself.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(
+            HttpResponseStatus.SERVICE_UNAVAILABLE,
+            "text/plain",
+            "upstream down\r\nX-Injected: evil\nsecond line"
+        )
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryCapacityExceededException e = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertFalse(e.getMessage().contains("\r"), e.getMessage());
+    Assertions.assertFalse(e.getMessage().contains("\n"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("upstream down"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("X-Injected: evil"), e.getMessage());
+  }
+
+  @Test
   public void testJson503IsNotShortCircuited()
   {
     // A 503 carrying Druid's own JSON error body must take the normal JSON error path so the server's message
@@ -502,20 +529,96 @@ public class DirectDruidClientTest
     Assertions.assertEquals("backend says no", e.getMessage());
   }
 
+  @Test
+  public void testSmile503IsNotShortCircuited() throws IOException
+  {
+    // Same as testJson503IsNotShortCircuited, but for the Smile ObjectMapper DirectDruidClientFactory actually
+    // injects in production. A Smile-encoded structured error body starts with the Smile format header byte (0x3a),
+    // not '{'/'[', and must not be misclassified as a non-JSON proxy error page.
+    final ObjectMapper smileObjectMapper = new DefaultObjectMapper(new SmileFactory(), null);
+    final byte[] smileBody = smileObjectMapper.writeValueAsBytes(
+        new QueryException("Unknown exception", "backend says no", "x", "h")
+    );
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(
+            HttpResponseStatus.SERVICE_UNAVAILABLE,
+            SmileMediaTypes.APPLICATION_JACKSON_SMILE,
+            false,
+            smileBody
+        ),
+        smileObjectMapper
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryException e = Assertions.assertThrows(
+        QueryException.class,
+        () -> client.run(queryPlus, responseContext).toList()
+    );
+    Assertions.assertFalse(e instanceof QueryCapacityExceededException, e.getClass().getName());
+    Assertions.assertEquals("backend says no", e.getMessage());
+  }
+
+  @Test
+  public void testHtml503InLaterChunkAfterFinishedInitialResponseIsCapacityExceeded()
+  {
+    // Reproduces the real NettyHttpClient lifecycle instead of the simplified one the other later-chunk tests use:
+    // handleResponse always returns an already-finished ClientResponse, so the transport's future is completed
+    // before any chunk is seen, and a later chunk's exception can only reach the caller through exceptionCaught.
+    // Before the fix, that path re-wrapped the QueryCapacityExceededException thrown by handleChunk into a plain
+    // RE (or, via the queued failure InputStream, an IOException), losing the original type entirely.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(
+            HttpResponseStatus.SERVICE_UNAVAILABLE,
+            null,
+            true,
+            StringUtils.toUtf8(""),
+            StringUtils.toUtf8("<html><body>503</body></html>")
+        )
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryCapacityExceededException e = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> client.run(queryPlus, responseContext).toList()
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[503]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("detected in chunk[1]"), e.getMessage());
+  }
+
   /**
    * An {@link HttpClient} that feeds the handler a scripted response synchronously: the initial {@link HttpResponse}
    * carries {@code bodies[0]} and each subsequent element is delivered as an {@link HttpChunk}.
+   * <p>
+   * By default, an exception thrown out of {@code handleChunk} is simply allowed to propagate out of {@link #go},
+   * which is adequate for testing the classification logic itself. Constructing with
+   * {@code routeChunkExceptionsThroughExceptionCaught=true} instead mirrors what
+   * {@code NettyHttpClient#messageReceived} actually does: since {@link DirectDruidClient#handleResponse} always
+   * returns an already-{@link ClientResponse#isFinished() finished} response, the future is completed with that
+   * object up front, and a later chunk's exception can only reach the handler via
+   * {@link HttpResponseHandler#exceptionCaught}, not by replacing the future's result.
    */
   private static class ScriptedHttpClient implements HttpClient
   {
     private final HttpResponseStatus status;
     private final String contentType;
-    private final String[] bodies;
+    private final boolean routeChunkExceptionsThroughExceptionCaught;
+    private final byte[][] bodies;
 
     ScriptedHttpClient(HttpResponseStatus status, String contentType, String... bodies)
     {
+      this(status, contentType, false, Arrays.stream(bodies).map(StringUtils::toUtf8).toArray(byte[][]::new));
+    }
+
+    ScriptedHttpClient(
+        HttpResponseStatus status,
+        String contentType,
+        boolean routeChunkExceptionsThroughExceptionCaught,
+        byte[]... bodies
+    )
+    {
       this.status = status;
       this.contentType = contentType;
+      this.routeChunkExceptionsThroughExceptionCaught = routeChunkExceptionsThroughExceptionCaught;
       this.bodies = bodies;
     }
 
@@ -536,12 +639,31 @@ public class DirectDruidClientTest
       if (contentType != null) {
         response.headers().set(HttpHeaders.Names.CONTENT_TYPE, contentType);
       }
-      response.setContent(ChannelBuffers.wrappedBuffer(StringUtils.toUtf8(bodies[0])));
+      response.setContent(ChannelBuffers.wrappedBuffer(bodies[0]));
       response.setChunked(bodies.length > 1);
       ClientResponse<Intermediate> clientResponse = handler.handleResponse(response, TestHttpClient.NOOP_TRAFFIC_COP);
+      final boolean initialResponseFinished = clientResponse.isFinished();
+      final Intermediate initialResponseObj = clientResponse.getObj();
       for (int i = 1; i < bodies.length; i++) {
-        final HttpChunk chunk = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(StringUtils.toUtf8(bodies[i])));
-        clientResponse = handler.handleChunk(clientResponse, chunk, i);
+        final HttpChunk chunk = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(bodies[i]));
+        if (!routeChunkExceptionsThroughExceptionCaught) {
+          clientResponse = handler.handleChunk(clientResponse, chunk, i);
+          continue;
+        }
+        try {
+          clientResponse = handler.handleChunk(clientResponse, chunk, i);
+        }
+        catch (RuntimeException e) {
+          handler.exceptionCaught(clientResponse, e);
+          if (initialResponseFinished) {
+            // retVal was already completed by handleResponse; the caller only learns about this exception by
+            // reading the already-vended stream, same as real NettyHttpClient.
+            @SuppressWarnings("unchecked")
+            final Final alreadyCompletedResult = (Final) initialResponseObj;
+            return Futures.immediateFuture(alreadyCompletedResult);
+          }
+          throw e;
+        }
       }
       return Futures.immediateFuture(handler.done(clientResponse).getObj());
     }
@@ -549,15 +671,25 @@ public class DirectDruidClientTest
 
   private DirectDruidClient makeDirectDruidClient(HttpClient httpClient)
   {
-    return makeDirectDruidClient(httpClient, new NoopServiceEmitter());
+    return makeDirectDruidClient(httpClient, objectMapper, new NoopServiceEmitter());
   }
 
   private DirectDruidClient makeDirectDruidClient(HttpClient httpClient, ServiceEmitter emitter)
   {
+    return makeDirectDruidClient(httpClient, objectMapper, emitter);
+  }
+
+  private DirectDruidClient makeDirectDruidClient(HttpClient httpClient, ObjectMapper clientObjectMapper)
+  {
+    return makeDirectDruidClient(httpClient, clientObjectMapper, new NoopServiceEmitter());
+  }
+
+  private DirectDruidClient makeDirectDruidClient(HttpClient httpClient, ObjectMapper clientObjectMapper, ServiceEmitter emitter)
+  {
     return new DirectDruidClient(
         conglomerateRule.getConglomerate(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        objectMapper,
+        clientObjectMapper,
         httpClient,
         "http",
         hostName,

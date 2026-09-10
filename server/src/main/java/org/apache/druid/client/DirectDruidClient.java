@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileConstants;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Preconditions;
@@ -197,6 +198,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         // 429/503 reply is still reported as capacity-exceeded rather than as a generic HTML-instead-of-JSON error.
         private volatile int responseStatusCode = -1;
         private final AtomicReference<String> fail = new AtomicReference<>();
+        // The original exception behind fail, when one exists (e.g. the QueryCapacityExceededException thrown by
+        // failIfNonJsonBody from a later chunk). Consulted so a typed exception isn't demoted to a plain RE/IOException
+        // once the transport layer has already moved on to exceptionCaught.
+        private final AtomicReference<Throwable> failCause = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
 
         private QueryMetrics<? super Query<T>> queryMetrics;
@@ -279,10 +284,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         /**
          * Classifies the body prefix in {@code buffer} (see {@link #bodyPrefixByte}) and fails the query if it is not
-         * JSON. HTML always fails; any other non-JSON body fails only when the status is 429/503, since Druid itself
-         * never sends a non-JSON body with those statuses but proxies routinely do (an HTML error page from nginx or
-         * a load balancer, a plain-text "upstream connect error" from Envoy). A JSON body, whatever the status, is
-         * left alone so that the normal parse path can surface the server's own structured error.
+         * JSON (or Smile, when the request was sent as Smile per {@link #isSmile}). HTML always fails; any other
+         * non-JSON/non-Smile body fails only when the status is 429/503, since Druid itself never sends such a body
+         * with those statuses but proxies routinely do (an HTML error page from nginx or a load balancer, a
+         * plain-text "upstream connect error" from Envoy). A structured body in the request's own format, whatever
+         * the status, is left alone so that the normal parse path can surface the server's own structured error.
          *
          * @param contentType Content-Type header of the initial response, possibly null; a text/html value fails the
          *                    query regardless of the body prefix
@@ -294,7 +300,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               contentType != null && StringUtils.toLowerCase(contentType).contains("text/html");
           final Byte prefix = bodyPrefixByte(buffer);
           final boolean isHtml = isHtmlContentType || (prefix != null && prefix == '<');
-          final boolean isNonJson = prefix != null && prefix != '{' && prefix != '[';
+          // A data server negotiates its response format from the request (ResourceIOReaderWriterFactory#factorize),
+          // so a Smile request gets a Smile response, error bodies included; those begin with the Smile format
+          // header's 0x3a byte rather than JSON's '{'/'['. Checking only '{'/'[' here would misclassify every
+          // structured Smile 429/503 body as non-JSON and discard the server's real error.
+          final boolean isNonJson = isSmile
+                                     ? prefix != null && prefix != SmileConstants.HEADER_BYTE_1
+                                     : prefix != null && prefix != '{' && prefix != '[';
           final int statusCode = responseStatusCode;
           if (isHtml || (isNonJson && (statusCode == 429 || statusCode == 503))) {
             throwForNonJsonBody(statusCode, contentType, buffer, chunkNum, isHtml);
@@ -303,7 +315,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         /**
          * Returns up to 256 characters of {@code buffer} (read from at most its first 512 bytes) for inclusion in an
-         * error message, without consuming the buffer.
+         * error message, without consuming the buffer. Control characters, including CR/LF, are stripped so the
+         * preview can't forge extra lines into a log record or the message it's embedded in.
          */
         private String bodyPreview(ChannelBuffer buffer)
         {
@@ -314,7 +327,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final byte[] previewBytes = new byte[len];
           buffer.getBytes(buffer.readerIndex(), previewBytes);
           final String preview = StringUtils.fromUtf8(previewBytes);
-          return preview.substring(0, Math.min(preview.length(), 256));
+          final StringBuilder sanitized = new StringBuilder(Math.min(preview.length(), 256));
+          for (int i = 0; i < preview.length() && sanitized.length() < 256; i++) {
+            final char c = preview.charAt(i);
+            sanitized.append(c >= 0x20 && c != 0x7f ? c : ' ');
+          }
+          return sanitized.toString();
         }
 
         /**
@@ -437,7 +455,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                         return false;
                       }
                       if (fail.get() != null) {
-                        throw new RE(fail.get());
+                        throw failureException();
                       }
                       checkQueryTimeout();
 
@@ -452,7 +470,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     public InputStream nextElement()
                     {
                       if (fail.get() != null) {
-                        throw new RE(fail.get());
+                        throw failureException();
                       }
 
                       try {
@@ -582,6 +600,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           emitNodeMetrics(System.nanoTime() - requestStartTimeNs);
           fail.set(msg);
+          failCause.set(th);
           queue.clear();
           queue.offer(
               InputStreamHolder.fromStream(
@@ -590,7 +609,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     @Override
                     public int read() throws IOException
                     {
-                      if (th != null) {
+                      if (th instanceof RuntimeException) {
+                        // Rethrow a typed failure (e.g. QueryCapacityExceededException) as itself rather than
+                        // burying it as the cause of a generic IOException, where it would otherwise only be
+                        // recoverable by callers that specifically unwrap getCause().
+                        throw (RuntimeException) th;
+                      } else if (th != null) {
                         throw new IOException(msg, th);
                       } else {
                         throw new IOException(msg);
@@ -601,6 +625,21 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   0
               )
           );
+        }
+
+        /**
+         * Returns the exception to surface for a failure recorded by {@link #setupResponseReadFailure}. Rethrows the
+         * original {@link #failCause} directly when it is already an unchecked exception (e.g. the
+         * {@link QueryCapacityExceededException} thrown from {@link #handleChunk} on a later chunk) so its concrete
+         * type survives to the caller instead of being flattened into a plain {@link RE}.
+         */
+        private RuntimeException failureException()
+        {
+          final Throwable cause = failCause.get();
+          if (cause instanceof RuntimeException) {
+            return (RuntimeException) cause;
+          }
+          return new RE(fail.get());
         }
 
         // Emit exactly once, regardless of whether we reach this via done() or setupResponseReadFailure().
