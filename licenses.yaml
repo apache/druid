@@ -4647,6 +4647,32 @@ libraries:
 
 ---
 
+name: CEL Java
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.13.0
+libraries:
+  - dev.cel: common
+  - dev.cel: protobuf
+  - dev.cel: runtime
+
+---
+
+name: ThreeTen Extra
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 1.8.0
+libraries:
+  - org.threeten: threeten-extra
+notices:
+  - threeten-extra: |
+      ThreeTen-Extra
+      Copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos.
+
+---
+
 name: listenablefuture
 license_category: binary
 module: extensions/druid-google-extensions
