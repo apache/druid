@@ -565,6 +565,12 @@ public class PlannerConfig
           String.valueOf(requireTimeCondition)
       );
     }
+    if (def.maxPlanningTimeMs != maxPlanningTimeMs) {
+      overrides.put(
+          CTX_KEY_MAX_PLANNING_TIME_MS,
+          maxPlanningTimeMs
+      );
+    }
 
     PlannerConfig newConfig = PlannerConfig.builder().withOverrides(overrides).build();
     if (!equals(newConfig)) {
