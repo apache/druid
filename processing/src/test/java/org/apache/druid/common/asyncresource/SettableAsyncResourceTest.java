@@ -222,16 +222,18 @@ public class SettableAsyncResourceTest
   }
 
   @Test
-  public void testSetExceptionRejectsTheCancellationType()
+  public void testSetExceptionPassesTheCancellationTypeThrough()
   {
     final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    final AsyncResourceCanceledException canceled = new AsyncResourceCanceledException("canceled upstream");
 
-    // Only close() may cancel a resource; a producer claiming cancellation would make the type useless to consumers.
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> resource.setException(new AsyncResourceCanceledException("not the producer's to throw"))
-    );
-    Assertions.assertFalse(resource.isReady(), "a rejected setException must not complete the resource");
+    // Wrappers forward a closed source's cancellation to their own target verbatim, so this type is accepted like any
+    // other error rather than being reserved for close(). It then means "something upstream was closed before it was
+    // ready", which is still what tells RecoverAsyncResource apart from a load canceled under a waiting consumer.
+    resource.setException(canceled);
+
+    Assertions.assertTrue(resource.isReady());
+    Assertions.assertSame(canceled, Assertions.assertThrows(AsyncResourceCanceledException.class, resource::get));
   }
 
   @Test
@@ -240,8 +242,8 @@ public class SettableAsyncResourceTest
     final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
     resource.close();
 
-    // Wrappers propagate a closed source's cancellation to their own already-closed target on ordinary cancel paths.
-    // That has to stay a silent no-op rather than an exception thrown from inside a ready callback.
+    // Wrappers propagate a closed source's cancellation to their own already-closed target on ordinary cancel paths,
+    // where it is dropped like any other late error.
     resource.setException(new AsyncResourceCanceledException("propagated from a closed source"));
     Assertions.assertThrows(AsyncResourceCanceledException.class, resource::get);
   }

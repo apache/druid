@@ -98,8 +98,15 @@ public class AsyncResources
    * Returns an {@link AsyncResource} backed by a {@link ListenableFuture} whose result <b>owns a lifecycle</b>: it
    * becomes ready when the future completes, exposing the result via {@link AsyncResource#get()}, and the result is
    * managed as a {@link Closeable}. Closing the resource closes the result, and a result that completes <i>after</i>
-   * the resource was already closed (a cancel/close-vs-completion race) is closed rather than leaked. Closing the
-   * returned resource before the future completes cancels the future ({@code cancel(true)}).
+   * the resource was already closed is closed rather than leaked.
+   *
+   * <p>Closing the returned resource deliberately does <b>not</b> cancel the future. Cancellation is what makes
+   * futures-of-closeables unsafe in the first place: a task that produces its value anyway hands it to a canceled
+   * future, which drops it silently, and nothing is left to close it. Leaving the future alone means the result
+   * always arrives through the callback below, which closes it when the resource is already gone. The cost is that
+   * work already submitted runs to completion; a producer that wants real cancellation should populate a
+   * {@link SettableAsyncResource} itself and give it a {@link SettableAsyncResource#setCanceler canceler} that can
+   * abort safely.
    *
    * <p>This is the managed counterpart of {@link #fromFutureUnmanaged}; use that for a future whose result is a plain
    * value or a completion signal with no lifecycle.
@@ -107,7 +114,6 @@ public class AsyncResources
   public static <T extends Closeable> AsyncResource<T> fromFutureCloseable(final ListenableFuture<T> future)
   {
     final SettableAsyncResource<T> retVal = new SettableAsyncResource<>();
-    retVal.setCanceler(() -> future.cancel(true));
     Futures.addCallback(
         future,
         new FutureCallback<>()
@@ -115,7 +121,7 @@ public class AsyncResources
           @Override
           public void onSuccess(T result)
           {
-            // Lost the race with close()/cancel(): the resource is already closed, so set() returns false and we own
+            // Lost the race with close(): the resource is already closed, so set() returns false and we own
             // closing the now-orphaned result.
             if (!retVal.set(ResourceHolder.fromCloseable(result))) {
               CloseableUtils.closeAndSuppressExceptions(result, ignored -> {});
