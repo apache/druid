@@ -236,9 +236,9 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
           pipeline.addFirst("ssl", sslHandler);
           sslHandler.handshakeFuture().addListener(f2 -> {
             if (f2.isSuccess()) {
-              handshakePromise.setSuccess();
+              handshakePromise.trySuccess();
             } else {
-              handshakePromise.setFailure(
+              handshakePromise.tryFailure(
                   new ChannelException(
                       StringUtils.format("Failed to handshake with host[%s]", hostname),
                       f2.cause()
@@ -247,7 +247,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
             }
           });
         } else {
-          handshakePromise.setFailure(
+          handshakePromise.tryFailure(
               new ChannelException(
                   StringUtils.format("Failed to connect to host[%s]", hostname),
                   f.cause()
@@ -325,13 +325,13 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
           final ChannelException e2 =
               new ChannelException(StringUtils.format("Channel is null. The context name is [%s]", ctx.name()));
           e2.addSuppressed(cause);
-          promise.setFailure(e2);
+          promise.tryFailure(e2);
         }
         return;
       }
 
-      if (promise != null && !promise.isDone()) {
-        promise.setFailure(cause);
+      if (promise != null) {
+        promise.tryFailure(cause);
       }
 
       // Close the channel if this is the last handler. Otherwise, we expect that NettyHttpClient would have added

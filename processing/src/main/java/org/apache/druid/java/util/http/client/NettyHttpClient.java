@@ -41,7 +41,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
-import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.util.ReferenceCountUtil;
 import org.apache.druid.java.util.common.IAE;
@@ -119,14 +118,29 @@ public class NettyHttpClient extends AbstractHttpClient
     final Channel channel;
     final String hostKey = getPoolKey(url);
     final ResourceContainer<ChannelFuture> channelResourceContainer = pool.take(hostKey);
-    // ResourcePool.take is documented as blocking, but a null return is possible on pool exhaustion or shutdown;
-    // fail fast rather than NPE on the awaitUninterruptibly() below.
+    // pool.take() returns null only when the pool is closed (the HttpClient has been stopped); that path
+    // already logs at ERROR inside ResourcePool. Surface it here so the caller sees a real exception
+    // instead of an NPE.
     if (channelResourceContainer == null) {
       return Futures.immediateFailedFuture(
-          new ChannelException(StringUtils.format("Connection pool exhausted or timed out for host[%s]", hostKey))
+          new ChannelException(
+              StringUtils.format("HttpClient is closed; cannot obtain a channel for host[%s]", hostKey)
+          )
       );
     }
-    final ChannelFuture channelFuture = channelResourceContainer.get().awaitUninterruptibly();
+    // channelResourceContainer.get() itself can be null when the underlying holder was interrupted (or
+    // the pool was closed) while waiting for capacity; in either case the pool never incremented its
+    // lent-resources count, so we do NOT call returnResource() (which would NPE inside giveBack); we
+    // just fail the request.
+    final ChannelFuture rawChannelFuture = channelResourceContainer.get();
+    if (rawChannelFuture == null) {
+      return Futures.immediateFailedFuture(
+          new ChannelException(
+              StringUtils.format("Interrupted or pool closed while waiting for a channel to host[%s]", hostKey)
+          )
+      );
+    }
+    final ChannelFuture channelFuture = rawChannelFuture.awaitUninterruptibly();
     if (!channelFuture.isSuccess()) {
       channelResourceContainer.returnResource(); // Some other poor sap will have to deal with it...
       return Futures.immediateFailedFuture(
@@ -400,17 +414,7 @@ public class NettyHttpClient extends AbstractHttpClient
             }
 
             if (!retVal.isDone()) {
-              if (t instanceof ReadTimeoutException) {
-                // ReadTimeoutHandler fires ReadTimeoutException.INSTANCE, a shared singleton whose stack
-                // trace was captured once at class load and points at whichever code first touched Netty's
-                // class initializer. Emit a fresh instance so the stack trace reflects this actual timeout.
-                if (log.isDebugEnabled()) {
-                  log.debug("[%s] Read timed out", requestDesc);
-                }
-                retVal.setException(new ReadTimeoutException());
-              } else {
-                retVal.setException(t);
-              }
+              retVal.setException(t);
             }
 
             // response is non-null if we received initial chunk and then exception occurs
