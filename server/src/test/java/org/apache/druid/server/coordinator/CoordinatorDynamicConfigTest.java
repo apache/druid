@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.http;
+package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -281,6 +281,7 @@ public class CoordinatorDynamicConfigTest
         null,
         ImmutableSet.of("host1"),
         null,
+        null,
         null
     );
     Assertions.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
@@ -307,6 +308,7 @@ public class CoordinatorDynamicConfigTest
         false,
         null,
         ImmutableSet.of("host1"),
+        null,
         null,
         null
     );
