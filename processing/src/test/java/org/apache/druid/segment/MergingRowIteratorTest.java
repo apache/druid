@@ -200,21 +200,33 @@ public class MergingRowIteratorTest extends InitializedNullHandlingTest
           Stream.of(timestampSequences).map(List::iterator).collect(Collectors.toList()),
           Comparator.naturalOrder()
       );
+      long currentTimestamp = 0;
+      boolean iterated = false;
       while (expectedTimestamps.hasNext()) {
+        final long expectedTimestamp = expectedTimestamps.next();
         Assertions.assertTrue(
             mergingRowIterator.moveToNext(),
             failureMessage
         );
         Assertions.assertEquals(
-            expectedTimestamps.next(),
+            expectedTimestamp,
             mergingRowIterator.getPointer().timestampSelector.getLong(),
             failureMessage
         );
+        currentTimestamp = expectedTimestamp;
+        iterated = true;
       }
       Assertions.assertFalse(
           mergingRowIterator.moveToNext(),
           failureMessage
       );
+      if (iterated) {
+        Assertions.assertEquals(
+            currentTimestamp,
+            mergingRowIterator.getPointer().timestampSelector.getLong(),
+            failureMessage
+        );
+      }
     }
   }
 
