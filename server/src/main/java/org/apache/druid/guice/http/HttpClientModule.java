@@ -26,7 +26,6 @@ import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Module;
-import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -167,24 +166,17 @@ public class HttpClientModule implements Module
   }
 
   /**
-   * Single shared adaptive allocator, instantiated eagerly. {@link AdaptiveByteBufAllocator} has no {@code DEFAULT}
-   * singleton of its own (the inherited {@code ByteBufAllocator.DEFAULT} constant routes through
-   * {@code -Dio.netty.allocator.type}). Instantiate one here so the "adaptive" config value really is adaptive.
-   */
-  private static final ByteBufAllocator ADAPTIVE_ALLOCATOR_INSTANCE = new AdaptiveByteBufAllocator();
-
-  /**
    * Maps the {@link DruidHttpClientConfig#getAllocator()} string to a Netty {@link ByteBufAllocator}
    * instance. Update this when upgrading Netty if new versions introduce additional allocators.
    */
   private static ByteBufAllocator resolveAllocator(String name)
   {
     if (name == null) {
-      return ADAPTIVE_ALLOCATOR_INSTANCE;
+      return HttpClientConfig.DEFAULT_BYTE_BUF_ALLOCATOR;
     }
     switch (StringUtils.toLowerCase(name)) {
       case "adaptive":
-        return ADAPTIVE_ALLOCATOR_INSTANCE;
+        return HttpClientConfig.DEFAULT_BYTE_BUF_ALLOCATOR;
       case "pooled":
         return PooledByteBufAllocator.DEFAULT;
       case "unpooled":

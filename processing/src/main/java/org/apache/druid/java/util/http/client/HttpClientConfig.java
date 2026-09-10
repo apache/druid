@@ -79,8 +79,8 @@ public class HttpClientConfig
   private static final Duration DEFAULT_CONNECT_TIMEOUT_DURATION = new Period("PT10S").toStandardDuration();
 
   // Set an explicit allocator so callers know exactly what they're getting rather than depending on whatever
-  // ByteBufAllocator.DEFAULT happens to resolve to
-  private static final ByteBufAllocator DEFAULT_BYTE_BUF_ALLOCATOR = new AdaptiveByteBufAllocator();
+  // ByteBufAllocator.DEFAULT happens to resolve to.
+  public static final ByteBufAllocator DEFAULT_BYTE_BUF_ALLOCATOR = new AdaptiveByteBufAllocator();
 
   public static Builder builder()
   {

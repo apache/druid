@@ -214,7 +214,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
     // Fall back to Throwable.toString() when the exception carries no message, so a timeout
     // (Netty's ReadTimeoutException is a stackless, messageless singleton) does not render as
     // "exception msg [null]" but as "exception msg [io.netty.handler.timeout.ReadTimeoutException]"
-    // instead. Behaviour for exceptions that DO have a message is unchanged.
+    // instead.
     final String exceptionDetail = e.getMessage() != null ? e.getMessage() : e.toString();
     String msg = StringUtils.format(
         "Query[%s] failed with exception msg [%s]",
