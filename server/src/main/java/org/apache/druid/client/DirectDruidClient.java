@@ -614,11 +614,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     @Override
                     public int read() throws IOException
                     {
-                      if (th instanceof RuntimeException) {
-                        // Rethrow a typed failure (e.g. QueryCapacityExceededException) as itself rather than
+                      if (th instanceof QueryException) {
+                        // Rethrow a typed query failure (e.g. QueryCapacityExceededException) as itself rather than
                         // burying it as the cause of a generic IOException, where it would otherwise only be
-                        // recoverable by callers that specifically unwrap getCause().
-                        throw (RuntimeException) th;
+                        // recoverable by callers that specifically unwrap getCause(). Deliberately limited to
+                        // QueryException: a transport-level RuntimeException such as Netty's ChannelException from a
+                        // mid-stream disconnect must keep going out as an IOException, because that is the form
+                        // JsonParserIterator normalizes into a QueryInterruptedException carrying this client's host.
+                        throw (QueryException) th;
                       } else if (th != null) {
                         throw new IOException(msg, th);
                       } else {
@@ -634,17 +637,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         /**
          * Returns the exception to surface for a failure recorded by {@link #setupResponseReadFailure}. Rethrows the
-         * original cause directly when it is already an unchecked exception (e.g. the
+         * original cause directly when it is already a {@link QueryException} (e.g. the
          * {@link QueryCapacityExceededException} thrown from {@link #handleChunk} on a later chunk) so its concrete
-         * type survives to the caller instead of being flattened into a plain {@link RE}. Only called after
+         * type survives to the caller instead of being flattened into a plain {@link RE}. Every other cause keeps
+         * the pre-existing {@link RE} form, so a transport failure such as a mid-stream disconnect still reaches
+         * the caller with this method's message rather than as a raw Netty exception. Only called after
          * confirming {@link #failure} is non-null, so the message and cause it reads are always the ones from the
          * same {@link Failure} publication.
          */
         private RuntimeException failureException()
         {
           final Failure f = failure.get();
-          if (f.cause instanceof RuntimeException) {
-            return (RuntimeException) f.cause;
+          if (f.cause instanceof QueryException) {
+            return (QueryException) f.cause;
           }
           return new RE(f.message);
         }

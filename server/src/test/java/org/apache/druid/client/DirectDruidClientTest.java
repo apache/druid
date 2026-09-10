@@ -29,6 +29,7 @@ import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -63,6 +64,7 @@ import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -641,6 +643,69 @@ public class DirectDruidClientTest
     Assertions.assertEquals(hostName, initialResponseException.getHost());
     Assertions.assertEquals(hostName, laterChunkException.getHost());
     Assertions.assertEquals(initialResponseException.getHost(), laterChunkException.getHost());
+  }
+
+  @Test
+  public void testMidStreamTransportFailureIsNotRethrownRaw()
+  {
+    // A mid-stream disconnect is not a query error: it reaches DirectDruidClient through exceptionCaught as a plain
+    // transport RuntimeException (Netty's ChannelException here), after handleResponse has already vended the stream.
+    // Rethrowing the cause is scoped to QueryException precisely so this case keeps the pre-existing behaviour of
+    // surfacing the "Query[id] url[url] failed with exception msg [...]" wrapper, which is the only place the query
+    // id and the target url appear at all, instead of a bare ChannelException that carries neither.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new TransportFailureHttpClient(new ChannelException("connection reset by peer"))
+    );
+
+    final RE e = Assertions.assertThrows(
+        RE.class,
+        () -> client.run(getQueryPlus(), responseContext).toList()
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("failed with exception msg [connection reset by peer]"),
+        e.getMessage()
+    );
+    Assertions.assertTrue(e.getMessage().contains(hostName), e.getMessage());
+  }
+
+  /**
+   * An {@link HttpClient} that completes {@link HttpResponseHandler#handleResponse} normally, so the caller is handed
+   * a stream, and then reports a transport failure through {@link HttpResponseHandler#exceptionCaught} the way
+   * NettyHttpClient does when a connection drops mid-response.
+   */
+  private static class TransportFailureHttpClient implements HttpClient
+  {
+    private final RuntimeException transportFailure;
+
+    TransportFailureHttpClient(RuntimeException transportFailure)
+    {
+      this.transportFailure = transportFailure;
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(Request request, HttpResponseHandler<Intermediate, Final> handler)
+    {
+      return go(request, handler, null);
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler,
+        Duration readTimeout
+    )
+    {
+      final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+      response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "application/json");
+      response.setContent(ChannelBuffers.wrappedBuffer(StringUtils.toUtf8("")));
+      response.setChunked(true);
+      final ClientResponse<Intermediate> clientResponse =
+          handler.handleResponse(response, TestHttpClient.NOOP_TRAFFIC_COP);
+      handler.exceptionCaught(clientResponse, transportFailure);
+      @SuppressWarnings("unchecked")
+      final Final alreadyCompletedResult = (Final) clientResponse.getObj();
+      return Futures.immediateFuture(alreadyCompletedResult);
+    }
   }
 
   /**

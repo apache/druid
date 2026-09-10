@@ -201,7 +201,7 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
           readNextToken();
           objectCodec = jp.getCodec();
         } else if (nextToken == JsonToken.START_OBJECT) {
-          throw convertException(jp.getCodec().readValue(jp, QueryException.class));
+          throw convertException(readStructuredError());
         } else {
           String errMsg = jp.getValueAsString();
           if (errMsg != null) {
@@ -241,6 +241,23 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
   {
     try {
       return objectMapper.getFactory().createParser(is);
+    }
+    catch (QueryException e) {
+      throw convertException(e);
+    }
+  }
+
+  /**
+   * Deserializes the structured error body {@link #init()} found in place of a result array, with the same
+   * unwrapped-{@link QueryException} handling as {@link #createParser}: the body can span chunks, so a later-chunk
+   * failure can surface from inside this read rather than from the deserialized value. An exception that comes off
+   * the stream is converted here and thrown; a QueryException that was successfully deserialized is returned for the
+   * caller to convert, so neither path is converted twice.
+   */
+  private QueryException readStructuredError() throws IOException
+  {
+    try {
+      return jp.getCodec().readValue(jp, QueryException.class);
     }
     catch (QueryException e) {
       throw convertException(e);
