@@ -599,6 +599,50 @@ public class DirectDruidClientTest
     Assertions.assertTrue(e.getMessage().contains("detected in chunk[1]"), e.getMessage());
   }
 
+  @Test
+  public void testLaterChunkQueryCapacityExceededReportsSameHostAsInitialResponse()
+  {
+    // DirectDruidClient rethrows a later-chunk QueryCapacityExceededException as itself (see the previous test), but
+    // it constructs that exception with QueryCapacityExceededException.withErrorMessageAndResolvedHost(), whose host
+    // is the data server's own locally resolved hostname (or null). An initial-response QueryCapacityExceededException
+    // arriving as Druid's own structured JSON error body (the case testJson503IsNotShortCircuited also exercises, as
+    // opposed to the failIfNonJsonBody HTML/non-JSON shortcut, which throws synchronously out of handleResponse and
+    // never reaches JsonParserIterator at all) is deserialized by JsonParserIterator.init()'s START_OBJECT branch and
+    // normalized by convertException to DirectDruidClient.host. Unless the later-chunk exception is also routed
+    // through convertException, the two report different hosts for the same logical failure. This asserts they
+    // match, both landing on DirectDruidClient's own configured host (hostName), not the data server's.
+    final DirectDruidClient initialResponseClient = makeDirectDruidClient(
+        new ScriptedHttpClient(
+            HttpResponseStatus.SERVICE_UNAVAILABLE,
+            "application/json",
+            "{\"error\":\"Query capacity exceeded\",\"errorMessage\":\"too many queries\","
+            + "\"errorClass\":\"org.apache.druid.query.QueryCapacityExceededException\",\"host\":\"data-server-01:8100\"}"
+        )
+    );
+    final QueryCapacityExceededException initialResponseException = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> initialResponseClient.run(getQueryPlus(), responseContext).toList()
+    );
+
+    final DirectDruidClient laterChunkClient = makeDirectDruidClient(
+        new ScriptedHttpClient(
+            HttpResponseStatus.SERVICE_UNAVAILABLE,
+            null,
+            true,
+            StringUtils.toUtf8(""),
+            StringUtils.toUtf8("<html><body>503</body></html>")
+        )
+    );
+    final QueryCapacityExceededException laterChunkException = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> laterChunkClient.run(getQueryPlus(), responseContext).toList()
+    );
+
+    Assertions.assertEquals(hostName, initialResponseException.getHost());
+    Assertions.assertEquals(hostName, laterChunkException.getHost());
+    Assertions.assertEquals(initialResponseException.getHost(), laterChunkException.getHost());
+  }
+
   /**
    * An {@link HttpClient} that feeds the handler a scripted response synchronously: the initial {@link HttpResponse}
    * carries {@code bodies[0]} and each subsequent element is delivered as an {@link HttpChunk}.

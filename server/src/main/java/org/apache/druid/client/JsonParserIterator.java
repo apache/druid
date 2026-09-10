@@ -132,6 +132,14 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
         throw convertException(e);
       }
     }
+    catch (QueryException e) {
+      // A QueryException can reach here unwrapped, straight from a InputStream.read() call inside jp.nextToken()/
+      // readValue() above, when DirectDruidClient rethrows a later-chunk failure (e.g. QueryCapacityExceededException
+      // from failIfNonJsonBody) as itself rather than as the cause of an IOException. Route it through the same
+      // convertException as every other error path so it gets this iterator's host instead of whatever host it
+      // happened to carry when the data server (rather than the broker) constructed it.
+      throw convertException(e);
+    }
   }
 
   @Override
@@ -173,7 +181,7 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
         InputStream is = hasTimeout ? future.get(timeLeftMillis, TimeUnit.MILLISECONDS) : future.get();
 
         if (is != null) {
-          jp = objectMapper.getFactory().createParser(is);
+          jp = createParser(is);
         } else if (checkTimeout()) {
           throw timeoutQuery();
         } else {
@@ -188,9 +196,9 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
           );
         }
 
-        final JsonToken nextToken = jp.nextToken();
+        final JsonToken nextToken = readNextToken();
         if (nextToken == JsonToken.START_ARRAY) {
-          jp.nextToken();
+          readNextToken();
           objectCodec = jp.getCodec();
         } else if (nextToken == JsonToken.START_OBJECT) {
           throw convertException(jp.getCodec().readValue(jp, QueryException.class));
@@ -218,6 +226,39 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
       catch (TimeoutException e) {
         throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out!", queryId), host);
       }
+    }
+  }
+
+  /**
+   * Creates the parser for {@code is}, converting a {@link QueryException} that reaches here unwrapped (e.g. a
+   * later-chunk {@link QueryCapacityExceededException} DirectDruidClient rethrows as itself rather than as the
+   * cause of an {@link IOException}, since Jackson's stream bootstrapping can read ahead for encoding detection
+   * before any token is parsed) through {@link #convertException}, same as every other error path. Scoped to just
+   * this call, rather than caught around the whole {@link #init()} try block, so it never re-catches the
+   * QueryExceptions {@link #init()} throws explicitly after already calling {@link #convertException}.
+   */
+  private JsonParser createParser(InputStream is) throws IOException
+  {
+    try {
+      return objectMapper.getFactory().createParser(is);
+    }
+    catch (QueryException e) {
+      throw convertException(e);
+    }
+  }
+
+  /**
+   * Reads the next {@link JsonToken} from {@link #jp}, with the same unwrapped-{@link QueryException} handling as
+   * {@link #createParser}, for the same reason: a later-chunk failure can surface on any read from the underlying
+   * stream, not only the first.
+   */
+  private JsonToken readNextToken() throws IOException
+  {
+    try {
+      return jp.nextToken();
+    }
+    catch (QueryException e) {
+      throw convertException(e);
     }
   }
 
