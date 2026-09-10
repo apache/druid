@@ -19,13 +19,12 @@
 
 package org.apache.druid.sql;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.java.util.common.concurrent.Execs;
 
 import java.io.Closeable;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -41,8 +40,17 @@ import java.util.concurrent.TimeUnit;
 public class SqlPlanningTimeout implements Closeable
 {
   // Single daemon thread suffices: each task only flips a flag and interrupts a thread, and is usually cancelled first.
-  private static final ScheduledExecutorService SCHEDULER =
-      Execs.scheduledSingleThreaded("sql-planning-timeout-%d");
+  private static final ScheduledThreadPoolExecutor SCHEDULER = createScheduler();
+
+  private static ScheduledThreadPoolExecutor createScheduler()
+  {
+    final ScheduledThreadPoolExecutor scheduler =
+        new ScheduledThreadPoolExecutor(1, Execs.makeThreadFactory("sql-planning-timeout-%d"));
+    // Planning usually finishes before the deadline, so most tasks are cancelled. Remove them from the queue on
+    // cancellation instead of letting them linger until their delay elapses, so the queue does not grow under load.
+    scheduler.setRemoveOnCancelPolicy(true);
+    return scheduler;
+  }
 
   // No-op instance returned when no timeout is configured, so callers need no null checks.
   private static final SqlPlanningTimeout DISABLED = new SqlPlanningTimeout();
@@ -119,11 +127,5 @@ public class SqlPlanningTimeout implements Closeable
       // Safe because close() runs on the planning thread once planning has finished.
       Thread.interrupted();
     }
-  }
-
-  @VisibleForTesting
-  static ScheduledExecutorService sharedScheduler()
-  {
-    return SCHEDULER;
   }
 }
