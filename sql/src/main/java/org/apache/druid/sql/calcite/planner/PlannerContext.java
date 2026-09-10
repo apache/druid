@@ -30,6 +30,7 @@ import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -80,6 +81,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Like {@link PlannerConfig}, but that has static configuration and this class
@@ -150,6 +152,15 @@ public class PlannerContext
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
+
+  /**
+   * Calcite cancellation flag, wired into the {@link org.apache.calcite.plan.RelOptPlanner} via the framework
+   * config {@link org.apache.calcite.plan.Context} in {@link PlannerFactory}. Setting the flag causes Calcite's
+   * planner to abort at its next cancellation checkpoint. This is used to enforce the query planning timeout (see
+   * {@link PlannerConfig#getMaxPlanningTimeMs()}) so that a pathological query cannot occupy a broker thread
+   * indefinitely during planning.
+   */
+  private final CancelFlag cancelFlag = new CancelFlag(new AtomicBoolean(false));
 
   private PlannerConfig plannerConfig;
   /**
@@ -278,6 +289,15 @@ public class PlannerContext
   public PlannerConfig getPlannerConfig()
   {
     return plannerConfig;
+  }
+
+  /**
+   * The Calcite {@link CancelFlag} for this planning session. Wired into the Calcite planner (see
+   * {@link PlannerFactory#buildFrameworkConfig}) so that requesting cancellation aborts in-progress planning.
+   */
+  public CancelFlag getCancelFlag()
+  {
+    return cancelFlag;
   }
 
   public DateTime getLocalNow()

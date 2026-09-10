@@ -40,7 +40,12 @@ public class PlannerConfig
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final String CTX_REQUIRE_TIME_CONDITION = "requireTimeCondition";
+  public static final String CTX_KEY_MAX_PLANNING_TIME_MS = "maxPlanningTimeMs";
   public static final int NUM_FILTER_NOT_USED = -1;
+  /**
+   * Sentinel value for {@link #maxPlanningTimeMs} meaning "no planning timeout".
+   */
+  public static final long PLANNING_TIME_NOT_LIMITED = 0;
   @JsonProperty
   private int maxTopNLimit = 100_000;
 
@@ -85,6 +90,17 @@ public class PlannerConfig
 
   @JsonProperty
   private boolean authorizeTableVisibility = true;
+
+  /**
+   * Maximum wall-clock time, in milliseconds, allowed for planning a SQL query on the Broker. When planning exceeds
+   * this budget, the in-progress Calcite planning is aborted and the query fails with a
+   * {@link org.apache.druid.query.QueryTimeoutException}. This guards the Broker against pathological queries (for
+   * example, an enormous {@code IN} clause) whose planning time can spike to tens of seconds and, under load, freeze
+   * the process. A value of {@link #PLANNING_TIME_NOT_LIMITED} (the default) disables the timeout. Overridable per
+   * query via the {@link #CTX_KEY_MAX_PLANNING_TIME_MS} query context key.
+   */
+  @JsonProperty
+  private long maxPlanningTimeMs = PLANNING_TIME_NOT_LIMITED;
 
   public int getMaxNumericInFilters()
   {
@@ -177,6 +193,23 @@ public class PlannerConfig
     return authorizeTableVisibility;
   }
 
+  /**
+   * Maximum wall-clock time, in milliseconds, allowed for planning a SQL query, or {@link #PLANNING_TIME_NOT_LIMITED}
+   * if planning time is unbounded. See {@link #maxPlanningTimeMs}.
+   */
+  public long getMaxPlanningTimeMs()
+  {
+    return maxPlanningTimeMs;
+  }
+
+  /**
+   * Whether a planning timeout is configured (i.e. {@link #getMaxPlanningTimeMs()} is a positive value).
+   */
+  public boolean isPlanningTimeLimited()
+  {
+    return maxPlanningTimeMs > PLANNING_TIME_NOT_LIMITED;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -205,6 +238,7 @@ public class PlannerConfig
            && useNativeQueryExplain == that.useNativeQueryExplain
            && forceExpressionVirtualColumns == that.forceExpressionVirtualColumns
            && maxNumericInFilters == that.maxNumericInFilters
+           && maxPlanningTimeMs == that.maxPlanningTimeMs
            && enableSysQueriesTable == that.enableSysQueriesTable
            && authorizeTableVisibility == that.authorizeTableVisibility
            && Objects.equals(sqlTimeZone, that.sqlTimeZone)
@@ -227,6 +261,7 @@ public class PlannerConfig
         useNativeQueryExplain,
         forceExpressionVirtualColumns,
         maxNumericInFilters,
+        maxPlanningTimeMs,
         nativeQuerySqlPlanningMode,
         enableSysQueriesTable,
         authorizeTableVisibility
@@ -244,6 +279,7 @@ public class PlannerConfig
            ", requireTimeCondition=" + requireTimeCondition +
            ", sqlTimeZone=" + sqlTimeZone +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
+           ", maxPlanningTimeMs=" + maxPlanningTimeMs +
            ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
            ", enableSysQueriesTable=" + enableSysQueriesTable +
            ", authorizeTableVisibility=" + authorizeTableVisibility +
@@ -280,6 +316,7 @@ public class PlannerConfig
     private boolean useNativeQueryExplain;
     private boolean forceExpressionVirtualColumns;
     private int maxNumericInFilters;
+    private long maxPlanningTimeMs;
     private String nativeQuerySqlPlanningMode;
     private boolean enableSysQueriesTable;
     private boolean authorizeTableVisibility;
@@ -301,6 +338,7 @@ public class PlannerConfig
       useNativeQueryExplain = base.isUseNativeQueryExplain();
       forceExpressionVirtualColumns = base.isForceExpressionVirtualColumns();
       maxNumericInFilters = base.getMaxNumericInFilters();
+      maxPlanningTimeMs = base.getMaxPlanningTimeMs();
       nativeQuerySqlPlanningMode = base.getNativeQuerySqlPlanningMode();
       enableSysQueriesTable = base.isEnableSysQueriesTable();
       authorizeTableVisibility = base.isAuthorizeTableVisibility();
@@ -321,6 +359,12 @@ public class PlannerConfig
     public Builder maxNumericInFilters(int value)
     {
       this.maxNumericInFilters = value;
+      return this;
+    }
+
+    public Builder maxPlanningTimeMs(long value)
+    {
+      this.maxPlanningTimeMs = value;
       return this;
     }
 
@@ -445,6 +489,11 @@ public class PlannerConfig
           CTX_REQUIRE_TIME_CONDITION,
           requireTimeCondition
       );
+      maxPlanningTimeMs = QueryContexts.parseLong(
+          queryContext,
+          CTX_KEY_MAX_PLANNING_TIME_MS,
+          maxPlanningTimeMs
+      );
       return this;
     }
 
@@ -484,6 +533,7 @@ public class PlannerConfig
       config.authorizeSystemTablesDirectly = authorizeSystemTablesDirectly;
       config.useNativeQueryExplain = useNativeQueryExplain;
       config.maxNumericInFilters = maxNumericInFilters;
+      config.maxPlanningTimeMs = maxPlanningTimeMs;
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
       config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
       config.enableSysQueriesTable = enableSysQueriesTable;

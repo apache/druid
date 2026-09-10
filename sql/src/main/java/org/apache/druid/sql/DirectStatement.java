@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
@@ -196,20 +197,47 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
     long planningStartNanos = System.nanoTime();
     try (DruidPlanner planner = createPlanner()) {
-      validate(planner);
-      authorize(planner, authorizer());
+      // Bound the wall-clock time spent planning this query. When the deadline is exceeded, the Calcite planner is
+      // aborted and the planning thread is interrupted so that a single pathological query (e.g. a huge IN filter)
+      // cannot hold a Broker thread for tens of seconds. A non-positive timeout disables this guard.
+      final long maxPlanningTimeMs = planner.getPlannerContext().getPlannerConfig().getMaxPlanningTimeMs();
+      try (SqlPlanningTimeout timeout = SqlPlanningTimeout.arm(
+          maxPlanningTimeMs,
+          planner.getPlannerContext().getCancelFlag(),
+          Thread.currentThread()
+      )) {
+        try {
+          validate(planner);
+          authorize(planner, authorizer());
 
-      // Adding the statement to the lifecycle manager allows cancellation.
-      // Tests cancel during this call; real clients might do so if the plan
-      // or execution prep stages take too long for some unexpected reason.
-      sqlToolbox.sqlLifecycleManager.add(sqlQueryId(), this);
-      transition(State.PREPARED);
-      resultSet = createResultSet(createPlan(planner));
-      prepareResult = planner.prepareResult();
-      // Double check needed by SqlResourceTest
-      transition(State.PREPARED);
-      reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
-      return resultSet;
+          // Adding the statement to the lifecycle manager allows cancellation.
+          // Tests cancel during this call; real clients might do so if the plan
+          // or execution prep stages take too long for some unexpected reason.
+          sqlToolbox.sqlLifecycleManager.add(sqlQueryId(), this);
+          transition(State.PREPARED);
+          resultSet = createResultSet(createPlan(planner));
+          prepareResult = planner.prepareResult();
+          // Double check needed by SqlResourceTest
+          transition(State.PREPARED);
+          reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
+          return resultSet;
+        }
+        catch (RuntimeException | AssertionError e) {
+          // If the planning timeout tripped, the underlying failure is a side effect of aborting the planner
+          // (or of the interrupt); surface it as a timeout rather than the incidental Calcite error.
+          if (timeout.isTimedOut()) {
+            throw new QueryTimeoutException(
+                StringUtils.format(
+                    "Query planning for [%s] exceeded the configured maximum planning time of [%,d] ms. This may "
+                    + "indicate an overly complex query, for example one with a very large IN filter.",
+                    sqlQueryId(),
+                    maxPlanningTimeMs
+                )
+            );
+          }
+          throw e;
+        }
+      }
     }
     catch (RelOptPlanner.CannotPlanException e) {
       // Not sure if this is even thrown here.

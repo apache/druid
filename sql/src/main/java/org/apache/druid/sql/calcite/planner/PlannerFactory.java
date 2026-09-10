@@ -35,6 +35,7 @@ import org.apache.calcite.sql.validate.SqlConformance;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
+import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
@@ -219,6 +220,11 @@ public class PlannerFactory extends PlannerToolbox
             }
             if (aClass.equals(PlannerContext.class)) {
               return (C) plannerContext;
+            }
+            if (aClass.equals(CancelFlag.class)) {
+              // Hand Calcite's planner our per-query cancellation flag so that planning can be aborted, e.g. when
+              // the query planning timeout (druid.sql.planner.maxPlanningTimeMs) is exceeded.
+              return (C) plannerContext.getCancelFlag();
             }
 
             return null;
