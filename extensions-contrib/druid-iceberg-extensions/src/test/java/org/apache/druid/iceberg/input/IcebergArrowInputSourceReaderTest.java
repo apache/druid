@@ -247,6 +247,30 @@ public class IcebergArrowInputSourceReaderTest
   }
 
   @Test
+  public void testSnapshotTimeUsesHistoricalSchema() throws IOException, InterruptedException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "beforeRename", 1.0));
+    final long afterFirstSnapshot = System.currentTimeMillis();
+
+    Thread.sleep(10);
+    table.updateSchema().renameColumn("name", "display_name").commit();
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        DateTimes.utc(afterFirstSnapshot),
+        true,
+        INPUT_SCHEMA,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    final List<InputRow> rows = readAll(reader);
+    Assertions.assertEquals(1, rows.size());
+    Assertions.assertEquals("beforeRename", rows.get(0).getDimension("name").get(0));
+  }
+
+  @Test
   public void testAggregatorSourceColumnSurvivesProjection() throws IOException
   {
     // Regression: dimensions=[name] plus ColumnsFilter inclusion of `value` (aggregator source).

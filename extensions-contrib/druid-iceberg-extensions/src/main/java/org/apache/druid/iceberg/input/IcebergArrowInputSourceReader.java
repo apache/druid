@@ -33,6 +33,7 @@ import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.CombinedScanTask;
 import org.apache.iceberg.FileScanTask;
+import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.arrow.vectorized.ArrowReader;
@@ -113,7 +114,8 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
         batchIter,
         arrowReader,
         tasks,
-        inputStats != null ? inputStats : new NoopInputStats()
+        inputStats != null ? inputStats : new NoopInputStats(),
+        scan.schema()
     );
   }
 
@@ -164,25 +166,26 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   {
     TableScan scan = table.newScan().caseSensitive(caseSensitive);
 
-    final List<String> projection = projectedColumns();
+    if (snapshotTime != null) {
+      scan = scan.asOfTime(snapshotTime.getMillis());
+    }
+
+    final List<String> projection = projectedColumns(scan.schema());
     if (projection != null) {
       scan = scan.select(projection);
     }
     if (icebergFilter != null) {
       scan = icebergFilter.filter(scan);
     }
-    if (snapshotTime != null) {
-      scan = scan.asOfTime(snapshotTime.getMillis());
-    }
     return scan;
   }
 
   /** Projection authority is ColumnsFilter, not DimensionsSpec. Mirrors DeltaInputSource#pruneSchema. */
   @Nullable
-  private List<String> projectedColumns()
+  private List<String> projectedColumns(final Schema scanSchema)
   {
     final ColumnsFilter filter = schema.getColumnsFilter();
-    final List<String> allColumns = table.schema().columns().stream()
+    final List<String> allColumns = scanSchema.columns().stream()
                                          .map(Types.NestedField::name)
                                          .collect(Collectors.toList());
     final List<String> filtered = allColumns.stream()
@@ -198,7 +201,11 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     return filtered;
   }
 
-  private InputRow batchRowToInputRow(final ColumnarBatch batch, final int rowIdx)
+  private InputRow batchRowToInputRow(
+      final ColumnarBatch batch,
+      final int rowIdx,
+      final Schema readSchema
+  )
   {
     final int numCols = batch.numCols();
     final Map<String, Object> event = Maps.newHashMapWithExpectedSize(numCols);
@@ -206,7 +213,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
       final ColumnVector column = batch.column(col);
       final FieldVector vec = column.getFieldVector();
       if (!column.isNullAt(rowIdx)) {
-        event.put(vec.getName(), extractValue(column, table.schema().findField(vec.getName()).type(), rowIdx));
+        event.put(vec.getName(), extractValue(column, readSchema.findField(vec.getName()).type(), rowIdx));
       }
     }
     final long timestamp = schema.getTimestampSpec().extractTimestamp(event).getMillis();
@@ -290,6 +297,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     private final ArrowReader arrowReader;
     private final CloseableIterable<CombinedScanTask> tasks;
     private final InputStats inputStats;
+    private final Schema readSchema;
 
     private ColumnarBatch currentBatch = null;
     private int rowIndexInBatch = 0;
@@ -299,13 +307,15 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
         final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter,
         final ArrowReader arrowReader,
         final CloseableIterable<CombinedScanTask> tasks,
-        final InputStats inputStats
+        final InputStats inputStats,
+        final Schema readSchema
     )
     {
       this.batchIter = batchIter;
       this.arrowReader = arrowReader;
       this.tasks = tasks;
       this.inputStats = inputStats;
+      this.readSchema = readSchema;
     }
 
     @Override
@@ -326,7 +336,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
-      return batchRowToInputRow(currentBatch, rowIndexInBatch++);
+      return batchRowToInputRow(currentBatch, rowIndexInBatch++, readSchema);
     }
 
     private boolean loadNextBatch()
