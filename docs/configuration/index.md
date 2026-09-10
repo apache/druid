@@ -1582,6 +1582,12 @@ In `druid.segmentCache.locationSelector.strategy`, one of `leastBytesUsed`, `rou
 
 Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the `leastBytesUsed` strategy or `mostAvailableSize` strategy, Historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
 
+#### Loading segments
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.segment.timeline.fastIntervalSearch`|(Experimental) Boolean flag to enable faster searches of segments in the timeline stored in memory. The setting when enabled uses an index based on [Interval tree](https://en.wikipedia.org/wiki/Interval_tree) to organize the timeline in-memory, for faster loading and searching of segments.|false|
+
 #### Historical query configs
 
 ##### Concurrent requests
