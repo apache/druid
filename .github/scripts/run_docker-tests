@@ -35,9 +35,10 @@ fi
 
 # No snapshot updates
 OPTS+=" -nsu"
-# Only embedded-tests is built here. This job runs build-dist first, which
-# installs every reactor module (including web-console, a test-scoped dependency
-# of embedded-tests) into the local Maven repository on a fresh runner, and no
-# Maven build cache is persisted across jobs. Adding -am would re-run the whole
-# reactor, including web-console, a second time.
+# Only embedded-tests is built here. The Docker workflow builds the distribution
+# first (mvn install of the whole reactor), which installs every module
+# (including web-console, a test-scoped dependency of embedded-tests) into the
+# local Maven repository on a fresh runner, and no Maven build cache is persisted
+# across jobs. Adding -am would re-run the whole reactor, including web-console,
+# a second time.
 mvn -B -pl embedded-tests $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
