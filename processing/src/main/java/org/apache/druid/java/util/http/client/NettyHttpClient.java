@@ -140,7 +140,14 @@ public class NettyHttpClient extends AbstractHttpClient
           )
       );
     }
-    final ChannelFuture channelFuture = rawChannelFuture.awaitUninterruptibly();
+    final ChannelFuture channelFuture;
+    try {
+      channelFuture = rawChannelFuture.awaitUninterruptibly();
+    }
+    catch (Throwable t) {
+      channelResourceContainer.returnResource();
+      return Futures.immediateFailedFuture(t);
+    }
     if (!channelFuture.isSuccess()) {
       channelResourceContainer.returnResource(); // Some other poor sap will have to deal with it...
       return Futures.immediateFailedFuture(
@@ -149,12 +156,9 @@ public class NettyHttpClient extends AbstractHttpClient
               channelFuture.cause()
           )
       );
-    } else {
-      channel = channelFuture.channel();
-
-      // In case we get a channel that never had its reads turned back on.
-      channel.config().setAutoRead(true);
     }
+    channel = channelFuture.channel();
+
     final long readTimeout = getReadTimeout(requestReadTimeout);
     final SettableFuture<Final> retVal = SettableFuture.create();
 
@@ -167,6 +171,9 @@ public class NettyHttpClient extends AbstractHttpClient
     boolean readTimeoutHandlerAdded = false;
     boolean lastHandlerAdded = false;
     try {
+      // In case we get a channel that never had its reads turned back on.
+      channel.config().setAutoRead(true);
+
       final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
       // retainedDuplicate so the encoder's read+release doesn't disturb the Request's stored
       // ByteBuf, preserving it for callers that resend or copy() the Request.
