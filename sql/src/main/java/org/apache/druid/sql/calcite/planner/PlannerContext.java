@@ -154,11 +154,9 @@ public class PlannerContext
   private final Set<String> lookupsToLoad = new HashSet<>();
 
   /**
-   * Calcite cancellation flag, wired into the {@link org.apache.calcite.plan.RelOptPlanner} via the framework
-   * config {@link org.apache.calcite.plan.Context} in {@link PlannerFactory}. Setting the flag causes Calcite's
-   * planner to abort at its next cancellation checkpoint. This is used to enforce the query planning timeout (see
-   * {@link PlannerConfig#getMaxPlanningTimeMs()}) so that a pathological query cannot occupy a broker thread
-   * indefinitely during planning.
+   * Calcite cancellation flag, wired into the planner via the framework config {@link org.apache.calcite.plan.Context}
+   * in {@link PlannerFactory}. Tripping it aborts planning at Calcite's next cancellation checkpoint; used to enforce
+   * the planning timeout (see {@link PlannerConfig#getMaxPlanningTimeMs()}).
    */
   private final CancelFlag cancelFlag = new CancelFlag(new AtomicBoolean(false));
 
@@ -292,8 +290,7 @@ public class PlannerContext
   }
 
   /**
-   * The Calcite {@link CancelFlag} for this planning session. Wired into the Calcite planner (see
-   * {@link PlannerFactory#buildFrameworkConfig}) so that requesting cancellation aborts in-progress planning.
+   * The Calcite {@link CancelFlag} for this planning session; requesting cancellation aborts in-progress planning.
    */
   public CancelFlag getCancelFlag()
   {

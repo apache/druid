@@ -92,12 +92,9 @@ public class PlannerConfig
   private boolean authorizeTableVisibility = true;
 
   /**
-   * Maximum wall-clock time, in milliseconds, allowed for planning a SQL query on the Broker. When planning exceeds
-   * this budget, the in-progress Calcite planning is aborted and the query fails with a
-   * {@link org.apache.druid.query.QueryTimeoutException}. This guards the Broker against pathological queries (for
-   * example, an enormous {@code IN} clause) whose planning time can spike to tens of seconds and, under load, freeze
-   * the process. A value of {@link #PLANNING_TIME_NOT_LIMITED} (the default) disables the timeout. Overridable per
-   * query via the {@link #CTX_KEY_MAX_PLANNING_TIME_MS} query context key.
+   * Maximum wall-clock time, in milliseconds, allowed for planning a SQL query. When exceeded, planning is aborted and
+   * the query fails with a {@link org.apache.druid.query.QueryTimeoutException}. {@link #PLANNING_TIME_NOT_LIMITED}
+   * (the default) disables the timeout. Overridable per query via {@link #CTX_KEY_MAX_PLANNING_TIME_MS}.
    */
   @JsonProperty
   private long maxPlanningTimeMs = PLANNING_TIME_NOT_LIMITED;
@@ -194,8 +191,7 @@ public class PlannerConfig
   }
 
   /**
-   * Maximum wall-clock time, in milliseconds, allowed for planning a SQL query, or {@link #PLANNING_TIME_NOT_LIMITED}
-   * if planning time is unbounded. See {@link #maxPlanningTimeMs}.
+   * See {@link #maxPlanningTimeMs}. Returns {@link #PLANNING_TIME_NOT_LIMITED} when planning time is unbounded.
    */
   public long getMaxPlanningTimeMs()
   {
@@ -203,7 +199,7 @@ public class PlannerConfig
   }
 
   /**
-   * Whether a planning timeout is configured (i.e. {@link #getMaxPlanningTimeMs()} is a positive value).
+   * Whether a planning timeout is configured.
    */
   public boolean isPlanningTimeLimited()
   {

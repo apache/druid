@@ -29,49 +29,31 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A watchdog that bounds the wall-clock time spent planning a single SQL query. SQL planning happens synchronously on
- * the request thread; a pathological query (for example one with an enormous {@code IN} clause) can spend tens of
- * seconds in Calcite's planner, and a flood of such queries can exhaust the Broker's request threads and freeze the
- * process. See {@link org.apache.druid.sql.calcite.planner.PlannerConfig#getMaxPlanningTimeMs()}.
+ * Bounds the wall-clock time spent planning a single SQL query. See
+ * {@link org.apache.druid.sql.calcite.planner.PlannerConfig#getMaxPlanningTimeMs()}.
  *
- * <p>When {@link #arm} is called with a positive timeout, a background task is scheduled that, once the deadline is
- * reached, (1) trips the Calcite {@link CancelFlag} for the query so that the planner aborts at its next cancellation
- * checkpoint, and (2) interrupts the planning thread so that any interruptible work also unwinds. The caller runs
- * planning on its own thread as usual and then calls {@link #close()} (ideally in a {@code finally} block), which
- * cancels the pending task and, if the watchdog had already fired, clears the interrupt status of the (current)
- * planning thread so the interrupt is not leaked back to a pooled request thread.
- *
- * <p>Callers should check {@link #isTimedOut()} when planning throws to decide whether to translate the failure into a
- * timeout error.
+ * <p>When {@link #arm} is called with a positive timeout, a task is scheduled that, on deadline, trips the query's
+ * Calcite {@link CancelFlag} (so the planner aborts at its next cancellation checkpoint) and interrupts the planning
+ * thread. The caller plans on its own thread and then calls {@link #close()} (ideally in a {@code finally}), which
+ * cancels the pending task and, if the watchdog fired, clears the interrupt so it is not leaked to a pooled request
+ * thread. Check {@link #isTimedOut()} when planning throws to decide whether to translate the failure into a timeout.
  */
 public class SqlPlanningTimeout implements Closeable
 {
-  /**
-   * Shared, lazily-started scheduler used to fire planning-timeout tasks. A single daemon thread is sufficient because
-   * each task does only a tiny amount of work (flip a flag and interrupt a thread) and, in the common case, is
-   * cancelled well before it ever runs.
-   */
+  // Single daemon thread suffices: each task only flips a flag and interrupts a thread, and is usually cancelled first.
   private static final ScheduledExecutorService SCHEDULER =
       Execs.scheduledSingleThreaded("sql-planning-timeout-%d");
 
-  /**
-   * A shared no-op instance returned when no planning timeout is configured, so callers need no null checks.
-   */
+  // No-op instance returned when no timeout is configured, so callers need no null checks.
   private static final SqlPlanningTimeout DISABLED = new SqlPlanningTimeout();
 
   private final Object lock = new Object();
   private final ScheduledFuture<?> future;
 
-  /**
-   * Whether the watchdog fired (i.e. the planning deadline was reached). Guarded by {@link #lock} for writes; read via
-   * {@link #isTimedOut()}.
-   */
+  // Whether the deadline was reached. Written under lock; read via isTimedOut().
   private volatile boolean timedOut;
 
-  /**
-   * Whether {@link #close()} has been called. Once closed, a concurrently-running watchdog task must not interrupt the
-   * planning thread. Guarded by {@link #lock}.
-   */
+  // Whether close() has been called. Once closed, a still-running watchdog task must not interrupt the thread.
   private boolean closed;
 
   private SqlPlanningTimeout()
@@ -89,12 +71,7 @@ public class SqlPlanningTimeout implements Closeable
   }
 
   /**
-   * Arm a planning-timeout watchdog for the current thread. When {@code maxPlanningTimeMs} is not positive the returned
-   * instance is a no-op.
-   *
-   * @param maxPlanningTimeMs the planning budget in milliseconds; values &lt;= 0 disable the timeout
-   * @param cancelFlag        the Calcite cancellation flag for the query, tripped on timeout
-   * @param planningThread    the thread performing planning, which will be interrupted on timeout
+   * Arm a watchdog for {@code planningThread}. A non-positive {@code maxPlanningTimeMs} returns a no-op instance.
    */
   public static SqlPlanningTimeout arm(long maxPlanningTimeMs, CancelFlag cancelFlag, Thread planningThread)
   {
@@ -112,15 +89,13 @@ public class SqlPlanningTimeout implements Closeable
         return;
       }
       timedOut = true;
-      // Ask Calcite's planner to abort at its next cancellation checkpoint.
       cancelFlag.requestCancel();
-      // Also interrupt the planning thread so any interruptible work unwinds.
       planningThread.interrupt();
     }
   }
 
   /**
-   * Whether the planning deadline was reached before {@link #close()} was called.
+   * Whether the planning deadline was reached before {@link #close()}.
    */
   public boolean isTimedOut()
   {
@@ -140,8 +115,8 @@ public class SqlPlanningTimeout implements Closeable
       wasTimedOut = timedOut;
     }
     if (wasTimedOut) {
-      // The watchdog interrupted this (the planning) thread. Clear the interrupt status so it is not leaked to a
-      // pooled request thread. Safe because close() is called on the planning thread once planning has finished.
+      // Clear the interrupt the watchdog set on this thread so it is not leaked to a pooled request thread.
+      // Safe because close() runs on the planning thread once planning has finished.
       Thread.interrupted();
     }
   }

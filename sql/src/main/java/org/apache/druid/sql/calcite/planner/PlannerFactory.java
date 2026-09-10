@@ -222,8 +222,7 @@ public class PlannerFactory extends PlannerToolbox
               return (C) plannerContext;
             }
             if (aClass.equals(CancelFlag.class)) {
-              // Hand Calcite's planner our per-query cancellation flag so that planning can be aborted, e.g. when
-              // the query planning timeout (druid.sql.planner.maxPlanningTimeMs) is exceeded.
+              // Hand Calcite the per-query cancellation flag so planning can be aborted (e.g. on planning timeout).
               return (C) plannerContext.getCancelFlag();
             }
 

@@ -197,9 +197,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
     long planningStartNanos = System.nanoTime();
     try (DruidPlanner planner = createPlanner()) {
-      // Bound the wall-clock time spent planning this query. When the deadline is exceeded, the Calcite planner is
-      // aborted and the planning thread is interrupted so that a single pathological query (e.g. a huge IN filter)
-      // cannot hold a Broker thread for tens of seconds. A non-positive timeout disables this guard.
+      // Bound the wall-clock time spent planning this query. A non-positive timeout disables this.
       final long maxPlanningTimeMs = planner.getPlannerContext().getPlannerConfig().getMaxPlanningTimeMs();
       try (SqlPlanningTimeout timeout = SqlPlanningTimeout.arm(
           maxPlanningTimeMs,
@@ -223,8 +221,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
           return resultSet;
         }
         catch (RuntimeException | AssertionError e) {
-          // If the planning timeout tripped, the underlying failure is a side effect of aborting the planner
-          // (or of the interrupt); surface it as a timeout rather than the incidental Calcite error.
+          // On timeout, the failure is a side effect of aborting the planner; surface it as a timeout.
           if (timeout.isTimedOut()) {
             throw new QueryTimeoutException(
                 StringUtils.format(
