@@ -943,6 +943,7 @@
               </includes>
               <redirectTestOutputToFile>true</redirectTestOutputToFile>
               <argLine>
+                -XX:+UseCompactObjectHeaders
                 ${jdk.strong.encapsulation.argLine}
                 -Xmx2048m
                 -XX:MaxDirectMemorySize=2500m

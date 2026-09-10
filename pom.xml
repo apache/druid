@@ -2047,6 +2047,7 @@
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set default options -->
                         <argLine>
+                            -XX:+UseCompactObjectHeaders
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             -Xmx2048m
@@ -2251,6 +2252,7 @@
                             <!-- locale settings must be set on the command line before startup -->
                             <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
                             <argLine>
+                                -XX:+UseCompactObjectHeaders
                                 -Xmx768m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
                                 -XX:+ExitOnOutOfMemoryError
                                 -XX:+HeapDumpOnOutOfMemoryError
