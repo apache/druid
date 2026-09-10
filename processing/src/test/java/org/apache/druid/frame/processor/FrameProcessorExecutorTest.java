@@ -211,7 +211,7 @@ public class FrameProcessorExecutorTest
     }
 
     @Test
-    public void test_registerCancelableFuture() throws InterruptedException
+    public void test_registerCancelableFuture()
     {
       final SettableFuture<Object> future = SettableFuture.create();
       final String cancellationId = "xyzzy";
@@ -372,15 +372,12 @@ public class FrameProcessorExecutorTest
             // If we see an unresolved future here, it's a bug in exec.cancel.
             Assertions.assertTrue(future.isDone());
             Assertions.assertTrue(future.isCancelled());
-
-            final Exception e = Assertions.assertThrows(Exception.class, future::get);
-            Assertions.assertInstanceOf(CancellationException.class, e);
           }
         }
 
         // In both cases, check for cleanup.
         for (final InfiniteFrameProcessor generator : generators) {
-          Assertions.assertTrue(generator.didCleanup());
+          Assertions.assertEquals(1, generator.getCleanupCount(), "exactly one cleanup call");
         }
 
         Assertions.assertTrue(chomper.didCleanup());
@@ -388,7 +385,7 @@ public class FrameProcessorExecutorTest
     }
 
     @Test
-    public void test_cancel_nonexistentCancellationId() throws InterruptedException
+    public void test_cancel_nonexistentCancellationId()
     {
       // Just making sure no error is thrown when we refer to a nonexistent cancellationId.
       exec.cancel("nonexistent");

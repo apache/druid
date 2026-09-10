@@ -136,13 +136,13 @@
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-storage</artifactId>
-      <version>2.72.0</version>
+      <version>2.73.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-core</artifactId>
-      <version>2.73.0</version>
+      <version>2.75.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -834,7 +834,7 @@
     <dependency>
       <groupId>com.google.auth</groupId>
       <artifactId>google-auth-library-credentials</artifactId>
-      <version>1.51.0</version>
+      <version>1.52.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -943,6 +943,7 @@
               </includes>
               <redirectTestOutputToFile>true</redirectTestOutputToFile>
               <argLine>
+                -XX:+UseCompactObjectHeaders
                 ${jdk.strong.encapsulation.argLine}
                 -Xmx2048m
                 -XX:MaxDirectMemorySize=2500m
