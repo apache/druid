@@ -92,6 +92,7 @@ public class CompressionStrategyTest
     }
   }
 
+  @Test
   @org.junit.jupiter.api.Timeout(value = 60_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
   public void testConcurrency() throws Exception
   {
