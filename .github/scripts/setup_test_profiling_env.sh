@@ -54,8 +54,8 @@ then
     # stdout is appended to $GITHUB_ENV by the caller, so diagnostics must go to stderr.
     echo "::warning::Failed to download the JFR profiler agent ($JAR_INPUT_FILE); running tests without profiling" >&2
     rm -f "$TMP_JAR" "$JAR_OUTPUT_FILE"
-    echo $ENV_VAR=\"\"
+    echo "$ENV_VAR="
   fi
 else
-  echo $ENV_VAR=\"\"
+  echo "$ENV_VAR="
 fi
