@@ -161,19 +161,18 @@ public class SegmentLoadDropHandler
         currentDropLatch.cancelOrAwait();
       }
 
-      // A load request for a segment this server already serves is a reload, not a new load. The failure cleanup
-      // below exists to discard the half-materialized state a failed *new* load leaves behind, and running it for a
-      // reload would instead unannounce and drop a replica that is still serving.
-      final boolean isReload = segmentManager.isSegmentLoaded(segment);
       final DataSegment loaded;
       try {
         loaded = segmentManager.loadSegment(segment);
       }
       catch (Exception e) {
-        if (isReload) {
+        // decides whether to clean up a failed load; a load request for a segment this server already serves is a
+        // reload, not a new load, and we only want to discard the half-materialized state a failed *new* load leaves
+        // behind.
+        if (segmentManager.isSegmentLoaded(segment)) {
           log.warn(
               e,
-              "Failed to reload segment[%s]; it stays loaded under its previous load spec and will be retried.",
+              "Failed to load segment[%s], but it is serving already; leaving it in place to be retried.",
               segment.getId()
           );
         } else {

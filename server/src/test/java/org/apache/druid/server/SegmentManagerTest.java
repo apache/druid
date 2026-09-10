@@ -331,7 +331,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testFailedFirstLoadDropsTheCachedSegment()
+  public void testFailedFirstLoadLeavesCleanupToTheCaller()
   {
     final TestSegmentCacheManager failingCacheManager = new TestSegmentCacheManager();
     failingCacheManager.failLoadsAfter(0);
@@ -340,10 +340,10 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
 
     Assertions.assertThrows(SegmentLoadingException.class, () -> manager.loadSegment(segment));
 
-    Assertions.assertFalse(manager.isSegmentLoaded(segment));
-    Assertions.assertTrue(
+    Assertions.assertFalse(manager.isSegmentLoaded(segment), "a failed load adds nothing to the timeline");
+    Assertions.assertFalse(
         failingCacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId()),
-        "a failed new load is cleaned up"
+        "and drops nothing either; SegmentLoadDropHandler.addSegment owns that decision"
     );
   }
 

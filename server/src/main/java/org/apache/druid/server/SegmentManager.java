@@ -145,6 +145,9 @@ public class SegmentManager
    * Whether this server is already serving {@code dataSegment}, i.e. it is in its datasource's timeline and so is
    * queryable right now. A load request for such a segment is a reload rather than a new load, which is how a
    * partial-load rule is applied, swapped, or released, see {@code StrategicSegmentAssigner}.
+   * <p>
+   * This is a lock-free read of the timeline, unlike the {@code compute} that {@link #loadSegment} mutates it under,
+   * so it answers for the instant it is called and nothing more.
    */
   public boolean isSegmentLoaded(final DataSegment dataSegment)
   {
@@ -338,25 +341,16 @@ public class SegmentManager
    *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
    *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
    *         partial-load announcements carry accurate {@code loadedBytes}.
+   * <b>Failure cleanup belongs to the caller.</b> This method deliberately discards nothing when the load fails,
+   * because it cannot tell on its own whether the state it would discard is half-materialized leftovers from this
+   * attempt or a live replica.
+   *
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
   public DataSegment loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
-    // A load of a segment we already serve is a reload, so the cache state this would drop on failure is the live
-    // (stale) replica's, not half-materialized state from this attempt. Leave it alone and keep serving; the
-    // coordinator sees the old announcement, treats the replica as stale and asks again on a later run.
-    final boolean isReload = isSegmentLoaded(dataSegment);
-    final DataSegment loaded;
-    try {
-      loaded = cacheManager.load(dataSegment);
-    }
-    catch (SegmentLoadingException e) {
-      if (!isReload) {
-        cacheManager.drop(dataSegment);
-      }
-      throw e;
-    }
+    final DataSegment loaded = cacheManager.load(dataSegment);
     // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
     // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);

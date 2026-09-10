@@ -245,6 +245,39 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
+  public void testFailedLoadPreservesAReplicaThatAppearedWhileItWasLoading()
+  {
+    final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
+    final SegmentManager segmentManager = new SegmentManager(cacheManager);
+    final SegmentLoadDropHandler handler = initSegmentLoadDropHandler(segmentManager);
+
+    final DataSegment segment = makeSegment("test", "1", Intervals.of("P1d/2011-04-01"));
+
+    // Stand in for the concurrent loader: the segment lands in the timeline, then this load fails. A snapshot taken
+    // before the load would have said "not serving" and torn the replica down.
+    cacheManager.failLoadsAfter(1);
+    handler.addSegment(segment, DataSegmentChangeCallback.NOOP, null);
+    Assertions.assertTrue(segmentManager.isSegmentLoaded(segment), "precondition: the replica is serving");
+    segmentAnnouncer.getObservedSegments().clear();
+    segmentAnnouncer.announceSegment(segment);
+
+    handler.addSegment(segment, DataSegmentChangeCallback.NOOP, null);
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+
+    Assertions.assertTrue(segmentManager.isSegmentLoaded(segment), "the serving replica stays in the timeline");
+    Assertions.assertTrue(
+        segmentAnnouncer.getObservedSegments().contains(segment),
+        "and stays announced"
+    );
+    Assertions.assertFalse(
+        cacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId()),
+        "and keeps its cached data"
+    );
+  }
+
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testProcessBatch() throws Exception
   {
