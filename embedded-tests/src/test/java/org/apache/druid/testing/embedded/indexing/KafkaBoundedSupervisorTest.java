@@ -179,10 +179,14 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
    * its own when it reaches its end offset. With the short duration, a bounded task that
    * has not consumed its whole range within one supervisor cycle is rolled over at its
    * current offset, and each successor task is rolled over again before the Kafka consumer
-   * finishes starting, so the supervisor never reaches the end offset. Use a duration that
-   * no bounded task in this class can exceed.
+   * finishes starting, so the supervisor never reaches the end offset.
+   * <p>
+   * 10 seconds is an order of magnitude above the time a bounded task in this class needs
+   * to start and consume its range. It is deliberately not longer: a task that pauses for a
+   * checkpoint and is not resumed by the supervisor only recovers at the next rollover, so
+   * the duration also caps how long such a stall can hold a test.
    */
-  private static final Period BOUNDED_TASK_DURATION = Period.seconds(60);
+  private static final Period BOUNDED_TASK_DURATION = Period.seconds(10);
 
   private KafkaSupervisorSpec createBoundedKafkaSupervisor(
       KafkaResource kafkaServer,
