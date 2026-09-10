@@ -118,7 +118,7 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
         if (numBytes < 0 || numBytes > readOnlyBuffer.remaining()) {
           throw new IllegalArgumentException(
-              String.format("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, readOnlyBuffer.remaining())
+              StringUtils.format("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, readOnlyBuffer.remaining())
           );
         }
         readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
