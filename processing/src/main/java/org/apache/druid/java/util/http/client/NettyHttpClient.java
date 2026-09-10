@@ -41,7 +41,9 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.timeout.ReadTimeoutException;
 import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.ReferenceCountUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -139,41 +141,6 @@ public class NettyHttpClient extends AbstractHttpClient
       // In case we get a channel that never had its reads turned back on.
       channel.config().setAutoRead(true);
     }
-    final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
-    // retainedDuplicate so the encoder's read+release doesn't disturb the Request's stored
-    // ByteBuf, preserving it for callers that resend or copy() the Request.
-    final FullHttpRequest httpRequest = new DefaultFullHttpRequest(
-        HttpVersion.HTTP_1_1,
-        method,
-        urlFile.isEmpty() ? "/" : urlFile,
-        request.hasContent() ? request.getContent().retainedDuplicate() : Unpooled.EMPTY_BUFFER
-    );
-
-    // Copy caller-supplied headers first, then apply defaults only for ones the caller didn't already provide. Request
-    // stores headers in a case-sensitive Guava Multimap, but HTTP header names are case-insensitive; checking presence
-    // against Netty 4's lowercase HttpHeaderNames constants directly would miss headers set with conventional HTTP
-    // casing and result in duplicate headers on the wire. Netty's HttpHeaders.contains() is case-insensitive, so
-    // applying defaults after the copy is the reliable check.
-    for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
-      String key = entry.getKey();
-      for (String obj : entry.getValue()) {
-        httpRequest.headers().add(key, obj);
-      }
-    }
-
-    if (!httpRequest.headers().contains(HttpHeaderNames.HOST)) {
-      httpRequest.headers().add(HttpHeaderNames.HOST, getHost(url));
-    }
-
-    // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "compressionCodec".
-    if (!httpRequest.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
-      httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, compressionCodec.getEncodingString());
-    }
-
-    if (request.hasContent()) {
-      HttpUtil.setContentLength(httpRequest, request.getContent().readableBytes());
-    }
-
     final long readTimeout = getReadTimeout(requestReadTimeout);
     final SettableFuture<Final> retVal = SettableFuture.create();
 
@@ -182,16 +149,56 @@ public class NettyHttpClient extends AbstractHttpClient
     // use this boolean to ensure that handlers do not see any chunks after exceptionCaught fires.
     final AtomicBoolean didEncounterException = new AtomicBoolean();
 
-    if (readTimeout > 0) {
-      channel.pipeline().addLast(
-          READ_TIMEOUT_HANDLER_NAME,
-          new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS)
+    FullHttpRequest httpRequest = null;
+    boolean readTimeoutHandlerAdded = false;
+    boolean lastHandlerAdded = false;
+    try {
+      final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
+      // retainedDuplicate so the encoder's read+release doesn't disturb the Request's stored
+      // ByteBuf, preserving it for callers that resend or copy() the Request.
+      httpRequest = new DefaultFullHttpRequest(
+          HttpVersion.HTTP_1_1,
+          method,
+          urlFile.isEmpty() ? "/" : urlFile,
+          request.hasContent() ? request.getContent().retainedDuplicate() : Unpooled.EMPTY_BUFFER
       );
-    }
 
-    channel.pipeline().addLast(
-        LAST_HANDLER_NAME,
-        new SimpleChannelInboundHandler<HttpObject>()
+      // Copy caller-supplied headers first, then apply defaults only for ones the caller didn't already provide.
+      // Request stores headers in a case-sensitive Guava Multimap, but HTTP header names are case-insensitive;
+      // checking presence against Netty 4's lowercase HttpHeaderNames constants directly would miss headers set
+      // with conventional HTTP casing and result in duplicate headers on the wire. Netty's HttpHeaders.contains()
+      // is case-insensitive, so applying defaults after the copy is the reliable check.
+      for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
+        String key = entry.getKey();
+        for (String obj : entry.getValue()) {
+          httpRequest.headers().add(key, obj);
+        }
+      }
+
+      if (!httpRequest.headers().contains(HttpHeaderNames.HOST)) {
+        httpRequest.headers().add(HttpHeaderNames.HOST, getHost(url));
+      }
+
+      // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "compressionCodec".
+      if (!httpRequest.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
+        httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, compressionCodec.getEncodingString());
+      }
+
+      if (request.hasContent()) {
+        HttpUtil.setContentLength(httpRequest, request.getContent().readableBytes());
+      }
+
+      if (readTimeout > 0) {
+        channel.pipeline().addLast(
+            READ_TIMEOUT_HANDLER_NAME,
+            new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS)
+        );
+        readTimeoutHandlerAdded = true;
+      }
+
+      channel.pipeline().addLast(
+          LAST_HANDLER_NAME,
+          new SimpleChannelInboundHandler<HttpObject>()
         {
           // Single-threaded access: all reads and writes happen on the channel's EventLoop thread
           // (channelRead0, exceptionCaught, channelInactive are all serial inbound events). The
@@ -393,7 +400,17 @@ public class NettyHttpClient extends AbstractHttpClient
             }
 
             if (!retVal.isDone()) {
-              retVal.setException(t);
+              if (t instanceof ReadTimeoutException) {
+                // ReadTimeoutHandler fires ReadTimeoutException.INSTANCE, a shared singleton whose stack
+                // trace was captured once at class load and points at whichever code first touched Netty's
+                // class initializer. Emit a fresh instance so the stack trace reflects this actual timeout.
+                if (log.isDebugEnabled()) {
+                  log.debug("[%s] Read timed out", requestDesc);
+                }
+                retVal.setException(new ReadTimeoutException());
+              } else {
+                retVal.setException(t);
+              }
             }
 
             // response is non-null if we received initial chunk and then exception occurs
@@ -421,29 +438,51 @@ public class NettyHttpClient extends AbstractHttpClient
             channel.pipeline().remove(LAST_HANDLER_NAME);
           }
         }
-    );
+      );
+      lastHandlerAdded = true;
 
-    channel.writeAndFlush(httpRequest).addListener(
-        new ChannelFutureListener()
-        {
-          @Override
-          public void operationComplete(ChannelFuture future)
+      channel.writeAndFlush(httpRequest).addListener(
+          new ChannelFutureListener()
           {
-            if (!future.isSuccess()) {
-              channel.close();
-              channelResourceContainer.returnResource();
-              if (!retVal.isDone()) {
-                retVal.setException(
-                    new ChannelException(
-                        StringUtils.format("[%s] Failed to write request to channel", requestDesc),
-                        future.cause()
-                    )
-                );
+            @Override
+            public void operationComplete(ChannelFuture future)
+            {
+              if (!future.isSuccess()) {
+                channel.close();
+                channelResourceContainer.returnResource();
+                if (!retVal.isDone()) {
+                  retVal.setException(
+                      new ChannelException(
+                          StringUtils.format("[%s] Failed to write request to channel", requestDesc),
+                          future.cause()
+                      )
+                  );
+                }
               }
             }
           }
-        }
-    );
+      );
+    }
+    catch (Throwable t) {
+      // Any partial state (pipeline handlers we added, the retained content buffer inside httpRequest) has to be
+      // undone or Netty will leak both the pooled buffer and the channel — the pool would then hand out a channel
+      // whose pipeline still carries our handler, which would misroute the next request's inbound messages.
+      // Reaching this block means writeAndFlush was never called (all earlier statements can throw; nothing after
+      // writeAndFlush does), so Netty never took ownership of httpRequest and it is always safe to release it here.
+      if (lastHandlerAdded && channel.pipeline().get(LAST_HANDLER_NAME) != null) {
+        channel.pipeline().remove(LAST_HANDLER_NAME);
+      }
+      if (readTimeoutHandlerAdded && channel.pipeline().get(READ_TIMEOUT_HANDLER_NAME) != null) {
+        channel.pipeline().remove(READ_TIMEOUT_HANDLER_NAME);
+      }
+      if (httpRequest != null) {
+        // The request owns the retainedDuplicate content; releasing the request releases that buffer.
+        ReferenceCountUtil.safeRelease(httpRequest);
+      }
+      channelResourceContainer.returnResource();
+      log.warn(t, "[%s] Failed to build or submit request", requestDesc);
+      return Futures.immediateFailedFuture(t);
+    }
 
     return retVal;
   }

@@ -601,6 +601,66 @@ public class FriendlyServersTest
     }
   }
 
+  @Test
+  public void testValidationFailureDoesNotLeakChannel() throws Exception
+  {
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    exec.submit(
+        () -> {
+          while (!Thread.currentThread().isInterrupted()) {
+            try (
+                Socket clientSocket = serverSocket.accept();
+                BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                );
+                OutputStream out = clientSocket.getOutputStream()
+            ) {
+              String line;
+              while ((line = in.readLine()) != null && !line.isEmpty()) {
+                // skip request headers
+              }
+              out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
+              out.flush();
+            }
+            catch (Exception ignored) {
+              if (serverSocket.isClosed()) {
+                return;
+              }
+            }
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final URL url = new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()));
+
+      // A header value with a CR is rejected by Netty 4 during headers().add(); Netty 3 accepted it.
+      final Request badRequest = new Request(HttpMethod.GET, url).setHeader("X-Bad", "value\rwith-cr");
+      final ExecutionException e = Assertions.assertThrows(
+          ExecutionException.class,
+          () -> client.go(badRequest, StatusResponseHandler.getInstance()).get(10, TimeUnit.SECONDS)
+      );
+      Assertions.assertNotNull(e.getCause(), "cause must propagate");
+
+      // Same host, same pool. If the failed setup leaked the connection, this get() will hit the
+      // pool-take timeout instead of completing. A bounded get() surfaces that as a TimeoutException
+      // rather than hanging the whole test.
+      final StatusResponseHolder ok = client
+          .go(new Request(HttpMethod.GET, url), StatusResponseHandler.getInstance())
+          .get(10, TimeUnit.SECONDS);
+      Assertions.assertEquals(200, ok.getStatus().code());
+      Assertions.assertEquals("hello!", ok.getContent());
+    }
+    finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
   /**
    * A response handler that throws (e.g. a byte-limit or query-timeout check tripping inside
    * {@code handleChunk}) must fail the caller's future with the actual cause and not leave the

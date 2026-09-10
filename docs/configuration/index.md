@@ -678,7 +678,8 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`(number of cores) * 3 / 2 + 1`|
-|`druid.global.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.global.http.clientConnectTimeout`|Connect timeout (in milliseconds) for the HTTP client used to forward requests between Druid services (for example, when the Router proxies queries to Brokers, or when management API calls are forwarded to the Coordinator or Overlord). Does not affect direct RPC connections between services; see `connectTimeout` for those.|500|
+|`druid.global.http.connectTimeout`|Connect timeout for the HTTP client used for direct RPC between Druid services (for example, a Broker dispatching a query to a Historical, or the Coordinator polling other services for status).|`PT10S`|
 
 ### Common endpoints configuration
 
@@ -1813,7 +1814,8 @@ client has the following configuration options.
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context-reference.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
-|`druid.broker.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.broker.http.clientConnectTimeout`|Connect timeout (in milliseconds) for the Broker's request-forwarding HTTP client. Does not affect the Broker's direct connections to data servers; see `connectTimeout` for those.|500|
+|`druid.broker.http.connectTimeout`|Connect timeout for the HTTP client the Broker uses to dispatch queries to Historical and real-time processes.|`PT10S`|
 
 
 ##### Retry policy
@@ -2331,4 +2333,5 @@ Supported query contexts:
 |`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`(number of cores) * 3 / 2 + 1`|
 |`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|
 |`druid.router.http.requestBuffersize`|Size of the content buffer for receiving requests. These buffers are only used for active connections that have requests with bodies that will not fit within the header buffer|`8 * 1024`|
-|`druid.router.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.router.http.clientConnectTimeout`|Connect timeout (in milliseconds) for the HTTP client the Router uses to forward incoming queries and management requests to Brokers and other Druid services. Does not affect the Router's direct RPC connections; see `connectTimeout` for those.|500|
+|`druid.router.http.connectTimeout`|Connect timeout for the HTTP client the Router uses for direct RPC to Brokers (for example, service-status polling).|`PT10S`|

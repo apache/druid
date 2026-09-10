@@ -76,6 +76,16 @@ public class DruidHttpClientConfig
   @JsonProperty
   private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);
 
+  /**
+   * Connect timeout for the HTTP client used for direct RPC between Druid services (broker → historical
+   * query dispatch, service clients, coordinator polls, and so on). Defaults to 10s, matching the
+   * pre-Netty-4-upgrade default; without this setting Netty 4's own default of 30s would apply.
+   * Distinct from {@link #clientConnectTimeout}, which is only applied to the HTTP client used by
+   * request-forwarding servlets (Router query proxying, management API forwarding).
+   */
+  @JsonProperty
+  private Period connectTimeout = new Period("PT10S");
+
   public int getNumConnections()
   {
     return numConnections;
@@ -136,6 +146,11 @@ public class DruidHttpClientConfig
   public long getClientConnectTimeout()
   {
     return clientConnectTimeout;
+  }
+
+  public Duration getConnectTimeout()
+  {
+    return connectTimeout == null ? null : connectTimeout.toStandardDuration();
   }
 
   private static HumanReadableBytes computeDefaultMaxQueuedBytes()

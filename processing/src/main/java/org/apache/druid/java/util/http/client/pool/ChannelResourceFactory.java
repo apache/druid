@@ -146,9 +146,9 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
                       // mode which makes it just do nothing.  Swap it with a new instance that will cover
                       // subsequent requests
                       pipeline.replace("codec", "codec", new HttpClientCodec());
-                      overallConnectPromise.setSuccess();
+                      overallConnectPromise.trySuccess();
                     } else {
-                      overallConnectPromise.setFailure(
+                      overallConnectPromise.tryFailure(
                           new ChannelException(
                               StringUtils.format(
                                   "Got status[%s] from CONNECT request to proxy[%s]",
@@ -193,7 +193,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
 
           channel.writeAndFlush(connectRequest).addListener((ChannelFuture f2) -> {
             if (!f2.isSuccess()) {
-              overallConnectPromise.setFailure(
+              overallConnectPromise.tryFailure(
                   new ChannelException(
                       StringUtils.format("Problem with CONNECT request to proxy[%s]", proxyUri), f2.cause()
                   )
@@ -201,7 +201,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
             }
           });
         } else {
-          overallConnectPromise.setFailure(
+          overallConnectPromise.tryFailure(
               new ChannelException(
                   StringUtils.format("Problem connecting to proxy[%s]", proxyUri), f1.cause()
               )
@@ -225,8 +225,11 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
       final SslHandler sslHandler = new SslHandler(sslEngine);
       sslHandler.setHandshakeTimeoutMillis(sslHandshakeTimeout);
 
-      final ChannelPromise handshakePromise = connectFuture.channel().newPromise();
-      connectFuture.channel().pipeline().addLast(ERROR_HANDLER_NAME, new ConnectionErrorHandler(handshakePromise));
+      final Channel sslChannel = connectFuture.channel();
+      final ChannelPromise handshakePromise = sslChannel.newPromise();
+      sslChannel.eventLoop().execute(
+          () -> sslChannel.pipeline().addLast(ERROR_HANDLER_NAME, new ConnectionErrorHandler(handshakePromise))
+      );
       connectFuture.addListener((ChannelFuture f) -> {
         if (f.isSuccess()) {
           final ChannelPipeline pipeline = f.channel().pipeline();
@@ -255,7 +258,10 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
 
       retVal = handshakePromise;
     } else {
-      connectFuture.channel().pipeline().addLast(ERROR_HANDLER_NAME, new ConnectionErrorHandler(null));
+      final Channel plainChannel = connectFuture.channel();
+      plainChannel.eventLoop().execute(
+          () -> plainChannel.pipeline().addLast(ERROR_HANDLER_NAME, new ConnectionErrorHandler(null))
+      );
       retVal = connectFuture;
     }
 
@@ -291,7 +297,7 @@ public class ChannelResourceFactory implements ResourceFactory<String, ChannelFu
    *
    * It's important to have this for all channels, even if {@link #promise} is null, because otherwise exceptions
    * that occur during connection land at {@link io.netty.handler.codec.http.HttpContentDecompressor} (the last
-   * handler from {@link org.apache.druid.java.util.http.client.netty.HttpClientPipelineFactory}) and are dropped on
+   * handler from {@link org.apache.druid.java.util.http.client.netty.HttpClientChannelInitializer}) and are dropped on
    * the floor along with a scary-looking warning.
    */
   private static class ConnectionErrorHandler extends ChannelInboundHandlerAdapter

@@ -67,13 +67,14 @@ public class HttpClientConfig
 
   public static final CompressionCodec DEFAULT_COMPRESSION_CODEC = CompressionCodec.GZIP;
 
-  // Default from NioClientSocketChannelFactory.DEFAULT_BOSS_COUNT, which is private:
-  private static final int DEFAULT_BOSS_COUNT = 1;
-
   // Default from SelectorUtil.DEFAULT_IO_THREADS, which is private:
   private static final int DEFAULT_WORKER_COUNT = JvmUtils.getRuntimeInfo().getAvailableProcessors() * 2;
 
   private static final Duration DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION = new Period("PT4M").toStandardDuration();
+
+  // Netty 4 defaults CONNECT_TIMEOUT_MILLIS to 30s; Netty 3 defaulted to 10s. Preserve the older, more
+  // aggressive default so a slow or dead peer surfaces sooner. Callers can override via the builder.
+  private static final Duration DEFAULT_CONNECT_TIMEOUT_DURATION = new Period("PT10S").toStandardDuration();
 
   public static Builder builder()
   {
@@ -86,7 +87,7 @@ public class HttpClientConfig
   private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
   private final Duration sslHandshakeTimeout;
-  private final int bossPoolSize;
+  private final Duration connectTimeout;
   private final int workerPoolSize;
   private final CompressionCodec compressionCodec;
   private final Duration unusedConnectionTimeoutDuration;
@@ -98,7 +99,7 @@ public class HttpClientConfig
       HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
       Duration sslHandshakeTimeout,
-      int bossPoolSize,
+      Duration connectTimeout,
       int workerPoolSize,
       CompressionCodec compressionCodec,
       Duration unusedConnectionTimeoutDuration
@@ -110,7 +111,7 @@ public class HttpClientConfig
     this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
     this.sslHandshakeTimeout = sslHandshakeTimeout;
-    this.bossPoolSize = bossPoolSize;
+    this.connectTimeout = connectTimeout;
     this.workerPoolSize = workerPoolSize;
     this.compressionCodec = compressionCodec;
     this.unusedConnectionTimeoutDuration = unusedConnectionTimeoutDuration;
@@ -146,9 +147,9 @@ public class HttpClientConfig
     return sslHandshakeTimeout;
   }
 
-  public int getBossPoolSize()
+  public Duration getConnectTimeout()
   {
-    return bossPoolSize;
+    return connectTimeout;
   }
 
   public int getWorkerPoolSize()
@@ -174,7 +175,7 @@ public class HttpClientConfig
     private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
     private Duration sslHandshakeTimeout = null;
-    private int bossCount = DEFAULT_BOSS_COUNT;
+    private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT_DURATION;
     private int workerCount = DEFAULT_WORKER_COUNT;
     private CompressionCodec compressionCodec = DEFAULT_COMPRESSION_CODEC;
     private Duration unusedConnectionTimeoutDuration = DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION;
@@ -219,6 +220,17 @@ public class HttpClientConfig
       return this;
     }
 
+    /**
+     * TCP connect timeout applied to every outbound channel. Null uses the default (10s, matching
+     * Netty 3). Configurable so operators can tighten it on latency-sensitive paths or loosen it on
+     * links that legitimately take longer to connect.
+     */
+    public Builder withConnectTimeout(Duration connectTimeout)
+    {
+      this.connectTimeout = connectTimeout == null ? DEFAULT_CONNECT_TIMEOUT_DURATION : connectTimeout;
+      return this;
+    }
+
     public Builder withWorkerCount(int workerCount)
     {
       this.workerCount = workerCount;
@@ -246,7 +258,7 @@ public class HttpClientConfig
           proxyConfig,
           readTimeout,
           sslHandshakeTimeout,
-          bossCount,
+          connectTimeout,
           workerCount,
           compressionCodec,
           unusedConnectionTimeoutDuration

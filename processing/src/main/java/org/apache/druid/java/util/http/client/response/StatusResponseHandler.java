@@ -22,8 +22,6 @@ package org.apache.druid.java.util.http.client.response;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpResponse;
 
-import java.nio.charset.StandardCharsets;
-
 public class StatusResponseHandler implements HttpResponseHandler<StatusResponseHolder, StatusResponseHolder>
 {
 
@@ -53,20 +51,24 @@ public class StatusResponseHandler implements HttpResponseHandler<StatusResponse
       long chunkNum
   )
   {
-    final StringBuilder builder = response.getObj().getBuilder();
+    final StatusResponseHolder holder = response.getObj();
 
-    if (builder == null) {
+    if (holder == null) {
       return ClientResponse.finished(null);
     }
 
-    builder.append(chunk.content().toString(StandardCharsets.UTF_8));
+    holder.addChunk(chunk.content());
     return response;
   }
 
   @Override
   public ClientResponse<StatusResponseHolder> done(ClientResponse<StatusResponseHolder> response)
   {
-    return ClientResponse.finished(response.getObj());
+    final StatusResponseHolder holder = response.getObj();
+    if (holder != null) {
+      holder.done();
+    }
+    return ClientResponse.finished(holder);
   }
 
   @Override

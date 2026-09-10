@@ -27,7 +27,7 @@ import io.netty.handler.codec.http.HttpContentDecompressor;
 
 /**
  */
-public class HttpClientPipelineFactory extends ChannelInitializer<Channel>
+public class HttpClientChannelInitializer extends ChannelInitializer<Channel>
 {
   @Override
   protected void initChannel(Channel ch)

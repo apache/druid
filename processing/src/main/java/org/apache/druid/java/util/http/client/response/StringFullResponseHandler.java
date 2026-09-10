@@ -57,14 +57,18 @@ public class StringFullResponseHandler
       return ClientResponse.finished(null);
     }
 
-    holder.addChunk(chunk.content().toString(charset));
+    holder.addChunk(chunk.content());
     return response;
   }
 
   @Override
   public ClientResponse<StringFullResponseHolder> done(ClientResponse<StringFullResponseHolder> response)
   {
-    return ClientResponse.finished(response.getObj());
+    final StringFullResponseHolder holder = response.getObj();
+    if (holder != null) {
+      holder.done();
+    }
+    return ClientResponse.finished(holder);
   }
 
   @Override

@@ -121,6 +121,7 @@ public class HttpClientModule implements Module
           .withNumConnections(config.getNumConnections())
           .withEagerInitialization(config.isEagerInitialization(eagerByDefault))
           .withReadTimeout(config.getReadTimeout())
+          .withConnectTimeout(config.getConnectTimeout())
           .withWorkerCount(config.getNumMaxThreads())
           .withCompressionCodec(
               HttpClientConfig.CompressionCodec.valueOf(StringUtils.toUpperCase(config.getCompressionCodec()))

@@ -28,10 +28,11 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import io.netty.util.internal.logging.Slf4JLoggerFactory;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.http.client.netty.HttpClientPipelineFactory;
+import org.apache.druid.java.util.http.client.netty.HttpClientChannelInitializer;
 import org.apache.druid.java.util.http.client.pool.ChannelResourceFactory;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.java.util.http.client.pool.ResourcePoolConfig;
+import org.joda.time.Duration;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
@@ -51,7 +52,7 @@ public class HttpClientInit
           new NettyHttpClient(
               new ResourcePool<>(
                   new ChannelResourceFactory(
-                      createBootstrap(lifecycle, config.getWorkerPoolSize()),
+                      createBootstrap(lifecycle, config.getWorkerPoolSize(), config.getConnectTimeout()),
                       config.getSslContext(),
                       config.getProxyConfig(),
                       config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().getMillis()
@@ -92,7 +93,7 @@ public class HttpClientInit
     }
   }
 
-  private static Bootstrap createBootstrap(Lifecycle lifecycle, int workerPoolSize)
+  private static Bootstrap createBootstrap(Lifecycle lifecycle, int workerPoolSize, Duration connectTimeout)
   {
     final NioEventLoopGroup eventLoopGroup = new NioEventLoopGroup(
         workerPoolSize,
@@ -105,8 +106,9 @@ public class HttpClientInit
     final Bootstrap bootstrap = new Bootstrap();
     bootstrap.group(eventLoopGroup)
              .channel(NioSocketChannel.class)
-             .handler(new HttpClientPipelineFactory())
-             .option(ChannelOption.SO_KEEPALIVE, true);
+             .handler(new HttpClientChannelInitializer())
+             .option(ChannelOption.SO_KEEPALIVE, true)
+             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(connectTimeout.getMillis()));
 
     InternalLoggerFactory.setDefaultFactory(Slf4JLoggerFactory.INSTANCE);
 

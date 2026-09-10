@@ -206,6 +206,10 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-codec-base</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-codec-http</artifactId>
     </dependency>
     <dependency>
