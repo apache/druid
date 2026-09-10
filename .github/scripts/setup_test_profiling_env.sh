@@ -28,24 +28,34 @@ fi
 
 if [[ "$1" -ge "17" ]];
 then
-  curl https://static.imply.io/cp/$JAR_INPUT_FILE -s -o $JAR_OUTPUT_FILE
+  # The profiler agent is observability only. If it cannot be downloaded, run the tests without it
+  # instead of failing the job or pointing -javaagent at a missing or partial jar.
+  TMP_JAR="$JAR_OUTPUT_FILE.tmp"
+  if curl -sSf --retry 3 --retry-delay 5 --retry-all-errors --connect-timeout 15 --max-time 120 --retry-max-time 300 \
+       "https://static.imply.io/cp/$JAR_INPUT_FILE" -o "$TMP_JAR"; then
+    mv -f "$TMP_JAR" "$JAR_OUTPUT_FILE"
 
-  # Run 'java -version' and capture the output
-  output=$(java -version 2>&1)
+    # Run 'java -version' and capture the output
+    output=$(java -version 2>&1)
 
-  # Extract the version number using grep and awk
-  jvm_version=$(echo "$output" | grep "version" | awk -F '"' '{print $2}')
+    # Extract the version number using grep and awk
+    jvm_version=$(echo "$output" | grep "version" | awk -F '"' '{print $2}')
 
-  shift
-  tags="${@/#/-Djfr.profiler.tags.}"
+    shift
+    tags="${@/#/-Djfr.profiler.tags.}"
 
-  echo $ENV_VAR=-javaagent:"$PWD"/$JAR_OUTPUT_FILE \
-  -Djfr.profiler.http.username=druid-ci \
-  -Djfr.profiler.http.password=w3Fb6PW8LIo849mViEkbgA== \
-  -Djfr.profiler.tags.project=druid \
-  -Djfr.profiler.tags.jvm_version=$jvm_version \
-  "${tags[@]}"
+    echo $ENV_VAR=-javaagent:"$PWD"/$JAR_OUTPUT_FILE \
+    -Djfr.profiler.http.username=druid-ci \
+    -Djfr.profiler.http.password=w3Fb6PW8LIo849mViEkbgA== \
+    -Djfr.profiler.tags.project=druid \
+    -Djfr.profiler.tags.jvm_version=$jvm_version \
+    "${tags[@]}"
+  else
+    # stdout is appended to $GITHUB_ENV by the caller, so diagnostics must go to stderr.
+    echo "::warning::Failed to download the JFR profiler agent ($JAR_INPUT_FILE); running tests without profiling" >&2
+    rm -f "$TMP_JAR" "$JAR_OUTPUT_FILE"
+    echo $ENV_VAR=\"\"
+  fi
 else
   echo $ENV_VAR=\"\"
 fi
-
