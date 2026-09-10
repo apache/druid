@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.54.10
+version: 2.54.13
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -1028,7 +1028,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.8.0
+version: 7.9.0
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -1093,7 +1093,7 @@ name: vertx
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 4.5.28
+version: 4.5.31
 libraries:
   - io.vertx: vertx-auth-common
   - io.vertx: vertx-core
@@ -1242,7 +1242,7 @@ name: org.jooq joou-java-6
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.9.4
+version: 0.9.5
 libraries:
   - org.jooq: joou-java-6
 
@@ -1276,7 +1276,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.18.1
+version: 3.18.2
 libraries:
   - com.squareup.okio: okio
   - com.squareup.okio: okio-jvm
@@ -1287,7 +1287,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 3.18.1
+version: 3.18.2
 libraries:
   - com.squareup.okio: okio-jvm
 
@@ -1800,7 +1800,7 @@ name: Apache Calcite
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.41.0
+version: 1.42.0
 libraries:
   - org.apache.calcite: calcite-core
   - org.apache.calcite: calcite-linq4j
@@ -2310,7 +2310,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
-version: 12.1.12
+version: 12.1.13
 libraries:
   - org.eclipse.jetty: jetty-alpn-client
   - org.eclipse.jetty: jetty-client
@@ -3027,7 +3027,7 @@ notice: |
 
 name: Kinesis Client
 license_category: binary
-version: 3.5.1
+version: 3.5.2
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 libraries:
@@ -4256,7 +4256,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.72.0
+version: 2.73.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -4266,7 +4266,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.67.0
+version: 2.68.0
 libraries:
   - com.google.api: api-common
 
@@ -4390,7 +4390,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.84.0
+version: 2.85.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4402,7 +4402,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.72.0
+version: 2.73.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4414,7 +4414,7 @@ name: grpc-io
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.4
+version: 1.83.0
 libraries:
   - io.grpc: grpc-alts
   - io.grpc: grpc-auth
@@ -4431,6 +4431,18 @@ libraries:
   - io.grpc: grpc-stub
   - io.grpc: grpc-util
   - io.grpc: grpc-xds
+
+---
+
+name: CEL Java
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.13.0
+libraries:
+  - dev.cel: common
+  - dev.cel: protobuf
+  - dev.cel: runtime
 
 ---
 
@@ -4458,7 +4470,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.75.0
+version: 2.76.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4468,7 +4480,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.70.0
+version: 1.71.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4478,7 +4490,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.51.0
+version: 1.52.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4499,11 +4511,37 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.74.0
+version: 2.75.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
   - com.google.cloud: google-cloud-core-http
+
+---
+
+name: CEL Java
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.13.0
+libraries:
+  - dev.cel: common
+  - dev.cel: protobuf
+  - dev.cel: runtime
+
+---
+
+name: ThreeTen Extra
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 1.8.0
+libraries:
+  - org.threeten: threeten-extra
+notices:
+  - threeten-extra: |
+      ThreeTen-Extra
+      Copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos.
 
 ---
 
@@ -4543,7 +4581,7 @@ name: google-grpc
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.4
+version: 1.83.0
 libraries:
   - io.grpc: grpc-grpclb
 

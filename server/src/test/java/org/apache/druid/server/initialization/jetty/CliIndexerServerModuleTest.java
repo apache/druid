@@ -17,39 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.server.initialization.jetty;
 
-import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class ServerCloneStatusTest
+import java.util.Properties;
+
+public class CliIndexerServerModuleTest
 {
   @Test
-  public void testSerde() throws Exception
+  public void testAdjustedServerConfigPreservesResponseIdentityHeaders()
   {
-    ServerCloneStatus metrics = new ServerCloneStatus(
-        "host2",
-        "host1",
-        ServerCloneStatus.State.IN_PROGRESS,
-        3012,
-        10,
-        1,
-        1,
-        100
-    );
-    byte[] bytes = DefaultObjectMapper.INSTANCE.writeValueAsBytes(metrics);
-    ServerCloneStatus deserialized = DefaultObjectMapper.INSTANCE.readValue(bytes, ServerCloneStatus.class);
-    Assertions.assertEquals(deserialized, metrics);
-  }
+    final ServerConfig oldConfig = new ServerConfig()
+    {
+      @Override
+      public boolean isEnableResponseIdentityHeaders()
+      {
+        return true;
+      }
+    };
 
-  @Test
-  public void testEquals()
-  {
-    EqualsVerifier.forClass(ServerCloneStatus.class)
-                  .withNonnullFields("sourceServer", "state")
-                  .usingGetClass()
-                  .verify();
+    final ServerConfig adjustedConfig = new CliIndexerServerModule(new Properties()).makeAdjustedServerConfig(oldConfig);
+
+    Assertions.assertTrue(adjustedConfig.isEnableResponseIdentityHeaders());
   }
 }

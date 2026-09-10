@@ -80,6 +80,18 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     super(LockGranularity.TIME_CHUNK, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
+  /**
+   * This test drives several rounds of parallel indexing/compaction (each with its own
+   * determine-partitions/generate/merge phases) back-to-back, always with concurrent sub-tasks, so the
+   * base implementation would poll task status at the 1-second production default and pay up to a full
+   * period per phase transition. None of the assertions here depend on the poll cadence, so poll quickly.
+   */
+  @Override
+  protected Long getTaskStatusCheckPeriodMs(int ignoredMaxNumConcurrentSubTasks)
+  {
+    return SHORT_TASK_STATUS_CHECK_PERIOD_MS;
+  }
+
   @BeforeEach
   public void setup() throws IOException
   {

@@ -46,6 +46,15 @@ public class Configs
    * Returns the given {@code value} if it is not null, otherwise returns the
    * {@code defaultValue}.
    */
+  public static double valueOrDefault(Double value, double defaultValue)
+  {
+    return value == null ? defaultValue : value;
+  }
+
+  /**
+   * Returns the given {@code value} if it is not null, otherwise returns the
+   * {@code defaultValue}.
+   */
   public static boolean valueOrDefault(Boolean value, boolean defaultValue)
   {
     return value == null ? defaultValue : value;

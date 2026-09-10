@@ -704,11 +704,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public Set<SegmentHolder> getSegmentsInQueue()
+  public List<SegmentHolder> getSegmentsInQueue()
   {
-    final Set<SegmentHolder> segmentsInQueue;
+    final List<SegmentHolder> segmentsInQueue;
     synchronized (lock) {
-      segmentsInQueue = new HashSet<>(queuedSegments);
+      segmentsInQueue = new ArrayList<>(queuedSegments);
     }
     return segmentsInQueue;
   }
