@@ -67,6 +67,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -755,6 +756,39 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   @Test
+  void testRangeReaderNullDoesNotDisturbANonPartialEntry() throws Exception
+  {
+    // A non-partial cache entry sits at this segment id and the coordinator asks for a rule this historical cannot
+    // honor. Giving up on the rule must leave that entry alone: it is not going to be replaced by a partial one, so
+    // there is nothing to clear out of the way, and discarding its cached data would buy nothing. Evicting it used
+    // to be attempted before the range-reader check, which both destroyed cache for nothing when the entry was
+    // unheld and failed the load outright when it was held, as it is here.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+
+    final DataSegment noRangeReader =
+        partialWrapperSegmentWithNullRangeReader(List.of(AGG_BUNDLE), "v1:cannot-honor");
+    // An on-demand acquire of a segment whose load spec cannot range-read registers a non-partial entry, held for
+    // as long as the action is open.
+    final AcquireSegmentAction inFlightQuery = manager.acquireSegment(noRangeReader, AcquireMode.PARTIAL);
+    try {
+      Assertions.assertNotNull(
+          location.getCacheEntry(id),
+          "precondition: an in-flight on-demand acquire holds a non-partial entry"
+      );
+
+      manager.load(noRangeReader);
+
+      Assertions.assertNotNull(location.getCacheEntry(id), "the non-partial entry is untouched");
+      Assertions.assertNull(manager.getRuleFingerprintForSegment(SEGMENT_ID), "and no rule is applied");
+    }
+    finally {
+      inFlightQuery.close();
+    }
+  }
+
+  @Test
   void testLoadFailureLeavesNoRuleApplied() throws Exception
   {
     // Wrapper referring to a non-existent projection — wrapper.getSelectedBundleNames throws before applyRule fires.
@@ -778,6 +812,55 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertNull(
         manager.getRuleFingerprintForSegment(SEGMENT_ID),
         "failed load must not leave a rule applied on the metadata entry"
+    );
+  }
+
+  @Test
+  void testFailedEagerDownloadRestoresThePriorRule() throws Exception
+  {
+    // A reload whose eager downloads fail must put the PRIOR rule back rather than clear the rule outright. The
+    // historical keeps serving the replica and keeps announcing the prior profile (the failed load never announces a
+    // new one), so the coordinator has to still find that profile's bundles pinned; clearing would leave the replica
+    // advertising a footprint it no longer holds, with every bundle of it evictable.
+    final StorageLoadingThreadPool loadingPool = StorageLoadingThreadPool.createFromConfig(
+        SegmentLoaderConfig.builder()
+                           .locations(List.of(new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null)))
+                           .virtualStorage(true)
+                           .virtualStoragePartialDownloadsEnabled(true)
+                           .build()
+    );
+    manager = makeManagerAtLocations(true, true, List.of(cacheRoot), loadingPool);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE), "v1:rule-original"));
+    final PartialSegmentMetadataCacheEntry meta = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertEquals("v1:rule-original", meta.getRuleFingerprint());
+    Assertions.assertTrue(meta.isBundleRuleHeld(AGG_BUNDLE));
+
+    // Stopping the loading pool makes every eager download for the new rule's bundle fail to even be submitted.
+    loadingPool.stop();
+
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> manager.load(partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), "v2:rule-updated"))
+    );
+
+    Assertions.assertEquals(
+        "v1:rule-original",
+        manager.getRuleFingerprintForSegment(SEGMENT_ID),
+        "a failed reload must restore the prior rule's fingerprint, not clear it"
+    );
+    Assertions.assertTrue(
+        meta.isBundleRuleHeld(AGG_BUNDLE),
+        "the prior rule's bundle must still be pinned after the failed reload"
+    );
+    Assertions.assertTrue(
+        location.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)),
+        "the prior rule's bundle must never have been unreserved during the attempt, so it was never evictable"
+    );
+    Assertions.assertFalse(
+        meta.isBundleRuleHeld(OTHER_AGG_BUNDLE),
+        "the attempted rule's bundle must not be left pinned"
     );
   }
 
@@ -938,6 +1021,20 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
       List<File> locationRoots
   )
   {
+    return makeManagerAtLocations(virtualStorage, partialDownloadsEnabled, locationRoots, null);
+  }
+
+  /**
+   * @param loadingPool the loading pool to use, or null to build one from the config. Pass one in to keep a handle on
+   *                    it, e.g. to {@link StorageLoadingThreadPool#stop()} it mid-test and make eager downloads fail.
+   */
+  private SegmentLocalCacheManager makeManagerAtLocations(
+      boolean virtualStorage,
+      boolean partialDownloadsEnabled,
+      List<File> locationRoots,
+      @Nullable StorageLoadingThreadPool loadingPool
+  )
+  {
     final List<StorageLocationConfig> locConfigs = locationRoots.stream()
         .map(root -> new StorageLocationConfig(root, 1024L * 1024L * 1024L, null))
         .toList();
@@ -950,7 +1047,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     return new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
-        StorageLoadingThreadPool.createFromConfig(loaderConfig),
+        loadingPool == null ? StorageLoadingThreadPool.createFromConfig(loaderConfig) : loadingPool,
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper

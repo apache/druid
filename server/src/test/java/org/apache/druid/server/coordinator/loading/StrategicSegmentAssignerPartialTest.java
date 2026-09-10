@@ -495,9 +495,10 @@ public class StrategicSegmentAssignerPartialTest
   @Test
   public void testFullLoadReplicaTreatedAsStaleAgainstPartialRule()
   {
-    // s1 holds the segment as a regular full-load (no profile). Under a partial rule it counts as stale, so the
-    // reconciler reloads it in place onto the rule's fingerprint rather than downloading a fresh replica onto the
-    // empty s2 and dropping s1 on a later run. Nothing is dropped either way: stale keeps serving while it reloads.
+    // s1 holds the segment as a regular full-load (no profile). Under a partial rule it counts as stale, and it is
+    // still an in-place candidate: under virtual storage a queried full-load replica is already backed by a partial
+    // cache entry that on-demand reads populated, so applying the rule there pins bundles that are largely resident
+    // and avoids both a full download onto the empty s2 and the later drop of s1.
     final DataSegment segment = createSegment();
     final ServerHolder s1 = createServerWithLoaded(TIER1, segment, null);
     final ServerHolder s2 = createServer(TIER1);
@@ -516,7 +517,7 @@ public class StrategicSegmentAssignerPartialTest
     Assertions.assertEquals(
         profileForRevenue(),
         ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment),
-        "the stale-loaded server is reloaded in place under the rule's fingerprint"
+        "the profileless stale replica is reloaded in place under the rule's fingerprint"
     );
     Assertions.assertTrue(s2.getLoadingSegments().isEmpty(), "no fresh download is needed on the empty server");
     Assertions.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
@@ -555,7 +556,7 @@ public class StrategicSegmentAssignerPartialTest
     // Deficit of 2 with only one stale replica to reload in place: the in-place reload covers one, and a fresh load
     // on an empty server covers the other. The second empty server stays untouched.
     final DataSegment segment = createSegment();
-    final ServerHolder stale = createServerWithLoaded(TIER1, segment, null);
+    final ServerHolder stale = createServerWithLoaded(TIER1, segment, staleProfileForUsers());
     final ServerHolder empty1 = createServer(TIER1);
     final ServerHolder empty2 = createServer(TIER1);
     final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, stale, empty1, empty2).build();
@@ -582,7 +583,7 @@ public class StrategicSegmentAssignerPartialTest
     // an idle server was available.
     final DataSegment segment = createSegment();
     final DruidServer staleServer = createDruidServer(TIER1);
-    staleServer.addDataSegment(segment, null);
+    staleServer.addDataSegment(segment, staleProfileForUsers());
     final ServerHolder stale =
         new ServerHolder(staleServer.toImmutableDruidServer(), new RefusingLoadQueuePeon());
     final ServerHolder empty = createServer(TIER1);
@@ -612,7 +613,7 @@ public class StrategicSegmentAssignerPartialTest
     // the replacement instead of the tier stalling on a server that cannot accept the request.
     final DataSegment segment = createSegment();
     final DataSegment other = createSegment(Intervals.of("2020/2021"));
-    final ServerHolder stale = createServerWithLoadedAndQueueLimit(TIER1, 1, null, segment);
+    final ServerHolder stale = createServerWithLoadedAndQueueLimit(TIER1, 1, staleProfileForUsers(), segment);
     // Consume the server's single load-queue slot so canReloadInPlace rejects it.
     stale.getPeon().loadSegment(other, SegmentAction.LOAD, null);
     Assertions.assertTrue(stale.startOperation(SegmentAction.LOAD, other));
@@ -637,7 +638,7 @@ public class StrategicSegmentAssignerPartialTest
     // A decommissioning stale replica is on its way out, so reloading it in place would be wasted work. The fresh
     // load on the empty server is what satisfies the rule.
     final DataSegment segment = createSegment();
-    final ServerHolder decommStale = createDecommissioningServerWithLoaded(TIER1, segment, null);
+    final ServerHolder decommStale = createDecommissioningServerWithLoaded(TIER1, segment, staleProfileForUsers());
     final ServerHolder empty = createServer(TIER1);
     final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, decommStale, empty).build();
 
@@ -1277,6 +1278,20 @@ public class StrategicSegmentAssignerPartialTest
     {
       return markedToDrop;
     }
+  }
+
+  /**
+   * A loaded profile under a fingerprint the tests' rule never asks for, i.e. a stale <em>partial</em> replica. A
+   * stale replica announcing no profile at all is an in-place candidate too, this just exercises the partial-to-
+   * partial swap specifically.
+   */
+  private static PartialLoadProfile staleProfileForUsers()
+  {
+    return PartialLoadProfile.forLoaded(
+        Map.of("type", "partialProjection", "projections", List.of("users"), "fingerprint", FP_USERS),
+        FP_USERS,
+        512L
+    );
   }
 
   private static PartialLoadProfile profileForRevenue()

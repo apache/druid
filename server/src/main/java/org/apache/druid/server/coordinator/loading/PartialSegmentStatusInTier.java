@@ -44,8 +44,8 @@ import java.util.Objects;
  * A stale replica is also classified as a target for an in-place reload: a partial-load request arriving at a server
  * that is already (stale-)loaded is honored by swapping the rule on the cache entry it already has, so only the delta
  * the new fingerprint adds has to come off deep storage. That makes {@link #getEligibleForInPlaceReload()} the
- * <em>preferred</em> destination for a matching deficit as it downloads strictly less than a fresh load elsewhere, the
- * replica keeps serving throughout, and no follow-up drop is needed to retire the replica it replaces.
+ * <em>preferred</em> destination for a matching deficit as it downloads strictly less than a fresh load elsewhere,
+ * the replica keeps serving throughout, and no follow-up drop is needed to retire the replica it replaces.
  * <p>
  * What makes this safe is that the historical pins a rule with cache holds rather than accumulating. Applying a rule
  * releases the holds on every bundle the new fingerprint does not select, so a reloaded server ends up pinned by
@@ -122,7 +122,7 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Stale-loaded servers that can take an in-place reload request; a subset of {@link #getStaleLoaded()} filtered by
+   * Stale-loaded servers that can take an in-place reload request: the subset of {@link #getStaleLoaded()} that passes
    * {@link #canReloadInPlace}. The preferred destination for a matching deficit, ahead of
    * {@link #getEligibleForFreshLoad()}. See {@link StrategicSegmentAssigner#updateReplicasInTierPartial}.
    */
