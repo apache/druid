@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.worker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.Pair;
 import org.apache.druid.error.DruidException;
@@ -29,6 +30,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.BaseWorkerClientImpl;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.FixedServiceLocator;
@@ -46,6 +48,8 @@ import java.io.Closeable;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Dart implementation of {@link WorkerClient}. Uses the same {@link BaseWorkerClientImpl} as the task-based engine.
@@ -67,6 +71,9 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
 
   @GuardedBy("clientMap")
   private boolean closed;
+
+  private final Set<ListenableFuture<Void>> activeWorkOrders = ConcurrentHashMap.newKeySet();
+  private volatile boolean isStopping = false;
 
   /**
    * Create a worker client.
@@ -140,8 +147,26 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   }
 
   @Override
-  public ListenableFuture<?> stopWorker(String workerId)
+  public ListenableFuture<Void> postWorkOrder(final String workerId, final WorkOrder workOrder)
   {
+    final ListenableFuture<Void> future = super.postWorkOrder(workerId, workOrder);
+
+    activeWorkOrders.add(future);
+    future.addListener(() -> activeWorkOrders.remove(future), MoreExecutors.directExecutor());
+
+    // Handle a 'stop' racing with 'registration'.
+    if (isStopping && activeWorkOrders.remove(future)) {
+      future.cancel(true);
+    }
+
+    return future;
+  }
+
+  @Override
+  public ListenableFuture<?> stopWorker(final String workerId)
+  {
+    isStopping = true;
+    activeWorkOrders.forEach(future -> future.cancel(true));
     return getClient(workerId).asyncRequest(
         new RequestBuilder(HttpMethod.POST, "/stop"),
         IgnoreHttpResponseHandler.INSTANCE
