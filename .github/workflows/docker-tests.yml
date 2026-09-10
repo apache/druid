@@ -39,7 +39,9 @@ jobs:
         # they are skipped here. Same flags as the builder stage in
         # distribution/docker/Dockerfile. This also installs every reactor module
         # into the local Maven repository, which run_docker-tests relies on.
-        run: mvn -B -T1C clean install -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests
+        # benchmarks is excluded: nothing in the distribution or the Docker tests
+        # depends on it.
+        run: mvn -B -T1C clean install -pl '!benchmarks' -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests
       - name: Build the Docker image
         run: |
           DOCKER_BUILDKIT=1 docker build \
