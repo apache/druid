@@ -688,7 +688,7 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`(number of cores) * 3 / 2 + 1`|
 |`druid.global.http.clientConnectTimeout`|Connect timeout (in milliseconds) for the HTTP client used to forward management API requests between Druid services. On the Router, this covers forwarding management API calls to the Coordinator or Overlord. On the Coordinator, this covers proxying `/druid/indexer/*` requests to the Overlord (when they run as separate processes). Does not affect Router query proxying to Brokers (see `druid.router.http.clientConnectTimeout`) or direct RPC connections between services (see `connectTimeout`).|500|
 |`druid.global.http.connectTimeout`|Connect timeout for the HTTP client used for most direct RPC between Druid services. This covers, among other things, Overlord-to-task and supervisor-to-task calls in the indexing service, Coordinator lookup management, dynamic config sync between services, MSQ tasks reading from data servers, and general Coordinator/Overlord/Broker service clients. Does not affect Broker-to-Historical query dispatch (see `druid.broker.http.connectTimeout`) or request forwarding (see `clientConnectTimeout`).|`PT10S`|
-|`druid.global.http.allocator`|Netty ByteBuf allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between pooled and unpooled based on load), `pooled` (always pooled), or `unpooled` (always freshly allocated).|`adaptive`|
+|`druid.global.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
 
 ### Common endpoints configuration
 
@@ -1833,7 +1833,7 @@ client has the following configuration options.
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context-reference.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
 |`druid.broker.http.connectTimeout`|Connect timeout for the HTTP client the Broker uses to dispatch queries to Historical and real-time processes.|`PT10S`|
-|`druid.broker.http.allocator`|Netty ByteBuf allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between pooled and unpooled based on load), `pooled` (always pooled), or `unpooled` (always freshly allocated).|`adaptive`|
+|`druid.broker.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
 
 
 ##### Retry policy
