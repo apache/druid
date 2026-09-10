@@ -3155,7 +3155,7 @@ notice: |
 
 name: Kinesis Client
 license_category: binary
-version: 3.5.1
+version: 3.5.2
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 libraries:
