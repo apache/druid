@@ -271,6 +271,45 @@ public class IcebergArrowInputSourceReaderTest
   }
 
   @Test
+  public void testArrowReaderWorksWhenContextClassLoaderCannotLoadArrowFormatModels() throws IOException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "alice", 1.0));
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        INPUT_SCHEMA,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+    final ClassLoader blockingClassLoader = new ClassLoader(originalClassLoader)
+    {
+      @Override
+      protected Class<?> loadClass(final String name, final boolean resolve) throws ClassNotFoundException
+      {
+        if ("org.apache.iceberg.arrow.vectorized.ArrowFormatModels".equals(name)) {
+          throw new ClassNotFoundException(name);
+        }
+        return super.loadClass(name, resolve);
+      }
+    };
+
+    try {
+      Thread.currentThread().setContextClassLoader(blockingClassLoader);
+      final List<InputRow> rows = readAll(reader);
+      Assertions.assertEquals(1, rows.size());
+      Assertions.assertEquals("alice", rows.get(0).getDimension("name").get(0));
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(originalClassLoader);
+    }
+  }
+
+  @Test
   public void testAggregatorSourceColumnSurvivesProjection() throws IOException
   {
     // Regression: dimensions=[name] plus ColumnsFilter inclusion of `value` (aggregator source).

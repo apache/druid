@@ -108,15 +108,24 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
         scan.splitLookback(),
         scan.splitOpenFileCost()
     );
-    final ArrowReader arrowReader = new ArrowReader(scan, batchSize, true);
-    final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter = arrowReader.open(tasks);
-    return new ArrowInputRowIterator(
-        batchIter,
-        arrowReader,
-        tasks,
-        inputStats != null ? inputStats : new NoopInputStats(),
-        scan.schema()
-    );
+    final ClassLoader extensionClassLoader = IcebergArrowInputSourceReader.class.getClassLoader();
+    final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(extensionClassLoader);
+      final ArrowReader arrowReader = new ArrowReader(scan, batchSize, true);
+      final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter = arrowReader.open(tasks);
+      return new ArrowInputRowIterator(
+          batchIter,
+          arrowReader,
+          tasks,
+          inputStats != null ? inputStats : new NoopInputStats(),
+          scan.schema(),
+          extensionClassLoader
+      );
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(originalClassLoader);
+    }
   }
 
   private void validateNoDeleteFiles(final TableScan scan) throws IOException
@@ -298,6 +307,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     private final CloseableIterable<CombinedScanTask> tasks;
     private final InputStats inputStats;
     private final Schema readSchema;
+    private final ClassLoader extensionClassLoader;
 
     private ColumnarBatch currentBatch = null;
     private int rowIndexInBatch = 0;
@@ -308,7 +318,8 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
         final ArrowReader arrowReader,
         final CloseableIterable<CombinedScanTask> tasks,
         final InputStats inputStats,
-        final Schema readSchema
+        final Schema readSchema,
+        final ClassLoader extensionClassLoader
     )
     {
       this.batchIter = batchIter;
@@ -316,10 +327,23 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
       this.tasks = tasks;
       this.inputStats = inputStats;
       this.readSchema = readSchema;
+      this.extensionClassLoader = extensionClassLoader;
     }
 
     @Override
     public boolean hasNext()
+    {
+      final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+      try {
+        Thread.currentThread().setContextClassLoader(extensionClassLoader);
+        return hasNextInternal();
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(originalClassLoader);
+      }
+    }
+
+    private boolean hasNextInternal()
     {
       if (exhausted) {
         return false;
@@ -333,10 +357,17 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     @Override
     public InputRow next()
     {
-      if (!hasNext()) {
-        throw new NoSuchElementException();
+      final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+      try {
+        Thread.currentThread().setContextClassLoader(extensionClassLoader);
+        if (!hasNextInternal()) {
+          throw new NoSuchElementException();
+        }
+        return batchRowToInputRow(currentBatch, rowIndexInBatch++, readSchema);
       }
-      return batchRowToInputRow(currentBatch, rowIndexInBatch++, readSchema);
+      finally {
+        Thread.currentThread().setContextClassLoader(originalClassLoader);
+      }
     }
 
     private boolean loadNextBatch()
@@ -365,16 +396,23 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     @Override
     public void close() throws IOException
     {
+      final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
       try {
-        batchIter.close();
-      }
-      finally {
+        Thread.currentThread().setContextClassLoader(extensionClassLoader);
         try {
-          arrowReader.close();
+          batchIter.close();
         }
         finally {
-          tasks.close();
+          try {
+            arrowReader.close();
+          }
+          finally {
+            tasks.close();
+          }
         }
+      }
+      finally {
+        Thread.currentThread().setContextClassLoader(originalClassLoader);
       }
     }
   }
