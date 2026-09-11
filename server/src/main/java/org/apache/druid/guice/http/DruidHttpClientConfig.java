@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -40,7 +41,7 @@ public class DruidHttpClientConfig
   private static final Logger LOG = new Logger(DruidHttpClientConfig.class);
 
   @JsonProperty
-  @Min(0)
+  @Min(1)
   private int numConnections = 20;
 
   @JsonProperty
@@ -72,6 +73,12 @@ public class DruidHttpClientConfig
 
   @JsonProperty
   private Boolean eagerInitialization = null;
+
+  @JsonProperty
+  private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.ADAPTIVE;
+
+  @JsonProperty
+  private boolean strictConnectionValidation = false;
 
   @JsonProperty
   private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);
@@ -131,6 +138,19 @@ public class DruidHttpClientConfig
       return defaultValue;
     }
     return eagerInitialization;
+  }
+
+  public ResourcePool.Implementation getPoolImplementation()
+  {
+    return poolImplementation;
+  }
+
+  /**
+   * Whether a request fails instead of being sent over a connection that never passed its health check.
+   */
+  public boolean isStrictConnectionValidation()
+  {
+    return strictConnectionValidation;
   }
 
   public long getClientConnectTimeout()

@@ -687,6 +687,8 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`(number of cores) * 3 / 2 + 1`|
 |`druid.global.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.global.http.poolImplementation`|How the connection pool follows demand. With `adaptive`, a request discards every stale or broken connection it walks past, so the pool falls back to the size the traffic needs. With `retaining`, the pool keeps every connection it has opened, replacing a stale or broken one by a fresh one, one for one.|`adaptive`|
+|`druid.global.http.strictConnectionValidation`|Whether a request fails instead of being sent over a connection that never passed its health check. A new connection is validated and replaced up to three times; if all attempts fail, the last one is used anyway and a warning is logged, unless this is `true`. Only used with `poolImplementation` `adaptive`.|`false`|
 
 ### Common endpoints configuration
 
@@ -1831,6 +1833,8 @@ client has the following configuration options.
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context-reference.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
 |`druid.broker.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.broker.http.poolImplementation`|How the connection pool follows demand. With `adaptive`, a query discards every stale or broken connection it walks past, so the pool falls back to the size the traffic needs. With `retaining`, the pool keeps every connection it has opened, replacing a stale or broken one by a fresh one, one for one.|`adaptive`|
+|`druid.broker.http.strictConnectionValidation`|Whether a query fails instead of being sent over a connection that never passed its health check. A new connection is validated and replaced up to three times; if all attempts fail, the last one is used anyway and a warning is logged, unless this is `true`. Only used with `poolImplementation` `adaptive`.|`false`|
 
 
 ##### Retry policy
@@ -2004,6 +2008,7 @@ The following table lists available monitors and the respective services where t
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. |MiddleManager, Indexer|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|Any|
 |`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |Broker, Historical, Indexer, Peon|
+|`org.apache.druid.server.metrics.HttpClientPoolMonitor`|Reports connection churn and usage of the HTTP client connection pools used for service to service communication, per remote end, per emission period.|Any|
 
 For example, if you only wanted monitors on all services for system and JVM information, you'd add the following to `common.runtime.properties`:
 

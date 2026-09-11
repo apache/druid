@@ -50,6 +50,11 @@ public class HttpClientInit
 {
   public static HttpClient createClient(HttpClientConfig config, Lifecycle lifecycle)
   {
+    return createNettyClient(config, lifecycle);
+  }
+
+  public static NettyHttpClient createNettyClient(HttpClientConfig config, Lifecycle lifecycle)
+  {
     try {
       // We need to use the full constructor in order to set a ThreadNameDeterminer. The other parameters are taken
       // from the defaults in HashedWheelTimer's other constructors.
@@ -90,7 +95,9 @@ public class HttpClientInit
                   ),
                   new ResourcePoolConfig(
                       config.getNumConnections(),
-                      config.getUnusedConnectionTimeoutDuration().getMillis()
+                      config.getUnusedConnectionTimeoutDuration().getMillis(),
+                      config.getPoolImplementation(),
+                      config.isStrictConnectionValidation()
                   ),
                   config.isEagerInitialization()
               ),

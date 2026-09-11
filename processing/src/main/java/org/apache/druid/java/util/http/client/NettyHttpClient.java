@@ -94,6 +94,11 @@ public class NettyHttpClient extends AbstractHttpClient
     }
   }
 
+  public ResourcePool<String, ChannelFuture> getPool()
+  {
+    return pool;
+  }
+
   @LifecycleStart
   public void start()
   {

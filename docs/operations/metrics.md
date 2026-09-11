@@ -553,6 +553,26 @@ These metrics are emitted when `druid.auth.emitAuthMetrics` is set to `true`.
 |`segment/rowCount/avg`| The average number of rows per segment on a historical. `SegmentStatsMonitor` must be enabled.| `dataSource`, `tier`, `priority`|Varies. See [segment optimization](../operations/segment-optimization.md) for guidance on optimal segment sizes. |
 |`segment/rowCount/range/count`| The number of segments in a bucket. `SegmentStatsMonitor` must be enabled.| `dataSource`, `tier`, `priority`, `range`|Varies|
 
+### HTTP client connection pools
+
+These metrics are only available if the `HttpClientPoolMonitor` module is included in `druid.monitoring.monitors`.
+They cover the connection pools that Druid services use to talk to each other, one emission per remote end. The
+`server` dimension is that remote end, and the `httpClient` dimension names the client that pools the connections to
+it: `client` and `escalatedClient` are configured by `druid.broker.http`, `global` and `escalatedGlobal` by
+`druid.global.http`. A remote end that a service has stopped talking to keeps being reported, with zeroes, until the
+service is restarted.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`httpClient/pool/opened`|Number of connections opened.|`httpClient`, `server`|Varies. Steady churn on an idle cluster points at connections being discarded too eagerly.|
+|`httpClient/pool/closed`|Number of connections closed, whether they were broken, unused for too long, or surplus.|`httpClient`, `server`|Varies|
+|`httpClient/pool/errored`|Number of failures while opening, health checking, or closing a connection.|`httpClient`, `server`|0|
+|`httpClient/pool/timedOut`|Number of connections discarded for being unused longer than `unusedConnectionTimeout`.|`httpClient`, `server`|Varies|
+|`httpClient/pool/taken`|Number of connections handed to a caller, that is, the number of requests that got a connection.|`httpClient`, `server`|Varies|
+|`httpClient/pool/returned`|Number of connections given back by a caller.|`httpClient`, `server`|Close to `httpClient/pool/taken`|
+|`httpClient/pool/used`|Number of connections in the hands of callers at the time of the emission, that is, the requests in flight to that remote end. A level, not a per period count.|`httpClient`, `server`|<= `druid.<service>.http.numConnections`. Sitting at that ceiling means requests are waiting for a connection.|
+|`httpClient/pool/idle`|Number of connections parked for the next caller at the time of the emission. A level, not a per period count.|`httpClient`, `server`|<= `druid.<service>.http.numConnections`|
+
 ### JVM
 
 These metrics are only available if the `JvmMonitor` module is included in `druid.monitoring.monitors`.

@@ -1,0 +1,105 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.guice.http;
+
+import jakarta.validation.Validation;
+import org.apache.druid.guice.JsonConfigProvider;
+import org.apache.druid.guice.JsonConfigurator;
+import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.http.client.pool.ResourcePool;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import java.util.Properties;
+
+/**
+ * Covers reading the connection pool knobs out of runtime.properties, which is how an operator moves off the default
+ * pooling implementation or turns strict connection validation on.
+ */
+public class DruidHttpClientConfigTest
+{
+  private static final String PROPERTY_BASE = "druid.broker.http";
+
+  @Test
+  public void testPoolImplementationDefaultsToAdaptive()
+  {
+    Assertions.assertEquals(ResourcePool.Implementation.ADAPTIVE, configure(new Properties()).getPoolImplementation());
+  }
+
+  @Test
+  public void testPoolImplementationCanBeSwitchedBackToRetaining()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "retaining");
+
+    Assertions.assertEquals(ResourcePool.Implementation.RETAINING, configure(properties).getPoolImplementation());
+  }
+
+  /**
+   * Either casing is accepted, since the constant is upper case while the value serialises lower case.
+   */
+  @Test
+  public void testPoolImplementationIsNotCaseSensitive()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "RETAINING");
+
+    Assertions.assertEquals(ResourcePool.Implementation.RETAINING, configure(properties).getPoolImplementation());
+  }
+
+  /**
+   * A misspelled implementation fails the service at startup rather than silently leaving the default in place.
+   */
+  @Test
+  public void testUnknownPoolImplementationIsRejected()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "invalid");
+
+    Assertions.assertThrows(RuntimeException.class, () -> configure(properties));
+  }
+
+  @Test
+  public void testStrictConnectionValidationIsOffByDefault()
+  {
+    Assertions.assertFalse(configure(new Properties()).isStrictConnectionValidation());
+  }
+
+  @Test
+  public void testStrictConnectionValidationCanBeTurnedOn()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty(PROPERTY_BASE + ".strictConnectionValidation", "true");
+
+    Assertions.assertTrue(configure(properties).isStrictConnectionValidation());
+  }
+
+  private static DruidHttpClientConfig configure(Properties properties)
+  {
+    final JsonConfigurator configurator = new JsonConfigurator(
+        new DefaultObjectMapper(),
+        Validation.buildDefaultValidatorFactory().getValidator()
+    );
+    final JsonConfigProvider<DruidHttpClientConfig> provider =
+        JsonConfigProvider.of(PROPERTY_BASE, DruidHttpClientConfig.class);
+    provider.inject(properties, configurator);
+    return provider.get();
+  }
+}
