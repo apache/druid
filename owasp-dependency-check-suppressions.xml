@@ -819,7 +819,9 @@
     <!-- GHSA-w5hq-g745-h8pq: Missing bounds check in uuid v3/v5/v6 when the optional buf
          argument is provided. Druid's web console uses only uuidv4() with no buf argument
          (web-console/src/druid-models/workbench-query/workbench-query.ts), so the
-         vulnerable code path is never exercised. -->
+         vulnerable code path is never exercised.
+         Update to version 11.1.1 or 12.0.1 to remove this suppression
+          -->
     <notes><![CDATA[
       file name: package-lock.json (pkg:npm/uuid@7.0.3)
     ]]></notes>
@@ -869,12 +871,9 @@
   <suppress>
     <!-- CVE-2026-54512, CVE-2026-54513: PolymorphicTypeValidator bypass in jackson-databind when
          polymorphic typing is enabled with generic type parameters or array subtypes.
-         These CVEs affect jackson-databind shaded inside hadoop-client-runtime-3.5.0.jar and
-         parquet-jackson-1.18.0.jar — not Druid's own jackson-databind (2.22.x). Druid cannot
-         upgrade the jackson version inside these third-party shaded jars. Druid's own usage of
-         @JsonTypeInfo uses a custom StrictTypeIdResolver that is not affected by these bypass paths.
-         CVE-2026-68497: Not yet published in NVD; suppressed as appearing only inside shaded
-         hadoop/parquet jars that Druid cannot control. -->
+         These CVEs affect jackson-databind shaded inside hadoop/parquet jars,
+         not Druid's own jackson-databind (2.22.x).
+         CVE-2026-68497: Not yet published in NVD, suppressed as appearing only inside shaded jars -->
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
                  parquet-jackson-1.18.0.jar (shaded jackson-databind 2.22.1)
