@@ -17,26 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.server.initialization.jetty;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
-public class NoopSysMonitorTest
+import java.util.Properties;
+
+public class CliIndexerServerModuleTest
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
-
   @Test
-  public void testDoMonitor()
+  public void testAdjustedServerConfigPreservesResponseIdentityHeaders()
   {
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
+    final ServerConfig oldConfig = new ServerConfig()
+    {
+      @Override
+      public boolean isEnableResponseIdentityHeaders()
+      {
+        return true;
+      }
+    };
 
-    ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
-    NoopSysMonitor noopSysMonitor = new NoopSysMonitor();
+    final ServerConfig adjustedConfig = new CliIndexerServerModule(new Properties()).makeAdjustedServerConfig(oldConfig);
 
-    Assertions.assertFalse(noopSysMonitor.doMonitor(serviceEmitter));
+    Assertions.assertTrue(adjustedConfig.isEnableResponseIdentityHeaders());
   }
 }

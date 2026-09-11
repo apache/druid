@@ -41,7 +41,6 @@
     "replace-in-file": "^4.3.1"
   },
   "overrides": {
-    "brace-expansion": "5.0.8",
     "serialize-javascript": "7.0.5",
     "sockjs": {
       "uuid": "11.1.1"
