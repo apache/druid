@@ -956,7 +956,7 @@
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
                  parquet-jackson-1.18.0.jar (shaded jackson-databind 2.22.1)
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson-databind@(2\.18\.|2\.22\.).*$</packageUrl>
+    <filePath regex="true">.*/(hadoop-client-runtime|parquet-jackson)-[0-9][^/]*\.jar[!/]+jackson-databind-[0-9].*\.jar$</filePath>
     <cve>CVE-2026-54512</cve>
     <cve>CVE-2026-54513</cve>
     <cve>CVE-2026-68497</cve>
@@ -972,7 +972,7 @@
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded org.eclipse.jetty* 9.4.58.v20250814)
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.eclipse\.jetty(\.[^/]+)?/.*@9\.4\.58.*$</packageUrl>
+    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar[!/]+jetty-[a-z-]*9\.4\.58\.v[0-9]+\.jar$</filePath>
     <cve>CVE-2026-2332</cve>
     <cve>CVE-2026-10050</cve>
   </suppress>
@@ -984,7 +984,7 @@
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jline 3.9.0)
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.jline/jline.*@.*$</packageUrl>
+    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar[!/]+jline-[0-9].*\.jar$</filePath>
     <cve>CVE-2026-56741</cve>
     <cve>CVE-2026-56740</cve>
   </suppress>
