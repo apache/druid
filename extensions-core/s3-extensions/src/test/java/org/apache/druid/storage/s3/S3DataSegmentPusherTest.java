@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3;
 import com.google.common.io.Files;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -98,14 +99,7 @@ public class S3DataSegmentPusherTest
 
     EasyMock.replay(s3Client);
 
-    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig()
-    {
-      @Override
-      public boolean isZip()
-      {
-        return false;
-      }
-    };
+    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
     config.setBucket("bucket");
     config.setBaseKey("key");
     DataSegment segment = validate(
@@ -113,6 +107,7 @@ public class S3DataSegmentPusherTest
         "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/",
         s3Client,
         config,
+        false,
         new byte[]{0x0, 0x0, 0x0, 0x1}
     );
     // V1 (test fixture) → not V10 → rangeable stamped as false (skips legacy HEAD probe).
@@ -135,14 +130,7 @@ public class S3DataSegmentPusherTest
 
     EasyMock.replay(s3Client);
 
-    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig()
-    {
-      @Override
-      public boolean isZip()
-      {
-        return false;
-      }
-    };
+    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
     config.setBucket("bucket");
     config.setBaseKey("key");
 
@@ -152,6 +140,7 @@ public class S3DataSegmentPusherTest
         "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/",
         s3Client,
         config,
+        false,
         new byte[]{0x0, 0x0, 0x0, 0x0A}
     );
     Assertions.assertEquals(10, (int) segment.getBinaryVersion());
@@ -234,7 +223,7 @@ public class S3DataSegmentPusherTest
     config.setBucket("bucket");
     config.setBaseKey("key");
     // Default version.bin is V1 for historical reasons.
-    DataSegment segment = validate(useUniquePath, matcher, s3Client, config, new byte[]{0x0, 0x0, 0x0, 0x1});
+    DataSegment segment = validate(useUniquePath, matcher, s3Client, config, true, new byte[]{0x0, 0x0, 0x0, 0x1});
     Assertions.assertEquals(1, (int) segment.getBinaryVersion());
     return segment;
   }
@@ -244,10 +233,11 @@ public class S3DataSegmentPusherTest
       String matcher,
       ServerSideEncryptingAmazonS3 s3Client,
       S3DataSegmentPusherConfig config,
+      boolean zip,
       byte[] versionBytes
   ) throws IOException
   {
-    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config);
+    S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config, new DeepStorageSegmentConfig(zip));
 
     // Create a mock segment on disk
     File tmp = new File(tempFolder, "version.bin");

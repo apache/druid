@@ -91,6 +91,7 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -245,7 +246,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
         binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance()),
         binder -> binder.bind(WireTransferableContext.class).toInstance(new WireTransferableContext(null, null, true)),
         binder -> binder.bind(DataSegmentPusher.class)
-                        .toInstance(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig())),
+                        .toInstance(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), new DeepStorageSegmentConfig())),
         binder -> binder.bind(DataServerQueryHandlerFactory.class).toProvider(Providers.of(null)),
         binder -> binder.bind(Escalator.class).toProvider(Providers.of(null)),
         binder -> binder.bind(QueryProcessingPool.class)

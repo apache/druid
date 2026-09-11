@@ -27,6 +27,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -41,17 +42,25 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
+  /**
+   * Originally S3 always wrote segments zipped, so that is what {@code druid.storage.zip} falls back to.
+   */
+  private static final boolean DEFAULT_ZIP = true;
+
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
+  private final boolean zip;
 
   @Inject
   public S3DataSegmentPusher(
       ServerSideEncryptingAmazonS3 s3Client,
-      S3DataSegmentPusherConfig config
+      S3DataSegmentPusherConfig config,
+      DeepStorageSegmentConfig deepStorageConfig
   )
   {
     this.s3Client = s3Client;
     this.config = config;
+    this.zip = deepStorageConfig.isZip(DEFAULT_ZIP);
   }
 
   @Override
@@ -64,7 +73,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix) throws IOException
   {
-    if (config.isZip()) {
+    if (zip) {
       final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), storageDirSuffix);
       log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
       return pushZip(indexFilesDir, inSegment, s3Path);

@@ -114,6 +114,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -664,8 +665,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     };
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
-    dataSegmentPusherConfig.zip = true;
-    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
+    final DataSegmentPusher dataSegmentPusher =
+        new LocalDataSegmentPusher(dataSegmentPusherConfig, new DeepStorageSegmentConfig(true));
 
     toolboxFactory = new TaskToolboxFactory(
         null,
