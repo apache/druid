@@ -20,8 +20,11 @@
 package org.apache.druid.sql.calcite.planner;
 
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutor;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
@@ -115,7 +118,7 @@ public class DruidRexExecutor implements RexExecutor
               // There can be implicit casts of VARCHAR to TIMESTAMP where the VARCHAR is an invalid timestamp, but the
               // TIMESTAMP type is not nullable. In this case it's best to throw an error, since it likely means the
               // user's SQL query contains an invalid literal.
-              throw InvalidSqlInput.exception("Invalid TIMESTAMP constant [%s]", constExp);
+              throw InvalidSqlInput.exception("Invalid TIMESTAMP value [%s]", getTimestampValue(constExp));
             }
           } else {
             try {
@@ -127,7 +130,7 @@ public class DruidRexExecutor implements RexExecutor
               );
             }
             catch (IllegalArgumentException e) {
-              throw InvalidSqlInput.exception(e, "Invalid TIMESTAMP constant [%s]", constExp);
+              throw InvalidSqlInput.exception(e, "Invalid TIMESTAMP value [%s]", getTimestampValue(constExp));
             }
           }
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
@@ -224,5 +227,16 @@ public class DruidRexExecutor implements RexExecutor
         reducedValues.add(literal);
       }
     }
+  }
+
+  private static String getTimestampValue(final RexNode constExp)
+  {
+    if (constExp.isA(SqlKind.CAST)) {
+      final RexNode operand = ((RexCall) constExp).getOperands().get(0);
+      if (operand instanceof RexLiteral && SqlTypeName.STRING_TYPES.contains(operand.getType().getSqlTypeName())) {
+        return RexLiteral.stringValue(operand);
+      }
+    }
+    return constExp.toString();
   }
 }

@@ -6693,7 +6693,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     catch (DruidException e) {
       assertDruidException(
           e,
-          invalidSqlIs("Invalid TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]")
+          invalidSqlIs("Invalid TIMESTAMP value [z2000-01-01 00:00:00]")
       );
     }
     catch (Exception e) {

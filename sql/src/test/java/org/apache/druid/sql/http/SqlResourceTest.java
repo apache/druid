@@ -1609,7 +1609,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     validateInvalidSqlError(
         errorResponse,
-        "Invalid TIMESTAMP constant [CAST('20260-09-11 00:00:00'):TIMESTAMP(3) NOT NULL]"
+        "Invalid TIMESTAMP value [20260-09-11 00:00:00]"
     );
     Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
