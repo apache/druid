@@ -160,9 +160,13 @@ public class DartWorkerClientImplTest
 
     try {
       client.stopWorker(WORKER_ID.toString());
-      client.postWorkOrder(WORKER_ID.toString(), Mockito.mock(WorkOrder.class));
+      final ListenableFuture<Void> returned = client.postWorkOrder(
+          WORKER_ID.toString(),
+          Mockito.mock(WorkOrder.class)
+      );
 
-      Assertions.assertTrue(workOrderFuture.isCancelled());
+      Assertions.assertTrue(returned.isCancelled());
+      Assertions.assertFalse(workOrderFuture.isCancelled());
     }
     finally {
       client.close();

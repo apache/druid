@@ -21,6 +21,7 @@ package org.apache.druid.msq.dart.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -158,24 +159,28 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   @Override
   public ListenableFuture<Void> postWorkOrder(final String workerId, final WorkOrder workOrder)
   {
-    final ListenableFuture<Void> future = super.postWorkOrder(workerId, workOrder);
+    synchronized (clientMap) {
+      if (isStopping) {
+        return Futures.immediateCancelledFuture();
+      }
 
-    activeWorkOrders.add(future);
-    future.addListener(() -> activeWorkOrders.remove(future), MoreExecutors.directExecutor());
+      final ListenableFuture<Void> future = super.postWorkOrder(workerId, workOrder);
 
-    // Handle a 'stop' racing with 'registration'.
-    if (isStopping && activeWorkOrders.remove(future)) {
-      future.cancel(true);
+      activeWorkOrders.add(future);
+      future.addListener(() -> activeWorkOrders.remove(future), MoreExecutors.directExecutor());
+
+      return future;
     }
-
-    return future;
   }
 
   @Override
   public ListenableFuture<?> stopWorker(final String workerId)
   {
-    isStopping = true;
-    activeWorkOrders.forEach(future -> future.cancel(true));
+    synchronized (clientMap) {
+      isStopping = true;
+      activeWorkOrders.forEach(future -> future.cancel(true));
+    }
+
     return getClient(workerId).asyncRequest(
         new RequestBuilder(HttpMethod.POST, "/stop"),
         IgnoreHttpResponseHandler.INSTANCE
