@@ -6693,7 +6693,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     catch (DruidException e) {
       assertDruidException(
           e,
-          invalidSqlIs("Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]")
+          invalidSqlIs("Invalid TIMESTAMP value [z2000-01-01 00:00:00]")
       );
     }
     catch (Exception e) {
@@ -7557,7 +7557,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             )))
                                             .setSubtotalsSpec(ImmutableList.of(
                                                 ImmutableList.of("d0", "d1"),
-                                                ImmutableList.of("d0", "d2")
+                                                ImmutableList.of("d0", "d2"),
+                                                ImmutableList.of("d0")
                                             ))
                                             .setContext(withTimestampResultContext(
                                                 QUERY_CONTEXT_DEFAULT,
@@ -15672,7 +15673,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testUnSupportedAggInSelectWindow()
   {
     assertEquals(
-        "1.41.0",
+        "1.42.0",
         RelNode.class.getPackage().getImplementationVersion(),
         "Calcite version changed; check if CALCITE-6500 is fixed and update:\n * method DruidSqlValidator#validateWindowClause"
     );

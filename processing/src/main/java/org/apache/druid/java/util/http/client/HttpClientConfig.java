@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.http.client;
 
+import io.netty.buffer.AdaptiveByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -67,13 +69,18 @@ public class HttpClientConfig
 
   public static final CompressionCodec DEFAULT_COMPRESSION_CODEC = CompressionCodec.GZIP;
 
-  // Default from NioClientSocketChannelFactory.DEFAULT_BOSS_COUNT, which is private:
-  private static final int DEFAULT_BOSS_COUNT = 1;
-
   // Default from SelectorUtil.DEFAULT_IO_THREADS, which is private:
   private static final int DEFAULT_WORKER_COUNT = JvmUtils.getRuntimeInfo().getAvailableProcessors() * 2;
 
   private static final Duration DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION = new Period("PT4M").toStandardDuration();
+
+  // Netty 4 defaults CONNECT_TIMEOUT_MILLIS to 30s; Netty 3 defaulted to 10s. Preserve the older, more
+  // aggressive default so a slow or dead peer surfaces sooner. Callers can override via the builder.
+  private static final Duration DEFAULT_CONNECT_TIMEOUT_DURATION = new Period("PT10S").toStandardDuration();
+
+  // Set an explicit allocator so callers know exactly what they're getting rather than depending on whatever
+  // ByteBufAllocator.DEFAULT happens to resolve to.
+  public static final ByteBufAllocator DEFAULT_BYTE_BUF_ALLOCATOR = new AdaptiveByteBufAllocator();
 
   public static Builder builder()
   {
@@ -86,10 +93,11 @@ public class HttpClientConfig
   private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
   private final Duration sslHandshakeTimeout;
-  private final int bossPoolSize;
+  private final Duration connectTimeout;
   private final int workerPoolSize;
   private final CompressionCodec compressionCodec;
   private final Duration unusedConnectionTimeoutDuration;
+  private final ByteBufAllocator byteBufAllocator;
 
   private HttpClientConfig(
       int numConnections,
@@ -98,10 +106,11 @@ public class HttpClientConfig
       HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
       Duration sslHandshakeTimeout,
-      int bossPoolSize,
+      Duration connectTimeout,
       int workerPoolSize,
       CompressionCodec compressionCodec,
-      Duration unusedConnectionTimeoutDuration
+      Duration unusedConnectionTimeoutDuration,
+      ByteBufAllocator byteBufAllocator
   )
   {
     this.numConnections = numConnections;
@@ -110,10 +119,11 @@ public class HttpClientConfig
     this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
     this.sslHandshakeTimeout = sslHandshakeTimeout;
-    this.bossPoolSize = bossPoolSize;
+    this.connectTimeout = connectTimeout;
     this.workerPoolSize = workerPoolSize;
     this.compressionCodec = compressionCodec;
     this.unusedConnectionTimeoutDuration = unusedConnectionTimeoutDuration;
+    this.byteBufAllocator = byteBufAllocator;
   }
 
   public int getNumConnections()
@@ -146,9 +156,9 @@ public class HttpClientConfig
     return sslHandshakeTimeout;
   }
 
-  public int getBossPoolSize()
+  public Duration getConnectTimeout()
   {
-    return bossPoolSize;
+    return connectTimeout;
   }
 
   public int getWorkerPoolSize()
@@ -166,6 +176,11 @@ public class HttpClientConfig
     return unusedConnectionTimeoutDuration;
   }
 
+  public ByteBufAllocator getByteBufAllocator()
+  {
+    return byteBufAllocator;
+  }
+
   public static class Builder
   {
     private int numConnections = 1;
@@ -174,10 +189,11 @@ public class HttpClientConfig
     private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
     private Duration sslHandshakeTimeout = null;
-    private int bossCount = DEFAULT_BOSS_COUNT;
+    private Duration connectTimeout = DEFAULT_CONNECT_TIMEOUT_DURATION;
     private int workerCount = DEFAULT_WORKER_COUNT;
     private CompressionCodec compressionCodec = DEFAULT_COMPRESSION_CODEC;
     private Duration unusedConnectionTimeoutDuration = DEFAULT_UNUSED_CONNECTION_TIMEOUT_DURATION;
+    private ByteBufAllocator byteBufAllocator = DEFAULT_BYTE_BUF_ALLOCATOR;
 
     private Builder()
     {
@@ -219,6 +235,17 @@ public class HttpClientConfig
       return this;
     }
 
+    /**
+     * TCP connect timeout applied to every outbound channel. Null uses the default (10s, matching
+     * Netty 3). Configurable so operators can tighten it on latency-sensitive paths or loosen it on
+     * links that legitimately take longer to connect.
+     */
+    public Builder withConnectTimeout(Duration connectTimeout)
+    {
+      this.connectTimeout = connectTimeout == null ? DEFAULT_CONNECT_TIMEOUT_DURATION : connectTimeout;
+      return this;
+    }
+
     public Builder withWorkerCount(int workerCount)
     {
       this.workerCount = workerCount;
@@ -237,6 +264,18 @@ public class HttpClientConfig
       return this;
     }
 
+    /**
+     * Netty {@link ByteBufAllocator} used for all inbound and outbound buffers on channels created by
+     * this client. Null uses the default ({@link AdaptiveByteBufAllocator}, matching Netty 4.2's
+     * own picked default). Callers can pass {@code PooledByteBufAllocator.DEFAULT} or
+     * {@code UnpooledByteBufAllocator.DEFAULT} to opt out.
+     */
+    public Builder withByteBufAllocator(ByteBufAllocator byteBufAllocator)
+    {
+      this.byteBufAllocator = byteBufAllocator == null ? DEFAULT_BYTE_BUF_ALLOCATOR : byteBufAllocator;
+      return this;
+    }
+
     public HttpClientConfig build()
     {
       return new HttpClientConfig(
@@ -246,10 +285,11 @@ public class HttpClientConfig
           proxyConfig,
           readTimeout,
           sslHandshakeTimeout,
-          bossCount,
+          connectTimeout,
           workerCount,
           compressionCodec,
-          unusedConnectionTimeoutDuration
+          unusedConnectionTimeoutDuration,
+          byteBufAllocator
       );
     }
   }

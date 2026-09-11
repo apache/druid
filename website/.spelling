@@ -209,6 +209,7 @@ MSQ
 Murmur3
 MVCC
 MV_TO_ARRAY
+Netty
 NFS
 NodeCache
 OCF
@@ -235,6 +236,7 @@ ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
 ROUTINE_TYPE
+RPC
 Rackspace
 Redis
 residualFilterMode
@@ -528,6 +530,7 @@ processFromRaw
 programmatically
 proto
 proxied
+proxying
 proxyConfig
 python2
 python3
