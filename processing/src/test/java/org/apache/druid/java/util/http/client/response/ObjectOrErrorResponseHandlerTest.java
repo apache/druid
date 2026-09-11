@@ -21,7 +21,6 @@ package org.apache.druid.java.util.http.client.response;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.Either;
-import org.apache.druid.java.util.common.StringUtils;
 import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
 import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -42,7 +41,7 @@ public class ObjectOrErrorResponseHandlerTest
   {
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     response.setChunked(false);
-    response.setContent(new BigEndianHeapChannelBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
+    response.setContent(new BigEndianHeapChannelBuffer("abcd".getBytes(StandardCharsets.UTF_8)));
 
     final ObjectOrErrorResponseHandler<InputStreamFullResponseHolder, InputStreamFullResponseHolder> responseHandler =
         new ObjectOrErrorResponseHandler<>(new InputStreamFullResponseHandler());
@@ -51,7 +50,7 @@ public class ObjectOrErrorResponseHandlerTest
         responseHandler.handleResponse(response, null);
 
     DefaultHttpChunk chunk =
-        new DefaultHttpChunk(new BigEndianHeapChannelBuffer("efg".getBytes(StringUtils.UTF8_STRING)));
+        new DefaultHttpChunk(new BigEndianHeapChannelBuffer("efg".getBytes(StandardCharsets.UTF_8)));
     clientResp = responseHandler.handleChunk(clientResp, chunk, 0);
     clientResp = responseHandler.done(clientResp);
 
@@ -67,7 +66,7 @@ public class ObjectOrErrorResponseHandlerTest
   {
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
     response.setChunked(false);
-    response.setContent(new BigEndianHeapChannelBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
+    response.setContent(new BigEndianHeapChannelBuffer("abcd".getBytes(StandardCharsets.UTF_8)));
 
     final ObjectOrErrorResponseHandler<InputStreamFullResponseHolder, InputStreamFullResponseHolder> responseHandler =
         new ObjectOrErrorResponseHandler<>(new InputStreamFullResponseHandler());
@@ -96,7 +95,7 @@ public class ObjectOrErrorResponseHandlerTest
   {
     HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR);
     response.setChunked(false);
-    response.setContent(new BigEndianHeapChannelBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
+    response.setContent(new BigEndianHeapChannelBuffer("abcd".getBytes(StandardCharsets.UTF_8)));
 
     final ObjectOrErrorResponseHandler<InputStreamFullResponseHolder, InputStreamFullResponseHolder> responseHandler =
         new ObjectOrErrorResponseHandler<>(new InputStreamFullResponseHandler());
@@ -105,7 +104,7 @@ public class ObjectOrErrorResponseHandlerTest
         responseHandler.handleResponse(response, null);
 
     DefaultHttpChunk chunk =
-        new DefaultHttpChunk(new BigEndianHeapChannelBuffer("efg".getBytes(StringUtils.UTF8_STRING)));
+        new DefaultHttpChunk(new BigEndianHeapChannelBuffer("efg".getBytes(StandardCharsets.UTF_8)));
     clientResp = responseHandler.handleChunk(clientResp, chunk, 0);
     clientResp = responseHandler.done(clientResp);
 
