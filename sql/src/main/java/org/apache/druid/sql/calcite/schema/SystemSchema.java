@@ -345,12 +345,12 @@ public class SystemSchema extends AbstractTableSchema
   @Override
   public Set<String> getTableNames()
   {
-    if (plannerConfig.isAuthorizeTableVisibility()) {
+    if (plannerConfig.isAuthorizeTableVisibility() && plannerConfig.isAuthorizeSystemTablesDirectly()) {
       return SchemaUtils.filterVisibleTables(
           authorizerMapper,
           authenticationResult,
           allTableNames,
-          _ -> plannerConfig.isAuthorizeSystemTablesDirectly() ? ResourceType.SYSTEM_TABLE : null
+          ResourceType.SYSTEM_TABLE
       );
     } else {
       // sys table authorization is not enabled, so all sys tables are visible to all users.
@@ -366,12 +366,12 @@ public class SystemSchema extends AbstractTableSchema
     if (!allTableNames.contains(sysTableName)) {
       // Short circuit that hides sys.queries if it is disabled server-wide.
       return false;
-    } else if (plannerConfig.isAuthorizeTableVisibility()) {
+    } else if (plannerConfig.isAuthorizeTableVisibility() && plannerConfig.isAuthorizeSystemTablesDirectly()) {
       return SchemaUtils.isTableVisible(
           authorizerMapper,
           authenticationResult,
           sysTableName,
-          _ -> plannerConfig.isAuthorizeSystemTablesDirectly() ? ResourceType.SYSTEM_TABLE : null
+          ResourceType.SYSTEM_TABLE
       );
     } else {
       // sys table authorization is not enabled, so all sys tables are visible to all users.
