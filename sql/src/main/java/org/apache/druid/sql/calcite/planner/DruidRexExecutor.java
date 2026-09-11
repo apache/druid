@@ -115,15 +115,20 @@ public class DruidRexExecutor implements RexExecutor
               // There can be implicit casts of VARCHAR to TIMESTAMP where the VARCHAR is an invalid timestamp, but the
               // TIMESTAMP type is not nullable. In this case it's best to throw an error, since it likely means the
               // user's SQL query contains an invalid literal.
-              throw InvalidSqlInput.exception("Illegal TIMESTAMP constant [%s]", constExp);
+              throw InvalidSqlInput.exception("Invalid TIMESTAMP constant [%s]", constExp);
             }
           } else {
-            literal = Calcites.jodaToCalciteTimestampLiteral(
-                rexBuilder,
-                DateTimes.utc(exprResult.asLong()),
-                plannerContext.getTimeZone(),
-                constExp.getType().getPrecision()
-            );
+            try {
+              literal = Calcites.jodaToCalciteTimestampLiteral(
+                  rexBuilder,
+                  DateTimes.utc(exprResult.asLong()),
+                  plannerContext.getTimeZone(),
+                  constExp.getType().getPrecision()
+              );
+            }
+            catch (IllegalArgumentException e) {
+              throw InvalidSqlInput.exception(e, "Invalid TIMESTAMP constant [%s]", constExp);
+            }
           }
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
           final BigDecimal bigDecimal;
