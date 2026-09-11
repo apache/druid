@@ -141,7 +141,7 @@ public class HttpClientModule implements Module
         builder.withSslContext(sslContextBinding.getProvider().get());
       }
 
-      NettyHttpClient client = HttpClientInit.createClient(
+      NettyHttpClient client = HttpClientInit.createNettyClient(
           builder.build(),
           getLifecycleProvider().get()
       );
