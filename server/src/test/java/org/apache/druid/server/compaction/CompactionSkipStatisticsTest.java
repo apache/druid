@@ -21,8 +21,8 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CompactionSkipStatisticsTest
 {
@@ -40,16 +40,16 @@ public class CompactionSkipStatisticsTest
         mapper.writeValueAsString(stats),
         CompactionSkipStatistics.class
     );
-    Assert.assertEquals(stats, deserialized);
-    Assert.assertEquals(100, deserialized.getBytes());
-    Assert.assertEquals(5, deserialized.getSegmentCount());
-    Assert.assertEquals(2, deserialized.getIntervalCount());
+    Assertions.assertEquals(stats, deserialized);
+    Assertions.assertEquals(100, deserialized.getBytes());
+    Assertions.assertEquals(5, deserialized.getSegmentCount());
+    Assertions.assertEquals(2, deserialized.getIntervalCount());
   }
 
   @Test
   public void testCategoryIsSerialized()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         CompactionSkipReason.Category.OUT_OF_SCOPE,
         CompactionSkipStatistics
             .of(CompactionSkipReason.SKIP_OFFSET, new CompactionStatistics())
@@ -66,7 +66,7 @@ public class CompactionSkipStatisticsTest
 
     final CompactionSkipStatistics deserialized
         = mapper.readValue(payloadWithWrongCategory, CompactionSkipStatistics.class);
-    Assert.assertEquals(CompactionSkipReason.SKIP_OFFSET, deserialized.getReason());
-    Assert.assertEquals(CompactionSkipReason.Category.OUT_OF_SCOPE, deserialized.getCategory());
+    Assertions.assertEquals(CompactionSkipReason.SKIP_OFFSET, deserialized.getReason());
+    Assertions.assertEquals(CompactionSkipReason.Category.OUT_OF_SCOPE, deserialized.getCategory());
   }
 }
