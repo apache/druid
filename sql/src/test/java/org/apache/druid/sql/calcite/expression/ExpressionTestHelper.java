@@ -55,6 +55,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerToolbox;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
+import org.apache.druid.sql.calcite.schema.ConstantDruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
@@ -88,11 +89,13 @@ public class ExpressionTestHelper
       CalciteTests.createExprMacroTable(),
       CalciteTests.getJsonMapper(),
       new PlannerConfig(),
-      new DruidSchemaCatalog(
-          EasyMock.createMock(SchemaPlus.class),
-          ImmutableMap.of(
-              "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
-              NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+      new ConstantDruidSchemaCatalogProvider(
+          new DruidSchemaCatalog(
+              EasyMock.createMock(SchemaPlus.class),
+              ImmutableMap.of(
+                  "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
+                  NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+              )
           )
       ),
       JOINABLE_FACTORY_WRAPPER,
@@ -109,6 +112,7 @@ public class ExpressionTestHelper
       "SELECT 1", // The actual query isn't important for this test
       null, /* Don't need SQL node */
       null, /* Don't need engine */
+      null, /* Don't need authentication result */
       Collections.emptySet(),
       Collections.emptyMap(),
       null
@@ -343,7 +347,6 @@ public class ExpressionTestHelper
     }
 
     ExprEval<?> result = PLANNER_CONTEXT.parseExpression(expression.getExpression())
-
                                         .eval(expressionBindings);
 
     Assertions.assertEquals(expectedResult, result.value(), "Result for: " + rexNode);

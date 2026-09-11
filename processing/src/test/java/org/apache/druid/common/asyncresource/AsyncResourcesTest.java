@@ -151,14 +151,21 @@ public class AsyncResourcesTest
   }
 
   @Test
-  public void testFromCloseableFutureCloseBeforeCompleteCancelsFuture()
+  public void testFromCloseableFutureCloseBeforeCompleteStillClosesTheLateResult()
   {
     final SettableFuture<CloseableProbe> future = SettableFuture.create();
     final AsyncResource<CloseableProbe> resource = AsyncResources.fromFutureCloseable(future);
 
     Assertions.assertFalse(resource.isReady());
     resource.close();
-    Assertions.assertTrue(future.isCancelled(), "closing before completion cancels the backing future");
+
+    // The future must be left alone: a canceled future silently discards a value set afterwards, so the callback
+    // below would never see the result and nothing would ever close it.
+    Assertions.assertFalse(future.isCancelled(), "closing must not cancel the future");
+
+    final CloseableProbe probe = new CloseableProbe();
+    Assertions.assertTrue(future.set(probe), "the producer's completion must still be accepted");
+    Assertions.assertEquals(1, probe.closeCount.get(), "a result produced after close must be closed, not leaked");
   }
 
   /**

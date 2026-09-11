@@ -216,7 +216,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     maxParseExceptions = null;
     maxSavedParseExceptions = null;
     doHandoff = true;
-    reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
+    reportsFile = temporaryFolder.newFile("KinesisIndexTaskTestReports.json");
     maxRecordsPerPoll = 1;
     maxBytesPerPoll = 1_000_000;
 

@@ -19,10 +19,10 @@
 
 package org.apache.druid.msq.dart.worker;
 
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.StandardRetryPolicy;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * Retry policy for {@link DartWorkerClientImpl}. This is a {@link StandardRetryPolicy#unlimited()} with

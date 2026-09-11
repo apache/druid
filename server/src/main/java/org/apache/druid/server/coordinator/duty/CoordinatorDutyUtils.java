@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Predicate;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskStatusPlus;
@@ -28,10 +29,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nonnull;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

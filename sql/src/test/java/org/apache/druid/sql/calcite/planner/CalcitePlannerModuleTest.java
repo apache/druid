@@ -42,6 +42,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -49,7 +50,9 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.schema.ConstantDruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -112,8 +115,10 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     EasyMock.expect(druidSchema2.getSchema()).andStubReturn(schema2);
     EasyMock.expect(druidSchema1.getSchemaName()).andStubReturn(SCHEMA_1);
     EasyMock.expect(druidSchema2.getSchemaName()).andStubReturn(SCHEMA_2);
-    EasyMock.expect(druidSchema1.getSchemaResourceType(EasyMock.anyString())).andStubReturn(ResourceType.DATASOURCE);
-    EasyMock.expect(druidSchema2.getSchemaResourceType(EasyMock.anyString())).andStubReturn("test");
+    EasyMock.expect(druidSchema1.getSchemaResource(EasyMock.anyString()))
+            .andStubReturn(new Resource("resource", ResourceType.DATASOURCE));
+    EasyMock.expect(druidSchema2.getSchemaResource(EasyMock.anyString()))
+            .andStubReturn(new Resource("resource", "test"));
     EasyMock.replay(druidSchema1, druidSchema2);
     aggregators = ImmutableSet.of();
     operatorConversions = ImmutableSet.of();
@@ -137,7 +142,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>() {})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
-          binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
+          binder.bind(DruidSchemaCatalogProvider.class)
+                .toInstance(new ConstantDruidSchemaCatalogProvider(rootSchema));
           binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
           binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
         },
@@ -191,6 +197,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         sql,
         DruidSqlParser.parse(sql, false).getMainStatement(),
         new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+        null, // Don't need an authentication result
         Collections.emptySet(),
         Collections.emptyMap(),
         null
@@ -214,6 +221,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             sql,
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+            null, // Don't need an authentication result
             Collections.emptySet(),
             Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
             null
@@ -224,6 +232,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             sql,
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+            null, // Don't need an authentication result
             Collections.emptySet(),
             Collections.emptyMap(),
             null

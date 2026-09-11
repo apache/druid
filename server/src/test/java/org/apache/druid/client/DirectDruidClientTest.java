@@ -25,6 +25,17 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -63,17 +74,6 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -697,8 +697,6 @@ public class DirectDruidClientTest
     {
       final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
       response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "application/json");
-      response.setContent(ChannelBuffers.wrappedBuffer(StringUtils.toUtf8("")));
-      response.setChunked(true);
       final ClientResponse<Intermediate> clientResponse =
           handler.handleResponse(response, TestHttpClient.NOOP_TRAFFIC_COP);
       handler.exceptionCaught(clientResponse, transportFailure);
@@ -710,7 +708,7 @@ public class DirectDruidClientTest
 
   /**
    * An {@link HttpClient} that feeds the handler a scripted response synchronously: the initial {@link HttpResponse}
-   * carries {@code bodies[0]} and each subsequent element is delivered as an {@link HttpChunk}.
+   * carries only headers and every element of {@code bodies} is delivered as an {@link HttpContent}.
    * <p>
    * By default, an exception thrown out of {@code handleChunk} is simply allowed to propagate out of {@link #go},
    * which is adequate for testing the classification logic itself. Constructing with
@@ -762,13 +760,13 @@ public class DirectDruidClientTest
       if (contentType != null) {
         response.headers().set(HttpHeaders.Names.CONTENT_TYPE, contentType);
       }
-      response.setContent(ChannelBuffers.wrappedBuffer(bodies[0]));
-      response.setChunked(bodies.length > 1);
       ClientResponse<Intermediate> clientResponse = handler.handleResponse(response, TestHttpClient.NOOP_TRAFFIC_COP);
       final boolean initialResponseFinished = clientResponse.isFinished();
       final Intermediate initialResponseObj = clientResponse.getObj();
-      for (int i = 1; i < bodies.length; i++) {
-        final HttpChunk chunk = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(bodies[i]));
+      // Netty 4 carries no body on the initial HttpResponse, so every element of bodies is delivered as an
+      // HttpContent, including the first. chunkNum therefore starts at 0.
+      for (int i = 0; i < bodies.length; i++) {
+        final HttpContent chunk = new DefaultHttpContent(Unpooled.wrappedBuffer(bodies[i]));
         if (!routeChunkExceptionsThroughExceptionCaught) {
           clientResponse = handler.handleChunk(clientResponse, chunk, i);
           continue;

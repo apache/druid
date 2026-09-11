@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.53.3
+version: 2.54.13
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -465,7 +465,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.6.0-jre
+version: 33.7.1-jre
 libraries:
   - com.google.guava: guava
 
@@ -627,7 +627,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.20.0
+version: 1.22.1
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -927,7 +927,7 @@ name: DropWizard Metrics Core
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.39
+version: 4.2.40
 libraries:
   - io.dropwizard.metrics: metrics-core
 
@@ -988,7 +988,7 @@ name: com.nimbusds content-type
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 2.2
+version: 2.3
 libraries:
   - com.nimbusds: content-type
 
@@ -998,7 +998,7 @@ name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 10.8
+version: 11.38.2
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -1028,7 +1028,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.8.0
+version: 7.9.0
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -1093,7 +1093,7 @@ name: vertx
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 4.5.28
+version: 4.5.31
 libraries:
   - io.vertx: vertx-auth-common
   - io.vertx: vertx-core
@@ -1171,7 +1171,7 @@ name: org.jspecify jspecify
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.0.0
+version: 1.0.1
 libraries:
   - org.jspecify: jspecify
 
@@ -1242,7 +1242,7 @@ name: org.jooq joou-java-6
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.9.4
+version: 0.9.5
 libraries:
   - org.jooq: joou-java-6
 
@@ -1276,7 +1276,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.18.1
+version: 3.18.2
 libraries:
   - com.squareup.okio: okio
   - com.squareup.okio: okio-jvm
@@ -1287,7 +1287,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 3.18.1
+version: 3.18.2
 libraries:
   - com.squareup.okio: okio-jvm
 
@@ -1322,7 +1322,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -1332,7 +1332,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -1419,134 +1419,6 @@ libraries:
   - org.jetbrains.kotlin: kotlin-stdlib-common
   - org.jetbrains.kotlin: kotlin-stdlib-jdk7
   - org.jetbrains.kotlin: kotlin-stdlib-jdk8
-
----
-
-name: Netty
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 3.10.6.Final
-libraries:
-  - io.netty: netty
-notices:
-  - netty: |
-      ==
-                                  The Netty Project
-                                  =================
-
-      Please visit the Netty web site for more information:
-
-        * http://netty.io/
-
-      Copyright 2011 The Netty Project
-
-      The Netty Project licenses this file to you under the Apache License,
-      version 2.0 (the "License"); you may not use this file except in compliance
-      with the License. You may obtain a copy of the License at:
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-      Unless required by applicable law or agreed to in writing, software
-      distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-      WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-      License for the specific language governing permissions and limitations
-      under the License.
-
-      Also, please refer to each LICENSE.<component>.txt file, which is located in
-      the 'license' directory of the distribution file, for the license terms of the
-      components that this product depends on.
-
-      -------------------------------------------------------------------------------
-      This product contains the extensions to Java Collections Framework which has
-      been derived from the works by JSR-166 EG, Doug Lea, and Jason T. Greene:
-
-        * LICENSE:
-          * license/LICENSE.jsr166y.txt (Public Domain)
-        * HOMEPAGE:
-          * http://gee.cs.oswego.edu/cgi-bin/viewcvs.cgi/jsr166/
-          * http://viewvc.jboss.org/cgi-bin/viewvc.cgi/jbosscache/experimental/jsr166/
-
-      This product contains a modified version of Robert Harder's Public Domain
-      Base64 Encoder and Decoder, which can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.base64.txt (Public Domain)
-        * HOMEPAGE:
-          * http://iharder.sourceforge.net/current/java/base64/
-
-      This product contains a modified version of 'JZlib', a re-implementation of
-      zlib in pure Java, which can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.jzlib.txt (BSD Style License)
-        * HOMEPAGE:
-          * http://www.jcraft.com/jzlib/
-
-      This product contains a modified version of 'Webbit', a Java event based
-      WebSocket and HTTP server:
-
-        * LICENSE:
-          * license/LICENSE.webbit.txt (BSD License)
-        * HOMEPAGE:
-          * https://github.com/joewalnes/webbit
-
-      This product optionally depends on 'Protocol Buffers', Google's data
-      interchange format, which can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.protobuf.txt (New BSD License)
-        * HOMEPAGE:
-          * http://code.google.com/p/protobuf/
-
-      This product optionally depends on 'Bouncy Castle Crypto APIs' to generate
-      a temporary self-signed X.509 certificate when the JVM does not provide the
-      equivalent functionality.  It can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.bouncycastle.txt (MIT License)
-        * HOMEPAGE:
-          * http://www.bouncycastle.org/
-
-      This product optionally depends on 'SLF4J', a simple logging facade for Java,
-      which can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.slf4j.txt (MIT License)
-        * HOMEPAGE:
-          * http://www.slf4j.org/
-
-      This product optionally depends on 'Apache Commons Logging', a logging
-      framework, which can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.commons-logging.txt (Apache License 2.0)
-        * HOMEPAGE:
-          * http://commons.apache.org/logging/
-
-      This product optionally depends on 'Apache Log4J', a logging framework,
-      which can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.log4j.txt (Apache License 2.0)
-        * HOMEPAGE:
-          * http://logging.apache.org/log4j/
-
-      This product optionally depends on 'JBoss Logging', a logging framework,
-      which can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.jboss-logging.txt (GNU LGPL 2.1)
-        * HOMEPAGE:
-          * http://anonsvn.jboss.org/repos/common/common-logging-spi/
-
-      This product optionally depends on 'Apache Felix', an open source OSGi
-      framework implementation, which can be obtained at:
-
-        * LICENSE:
-          * license/LICENSE.felix.txt (Apache License 2.0)
-        * HOMEPAGE:
-          * http://felix.apache.org/
 
 ---
 
@@ -1918,7 +1790,7 @@ name: jackson-jq
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.2
+version: 1.6.3
 libraries:
   - net.thisptr: jackson-jq
 
@@ -1928,7 +1800,7 @@ name: Apache Calcite
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.41.0
+version: 1.42.0
 libraries:
   - org.apache.calcite: calcite-core
   - org.apache.calcite: calcite-linq4j
@@ -2359,9 +2231,17 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.11
+version: 3.0.13
 libraries:
   - org.asynchttpclient: async-http-client
+
+---
+
+name: Public Suffix List bundled by AsyncHttpClient
+license_category: binary
+module: java-core
+license_name: Mozilla Public License Version 2.0
+license_file_path: licenses/bin/public-suffix-list.MPL2
 
 ---
 
@@ -2398,7 +2278,7 @@ name: Plexus Common Utilities
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6.1
+version: 4.1.0
 libraries:
   - org.codehaus.plexus: plexus-utils
 notices:
@@ -2414,13 +2294,23 @@ notices:
 
       This product includes software developed by
       Rome (https://rome.dev.java.net/).
+
+---
+
+name: Plexus XML
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.1.0
+libraries:
+  - org.codehaus.plexus: plexus-xml
 ---
 
 name: Jetty
 license_category: binary
 module: java-core
 license_name: Eclipse Public License 2.0
-version: 12.1.12
+version: 12.1.13
 libraries:
   - org.eclipse.jetty: jetty-alpn-client
   - org.eclipse.jetty: jetty-client
@@ -2584,140 +2474,11 @@ libraries:
 
 ---
 
-name: SIGAR
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 1.6.5.132-6
-libraries:
-  - org.hyperic: sigar
-notices:
-  - sigar: |
-      Copyright (c) 2004-2011 VMware, Inc.
-
-      Licensed under the Apache License, Version 2.0 (the "License");
-      you may not use this file except in compliance with the License.
-      You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-      Unless required by applicable law or agreed to in writing, software
-      distributed under the License is distributed on an "AS IS" BASIS,
-      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-      See the License for the specific language governing permissions and
-      limitations under the License.
-
-      ADDITIONAL LICENSE INFORMATION:
-
-      Hyperic SIGAR includes some third-party open source components
-      in its distribution. The list below identifies the community or
-      organization and links to their appropriate license terms.
-
-      The Hyperic team would like to thank all the communities
-      of the projects listed below for their contributions.
-
-      ----------------------------------------------------------
-      Components under the Apache License 2.0:
-      ----------------------------------------------------------
-
-      The following components are included without modification:
-
-      - log4j -
-      Information: http://logging.apache.org/
-      License: http://www.apache.org/licenses/LICENSE-2.0
-
-      The following components are included with modification:
-
-      - cpptasks -
-      Information: http://ant-contrib.sourceforge.net/
-      License: http://www.apache.org/licenses/LICENSE-2.0
-
-      - (portions of) APR -
-      Information: http://apr.apache.org/
-      License: http://www.apache.org/licenses/LICENSE-2.0
-
-      ----------------------------------------------------------
-      Components under BSD/MIT Style Licenses:
-      ----------------------------------------------------------
-
-      The following components are included with modification:
-
-      - solaris get_mib2 -
-      Information: ftp://vic.cc.purdue.edu/pub/tools/unix/solaris/get_mib2/
-      License: within src/os/solaris/get_mib2.[ch]
-
-      Copyright 1995 Purdue Research Foundation, West Lafayette, Indiana
-      47907.  All rights reserved.
-
-      Written by Victor A. Abell <abe@cc.purdue.edu>
-
-      This software is not subject to any license of the American Telephone
-      and Telegraph Company or the Regents of the University of California.
-
-      Permission is granted to anyone to use this software for any purpose on
-      any computer system, and to alter it and redistribute it freely, subject
-      to the following restrictions:
-
-      1. Neither Victor A  Abell nor Purdue University are responsible for
-         any consequences of the use of this software.
-
-      2. The origin of this software must not be misrepresented, either by
-         explicit claim or by omission.  Credit to Victor A. Abell and Purdue
-         University must appear in documentation and sources.
-
-      3. Altered versions must be plainly marked as such, and must not be
-         misrepresented as being the original software.
-
-      4. This notice may not be removed or altered.
-
-      - getline by Chris Thewalt -
-      Information: http://tinyurl.com/r438r
-      License: within src/sigar_getline.c
-
-      Copyright (C) 1991, 1992 by Chris Thewalt (thewalt@ce.berkeley.edu)
-
-      Permission to use, copy, modify, and distribute this software
-      for any purpose and without fee is hereby granted, provided
-      that the above copyright notices appear in all copies and that both the
-      copyright notice and this permission notice appear in supporting
-      documentation.  This software is provided "as is" without express or
-      implied warranty.
-
-      - PrintfFormat.java -
-      Information: http://java.sun.com/developer/technicalArticles/Programming/sprintf/PrintfFormat.java
-      License: within bindings/java/src/org/hyperic/sigar/util/PrintfFormat.java
-
-      (c) 2000 Sun Microsystems, Inc.
-      ALL RIGHTS RESERVED
-
-      License Grant-
-
-      Permission to use, copy, modify, and distribute this Software and its
-      documentation for NON-COMMERCIAL or COMMERCIAL purposes and without fee is
-      hereby granted.
-
-      This Software is provided "AS IS".  All express warranties, including any
-      implied warranty of merchantability, satisfactory quality, fitness for a
-      particular purpose, or non-infringement, are disclaimed, except to the extent
-      that such disclaimers are held to be legally invalid.
-
-      You acknowledge that Software is not designed, licensed or intended for use in
-      the design, construction, operation or maintenance of any nuclear facility
-      ("High Risk Activities").  Sun disclaims any express or implied warranty of
-      fitness for such uses.
-
-      Please refer to the file http://www.sun.com/policies/trademarks/ for further
-      important trademark information and to
-      http://java.sun.com/nav/business/index.html for further important licensing
-      information for the Java Technology.
-
----
-
 name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.5.0
+version: 7.6.1
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -2785,7 +2546,7 @@ name: Resilience4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3.1
+version: 2.4.0
 libraries:
   - io.github.resilience4j: resilience4j-core
   - io.github.resilience4j: resilience4j-bulkhead
@@ -3266,7 +3027,7 @@ notice: |
 
 name: Kinesis Client
 license_category: binary
-version: 3.5.1
+version: 3.5.2
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 libraries:
@@ -3410,7 +3171,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -3668,7 +3429,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.18.0
+version: 1.18.1
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3750,7 +3511,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 4.2.2
+version: 4.2.3
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
@@ -3844,7 +3605,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.35.1
+version: 4.36.0
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -3974,7 +3735,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3986,7 +3747,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3998,7 +3759,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4010,7 +3771,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 4.35.1
+version: 4.36.1
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4023,7 +3784,7 @@ name: ICU4J
 license_category: binary
 module: java-core
 license_name: Unicode/ICU License
-version: 77.1
+version: 78.3
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
@@ -4465,7 +4226,7 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev20231028-2.0.0
+version: v1-rev20260524-2.0.0
 libraries:
   - com.google.apis: google-api-services-storage
 
@@ -4485,7 +4246,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.2.0
+version: 2.7.2
 libraries:
   - com.google.api-client: google-api-client
 
@@ -4495,7 +4256,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.29.1
+version: 2.73.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -4505,10 +4266,123 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.20.0
+version: 2.68.0
 libraries:
-  - com.google.cloud: google-cloud-storage
   - com.google.api: api-common
+
+---
+
+name: Google Cloud Monitoring
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 3.52.0
+libraries:
+  - com.google.cloud: google-cloud-monitoring
+
+---
+
+name: proto-google-cloud-monitoring-v3
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 3.52.0
+libraries:
+  - com.google.api.grpc: proto-google-cloud-monitoring-v3
+
+---
+
+name: Google Cloud OpenTelemetry
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.33.0
+libraries:
+  - com.google.cloud.opentelemetry: exporter-metrics
+  - com.google.cloud.opentelemetry: detector-resources-support
+  - com.google.cloud.opentelemetry: shared-resourcemapping
+
+---
+
+name: OpenTelemetry
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.62.0
+libraries:
+  - io.opentelemetry: opentelemetry-api
+  - io.opentelemetry: opentelemetry-common
+  - io.opentelemetry: opentelemetry-context
+  - io.opentelemetry: opentelemetry-sdk
+  - io.opentelemetry: opentelemetry-sdk-common
+  - io.opentelemetry: opentelemetry-sdk-extension-autoconfigure-spi
+  - io.opentelemetry: opentelemetry-sdk-logs
+  - io.opentelemetry: opentelemetry-sdk-metrics
+  - io.opentelemetry: opentelemetry-sdk-trace
+
+---
+
+name: OpenTelemetry GCP Resources
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.37.0-alpha
+libraries:
+  - io.opentelemetry.contrib: opentelemetry-gcp-resources
+
+---
+
+name: OpenTelemetry Semantic Conventions
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.29.0-alpha
+libraries:
+  - io.opentelemetry.semconv: opentelemetry-semconv
+
+---
+
+name: Animal Sniffer Annotations
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: MIT License
+version: 1.27
+libraries:
+  - org.codehaus.mojo: animal-sniffer-annotations
+
+---
+
+name: stax2-api
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-2-Clause License
+version: 4.2.2
+copyright: 2008+, FasterXML, LLC
+license_file_path: licenses/bin/stax2-api.BSD2
+libraries:
+  - org.codehaus.woodstox: stax2-api
+
+---
+
+name: stax2-api
+license_category: binary
+module: extensions/druid-iceberg-extensions
+license_name: BSD-2-Clause License
+version: 4.3.0
+copyright: 2008+, FasterXML, LLC
+license_file_path: licenses/bin/stax2-api.BSD2
+libraries:
+  - org.codehaus.woodstox: stax2-api
+
+---
+
+name: Woodstox
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 7.0.0
+libraries:
+  - com.fasterxml.woodstox: woodstox-core
 
 ---
 
@@ -4516,7 +4390,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.37.0
+version: 2.85.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4528,7 +4402,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.29.1-alpha
+version: 2.73.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4540,16 +4414,35 @@ name: grpc-io
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.59.0
+version: 1.83.0
 libraries:
   - io.grpc: grpc-alts
   - io.grpc: grpc-auth
   - io.grpc: grpc-core
   - io.grpc: grpc-grpclib
   - io.grpc: grpc-inprocess
+  - io.grpc: grpc-googleapis
+  - io.grpc: grpc-netty-shaded
+  - io.grpc: grpc-opentelemetry
   - io.grpc: grpc-protobuf
   - io.grpc: grpc-protobuf-lite
+  - io.grpc: grpc-rls
+  - io.grpc: grpc-services
   - io.grpc: grpc-stub
+  - io.grpc: grpc-util
+  - io.grpc: grpc-xds
+
+---
+
+name: CEL Java
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.13.0
+libraries:
+  - dev.cel: common
+  - dev.cel: protobuf
+  - dev.cel: runtime
 
 ---
 
@@ -4557,7 +4450,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.70.0
+version: 1.84.0
 libraries:
   - io.grpc: grpc-api
 
@@ -4567,7 +4460,7 @@ name: grpc-context
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.70.0
+version: 1.84.0
 libraries:
   - io.grpc: grpc-context
 
@@ -4577,7 +4470,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.28.0
+version: 2.76.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4587,7 +4480,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.23.0
+version: 1.71.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4597,7 +4490,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.20.0
+version: 1.52.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4608,7 +4501,7 @@ name: google-auto-value
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.10.4
+version: 1.11.0
 libraries:
   - com.google.auto.value: auto-value-annotations
 
@@ -4618,11 +4511,37 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.27.0
+version: 2.75.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
   - com.google.cloud: google-cloud-core-http
+
+---
+
+name: CEL Java
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.13.0
+libraries:
+  - dev.cel: common
+  - dev.cel: protobuf
+  - dev.cel: runtime
+
+---
+
+name: ThreeTen Extra
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 1.8.0
+libraries:
+  - org.threeten: threeten-extra
+notices:
+  - threeten-extra: |
+      ThreeTen-Extra
+      Copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos.
 
 ---
 
@@ -4640,7 +4559,7 @@ name: google-http-client
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.43.3
+version: 2.2.0
 libraries:
   - com.google.http-client: google-http-client-apache-v2
   - com.google.http-client: google-http-client-appengine
@@ -4652,7 +4571,7 @@ name: google-protobuf
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 3.24.4
+version: 4.33.6
 libraries:
   - com.google.protobuf: protobuf-java-util
 
@@ -4662,7 +4581,7 @@ name: google-grpc
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.59.0
+version: 1.83.0
 libraries:
   - io.grpc: grpc-grpclb
 
@@ -4683,7 +4602,7 @@ name: conscrypt-openjdk-uber
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.5.2
+version: 2.6.2
 libraries:
   - org.conscrypt: conscrypt-openjdk-uber
 
@@ -4693,7 +4612,7 @@ name: threetenbp
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.6.8
+version: 1.7.0
 libraries:
   - org.threeten: threetenbp
 
@@ -4703,7 +4622,7 @@ name: Google OAuth Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.34.1
+version: 1.39.0
 libraries:
   - com.google.oauth-client: google-oauth-client
 
@@ -4898,7 +4817,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.7.19
+version: 3.8.7
 libraries:
   - io.projectreactor: reactor-core
 ---
@@ -5361,7 +5280,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 6.4.0
+version: 7.2.2
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5536,7 +5455,7 @@ name: GraalVM
 license_category: binary
 license_name: Universal Permissive License, Version 1.0
 license_file_path: licenses/bin/graal.UPL
-version: 25.1.3
+version: 25.3.4.1
 module: core
 libraries:
   - org.graalvm.js: js
@@ -5558,7 +5477,7 @@ libraries:
 name: GraalVM Shadowed ICU4J
 license_category: binary
 license_name: Unicode/ICU License
-version: 25.1.3
+version: 25.3.4.1
 copyright: Unicode, Inc.
 license_file_path: licenses/bin/icu4j.ICU
 module: core

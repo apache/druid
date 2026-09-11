@@ -168,6 +168,9 @@ public interface ColumnarLongs extends Closeable
       private int id = ReadableVectorInspector.NULL_ID;
 
       private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+      /**
+       * One past the highest row id of the previous batch, or -1 before the first batch.
+       */
       private int offsetMark = -1;
 
       @Nullable
@@ -208,11 +211,10 @@ public interface ColumnarLongs extends Closeable
           ColumnarLongs.this.get(longVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
           final int[] offsets = offset.getOffsets();
-          final int maxOffset = offsets[offset.getCurrentVectorSize() - 1];
-          if (maxOffset < offsetMark) {
+          if (offsets[0] < offsetMark) {
             nullIterator = nullValueBitmap.peekableIterator();
           }
-          offsetMark = maxOffset;
+          offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
           ColumnarLongs.this.get(longVector, offsets, offset.getCurrentVectorSize());
         }
 

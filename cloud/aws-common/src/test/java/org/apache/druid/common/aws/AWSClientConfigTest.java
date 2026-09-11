@@ -190,6 +190,18 @@ public class AWSClientConfigTest
     Assertions.assertNull(bind(Map.of("crossRegionAccessEnabled", true)).isForceGlobalBucketAccessEnabled());
   }
 
+  @Test
+  public void testLegacyMd5DisabledByDefault()
+  {
+    Assertions.assertFalse(bind(Map.of()).isEnableLegacyMd5());
+  }
+
+  @Test
+  public void testLegacyMd5CanBeEnabled()
+  {
+    Assertions.assertTrue(bind(Map.of("enableLegacyMd5", true)).isEnableLegacyMd5());
+  }
+
   @ParameterizedTest(name = "{0} processors -> {1} connections")
   @CsvSource({"8, 50", "32, 128"})
   public void testDefaultMaxConnectionsTakesTheSdkFloorOrFourPerCore(int processors, int expected)

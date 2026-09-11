@@ -67,7 +67,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
   private final int minNumWorkers;
   private final int maxNumWorkers;
 
-  private Compute cachedComputeService = null;
+  private volatile Compute cachedComputeService = null;
 
   private static final long POLL_INTERVAL_MS = 5 * 1000;  // 5 sec
   private static final int RUNNING_INSTANCES_MAX_RETRIES = 10;
@@ -138,7 +138,7 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
         .build();
   }
 
-  private synchronized Compute createComputeService()
+  private Compute createComputeService()
       throws IOException, GeneralSecurityException, InterruptedException, GceServiceException
   {
     final int maxRetries = 5;
@@ -155,7 +155,11 @@ public class GceAutoScaler implements AutoScaler<GceEnvironmentConfig>
       log.info("Creating new ComputeService [%d/%d]", retries + 1, maxRetries);
 
       try {
-        cachedComputeService = createComputeServiceImpl();
+        synchronized (this) {
+          if (cachedComputeService == null) {
+            cachedComputeService = createComputeServiceImpl();
+          }
+        }
         retries++;
       }
       catch (Throwable e) {

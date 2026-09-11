@@ -336,7 +336,7 @@ class PartialSegmentRestoreFromDiskTest
     // Refuse only the aggregate bundle's reservation, so the restore fails with __base already mounted.
     Mockito.doReturn(null)
            .when(location)
-           .addWeakReservationHold(ArgumentMatchers.eq(aggId), ArgumentMatchers.any());
+           .addInternalWeakReservationHold(ArgumentMatchers.eq(aggId), ArgumentMatchers.any());
 
     Assertions.assertThrows(Throwable.class, () -> restoreFromDisk(location));
 

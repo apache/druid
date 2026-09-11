@@ -28,6 +28,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaders;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -61,17 +67,10 @@ import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.utils.CloseableUtils;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.SequenceInputStream;
@@ -197,6 +196,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         // HTTP status of the initial response, remembered so that an HTML body first seen in a later chunk of a
         // 429/503 reply is still reported as capacity-exceeded rather than as a generic HTML-instead-of-JSON error.
         private volatile int responseStatusCode = -1;
+        // Netty 4 delivers the body after the headers, so the Content-Type recorded in handleResponse has
+        // to survive until the first chunk arrives to be usable in the non-JSON check.
+        private volatile String responseContentType = null;
         // Message and (when available) original exception for a read failure, published together through a single
         // reference so a reader that observes a non-null Failure also sees its cause. Publishing them as two
         // separate AtomicReferences (a "fail" flag written before a "failCause" detail) would let a concurrent
@@ -237,7 +239,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         /**
          * Queue a buffer. Returns true if we should keep reading, false otherwise.
          */
-        private boolean enqueue(ChannelBuffer buffer, long chunkNum) throws InterruptedException
+        private boolean enqueue(ByteBuf buffer, long chunkNum) throws InterruptedException
         {
           // If the consumer has abandoned the response (see the SequenceInputStream.close() override below), drop the
           // chunk instead of buffering it, and keep reads flowing (continueReading = true) so we never suspend the
@@ -282,7 +284,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
          * {@link #handleChunk}.
          */
         @Nullable
-        private Byte bodyPrefixByte(ChannelBuffer buffer)
+        private Byte bodyPrefixByte(ByteBuf buffer)
         {
           if (bodyPrefixResolved.get()) {
             return null;
@@ -312,7 +314,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
          *                    query regardless of the body prefix
          * @param chunkNum    0 for the initial response body, else the chunk number
          */
-        private void failIfNonJsonBody(String contentType, ChannelBuffer buffer, long chunkNum)
+        private void failIfNonJsonBody(String contentType, ByteBuf buffer, long chunkNum)
         {
           final boolean isHtmlContentType =
               contentType != null && StringUtils.toLowerCase(contentType).contains("text/html");
@@ -352,7 +354,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private void throwForNonJsonBody(
             int statusCode,
             String contentType,
-            ChannelBuffer buffer,
+            ByteBuf buffer,
             long chunkNum,
             boolean isHtml
         )
@@ -396,15 +398,15 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           trafficCopRef.set(trafficCop);
           checkQueryTimeout();
-          // Detect a non-JSON body (e.g. a 429/503 error page from a proxy) before it reaches the JSON parser, where
-          // it would surface only as a JsonParseException on 0x3c ('<'). The shortcut is taken only when the body is
-          // confirmed non-JSON: a 429/503 carrying Druid's own JSON error body (a genuine
-          // QueryCapacityExceededException or SERVICE_UNAVAILABLE from a data server) falls through to the normal JSON
-          // error path below, which preserves the server's structured error details.
-          responseStatusCode = response.getStatus().getCode();
-          final String contentType = response.headers().get(HttpHeaders.Names.CONTENT_TYPE);
-          failIfNonJsonBody(contentType, response.getContent(), 0);
-          checkTotalBytesLimit(response.getContent().readableBytes());
+          // Netty 4: the initial HttpResponse carries no body, so the status and Content-Type are recorded
+          // here and the body itself is inspected on the first HttpContent chunk. The goal is to detect a
+          // non-JSON body (a 429/503 error page from a proxy, say) before it reaches the JSON parser, where it
+          // would surface only as a JsonParseException on 0x3c ('<'). The shortcut is taken only when the body
+          // is confirmed non-JSON: a 429/503 carrying Druid's own JSON error body (a genuine
+          // QueryCapacityExceededException or SERVICE_UNAVAILABLE from a data server) falls through to the
+          // normal JSON error path below, which preserves the server's structured error details.
+          responseStatusCode = response.status().code();
+          responseContentType = response.headers().get(HttpHeaders.Names.CONTENT_TYPE);
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTimeNs = System.nanoTime();
@@ -424,7 +426,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (responseContext != null) {
               context.merge(ResponseContext.deserialize(responseContext, objectMapper));
             }
-            continueReading = enqueue(response.getContent(), 0L);
+            // Netty 4: initial HttpResponse has no body content; body arrives via HttpContent chunks.
+            // Seed the queue with an empty placeholder so SequenceInputStream's constructor (which
+            // eagerly calls peekNextStream()) doesn't block before chunks arrive.
+            queue.put(InputStreamHolder.fromChannelBuffer(Unpooled.EMPTY_BUFFER, 0L));
+            continueReading = true;
           }
           catch (final IOException e) {
             log.error(e, "Error parsing response context from url [%s]", url);
@@ -444,7 +450,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);
           }
-          totalByteCount.addAndGet(response.getContent().readableBytes());
           return ClientResponse.finished(
               new SequenceInputStream(
                   new Enumeration<>()
@@ -520,23 +525,23 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public ClientResponse<InputStream> handleChunk(
             ClientResponse<InputStream> clientResponse,
-            HttpChunk chunk,
+            HttpContent chunk,
             long chunkNum
         )
         {
           checkQueryTimeout();
 
-          final ChannelBuffer channelBuffer = chunk.getContent();
+          final ByteBuf channelBuffer = chunk.content();
           final int bytes = channelBuffer.readableBytes();
 
           checkTotalBytesLimit(bytes);
 
-          // The initial HttpResponse for a chunked reply can have an empty body, so the JSON-vs-not prefix check done
-          // in handleResponse may not have resolved yet. Retry it here, against this chunk, before the bytes are
-          // enqueued for JSON parsing: otherwise an HTML error page (for example from a load balancer or reverse
-          // proxy) delivered as chunked content is enqueued blind and only surfaces later as a confusing
-          // JsonParseException. This is a no-op once the prefix has been resolved.
-          failIfNonJsonBody(null, channelBuffer, chunkNum);
+          // Under Netty 4 the body never appears on the initial HttpResponse, so this is where the JSON-vs-not
+          // prefix check happens, against the first chunk that carries any non-whitespace byte, and before those
+          // bytes are enqueued for JSON parsing. Otherwise an HTML error page (from a load balancer or reverse
+          // proxy, say) is enqueued blind and surfaces later as a confusing JsonParseException. The Content-Type
+          // comes from the headers recorded in handleResponse. This is a no-op once the prefix has resolved.
+          failIfNonJsonBody(responseContentType, channelBuffer, chunkNum);
 
           boolean continueReading = true;
           if (bytes > 0) {
@@ -574,7 +579,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
               // after done is set to true, regardless of the rest of the stream's state.
-              queue.put(InputStreamHolder.fromChannelBuffer(ChannelBuffers.EMPTY_BUFFER, Long.MAX_VALUE));
+              queue.put(InputStreamHolder.fromChannelBuffer(Unpooled.EMPTY_BUFFER, Long.MAX_VALUE));
             }
             catch (InterruptedException e) {
               log.error(e, "Unable to put finalizing input stream into Sequence queue for url [%s]", url);
@@ -591,11 +596,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public void exceptionCaught(final ClientResponse<InputStream> clientResponse, final Throwable e)
         {
+          // Fall back to Throwable.toString() when the exception carries no message, so a timeout
+          // (Netty's ReadTimeoutException is a stackless, messageless singleton) does not render as
+          // "exception msg [null]" but as "exception msg [io.netty.handler.timeout.ReadTimeoutException]"
+          // instead.
+          final String exceptionDetail = e.getMessage() != null ? e.getMessage() : e.toString();
           String msg = StringUtils.format(
               "Query[%s] url[%s] failed with exception msg [%s]",
               query.getId(),
               url,
-              e.getMessage()
+              exceptionDetail
           );
           setupResponseReadFailure(msg, e);
         }
@@ -811,11 +821,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               log.error("Error cancelling query[%s]", query);
             }
             StatusResponseHolder response = responseFuture.get(30, TimeUnit.SECONDS);
-            if (response.getStatus().getCode() >= 500) {
+            if (response.getStatus().code() >= 500) {
               log.error("Error cancelling query[%s]: queriable node returned status[%d] [%s].",
                   query,
-                  response.getStatus().getCode(),
-                  response.getStatus().getReasonPhrase());
+                  response.getStatus().code(),
+                  response.getStatus().reasonPhrase());
             }
           }
           catch (ExecutionException | InterruptedException e) {

@@ -39,6 +39,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerToolbox;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlResults;
+import org.apache.druid.sql.calcite.schema.ConstantDruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
@@ -66,11 +67,13 @@ public class ResultsContextSerdeTest
         CalciteTests.createExprMacroTable(),
         CalciteTests.getJsonMapper(),
         new PlannerConfig(),
-        new DruidSchemaCatalog(
-            EasyMock.createMock(SchemaPlus.class),
-            ImmutableMap.of(
-                "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
-                NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+        new ConstantDruidSchemaCatalogProvider(
+            new DruidSchemaCatalog(
+                EasyMock.createMock(SchemaPlus.class),
+                ImmutableMap.of(
+                    "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
+                    NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+                )
             )
         ),
         CalciteTests.createJoinableFactoryWrapper(),
@@ -93,6 +96,7 @@ public class ResultsContextSerdeTest
         sql,
         DruidSqlParser.parse(sql, false).getMainStatement(),
         engine,
+        null, // No authentication result needed for this test
         Collections.emptySet(),
         Collections.emptyMap(),
         null

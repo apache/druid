@@ -138,8 +138,10 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
       private boolean[] nullVector = null;
       private int id = ReadableVectorInspector.NULL_ID;
 
-      @Nullable
       private PeekableIntIterator nullIterator = nullValueIndex.peekableIterator();
+      /**
+       * One past the highest row id of the previous batch, or -1 before the first batch.
+       */
       private int offsetMark = -1;
 
       @Override
@@ -171,11 +173,10 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
           valueColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
           final int[] offsets = offset.getOffsets();
-          final int maxOffset = offsets[offset.getCurrentVectorSize() - 1];
-          if (maxOffset < offsetMark) {
+          if (offsets[0] < offsetMark) {
             nullIterator = nullValueIndex.peekableIterator();
           }
-          offsetMark = maxOffset;
+          offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
           valueColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
         }
 

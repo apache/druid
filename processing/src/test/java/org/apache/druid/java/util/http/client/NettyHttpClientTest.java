@@ -25,9 +25,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -68,7 +68,7 @@ public class NettyHttpClientTest
     }
 
     @Override
-    public ClientResponse<Object> handleChunk(ClientResponse<Object> clientResponse, HttpChunk chunk, long chunkNum)
+    public ClientResponse<Object> handleChunk(ClientResponse<Object> clientResponse, HttpContent chunk, long chunkNum)
     {
       return clientResponse;
     }
@@ -145,7 +145,7 @@ public class NettyHttpClientTest
     }
 
     @Override
-    public ClientResponse<Object> handleChunk(ClientResponse<Object> clientResponse, HttpChunk chunk, long chunkNum)
+    public ClientResponse<Object> handleChunk(ClientResponse<Object> clientResponse, HttpContent chunk, long chunkNum)
     {
       if (chunkNum >= 2) {
         throw toThrow;
@@ -171,7 +171,7 @@ public class NettyHttpClientTest
    * DirectDruidClient does for chunked responses), an exception thrown by {@link HttpResponseHandler#handleChunk}
    * on a later chunk must be delivered to {@link HttpResponseHandler#exceptionCaught} as itself. Previously the
    * catch block only closed the channel, so the handler instead saw the generic "Channel disconnected"
-   * {@link org.jboss.netty.channel.ChannelException} raised by the resulting disconnect, and the real cause was lost.
+   * {@link io.netty.channel.ChannelException} raised by the resulting disconnect, and the real cause was lost.
    */
   @Test
   public void testHandleChunkExceptionReachesExceptionCaught() throws Exception

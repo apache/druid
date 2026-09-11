@@ -137,7 +137,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 ### Real-time
 
 :::info
-Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`, `OshiSysMonitor`, `JvmMonitor`, `JvmCpuMonitor`, `JvmThreadsMonitor` and `SysMonitor` 
+Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`, `OshiSysMonitor`, `JvmMonitor`, `JvmCpuMonitor` and `JvmThreadsMonitor`
 to represent the task ID are deprecated and will be removed in a future release. Use the `taskId` dimension instead.
 :::
 
@@ -230,6 +230,7 @@ If SQL is enabled, the Broker will emit the following metrics for SQL.
 |------|-----------|----------|------------|
 |`ingest/count`|Count of `1` every time an ingestion job runs (includes compaction jobs). Aggregate using dimensions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Always `1`.|
 |`ingest/segments/count`|Count of final segments created by job (includes tombstones). | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
+|`ingest/segments/oversized`|Count of final segments created by job that were detected as being oversized, meaning the number of rows in the segment exceeded more than twice the maxRowsPerSegment in the spec. This is relevant only for hash and range partitioned ingestions. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
 |`ingest/rows/published`|Number of rows successfully published by the job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |At least `1`.|
 |`ingest/tombstones/count`|Count of tombstones created by job. | `dataSource`, `taskId`, `taskType`, `groupId`, `taskIngestionMode`, `tags` |Zero or more for replace. Always zero for non-replace tasks (always zero for legacy replace, see below).|
 
@@ -451,6 +452,9 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/assignSkipped/count`|Number of segments that could not be assigned to any server for loading. This can occur due to replication throttling, no available disk space, or a full load queue.|`dataSource`, `server`, `tier`, `description`|Varies|
 |`segment/moveSkipped/count`|Number of segments that were chosen for balancing but could not be moved. This can occur when segments are already optimally placed.|`dataSource`, `server`, `tier`, `description`|Varies|
 |`segment/dropSkipped/count`|Number of segments that could not be dropped from any server.|`dataSource`, `server`, `tier`, `description`|Varies|
+|`segment/clone/assigned/count`|Number of segments assigned to be loaded on a historical clone.|`dataSource`, `server`, `tier`|Varies|
+|`segment/clone/dropped/count`|Number of segments dropped from a historical clone.|`dataSource`, `server`, `tier`|Varies|
+|`segment/clone/pendingSync/count`|Number of segments that still need to be loaded on a historical clone but are already loaded on its source server.|`server`, `tier`|Varies|
 |`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
 |`segment/loading/rateKbps`|Current rate of segment loading on a server in kbps (1000 bits per second). The rate is calculated as a moving average over the last 10 GiB or more of successful segment loads on that server.|`server`|Varies|
@@ -467,9 +471,15 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
 |`tier/historical/count`|Number of available historical nodes in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/historical/clone/count`|Number of historical nodes in a tier which are a clone of another historical in the same or different tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/historical/clone/synced`|Number of historical clones in a tier which are currently in sync with their source server. |`server`, `tier`|1 if synced, O if not synced|
 |`tier/replication/factor`|Configured maximum replication factor in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
-|`tier/required/capacity`|Total capacity in bytes required in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
-|`tier/total/capacity`|Total capacity in bytes available in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/storage/required`|Segment storage in bytes that the load rules require in each tier, counting each replica at its full segment size. Compare against `tier/storage/capacity` to see how heavily the tier is subscribed. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/storage/capacity`|Total segment storage in bytes that each tier advertises for segment assignment. Can be greater than the physical disk reported by `tier/segmentCache/capacity` if using virtual storage, so use that metric rather than this one to monitor physical capacity. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/segmentCache/capacity`|Total physical size in bytes of the segment cache locations configured on the historicals in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/segmentCache/used`|Bytes occupied on disk in each tier by the segments its historicals have announced. Partially loaded segments count only the bytes the historical reported loading, not their full size. Compare against `tier/segmentCache/capacity` to see how full the tier's disks are. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/required/capacity`|Deprecated. Use `tier/storage/required` instead, which reports the same value under a name that groups it with the storage capacity it should be compared against. This metric will be removed in a future release.|`tier`, `tierAlias`|Varies|
+|`tier/total/capacity`|Deprecated. Use `tier/storage/capacity` instead, which reports the same value under a name that groups it with the required storage it should be compared against. This metric will be removed in a future release.|`tier`, `tierAlias`|Varies|
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
 |`compactTask/maxSlot/count`|Maximum number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
 |`compactTask/availableSlot/count`|Number of currently vacant task slots out of the total slots allocated for auto compaction tasks. This value is computed as the difference between the total number of task slots allocated for auto compaction and the estimated number of task slots currently occupied by running compaction tasks. The number of sub-tasks of each compaction task is estimated to be `maxNumConcurrentSubTasks`.| |Varies|
@@ -572,32 +582,6 @@ These metrics are available only when `druid.zk.service.enabled = true`.
 |------|-----------|----------|------------|
 |`zk/connected`|Indicator of connection status. `1` for connected, `0` for disconnected. Emitted once per monitor period.|None|1|
 |`zk/reconnect/time`|Amount of time, in milliseconds, that a server was disconnected from ZooKeeper before reconnecting. Emitted on reconnection. Not emitted if connection to ZooKeeper is permanently lost, because in this case, there is no reconnection.|None|Not present|
-
-## Sys [Deprecated]
-
-> SysMonitor is now deprecated and will be removed in future releases.
-> Instead, use the new OSHI monitor called [OshiSysMonitor](#oshisysmonitor). The new monitor has a wider support for different machine architectures including ARM instances.
-
-These metrics are only available if the `SysMonitor` module is included.
-
-|Metric|Description|Dimensions|Normal value|
-|------|-----------|----------|------------|
-|`sys/swap/free`|Free swap||Varies|
-|`sys/swap/max`|Max swap||Varies|
-|`sys/swap/pageIn`|Paged in swap||Varies|
-|`sys/swap/pageOut`|Paged out swap||Varies|
-|`sys/disk/write/count`|Writes to disk|`fsDevName`, `fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/disk/read/count`|Reads from disk|`fsDevName`, `fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/disk/write/size`|Bytes written to disk. One indicator of the amount of paging occurring for segments.|`fsDevName`,`fsDirName`,`fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/disk/read/size`|Bytes read from disk. One indicator of the amount of paging occurring for segments.|`fsDevName`,`fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/net/write/size`|Bytes written to the network|`netName`, `netAddress`, `netHwaddr`|Varies|
-|`sys/net/read/size`|Bytes read from the network|`netName`, `netAddress`, `netHwaddr`|Varies|
-|`sys/fs/used`|Filesystem bytes used|`fsDevName`, `fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|< max|
-|`sys/fs/max`|Filesystem bytes max|`fsDevName`, `fsDirName`, `fsTypeName`, `fsSysTypeName`, `fsOptions`|Varies|
-|`sys/mem/used`|Memory used||< max|
-|`sys/mem/max`|Memory max||Varies|
-|`sys/storage/used`|Disk space used|`fsDirName`|Varies|
-|`sys/cpu`|CPU used|`cpuName`, `cpuTime`|Varies|
 
 ## OshiSysMonitor
 
