@@ -20,7 +20,9 @@
 package org.apache.druid.server.system;
 
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SystemTableDataSource;
@@ -143,6 +145,36 @@ public class SystemTableQueryHandlerTest
             List.of("task-b", 20L)
         ),
         result.get(0).getEvents()
+    );
+  }
+
+  /** A node-local handler rejects a composite root instead of casting it to a system-table datasource. */
+  @Test
+  public void testRejectsCompositeDataSource()
+  {
+    final SystemTableQueryHandler handler = new SystemTableQueryHandler(
+        Map.of(),
+        Map.of(),
+        new ScanQueryEngine(),
+        new AuthorizerMapper(Map.of())
+    );
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource(
+                                      FilteredDataSource.create(
+                                          new SystemTableDataSource("server_properties"),
+                                          new SelectorDimFilter("property", "druid.host", null)
+                                      )
+                                  )
+                                  .eternityInterval()
+                                  .build();
+
+    Assertions.assertThrows(
+        BadQueryContextException.class,
+        () -> handler.createRunner(
+            query,
+            new AuthenticationResult("alice", "allow", "external", null),
+            true
+        )
     );
   }
 

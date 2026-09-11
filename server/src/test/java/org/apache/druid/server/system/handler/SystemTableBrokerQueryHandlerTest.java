@@ -19,9 +19,12 @@
 
 package org.apache.druid.server.system.handler;
 
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.SystemTableDataSource;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -62,6 +65,30 @@ public class SystemTableBrokerQueryHandlerTest
 
     Assertions.assertSame(expectedRunner, brokerHandler.createRunner(query, AUTHENTICATION_RESULT, false));
     Mockito.verifyNoInteractions(localHandler);
+  }
+
+  /** A local route cannot bypass recursive resolution for a system table below a composite datasource. */
+  @Test
+  public void testLocalRouteRejectsCompositeDataSource()
+  {
+    final SystemTableQueryClient queryClient = Mockito.mock(SystemTableQueryClient.class);
+    final SystemTableQueryHandler localHandler = Mockito.mock(SystemTableQueryHandler.class);
+    final SystemTableBrokerQueryHandler brokerHandler = new SystemTableBrokerQueryHandler(queryClient, localHandler);
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource(
+                                      FilteredDataSource.create(
+                                          new SystemTableDataSource("server_properties"),
+                                          new SelectorDimFilter("property", "druid.host", null)
+                                      )
+                                  )
+                                  .eternityInterval()
+                                  .build();
+
+    Assertions.assertThrows(
+        BadQueryContextException.class,
+        () -> brokerHandler.createRunner(query, AUTHENTICATION_RESULT, true)
+    );
+    Mockito.verifyNoInteractions(queryClient, localHandler);
   }
 
   private static ScanQuery query()
