@@ -865,6 +865,68 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   @Test
+  void testRestartAfterFailedReloadReappliesThePriorRuleNotTheFailedOne() throws Exception
+  {
+    // The durable half of the rollback. A failed reload restores the prior rule in memory and the replica keeps
+    // announcing it, so the info file has to still describe that rule too. If it described the rule that just
+    // failed, a restart would reapply it from disk, and a second failure there takes the replica down entirely:
+    // SegmentManager.loadSegmentOnBootstrap drops on failure and the segment never gets announced.
+    final StorageLoadingThreadPool loadingPool = StorageLoadingThreadPool.createFromConfig(
+        SegmentLoaderConfig.builder()
+                           .locations(List.of(new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null)))
+                           .virtualStorage(true)
+                           .virtualStoragePartialDownloadsEnabled(true)
+                           .build()
+    );
+    final SegmentLocalCacheManager beforeRestart =
+        makeManagerAtLocations(true, true, List.of(cacheRoot), loadingPool);
+    try {
+      beforeRestart.load(partialWrapperSegment(List.of(AGG_BUNDLE), "v1:rule-original"));
+      Assertions.assertEquals("v1:rule-original", beforeRestart.getRuleFingerprintForSegment(SEGMENT_ID));
+
+      loadingPool.stop();
+      Assertions.assertThrows(
+          SegmentLoadingException.class,
+          () -> beforeRestart.load(partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), "v2:rule-updated"))
+      );
+      Assertions.assertEquals(
+          "v1:rule-original",
+          beforeRestart.getRuleFingerprintForSegment(SEGMENT_ID),
+          "precondition: the failed reload rolled the in-memory rule back"
+      );
+    }
+    finally {
+      beforeRestart.shutdown();
+    }
+
+    // Restart over the same cache directory.
+    manager = makeManager(true, true);
+    final List<DataSegment> cached = manager.getCachedSegments();
+    final DataSegment rediscovered = cached.stream()
+                                           .filter(s -> s.getId().equals(SEGMENT_ID))
+                                           .findFirst()
+                                           .orElseThrow();
+    Assertions.assertEquals(
+        "v1:rule-original",
+        rediscovered.getLoadSpec().get("fingerprint"),
+        "the persisted load spec must describe the rule the replica is serving under, not the failed one"
+    );
+
+    manager.bootstrap(rediscovered, SegmentLazyLoadFailCallback.NOOP);
+    Assertions.assertEquals(
+        "v1:rule-original",
+        manager.getRuleFingerprintForSegment(SEGMENT_ID),
+        "bootstrap must reapply the prior rule, not the one that failed"
+    );
+    Assertions.assertTrue(
+        manager.getLocations().get(0).isWeakReserved(
+            new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)
+        ),
+        "and pin that rule's bundle"
+    );
+  }
+
+  @Test
   void testBootstrapReinstallsRuleHoldsFromPersistedInfoFile() throws Exception
   {
     // on historical restart, getCachedSegments+bootstrap must reapply the rule using the persisted DataSegment's

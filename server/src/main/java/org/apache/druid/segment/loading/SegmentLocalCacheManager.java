@@ -1080,19 +1080,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         final ReservedPartial reserved = findOrReservePartial(dataSegment, rangeReader);
         try {
           final PartialSegmentMetadataCacheEntry metadata = reserved.metadata();
-          // findOrReservePartial only invokes reservePartial (which writes the info file) on the fresh-reserve
-          // branch. On the find-existing branch the info file on disk still carries the PRIOR rule's wrapped
-          // load spec, so a rule swap here would apply in memory only. Rewrite unconditionally before mount.
-          try {
-            rewriteInfoFile(dataSegment);
-          }
-          catch (IOException e) {
-            throw new SegmentLoadingException(
-                e,
-                "Failed to write partial info file for segment[%s]",
-                dataSegment.getId()
-            );
-          }
           try {
             metadata.mount(reserved.location());
           }
@@ -1168,9 +1155,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   /**
    * Completes the second half of a rule swap. The caller has pinned the union of the prior and new selections; this
    * submits eager-download tasks to the loading pool for every bundle of the new selection that is not resident yet,
-   * blocks until they all finish, and then narrows the pin down to {@code selected}. On any failure it puts
-   * {@code priorFingerprint} / {@code priorSelection} back and throws {@link SegmentLoadingException} so the caller
-   * treats the load as failed and retries.
+   * blocks until they all finish, then commits by persisting the new wrapper to the segment's info file and narrowing
+   * the pin down to {@code selected}. On any failure it puts {@code priorFingerprint} / {@code priorSelection} back
+   * and throws {@link SegmentLoadingException} so the caller treats the load as failed and retries.
    */
   private void realizeRuleOrRestorePrior(
       DataSegment dataSegment,
@@ -1254,9 +1241,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
 
     if (firstFailure == null) {
-      // every bundle the new rule wants is resident and pinned, so the prior rule's extras can go. Pure
-      // release, since the target selection is a subset of what is held.
       try {
+        rewriteInfoFile(dataSegment);
+        // every bundle the new rule wants is resident and pinned, so the prior rule's extras can go. Pure
+        // release, since the target selection is a subset of what is held.
         metadata.applyRule(fingerprint, selected);
         return;
       }
