@@ -269,11 +269,61 @@
     <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
     <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
+    <!--
+      Dependency-Check maps the generic netty:netty CPE to advisories published for Netty 4 module artifacts.
+      Druid uses this Netty 3 artifact only for internal HTTP client requests; the affected Netty 4 modules and
+      APIs are not used by Druid.
+    -->
+    <cve>CVE-2024-29025</cve>
+    <cve>CVE-2024-47535</cve>
+    <cve>CVE-2025-25193</cve>
     <cve>CVE-2025-55163</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
     <cve>CVE-2025-58056</cve>
     <cve>CVE-2025-58057</cve> <!-- Netty 3.x not affected; compression issue only in 4.x -->
+    <cve>CVE-2025-67735</cve>
     <cve>CVE-2026-33870</cve> <!-- We don't use HttpPostRequestDecoder -->
     <cve>CVE-2026-33871</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
+    <cve>CVE-2026-41417</cve>
+    <cve>CVE-2026-42578</cve>
+    <cve>CVE-2026-42579</cve>
+    <cve>CVE-2026-42580</cve>
+    <cve>CVE-2026-42581</cve>
+    <cve>CVE-2026-42583</cve>
+    <cve>CVE-2026-42584</cve>
+    <cve>CVE-2026-42585</cve>
+    <cve>CVE-2026-42586</cve>
+    <cve>CVE-2026-42587</cve>
+    <cve>CVE-2026-44248</cve>
+    <cve>CVE-2026-44249</cve>
+    <cve>CVE-2026-44250</cve>
+    <cve>CVE-2026-44890</cve>
+    <cve>CVE-2026-44891</cve>
+    <cve>CVE-2026-44893</cve>
+    <cve>CVE-2026-45416</cve>
+    <cve>CVE-2026-45536</cve>
+    <cve>CVE-2026-45673</cve>
+    <cve>CVE-2026-45674</cve>
+    <cve>CVE-2026-46340</cve>
+    <cve>CVE-2026-47244</cve>
+    <cve>CVE-2026-47691</cve>
+    <cve>CVE-2026-48006</cve>
+    <cve>CVE-2026-48043</cve>
+    <cve>CVE-2026-48059</cve>
+    <cve>CVE-2026-50010</cve>
+    <cve>CVE-2026-50011</cve>
+    <cve>CVE-2026-50020</cve>
+    <cve>CVE-2026-50560</cve>
+    <cve>CVE-2026-56820</cve>
+    <cve>CVE-2026-56821</cve>
+    <cve>CVE-2026-56822</cve>
+    <cve>CVE-2026-59898</cve>
+    <cve>CVE-2026-59899</cve>
+    <cve>CVE-2026-59900</cve>
+    <cve>CVE-2026-59901</cve>
+    <cve>CVE-2026-59919</cve>
+    <cve>CVE-2026-59920</cve>
+    <cve>CVE-2026-59921</cve>
+    <cve>CVE-2026-62380</cve>
   </suppress>
 
   <suppress>
@@ -767,5 +817,75 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-.*@.*$</packageUrl>
     <cve>CVE-2026-33186</cve> <!-- Only applicable to gRPC Go (google.golang.org/grpc < 1.79.3), not gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2026-33186 -->
+  </suppress>
+
+  <suppress>
+    <!-- These findings come from Jackson versions embedded in third-party shaded JARs.
+         Druid's normal Jackson dependency management cannot replace those copies. The
+         selectors are restricted to the two affected embedded JARs. Revisit when Hadoop
+         or Parquet ships a build containing the fixed Jackson version. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
+                 parquet-jackson-1.18.0.jar (shaded jackson-databind 2.22.1)
+    ]]></notes>
+    <filePath regex="true">.*(hadoop-client-runtime-3\.5\.0|parquet-jackson-1\.18\.0)\.jar.*</filePath>
+    <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson-databind@(2\.18\.6|2\.22\.1)$</packageUrl>
+    <cve>CVE-2026-54512</cve>
+    <cve>CVE-2026-54513</cve>
+    <cve>CVE-2026-68497</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Hadoop shades Jetty 9.4.58 for its own internal HTTP components. Druid uses
+         Jetty for its server and does not expose Hadoop's embedded Jetty server or
+         Digest authentication. Keep the selectors limited to the Hadoop shaded JAR. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jetty-http/jetty-io 9.4.58.v20250814)
+    ]]></notes>
+    <filePath regex="true">.*hadoop-client-runtime-3\.5\.0\.jar.*</filePath>
+    <packageUrl regex="true">^pkg:maven/org\.eclipse\.jetty(\.[^/]+)?/.*@9\.4\.58.*$</packageUrl>
+    <cve>CVE-2026-2332</cve>
+    <cve>CVE-2026-10050</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Hadoop shades JLine for its interactive CLI. Druid does not expose a JLine
+         Telnet server endpoint. Keep this scoped to Hadoop's shaded copy. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jline 3.9.0)
+    ]]></notes>
+    <filePath regex="true">.*hadoop-client-runtime-3\.5\.0\.jar.*</filePath>
+    <packageUrl regex="true">^pkg:maven/org\.jline/jline.*@.*$</packageUrl>
+    <cve>CVE-2026-56741</cve>
+    <cve>CVE-2026-56740</cve>
+  </suppress>
+
+  <suppress>
+    <!-- Dependency-Check matches the Java GCP resource provider to OpenTelemetry Go
+         advisories. Druid uses the Java artifact only for GCP resource detection. -->
+    <notes><![CDATA[
+      file name: opentelemetry-gcp-resources-1.37.0-alpha.jar
+      The reported CVEs affect opentelemetry-go, not this Java artifact.
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.opentelemetry\.contrib/opentelemetry-gcp-resources@1\.37\.0-alpha$</packageUrl>
+    <cve>CVE-2026-24051</cve>
+    <cve>CVE-2026-39883</cve>
+    <cve>CVE-2026-29181</cve>
+  </suppress>
+
+  <suppress>
+    <!-- docker-java-transport-zerodep embeds these HttpComponents versions. Druid uses
+         this dependency for container-based test infrastructure; normal Druid-managed
+         HttpClient versions cannot replace the relocated copies. Keep the suppression
+         limited to the exact embedded transport JAR and versions. -->
+    <notes><![CDATA[
+      file name: docker-java-transport-zerodep-3.7.1.jar (shaded httpclient5 5.5.1 and httpcore5 5.3.6)
+    ]]></notes>
+    <filePath regex="true">.*docker-java-transport-zerodep-3\.7\.1\.jar.*</filePath>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.(client5/httpclient5@5\.5\.1|core5/httpcore5@5\.3\.6)$</packageUrl>
+    <cve>CVE-2026-40542</cve>
+    <cve>CVE-2026-71290</cve>
+    <cve>CVE-2026-54399</cve>
+    <cve>CVE-2026-54428</cve>
   </suppress>
 </suppressions>
