@@ -842,8 +842,9 @@
 
   <suppress>
     <!-- CVE-2026-33117: Vulnerability in Azure SDK for Java's Key Vault Keys local cryptographic verification path.
-         Druid's azure-extensions use azure-core/azure-identity for blob storage auth only; Druid does not use
-         azure-keyvault-keys or the local cryptography client path that contains the vulnerability. -->
+         The CVE fires against azure-core, azure-core-http-netty, azure-identity, and azure-json due to broad CPE
+         matching, but none of these jars contain the vulnerable Key Vault code path. Druid uses these artifacts
+         for blob storage auth only and does not use the Key Vault cryptography client. -->
     <notes><![CDATA[
       file name: azure-core-1.58.1.jar azure-core-http-netty-1.16.5.jar azure-identity-1.18.4.jar azure-json-1.5.1.jar
     ]]></notes>
