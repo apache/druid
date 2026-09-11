@@ -169,6 +169,38 @@ public class DartWorkerClientImplTest
     }
   }
 
+  @Test
+  public void test_closeCancelsActiveRequests()
+  {
+    final SettableFuture<Void> finishFuture = SettableFuture.create();
+    final SettableFuture<Void> stopFuture = SettableFuture.create();
+    final ServiceClient serviceClient = Mockito.mock(ServiceClient.class);
+    Mockito.<ListenableFuture<Void>>when(serviceClient.asyncRequest(Mockito.any(), Mockito.any()))
+           .thenReturn(finishFuture, stopFuture);
+
+    final ServiceClientFactory clientFactory = Mockito.mock(ServiceClientFactory.class);
+    Mockito.when(clientFactory.makeClient(Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(serviceClient);
+
+    final DartWorkerClientImpl client = new DartWorkerClientImpl(
+        QUERY_ID,
+        clientFactory,
+        TestHelper.makeSmileMapper(),
+        "localhost:8080"
+    );
+
+    try {
+      client.postFinish(WORKER_ID.toString());
+      client.stopWorker(WORKER_ID.toString());
+      client.close();
+
+      Assertions.assertTrue(finishFuture.isCancelled());
+      Assertions.assertTrue(stopFuture.isCancelled());
+    }
+    finally {
+      client.close();
+    }
+  }
+
   /**
    * Verify that a request to {@link #WORKER_ID} fails immediately, rather than retrying, due to its client
    * being closed.

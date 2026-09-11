@@ -46,7 +46,9 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -72,6 +74,7 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   @GuardedBy("clientMap")
   private boolean closed;
 
+  private final Set<ListenableFuture<?>> activeRequests = ConcurrentHashMap.newKeySet();
   private final Set<ListenableFuture<Void>> activeWorkOrders = ConcurrentHashMap.newKeySet();
   private volatile boolean isStopping = false;
 
@@ -134,6 +137,13 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   public void close()
   {
     synchronized (clientMap) {
+      closed = true;
+
+      // Cancel requests before closing locators so in-flight requests do not continue retrying.
+      final List<ListenableFuture<?>> requests = new ArrayList<>(activeRequests);
+      activeRequests.clear();
+      requests.forEach(request -> request.cancel(true));
+
       for (Map.Entry<String, Pair<ServiceClient, Closeable>> entry : clientMap.entrySet()) {
         CloseableUtils.closeAndSuppressExceptions(
             entry.getValue().right(),
@@ -142,7 +152,6 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
       }
 
       clientMap.clear();
-      closed = true;
     }
   }
 
@@ -190,7 +199,7 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
       client = baseClient;
     }
 
-    return Pair.of(client, locator);
+    return Pair.of(new RequestTrackingClient(client, activeRequests), locator);
   }
 
   private Pair<ServiceClient, Closeable> getClientAndLocator(final String workerIdString)
@@ -206,6 +215,39 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
       }
 
       return clientMap.computeIfAbsent(workerId.getHostAndPort(), ignored -> makeNewClient(workerId));
+    }
+  }
+
+  private static class RequestTrackingClient implements ServiceClient
+  {
+    private final ServiceClient delegate;
+    private final Set<ListenableFuture<?>> activeRequests;
+
+    private RequestTrackingClient(
+        final ServiceClient delegate,
+        final Set<ListenableFuture<?>> activeRequests
+    )
+    {
+      this.delegate = delegate;
+      this.activeRequests = activeRequests;
+    }
+
+    @Override
+    public <IntermediateType, FinalType> ListenableFuture<FinalType> asyncRequest(
+        final RequestBuilder requestBuilder,
+        final HttpResponseHandler<IntermediateType, FinalType> handler
+    )
+    {
+      final ListenableFuture<FinalType> future = delegate.asyncRequest(requestBuilder, handler);
+      activeRequests.add(future);
+      future.addListener(() -> activeRequests.remove(future), MoreExecutors.directExecutor());
+      return future;
+    }
+
+    @Override
+    public ServiceClient withRetryPolicy(final ServiceRetryPolicy retryPolicy)
+    {
+      return new RequestTrackingClient(delegate.withRetryPolicy(retryPolicy), activeRequests);
     }
   }
 
