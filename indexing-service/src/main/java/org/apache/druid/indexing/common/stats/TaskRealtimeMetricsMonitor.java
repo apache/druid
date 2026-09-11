@@ -105,6 +105,9 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
 
     emitter.emit(builder.setMetric("ingest/events/processed", rowIngestionMetersTotals.getProcessed() - previousRowIngestionMetersTotals.getProcessed()));
 
+    final long filtered = rowIngestionMetersTotals.getFiltered() - previousRowIngestionMetersTotals.getFiltered();
+    emitter.emit(builder.setMetric("ingest/events/filtered", filtered));
+
     final long dedup = metrics.dedup() - previousSegmentGenerationMetrics.dedup();
     if (dedup > 0) {
       log.warn("[%,d] duplicate events!", dedup);

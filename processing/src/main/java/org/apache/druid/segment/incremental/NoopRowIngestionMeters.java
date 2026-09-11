@@ -85,6 +85,18 @@ public class NoopRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
+  public long getFiltered()
+  {
+    return 0;
+  }
+
+  @Override
+  public void incrementFiltered()
+  {
+
+  }
+
+  @Override
   public RowIngestionMetersTotals getTotals()
   {
     return EMPTY_TOTALS;

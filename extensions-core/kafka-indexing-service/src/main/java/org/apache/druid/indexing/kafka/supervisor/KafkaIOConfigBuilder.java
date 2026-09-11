@@ -37,6 +37,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
   private Long pollTimeout;
   private KafkaConfigOverrides configOverrides;
   private Boolean emitTimeLagMetrics;
+  private KafkaHeaderBasedFilterConfig headerBasedFilterConfig;
 
   public KafkaIOConfigBuilder withTopic(String topic)
   {
@@ -74,6 +75,12 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
     return this;
   }
 
+  public KafkaIOConfigBuilder withHeaderBasedFilterConfig(KafkaHeaderBasedFilterConfig headerBasedFilterConfig)
+  {
+    this.headerBasedFilterConfig = headerBasedFilterConfig;
+    return this;
+  }
+
   public KafkaIOConfigBuilder withKafkaInputFormat(InputFormat valueFormat)
   {
     this.inputFormat = new KafkaInputFormat(
@@ -102,6 +109,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
     this.pollTimeout = io.getPollTimeout();
     this.configOverrides = io.getConfigOverrides();
     this.emitTimeLagMetrics = io.isEmitTimeLagMetrics();
+    this.headerBasedFilterConfig = io.getheaderBasedFilterConfig();
     return this;
   }
 
@@ -127,6 +135,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
         earlyMessageRejectionPeriod,
         lateMessageRejectionStartDateTime,
         configOverrides,
+        headerBasedFilterConfig,
         idleConfig,
         stopTaskCount,
         emitTimeLagMetrics,

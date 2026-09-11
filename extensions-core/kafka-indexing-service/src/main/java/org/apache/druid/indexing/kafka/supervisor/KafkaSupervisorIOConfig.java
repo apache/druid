@@ -56,6 +56,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final String topic;
   private final String topicPattern;
   private final boolean emitTimeLagMetrics;
+  private final KafkaHeaderBasedFilterConfig headerBasedFilterConfig;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -77,6 +78,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
+      @JsonProperty("headerBasedFilterConfig") KafkaHeaderBasedFilterConfig headerBasedFilterConfig,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
       @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics,
@@ -105,6 +107,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         boundedStreamConfig
     );
 
+    this.headerBasedFilterConfig = headerBasedFilterConfig;
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     Preconditions.checkNotNull(
         consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
@@ -115,6 +118,64 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.topic = topic;
     this.topicPattern = topicPattern;
     this.emitTimeLagMetrics = Configs.valueOrDefault(emitTimeLagMetrics, false);
+  }
+
+  /**
+   * Backwards-compatible overload without {@code headerBasedFilterConfig} (defaults to null), retained so that
+   * callers compiled against the previous signature keep working.
+   */
+  public KafkaSupervisorIOConfig(
+      String topic,
+      String topicPattern,
+      InputFormat inputFormat,
+      Integer replicas,
+      Integer taskCount,
+      Period taskDuration,
+      Map<String, Object> consumerProperties,
+      @Nullable AutoScalerConfig autoScalerConfig,
+      @Nullable LagAggregator lagAggregator,
+      Long pollTimeout,
+      Period startDelay,
+      Period period,
+      Boolean useEarliestOffset,
+      Period completionTimeout,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      DateTime lateMessageRejectionStartDateTime,
+      KafkaConfigOverrides configOverrides,
+      IdleConfig idleConfig,
+      Integer stopTaskCount,
+      @Nullable Boolean emitTimeLagMetrics,
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable BoundedStreamConfig boundedStreamConfig
+  )
+  {
+    this(
+        topic,
+        topicPattern,
+        inputFormat,
+        replicas,
+        taskCount,
+        taskDuration,
+        consumerProperties,
+        autoScalerConfig,
+        lagAggregator,
+        pollTimeout,
+        startDelay,
+        period,
+        useEarliestOffset,
+        completionTimeout,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        lateMessageRejectionStartDateTime,
+        configOverrides,
+        null,
+        idleConfig,
+        stopTaskCount,
+        emitTimeLagMetrics,
+        serverPriorityToReplicas,
+        boundedStreamConfig
+    );
   }
 
   /**
@@ -173,6 +234,14 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return emitTimeLagMetrics;
   }
 
+  @JsonProperty
+  @Nullable
+  public KafkaHeaderBasedFilterConfig getheaderBasedFilterConfig()
+  {
+    return headerBasedFilterConfig;
+  }
+
+
   @Override
   public String toString()
   {
@@ -193,6 +262,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
            ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
            ", configOverrides=" + getConfigOverrides() +
+           ", headerBasedFilterConfig=" + headerBasedFilterConfig +
            ", idleConfig=" + getIdleConfig() +
            ", stopTaskCount=" + getStopTaskCount() +
            '}';
@@ -228,7 +298,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            && Objects.equals(consumerProperties, that.consumerProperties)
            && Objects.equals(configOverrides, that.configOverrides)
            && Objects.equals(topic, that.topic)
-           && Objects.equals(topicPattern, that.topicPattern);
+           && Objects.equals(topicPattern, that.topicPattern)
+           && Objects.equals(headerBasedFilterConfig, that.headerBasedFilterConfig);
   }
 
   @Override
@@ -241,7 +312,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         configOverrides,
         topic,
         topicPattern,
-        emitTimeLagMetrics
+        emitTimeLagMetrics,
+        headerBasedFilterConfig
     );
   }
 
