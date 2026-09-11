@@ -57,7 +57,7 @@ export default env => {
 
   const plugins = [
     new webpack.BannerPlugin({
-      banner: 'globalThis.global ??= globalThis;',
+      banner: 'globalThis.global = globalThis.global || globalThis;',
       raw: true,
       entryOnly: true,
     }),
