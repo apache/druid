@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.storage.azure.blob.CloudBlobHolder;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -67,43 +68,31 @@ public class AzureDataSegmentKillerTest extends EasyMockSupport
   // BlobStorageException is not recoverable since the client attempts retries on it internally
   private static final Exception NON_RECOVERABLE_EXCEPTION = new BlobStorageException("", null, null);
 
-  private static final DataSegment DATA_SEGMENT = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH),
-      null,
-      null,
-      new LinearShardSpec(0),
-      0,
-      1
-  );
+  private static final DataSegment DATA_SEGMENT =
+      DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                 .loadSpec(ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH))
+                 .shardSpec(new LinearShardSpec(0))
+                 .binaryVersion(0)
+                 .size(1)
+                 .build();
 
-  private static final DataSegment DATA_SEGMENT_2 = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH_2),
-      null,
-      null,
-      new LinearShardSpec(0),
-      0,
-      1
-  );
+  private static final DataSegment DATA_SEGMENT_2 =
+      DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                 .loadSpec(ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", BLOB_PATH_2))
+                 .shardSpec(new LinearShardSpec(0))
+                 .binaryVersion(0)
+                 .size(1)
+                 .build();
 
   // pushed with druid.storage.zip=false, so blobPath is the directory holding the segment files
   private static final String UNZIPPED_BLOB_PATH = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/";
-  private static final DataSegment UNZIPPED_DATA_SEGMENT = new DataSegment(
-      "test",
-      Intervals.of("2015-04-12/2015-04-13"),
-      "1",
-      ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", UNZIPPED_BLOB_PATH),
-      null,
-      null,
-      new LinearShardSpec(0),
-      0,
-      1
-  );
+  private static final DataSegment UNZIPPED_DATA_SEGMENT =
+      DataSegment.builder(SegmentId.of("test", Intervals.of("2015-04-12/2015-04-13"), "1", 0))
+                 .loadSpec(ImmutableMap.of("containerName", CONTAINER_NAME, "blobPath", UNZIPPED_BLOB_PATH))
+                 .shardSpec(new LinearShardSpec(0))
+                 .binaryVersion(0)
+                 .size(1)
+                 .build();
 
   private AzureDataSegmentConfig segmentConfig;
   private AzureInputDataConfig inputDataConfig;

@@ -34,7 +34,7 @@ import org.apache.druid.segment.loading.RandomStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -97,17 +97,7 @@ public class LocalDataStorageDruidModuleTest
     }
 
     final DataSegmentPusher pusher = injector.getInstance(DataSegmentPusher.class);
-    final DataSegment segment = new DataSegment(
-        "ds",
-        Intervals.utc(0, 1),
-        "v1",
-        null,
-        null,
-        null,
-        NoneShardSpec.instance(),
-        null,
-        0
-    );
+    final DataSegment segment = DataSegment.builder(SegmentId.of("ds", Intervals.utc(0, 1), "v1", 0)).build();
 
     return new File(storageDir, pusher.getStorageDir(pusher.push(segmentDir, segment, false), false));
   }

@@ -116,7 +116,7 @@ public class AzureDataSegmentPuller
       final String containerName,
       final String blobPathPrefix,
       final File outDir
-  ) throws IOException
+  )
   {
     final int maxTries = azureAccountConfig.getMaxTries();
     final List<String> blobPaths = azureStorage.listBlobs(containerName, blobPathPrefix, null, maxTries);
