@@ -230,10 +230,14 @@ public class KafkaHeaderBasedFilterConfigIntegrationTest
     Assertions.assertEquals(originalFilter.getEncoding(), deserializedFilter.getEncoding());
     Assertions.assertEquals(originalFilter.getStringDecodingCacheSize(), deserializedFilter.getStringDecodingCacheSize());
 
-    // Test that the deserialized filter works
+    // Verify the deserialized filter works. It was configured with UTF-16, so the header value must be encoded
+    // with the same charset for it to decode and match. "production" is one of the filter's values, so the
+    // record is included.
     evaluator = new KafkaHeaderBasedFilterEvaluator(deserializedFilter);
-    ConsumerRecord<byte[], byte[]> record = createRecord("events", 0, 100L, headers("environment", "production"));
-    Assertions.assertFalse(evaluator.shouldIncludeRecord(record), "Deserialized filter should work");
+    RecordHeaders utf16Headers = new RecordHeaders();
+    utf16Headers.add(new RecordHeader("environment", "production".getBytes(StandardCharsets.UTF_16)));
+    ConsumerRecord<byte[], byte[]> record = createRecord("events", 0, 100L, utf16Headers);
+    Assertions.assertTrue(evaluator.shouldIncludeRecord(record), "Deserialized filter should include a matching record");
   }
 
   @Test
