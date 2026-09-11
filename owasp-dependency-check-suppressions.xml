@@ -339,7 +339,7 @@
     <cve>CVE-2026-45674</cve> <!-- Affects netty-resolver-dns which Druid doesn't use; Druid uses JDK DNS resolution -->
     <cve>CVE-2026-48006</cve> <!-- We don't use the Redis codec -->
     <cve>CVE-2026-42585</cve> <!-- Server-side HTTP request smuggling; Druid's HTTP server is Jetty, not Netty -->
-    <cve>CVE-2026-42584</cve> <!-- HttpClientCodec response desynchronization in Netty 4.x codec; Druid uses Netty 3.x's HttpClientCodec which has a different implementation -->
+    <cve>CVE-2026-42584</cve> <!-- Druid uses Netty3 for internal communication only, which does not satisfy any of the prerequisites of this vulnerability (pipeline requests, send HEAD, use 1xx responses) -->
     <cve>CVE-2026-46340</cve> <!-- We don't use SCTP transport; Druid uses TCP/NIO -->
     <cve>CVE-2026-42583</cve> <!-- We don't use Netty's Lz4FrameDecoder; Druid uses lz4-java directly -->
     <cve>CVE-2026-48043</cve> <!-- We don't use netty-codec-http2 directly; Druid's HTTP/2 is served by Jetty -->
@@ -350,31 +350,6 @@
     <cve>CVE-2026-50010</cve> <!-- Druid's Netty 3.x HTTP client does not use SslContextBuilder; gRPC/AWS SDK paths use managed SSL contexts -->
     <cve>CVE-2026-42578</cve> <!-- We don't use HttpProxyHandler; Druid uses a custom HTTP CONNECT tunnel via HttpClientCodec -->
     <cve>CVE-2026-42579</cve> <!-- We don't use netty-codec-dns; Druid uses JDK DNS resolution -->
-  </suppress>
-
-  <suppress>
-    <!-- Netty 4.x CVEs for codecs/features that Druid never activates.
-         Druid's HTTP server is Jetty; Netty 4.x is present as a transitive dependency
-         (gRPC, AWS SDK) for buffer management and internal comms only. -->
-    <notes><![CDATA[
-      file name: netty-codec-protobuf-4.2.15.Final.jar netty-transport-4.2.15.Final.jar (and other netty-*.jar at 4.2.x)
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/io\.netty/netty-.*@4\.2\..*$</packageUrl>
-    <cve>CVE-2026-56819</cve> <!-- HTTP/2 decompressor ByteBuf leak: Druid does not run a Netty 4.x HTTP/2 server -->
-    <cve>CVE-2026-56817</cve> <!-- XML injection/XXE in netty-codec-xml: Druid does not use the XML codec -->
-    <cve>CVE-2026-44891</cve> <!-- STOMP header OOM: Druid does not use the STOMP codec -->
-    <cve>CVE-2026-55833</cve> <!-- SPDY zlib expansion: Druid does not use SPDY -->
-    <cve>CVE-2026-56745</cve> <!-- SPDY RST_STREAM ByteBuf leak: Druid does not use SPDY -->
-    <cve>CVE-2026-56822</cve> <!-- OCSP TOCTOU race: Druid does not use netty-handler-ssl-ocsp -->
-    <cve>CVE-2026-55831</cve> <!-- SPDY SETTINGS frame unbounded map: Druid does not use SPDY -->
-    <cve>CVE-2026-56821</cve> <!-- OCSP stale response: Druid does not use netty-handler-ssl-ocsp -->
-    <cve>CVE-2026-56820</cve> <!-- OCSP CertificateID not validated: Druid does not use netty-handler-ssl-ocsp -->
-    <cve>CVE-2026-56816</cve> <!-- HTTP/3 reserved frame memory exhaustion: Druid does not use HTTP/3 -->
-    <cve>CVE-2026-59901</cve> <!-- Bzip2Decoder infinite loop: Druid uses Apache Commons Compress for bzip2, not Netty's codec -->
-    <cve>CVE-2026-62380</cve> <!-- SOCKS encoder CRLF injection: Druid does not use the SOCKS codec -->
-    <cve>CVE-2026-59898</cve> <!-- WebSocket handshake smuggling (server-side): Druid's HTTP server is Jetty -->
-    <cve>CVE-2026-59899</cve> <!-- HttpContentEncoder pipelining OOM (server-side): Druid's HTTP server is Jetty -->
-    <cve>CVE-2026-55851</cve> <!-- HAProxy decoder OOM: Druid does not use the HAProxy codec -->
   </suppress>
 
   <suppress>
