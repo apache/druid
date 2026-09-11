@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
 /**
  * Reads an Iceberg table via iceberg-arrow's {@link ArrowReader}, yielding {@link InputRow} objects.
  *
- * Type coercion and schema evolution are handled entirely by the Iceberg library. Druid only consumes
+ * Type coercion and compatible schema evolution are handled by the Iceberg library. Druid only consumes
  * the resulting {@link ColumnarBatch} batches and maps them to {@link MapBasedInputRow}.
  *
  * Column projection and predicate push-down are applied at scan planning time so only requested
@@ -220,28 +220,27 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     final Map<String, Object> event = Maps.newHashMapWithExpectedSize(numCols);
     for (int col = 0; col < numCols; col++) {
       final ColumnVector column = batch.column(col);
-      final FieldVector vec = column.getFieldVector();
+      final Types.NestedField field = readSchema.columns().get(col);
       if (!column.isNullAt(rowIdx)) {
-        event.put(vec.getName(), extractValue(column, readSchema.findField(vec.getName()).type(), rowIdx));
+        event.put(field.name(), extractValue(column, field.type(), rowIdx));
       }
     }
     final long timestamp = schema.getTimestampSpec().extractTimestamp(event).getMillis();
-    final List<String> dimensions = resolveDimensions(batch);
+    final List<String> dimensions = resolveDimensions(readSchema);
     return new MapBasedInputRow(timestamp, dimensions, event);
   }
 
-  private List<String> resolveDimensions(final ColumnarBatch batch)
+  private List<String> resolveDimensions(final Schema readSchema)
   {
     final List<String> configured = schema.getDimensionsSpec().getDimensionNames();
     if (!configured.isEmpty()) {
       return configured;
     }
     final String tsCol = schema.getTimestampSpec().getTimestampColumn();
-    final List<String> dims = new ArrayList<>(batch.numCols());
-    for (int col = 0; col < batch.numCols(); col++) {
-      final String name = batch.column(col).getFieldVector().getName();
-      if (!name.equals(tsCol)) {
-        dims.add(name);
+    final List<String> dims = new ArrayList<>(readSchema.columns().size());
+    for (final Types.NestedField field : readSchema.columns()) {
+      if (!field.name().equals(tsCol)) {
+        dims.add(field.name());
       }
     }
     return dims;
@@ -372,13 +371,24 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
 
     private boolean loadNextBatch()
     {
-      while (batchIter.hasNext()) {
-        currentBatch = batchIter.next();
-        rowIndexInBatch = 0;
-        if (currentBatch.numRows() > 0) {
-          inputStats.incrementProcessedBytes(estimateBatchBytes(currentBatch));
-          return true;
+      try {
+        while (batchIter.hasNext()) {
+          currentBatch = batchIter.next();
+          rowIndexInBatch = 0;
+          if (currentBatch.numRows() > 0) {
+            inputStats.incrementProcessedBytes(estimateBatchBytes(currentBatch));
+            return true;
+          }
         }
+      }
+      catch (NullPointerException e) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build(
+                                e,
+                                "Arrow reader does not support snapshots with data files written using "
+                                + "different schemas. Use the standard Iceberg reader."
+                            );
       }
       exhausted = true;
       return false;
@@ -388,7 +398,10 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     {
       long bytes = 0;
       for (int col = 0; col < batch.numCols(); col++) {
-        bytes += batch.column(col).getFieldVector().getBufferSize();
+        final FieldVector vector = batch.column(col).getFieldVector();
+        if (vector != null) {
+          bytes += vector.getBufferSize();
+        }
       }
       return bytes;
     }

@@ -28,6 +28,7 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -310,6 +311,39 @@ public class IcebergArrowInputSourceReaderTest
   }
 
   @Test
+  public void testSchemaEvolutionRejectsFieldsMissingFromOlderFiles() throws IOException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "old", 1.0));
+
+    table.updateSchema().addColumn("category", Types.StringType.get()).commit();
+    final Schema evolvedSchema = table.schema();
+    final GenericRecord evolvedRow = GenericRecord.create(evolvedSchema);
+    evolvedRow.setField("ts", 2_000L);
+    evolvedRow.setField("name", "new");
+    evolvedRow.setField("value", 2.0);
+    evolvedRow.setField("category", "updated");
+    writeRows(table, evolvedSchema, evolvedRow);
+
+    final InputRowSchema inferredDimensionsSchema = new InputRowSchema(
+        new TimestampSpec("ts", "millis", null),
+        DimensionsSpec.builder().build(),
+        ColumnsFilter.all()
+    );
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        inferredDimensionsSchema,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    final DruidException exception = Assertions.assertThrows(DruidException.class, () -> readAll(reader));
+    Assertions.assertTrue(exception.getMessage().contains("different schemas"));
+  }
+
+  @Test
   public void testAggregatorSourceColumnSurvivesProjection() throws IOException
   {
     // Regression: dimensions=[name] plus ColumnsFilter inclusion of `value` (aggregator source).
@@ -394,11 +428,20 @@ public class IcebergArrowInputSourceReaderTest
 
   private static void writeRows(final Table table, final GenericRecord... records) throws IOException
   {
+    writeRows(table, SCHEMA, records);
+  }
+
+  private static void writeRows(
+      final Table table,
+      final Schema dataSchema,
+      final GenericRecord... records
+  ) throws IOException
+  {
     final String filepath = table.location() + "/" + UUID.randomUUID() + ".parquet";
     final OutputFile file = table.io().newOutputFile(filepath);
     final DataWriter<GenericRecord> writer =
         Parquet.writeData(file)
-               .schema(SCHEMA)
+               .schema(dataSchema)
                .createWriterFunc(GenericParquetWriter::create)
                .overwrite()
                .withSpec(PartitionSpec.unpartitioned())
