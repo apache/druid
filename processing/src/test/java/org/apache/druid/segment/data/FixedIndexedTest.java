@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
@@ -228,5 +229,23 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
         () -> FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES)
     );
     Assertions.assertTrue(e.getMessage().contains("exceeds the available buffer"), e.getMessage());
+  }
+
+  @Test
+  public void testNegativeCountWithNullFlagRejected()
+  {
+    // With the null flag set the serialized count is incremented before validation: a raw
+    // count of -1 yields size == 0 but valuesCount == -1, which must still be rejected.
+    final ByteBuffer buffer = ByteBuffer.allocate(16).order(order);
+    buffer.put((byte) 0);
+    buffer.put((byte) (TypeStrategies.IS_NULL_BYTE | FixedIndexed.IS_SORTED_MASK));
+    buffer.putInt(-1);
+    buffer.flip();
+
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> FixedIndexed.read(buffer, ColumnType.LONG.getStrategy(), order, Long.BYTES)
+    );
+    Assertions.assertTrue(e.getMessage().contains("must be non-negative"), e.getMessage());
   }
 }

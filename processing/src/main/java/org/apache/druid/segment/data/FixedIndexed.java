@@ -63,8 +63,8 @@ public class FixedIndexed<T> implements Indexed<T>
     final boolean isSorted = (flags & IS_SORTED_MASK) == IS_SORTED_MASK ? true : false;
     Preconditions.checkState(!(hasNull && !isSorted), "cannot have null values if not sorted");
     final int size = buffer.getInt() + (hasNull ? 1 : 0);
-    Preconditions.checkArgument(size >= 0, "size[%s] must be non-negative", size);
     final int valuesCount = hasNull ? size - 1 : size;
+    Preconditions.checkArgument(valuesCount >= 0, "valuesCount[%s] must be non-negative", valuesCount);
     Preconditions.checkArgument(
         (long) width * valuesCount <= buffer.remaining(),
         "size[%s] with width[%s] exceeds the available buffer",
