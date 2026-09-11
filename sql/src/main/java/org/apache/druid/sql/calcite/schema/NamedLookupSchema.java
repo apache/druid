@@ -22,6 +22,9 @@ package org.apache.druid.sql.calcite.schema;
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.server.security.Resource;
+
+import javax.annotation.Nullable;
 
 /**
  * The schema for Druid lookup tables to be accessible via SQL.
@@ -43,6 +46,14 @@ public class NamedLookupSchema implements NamedSchema
   public String getSchemaName()
   {
     return NAME;
+  }
+
+  @Nullable
+  @Override
+  public Resource getSchemaResource(String resourceName)
+  {
+    // No authorization for lookups.
+    return null;
   }
 
   @Override

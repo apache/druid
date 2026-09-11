@@ -64,7 +64,7 @@ public class DruidSchema extends AbstractTableSchema
   public Table getTable(String name)
   {
     if (authorizeTableVisibility
-        && !SchemaUtils.isTableVisible(authorizerMapper, authenticationResult, name, _ -> ResourceType.DATASOURCE)) {
+        && !SchemaUtils.isTableVisible(authorizerMapper, authenticationResult, name, ResourceType.DATASOURCE)) {
       // Do not return tables that are not supposed to be visible in this schema.
       return null;
     }
@@ -97,7 +97,7 @@ public class DruidSchema extends AbstractTableSchema
           authorizerMapper,
           authenticationResult,
           allTableNames,
-          _ -> ResourceType.DATASOURCE
+          ResourceType.DATASOURCE
       );
     } else {
       return allTableNames;

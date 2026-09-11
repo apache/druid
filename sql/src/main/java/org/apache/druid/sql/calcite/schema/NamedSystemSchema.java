@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 
@@ -55,10 +56,10 @@ public class NamedSystemSchema implements NamedSchema
 
   @Nullable
   @Override
-  public String getSchemaResourceType(String resourceName)
+  public Resource getSchemaResource(String resourceName)
   {
     if (plannerConfig.isAuthorizeSystemTablesDirectly()) {
-      return ResourceType.SYSTEM_TABLE;
+      return new Resource(resourceName, ResourceType.SYSTEM_TABLE);
     }
     return null;
   }
