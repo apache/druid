@@ -26,6 +26,7 @@ import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.RateLimiter;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -614,6 +615,7 @@ public class ResourcePool<K, V> implements Closeable
   private static class AdaptiveResourceHolderPerKey<K, V> extends PooledResources<V>
   {
     private static final int CREATE_ATTEMPTS = 3;
+    private static final double BAD_RESOURCE_WARN_PERIOD_SECONDS = 5;
 
     private final int maxSize;
     private final K key;
@@ -624,6 +626,7 @@ public class ResourcePool<K, V> implements Closeable
     private final Deque<ResourceHolder<V>> idleResources = new ConcurrentLinkedDeque<>();
     private final AtomicBoolean closed = new AtomicBoolean(false);
     private final AtomicInteger lentResources = new AtomicInteger();
+    private final RateLimiter badResourceWarnings = RateLimiter.create(1 / BAD_RESOURCE_WARN_PERIOD_SECONDS);
 
     private AdaptiveResourceHolderPerKey(
         int maxSize,
@@ -787,12 +790,16 @@ public class ResourcePool<K, V> implements Closeable
           closeQuietly(resource);
           throw new ISE("Could not create a good resource for key[%s] in [%d] attempts", key, CREATE_ATTEMPTS);
         }
-        log.warn(
-            "Handing over resource[%s] at key[%s] that failed its health check in all [%d] attempts, it may be bad.",
-            resource,
-            key,
-            CREATE_ATTEMPTS
-        );
+        if (badResourceWarnings.tryAcquire()) {
+          log.warn(
+              "Handing over resource[%s] at key[%s] that failed its health check in all [%d] attempts, it may be bad."
+              + " Further such warnings about this key are suppressed for [%s] seconds.",
+              resource,
+              key,
+              CREATE_ATTEMPTS,
+              BAD_RESOURCE_WARN_PERIOD_SECONDS
+          );
+        }
         return resource;
       }
     }

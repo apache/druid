@@ -20,7 +20,7 @@
 package org.apache.druid.server.metrics;
 
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 
 import java.util.Collections;
@@ -34,12 +34,18 @@ import java.util.concurrent.ConcurrentHashMap;
 @LazySingleton
 public class HttpClientPoolRegistry
 {
+  private static final Logger log = new Logger(HttpClientPoolRegistry.class);
+
   private final Map<String, ResourcePool<?, ?>> pools = new ConcurrentHashMap<>();
 
+  /**
+   * Registers the pool of a client, replacing the pool registered under that name before, whose metrics then stop
+   * being reported.
+   */
   public void register(String clientName, ResourcePool<?, ?> pool)
   {
-    if (pools.putIfAbsent(clientName, pool) != null) {
-      throw new ISE("Client[%s] is already registered", clientName);
+    if (pools.put(clientName, pool) != null) {
+      log.warn("Client[%s] was already registered, only the pool registered last is reported.", clientName);
     }
   }
 

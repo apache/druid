@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.metrics;
 
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.pool.ResourceContainer;
 import org.apache.druid.java.util.http.client.pool.ResourceFactory;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
@@ -139,11 +138,22 @@ public class HttpClientPoolMonitorTest
     );
   }
 
+  /**
+   * A client name registered twice reports the pool registered last, rather than failing the process it was only
+   * meant to report on.
+   */
   @Test
-  public void testAClientNameIsRegisteredOnlyOnce()
+  public void testAReRegisteredClientNameReportsTheLastPool()
   {
+    final ResourcePool<String, String> replacement = new ResourcePool<>(
+        new TestResourceFactory(),
+        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(5)),
+        false
+    );
     registry.register("global", pool);
-    Assertions.assertThrows(ISE.class, () -> registry.register("global", pool));
+    registry.register("global", replacement);
+
+    Assertions.assertEquals(Map.of("global", replacement), registry.getPools());
   }
 
   @Test
