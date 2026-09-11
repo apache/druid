@@ -495,9 +495,10 @@ public class StrategicSegmentAssignerPartialTest
   @Test
   public void testFullLoadReplicaTreatedAsStaleAgainstPartialRule()
   {
-    // s1 holds the segment as a regular full-load (no profile). Under a partial rule it counts as stale: queue a
-    // fresh load to satisfy the partial rule, but don't drop s1 yet; stale stays serving until the matching load
-    // completes. Note: s1 is also reload-eligible (additive), but because s2 is empty, s2 is preferred.
+    // s1 holds the segment as a regular full-load (no profile). Under a partial rule it counts as stale, and it is
+    // still an in-place candidate: under virtual storage a queried full-load replica is already backed by a partial
+    // cache entry that on-demand reads populated, so applying the rule there pins bundles that are largely resident
+    // and avoids both a full download onto the empty s2 and the later drop of s1.
     final DataSegment segment = createSegment();
     final ServerHolder s1 = createServerWithLoaded(TIER1, segment, null);
     final ServerHolder s2 = createServer(TIER1);
@@ -513,9 +514,181 @@ public class StrategicSegmentAssignerPartialTest
         stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED),
         "Stale must not be dropped before matching has actually loaded"
     );
-    Assertions.assertTrue(s2.getLoadingSegments().contains(segment));
-    Assertions.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
+    Assertions.assertEquals(
+        profileForRevenue(),
+        ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment),
+        "the profileless stale replica is reloaded in place under the rule's fingerprint"
+    );
+    Assertions.assertTrue(s2.getLoadingSegments().isEmpty(), "no fresh download is needed on the empty server");
     Assertions.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+  }
+
+  @Test
+  public void testInPlaceReloadPreferredOverFreshLoadOnEmptyServer()
+  {
+    // Same preference, but with a stale *partial* replica rather than a full-load one, and with more empty servers
+    // than the deficit: the only thing queued is the in-place reload on the server that already holds a footprint.
+    final DataSegment segment = createSegment();
+    final PartialLoadProfile usersProfile = PartialLoadProfile.forLoaded(
+        Map.of("type", "partialProjection", "projections", List.of("users"), "fingerprint", FP_USERS),
+        FP_USERS,
+        512L
+    );
+    final ServerHolder stale = createServerWithLoaded(TIER1, segment, usersProfile);
+    final ServerHolder empty1 = createServer(TIER1);
+    final ServerHolder empty2 = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, stale, empty1, empty2).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) stale.getPeon()).getProfileFor(segment));
+    Assertions.assertTrue(empty1.getLoadingSegments().isEmpty());
+    Assertions.assertTrue(empty2.getLoadingSegments().isEmpty());
+  }
+
+  @Test
+  public void testInPlaceReloadsFirstThenFreshLoadsCoverTheRest()
+  {
+    // Deficit of 2 with only one stale replica to reload in place: the in-place reload covers one, and a fresh load
+    // on an empty server covers the other. The second empty server stays untouched.
+    final DataSegment segment = createSegment();
+    final ServerHolder stale = createServerWithLoaded(TIER1, segment, staleProfileForUsers());
+    final ServerHolder empty1 = createServer(TIER1);
+    final ServerHolder empty2 = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, stale, empty1, empty2).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 2));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(2L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) stale.getPeon()).getProfileFor(segment));
+    Assertions.assertEquals(
+        1,
+        empty1.getLoadingSegments().size() + empty2.getLoadingSegments().size(),
+        "exactly one of the empty servers takes the remaining replica"
+    );
+  }
+
+  @Test
+  public void testFreshLoadCoversTheDeficitWhenTheInPlaceReloadCannotBeQueued()
+  {
+    // The in-place reload is preferred, but if queueing it on the stale server fails the deficit is still real and a
+    // fresh candidate has to cover it. Without the fall-through the tier would sit under-replicated for the run while
+    // an idle server was available.
+    final DataSegment segment = createSegment();
+    final DruidServer staleServer = createDruidServer(TIER1);
+    staleServer.addDataSegment(segment, staleProfileForUsers());
+    final ServerHolder stale =
+        new ServerHolder(staleServer.toImmutableDruidServer(), new RefusingLoadQueuePeon());
+    final ServerHolder empty = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, stale, empty).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertTrue(
+        empty.getLoadingSegments().contains(segment),
+        "the fresh candidate covers the deficit the refused in-place reload left"
+    );
+    Assertions.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) empty.getPeon()).getProfileFor(segment));
+    Assertions.assertTrue(
+        stale.getPeon().getSegmentsToDrop().isEmpty(),
+        "the stale replica keeps serving until the replacement lands"
+    );
+  }
+
+  @Test
+  public void testLoadQueueFullStaleServerIsReplacedByFreshLoad()
+  {
+    // A stale server already at its per-run load-queue budget is not an in-place candidate, so the empty server takes
+    // the replacement instead of the tier stalling on a server that cannot accept the request.
+    final DataSegment segment = createSegment();
+    final DataSegment other = createSegment(Intervals.of("2020/2021"));
+    final ServerHolder stale = createServerWithLoadedAndQueueLimit(TIER1, 1, staleProfileForUsers(), segment);
+    // Consume the server's single load-queue slot so canReloadInPlace rejects it.
+    stale.getPeon().loadSegment(other, SegmentAction.LOAD, null);
+    Assertions.assertTrue(stale.startOperation(SegmentAction.LOAD, other));
+    Assertions.assertTrue(stale.isLoadQueueFull());
+
+    final ServerHolder empty = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, stale, empty).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertTrue(empty.getLoadingSegments().contains(segment));
+    Assertions.assertNull(((TestLoadQueuePeon) stale.getPeon()).getProfileFor(segment));
+  }
+
+  @Test
+  public void testDecommissioningStaleServerIsReplacedByFreshLoad()
+  {
+    // A decommissioning stale replica is on its way out, so reloading it in place would be wasted work. The fresh
+    // load on the empty server is what satisfies the rule.
+    final DataSegment segment = createSegment();
+    final ServerHolder decommStale = createDecommissioningServerWithLoaded(TIER1, segment, staleProfileForUsers());
+    final ServerHolder empty = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, decommStale, empty).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertTrue(empty.getLoadingSegments().contains(segment));
+    Assertions.assertNull(((TestLoadQueuePeon) decommStale.getPeon()).getProfileFor(segment));
+  }
+
+  @Test
+  public void testCancelledStaleInFlightOnLoadedServerIsReloadedInPlace()
+  {
+    // s1 both serves the segment under a stale fingerprint and has another stale load in flight on top of it, so it
+    // classifies as stale-in-flight, not stale-loaded, and is missing from the in-place bucket at snapshot time.
+    // Cancelling its load leaves it serving the segment, so it must be picked up as an in-place destination: the
+    // fresh-load path filters on canLoadSegment, which rejects a server that already has the segment.
+    final DataSegment segment = createSegment();
+    final PartialLoadProfile usersProfile = PartialLoadProfile.forRequest(
+        Map.of("type", "partialProjection", "projections", List.of("users"), "fingerprint", FP_USERS),
+        FP_USERS
+    );
+    final DruidServer druidServer = createDruidServer(TIER1);
+    druidServer.addDataSegment(segment, usersProfile);
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
+    peon.addInFlightHolder(
+        new SegmentHolder(segment, SegmentAction.LOAD, usersProfile, Duration.standardSeconds(10), null)
+    );
+    final ServerHolder s1 = new ServerHolder(druidServer.toImmutableDruidServer(), peon);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_STALE_CANCELLED, TIER1, segment.getDataSource())
+    );
+    Assertions.assertEquals(
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()),
+        "the cancelled slot is refilled in place rather than left empty"
+    );
+    Assertions.assertEquals(profileForRevenue(), peon.getProfileFor(segment));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.ASSIGN_SKIPPED));
   }
 
   @Test
@@ -541,12 +714,11 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
-  public void testStuckStateAdditiveReloadOnStaleServers()
+  public void testInPlaceReloadOnEveryStaleServer()
   {
-    // Both servers hold the segment with mismatched fingerprints (and there are no spare servers). Reconciler
-    // queues additive-reload requests on both stale servers; the historical's additive-load semantics fill in the
-    // missing parts in place. matching count is still 0 in the same run, so stale isn't dropped; but next run, after
-    // the loads land, the servers reclassify as matching.
+    // Both servers hold the segment with mismatched fingerprints. Reconciler queues an in-place reload on each; the
+    // historical swaps the rule on the cache entry it already has. matching count is still 0 in the same run, so
+    // stale isn't dropped; but next run, after the loads land, the servers reclassify as matching.
     final DataSegment segment = createSegment();
     final PartialLoadProfile usersProfile = PartialLoadProfile.forLoaded(
         Map.of("type", "partialProjection", "projections", List.of("users"), "fingerprint", FP_USERS),
@@ -1063,6 +1235,25 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   /**
+   * Peon that refuses every load, the way the real peon surfaces an error while queueing. {@link
+   * SegmentLoadQueueManager#loadSegment} catches it, rolls the operation back off the {@link ServerHolder} and
+   * reports the destination as unusable.
+   */
+  private static class RefusingLoadQueuePeon extends TestLoadQueuePeon
+  {
+    @Override
+    public void loadSegment(
+        DataSegment segment,
+        SegmentAction action,
+        @Nullable PartialLoadProfile profile,
+        @Nullable LoadPeonCallback callback
+    )
+    {
+      throw new IllegalStateException("Cannot queue segment[" + segment.getId() + "]");
+    }
+  }
+
+  /**
    * Peon that records the segments marked to drop, so that a move source shows up as MOVE_FROM in the
    * {@link ServerHolder}'s queue the way the real peon reports it.
    */
@@ -1087,6 +1278,20 @@ public class StrategicSegmentAssignerPartialTest
     {
       return markedToDrop;
     }
+  }
+
+  /**
+   * A loaded profile under a fingerprint the tests' rule never asks for, i.e. a stale <em>partial</em> replica. A
+   * stale replica announcing no profile at all is an in-place candidate too, this just exercises the partial-to-
+   * partial swap specifically.
+   */
+  private static PartialLoadProfile staleProfileForUsers()
+  {
+    return PartialLoadProfile.forLoaded(
+        Map.of("type", "partialProjection", "projections", List.of("users"), "fingerprint", FP_USERS),
+        FP_USERS,
+        512L
+    );
   }
 
   private static PartialLoadProfile profileForRevenue()
