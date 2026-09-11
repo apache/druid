@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.asyncresource.AsyncResource;
@@ -124,7 +125,13 @@ public class StorageLoadingThreadPool
   @Nullable
   private final Semaphore permits;
 
-  private StorageLoadingThreadPool(@Nullable final ListeningExecutorService exec, @Nullable final Semaphore permits)
+  /**
+   * Package-private for tests that need to control task dispatch (e.g. to deterministically construct the
+   * submitted-but-not-yet-started state, which cannot be forced through {@link #createFromConfig} since the
+   * virtual-thread mode starts tasks immediately). Production code should use {@link #createFromConfig}.
+   */
+  @VisibleForTesting
+  StorageLoadingThreadPool(@Nullable final ListeningExecutorService exec, @Nullable final Semaphore permits)
   {
     this.exec = exec;
     this.permits = permits;

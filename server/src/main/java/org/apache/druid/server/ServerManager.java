@@ -22,8 +22,6 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
@@ -87,8 +85,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -255,8 +251,7 @@ public class ServerManager implements QuerySegmentWalker
         segmentReferences.add(
             new SegmentReference(
                 segment.getDescriptor(),
-                Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment())),
-                null
+                Optional.of(new VirtualPlaceholderSegment(segment.getDataSegment()))
             )
         );
       }
@@ -300,9 +295,10 @@ public class ServerManager implements QuerySegmentWalker
     // closing the segment reference handles everything and it is the callers responsibility
     final Closer safetyNet = Closer.create();
 
-    // build list of acquire reference actions, this does not initiate the actions until we collect the futures. this
-    // does place a hold on any weakly held references if the cache includes segments that reside on virtual storage
-    // fabric
+    // Acquire an action per segment; this kicks off any on-demand loads immediately, and places a hold on any weakly
+    // held references if the cache includes segments that reside on virtual storage fabric. Closing an action before
+    // its result has been released cancels an in-flight load, so registering them all with the safetyNet covers the
+    // failure paths below.
     final List<AcquireSegmentAction> actions = new ArrayList<>();
     try {
       for (DataSegmentAndDescriptor segment : segmentsToMap) {
@@ -328,33 +324,6 @@ public class ServerManager implements QuerySegmentWalker
 
     Throwable failure = null;
 
-    // getting the future kicks off any background action, so materialize them all to a list to get things started
-    final List<ListenableFuture<AcquireSegmentResult>> futures = new ArrayList<>(actions.size());
-    for (AcquireSegmentAction acquireSegmentAction : actions) {
-      // if we haven't failed yet, keep collecting futures
-      if (failure == null) {
-        try {
-          futures.add(acquireSegmentAction.getSegmentFuture());
-        }
-        catch (Throwable t) {
-          failure = t;
-        }
-      } else {
-        futures.add(Futures.immediateFuture(AcquireSegmentResult.empty()));
-      }
-    }
-
-    if (failure != null) {
-      throw CloseableUtils.closeInCatch(
-          failure instanceof DruidException
-          ? (DruidException) failure
-          : DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(failure, "Failed to acquire segment references to process query"),
-          safetyNet
-      );
-    }
-
     final ArrayList<SegmentReference> segmentReferences = new ArrayList<>(actions.size());
     long totalSegmentsLoadTime = 0;
     long totalSegmentsLoadWaitTime = 0;
@@ -363,49 +332,49 @@ public class ServerManager implements QuerySegmentWalker
     long bytesLoaded = 0;
     boolean timedOut = false;
     boolean interrupted = false;
+    boolean firstFailureFromAcquire = false;
     for (int i = 0; i < actions.size(); i++) {
+      // distinguishes acquire-phase failures (await/release, where AsyncResource.get() launders checked producer
+      // exceptions into UNCATEGORIZED DruidExceptions) from map-phase failures for the classification below
+      boolean acquirePhase = true;
       try {
         final DataSegmentAndDescriptor segmentAndDescriptor = segmentsToMap.get(i);
         final AcquireSegmentAction action = actions.get(i);
-        final ListenableFuture<AcquireSegmentResult> future = futures.get(i);
-        final AcquireSegmentResult result = future.get(timeoutAt - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-        if (result == null) {
-          segmentReferences.add(
-              new SegmentReference(segmentAndDescriptor.getDescriptor(), Optional.empty(), action)
-          );
-        } else {
-          totalSegmentsLoadTime += result.getLoadTimeNanos();
-          totalSegmentsLoadWaitTime += result.getWaitTimeNanos();
-          maxSegmentLoadTime = Math.max(maxSegmentLoadTime, result.getLoadTimeNanos());
-          maxSegmentWaitTime = Math.max(maxSegmentWaitTime, result.getWaitTimeNanos());
-          bytesLoaded += result.getLoadSizeBytes();
-          final Optional<Segment> segment = result.getReferenceProvider().acquireReference();
-          try {
-            final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
-            segmentReferences.add(
-                new SegmentReference(
-                    segmentAndDescriptor.getDescriptor(),
-                    mappedSegment,
-                    action
-                )
-            );
-          }
-          catch (Throwable t) {
-            // if applying the mapFn failed, attach the base segment to the closer and rethrow
-            segment.ifPresent(safetyNet::register);
-            throw t;
-          }
+        action.await(timeoutAt - System.currentTimeMillis());
+        // Take ownership of the result. After release, the safetyNet-registered action close is a no-op; the
+        // delivered segment (registered below, or folded into the returned SegmentReference) carries all cleanup.
+        final AcquireSegmentResult result = action.release();
+        totalSegmentsLoadTime += result.getLoadTimeNanos();
+        totalSegmentsLoadWaitTime += result.getWaitTimeNanos();
+        maxSegmentLoadTime = Math.max(maxSegmentLoadTime, result.getLoadTimeNanos());
+        maxSegmentWaitTime = Math.max(maxSegmentWaitTime, result.getWaitTimeNanos());
+        bytesLoaded += result.getLoadSizeBytes();
+        final Optional<Segment> segment = result.getSegment();
+        acquirePhase = false;
+        try {
+          final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
+          segmentReferences.add(new SegmentReference(segmentAndDescriptor.getDescriptor(), mappedSegment));
+        }
+        catch (Throwable t) {
+          // if applying the mapFn failed, attach the base segment to the closer and rethrow
+          segment.ifPresent(safetyNet::register);
+          throw t;
         }
       }
       catch (Throwable t) {
         if (t instanceof InterruptedException) {
           interrupted = true;
+          // Restore the interrupt status immediately (await() cleared it): subsequent await() calls in this loop then
+          // fail fast instead of blocking with the flag lost, and downstream cancellation checks keep working even if
+          // the classification below picks a different branch for the first-recorded failure.
+          Thread.currentThread().interrupt();
         }
         if (t instanceof TimeoutException) {
           timedOut = true;
         }
         if (failure == null) {
           failure = t;
+          firstFailureFromAcquire = acquirePhase;
         } else {
           // no need to get carried away, if a bunch fail this ceases to be useful
           if (failure.getSuppressed().length <= 10) {
@@ -416,16 +385,20 @@ public class ServerManager implements QuerySegmentWalker
     }
     if (failure != null) {
       final DruidException toThrow;
-      if (failure instanceof DruidException) {
-        toThrow = (DruidException) failure;
-      } else if (failure instanceof ExecutionException ee && ee.getCause() instanceof DruidException druidException) {
-        toThrow = druidException;
+      // Pass a genuine DruidException through as-is — including UNCATEGORIZED ones from the map phase (e.g. segment
+      // map functions or legacy compat layers), which old code surfaced verbatim. The one exception: an UNCATEGORIZED
+      // DruidException from the ACQUIRE phase is AsyncResource.get()'s laundering of a checked producer exception
+      // (e.g. SegmentLoadingException from an on-demand load); treat that like any other opaque failure and
+      // reclassify it to OPERATOR/RUNTIME_FAILURE with the query-facing context, matching the behavior before
+      // segment acquisition moved onto AsyncResource.
+      if (failure instanceof DruidException de
+          && (de.getCategory() != DruidException.Category.UNCATEGORIZED || !firstFailureFromAcquire)) {
+        toThrow = de;
       } else if (timedOut) {
         toThrow = DruidException.forPersona(DruidException.Persona.USER)
                                 .ofCategory(DruidException.Category.TIMEOUT)
                                 .build(failure, "Failed to acquire segment references to process query");
       } else if (interrupted) {
-        Thread.currentThread().interrupt();
         toThrow = DruidException.forPersona(DruidException.Persona.OPERATOR)
                                 .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                                 .build(failure, "Interrupted waiting for segments");

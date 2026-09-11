@@ -20,12 +20,9 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.utils.CloseableUtils;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Optional;
@@ -38,32 +35,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * If the {@link SegmentMapFunction} you want to apply is not available at the time the {@link SegmentReference}
  * is created, use {@link #map(SegmentMapFunction)} to apply it.
  *
- * Closing this object closes both the {@link #getSegmentReference()} and any closeables attached from the process of
- * creating this object, such as from {@link AcquireSegmentAction}. The object from {@link #getSegmentReference()}
- * should not be closed directly by callers.
+ * Closing this object closes the {@link #getSegmentReference()}, whose own close releases everything associated with
+ * its acquisition (references and any cache holds folded in by the loader). The object from
+ * {@link #getSegmentReference()} should not be closed directly by callers.
  */
 public class SegmentReference implements Closeable
 {
   public static SegmentReference missing(SegmentDescriptor segmentDescriptor)
   {
-    return new SegmentReference(segmentDescriptor, Optional.empty(), null);
+    return new SegmentReference(segmentDescriptor, Optional.empty());
   }
 
   private final SegmentDescriptor segmentDescriptor;
   private final Optional<Segment> segmentReference;
-  @Nullable
-  private final Closeable cleanupHold;
   private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public SegmentReference(
       SegmentDescriptor segmentDescriptor,
-      Optional<Segment> segmentReference,
-      @Nullable Closeable cleanupHold
+      Optional<Segment> segmentReference
   )
   {
     this.segmentDescriptor = segmentDescriptor;
     this.segmentReference = segmentReference;
-    this.cleanupHold = cleanupHold;
   }
 
   public SegmentDescriptor getSegmentDescriptor()
@@ -90,11 +83,7 @@ public class SegmentReference implements Closeable
       final Optional<Segment> mappedSegment = segmentMapFn.apply(segmentReference);
 
       // Resources are handed off to the new reference.
-      return new SegmentReference(
-          segmentDescriptor,
-          mappedSegment,
-          cleanupHold
-      );
+      return new SegmentReference(segmentDescriptor, mappedSegment);
     }
     catch (Throwable e) {
       // segmentMapFn threw an error
@@ -113,9 +102,8 @@ public class SegmentReference implements Closeable
       throw DruidException.defensive("Reference is closed, cannot close again");
     }
 
-    final Closer closer = Closer.create();
-    closer.register(cleanupHold);
-    segmentReference.ifPresent(closer::register);
-    closer.close();
+    if (segmentReference.isPresent()) {
+      segmentReference.get().close();
+    }
   }
 }

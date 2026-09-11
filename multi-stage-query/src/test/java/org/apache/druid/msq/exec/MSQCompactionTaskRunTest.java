@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.util.concurrent.Futures;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -220,9 +219,9 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
           new TestUtils().getTestIndexIO().loadIndex(new File((String) segment.getLoadSpec().get("path"))),
           segment.getId()
       );
-      return new AcquireSegmentAction(
-          () -> Futures.immediateFuture(new AcquireSegmentResult(new ReferenceCountedSegmentProvider(index), 0, 0, 0)),
-          null
+      // a fresh reference per acquire; the consumer's close of the delivered segment closes the index
+      return AcquireSegmentAction.completed(
+          AcquireSegmentResult.of(new ReferenceCountedSegmentProvider(index).acquireReference())
       );
     });
     when(segmentCacheManager.acquireCachedSegment(any(), any())).thenReturn(Optional.empty());

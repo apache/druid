@@ -1193,6 +1193,12 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       }
       index = queryableIndex;
     }
+    catch (Throwable t) {
+      // We took ownership of extraOnClose; a failure building the queryable index must release it rather than leak
+      // the caller's eviction-protective hold.
+      CloseableUtils.closeAndSuppressExceptions(extraOnClose, t::addSuppressed);
+      throw t;
+    }
     finally {
       entryLock.unlock();
     }
@@ -1221,14 +1227,21 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       onClose.register(extraOnClose);
     }
     onClose.register(metadataRef);
-    return Optional.of(
-        new PartialQueryableIndexSegment(
-            index,
-            segmentId,
-            onClose,
-            bundleAcquirer
-        )
-    );
+    try {
+      return Optional.of(
+          new PartialQueryableIndexSegment(
+              index,
+              segmentId,
+              onClose,
+              bundleAcquirer
+          )
+      );
+    }
+    catch (Throwable t) {
+      // The segment did not take ownership of onClose; close it here so extraOnClose and the metadata reference are
+      // both released rather than leaked.
+      throw CloseableUtils.closeAndWrapInCatch(t, onClose);
+    }
   }
 
   /**

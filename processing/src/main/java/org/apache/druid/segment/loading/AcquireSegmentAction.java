@@ -19,76 +19,87 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
-import org.apache.druid.segment.ReferenceCountedSegmentProvider;
+import org.apache.druid.common.asyncresource.AsyncResource;
+import org.apache.druid.common.asyncresource.SettableAsyncResource;
 import org.apache.druid.segment.Segment;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 
 /**
- * This class represents an intent to acquire a reference to a {@link Segment} and then use it to do stuff, and finally
- * closing when done.
+ * Handle for acquiring a reference to a {@link Segment} which might need to be loaded on demand: an
+ * {@link AsyncResource} delivering an {@link AcquireSegmentResult} whose pre-acquired segment reference carries
+ * every hold and reference associated with the acquisition inside its own {@link Segment#close()}.
  * <p>
- * When an {@link AcquireSegmentAction} is created, segment cache implementations will create a
- * 'hold' to ensure it cannot be removed from the cache until this action has been closed.
+ * The load (if one is needed) starts when the handle is created; there is no separate initiation step.
+ *
+ * <h3>Consumer protocol</h3>
+ * Register the handle with cleanup machinery (e.g. a {@code Closer}) immediately — this is safe at any lifecycle
+ * point. Wait for {@link #isReady()} via {@link #addReadyCallback} or {@link #await}, then call {@link #release()}
+ * to take ownership of the {@link AcquireSegmentResult} (or surface the producer's exception). After release, the
+ * caller owns closing the result (or the segment inside it); {@link #close()} on this handle becomes a no-op.
  * <p>
- * Calling {@link #getSegmentFuture()} is what actually initiates the 'action', and will return a segment reference
- * provider if already cached, or attempt to download from deep storage to load into the cache if not. The
- * {@link Segment} returned by acquiring a reference from the {@link ReferenceCountedObjectProvider} returned by the
- * future places a separate hold on the cache until the segment itself is closed, and MUST be closed when the caller is
- * finished doing segment things with it.
- * <p>
- * The caller must also call {@link #close()} on this object to clean up the hold that exists while possibly loading
- * the segment, and may do so as soon as the {@link Segment} is acquired (or can do so earlier to abort the load and
- * release the hold).
+ * Closing the handle without releasing cancels an in-flight load (releasing any cache holds placed for it), or
+ * closes an already-delivered result. Note that ready callbacks are never fired if the handle is closed before the
+ * result arrives, and that {@link #close()} is <b>not</b> idempotent (it throws if called twice), close exactly
+ * once.
  */
-public class AcquireSegmentAction implements Closeable
+public class AcquireSegmentAction extends SettableAsyncResource<AcquireSegmentResult>
 {
+  /**
+   * Handle representing a segment that is known to be missing: immediately ready with
+   * {@link AcquireSegmentResult#empty()}.
+   */
   public static AcquireSegmentAction missingSegment()
   {
-    return new AcquireSegmentAction(() -> Futures.immediateFuture(AcquireSegmentResult.empty()), null);
-  }
-
-  private final Supplier<ListenableFuture<AcquireSegmentResult>> segmentFutureSupplier;
-  @Nullable
-  private final Closeable loadCleanup;
-  private final AtomicBoolean closed = new AtomicBoolean(false);
-
-  public AcquireSegmentAction(
-      Supplier<ListenableFuture<AcquireSegmentResult>> segmentFutureSupplier,
-      @Nullable Closeable loadCleanup
-  )
-  {
-    this.segmentFutureSupplier = segmentFutureSupplier;
-    this.loadCleanup = loadCleanup;
+    return completed(AcquireSegmentResult.empty());
   }
 
   /**
-   * Get a {@link ReferenceCountedObjectProvider<Segment>} to acquire a reference to an item that exists in the cache,
-   * or if necessary/possible, fetching it from deep storage. This is typically {@link ReferenceCountedSegmentProvider},
-   * either as an immediate future if the segment already exists in cache. The 'action' to fetch the segment and return
-   * the reference provider is not initiated until this method is called.
+   * Handle that is immediately ready with the given result, for segments that did not require an asynchronous load.
    */
-  public ListenableFuture<AcquireSegmentResult> getSegmentFuture()
+  public static AcquireSegmentAction completed(AcquireSegmentResult result)
   {
-    if (closed.get()) {
-      throw DruidException.defensive("Cannot getSegmentFuture() after close()");
-    }
-    return segmentFutureSupplier.get();
+    final AcquireSegmentAction action = new AcquireSegmentAction();
+    action.set(result);
+    return action;
   }
 
-  @Override
-  public void close() throws IOException
+  /**
+   * Constructor for producers that install a canceler after creating whatever the canceler must cancel (calling
+   * {@link #setCanceler} on a handle that has already become ready is a safe no-op).
+   */
+  public AcquireSegmentAction()
   {
-    if (loadCleanup != null && closed.compareAndSet(false, true)) {
-      loadCleanup.close();
+    super(true);
+  }
+
+  /**
+   * @param canceler optional callback invoked from {@link #close()} when the handle is closed before the result has
+   *                 been delivered ({@link #set} or {@link #setException}). Producers that support cancellation
+   *                 should provide one; producers that don't can pass {@code null}, in which case {@link #close()}
+   *                 just stops observing the result.
+   */
+  public AcquireSegmentAction(@Nullable Runnable canceler)
+  {
+    this();
+    if (canceler != null) {
+      setCanceler(canceler);
     }
+  }
+
+  /**
+   * Convenience setter: the result acts as its own closer, so closing an un-released ready handle closes the
+   * delivered result. Returns false if this handle was closed before delivery, in which case the producer retains
+   * ownership of the result and must close it.
+   */
+  public boolean set(AcquireSegmentResult result)
+  {
+    return super.set(result, result);
+  }
+
+  @Override // Overridden to change access from protected to public
+  public synchronized AcquireSegmentResult release()
+  {
+    return super.release();
   }
 }

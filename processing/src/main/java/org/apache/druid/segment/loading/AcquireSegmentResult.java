@@ -19,53 +19,73 @@
 
 package org.apache.druid.segment.loading;
 
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.utils.CloseableUtils;
 
+import java.io.Closeable;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Wraps a {@link ReferenceCountedObjectProvider<Segment>} with additional measurements about segment loading, if it
- * was required
+ * The deliverable of {@link AcquireSegmentAction}: a pre-acquired {@link Segment} reference, along with measurements
+ * about segment loading if it was required.
+ * <p>
+ * The segment, when present, is a single already-acquired reference whose {@link Segment#close()} releases everything
+ * associated with the acquisition: the reference itself plus any eviction-protective cache holds the loader folded
+ * into it. An empty segment means the segment could not be acquired (no longer in the cache, and could not be or was
+ * not fetched from deep storage) — a first-class outcome, not an error.
+ * <p>
+ * Whoever owns this result must {@link #close()} it (closing the contained segment, if any). Close is idempotent:
+ * a result may be closed by {@link AcquireSegmentAction#close()} (when the action was never released), by the
+ * producer (when delivery lost a race with close/cancel), or by the consumer that
+ * {@link AcquireSegmentAction#release()}d it — exactly one of these wins.
  */
-public class AcquireSegmentResult
+public class AcquireSegmentResult implements Closeable
 {
-  private static final AcquireSegmentResult EMPTY = new AcquireSegmentResult(Optional::empty, 0L, 0L, 0L);
-
+  /**
+   * Result with no segment (missing from cache and deep storage) and zero metrics. Returns a fresh instance since
+   * results are stateful {@link Closeable}s.
+   */
   public static AcquireSegmentResult empty()
   {
-    return EMPTY;
+    return new AcquireSegmentResult(Optional.empty(), 0L, 0L, 0L);
   }
 
-  public static AcquireSegmentResult cached(ReferenceCountedObjectProvider<Segment> provider)
+  /**
+   * Result for a segment that was already available, with zero load metrics.
+   */
+  public static AcquireSegmentResult of(Optional<Segment> segment)
   {
-    return new AcquireSegmentResult(provider, 0L, 0L, 0L);
+    return new AcquireSegmentResult(segment, 0L, 0L, 0L);
   }
 
-  private final ReferenceCountedObjectProvider<Segment> referenceProvider;
+  private final Optional<Segment> segment;
   private final long loadSizeBytes;
   private final long waitTimeNanos;
   private final long loadTimeNanos;
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   public AcquireSegmentResult(
-      ReferenceCountedObjectProvider<Segment> referenceProvider,
+      Optional<Segment> segment,
       long loadSizeBytes,
       long waitTimeNanos,
       long loadTimeNanos
   )
   {
-    this.referenceProvider = referenceProvider;
+    this.segment = segment;
     this.loadSizeBytes = loadSizeBytes;
     this.waitTimeNanos = waitTimeNanos;
     this.loadTimeNanos = loadTimeNanos;
   }
 
   /**
-   * Segment reference provider for loaded segment
+   * The acquired segment reference, or empty if the segment is not available. Unlike the reference providers this
+   * type once wrapped, this is a single pre-acquired reference: callers must not attempt to mint additional
+   * references from it, and must arrange for it to be closed exactly once (directly, or via {@link #close()}).
    */
-  public ReferenceCountedObjectProvider<Segment> getReferenceProvider()
+  public Optional<Segment> getSegment()
   {
-    return referenceProvider;
+    return segment;
   }
 
   /**
@@ -90,5 +110,13 @@ public class AcquireSegmentResult
   public long getLoadTimeNanos()
   {
     return loadTimeNanos;
+  }
+
+  @Override
+  public void close()
+  {
+    if (closed.compareAndSet(false, true) && segment.isPresent()) {
+      CloseableUtils.closeAndWrapExceptions(segment.get());
+    }
   }
 }

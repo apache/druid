@@ -36,7 +36,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
@@ -89,7 +88,6 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -99,6 +97,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -933,9 +932,21 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     try {
       final AcquireSegmentAction acquireAction =
           closer.register(segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL));
-      final ReferenceCountedObjectProvider<Segment> segmentProvider =
-          FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), true).getReferenceProvider();
-      final Segment segment = segmentProvider.acquireReference().map(closer::register).get();
+      acquireAction.await();
+      // take ownership of the result (the registered action close becomes a no-op) and register it so closing the
+      // holder releases the segment reference and any cache holds folded into it
+      final AcquireSegmentResult result = closer.register(acquireAction.release());
+      // an empty delivery is a first-class outcome (segment no longer in the cache or deep storage), so surface it
+      // with the segment id rather than a bare NoSuchElementException
+      final Segment segment = result.getSegment().orElseThrow(
+          () -> DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build(
+                                  "Could not load segment[%s] to compact; it is no longer available in the cache or "
+                                  + "deep storage",
+                                  dataSegment.getId()
+                              )
+      );
       return new ResourceHolder<>()
       {
         @Override
@@ -952,6 +963,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       };
     }
     catch (Exception e) {
+      // await() clears the interrupt flag when it throws InterruptedException; restore it so the task's unwind and
+      // any downstream blocking work still observe the interrupt (matches ServerManager and the prior
+      // FutureUtils.getUnchecked behavior this replaced).
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw CloseableUtils.closeAndWrapInCatch(e, closer);
     }
   }
