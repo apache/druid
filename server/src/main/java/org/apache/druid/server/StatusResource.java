@@ -28,16 +28,19 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.guice.ExtensionsLoader;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
 import org.apache.druid.utils.RuntimeInfo;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -90,6 +93,27 @@ public class StatusResource
 
     //    Return the properties in sorted order
     return new TreeMap<>(filtered);
+  }
+
+  /**
+   * Returns a live thread-stack snapshot for this Druid process.
+   *
+   * <p>{@link StateResourceFilter} authorizes this endpoint as a state-read operation before this
+   * method is invoked.
+   */
+  @GET
+  @Path("/stack")
+  @ResourceFilters(StateResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getStackTrace(
+      @QueryParam(StackTraceCollector.MAX_STACK_TRACE_FRAME_DEPTH_KEY) @Nullable final String maxStackTraceFrameDepth
+  )
+  {
+    return ServletResourceUtils.buildReadResponse(
+        () -> new StackTraceCollector().collect(
+            StackTraceCollector.parseMaxStackTraceFrameDepth(maxStackTraceFrameDepth)
+        )
+    );
   }
 
   /**

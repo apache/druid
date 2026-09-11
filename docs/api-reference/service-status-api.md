@@ -167,6 +167,47 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
+### Get service thread stack traces
+
+Retrieves an on-demand snapshot of the live Java platform threads running in the individual Druid service. Virtual threads are not included. The response includes each thread's state, cumulative CPU times when supported, lock information, deadlock status, and up to `maxStackTraceFrameDepth` stack frames. The `collectedAt` timestamp is recorded when snapshot collection begins, and `stackTrace` is a single jstack-style string. This endpoint requires the same state-read permission as `GET /status`.
+
+#### URL
+
+`GET` `/status/stack[?maxStackTraceFrameDepth=N]`
+
+The optional `maxStackTraceFrameDepth` query parameter controls the maximum number of stack frames returned for each thread. It defaults to `100`, accepts integer values from `10` through `1000`, and returns a `400 Bad Request` response for values outside that range or values that are not integers.
+
+#### Responses
+
+`200 SUCCESS` returns a JSON object containing the UTC collection timestamp and an array of thread snapshots. The `cpuTimeNs` and `userCpuTimeNs` fields are omitted when thread CPU timing is unsupported, disabled, or unavailable for an individual thread. Optional lock-related fields are omitted when the JVM cannot provide them.
+
+#### Sample request
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/status/stack?maxStackTraceFrameDepth=25"
+```
+
+#### Sample response
+
+```json
+{
+  "collectedAt": "2026-08-02T05:00:00.000Z",
+  "threads": [
+    {
+      "threadId": 1,
+      "threadName": "main",
+      "threadState": "RUNNABLE",
+      "daemon": false,
+      "priority": 5,
+      "cpuTimeNs": 123456789,
+      "userCpuTimeNs": 98765432,
+      "deadlocked": false,
+      "stackTrace": "\"main\" prio=5 Id=1 RUNNABLE\n\tat example.Main.run(Main.java:10)\n\n"
+    }
+  ]
+}
+```
+
 ### Get service health
 
 Retrieves the online status of the individual Druid service. It is a simple health check to determine if the service is running and accessible. If online, it will always return a boolean `true` value, indicating that the service can receive API calls. This endpoint is suitable for automated health checks.

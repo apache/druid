@@ -97,6 +97,7 @@ public class SystemSchemaProvider implements SchemaProvider
     allTableNames.add(SystemSchema.TASKS_TABLE);
     allTableNames.add(SystemSchema.SUPERVISOR_TABLE);
     allTableNames.add(SystemServerPropertiesTable.TABLE_NAME);
+    allTableNames.add(SystemStackTraceTable.TABLE_NAME);
 
     if (plannerConfig.isEnableSysQueriesTable()) {
       allTableNames.add(SystemSchema.QUERIES_TABLE);
