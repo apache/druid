@@ -118,7 +118,10 @@ public class DruidRexExecutor implements RexExecutor
               // There can be implicit casts of VARCHAR to TIMESTAMP where the VARCHAR is an invalid timestamp, but the
               // TIMESTAMP type is not nullable. In this case it's best to throw an error, since it likely means the
               // user's SQL query contains an invalid literal.
-              throw InvalidSqlInput.exception("Invalid TIMESTAMP value [%s]", getTimestampValue(constExp));
+              throw InvalidSqlInput.exception(
+                  "Invalid TIMESTAMP value [%s]",
+                  getInputValueOrExpression(constExp)
+              );
             }
           } else {
             try {
@@ -130,7 +133,11 @@ public class DruidRexExecutor implements RexExecutor
               );
             }
             catch (IllegalArgumentException e) {
-              throw InvalidSqlInput.exception(e, "Invalid TIMESTAMP value [%s]", getTimestampValue(constExp));
+              throw InvalidSqlInput.exception(
+                  e,
+                  "Invalid TIMESTAMP value [%s]",
+                  getInputValueOrExpression(constExp)
+              );
             }
           }
         } else if (SqlTypeName.NUMERIC_TYPES.contains(sqlTypeName)) {
@@ -229,7 +236,7 @@ public class DruidRexExecutor implements RexExecutor
     }
   }
 
-  private static String getTimestampValue(final RexNode constExp)
+  private static String getInputValueOrExpression(final RexNode constExp)
   {
     if (constExp.isA(SqlKind.CAST)) {
       final RexNode operand = ((RexCall) constExp).getOperands().get(0);
