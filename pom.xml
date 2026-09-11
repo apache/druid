@@ -1435,11 +1435,6 @@
                 </exclusions>
             </dependency>
             <dependency>
-                <groupId>com.google.j2objc</groupId>
-                <artifactId>j2objc-annotations</artifactId>
-                <version>3.1</version>
-            </dependency>
-            <dependency>
                 <groupId>io.github.resilience4j</groupId>
                 <artifactId>resilience4j-bulkhead</artifactId>
                 <version>${resilience4j.version}</version>
