@@ -477,16 +477,6 @@
   </suppress>
 
 
-  <!--
-   ~ Hostname verification is disabled by default in Netty 4.x, therefore the version that Druid is using gets flagged,
-   ~ however Druid enables it in ChannelResourceFactory therefore this is a false positive-->
-  <suppress>
-    <notes><![CDATA[
-      file name: netty-transport-4.1.100.Final.jar
-    ]]></notes>
-    <cve>CVE-2023-4586</cve>
-  </suppress>
-
   <!-- druid cassandra storage exclusions -->
   <suppress>
       <!-- TODO: Fix by using com.datastax.oss:java-driver-core instead of com.netflix.astyanax:astyanax in extensions-contrib/cassandra-storage -->
