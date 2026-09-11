@@ -780,8 +780,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
   {
     final RowKey rowKey = tierRowKey(tier);
+    final long requiredStorage = segment.getSize() * requiredReplicas;
     stats.updateMax(Stats.Tier.REPLICATION_FACTOR, rowKey, requiredReplicas);
-    stats.add(Stats.Tier.REQUIRED_CAPACITY, rowKey, segment.getSize() * requiredReplicas);
+    stats.add(Stats.Tier.REQUIRED_STORAGE, rowKey, requiredStorage);
+    // Deprecated alias of tier/storage/required, emitted until the deprecation period is over
+    stats.add(Stats.Tier.REQUIRED_CAPACITY, rowKey, requiredStorage);
   }
 
   /**
