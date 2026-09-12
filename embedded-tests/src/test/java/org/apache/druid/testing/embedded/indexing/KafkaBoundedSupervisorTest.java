@@ -29,6 +29,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -172,6 +173,21 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     Assertions.assertEquals("UNHEALTHY_SUPERVISOR", status.getState());
   }
 
+  /**
+   * Task duration for bounded supervisors in this test. The shared fixture uses a 500ms
+   * taskDuration so that unbounded tasks publish quickly, but a bounded task publishes on
+   * its own when it reaches its end offset. With the short duration, a bounded task that
+   * has not consumed its whole range within one supervisor cycle is rolled over at its
+   * current offset, and each successor task is rolled over again before the Kafka consumer
+   * finishes starting, so the supervisor never reaches the end offset.
+   * <p>
+   * 10 seconds is an order of magnitude above the time a bounded task in this class needs
+   * to start and consume its range. It is deliberately not longer: a task that pauses for a
+   * checkpoint and is not resumed by the supervisor only recovers at the next rollover, so
+   * the duration also caps how long such a stall can hold a test.
+   */
+  private static final Period BOUNDED_TASK_DURATION = Period.seconds(10);
+
   private KafkaSupervisorSpec createBoundedKafkaSupervisor(
       KafkaResource kafkaServer,
       String topic,
@@ -181,6 +197,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     return createKafkaSupervisor(kafkaServer)
         .withIoConfig(io -> io
             .withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null))
+            .withTaskDuration(BOUNDED_TASK_DURATION)
             .withBoundedStreamConfig(boundedConfig)
         )
         .build(dataSource, topic);
