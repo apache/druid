@@ -27,6 +27,7 @@ import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
 import org.testcontainers.containers.MinIOContainer;
+import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -45,7 +46,8 @@ import java.net.URI;
  */
 public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 {
-  private static final String MINIO_IMAGE = "minio/minio:latest";
+  private static final DockerImageName MINIO_IMAGE =
+      DockerImageName.parse("quay.io/minio/minio:latest").asCompatibleSubstituteFor("minio/minio");
   private static final String DEFAULT_BUCKET = "druid-deep-storage";
   private static final String DEFAULT_BASE_KEY = "druid/segments";
   private static final String ACCESS_KEY = "minioadmin";
