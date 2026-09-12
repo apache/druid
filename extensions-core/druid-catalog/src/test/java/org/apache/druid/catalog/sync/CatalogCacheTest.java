@@ -20,6 +20,7 @@
 package org.apache.druid.catalog.sync;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
@@ -32,6 +33,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -156,4 +159,43 @@ public class CatalogCacheTest
       receiver.stop();
     }
   }
+  /**
+   * {@link CachedMetadataCatalog#resynced} installs an authoritative row without expecting the cache to hold anything
+   * for it, which is what the DDL write path needs right after CREATE TABLE: the issuing Broker's cache has never
+   * seen the table, and an incremental UPDATE event for an unseen entry is reported as an inconsistency.
+   */
+  @Test
+  public void testResyncSingleEntry() throws CatalogException
+  {
+    TableMetadata table1 = TableBuilder.datasource("table1", "P1D")
+        .timeColumn()
+        .column("a", Columns.SQL_VARCHAR)
+        .build();
+    storage.validate(table1);
+    storage.tables().create(table1);
+
+    // Deliberately not registered as a listener: this cache has seen no events at all.
+    CachedMetadataCatalog cache = new CachedMetadataCatalog(storage, storage.schemaRegistry(), jsonMapper);
+    assertTrue(cache.tableNames(TableId.DRUID_SCHEMA).isEmpty());
+
+    // Install a row the cache has never seen.
+    final TableMetadata current = storage.tables().read(table1.id());
+    cache.resynced(table1.id(), current);
+    assertEquals(Set.of("table1"), cache.tableNames(TableId.DRUID_SCHEMA));
+    assertEquals(current.updateTime(), cache.getTable(table1.id()).updateTime());
+
+    // An older row cannot roll back a newer entry, so a racing notification is not undone.
+    cache.resynced(table1.id(), TableMetadata.forUpdate(table1.id(), current.updateTime() - 1, current.spec()));
+    assertEquals(current.updateTime(), cache.getTable(table1.id()).updateTime());
+
+    // A newer row replaces the entry.
+    final TableMetadata newer = TableMetadata.forUpdate(table1.id(), current.updateTime() + 1, current.spec());
+    cache.resynced(table1.id(), newer);
+    assertEquals(newer.updateTime(), cache.getTable(table1.id()).updateTime());
+
+    // Null means the table no longer exists: the entry is removed.
+    cache.resynced(table1.id(), null);
+    assertTrue(cache.tableNames(TableId.DRUID_SCHEMA).isEmpty());
+  }
+
 }

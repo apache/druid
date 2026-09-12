@@ -21,15 +21,24 @@ package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
 import org.apache.druid.catalog.CatalogException;
+import org.apache.druid.catalog.http.TableEditRequest.AddColumns;
+import org.apache.druid.catalog.http.TableEditRequest.AddProjection;
+import org.apache.druid.catalog.http.TableEditRequest.AlterColumns;
+import org.apache.druid.catalog.http.TableEditRequest.DropBaseTable;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
+import org.apache.druid.catalog.http.TableEditRequest.DropProjection;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest.MoveColumn.Position;
+import org.apache.druid.catalog.http.TableEditRequest.SetBaseTable;
 import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateProperties;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
+import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -40,8 +49,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -89,26 +98,43 @@ public class TableEditor
    */
   public long go() throws CatalogException
   {
-    if (editRequest instanceof HideColumns) {
-      return hideColumns(((HideColumns) editRequest).columns);
-    } else if (editRequest instanceof UnhideColumns) {
-      return unHideColumns(((UnhideColumns) editRequest).columns);
-    } else if (editRequest instanceof DropColumns) {
-      return dropColumns(((DropColumns) editRequest).columns);
-    } else if (editRequest instanceof UpdateProperties) {
-      return updateProperties(((UpdateProperties) editRequest).properties);
-    } else if (editRequest instanceof UpdateColumns) {
-      return updateColumns(((UpdateColumns) editRequest).columns);
-    } else if (editRequest instanceof MoveColumn) {
-      return moveColumn(((MoveColumn) editRequest));
-    } else {
-      // More of a server error: if we can deserialize the request,
-      // we should know how to perform that request.
-      throw CatalogException.badRequest(
+    return switch (editRequest) {
+      case HideColumns hideColumns -> hideColumns(hideColumns.columns);
+      case UnhideColumns unhideColumns -> unHideColumns(unhideColumns.columns);
+      case DropColumns dropColumns -> dropColumns(dropColumns.columns);
+      case UpdateProperties updateProperties -> updateProperties(updateProperties.properties);
+      case UpdateColumns updateColumns -> updateColumns(updateColumns.columns);
+      case AddColumns addColumns -> addOrAlterColumns(addColumns.columns, true);
+      case AlterColumns alterColumns -> addOrAlterColumns(alterColumns.columns, false);
+      case AddProjection addProjection -> addProjection(addProjection.projection, addProjection.ifNotExists);
+      case DropProjection dropProjection -> dropProjection(dropProjection.projection, dropProjection.ifExists);
+      case SetBaseTable setBaseTable -> setBaseTable(setBaseTable.baseTable, setBaseTable.ifNotExists);
+      case DropBaseTable dropBaseTable -> dropBaseTable(dropBaseTable.ifExists);
+      case MoveColumn moveColumn -> moveColumn(moveColumn);
+      default -> throw CatalogException.badRequest(
           "Unknown edit request: %s",
           editRequest.getClass().getSimpleName()
       );
+    };
+  }
+
+  /**
+   * Validate the revised spec as a whole before it is written back.
+   *
+   * @param revised the revised spec, or null when the edit is a no-op and the transaction should roll back
+   */
+  private TableSpec validated(@Nullable TableSpec revised) throws CatalogException
+  {
+    if (revised == null) {
+      return null;
     }
+    try {
+      catalog.tableRegistry().resolve(revised).validate();
+    }
+    catch (IAE | DruidException e) {
+      throw CatalogException.validationError(e);
+    }
+    return revised;
   }
 
   private long hideColumns(List<String> columns) throws CatalogException
@@ -118,7 +144,7 @@ public class TableEditor
     }
     return catalog.tables().updateProperties(
         id,
-        table -> applyHiddenColumns(table, columns)
+        table -> validated(applyHiddenColumns(table, columns))
     );
   }
 
@@ -168,7 +194,7 @@ public class TableEditor
     }
     return catalog.tables().updateProperties(
         id,
-        table -> applyUnhideColumns(table, columns)
+        table -> validated(applyUnhideColumns(table, columns))
     );
   }
 
@@ -219,7 +245,7 @@ public class TableEditor
     }
     return catalog.tables().updateColumns(
         id,
-        table -> applyDropColumns(table, columnsToDrop)
+        table -> validated(applyDropColumns(table, columnsToDrop))
     );
   }
 
@@ -252,7 +278,7 @@ public class TableEditor
     }
     return catalog.tables().updateProperties(
         id,
-        table -> applyUpdateProperties(table, updates)
+        table -> validated(applyUpdateProperties(table, updates))
     );
   }
 
@@ -267,12 +293,6 @@ public class TableEditor
         existingSpec.properties(),
         updates
     );
-    try {
-      defn.validate(revised, catalog.jsonMapper());
-    }
-    catch (IAE e) {
-      throw CatalogException.badRequest(e.getMessage());
-    }
     return existingSpec.withProperties(revised);
   }
 
@@ -298,7 +318,7 @@ public class TableEditor
     }
     return catalog.tables().updateColumns(
         id,
-        table -> applyUpdateColumns(table, updates)
+        table -> validated(applyUpdateColumns(table, updates))
     );
   }
 
@@ -310,13 +330,52 @@ public class TableEditor
     final TableSpec existingSpec = table.spec();
     final TableDefn defn = resolveDefn(existingSpec.type());
     final List<ColumnSpec> revised = defn.mergeColumns(existingSpec.columns(), updates);
-    try {
-      defn.validateColumns(revised);
-    }
-    catch (IAE | DruidException e) {
-      throw CatalogException.validationError(e);
-    }
     return existingSpec.withColumns(revised);
+  }
+
+  /**
+   * Applies {@link AddColumns} and {@link AlterColumns}, which are {@link UpdateColumns} plus an existence rule.
+   * Merging by name is the right operation for both, but on its own it is silent about which columns already existed:
+   * a merge that finds the name changes that column, and one that does not appends a new one. So {@code ADD} would
+   * quietly alter and {@code ALTER} would quietly add.
+   * <p>
+   * The rule is checked here, inside the Coordinator's update transaction, rather than by the caller beforehand. A
+   * caller's check would race: two requests adding the same column could both find it absent and the second merge
+   * would overwrite the first.
+   *
+   * @param mustBeAbsent true for {@code ADD} (no column may already exist), false for {@code ALTER} (all must exist)
+   */
+  private long addOrAlterColumns(final List<ColumnSpec> updates, final boolean mustBeAbsent) throws CatalogException
+  {
+    if (CollectionUtils.isNullOrEmpty(updates)) {
+      return 0;
+    }
+    return catalog.tables().updateColumns(
+        id,
+        table -> {
+          final TableSpec existingSpec = table.spec();
+          final List<ColumnSpec> existingColumns =
+              existingSpec.columns() == null ? Collections.emptyList() : existingSpec.columns();
+          final Set<String> existingNames = new HashSet<>(CatalogUtils.columnNames(existingColumns));
+          for (ColumnSpec update : updates) {
+            if (mustBeAbsent && existingNames.contains(update.name())) {
+              throw CatalogException.badRequest(
+                  "Column [%s] already exists in table %s; use ALTER COLUMN to change its type",
+                  update.name(),
+                  id.sqlName()
+              );
+            }
+            if (!mustBeAbsent && !existingNames.contains(update.name())) {
+              throw CatalogException.badRequest(
+                  "Column [%s] does not exist in table %s; use ADD COLUMN to define it",
+                  update.name(),
+                  id.sqlName()
+              );
+            }
+          }
+          return validated(applyUpdateColumns(table, updates));
+        }
+    );
   }
 
   private long moveColumn(MoveColumn moveColumn) throws CatalogException
@@ -332,7 +391,7 @@ public class TableEditor
     }
     return catalog.tables().updateColumns(
         id,
-        table -> applyMoveColumn(table, moveColumn)
+        table -> validated(applyMoveColumn(table, moveColumn))
     );
   }
 
@@ -379,4 +438,134 @@ public class TableEditor
 
     return existingSpec.withColumns(revised);
   }
+
+  /**
+   * Projections are stored as a table property, so adding one is a read-modify-write of that property performed
+   * inside the update transaction rather than by the caller.
+   */
+  private long addProjection(DatasourceProjectionMetadata projection, boolean ifNotExists) throws CatalogException
+  {
+    if (projection == null || projection.getSpec() == null) {
+      throw CatalogException.badRequest("A projection is required");
+    }
+    final String name = projection.getSpec().getName();
+    return catalog.tables().updateProperties(id, table -> {
+      final List<DatasourceProjectionMetadata> existing = projectionsOf(table);
+      for (DatasourceProjectionMetadata current : existing) {
+        if (name.equals(current.getSpec().getName())) {
+          if (ifNotExists) {
+            return null;
+          }
+          throw CatalogException.badRequest(
+              "Projection [%s] already exists in table %s",
+              name,
+              id.sqlName()
+          );
+        }
+      }
+      final List<DatasourceProjectionMetadata> revised = new ArrayList<>(existing);
+      revised.add(projection);
+      return validated(withProjections(table, revised));
+    });
+  }
+
+  private long dropProjection(String name, boolean ifExists) throws CatalogException
+  {
+    if (Strings.isNullOrEmpty(name)) {
+      throw CatalogException.badRequest("A projection name is required");
+    }
+    return catalog.tables().updateProperties(id, table -> {
+      final List<DatasourceProjectionMetadata> existing = projectionsOf(table);
+      final List<DatasourceProjectionMetadata> revised = new ArrayList<>(existing.size());
+      for (DatasourceProjectionMetadata current : existing) {
+        if (!name.equals(current.getSpec().getName())) {
+          revised.add(current);
+        }
+      }
+      if (revised.size() == existing.size()) {
+        if (ifExists) {
+          return null;
+        }
+        throw CatalogException.badRequest(
+            "Projection [%s] does not exist in table %s",
+            name,
+            id.sqlName()
+        );
+      }
+      return validated(withProjections(table, revised));
+    });
+  }
+
+  /**
+   * Sets the base table layout, which lives in a table property rather than in the projections list. Mirrors
+   * {@link #addProjection}: the layout must not already be defined, and that is decided here, inside the update
+   * transaction, so two callers cannot both find it absent and have the later write overwrite the earlier.
+   */
+  private long setBaseTable(DatasourceBaseTableMetadata baseTable, boolean ifNotExists) throws CatalogException
+  {
+    if (baseTable == null) {
+      throw CatalogException.badRequest("A base table layout is required");
+    }
+    return catalog.tables().updateProperties(id, table -> {
+      if (table.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY) != null) {
+        if (ifNotExists) {
+          return null;
+        }
+        throw CatalogException.badRequest(
+            "Table %s already has a base table layout; drop it before defining another",
+            id.sqlName()
+        );
+      }
+      return validated(withBaseTable(table, baseTable));
+    });
+  }
+
+  /**
+   * Removes the base table layout. The mirror of {@link #setBaseTable}, checked in the same transaction.
+   */
+  private long dropBaseTable(boolean ifExists) throws CatalogException
+  {
+    return catalog.tables().updateProperties(id, table -> {
+      if (table.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY) == null) {
+        if (ifExists) {
+          return null;
+        }
+        throw CatalogException.badRequest("Table %s does not have a base table layout", id.sqlName());
+      }
+      return validated(withBaseTable(table, null));
+    });
+  }
+
+  private TableSpec withBaseTable(TableMetadata table, @Nullable DatasourceBaseTableMetadata baseTable)
+  {
+    final TableSpec existingSpec = table.spec();
+    final Map<String, Object> revised = new HashMap<>(existingSpec.properties());
+    if (baseTable == null) {
+      revised.remove(DatasourceDefn.BASE_TABLE_PROPERTY);
+    } else {
+      revised.put(DatasourceDefn.BASE_TABLE_PROPERTY, baseTable);
+    }
+    return existingSpec.withProperties(revised);
+  }
+
+  private List<DatasourceProjectionMetadata> projectionsOf(TableMetadata table)
+  {
+    final ResolvedTable resolved = catalog.tableRegistry().resolve(table.spec());
+    final List<DatasourceProjectionMetadata> projections =
+        resolved.decodeProperty(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
+    return projections == null ? Collections.emptyList() : projections;
+  }
+
+  private TableSpec withProjections(TableMetadata table, List<DatasourceProjectionMetadata> projections)
+  {
+    final TableSpec existingSpec = table.spec();
+    final Map<String, Object> revised = new HashMap<>(existingSpec.properties());
+    if (projections.isEmpty()) {
+      revised.remove(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
+    } else {
+      revised.put(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, projections);
+    }
+    return existingSpec.withProperties(revised);
+  }
+
 }
