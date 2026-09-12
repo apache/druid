@@ -25,6 +25,7 @@ import com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
@@ -63,6 +64,8 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
       0,
       1
   );
+  private static final DeepStorageSegmentConfig ZIP_CONFIG = new DeepStorageSegmentConfig(true);
+  private static final DeepStorageSegmentConfig NO_ZIP_CONFIG = new DeepStorageSegmentConfig(false);
   private static final byte[] DATA = new byte[]{0x0, 0x0, 0x0, 0x1};
   private static final String UNIQUE_MATCHER_NO_PREFIX = "foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0/[A-Za-z0-9-]{36}/index\\.zip";
   private static final String UNIQUE_MATCHER_PREFIX = PREFIX + "/" + UNIQUE_MATCHER_NO_PREFIX;
@@ -107,8 +110,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void test_push_nonUniquePathNoPrefix_succeeds(@TempDir Path tempPath) throws Exception
   {
     boolean useUniquePath = false;
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix
-    );
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix, ZIP_CONFIG);
 
     // Create a mock segment on disk
     File tmp = tempPath.resolve("version.bin").toFile();
@@ -138,8 +140,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void test_push_nonUniquePathWithPrefix_succeeds(@TempDir Path tempPath) throws Exception
   {
     boolean useUniquePath = false;
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix
-    );
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, ZIP_CONFIG);
 
     // Create a mock segment on disk
     File tmp = tempPath.resolve("version.bin").toFile();
@@ -170,7 +171,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void test_push_uniquePathNoPrefix_succeeds(@TempDir Path tempPath) throws Exception
   {
     boolean useUniquePath = true;
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix, ZIP_CONFIG);
 
     // Create a mock segment on disk
     File tmp = tempPath.resolve("version.bin").toFile();
@@ -205,7 +206,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void test_push_uniquePath_succeeds(@TempDir Path tempPath) throws Exception
   {
     boolean useUniquePath = true;
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, ZIP_CONFIG);
 
     // Create a mock segment on disk
     File tmp = tempPath.resolve("version.bin").toFile();
@@ -238,10 +239,104 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   }
 
   @Test
+  public void test_pushNoZip_uploadsEachFile_succeeds(@TempDir Path tempPath) throws Exception
+  {
+    AzureDataSegmentPusher pusher =
+        new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, NO_ZIP_CONFIG);
+
+    // Create a mock segment on disk, of more than one file, since the point of not zipping is to keep them separate
+    Files.write(DATA, tempPath.resolve("version.bin").toFile());
+    Files.write(DATA, tempPath.resolve("meta.smoosh").toFile());
+
+    final String expectedDir = PREFIX + "/" + pusher.getStorageDir(SEGMENT_TO_PUSH, false);
+    azureStorage.uploadBlockBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.eq(expectedDir + "/version.bin"),
+        EasyMock.eq(MAX_TRIES)
+    );
+    EasyMock.expectLastCall();
+    azureStorage.uploadBlockBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.eq(expectedDir + "/meta.smoosh"),
+        EasyMock.eq(MAX_TRIES)
+    );
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    DataSegment segment = pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false);
+
+    // the trailing slash is what marks the blobPath as a directory of files rather than a single blob
+    assertEquals(expectedDir + "/", segment.getLoadSpec().get("blobPath"));
+    assertEquals(CONTAINER_NAME, segment.getLoadSpec().get("containerName"));
+    assertEquals(AzureStorageDruidModule.SCHEME, segment.getLoadSpec().get("type"));
+    assertEquals(2 * DATA.length, segment.getSize());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushNoZip_subdirectory_throwsException(@TempDir Path tempPath) throws Exception
+  {
+    AzureDataSegmentPusher pusher =
+        new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, NO_ZIP_CONFIG);
+
+    Files.write(DATA, tempPath.resolve("version.bin").toFile());
+    // Segment directories are expected to be flat.
+    java.nio.file.Files.createDirectory(tempPath.resolve("nested"));
+
+    // version.bin may be uploaded first or not at all, depending on the order the directory lists in
+    azureStorage.uploadBlockBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.anyString(),
+        EasyMock.anyString(),
+        EasyMock.anyInt()
+    );
+    EasyMock.expectLastCall().anyTimes();
+
+    replayAll();
+
+    assertThrows(
+        RuntimeException.class,
+        () -> pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false)
+    );
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushToPath_nonSegmentDirSuffix_appendsIndexZip(@TempDir Path tempPath) throws Exception
+  {
+    // The shuffle intermediary data manager pushes to a path of its own choosing, which is a directory like any other
+    AzureDataSegmentPusher pusher =
+        new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithoutPrefix, ZIP_CONFIG);
+
+    Files.write(DATA, tempPath.resolve("version.bin").toFile());
+
+    azureStorage.uploadBlockBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.eq("shuffle-data/supervisorId/partition/index.zip"),
+        EasyMock.eq(MAX_TRIES)
+    );
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    DataSegment segment = pusher.pushToPath(tempPath.toFile(), SEGMENT_TO_PUSH, "shuffle-data/supervisorId/partition");
+
+    assertEquals("shuffle-data/supervisorId/partition/index.zip", segment.getLoadSpec().get("blobPath"));
+
+    verifyAll();
+  }
+
+  @Test
   public void test_push_exception_throwsException(@TempDir Path tempPath) throws Exception
   {
     boolean useUniquePath = true;
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, ZIP_CONFIG);
 
     // Create a mock segment on disk
     File tmp = tempPath.resolve("version.bin").toFile();
@@ -264,7 +359,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void getAzurePathsTest()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, ZIP_CONFIG);
     final String storageDir = pusher.getStorageDir(DATA_SEGMENT, false);
     final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
 
@@ -277,7 +372,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void uploadDataSegmentTest() throws BlobStorageException, IOException
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, ZIP_CONFIG);
     final int binaryVersion = 9;
     final File compressedSegmentData = new File("index.zip");
     final String azurePath = pusher.getAzurePath(DATA_SEGMENT, false);
@@ -307,7 +402,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   @Test
   public void storageDirContainsNoColonsTest()
   {
-    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix);
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, ZIP_CONFIG);
     DataSegment withColons = DATA_SEGMENT.withVersion("2018-01-05T14:54:09.295Z");
     String segmentPath = pusher.getStorageDir(withColons, false);
     assertFalse(segmentPath.contains(":"), "Path should not contain any columns");

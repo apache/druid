@@ -21,6 +21,7 @@ package org.apache.druid.storage.azure;
 
 import com.azure.core.http.HttpResponse;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.easymock.EasyMock;
@@ -35,6 +36,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -47,6 +49,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 {
   private static final String CONTAINER_NAME = "container";
   private static final String BLOB_PATH = "path/to/storage/index.zip";
+  private static final String UNZIPPED_BLOB_PATH = "path/to/storage/";
   private AzureStorage azureStorage;
   private AzureByteSourceFactory byteSourceFactory;
 
@@ -119,6 +122,39 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
   }
 
   @Test
+  public void test_getSegmentFiles_unzippedSegment_pullsEachBlob(@TempDir Path sourcePath, @TempDir Path targetPath)
+      throws IOException, SegmentLoadingException
+  {
+    final AzureAccountConfig config = new AzureAccountConfig();
+    final String versionBlob = UNZIPPED_BLOB_PATH + "version.bin";
+    final String smooshBlob = UNZIPPED_BLOB_PATH + "meta.smoosh";
+    final String versionValue = "version";
+    final String smooshValue = "smoosh";
+
+    EasyMock.expect(azureStorage.listBlobs(CONTAINER_NAME, UNZIPPED_BLOB_PATH, null, config.getMaxTries()))
+            .andReturn(ImmutableList.of(versionBlob, smooshBlob));
+    expectBlobContents(sourcePath, versionBlob, versionValue);
+    expectBlobContents(sourcePath, smooshBlob, smooshValue);
+
+    replayAll();
+
+    AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
+
+    FileUtils.FileCopyResult result = puller.getSegmentFiles(CONTAINER_NAME, UNZIPPED_BLOB_PATH, targetPath.toFile());
+
+    // the blobs land in outDir under their own names, not unpacked from a zip
+    final File version = new File(targetPath.toFile(), "version.bin");
+    final File smoosh = new File(targetPath.toFile(), "meta.smoosh");
+    assertTrue(version.exists());
+    assertTrue(smoosh.exists());
+    assertEquals(versionValue.length(), version.length());
+    assertEquals(smooshValue.length(), smoosh.length());
+    assertEquals(versionValue.length() + smooshValue.length(), result.size());
+
+    verifyAll();
+  }
+
+  @Test
   public void test_getSegmentFiles_nonRecoverableErrorRaisedWhenPullingSegmentFiles_doNotDeleteOutputDirectory(
       @TempDir Path tempPath
   )
@@ -171,6 +207,22 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
     assertFalse(tempPath.toFile().exists());
     verifyAll();
+  }
+
+  /**
+   * Sets up {@link #byteSourceFactory} and {@link #azureStorage} to serve {@code value} as the contents of
+   * {@code blobPath}, backed by a real file so that the copy has something to read.
+   */
+  private void expectBlobContents(final Path sourcePath, final String blobPath, final String value)
+      throws IOException
+  {
+    final File blobFile = Files.createFile(sourcePath.resolve(Paths.get(blobPath).getFileName().toString())).toFile();
+    Files.write(blobFile.toPath(), value.getBytes(StandardCharsets.UTF_8));
+
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, blobPath, azureStorage))
+            .andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, blobPath));
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, blobPath))
+            .andReturn(Files.newInputStream(blobFile.toPath()));
   }
 
   @SuppressWarnings("SameParameterValue")
