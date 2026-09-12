@@ -559,9 +559,37 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           return ClientResponse.finished(clientResponse.getObj(), continueReading);
         }
 
+        /**
+         * Classifies a 429/503 whose body never resolved the prefix check, that is, a body that was empty or all
+         * whitespace. Netty skips {@link #handleChunk} for an empty {@code LastHttpContent} and whitespace-only chunks
+         * leave {@link #bodyPrefixResolved} unset, so end of response is the last chance to report such a reply as
+         * {@link QueryCapacityExceededException}; otherwise the empty stream completes normally and
+         * {@link JsonParserIterator} reports it as a generic EOF. A successful empty response is left alone.
+         */
+        private void failIfUnresolvedCapacityBody()
+        {
+          final int statusCode = responseStatusCode;
+          if (bodyPrefixResolved.get() || (statusCode != 429 && statusCode != 503)) {
+            return;
+          }
+          throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
+              StringUtils.format(
+                  "Query[%s] url[%s] failed with status[%s] and no JSON body contentType[%s] bodyLength[%d]",
+                  query.getId(),
+                  url,
+                  statusCode,
+                  responseContentType,
+                  totalByteCount.get()
+              )
+          );
+        }
+
         @Override
         public ClientResponse<InputStream> done(ClientResponse<InputStream> clientResponse)
         {
+          // Runs before the stream is completed so the failure reaches the caller the same way a chunk-detected
+          // non-JSON body does: synchronously here, or via exceptionCaught in NettyHttpClient.
+          failIfUnresolvedCapacityBody();
           long stopTimeNs = System.nanoTime();
           long nodeTimeNs = stopTimeNs - requestStartTimeNs;
           final long nodeTimeMs = TimeUnit.NANOSECONDS.toMillis(nodeTimeNs);

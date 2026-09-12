@@ -455,6 +455,74 @@ public class DirectDruidClientTest
   }
 
   @Test
+  public void testEmptyBody503IsCapacityExceeded()
+  {
+    // A proxy answering 503 with no body at all. Netty skips handleChunk for an empty LastHttpContent, so the body
+    // prefix never resolves and done() is the only place left to classify the response; without that it completes
+    // an empty stream that JsonParserIterator later reports as a generic EOF instead of capacity-exceeded.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.SERVICE_UNAVAILABLE, null)
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryCapacityExceededException e = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[503]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("bodyLength[0]"), e.getMessage());
+  }
+
+  @Test
+  public void testWhitespaceOnlyBody429IsCapacityExceeded()
+  {
+    // Whitespace-only chunks never resolve the prefix either, so the same end-of-response classification applies.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.TOO_MANY_REQUESTS, "text/plain", "  \n", "\t")
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryCapacityExceededException e = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[429]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("contentType[text/plain]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("bodyLength[4]"), e.getMessage());
+  }
+
+  @Test
+  public void testEmptyBody503RoutedThroughExceptionCaughtIsCapacityExceeded()
+  {
+    // Same lifecycle as testHtml503InLaterChunkAfterFinishedInitialResponseIsCapacityExceeded: the future is already
+    // completed by handleResponse, so the end-of-response classification can only reach the caller through
+    // exceptionCaught and the vended stream, and must keep its type on the way.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.SERVICE_UNAVAILABLE, null, true)
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryCapacityExceededException e = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> client.run(queryPlus, responseContext).toList()
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[503]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("bodyLength[0]"), e.getMessage());
+  }
+
+  @Test
+  public void testEmptyBody200IsNotShortCircuited()
+  {
+    // A successful response with no body keeps completing normally; only 429/503 are classified at end of response.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.OK, null)
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    Assertions.assertDoesNotThrow(() -> client.run(queryPlus, responseContext));
+  }
+
+  @Test
   public void testHtmlInLaterChunkOf200ResponseIsQueryInterrupted()
   {
     final DirectDruidClient client = makeDirectDruidClient(
@@ -786,7 +854,23 @@ public class DirectDruidClientTest
           throw e;
         }
       }
-      return Futures.immediateFuture(handler.done(clientResponse).getObj());
+      if (!routeChunkExceptionsThroughExceptionCaught) {
+        return Futures.immediateFuture(handler.done(clientResponse).getObj());
+      }
+      try {
+        return Futures.immediateFuture(handler.done(clientResponse).getObj());
+      }
+      catch (RuntimeException e) {
+        // NettyHttpClient's finishRequest() sits inside the same catch as handleChunk, so an exception from done()
+        // also reaches the handler through exceptionCaught after the initial response has completed the future.
+        handler.exceptionCaught(clientResponse, e);
+        if (initialResponseFinished) {
+          @SuppressWarnings("unchecked")
+          final Final alreadyCompletedResult = (Final) initialResponseObj;
+          return Futures.immediateFuture(alreadyCompletedResult);
+        }
+        throw e;
+      }
     }
   }
 
