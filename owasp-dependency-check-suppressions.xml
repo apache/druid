@@ -392,6 +392,18 @@
      <cve>CVE-2022-3171</cve>
    </suppress>
 
+  <suppress>
+    <!-- CVE-2022-3171: False positive. This CVE affects Google's protobuf-java (com.google.protobuf),
+         but the scanner matches it against dev.cel:protobuf via the broad protobuf CPE.
+         dev.cel:protobuf is part of the Common Expression Language library and is unrelated
+         to Google's protobuf-java parsing code that contains the vulnerability. -->
+    <notes><![CDATA[
+      file name: protobuf-0.13.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/dev\.cel/protobuf@.*$</packageUrl>
+    <cve>CVE-2022-3171</cve>
+  </suppress>
+
    <suppress>
      <notes><![CDATA[
      file name: ansi-regex:5.0.0
