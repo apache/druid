@@ -182,6 +182,10 @@
   "coordinator/time" : { "dimensions" : [], "type" : "timer"},
   "coordinator/global/time" : { "dimensions" : ["dutyGroup"], "type" : "timer"},
 
+  "tier/storage/required": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/storage/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/segmentCache/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/segmentCache/used": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
   "tier/required/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
   "tier/total/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
   "tier/replication/factor" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },

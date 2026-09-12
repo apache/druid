@@ -348,7 +348,8 @@ public class OssTaskLogsTest extends EasyMockSupport
     EasyMock.replay(ossClient);
 
     OssTaskLogs ossTaskLogs = getOssTaskLogs();
-    Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskLog(KEY_1, -1 * (LOG_CONTENTS.length() - 1));
+    final Optional<InputStream> inputStreamOptional =
+        ossTaskLogs.streamTaskLog(KEY_1, 1L - LOG_CONTENTS.length());
     final String taskLogs;
     try (final BufferedReader reader = new BufferedReader(
         new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {

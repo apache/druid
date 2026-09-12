@@ -20,6 +20,8 @@
 package org.apache.druid.testing.embedded.auth;
 
 import com.google.common.collect.ImmutableMap;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.CredentialedHttpClient;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -28,8 +30,6 @@ import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroup
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.embedded.EmbeddedResource;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

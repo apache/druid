@@ -266,62 +266,6 @@
   </suppress>
 
   <suppress>
-    <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
-    <notes><![CDATA[
-   file name: netty-3.10.6.Final.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.6.Final$</packageUrl>
-    <cve>CVE-2019-16869</cve>
-    <cve>CVE-2019-20444</cve>
-    <cve>CVE-2019-20445</cve>
-    <cve>CVE-2020-11612</cve>
-    <cve>CVE-2021-21290</cve> <!-- We don't use HttpPostRequestDecoder or HttpPostMultiPartRequestDecoder which uses vulnerable AbstractDiskHttpData - https://github.com/advisories/GHSA-5mcr-gq6c-3hq2 -->
-    <cve>CVE-2021-21295</cve> <!-- We don't use HTTP2MultiplexCodec or Http2FrameCodec or Http2StreamFrameToHttpObjectCodec affected or convert HTTP/2 to HTTP/1.1 requests - https://github.com/advisories/GHSA-wm47-8v5p-wjpj -->
-    <cve>CVE-2021-21409</cve> <!-- We don't use Http2HeaderFrame or convert HTTP/2 to HTTP/1.1 requests https://github.com/advisories/GHSA-f256-j965-7f32 -->
-    <cve>CVE-2021-37136</cve>
-    <cve>CVE-2021-37137</cve>
-    <cve>CVE-2021-43797</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-wx5j-54mm-rqqq -->
-    <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
-    <cve>CVE-2022-41881</cve>
-    <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
-    <cve>CVE-2025-55163</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
-    <cve>CVE-2025-58056</cve>
-    <cve>CVE-2025-58057</cve> <!-- Netty 3.x not affected; compression issue only in 4.x -->
-    <cve>CVE-2026-33870</cve> <!-- We don't use HttpPostRequestDecoder -->
-    <cve>CVE-2026-33871</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
-    <cve>CVE-2026-44893</cve> <!-- We don't use the HAProxy codec -->
-    <cve>CVE-2026-44250</cve> <!-- We don't use the Redis codec -->
-    <cve>CVE-2026-48059</cve> <!-- We don't use the HAProxy codec -->
-    <cve>CVE-2026-44890</cve> <!-- We don't use the Redis codec -->
-    <cve>CVE-2026-44891</cve> <!-- We don't use the STOMP codec -->
-    <cve>CVE-2026-50011</cve> <!-- We don't use the Redis codec -->
-    <cve>CVE-2026-59901</cve> <!-- We don't use Netty's Bzip2Decoder; Druid uses Apache Commons Compress for bzip2 -->
-    <cve>CVE-2026-62380</cve> <!-- We don't use the SOCKS codec; Druid uses HTTP CONNECT proxy tunneling -->
-    <cve>CVE-2026-59898</cve> <!-- Server-side WebSocket vulnerability; Druid's HTTP server is Jetty, not Netty -->
-    <cve>CVE-2026-59899</cve> <!-- Server-side HttpContentEncoder vulnerability; Druid uses Netty 3.x as HTTP client only -->
-    <cve>CVE-2026-42587</cve> <!-- Affects brotli/zstd/snappy decompression added in Netty 4.x; Netty 3.x only supports gzip/deflate -->
-    <cve>CVE-2026-42586</cve> <!-- We don't use the Redis codec -->
-    <cve>CVE-2026-44248</cve> <!-- We don't use the MQTT codec -->
-    <cve>CVE-2026-44249</cve> <!-- We don't use Netty's IpSubnetFilterRule; Druid uses Jetty for HTTP access control -->
-    <cve>CVE-2026-45416</cve> <!-- Server-side TLS SNI vulnerability; Druid uses Netty 3.x as TLS client only, never as a server -->
-    <cve>CVE-2026-42581</cve> <!-- Server-side HTTP request smuggling; Druid's HTTP server is Jetty, not Netty -->
-    <cve>CVE-2026-45674</cve> <!-- Affects netty-resolver-dns which Druid doesn't use; Druid uses JDK DNS resolution -->
-    <cve>CVE-2026-48006</cve> <!-- We don't use the Redis codec -->
-    <cve>CVE-2026-42585</cve> <!-- Server-side HTTP request smuggling; Druid's HTTP server is Jetty, not Netty -->
-    <cve>CVE-2026-42584</cve> <!-- Druid uses Netty3 for internal communication only, which does not satisfy any of the prerequisites of this vulnerability (pipeline requests, send HEAD, use 1xx responses) -->
-    <cve>CVE-2026-46340</cve> <!-- We don't use SCTP transport; Druid uses TCP/NIO -->
-    <cve>CVE-2026-42583</cve> <!-- We don't use Netty's Lz4FrameDecoder; Druid uses lz4-java directly -->
-    <cve>CVE-2026-48043</cve> <!-- We don't use netty-codec-http2 directly; Druid's HTTP/2 is served by Jetty -->
-    <cve>CVE-2026-56822</cve> <!-- We don't use netty-handler-ssl-ocsp -->
-    <cve>CVE-2026-56821</cve> <!-- We don't use netty-handler-ssl-ocsp -->
-    <cve>CVE-2026-47691</cve> <!-- Affects netty-resolver-dns which Druid doesn't use; Druid uses JDK DNS resolution -->
-    <cve>CVE-2026-56820</cve> <!-- We don't use netty-handler-ssl-ocsp -->
-    <cve>CVE-2026-50010</cve> <!-- Druid's Netty 3.x HTTP client does not use SslContextBuilder; gRPC/AWS SDK paths use managed SSL contexts -->
-    <cve>CVE-2026-42578</cve> <!-- We don't use HttpProxyHandler; Druid uses a custom HTTP CONNECT tunnel via HttpClientCodec -->
-    <cve>CVE-2026-42579</cve> <!-- We don't use netty-codec-dns; Druid uses JDK DNS resolution -->
-  </suppress>
-
-  <suppress>
     <notes><![CDATA[
    file name: icu4j-77.1.jar
    ]]></notes>
@@ -547,16 +491,6 @@
     <cve>CVE-2023-5072</cve>
   </suppress>
 
-
-  <!--
-   ~ Hostname verification is disabled by default in Netty 4.x, therefore the version that Druid is using gets flagged,
-   ~ however Druid enables it in ChannelResourceFactory therefore this is a false positive-->
-  <suppress>
-    <notes><![CDATA[
-      file name: netty-transport-4.1.100.Final.jar
-    ]]></notes>
-    <cve>CVE-2023-4586</cve>
-  </suppress>
 
   <!-- druid cassandra storage exclusions -->
   <suppress>

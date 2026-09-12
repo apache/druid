@@ -20,11 +20,11 @@
 package org.apache.druid.testing.embedded.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.testing.embedded.EmbeddedServiceClient;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.util.List;
 import java.util.Map;

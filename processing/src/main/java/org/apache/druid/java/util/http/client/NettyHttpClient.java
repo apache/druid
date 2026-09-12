@@ -24,6 +24,25 @@ import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.util.ReferenceCountUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,25 +53,6 @@ import org.apache.druid.java.util.http.client.pool.ResourceContainer;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
-import org.jboss.netty.handler.timeout.ReadTimeoutHandler;
-import org.jboss.netty.util.Timer;
 import org.joda.time.Duration;
 
 import java.net.URL;
@@ -71,7 +71,6 @@ public class NettyHttpClient extends AbstractHttpClient
   private static final String READ_TIMEOUT_HANDLER_NAME = "read-timeout";
   private static final String LAST_HANDLER_NAME = "last-handler";
 
-  private final Timer timer;
   private final ResourcePool<String, ChannelFuture> pool;
   private final HttpClientConfig.CompressionCodec compressionCodec;
   private final Duration defaultReadTimeout;
@@ -80,18 +79,12 @@ public class NettyHttpClient extends AbstractHttpClient
   NettyHttpClient(
       ResourcePool<String, ChannelFuture> pool,
       Duration defaultReadTimeout,
-      HttpClientConfig.CompressionCodec compressionCodec,
-      Timer timer
+      HttpClientConfig.CompressionCodec compressionCodec
   )
   {
     this.pool = Preconditions.checkNotNull(pool, "pool");
     this.defaultReadTimeout = defaultReadTimeout;
     this.compressionCodec = Preconditions.checkNotNull(compressionCodec);
-    this.timer = timer;
-
-    if (defaultReadTimeout != null && defaultReadTimeout.getMillis() > 0) {
-      Preconditions.checkNotNull(timer, "timer");
-    }
   }
 
   @LifecycleStart
@@ -125,48 +118,46 @@ public class NettyHttpClient extends AbstractHttpClient
     final Channel channel;
     final String hostKey = getPoolKey(url);
     final ResourceContainer<ChannelFuture> channelResourceContainer = pool.take(hostKey);
-    final ChannelFuture channelFuture = channelResourceContainer.get().awaitUninterruptibly();
+    // pool.take() returns null only when the pool is closed (the HttpClient has been stopped); that path
+    // already logs at ERROR inside ResourcePool. Surface it here so the caller sees a real exception
+    // instead of an NPE.
+    if (channelResourceContainer == null) {
+      return Futures.immediateFailedFuture(
+          new ChannelException(
+              StringUtils.format("HttpClient is closed; cannot obtain a channel for host[%s]", hostKey)
+          )
+      );
+    }
+    // channelResourceContainer.get() itself can be null when the underlying holder was interrupted (or
+    // the pool was closed) while waiting for capacity; in either case the pool never incremented its
+    // lent-resources count, so we do NOT call returnResource() (which would NPE inside giveBack); we
+    // just fail the request.
+    final ChannelFuture rawChannelFuture = channelResourceContainer.get();
+    if (rawChannelFuture == null) {
+      return Futures.immediateFailedFuture(
+          new ChannelException(
+              StringUtils.format("Interrupted or pool closed while waiting for a channel to host[%s]", hostKey)
+          )
+      );
+    }
+    final ChannelFuture channelFuture;
+    try {
+      channelFuture = rawChannelFuture.awaitUninterruptibly();
+    }
+    catch (Throwable t) {
+      channelResourceContainer.returnResource();
+      return Futures.immediateFailedFuture(t);
+    }
     if (!channelFuture.isSuccess()) {
       channelResourceContainer.returnResource(); // Some other poor sap will have to deal with it...
       return Futures.immediateFailedFuture(
           new ChannelException(
               "Faulty channel in resource pool",
-              channelFuture.getCause()
+              channelFuture.cause()
           )
       );
-    } else {
-      channel = channelFuture.getChannel();
-
-      // In case we get a channel that never had its readability turned back on.
-      channel.setReadable(true);
     }
-    final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
-    final HttpRequest httpRequest = new DefaultHttpRequest(
-        HttpVersion.HTTP_1_1,
-        method,
-        urlFile.isEmpty() ? "/" : urlFile
-    );
-
-    if (!headers.containsKey(HttpHeaders.Names.HOST)) {
-      httpRequest.headers().add(HttpHeaders.Names.HOST, getHost(url));
-    }
-
-    // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "compressionCodec".
-    if (!headers.containsKey(HttpHeaders.Names.ACCEPT_ENCODING)) {
-      httpRequest.headers().set(HttpHeaders.Names.ACCEPT_ENCODING, compressionCodec.getEncodingString());
-    }
-
-    for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
-      String key = entry.getKey();
-
-      for (String obj : entry.getValue()) {
-        httpRequest.headers().add(key, obj);
-      }
-    }
-
-    if (request.hasContent()) {
-      httpRequest.setContent(request.getContent());
-    }
+    channel = channelFuture.channel();
 
     final long readTimeout = getReadTimeout(requestReadTimeout);
     final SettableFuture<Final> retVal = SettableFuture.create();
@@ -176,18 +167,64 @@ public class NettyHttpClient extends AbstractHttpClient
     // use this boolean to ensure that handlers do not see any chunks after exceptionCaught fires.
     final AtomicBoolean didEncounterException = new AtomicBoolean();
 
-    if (readTimeout > 0) {
-      channel.getPipeline().addLast(
-          READ_TIMEOUT_HANDLER_NAME,
-          new ReadTimeoutHandler(timer, readTimeout, TimeUnit.MILLISECONDS)
-      );
-    }
+    FullHttpRequest httpRequest = null;
+    boolean readTimeoutHandlerAdded = false;
+    boolean lastHandlerAdded = false;
+    try {
+      // In case we get a channel that never had its reads turned back on.
+      channel.config().setAutoRead(true);
 
-    channel.getPipeline().addLast(
-        LAST_HANDLER_NAME,
-        new SimpleChannelUpstreamHandler()
+      final String urlFile = StringUtils.nullToEmptyNonDruidDataString(url.getFile());
+      // retainedDuplicate so the encoder's read+release doesn't disturb the Request's stored
+      // ByteBuf, preserving it for callers that resend or copy() the Request.
+      httpRequest = new DefaultFullHttpRequest(
+          HttpVersion.HTTP_1_1,
+          method,
+          urlFile.isEmpty() ? "/" : urlFile,
+          request.hasContent() ? request.getContent().retainedDuplicate() : Unpooled.EMPTY_BUFFER
+      );
+
+      // Copy caller-supplied headers first, then apply defaults only for ones the caller didn't already provide.
+      // Request stores headers in a case-sensitive Guava Multimap, but HTTP header names are case-insensitive;
+      // checking presence against Netty 4's lowercase HttpHeaderNames constants directly would miss headers set
+      // with conventional HTTP casing and result in duplicate headers on the wire. Netty's HttpHeaders.contains()
+      // is case-insensitive, so applying defaults after the copy is the reliable check.
+      for (Map.Entry<String, Collection<String>> entry : headers.asMap().entrySet()) {
+        String key = entry.getKey();
+        for (String obj : entry.getValue()) {
+          httpRequest.headers().add(key, obj);
+        }
+      }
+
+      if (!httpRequest.headers().contains(HttpHeaderNames.HOST)) {
+        httpRequest.headers().add(HttpHeaderNames.HOST, getHost(url));
+      }
+
+      // If Accept-Encoding is set in the Request, use that. Otherwise use the default from "compressionCodec".
+      if (!httpRequest.headers().contains(HttpHeaderNames.ACCEPT_ENCODING)) {
+        httpRequest.headers().set(HttpHeaderNames.ACCEPT_ENCODING, compressionCodec.getEncodingString());
+      }
+
+      if (request.hasContent()) {
+        HttpUtil.setContentLength(httpRequest, request.getContent().readableBytes());
+      }
+
+      if (readTimeout > 0) {
+        channel.pipeline().addLast(
+            READ_TIMEOUT_HANDLER_NAME,
+            new ReadTimeoutHandler(readTimeout, TimeUnit.MILLISECONDS)
+        );
+        readTimeoutHandlerAdded = true;
+      }
+
+      channel.pipeline().addLast(
+          LAST_HANDLER_NAME,
+          new SimpleChannelInboundHandler<HttpObject>()
         {
-          private volatile ClientResponse<Intermediate> response = null;
+          // Single-threaded access: all reads and writes happen on the channel's EventLoop thread
+          // (channelRead0, exceptionCaught, channelInactive are all serial inbound events). The
+          // TrafficCop callback can fire from arbitrary threads but doesn't touch this field.
+          private ClientResponse<Intermediate> response = null;
 
           // Chunk number most recently assigned.
           private long currentChunkNum = 0;
@@ -200,23 +237,30 @@ public class NettyHttpClient extends AbstractHttpClient
           private long resumeWatermark = -1;
 
           @Override
-          public void messageReceived(ChannelHandlerContext ctx, MessageEvent e)
+          protected void channelRead0(ChannelHandlerContext ctx, HttpObject msg)
           {
             if (log.isDebugEnabled()) {
-              log.debug("[%s] messageReceived: %s", requestDesc, e.getMessage());
+              log.debug("[%s] messageReceived: %s", requestDesc, msg);
             }
             try {
-              Object msg = e.getMessage();
+              // Netty 4's HTTP codec does not throw on a malformed status line, headers, or chunk framing;
+              // instead it attaches a failed DecoderResult to a best-effort HttpObject (e.g. status "999 Unknown"
+              // for a status line it could not parse). Propagate the failure explicitly so the caller sees the
+              // real cause instead of a synthesized response, and so we stop processing subsequent objects on
+              // the same broken message.
+              if (msg.decoderResult().isFailure()) {
+                handleExceptionAndCloseChannel(msg.decoderResult().cause(), false);
+                return;
+              }
 
-              if (msg instanceof HttpResponse) {
+              if (msg instanceof HttpResponse httpResponse) {
                 if (didEncounterException.get()) {
                   // Don't process HttpResponse after encountering an exception.
                   return;
                 }
 
-                HttpResponse httpResponse = (HttpResponse) msg;
                 if (log.isDebugEnabled()) {
-                  log.debug("[%s] Got response: %s", requestDesc, httpResponse.getStatus());
+                  log.debug("[%s] Got response: %s", requestDesc, httpResponse.status());
                 }
 
                 HttpResponseHandler.TrafficCop trafficCop = new HttpResponseHandler.TrafficCop()
@@ -229,7 +273,8 @@ public class NettyHttpClient extends AbstractHttpClient
 
                       if (suspendWatermark >= 0 && resumeWatermark >= suspendWatermark) {
                         suspendWatermark = -1;
-                        channel.setReadable(true);
+                        channel.config().setAutoRead(true);
+                        channel.read();
                         long backPressureDuration = System.nanoTime() - backPressureStartTimeNs;
                         log.debug("[%s] Resumed reads from channel (chunkNum = %,d).", requestDesc, resumeChunkNum);
                         return backPressureDuration;
@@ -254,44 +299,50 @@ public class NettyHttpClient extends AbstractHttpClient
 
                 assert currentChunkNum == 0;
                 possiblySuspendReads(response);
+              }
 
-                if (!httpResponse.isChunked()) {
-                  finishRequest();
-                }
-              } else if (msg instanceof HttpChunk) {
+              if (msg instanceof HttpContent httpContent) {
                 if (didEncounterException.get()) {
-                  // Don't process HttpChunk after encountering an exception.
+                  // Don't process HttpContent after encountering an exception.
                   return;
                 }
 
-                HttpChunk httpChunk = (HttpChunk) msg;
                 if (log.isDebugEnabled()) {
                   log.debug(
                       "[%s] Got chunk: %sB, last=%s",
                       requestDesc,
-                      httpChunk.getContent().readableBytes(),
-                      httpChunk.isLast()
+                      httpContent.content().readableBytes(),
+                      msg instanceof LastHttpContent
                   );
                 }
 
-                if (httpChunk.isLast()) {
+                if (msg instanceof LastHttpContent) {
+                  // Hand the final chunk's bytes to the handler if it has any, then finish.
+                  if (httpContent.content().isReadable()) {
+                    response = handler.handleChunk(response, httpContent, ++currentChunkNum);
+                    if (response.isFinished() && !retVal.isDone()) {
+                      retVal.set((Final) response.getObj());
+                    }
+                  }
                   finishRequest();
                 } else {
-                  response = handler.handleChunk(response, httpChunk, ++currentChunkNum);
+                  response = handler.handleChunk(response, httpContent, ++currentChunkNum);
                   if (response.isFinished() && !retVal.isDone()) {
                     retVal.set((Final) response.getObj());
                   }
                   possiblySuspendReads(response);
                 }
-              } else {
-                throw new ISE("Unknown message type[%s]", msg.getClass());
               }
             }
             catch (Exception ex) {
               log.warn(ex, "[%s] Exception thrown while processing message, closing channel.", requestDesc);
 
               if (!retVal.isDone()) {
-                retVal.set(null);
+                // Propagate the real cause: a handler that throws (a byte-limit check, a query-timeout,
+                // a deserialization failure) needs the caller's future.get() to raise the exception, not
+                // return null. The subsequent throw goes to exceptionCaught → handleExceptionAndCloseChannel,
+                // which is a no-op once the future is already done.
+                retVal.setException(ex);
               }
               channel.close();
               channelResourceContainer.returnResource();
@@ -306,7 +357,7 @@ public class NettyHttpClient extends AbstractHttpClient
               synchronized (watermarkLock) {
                 suspendWatermark = Math.max(suspendWatermark, currentChunkNum);
                 if (suspendWatermark > resumeWatermark) {
-                  channel.setReadable(false);
+                  channel.config().setAutoRead(false);
                   backPressureStartTimeNs = System.nanoTime();
                   log.debug("[%s] Suspended reads from channel (chunkNum = %,d).", requestDesc, currentChunkNum);
                 }
@@ -331,18 +382,18 @@ public class NettyHttpClient extends AbstractHttpClient
               retVal.set(finalResponse.getObj());
             }
             removeHandlers();
-            channel.setReadable(true);
+            channel.config().setAutoRead(true);
             channelResourceContainer.returnResource();
           }
 
           @Override
-          public void exceptionCaught(ChannelHandlerContext context, ExceptionEvent event)
+          public void exceptionCaught(ChannelHandlerContext context, Throwable cause)
           {
-            handleExceptionAndCloseChannel(event.getCause(), false);
+            handleExceptionAndCloseChannel(cause, false);
           }
 
           @Override
-          public void channelDisconnected(ChannelHandlerContext context, ChannelStateEvent event)
+          public void channelInactive(ChannelHandlerContext context)
           {
             handleExceptionAndCloseChannel(new ChannelException("Channel disconnected"), true);
           }
@@ -370,13 +421,7 @@ public class NettyHttpClient extends AbstractHttpClient
             }
 
             if (!retVal.isDone()) {
-              if (t instanceof ReadTimeoutException) {
-                // ReadTimeoutException thrown by ReadTimeoutHandler is a singleton with a misleading stack trace.
-                // No point including it: instead, we replace it with a fresh exception.
-                retVal.setException(new ReadTimeoutException(StringUtils.format("[%s] Read timed out", requestDesc)));
-              } else {
-                retVal.setException(t);
-              }
+              retVal.setException(t);
             }
 
             // response is non-null if we received initial chunk and then exception occurs
@@ -399,34 +444,56 @@ public class NettyHttpClient extends AbstractHttpClient
           private void removeHandlers()
           {
             if (readTimeout > 0) {
-              channel.getPipeline().remove(READ_TIMEOUT_HANDLER_NAME);
+              channel.pipeline().remove(READ_TIMEOUT_HANDLER_NAME);
             }
-            channel.getPipeline().remove(LAST_HANDLER_NAME);
+            channel.pipeline().remove(LAST_HANDLER_NAME);
           }
         }
-    );
+      );
+      lastHandlerAdded = true;
 
-    channel.write(httpRequest).addListener(
-        new ChannelFutureListener()
-        {
-          @Override
-          public void operationComplete(ChannelFuture future)
+      channel.writeAndFlush(httpRequest).addListener(
+          new ChannelFutureListener()
           {
-            if (!future.isSuccess()) {
-              channel.close();
-              channelResourceContainer.returnResource();
-              if (!retVal.isDone()) {
-                retVal.setException(
-                    new ChannelException(
-                        StringUtils.format("[%s] Failed to write request to channel", requestDesc),
-                        future.getCause()
-                    )
-                );
+            @Override
+            public void operationComplete(ChannelFuture future)
+            {
+              if (!future.isSuccess()) {
+                channel.close();
+                channelResourceContainer.returnResource();
+                if (!retVal.isDone()) {
+                  retVal.setException(
+                      new ChannelException(
+                          StringUtils.format("[%s] Failed to write request to channel", requestDesc),
+                          future.cause()
+                      )
+                  );
+                }
               }
             }
           }
-        }
-    );
+      );
+    }
+    catch (Throwable t) {
+      // Any partial state (pipeline handlers we added, the retained content buffer inside httpRequest) has to be
+      // undone or Netty will leak both the pooled buffer and the channel — the pool would then hand out a channel
+      // whose pipeline still carries our handler, which would misroute the next request's inbound messages.
+      // Reaching this block means writeAndFlush was never called (all earlier statements can throw; nothing after
+      // writeAndFlush does), so Netty never took ownership of httpRequest and it is always safe to release it here.
+      if (lastHandlerAdded && channel.pipeline().get(LAST_HANDLER_NAME) != null) {
+        channel.pipeline().remove(LAST_HANDLER_NAME);
+      }
+      if (readTimeoutHandlerAdded && channel.pipeline().get(READ_TIMEOUT_HANDLER_NAME) != null) {
+        channel.pipeline().remove(READ_TIMEOUT_HANDLER_NAME);
+      }
+      if (httpRequest != null) {
+        // The request owns the retainedDuplicate content; releasing the request releases that buffer.
+        ReferenceCountUtil.safeRelease(httpRequest);
+      }
+      channelResourceContainer.returnResource();
+      log.warn(t, "[%s] Failed to build or submit request", requestDesc);
+      return Futures.immediateFailedFuture(t);
+    }
 
     return retVal;
   }
@@ -442,12 +509,7 @@ public class NettyHttpClient extends AbstractHttpClient
       timeout = 0;
     }
 
-    if (timeout > 0 && timer == null) {
-      log.warn("Cannot time out requests without a timer! Disabling timeout for this request.");
-      return 0;
-    } else {
-      return timeout;
-    }
+    return timeout;
   }
 
   private String getHost(URL url)

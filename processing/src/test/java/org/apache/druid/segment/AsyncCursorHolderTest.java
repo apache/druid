@@ -28,6 +28,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 class AsyncCursorHolderTest
 {
   @Test
+  void testIsReadyStaysTrueThroughReleaseAndClose()
+  {
+    final CountingCursorHolder holder = new CountingCursorHolder();
+    final AsyncCursorHolder asyncHolder = new AsyncCursorHolder(null);
+    Assertions.assertFalse(asyncHolder.isReady());
+
+    Assertions.assertTrue(asyncHolder.set(holder));
+    Assertions.assertTrue(asyncHolder.isReady());
+
+    // Releasing transfers ownership, and closing afterwards is a no-op, but acquisition is over either way: readiness
+    // must not flip back to false, or a consumer that gates its waiting on it could be sent back to waiting.
+    asyncHolder.release();
+    Assertions.assertTrue(asyncHolder.isReady());
+
+    asyncHolder.close();
+    Assertions.assertTrue(asyncHolder.isReady());
+  }
+
+  @Test
   void testCloseAfterReleaseDoesNotDoubleCloseHolder()
   {
     final CountingCursorHolder holder = new CountingCursorHolder();
