@@ -194,6 +194,34 @@ Example:
 
 When `residualFilterMode` is set to `fail` and a residual filter is detected, the job will fail with an error message indicating which filter expression produced the residual. This helps ensure data quality by preventing unintended rows from being ingested.
 
+## Arrow vectorized reader
+
+By default the Iceberg input source resolves the snapshot to a list of data file paths and reads them through the `warehouseSource`. Setting `useArrowReader` to `true` reads the table scan directly with Iceberg's vectorized Arrow reader instead, which avoids the per-file input format layer.
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `useArrowReader` | Read the table with Iceberg's vectorized Arrow reader. | `false` |
+| `arrowBatchSize` | Rows per Arrow batch. Only applies when `useArrowReader` is `true`. | `1024` |
+
+Example:
+```json
+{
+  "type": "iceberg",
+  "tableName": "events",
+  "namespace": "analytics",
+  "icebergCatalog": { ... },
+  "useArrowReader": true,
+  "arrowBatchSize": 2048
+}
+```
+
+Note the following when `useArrowReader` is `true`:
+
+- The table must store its data files as Parquet. Ingestion fails with an error if it finds a data file in any other format.
+- `warehouseSource` is not required and is unused. It is still required when `useArrowReader` is `false`.
+- No `inputFormat` is needed, since the reader works from Iceberg metadata.
+- The input source is not splittable, so the table is read by a single task even in a parallel ingestion. Keep `useArrowReader` set to `false` if you rely on parallel batch ingestion for throughput.
+
 ## Known limitations
 
 This section lists the known limitations that apply to the Iceberg extension.

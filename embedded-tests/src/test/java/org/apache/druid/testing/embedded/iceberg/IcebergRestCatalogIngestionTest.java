@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.parquet.ParquetExtensionsModule;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -46,6 +47,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Ingestion test for Iceberg tables via a REST catalog.
@@ -56,6 +58,7 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
 {
   private static final String ICEBERG_NAMESPACE = "default";
   private static final String ICEBERG_TABLE_NAME = "test_events";
+  private static final Logger log = new Logger(IcebergRestCatalogIngestionTest.class);
 
   private static final Schema ICEBERG_SCHEMA = new Schema(
       Types.NestedField.required(1, "event_time", Types.StringType.get()),
@@ -136,7 +139,23 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
   @Test
   public void testIngestFromIcebergRestCatalog()
   {
+    ingestFromIcebergRestCatalog(dataSource, false);
+  }
+
+  @Test
+  public void testIngestFromIcebergRestCatalogWithArrowReader()
+  {
+    ingestFromIcebergRestCatalog(dataSource + "_arrow", true);
+  }
+
+  private void ingestFromIcebergRestCatalog(final String targetDataSource, final boolean useArrowReader)
+  {
+    final long startNanos = System.nanoTime();
     final String catalogUri = icebergCatalog.getCatalogUri();
+    final String warehouseSource = useArrowReader ? "" : "\"warehouseSource\":{\"type\":\"local\"}";
+    final String arrowReaderOptions = useArrowReader
+                                      ? "\"useArrowReader\":true,\"arrowBatchSize\":2"
+                                      : "";
 
     final String sql = StringUtils.format(
         "INSERT INTO %s\n"
@@ -151,7 +170,7 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
         + "\"namespace\":\"%s\","
         + "\"icebergCatalog\":{\"type\":\"rest\",\"catalogUri\":\"%s\","
         + "\"catalogProperties\":{\"io-impl\":\"org.apache.iceberg.hadoop.HadoopFileIO\"}},"
-        + "\"warehouseSource\":{\"type\":\"local\"}}',\n"
+        + "%s%s}',\n"
         + "    '{\"type\":\"parquet\"}',\n"
         + "    '[{\"type\":\"string\",\"name\":\"event_time\"},"
         + "{\"type\":\"string\",\"name\":\"name\"},"
@@ -159,22 +178,31 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
         + "  )\n"
         + ")\n"
         + "PARTITIONED BY ALL TIME",
-        dataSource,
+        targetDataSource,
         ICEBERG_TABLE_NAME,
         ICEBERG_NAMESPACE,
-        catalogUri
+        catalogUri,
+        warehouseSource,
+        arrowReaderOptions
     );
 
     final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(targetDataSource, coordinator, broker);
 
     cluster.callApi().verifySqlQuery(
         "SELECT __time, \"name\", \"value\" FROM %s ORDER BY __time",
-        dataSource,
+        targetDataSource,
         "2024-01-01T00:00:00.000Z,alice,100\n"
         + "2024-01-01T01:00:00.000Z,bob,200\n"
         + "2024-01-01T02:00:00.000Z,charlie,300"
+    );
+
+    log.info(
+        "Iceberg REST catalog ingestion timing: useArrowReader[%s], dataSource[%s], elapsedMs[%d]",
+        useArrowReader,
+        targetDataSource,
+        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos)
     );
   }
 }
