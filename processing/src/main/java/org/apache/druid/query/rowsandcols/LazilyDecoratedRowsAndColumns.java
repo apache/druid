@@ -32,6 +32,7 @@ import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -281,19 +282,14 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         cursor.advance();
       }
       for (; !cursor.isDoneOrInterrupted() && remainingRowsToFetch > 0; remainingRowsToFetch--) {
-        writer.addSelection();
+        if (!writer.addSelection()) {
+          throw materializationLimitExceeded();
+        }
         cursor.advance();
       }
 
-      if (writer == null) {
-        // This means that the accumulate was never called, which can only happen if we didn't have any cursors.
-        // We would only have zero cursors if we essentially didn't match anything, meaning that our RowsAndColumns
-        // should be completely empty.
-        return null;
-      } else {
-        final byte[] bytes = writer.toByteArray();
-        return Pair.of(bytes, siggy.get());
-      }
+      final byte[] bytes = writer.toByteArray();
+      return Pair.of(bytes, siggy.get());
     }
   }
 
@@ -400,9 +396,19 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
         continue;
       }
       remainingRowsToFetch--;
-      frameWriter.addSelection();
+      if (!frameWriter.addSelection()) {
+        throw materializationLimitExceeded();
+      }
     }
 
     return Pair.of(frameWriter.toByteArray(), sigBob.build());
+  }
+
+  private ResourceLimitExceededException materializationLimitExceeded()
+  {
+    return ResourceLimitExceededException.withMessage(
+        "RowsAndColumns materialization exceeded the configured frame capacity of [%,d] bytes",
+        allocatorCapacity
+    );
   }
 }

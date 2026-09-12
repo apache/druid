@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.server.http.RedirectInfo;
 
 import java.net.URL;
@@ -35,7 +36,9 @@ public class OverlordRedirectInfo implements RedirectInfo
 {
   private static final Set<String> LOCAL_PATHS = ImmutableSet.of(
       "/druid/indexer/v1/leader",
-      "/druid/indexer/v1/isLeader"
+      "/druid/indexer/v1/isLeader",
+      "/druid/v2",
+      "/druid/v2/"
   );
 
   private final DruidOverlord overlord;
@@ -49,7 +52,10 @@ public class OverlordRedirectInfo implements RedirectInfo
   @Override
   public boolean doLocal(String requestURI)
   {
-    return (requestURI != null && LOCAL_PATHS.contains(requestURI)) || overlord.isLeader();
+    return (requestURI != null
+            && (LOCAL_PATHS.contains(requestURI)
+                || requestURI.startsWith("/druid/v2/" + SystemTableDataSource.NODE_QUERY_ID_PREFIX)))
+           || overlord.isLeader();
   }
 
   @Override

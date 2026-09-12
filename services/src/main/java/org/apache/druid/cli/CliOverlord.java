@@ -51,6 +51,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MetadataManagerModule;
+import org.apache.druid.guice.NativeQueryEngineModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SupervisorModule;
@@ -203,9 +204,13 @@ public class CliOverlord extends ServerRunnable
 
   protected List<? extends Module> getModules(final boolean standalone)
   {
-    return ImmutableList.of(
-        new DerbyTaskStorageModule(),
-        standalone ? new MetadataManagerModule() : binder -> {},
+    final ImmutableList.Builder<Module> modules = ImmutableList.builder();
+    modules.add(new DerbyTaskStorageModule());
+    modules.add(standalone ? new MetadataManagerModule() : binder -> {});
+    if (standalone) {
+      modules.add(NativeQueryEngineModule.builder().scanOnly().build());
+    }
+    modules.add(
         new Module()
         {
           @Override
@@ -516,6 +521,7 @@ public class CliOverlord extends ServerRunnable
         new MSQExternalDataSourceModule(),
         new RegexEngineModule()
     );
+    return modules.build();
   }
 
   /**

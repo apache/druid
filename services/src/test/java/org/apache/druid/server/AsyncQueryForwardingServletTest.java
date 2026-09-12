@@ -31,6 +31,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.Service;
 import org.apache.commons.io.IOUtils;
@@ -60,6 +61,7 @@ import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -96,6 +98,7 @@ import org.eclipse.jetty.ee8.servlet.ServletContextHandler;
 import org.eclipse.jetty.ee8.servlet.ServletHolder;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.server.Handler;
@@ -134,6 +137,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.Deflater;
 
@@ -246,6 +250,168 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Assertions.assertEquals(200, code);
 
     latch.await();
+  }
+
+  /** {@code X-Druid-Native-Query-Route: local} dispatches a user's cancellation to the Router-local query resource. */
+  @Test
+  public void testLocalNativeQueryRouteDispatchesDeleteLocally() throws Exception
+  {
+    assertNativeQueryRouteForDelete(QueryResource.NATIVE_QUERY_ROUTE_LOCAL, true);
+  }
+
+  /** A non-exact native-query route value follows the normal cancellation forwarding path. */
+  @Test
+  public void testNonExactNativeQueryRouteDoesNotDispatchDeleteLocally() throws Exception
+  {
+    assertNativeQueryRouteForDelete("LOCAL", false);
+  }
+
+  /** A Router-local system table query reports the length of its reserialized body, not the original request body. */
+  @Test
+  public void testLocalNativeQueryRouteUsesReserializedBodyLength() throws Exception
+  {
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    final Query<?> query = Druids.newScanQueryBuilder()
+                                  .dataSource(new SystemTableDataSource("server_properties"))
+                                  .eternityInterval()
+                                  .build();
+    final byte[] originalBody = StringUtils.toUtf8("  " + objectMapper.writeValueAsString(query) + "  ");
+    final ByteArrayInputStream input = new ByteArrayInputStream(originalBody);
+    final ServletInputStream requestInputStream = new ServletInputStream()
+    {
+      @Override
+      public boolean isFinished()
+      {
+        return input.available() == 0;
+      }
+
+      @Override
+      public boolean isReady()
+      {
+        return true;
+      }
+
+      @Override
+      public void setReadListener(final ReadListener readListener)
+      {
+        // Synchronous in-memory request body.
+      }
+
+      @Override
+      public int read()
+      {
+        return input.read();
+      }
+    };
+
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        objectMapper,
+        TestHelper.makeSmileMapper(),
+        Mockito.mock(QueryHostFinder.class),
+        null,
+        null,
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    );
+    final GuiceContainer localQueryContainer = Mockito.mock(GuiceContainer.class);
+    servlet.setLocalQueryContainer(localQueryContainer);
+
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(request.getContentType()).thenReturn(MediaType.APPLICATION_JSON);
+    Mockito.when(request.getRequestURI()).thenReturn("/druid/v2");
+    Mockito.when(request.getMethod()).thenReturn("POST");
+    Mockito.when(request.getInputStream()).thenReturn(requestInputStream);
+    Mockito.when(request.getContentLength()).thenReturn(originalBody.length);
+    Mockito.when(request.getContentLengthLong()).thenReturn((long) originalBody.length);
+    Mockito.when(request.getHeader(HttpHeader.CONTENT_LENGTH.asString()))
+           .thenReturn(String.valueOf(originalBody.length));
+    Mockito.when(request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE))
+           .thenReturn(QueryResource.NATIVE_QUERY_ROUTE_LOCAL);
+
+    servlet.service(request, response);
+
+    final ArgumentCaptor<HttpServletRequest> localRequest = ArgumentCaptor.forClass(HttpServletRequest.class);
+    Mockito.verify(localQueryContainer).service(localRequest.capture(), Mockito.same(response));
+    final HttpServletRequest reserializedRequest = localRequest.getValue();
+    final byte[] reserializedBody = IOUtils.toByteArray(reserializedRequest.getInputStream());
+    Assertions.assertNotEquals(originalBody.length, reserializedBody.length);
+    Assertions.assertEquals(reserializedBody.length, reserializedRequest.getContentLength());
+    Assertions.assertEquals(reserializedBody.length, reserializedRequest.getContentLengthLong());
+    Assertions.assertEquals(
+        String.valueOf(reserializedBody.length),
+        reserializedRequest.getHeader(HttpHeader.CONTENT_LENGTH.asString())
+    );
+    Assertions.assertEquals(
+        Collections.singletonList(String.valueOf(reserializedBody.length)),
+        Collections.list(reserializedRequest.getHeaders(HttpHeader.CONTENT_LENGTH.asString()))
+    );
+    Assertions.assertEquals(
+        reserializedBody.length,
+        reserializedRequest.getIntHeader(HttpHeader.CONTENT_LENGTH.asString())
+    );
+  }
+
+  private void assertNativeQueryRouteForDelete(final String route, final boolean expectedLocal) throws Exception
+  {
+    final QueryHostFinder hostFinder = Mockito.mock(QueryHostFinder.class);
+    final org.apache.druid.client.selector.Server defaultServer =
+        new TestServer("http", "localhost", 8082);
+    Mockito.when(hostFinder.pickDefaultServer()).thenReturn(defaultServer);
+    Mockito.when(hostFinder.getAllServers()).thenReturn(List.of(defaultServer));
+
+    final AtomicInteger proxyCalls = new AtomicInteger();
+    final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
+        new MapQueryToolChestWarehouse(ImmutableMap.of()),
+        TestHelper.makeJsonMapper(),
+        TestHelper.makeSmileMapper(),
+        hostFinder,
+        null,
+        null,
+        NoopServiceEmitter.instance(),
+        NoopRequestLogger.instance(),
+        new DefaultGenericQueryMetricsFactory(),
+        new AuthenticatorMapper(ImmutableMap.of()),
+        new Properties(),
+        new ServerConfig()
+    )
+    {
+      @Override
+      protected void doService(final HttpServletRequest request, final HttpServletResponse response)
+      {
+        proxyCalls.incrementAndGet();
+      }
+    };
+    final GuiceContainer localQueryContainer = Mockito.mock(GuiceContainer.class);
+    servlet.setLocalQueryContainer(localQueryContainer);
+
+    final HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(request.getContentType()).thenReturn(MediaType.APPLICATION_JSON);
+    Mockito.when(request.getRequestURI())
+           .thenReturn("/druid/v2/" + SystemTableDataSource.NODE_QUERY_ID_PREFIX + "query-id");
+    Mockito.when(request.getMethod()).thenReturn("DELETE");
+    Mockito.when(request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE))
+           .thenReturn(route);
+    Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(new AuthenticationResult("alice", "allow", "external", null));
+
+    servlet.service(request, response);
+
+    if (expectedLocal) {
+      final ArgumentCaptor<HttpServletRequest> localRequest = ArgumentCaptor.forClass(HttpServletRequest.class);
+      Mockito.verify(localQueryContainer).service(localRequest.capture(), Mockito.same(response));
+      Assertions.assertEquals("", localRequest.getValue().getServletPath());
+      Assertions.assertEquals(request.getRequestURI(), localRequest.getValue().getPathInfo());
+    } else {
+      Mockito.verifyNoInteractions(localQueryContainer);
+    }
+    Assertions.assertEquals(expectedLocal ? 0 : 1, proxyCalls.get());
   }
 
   @Test

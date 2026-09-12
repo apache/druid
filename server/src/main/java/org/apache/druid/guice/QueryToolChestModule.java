@@ -20,6 +20,7 @@
 package org.apache.druid.guice;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -64,6 +65,7 @@ import org.apache.druid.query.topn.TopNQueryMetricsFactory;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -75,7 +77,7 @@ public class QueryToolChestModule implements Module
   public static final String TOPN_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.topN.queryMetricsFactory";
   public static final String SEARCH_QUERY_METRICS_FACTORY_PROPERTY = "druid.query.search.queryMetricsFactory";
 
-  public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings =
+  private static final Map<Class<? extends Query>, Class<? extends QueryToolChest>> MAPPINGS =
       ImmutableMap.<Class<? extends Query>, Class<? extends QueryToolChest>>builder()
                   .put(DataSourceMetadataQuery.class, DataSourceQueryQueryToolChest.class)
                   .put(GroupByQuery.class, GroupByQueryQueryToolChest.class)
@@ -88,14 +90,30 @@ public class QueryToolChestModule implements Module
                   .put(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class)
                   .build();
 
+  public final Map<Class<? extends Query>, Class<? extends QueryToolChest>> mappings = MAPPINGS;
+
+  private final Set<Class<? extends Query>> queryTypes;
+
+  public QueryToolChestModule()
+  {
+    this(MAPPINGS.keySet());
+  }
+
+  public QueryToolChestModule(final Set<? extends Class<? extends Query>> queryTypes)
+  {
+    this.queryTypes = ImmutableSet.copyOf(queryTypes);
+  }
+
   @Override
   public void configure(Binder binder)
   {
     MapBinder<Class<? extends Query>, QueryToolChest> toolChests = DruidBinders.queryToolChestBinder(binder);
 
-    for (Map.Entry<Class<? extends Query>, Class<? extends QueryToolChest>> entry : mappings.entrySet()) {
-      toolChests.addBinding(entry.getKey()).to(entry.getValue());
-      binder.bind(entry.getValue()).in(LazySingleton.class);
+    for (Map.Entry<Class<? extends Query>, Class<? extends QueryToolChest>> entry : MAPPINGS.entrySet()) {
+      if (queryTypes.contains(entry.getKey())) {
+        toolChests.addBinding(entry.getKey()).to(entry.getValue());
+        binder.bind(entry.getValue()).in(LazySingleton.class);
+      }
     }
 
     binder.bind(QueryToolChestWarehouse.class).to(ConglomerateBackedToolChestWarehouse.class);
@@ -103,11 +121,21 @@ public class QueryToolChestModule implements Module
     JsonConfigProvider.bind(binder, "druid.query.default", DefaultQueryConfig.class);
     // DefaultQueryContext defaults to the static DefaultQueryConfig; brokers override this binding.
     binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
-    JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
-    JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
-    JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);
-    JsonConfigProvider.bind(binder, "druid.query.segmentMetadata", SegmentMetadataQueryConfig.class);
-    JsonConfigProvider.bind(binder, "druid.query.scan", ScanQueryConfig.class);
+    if (queryTypes.contains(GroupByQuery.class)) {
+      JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
+    }
+    if (queryTypes.contains(SearchQuery.class)) {
+      JsonConfigProvider.bind(binder, "druid.query.search", SearchQueryConfig.class);
+    }
+    if (queryTypes.contains(TopNQuery.class)) {
+      JsonConfigProvider.bind(binder, "druid.query.topN", TopNQueryConfig.class);
+    }
+    if (queryTypes.contains(SegmentMetadataQuery.class)) {
+      JsonConfigProvider.bind(binder, "druid.query.segmentMetadata", SegmentMetadataQueryConfig.class);
+    }
+    if (queryTypes.contains(ScanQuery.class)) {
+      JsonConfigProvider.bind(binder, "druid.query.scan", ScanQueryConfig.class);
+    }
 
     PolyBind.createChoice(
         binder,
@@ -120,48 +148,56 @@ public class QueryToolChestModule implements Module
         .addBinding("default")
         .to(DefaultGenericQueryMetricsFactory.class);
 
-    PolyBind.createChoice(
-        binder,
-        GROUPBY_QUERY_METRICS_FACTORY_PROPERTY,
-        Key.get(GroupByQueryMetricsFactory.class),
-        Key.get(DefaultGroupByQueryMetricsFactory.class)
-    );
-    PolyBind
-        .optionBinder(binder, Key.get(GroupByQueryMetricsFactory.class))
-        .addBinding("default")
-        .to(DefaultGroupByQueryMetricsFactory.class);
+    if (queryTypes.contains(GroupByQuery.class)) {
+      PolyBind.createChoice(
+          binder,
+          GROUPBY_QUERY_METRICS_FACTORY_PROPERTY,
+          Key.get(GroupByQueryMetricsFactory.class),
+          Key.get(DefaultGroupByQueryMetricsFactory.class)
+      );
+      PolyBind
+          .optionBinder(binder, Key.get(GroupByQueryMetricsFactory.class))
+          .addBinding("default")
+          .to(DefaultGroupByQueryMetricsFactory.class);
+    }
 
-    PolyBind.createChoice(
-        binder,
-        TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY,
-        Key.get(TimeseriesQueryMetricsFactory.class),
-        Key.get(DefaultTimeseriesQueryMetricsFactory.class)
-    );
-    PolyBind
-        .optionBinder(binder, Key.get(TimeseriesQueryMetricsFactory.class))
-        .addBinding("default")
-        .to(DefaultTimeseriesQueryMetricsFactory.class);
+    if (queryTypes.contains(TimeseriesQuery.class)) {
+      PolyBind.createChoice(
+          binder,
+          TIMESERIES_QUERY_METRICS_FACTORY_PROPERTY,
+          Key.get(TimeseriesQueryMetricsFactory.class),
+          Key.get(DefaultTimeseriesQueryMetricsFactory.class)
+      );
+      PolyBind
+          .optionBinder(binder, Key.get(TimeseriesQueryMetricsFactory.class))
+          .addBinding("default")
+          .to(DefaultTimeseriesQueryMetricsFactory.class);
+    }
 
-    PolyBind.createChoice(
-        binder,
-        TOPN_QUERY_METRICS_FACTORY_PROPERTY,
-        Key.get(TopNQueryMetricsFactory.class),
-        Key.get(DefaultTopNQueryMetricsFactory.class)
-    );
-    PolyBind
-        .optionBinder(binder, Key.get(TopNQueryMetricsFactory.class))
-        .addBinding("default")
-        .to(DefaultTopNQueryMetricsFactory.class);
+    if (queryTypes.contains(TopNQuery.class)) {
+      PolyBind.createChoice(
+          binder,
+          TOPN_QUERY_METRICS_FACTORY_PROPERTY,
+          Key.get(TopNQueryMetricsFactory.class),
+          Key.get(DefaultTopNQueryMetricsFactory.class)
+      );
+      PolyBind
+          .optionBinder(binder, Key.get(TopNQueryMetricsFactory.class))
+          .addBinding("default")
+          .to(DefaultTopNQueryMetricsFactory.class);
+    }
 
-    PolyBind.createChoice(
-        binder,
-        SEARCH_QUERY_METRICS_FACTORY_PROPERTY,
-        Key.get(SearchQueryMetricsFactory.class),
-        Key.get(DefaultSearchQueryMetricsFactory.class)
-    );
-    PolyBind
-        .optionBinder(binder, Key.get(SearchQueryMetricsFactory.class))
-        .addBinding("default")
-        .to(DefaultSearchQueryMetricsFactory.class);
+    if (queryTypes.contains(SearchQuery.class)) {
+      PolyBind.createChoice(
+          binder,
+          SEARCH_QUERY_METRICS_FACTORY_PROPERTY,
+          Key.get(SearchQueryMetricsFactory.class),
+          Key.get(DefaultSearchQueryMetricsFactory.class)
+      );
+      PolyBind
+          .optionBinder(binder, Key.get(SearchQueryMetricsFactory.class))
+          .addBinding("default")
+          .to(DefaultSearchQueryMetricsFactory.class);
+    }
   }
 }

@@ -25,6 +25,7 @@ import org.apache.calcite.plan.RelOptTable;
 import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQueryRel;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 public class DruidTableScanRule extends RelOptRule
@@ -42,7 +43,11 @@ public class DruidTableScanRule extends RelOptRule
   {
     final LogicalTableScan scan = call.rel(0);
     final RelOptTable table = scan.getTable();
-    final DruidTable druidTable = table.unwrap(DruidTable.class);
+    DruidTable druidTable = table.unwrap(DruidTable.class);
+    if (druidTable == null) {
+      // QueryHandler has already selected native planning, so only resolve the advertised native representation here.
+      druidTable = SystemSchema.getNativeSystemTable(table);
+    }
     if (druidTable != null) {
       call.transformTo(
           DruidQueryRel.scanTable(scan, table, druidTable, plannerContext)

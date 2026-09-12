@@ -135,6 +135,9 @@ public class PlannerContext
   public static final String CTX_SQL_USE_GRANULARITY = "sqlUseGranularity";
   public static final boolean DEFAULT_SQL_USE_GRANULARITY = true;
 
+  public static final String CTX_USE_NATIVE_QUERY_FOR_SYSTEM_TABLES = "useNativeQueryForSystemTables";
+  public static final boolean DEFAULT_USE_NATIVE_QUERY_FOR_SYSTEM_TABLES = false;
+
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
@@ -376,6 +379,14 @@ public class PlannerContext
   public QueryContext queryContext()
   {
     return QueryContext.of(queryContext);
+  }
+
+  public boolean useNativeQueryForSystemTables()
+  {
+    return queryContext().getBoolean(
+        CTX_USE_NATIVE_QUERY_FOR_SYSTEM_TABLES,
+        DEFAULT_USE_NATIVE_QUERY_FOR_SYSTEM_TABLES
+    );
   }
 
   public boolean isStringifyArrays()

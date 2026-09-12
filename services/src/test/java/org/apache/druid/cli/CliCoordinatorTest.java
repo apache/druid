@@ -26,15 +26,26 @@ import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.annotations.JSR311Resource;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.QueryRunnerFactory;
+import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
+import org.apache.druid.server.NoopQuerySegmentWalker;
+import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
+import org.apache.druid.server.system.handler.SystemTableQueryResource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -91,6 +102,49 @@ public class CliCoordinatorTest
     );
   }
 
+  @Test
+  public void testCoordinatorAsOverlordWithCentralizedDatasourceSchema()
+  {
+    final Properties properties = new Properties();
+    properties.setProperty("druid.coordinator.asOverlord.enabled", "true");
+    properties.setProperty("druid.centralizedDatasourceSchema.enabled", "true");
+    properties.setProperty("druid.coordinator.query.default.context.testKey", "testValue");
+
+    final Injector injector = makeCoordinatorInjector(properties);
+
+    Assertions.assertNotNull(injector.getInstance(SystemTableQueryResource.class));
+    Assertions.assertFalse(jerseyResources(injector).contains(QueryResource.class));
+    Assertions.assertTrue(jerseyResources(injector).contains(SystemTableQueryResource.class));
+    Assertions.assertInstanceOf(
+        SegmentMetadataQuerySegmentWalker.class,
+        injector.getInstance(QuerySegmentWalker.class)
+    );
+    Assertions.assertTrue(queryRunnerFactories(injector).containsKey(ScanQuery.class));
+    Assertions.assertTrue(queryRunnerFactories(injector).containsKey(SegmentMetadataQuery.class));
+    Assertions.assertEquals("testValue", injector.getInstance(QueryConfigProvider.class).getContext().get("testKey"));
+  }
+
+  @Test
+  public void testCoordinatorUsesRestrictedQueryResourceWithoutCentralizedDatasourceSchema()
+  {
+    final Injector injector = makeCoordinatorInjector(new Properties());
+
+    Assertions.assertNotNull(injector.getInstance(SystemTableQueryResource.class));
+    Assertions.assertInstanceOf(NoopQuerySegmentWalker.class, injector.getInstance(QuerySegmentWalker.class));
+    Assertions.assertTrue(queryRunnerFactories(injector).containsKey(ScanQuery.class));
+    Assertions.assertFalse(queryRunnerFactories(injector).containsKey(SegmentMetadataQuery.class));
+  }
+
+  private static Map<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactories(final Injector injector)
+  {
+    return injector.getInstance(Key.get(new TypeLiteral<>() {}));
+  }
+
+  private static Set<Class<?>> jerseyResources(final Injector injector)
+  {
+    return injector.getInstance(Key.get(new TypeLiteral<>() {}, JSR311Resource.class));
+  }
+
   private static boolean hasCoordinatorQosFilter(Set<JettyBindings.QosFilterHolder> qosFilters)
   {
     return qosFilters.stream()
@@ -116,6 +170,6 @@ public class CliCoordinatorTest
 
     final CliCoordinator coordinator = new CliCoordinator();
     baseInjector.injectMembers(coordinator);
-    return coordinator.makeInjector(Set.of(NodeRole.COORDINATOR));
+    return coordinator.makeInjector(coordinator.getNodeRoles(props));
   }
 }
