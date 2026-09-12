@@ -23,16 +23,18 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.manager.ProcessorAndCallback;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -41,11 +43,14 @@ import java.util.function.Function;
  */
 public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object, R>
 {
+  private static final Logger log = new Logger(ChainedProcessorManager.class);
+
   /**
-   * First processor manager. FrameProcessors created by this runs before all the others.
-   * The reference is set to null once all the processors have been returned by the channel.
+   * First processor manager. The {@link FrameProcessor}s it creates run before all the others. The reference is
+   * set to null once this manager has returned all of its processors.
    */
   @Nullable
+  @GuardedBy("lock")
   private ProcessorManager<A, List<A>> first;
 
   /**
@@ -59,13 +64,29 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   private final SettableFuture<ProcessorManager<B, R>> restFuture = SettableFuture.create();
 
   /**
+   * Lock used to synchronize the things used by {@link #next()}. We need enough thread safety to allow the
+   * future returned by {@link #next()} to be resolved in a future callback handler.
+   */
+  private final Object lock = new Object();
+
+  /**
    * Whether {@link #close()} has been called.
    */
+  @GuardedBy("lock")
   private boolean closed;
 
-  private final List<A> firstProcessorResult = new CopyOnWriteArrayList<>();
+  /**
+   * Number of processors handed out by {@link #first}. {@link #firstProcessorResult} is complete once this many
+   * results have been accumulated.
+   */
+  @GuardedBy("lock")
+  private int firstProcessorCount;
 
-  private final AtomicInteger firstProcessorCount = new AtomicInteger(0);
+  /**
+   * Results of the processors created by {@link #first}. Read and written under {@link #lock}, but the list itself
+   * is handed to {@link #restFactory}, so it may be read by the resulting manager on another thread.
+   */
+  private final List<A> firstProcessorResult = new CopyOnWriteArrayList<>();
 
   public ChainedProcessorManager(
       final ProcessorManager<A, ?> firstProcessor,
@@ -77,8 +98,10 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
     this.first = firstProcessor.withAccumulation(
         firstProcessorResult,
         (acc, a) -> {
-          acc.add(a);
-          checkFirstProcessorComplete();
+          synchronized (lock) {
+            acc.add(a);
+            checkFirstProcessorComplete();
+          }
           return acc;
         }
     );
@@ -88,32 +111,70 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   @Override
   public ListenableFuture<Optional<ProcessorAndCallback<Object>>> next()
   {
-    if (closed) {
-      throw new IllegalStateException();
-    } else if (first != null) {
-      Optional<ProcessorAndCallback<A>> processorAndCallbackOptional = Futures.getUnchecked(first.next());
-      if (processorAndCallbackOptional.isPresent()) {
-        // More processors left to run.
-        firstProcessorCount.incrementAndGet();
-        ProcessorAndCallback<A> aProcessorAndCallback = processorAndCallbackOptional.get();
-        //noinspection unchecked
-        return Futures.immediateFuture(Optional.of((ProcessorAndCallback<Object>) aProcessorAndCallback));
-      } else {
-        first = null;
-        checkFirstProcessorComplete();
+    final ListenableFuture<Optional<ProcessorAndCallback<A>>> nextFromFirst;
+
+    synchronized (lock) {
+      if (closed) {
+        throw new IllegalStateException();
+      } else if (first == null) {
+        return nextFromRest();
       }
+
+      nextFromFirst = first.next();
     }
 
-    //noinspection unchecked
+    return FutureUtils.transformAsync(
+        nextFromFirst,
+        processorAndCallback -> {
+          synchronized (lock) {
+            if (!closed) {
+              if (processorAndCallback.isPresent()) {
+                // More processors left to run.
+                firstProcessorCount++;
+                //noinspection unchecked
+                return Futures.immediateFuture(Optional.of((ProcessorAndCallback<Object>) processorAndCallback.get()));
+              } else {
+                first = null;
+                checkFirstProcessorComplete();
+                return nextFromRest();
+              }
+            }
+          }
+
+          // Closed while we were waiting. Clean up the processor we were handed.
+          if (processorAndCallback.isPresent()) {
+            final FrameProcessor<A> processor = processorAndCallback.get().processor();
+            CloseableUtils.closeAndSuppressExceptions(
+                processor::cleanup,
+                e -> log.noStackTrace().warn(e, "Failed to clean up processor[%s] after close", processor)
+            );
+          }
+
+          return Futures.immediateFuture(Optional.empty());
+        }
+    );
+  }
+
+  /**
+   * Returns the next processor from {@link #restFuture}, once that manager is available.
+   */
+  private ListenableFuture<Optional<ProcessorAndCallback<Object>>> nextFromRest()
+  {
+    //noinspection unchecked, rawtypes
     return FutureUtils.transformAsync(
         restFuture,
         rest -> (ListenableFuture) rest.next()
     );
   }
 
+  /**
+   * Sets {@link #restFuture} once all processors from {@link #first} have been created and have finished running.
+   * Does nothing once {@link #close()} has been called, since nothing would close the new manager.
+   */
+  @GuardedBy("lock")
   private void checkFirstProcessorComplete()
   {
-    if (first == null && (firstProcessorResult.size() == firstProcessorCount.get())) {
+    if (!closed && first == null && (firstProcessorResult.size() == firstProcessorCount)) {
       restFuture.set(restFactory.apply(firstProcessorResult));
     }
   }
@@ -127,12 +188,22 @@ public class ChainedProcessorManager<A, B, R> implements ProcessorManager<Object
   @Override
   public void close()
   {
-    if (!closed) {
+    final ProcessorManager<A, List<A>> firstToClose;
+    final ProcessorManager<B, R> restToClose;
+
+    synchronized (lock) {
+      if (closed) {
+        return;
+      }
+
       closed = true;
-      CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(
-          first != null ? first : null,
-          restFuture.isDone() ? FutureUtils.getUnchecked(restFuture, false) : null
-      ));
+      firstToClose = first;
+      restToClose = restFuture.isDone() ? FutureUtils.getUncheckedImmediately(restFuture) : null;
     }
+
+    // Cancel in case restFuture was never set, so futures from nextFromRest() do not remain pending forever.
+    restFuture.cancel(false);
+
+    CloseableUtils.closeAndWrapExceptions(() -> CloseableUtils.closeAll(firstToClose, restToClose));
   }
 }
