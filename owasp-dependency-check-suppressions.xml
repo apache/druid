@@ -895,7 +895,7 @@
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded org.eclipse.jetty* 9.4.58.v20250814)
     ]]></notes>
-    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/org\.eclipse\.jetty/jetty-io/pom\.xml$</filePath>
+    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/org\.eclipse\.jetty/jetty[^/]*/pom\.xml$
     <cve>CVE-2026-2332</cve>
     <cve>CVE-2026-10050</cve>
   </suppress>
@@ -907,7 +907,7 @@
     <notes><![CDATA[
       file name: hadoop-client-runtime-3.5.0.jar (shaded jline 3.9.0)
     ]]></notes>
-    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/org\.jline/jline/pom\.xml$</filePath>
+    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/org\.jline/jline[^/]*/pom\.xml$</filePath>
     <cve>CVE-2026-56741</cve>
     <cve>CVE-2026-56740</cve>
   </suppress>
