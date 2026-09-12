@@ -60,6 +60,7 @@ import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryMetrics;
@@ -297,24 +298,24 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
     }
 
-    private ImmutableMap<String, Object> makeDownstreamQueryContext()
+    private Map<String, Object> makeDownstreamQueryContext()
     {
-      final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
+      final QueryContextBuilder contextBuilder = QueryContext.builder();
 
       final QueryContext queryContext = query.context();
       final int priority = queryContext.getPriority();
-      contextBuilder.put(QueryContexts.PRIORITY_KEY, priority);
+      contextBuilder.putRaw(QueryContexts.PRIORITY_KEY, priority);
       final String lane = queryContext.getLane();
       if (lane != null) {
-        contextBuilder.put(QueryContexts.LANE_KEY, lane);
+        contextBuilder.putRaw(QueryContexts.LANE_KEY, lane);
       }
 
       if (populateCache) {
         // prevent down-stream nodes from caching results as well if we are populating the cache
-        contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
-        contextBuilder.put(QueryContexts.BY_SEGMENT_KEY, true);
+        contextBuilder.putRaw(CacheConfig.POPULATE_CACHE, false);
+        contextBuilder.putRaw(QueryContexts.BY_SEGMENT_KEY, true);
       }
-      return contextBuilder.build();
+      return contextBuilder.toMap();
     }
 
     /**

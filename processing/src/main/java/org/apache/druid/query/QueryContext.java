@@ -25,19 +25,22 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryContexts.Vectorize;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -81,9 +84,150 @@ public class QueryContext
     return EMPTY;
   }
 
+  /**
+   * Creates a builder for a query context map.
+   */
+  public static QueryContextBuilder builder()
+  {
+    return new QueryContextBuilder();
+  }
+
   public static QueryContext of(Map<String, Object> context)
   {
     return new QueryContext(context);
+  }
+
+  /**
+   * Creates a query context from one declared query context parameter.
+   */
+  public static <T> QueryContext of(
+      final QueryContextParameter<T> parameter,
+      @Nullable final T value
+  )
+  {
+    return new QueryContext(ofMap(parameter, value));
+  }
+
+  /**
+   * Creates a query context map from one declared query context parameter.
+   */
+  public static <T> Map<String, Object> ofMap(
+      final QueryContextParameter<T> parameter,
+      @Nullable final T value
+  )
+  {
+    return builder().put(parameter, value).toMap();
+  }
+
+  /**
+   * Creates a query context from two declared query context parameters.
+   */
+  public static <T1, T2> QueryContext of(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2
+  )
+  {
+    return new QueryContext(ofMap(parameter1, value1, parameter2, value2));
+  }
+
+  /**
+   * Creates a query context map from two declared query context parameters.
+   */
+  public static <T1, T2> Map<String, Object> ofMap(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2
+  )
+  {
+    return builder()
+        .put(parameter1, value1)
+        .put(parameter2, value2)
+        .toMap();
+  }
+
+  /**
+   * Creates a query context from three declared query context parameters.
+   */
+  public static <T1, T2, T3> QueryContext of(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2,
+      final QueryContextParameter<T3> parameter3,
+      @Nullable final T3 value3
+  )
+  {
+    return new QueryContext(ofMap(parameter1, value1, parameter2, value2, parameter3, value3));
+  }
+
+  /**
+   * Creates a query context map from three declared query context parameters.
+   */
+  public static <T1, T2, T3> Map<String, Object> ofMap(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2,
+      final QueryContextParameter<T3> parameter3,
+      @Nullable final T3 value3
+  )
+  {
+    return builder()
+        .put(parameter1, value1)
+        .put(parameter2, value2)
+        .put(parameter3, value3)
+        .toMap();
+  }
+
+  /**
+   * Creates a query context from four declared query context parameters.
+   */
+  public static <T1, T2, T3, T4> QueryContext of(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2,
+      final QueryContextParameter<T3> parameter3,
+      @Nullable final T3 value3,
+      final QueryContextParameter<T4> parameter4,
+      @Nullable final T4 value4
+  )
+  {
+    return new QueryContext(ofMap(
+        parameter1,
+        value1,
+        parameter2,
+        value2,
+        parameter3,
+        value3,
+        parameter4,
+        value4
+    ));
+  }
+
+  /**
+   * Creates a query context map from four declared query context parameters.
+   */
+  public static <T1, T2, T3, T4> Map<String, Object> ofMap(
+      final QueryContextParameter<T1> parameter1,
+      @Nullable final T1 value1,
+      final QueryContextParameter<T2> parameter2,
+      @Nullable final T2 value2,
+      final QueryContextParameter<T3> parameter3,
+      @Nullable final T3 value3,
+      final QueryContextParameter<T4> parameter4,
+      @Nullable final T4 value4
+  )
+  {
+    return builder()
+        .put(parameter1, value1)
+        .put(parameter2, value2)
+        .put(parameter3, value3)
+        .put(parameter4, value4)
+        .toMap();
   }
 
   public boolean isEmpty()
@@ -107,6 +251,14 @@ public class QueryContext
   }
 
   /**
+   * Check if the given declared query context parameter is set.
+   */
+  public boolean has(final QueryContextParameter<?> parameter)
+  {
+    return containsKey(parameter.getName());
+  }
+
+  /**
    * Return a value as a generic {@code Object}, returning {@code null} if the
    * context value is not set.
    */
@@ -114,6 +266,44 @@ public class QueryContext
   public Object get(String key)
   {
     return context.get(key);
+  }
+
+  /**
+   * Returns a parsed parameter value, its declared default, or {@code null} when neither is present.
+   */
+  @Nullable
+  public <T> T get(final QueryContextParameter<T> parameter)
+  {
+    if (!has(parameter)) {
+      return parameter.getDefaultValue().orElse(null);
+    }
+    return parameter.parse(get(parameter.getName()));
+  }
+
+  /**
+   * Returns a parsed parameter value or its declared default, including when the parsed value is {@code null}.
+   *
+   * @throws ISE if the parameter has no declared default
+   */
+  public <T> T getOrDefault(final QueryContextParameter<T> parameter)
+  {
+    return getOrDefault(
+        parameter,
+        parameter.getDefaultValue().orElseThrow(
+            () -> new ISE("Query context parameter [%s] has no declared default", parameter.getName())
+        )
+    );
+  }
+
+  /**
+   * Returns a parsed parameter value or the supplied default, including when the parsed value is {@code null}.
+   */
+  public <T> T getOrDefault(final QueryContextParameter<T> parameter, final T defaultValue)
+  {
+    if (!has(parameter)) {
+      return defaultValue;
+    }
+    return Optional.ofNullable(parameter.parse(get(parameter.getName()))).orElse(defaultValue);
   }
 
   /**
@@ -197,18 +387,6 @@ public class QueryContext
   public long getLong(final String key, final long defaultValue)
   {
     return QueryContexts.parseLong(context, key, defaultValue);
-  }
-
-  /**
-   * Return a value as an {@code Float}, returning {@link null} if the
-   * context value is not set.
-   *
-   * @throws BadQueryContextException for an invalid value
-   */
-  @SuppressWarnings("unused")
-  public Float getFloat(final String key)
-  {
-    return QueryContexts.getAsFloat(key, get(key));
   }
 
   /**
@@ -299,12 +477,12 @@ public class QueryContext
 
   public boolean isUseResultLevelCache()
   {
-    return isUseResultLevelCache(QueryContexts.DEFAULT_USE_RESULTLEVEL_CACHE);
+    return getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE);
   }
 
   public boolean isUseResultLevelCache(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE, defaultValue);
   }
 
   public boolean isFinalize(boolean defaultValue)
@@ -512,15 +690,6 @@ public class QueryContext
             timeout
         )
     );
-  }
-
-  @Nullable
-  public Duration getTimeoutDuration()
-  {
-    if (hasTimeout()) {
-      return Duration.ofMillis(getTimeout());
-    }
-    return null;
   }
 
   public long getDefaultTimeout()
@@ -818,12 +987,4 @@ public class QueryContext
     return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
   }
 
-  /**
-   * @deprecated Use {@link #getRealtimeSegmentsMode()} instead.
-   */
-  @Deprecated
-  public boolean isRealtimeSegmentsOnly()
-  {
-    return getRealtimeSegmentsMode() == RealtimeSegmentsMode.EXCLUSIVE;
-  }
 }

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameter;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -92,7 +93,6 @@ public class QueryContexts
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
   public static final String POPULATE_CACHE_KEY = "populateCache";
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
-  public static final String USE_RESULT_LEVEL_CACHE_KEY = "useResultLevelCache";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_KEY = "serializeDateTimeAsLong";
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
@@ -168,7 +168,6 @@ public class QueryContexts
   public static final boolean DEFAULT_POPULATE_CACHE = true;
   public static final boolean DEFAULT_USE_CACHE = true;
   public static final boolean DEFAULT_POPULATE_RESULTLEVEL_CACHE = true;
-  public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
   public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.TRUE;
   public static final int DEFAULT_VECTOR_SIZE = 512;
@@ -517,6 +516,19 @@ public class QueryContexts
   }
 
   /**
+   * Insert, update or remove a typed parameter to produce an overridden context.
+   * Leaves the original context unchanged.
+   */
+  public static <V> Map<String, Object> override(
+      final Map<String, Object> context,
+      final QueryContextParameter<V> parameter,
+      @Nullable final V value
+  )
+  {
+    return override(context, parameter.getName(), parameter.validate(value));
+  }
+
+  /**
    * Insert or replace multiple keys to produce an overridden context.
    * Leaves the original context unchanged.
    *
@@ -559,7 +571,9 @@ public class QueryContexts
     }
 
     try {
-      if (value instanceof String) {
+      if (clazz.isInstance(value)) {
+        return clazz.cast(value);
+      } else if (value instanceof String) {
         return Enum.valueOf(clazz, StringUtils.toUpperCase((String) value));
       } else if (value instanceof Boolean) {
         return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(value)));

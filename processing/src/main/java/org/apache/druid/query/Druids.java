@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -268,6 +269,18 @@ public class Druids
     public TimeseriesQueryBuilder context(Map<String, Object> c)
     {
       this.context = c;
+      return this;
+    }
+
+    /**
+     * Adds or overrides one typed query context parameter without replacing other context values.
+     */
+    public <V> TimeseriesQueryBuilder context(final QueryContextParameter<V> parameter, final V value)
+    {
+      context = BaseQuery.computeOverriddenContext(
+          context,
+          Collections.singletonMap(parameter.getName(), parameter.validate(value))
+      );
       return this;
     }
 

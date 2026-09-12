@@ -30,6 +30,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.Assertions;
@@ -154,6 +155,24 @@ public class CacheUtilTest
             makeCacheConfig(ImmutableMap.of()),
             CacheUtil.ServerType.BROKER,
             false
+        )
+    );
+  }
+
+  @Test
+  public void test_isUseResultCache_explicitNullUsesDeclaredDefault()
+  {
+    final Query<?> query = timeseriesQuery.withOverriddenContext(
+        QueryContextParameters.USE_RESULT_LEVEL_CACHE,
+        null
+    );
+
+    Assertions.assertTrue(
+        CacheUtil.isUseResultCache(
+            query,
+            new DummyCacheStrategy<>(true, true),
+            makeCacheConfig(ImmutableMap.of("useResultLevelCache", true)),
+            CacheUtil.ServerType.BROKER
         )
     );
   }
