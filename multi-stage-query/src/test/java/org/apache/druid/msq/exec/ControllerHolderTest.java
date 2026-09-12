@@ -384,6 +384,7 @@ public class ControllerHolderTest
   public void testFinalReportVisibleBeforeCompletionListenerReturns() throws Exception
   {
     final MSQTaskReportPayload finalPayload = makeSuccessReport();
+    final AtomicReference<TaskReport.ReportMap> finalReports = new AtomicReference<>();
     final CountDownLatch listenerCalled = new CountDownLatch(1);
     final CountDownLatch releaseListener = new CountDownLatch(1);
     final DartControllerRegistry registry = new DartControllerRegistry(new DartControllerConfig());
@@ -392,7 +393,14 @@ public class ControllerHolderTest
       @Override
       public void run(final QueryListener listener)
       {
+        finalReports.set(TaskReport.buildTaskReports(new MSQTaskReport("test-query", finalPayload)));
         listener.onQueryComplete(finalPayload);
+      }
+
+      @Override
+      public TaskReport.ReportMap finalReport()
+      {
+        return finalReports.get();
       }
     };
     final ControllerHolder holder = new ControllerHolder(
@@ -567,6 +575,12 @@ public class ControllerHolderTest
     public TaskReport.ReportMap liveReports()
     {
       return new TaskReport.ReportMap();
+    }
+
+    @Override
+    public TaskReport.ReportMap finalReport()
+    {
+      return TaskReport.buildTaskReports(new MSQTaskReport(queryId, makeSuccessReport()));
     }
 
     @Override

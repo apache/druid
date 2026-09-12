@@ -67,10 +67,6 @@ public class ControllerHolder
 
   private final DateTime startTime;
 
-  // Published before notifying the result listener, so report readers see final counters once results end.
-  @Nullable
-  private volatile TaskReport.ReportMap finalReport;
-
   @GuardedBy("this")
   private State state = State.ACCEPTED;
 
@@ -111,7 +107,7 @@ public class ControllerHolder
   @Nullable
   public TaskReport.ReportMap getReports()
   {
-    final TaskReport.ReportMap report = finalReport;
+    final TaskReport.ReportMap report = controller.finalReport();
     return report == null ? controller.liveReports() : report;
   }
 
@@ -181,20 +177,12 @@ public class ControllerHolder
       Thread.currentThread().setName(makeThreadName());
 
       try {
-        final CaptureReportQueryListener reportListener = new CaptureReportQueryListener(listener)
-        {
-          @Override
-          public void onQueryComplete(final MSQTaskReportPayload report)
-          {
-            finalReport = TaskReport.buildTaskReports(new MSQTaskReport(controller.queryId(), report));
-            super.onQueryComplete(report);
-          }
-        };
+        TaskReport.ReportMap reportMap = null;
 
         try {
           if (transitionToRunning()) {
             try {
-              controller.run(reportListener);
+              controller.run(listener);
             }
             finally {
               synchronized (this) {
@@ -205,11 +193,22 @@ public class ControllerHolder
               }
             }
 
-            updateStateOnQueryComplete(reportListener.getReport());
+            reportMap = controller.finalReport();
+            if (reportMap != null) {
+              final TaskReport taskReport = reportMap.get(MSQTaskReport.REPORT_KEY);
+              if (taskReport instanceof MSQTaskReport) {
+                final MSQTaskReportPayload report = ((MSQTaskReport) taskReport).getPayload();
+                if (report != null) {
+                  updateStateOnQueryComplete(report);
+                }
+              }
+            }
           } else {
             // Canceled before running.
+            final MSQTaskReportPayload canceledReport = makeCanceledReport(cancelReason);
+            reportMap = TaskReport.buildTaskReports(new MSQTaskReport(controller.queryId(), canceledReport));
             synchronized (this) {
-              reportListener.onQueryComplete(makeCanceledReport(cancelReason));
+              listener.onQueryComplete(canceledReport);
             }
           }
         }
@@ -223,17 +222,11 @@ public class ControllerHolder
           );
         }
         finally {
-          // Build report and then call "deregister".
-          final MSQTaskReport taskReport;
-
-          if (reportListener.hasReport()) {
-            taskReport = new MSQTaskReport(controller.queryId(), reportListener.getReport());
-          } else {
-            taskReport = null;
+          if (reportMap == null) {
+            // ControllerImpl publishes its final report before invoking the completion listener, including when
+            // controller.run() exits with an exception.
+            reportMap = controller.finalReport();
           }
-
-          final TaskReport.ReportMap reportMap = new TaskReport.ReportMap();
-          reportMap.put(MSQTaskReport.REPORT_KEY, taskReport);
 
           if (controllerRegistry != null) {
             controllerRegistry.deregister(this, reportMap);
