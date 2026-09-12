@@ -42,6 +42,19 @@ public class BrokerSegmentWatcherConfig
   @JsonProperty
   private boolean awaitInitializationOnStart = true;
 
+  /**
+   * Delay in milliseconds before removing a segment from the broker timeline after the last server
+   * drops it. This helps prevent the segment load/drop race condition described in
+   * <a href="https://github.com/apache/druid/issues/18738">#18738</a> where a segment moved from
+   * one historical to another can temporarily disappear from the broker timeline, causing silent
+   * partial query results.
+   * <p>
+   * Set to 0 to disable the delay (immediate removal, matching the pre-fix behavior).
+   * Default is 30000 (30 seconds).
+   */
+  @JsonProperty
+  private long segmentDropDelayMillis = 30_000;
+
   public Set<String> getWatchedTiers()
   {
     return watchedTiers;
@@ -65,5 +78,10 @@ public class BrokerSegmentWatcherConfig
   public boolean isAwaitInitializationOnStart()
   {
     return awaitInitializationOnStart;
+  }
+
+  public long getSegmentDropDelayMillis()
+  {
+    return segmentDropDelayMillis;
   }
 }
