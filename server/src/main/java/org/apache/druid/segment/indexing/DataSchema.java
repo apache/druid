@@ -51,6 +51,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.transform.BaseTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.joda.time.Interval;
 
@@ -89,7 +90,7 @@ public class DataSchema
   private final GranularitySpec granularitySpec;
   @Nullable
   private final SegmentGranularitySpec segmentGranularitySpec;
-  private final TransformSpec transformSpec;
+  private final BaseTransformSpec transformSpec;
   private final TimestampSpec timestampSpec;
   @Nullable
   private final DimensionsSpec dimensionsSpec;
@@ -108,7 +109,7 @@ public class DataSchema
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") @Nullable GranularitySpec granularitySpec,
       @JsonProperty("segmentGranularitySpec") @Nullable SegmentGranularitySpec segmentGranularitySpec,
-      @JsonProperty("transformSpec") TransformSpec transformSpec,
+      @JsonProperty("transformSpec") BaseTransformSpec transformSpec,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @JsonProperty("baseTable") @Nullable BaseTableProjectionSpec baseTable,
       @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap
@@ -303,7 +304,7 @@ public class DataSchema
   }
 
   @JsonProperty
-  public TransformSpec getTransformSpec()
+  public BaseTransformSpec getTransformSpec()
   {
     return transformSpec;
   }
@@ -398,7 +399,7 @@ public class DataSchema
     return builder(this).withGranularity(granularitySpec).build();
   }
 
-  public DataSchema withTransformSpec(TransformSpec transformSpec)
+  public DataSchema withTransformSpec(BaseTransformSpec transformSpec)
   {
     return builder(this).withTransform(transformSpec).build();
   }
@@ -709,7 +710,7 @@ public class DataSchema
     private AggregatorFactory[] aggregators;
     private GranularitySpec granularitySpec;
     private SegmentGranularitySpec segmentGranularitySpec;
-    private TransformSpec transformSpec;
+    private BaseTransformSpec transformSpec;
     private TimestampSpec timestampSpec;
     private DimensionsSpec dimensionsSpec;
     private List<AggregateProjectionSpec> projections;
@@ -780,7 +781,7 @@ public class DataSchema
       return this;
     }
 
-    public Builder withTransform(TransformSpec transformSpec)
+    public Builder withTransform(BaseTransformSpec transformSpec)
     {
       this.transformSpec = transformSpec;
       return this;

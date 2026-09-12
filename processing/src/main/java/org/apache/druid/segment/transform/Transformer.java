@@ -35,9 +35,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
+ * Expression-based transformer {@link ExpressionTransform} that accepts {@link TransformSpec}.
  */
-public class Transformer
+public class Transformer implements BaseTransformer
 {
   private final Map<String, RowFunction> transforms = new HashMap<>();
   private final ThreadLocal<Row> rowSupplierForValueMatcher = new ThreadLocal<>();
@@ -64,11 +64,18 @@ public class Transformer
     }
   }
 
+  @Override
+  public boolean hasMultiRowTransform()
+  {
+    return false;
+  }
+
   /**
    * Transforms an input row, or returns null if the row should be filtered out.
    *
    * @param row the input row
    */
+  @Override
   @Nullable
   public InputRow transform(@Nullable final InputRow row)
   {
@@ -79,6 +86,7 @@ public class Transformer
     return transformedRow;
   }
 
+  @Override
   @Nullable
   public InputRow transformWithoutFilter(@Nullable final InputRow row)
   {
@@ -96,6 +104,7 @@ public class Transformer
   /**
    * Returns true if this transformer has a {@link TransformSpec} filter to apply via {@link #rowMatchesFilter}.
    */
+  @Override
   public boolean hasFilter()
   {
     return valueMatcher != null;
@@ -104,6 +113,7 @@ public class Transformer
   /**
    * Applies the {@link TransformSpec} filter to a row that has already had transforms applied.
    */
+  @Override
   public boolean rowMatchesFilter(@Nullable final InputRow transformedRow)
   {
     if (transformedRow == null || valueMatcher == null) {
@@ -114,6 +124,14 @@ public class Transformer
     return valueMatcher.matches(false);
   }
 
+  @Override
+  public List<InputRow> transformToList(@Nullable final InputRow row)
+  {
+    final InputRow result = transform(row);
+    return result == null ? List.of() : List.of(result);
+  }
+
+  @Override
   @Nullable
   public InputRowListPlusRawValues transform(@Nullable final InputRowListPlusRawValues row)
   {

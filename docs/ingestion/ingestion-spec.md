@@ -338,9 +338,21 @@ A `granularitySpec` can have the following components:
 ### `transformSpec`
 
 The `transformSpec` is located in `dataSchema` → `transformSpec` and is responsible for transforming and filtering
-records during ingestion time. It is optional. An example `transformSpec` is:
+records during ingestion time. It is optional. There are two types of transform specs: the default expression-based
+transform spec and the [scan transform spec](#scan-transform-spec).
 
-```
+:::info
+ Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
+ first [`flattenSpec`](data-formats.md#flattenspec) (if any), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
+ and finally [`dimensionsSpec`](#dimensionsspec) and [`metricsSpec`](#metricsspec). Keep this in mind when writing
+ your ingestion spec.
+:::
+
+#### Expression transform spec
+
+The default `transformSpec` uses expression-based transforms and an optional filter:
+
+```json
 "transformSpec": {
   "transforms": [
     { "type": "expression", "name": "countryUpper", "expression": "upper(country)" }
@@ -353,14 +365,7 @@ records during ingestion time. It is optional. An example `transformSpec` is:
 }
 ```
 
-:::info
- Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
- first [`flattenSpec`](data-formats.md#flattenspec) (if any), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
- and finally [`dimensionsSpec`](#dimensionsspec) and [`metricsSpec`](#metricsspec). Keep this in mind when writing
- your ingestion spec.
-:::
-
-#### Transforms
+##### Transforms
 
 The `transforms` list allows you to specify a set of expressions to evaluate on top of input data. Each transform has a
 "name" which can be referred to by your `dimensionsSpec`, `metricsSpec`, etc.
@@ -372,7 +377,7 @@ Transforms do have some limitations. They can only refer to fields present in th
 they cannot refer to other transforms. And they cannot remove fields, only add them. However, they can shadow a field
 with another field containing all nulls, which will act similarly to removing the field.
 
-Druid currently includes one kind of built-in transform, the expression transform. It has the following syntax:
+The expression transform has the following syntax:
 
 ```
 {
@@ -384,18 +389,92 @@ Druid currently includes one kind of built-in transform, the expression transfor
 
 The `expression` is a [Druid query expression](../querying/math-expr.md).
 
-:::info
- Conceptually, after input data records are read, Druid applies ingestion spec components in a particular order:
- first [`flattenSpec`](data-formats.md#flattenspec) (if any), then [`timestampSpec`](#timestampspec), then [`transformSpec`](#transformspec),
- and finally [`dimensionsSpec`](#dimensionsspec) and [`metricsSpec`](#metricsspec). Keep this in mind when writing
- your ingestion spec.
-:::
-
-#### Filter
+##### Filter
 
 The `filter` conditionally filters input rows during ingestion. Only rows that pass the filter will be
 ingested. Any of Druid's standard [query filters](../querying/filters.md) can be used. Note that within a
 `transformSpec`, the `transforms` are applied before the `filter`, so the filter can refer to a transform.
+
+#### Scan transform spec
+
+The scan transform spec (`"type": "scan"`) processes each input row through an embedded [scan query](../querying/scan-query.md). Its primary use case is unnesting array-valued columns into individual rows during streaming ingestion (Kafka, Kinesis), similar to existing UNNEST functionality with Druid SQL and the MSQ engine.
+
+The scan query uses `"__input__"` as the base table name and can include [unnest data sources](../querying/datasource.md#unnest), [virtual columns](../querying/virtual-columns.md) (for expression-based column derivations), and [filters](../querying/filters.md).
+
+**Example: Unnesting a string array**
+
+Given input rows with a `tags` column containing `["sports", "news"]`, this `transformSpec` produces one output row per tag:
+
+```json
+"transformSpec": {
+  "type": "scan",
+  "query": {
+    "queryType": "scan",
+    "dataSource": {
+      "type": "unnest",
+      "base": { "type": "table", "name": "__input__" },
+      "virtualColumn": {
+        "type": "expression",
+        "name": "tag",
+        "expression": "\"tags\"",
+        "outputType": "STRING"
+      }
+    },
+    "intervals": { "type": "intervals", "intervals": ["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"] },
+    "resultFormat": "list"
+  }
+}
+```
+
+**Example: Unnesting with virtual columns and a filter**
+
+This example unnests both `tags` and `services` arrays (via nested unnest data sources), computes derived columns (`upper_user`, `user_tag`) via virtual columns, and filters with `unnestFilter`:
+
+```json
+"transformSpec": {
+  "type": "scan",
+  "query": {
+    "queryType": "scan",
+    "dataSource": {
+      "type": "unnest",
+      "base": {
+        "type": "unnest",
+        "base": { "type": "table", "name": "__input__" },
+        "virtualColumn": {
+          "type": "expression",
+          "name": "tag",
+          "expression": "\"tags\"",
+          "outputType": "STRING"
+        }
+      },
+      "virtualColumn": {
+        "type": "expression",
+        "name": "service",
+        "expression": "\"services\"",
+        "outputType": "COMPLEX<json>"
+      },
+      "unnestFilter": {
+        "type": "selector",
+        "dimension": "service",
+        "value": "web"
+      }
+    },
+    "virtualColumns": [
+      { "type": "expression", "name": "upper_user", "expression": "upper(\"user\")", "outputType": "STRING" },
+      { "type": "expression", "name": "user_tag", "expression": "concat(\"user\", '_', \"tag\")", "outputType": "STRING" }
+    ],
+    "intervals": { "type": "intervals", "intervals": ["-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"] },
+    "resultFormat": "list"
+  }
+}
+```
+
+|Property|Description|Required|
+|--------|-----------|--------|
+|`type`|Must be `"scan"`.|Yes|
+|`query`|A [scan query](../querying/scan-query.md) that defines how to process each input row. Use an [unnest data source](../querying/datasource.md#unnest) with `"__input__"` as the base table to unnest arrays. Nest multiple unnest data sources for cross-join unnesting. Add `virtualColumns` on the scan query for expression-based column derivations. Set `intervals` to eternity and `resultFormat` to `"list"`.|Yes|
+
+If an unnest column is missing or the array is empty, the input row produces no output rows, matching native `CROSS JOIN UNNEST` semantics.
 
 ### Projections
 
