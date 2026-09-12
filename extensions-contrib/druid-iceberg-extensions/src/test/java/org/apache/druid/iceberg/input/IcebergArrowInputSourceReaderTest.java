@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
@@ -232,6 +233,75 @@ public class IcebergArrowInputSourceReaderTest
     Assertions.assertEquals(1, rows.size());
     Assertions.assertEquals(1_000L, rows.get(0).getTimestampFromEpoch());
     Assertions.assertEquals("alice", rows.get(0).getDimension("name").get(0));
+  }
+
+  @Test
+  public void testDynamicDimensionsWithExplicitDimensions() throws IOException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "alice", 1.0));
+    final InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec("ts", "millis", null),
+        DimensionsSpec.builder()
+                      .setDimensions(ImmutableList.of(new StringDimensionSchema("name")))
+                      .setIncludeAllDimensions(true)
+                      .build(),
+        ColumnsFilter.all()
+    );
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        inputRowSchema,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    final List<InputRow> rows = readAll(reader);
+    Assertions.assertEquals(1, rows.size());
+    Assertions.assertEquals(
+        MapInputRowParser.findDimensions(
+            inputRowSchema.getTimestampSpec(),
+            inputRowSchema.getDimensionsSpec(),
+            ImmutableSet.of("ts", "name", "value")
+        ),
+        rows.get(0).getDimensions()
+    );
+  }
+
+  @Test
+  public void testDynamicDimensionsHonorExclusions() throws IOException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "alice", 1.0));
+    final InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec("ts", "millis", null),
+        DimensionsSpec.builder()
+                      .setDimensionExclusions(ImmutableList.of("value"))
+                      .build(),
+        ColumnsFilter.all()
+    );
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        inputRowSchema,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    final List<InputRow> rows = readAll(reader);
+    Assertions.assertEquals(1, rows.size());
+    Assertions.assertEquals(
+        MapInputRowParser.findDimensions(
+            inputRowSchema.getTimestampSpec(),
+            inputRowSchema.getDimensionsSpec(),
+            ImmutableSet.of("ts", "name", "value")
+        ),
+        rows.get(0).getDimensions()
+    );
   }
 
   @Test

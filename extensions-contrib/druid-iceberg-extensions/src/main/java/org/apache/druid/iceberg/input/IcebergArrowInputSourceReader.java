@@ -28,6 +28,7 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -47,7 +48,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -280,18 +280,11 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
 
   private List<String> resolveDimensions(final Schema readSchema)
   {
-    final List<String> configured = schema.getDimensionsSpec().getDimensionNames();
-    if (!configured.isEmpty()) {
-      return configured;
-    }
-    final String tsCol = schema.getTimestampSpec().getTimestampColumn();
-    final List<String> dims = new ArrayList<>(readSchema.columns().size());
-    for (final Types.NestedField field : readSchema.columns()) {
-      if (!field.name().equals(tsCol)) {
-        dims.add(field.name());
-      }
-    }
-    return dims;
+    return MapInputRowParser.findDimensions(
+        schema.getTimestampSpec(),
+        schema.getDimensionsSpec(),
+        readSchema.columns().stream().map(Types.NestedField::name).collect(Collectors.toSet())
+    );
   }
 
   /**
