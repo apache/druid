@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -38,22 +39,26 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class PrioritizedExecutorService extends AbstractExecutorService implements ListeningExecutorService
+public class PrioritizedExecutorService extends AbstractExecutorService
+    implements ListeningExecutorService, ProcessingPoolStats
 {
+  private static final Logger log = new Logger(PrioritizedExecutorService.class);
+
   public static PrioritizedExecutorService create(Lifecycle lifecycle, DruidProcessingConfig config)
   {
+    log.info(
+        "Creating processing pool with [%d] threads in a single queue (druid.processing.numThreadPools=1).",
+        config.getNumThreads()
+    );
     final PrioritizedExecutorService service = new PrioritizedExecutorService(
-        new ThreadPoolExecutor(
+        makeThreadPoolExecutor(
             config.getNumThreads(),
-            config.getNumThreads(),
-            0L,
-            TimeUnit.MILLISECONDS,
-            new PriorityBlockingQueue<>(),
             new ThreadFactoryBuilder().setDaemon(true).setNameFormat(config.getFormatString()).build()
         ),
         config
@@ -76,6 +81,23 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     );
 
     return service;
+  }
+
+  /**
+   * Builds a fixed-size thread pool backed by a {@link PriorityBlockingQueue}. Shared with
+   * {@link ShardedPrioritizedExecutorService} so both the single-pool and sharded paths construct their pools
+   * identically.
+   */
+  static ThreadPoolExecutor makeThreadPoolExecutor(int numThreads, ThreadFactory threadFactory)
+  {
+    return new ThreadPoolExecutor(
+        numThreads,
+        numThreads,
+        0L,
+        TimeUnit.MILLISECONDS,
+        new PriorityBlockingQueue<>(),
+        threadFactory
+    );
   }
 
   private final AtomicLong queuePosition = new AtomicLong(Long.MAX_VALUE);
@@ -199,6 +221,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     }
   }
 
+  @Override
   public int getQueueSize()
   {
     return delegateQueue.size();
@@ -207,6 +230,7 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   /**
    * Returns the approximate number of tasks being run by the thread pool currently.
    */
+  @Override
   public int getActiveTasks()
   {
     return threadPoolExecutor.getActiveCount();
