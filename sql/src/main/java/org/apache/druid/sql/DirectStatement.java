@@ -27,15 +27,18 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlLifecycleManager.Cancelable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
 import javax.annotation.Nullable;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Lifecycle for direct SQL statement execution, which means that the query
@@ -196,20 +199,52 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
     long planningStartNanos = System.nanoTime();
     try (DruidPlanner planner = createPlanner()) {
-      validate(planner);
-      authorize(planner, authorizer());
+      // Bound the wall-clock time spent planning this query. A non-positive timeout disables this. The budget is
+      // measured from planningStartNanos (above), so any time already spent constructing the planner counts against
+      // it and a query cannot get a fresh full budget after an expensive planner/schema setup.
+      final long maxPlanningTimeMs = planner.getPlannerContext().getPlannerConfig().getMaxPlanningTimeMs();
+      final long remainingBudgetMs = remainingPlanningBudgetMs(maxPlanningTimeMs, planningStartNanos);
+      try (SqlPlanningTimeout timeout = SqlPlanningTimeout.arm(
+          remainingBudgetMs,
+          planner.getPlannerContext().getCancelFlag(),
+          Thread.currentThread()
+      )) {
+        // Share this query's cancel flag with any nested planners created during view expansion, so that the same
+        // planning timeout governs the whole planning session (see PlannerContext#withInheritedCancelFlag).
+        return PlannerContext.withInheritedCancelFlag(
+            planner.getPlannerContext().getCancelFlag(),
+            () -> {
+              try {
+                validate(planner);
+                authorize(planner, authorizer());
 
-      // Adding the statement to the lifecycle manager allows cancellation.
-      // Tests cancel during this call; real clients might do so if the plan
-      // or execution prep stages take too long for some unexpected reason.
-      sqlToolbox.sqlLifecycleManager.add(sqlQueryId(), this);
-      transition(State.PREPARED);
-      resultSet = createResultSet(createPlan(planner));
-      prepareResult = planner.prepareResult();
-      // Double check needed by SqlResourceTest
-      transition(State.PREPARED);
-      reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
-      return resultSet;
+                // Adding the statement to the lifecycle manager allows cancellation.
+                // Tests cancel during this call; real clients might do so if the plan
+                // or execution prep stages take too long for some unexpected reason.
+                sqlToolbox.sqlLifecycleManager.add(sqlQueryId(), this);
+                transition(State.PREPARED);
+                resultSet = createResultSet(createPlan(planner));
+                prepareResult = planner.prepareResult();
+                // Double check needed by SqlResourceTest
+                transition(State.PREPARED);
+                reporter.planningTimeNanos(System.nanoTime() - planningStartNanos);
+              }
+              catch (RuntimeException | AssertionError e) {
+                // On timeout, the failure is a side effect of aborting the planner; surface it as a timeout.
+                if (timeout.isTimedOut()) {
+                  throw planningTimedOut(maxPlanningTimeMs);
+                }
+                throw e;
+              }
+              // Planning may have finished after the watchdog fired, e.g. in a non-cancellable section, or one that
+              // caught the interrupt and returned normally. Reject the late plan rather than executing it.
+              if (timeout.isTimedOut()) {
+                throw planningTimedOut(maxPlanningTimeMs);
+              }
+              return resultSet;
+            }
+        );
+      }
     }
     catch (RelOptPlanner.CannotPlanException e) {
       // Not sure if this is even thrown here.
@@ -227,6 +262,32 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       reporter.failed(e);
       throw InvalidSqlInput.exception(e, "Calcite assertion violated: [%s]", e.getMessage());
     }
+  }
+
+  /**
+   * Planning budget still available given a total {@code maxPlanningTimeMs} and the time already elapsed since
+   * {@code planningStartNanos}. Returns {@code maxPlanningTimeMs} unchanged when it is non-positive (timeout disabled),
+   * otherwise at least 1ms so an already-overrun query still arms (and fires immediately).
+   */
+  private static long remainingPlanningBudgetMs(long maxPlanningTimeMs, long planningStartNanos)
+  {
+    if (maxPlanningTimeMs <= 0) {
+      return maxPlanningTimeMs;
+    }
+    final long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - planningStartNanos);
+    return Math.max(1, maxPlanningTimeMs - elapsedMs);
+  }
+
+  private QueryTimeoutException planningTimedOut(long maxPlanningTimeMs)
+  {
+    return new QueryTimeoutException(
+        StringUtils.format(
+            "Query planning for [%s] exceeded the configured maximum planning time of [%,d] ms. This may "
+            + "indicate an overly complex query, for example one with a very large IN filter.",
+            sqlQueryId(),
+            maxPlanningTimeMs
+        )
+    );
   }
 
   protected DruidPlanner createPlanner()

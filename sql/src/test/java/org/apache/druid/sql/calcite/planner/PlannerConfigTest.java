@@ -19,10 +19,13 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.Map;
 
 public class PlannerConfigTest
 {
@@ -33,6 +36,55 @@ public class PlannerConfigTest
     Assertions.assertFalse(config.isUseLexicographicTopN());
     Assertions.assertTrue(config.isUseApproximateTopN());
     Assertions.assertTrue(config.isUseApproximateCountDistinct());
+  }
+
+  @Test
+  public void testMaxPlanningTimeMsDisabledByDefault()
+  {
+    PlannerConfig config = new PlannerConfig();
+    Assertions.assertEquals(PlannerConfig.PLANNING_TIME_NOT_LIMITED, config.getMaxPlanningTimeMs());
+    Assertions.assertFalse(config.isPlanningTimeLimited());
+  }
+
+  @Test
+  public void testMaxPlanningTimeMsBuilder()
+  {
+    PlannerConfig config = PlannerConfig.builder()
+                                        .maxPlanningTimeMs(5000)
+                                        .build();
+    Assertions.assertEquals(5000, config.getMaxPlanningTimeMs());
+    Assertions.assertTrue(config.isPlanningTimeLimited());
+  }
+
+  @Test
+  public void testMaxPlanningTimeMsQueryContextOverride()
+  {
+    PlannerConfig base = PlannerConfig.builder().maxPlanningTimeMs(10_000).build();
+    PlannerConfig overridden = base.withOverrides(
+        ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 2500)
+    );
+    Assertions.assertEquals(2500, overridden.getMaxPlanningTimeMs());
+    // The base config is untouched.
+    Assertions.assertEquals(10_000, base.getMaxPlanningTimeMs());
+  }
+
+  @Test
+  public void testMaxPlanningTimeMsInheritedWhenNotOverridden()
+  {
+    PlannerConfig base = PlannerConfig.builder().maxPlanningTimeMs(10_000).build();
+    PlannerConfig overridden = base.withOverrides(ImmutableMap.of("someOtherKey", "someValue"));
+    Assertions.assertEquals(10_000, overridden.getMaxPlanningTimeMs());
+  }
+
+  @Test
+  public void testMaxPlanningTimeMsRoundTripsThroughQueryContext()
+  {
+    // A non-default maxPlanningTimeMs must be emitted by getNonDefaultAsQueryContext() so the defensive
+    // config <-> context round-trip check inside that method passes.
+    PlannerConfig config = PlannerConfig.builder().maxPlanningTimeMs(5000).build();
+    Map<String, Object> asContext = config.getNonDefaultAsQueryContext();
+    Assertions.assertEquals(5000L, ((Number) asContext.get(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS)).longValue());
+    Assertions.assertEquals(config, PlannerConfig.builder().withOverrides(asContext).build());
   }
 
   @Test

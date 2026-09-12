@@ -38,6 +38,7 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
@@ -102,6 +103,7 @@ public class SqlStatementTest
 
   private PolicyEnforcer policyEnforcer;
   private SqlStatementFactory sqlStatementFactory;
+  private SqlToolbox sqlToolbox;
 
   @BeforeAll
   public static void setUpClass()
@@ -568,15 +570,63 @@ public class SqlStatementTest
         new DruidHookDispatcher()
     );
 
-    return new SqlStatementFactory(
-        new SqlToolbox(
-            CalciteTests.createMockSqlEngine(walker, conglomerate),
-            plannerFactory,
-            new NoopServiceEmitter(),
-            testRequestLogger,
-            QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-            new SqlLifecycleManager()
-        )
+    this.sqlToolbox = new SqlToolbox(
+        CalciteTests.createMockSqlEngine(walker, conglomerate),
+        plannerFactory,
+        new NoopServiceEmitter(),
+        testRequestLogger,
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        new SqlLifecycleManager()
     );
+    return new SqlStatementFactory(sqlToolbox);
+  }
+
+  /**
+   * A query whose planning exceeds the configured {@code maxPlanningTimeMs} should fail with a
+   * {@link QueryTimeoutException} rather than occupying the planning thread indefinitely. Planning is simulated as a
+   * CPU-bound loop that honours the Calcite cancel flag (as Calcite's planner does), so we verify the watchdog trips
+   * that flag and the failure is surfaced as a timeout.
+   */
+  @Test
+  @org.junit.jupiter.api.Timeout(30)
+  public void testPlanningTimeout()
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 100))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    // A DirectStatement whose planning step blocks until the query is cancelled, mimicking a pathological query.
+    DirectStatement stmt = new DirectStatement(sqlToolbox, sqlReq, null)
+    {
+      @Override
+      protected org.apache.druid.sql.calcite.planner.PlannerResult createPlan(
+          org.apache.druid.sql.calcite.planner.DruidPlanner planner
+      )
+      {
+        final org.apache.calcite.util.CancelFlag cancelFlag = planner.getPlannerContext().getCancelFlag();
+        // Busy-wait like a CPU-bound Calcite planning phase that periodically checks for cancellation.
+        while (!cancelFlag.isCancelRequested() && !Thread.currentThread().isInterrupted()) {
+          // spin until the planning-timeout watchdog aborts us
+        }
+        // Calcite throws when it observes a tripped cancel flag; emulate that here.
+        throw new RuntimeException("Preparation aborted");
+      }
+    };
+
+    try {
+      stmt.plan();
+      fail("Expected planning to time out");
+    }
+    catch (QueryTimeoutException e) {
+      Assertions.assertTrue(
+          e.getMessage().contains("exceeded the configured maximum planning time"),
+          "Unexpected message: " + e.getMessage()
+      );
+    }
+    finally {
+      stmt.close();
+    }
   }
 }
