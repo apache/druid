@@ -20,14 +20,18 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
+import org.apache.druid.query.lookup.RetainedLookupExtractor;
+import org.apache.druid.query.lookup.RetainingLookupExtractorFactory;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -35,6 +39,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class LookupJoinableFactoryTest
 {
@@ -132,6 +137,59 @@ public class LookupJoinableFactoryTest
   {
     Assertions.assertTrue(factory.isDirectlyJoinable(lookupDataSource));
     Assertions.assertFalse(factory.isDirectlyJoinable(new TableDataSource("foo")));
+  }
+
+  @Test
+  public void testBuildWithRetainedExtractorReleasesOnJoinableClose() throws IOException
+  {
+    final AtomicInteger releaseCount = new AtomicInteger(0);
+    final MapLookupExtractor extractor = new MapLookupExtractor(ImmutableMap.of("MX", "Mexico"), false);
+    final LookupJoinableFactory retainingFactory = new LookupJoinableFactory(
+        makeProvider(
+            new RetainingLookupExtractorFactory(
+                () -> extractor,
+                () -> Optional.of(RetainedLookupExtractor.create(extractor, releaseCount::incrementAndGet))
+            )
+        )
+    );
+
+    final Joinable joinable = retainingFactory.build(lookupDataSource, makeCondition("x == \"j.k\"")).get();
+    Assertions.assertInstanceOf(LookupJoinable.class, joinable);
+
+    // retained snapshot must stay pinned until the joinable is closed at the end of the query
+    Assertions.assertEquals("Mexico", joinable.getCorrelatedColumnValues("k", "MX", "v", 1, true).get().iterator().next());
+    Assertions.assertEquals(0, releaseCount.get());
+
+    ((LookupJoinable) joinable).close();
+    Assertions.assertEquals(1, releaseCount.get());
+  }
+
+  private LookupExtractorFactoryContainerProvider makeProvider(final LookupExtractorFactory lookupExtractorFactory)
+  {
+    return new LookupExtractorFactoryContainerProvider()
+    {
+      @Override
+      public Set<String> getAllLookupNames()
+      {
+        return ImmutableSet.of(lookupDataSource.getLookupName());
+      }
+
+      @Override
+      public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+      {
+        if (lookupDataSource.getLookupName().equals(lookupName)) {
+          return Optional.of(new LookupExtractorFactoryContainer("v0", lookupExtractorFactory));
+        } else {
+          return Optional.empty();
+        }
+      }
+
+      @Override
+      public String getCanonicalLookupName(String lookupName)
+      {
+        return lookupName;
+      }
+    };
   }
 
   private static JoinConditionAnalysis makeCondition(final String condition)

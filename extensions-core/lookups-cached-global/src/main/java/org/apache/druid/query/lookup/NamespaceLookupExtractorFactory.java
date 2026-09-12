@@ -32,7 +32,9 @@ import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.Lock;
@@ -44,6 +46,7 @@ import java.util.function.Supplier;
 public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(NamespaceLookupExtractorFactory.class);
+  private static final int MAX_RETAIN_ATTEMPTS = 3;
 
   private static final byte[] CLASS_CACHE_KEY;
 
@@ -224,22 +227,84 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         throw new ISE("%s: %s, extractorID = %s", entry, noCacheReason, extractorID);
       }
       CacheScheduler.VersionedCache versionedCache = (CacheScheduler.VersionedCache) cacheState;
-      final byte[] v = StringUtils.toUtf8(versionedCache.getVersion());
-      final byte[] id = StringUtils.toUtf8(extractorID);
-      final byte injectiveByte = isInjective() ? (byte) 1 : (byte) 0;
-      final Supplier<byte[]> cacheKey = () ->
-          ByteBuffer
-              .allocate(CLASS_CACHE_KEY.length + id.length + 1 + v.length + 1 + 1)
-              .put(CLASS_CACHE_KEY)
-              .put(id).put((byte) 0xFF)
-              .put(v).put((byte) 0xFF)
-              .put(injectiveByte)
-              .array();
-      return versionedCache.asLookupExtractor(isInjective(), cacheKey);
+      return versionedCache.asLookupExtractor(isInjective(), makeCacheKeySupplier(versionedCache));
     }
     finally {
       readLock.unlock();
     }
+  }
+
+  @Override
+  public Optional<RetainedLookupExtractor> acquireRetainedLookupExtractor()
+  {
+    for (int attempt = 1; ; attempt++) {
+      final CacheScheduler.VersionedCache versionedCache = getVersionedCache();
+      try {
+        return Optional.of(makeRetainedLookupExtractor(versionedCache, versionedCache.acquireReference()));
+      }
+      catch (ISE e) {
+        if (attempt == MAX_RETAIN_ATTEMPTS) {
+          throw new ISE(
+              e,
+              "Failed to retain a live cache for [%s] after [%s] attempts",
+              extractorID,
+              MAX_RETAIN_ATTEMPTS
+          );
+        }
+      }
+    }
+  }
+
+  private CacheScheduler.VersionedCache getVersionedCache()
+  {
+    final Lock readLock = startStopSync.readLock();
+    try {
+      readLock.lockInterruptibly();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
+    try {
+      if (entry == null) {
+        throw new ISE("Factory '%s' not started", extractorID);
+      }
+      final CacheScheduler.CacheState cacheState = entry.getCacheState();
+      if (cacheState instanceof CacheScheduler.NoCache) {
+        final String noCacheReason = ((CacheScheduler.NoCache) cacheState).name();
+        throw new ISE("%s: %s, extractorID = %s", entry, noCacheReason, extractorID);
+      }
+      return (CacheScheduler.VersionedCache) cacheState;
+    }
+    finally {
+      readLock.unlock();
+    }
+  }
+
+  private Supplier<byte[]> makeCacheKeySupplier(CacheScheduler.VersionedCache versionedCache)
+  {
+    final byte[] v = StringUtils.toUtf8(versionedCache.getVersion());
+    final byte[] id = StringUtils.toUtf8(extractorID);
+    final byte injectiveByte = isInjective() ? (byte) 1 : (byte) 0;
+    return () ->
+        ByteBuffer
+            .allocate(CLASS_CACHE_KEY.length + id.length + 1 + v.length + 1 + 1)
+            .put(CLASS_CACHE_KEY)
+            .put(id).put((byte) 0xFF)
+            .put(v).put((byte) 0xFF)
+            .put(injectiveByte)
+            .array();
+  }
+
+  private RetainedLookupExtractor makeRetainedLookupExtractor(
+      CacheScheduler.VersionedCache versionedCache,
+      Closeable retainedReference
+  )
+  {
+    return RetainedLookupExtractor.create(
+        versionedCache.asLookupExtractor(isInjective(), makeCacheKeySupplier(versionedCache)),
+        retainedReference
+    );
   }
 
   @VisibleForTesting

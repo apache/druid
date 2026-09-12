@@ -59,6 +59,22 @@ public interface DimensionSpec extends Cacheable
   ExtractionFn getExtractionFn();
 
   /**
+   * Returns an {@link ExtractionFn} to be used only for inspecting extraction metadata, such as
+   * {@link ExtractionFn#preservesOrdering()} and {@link ExtractionFn#getExtractionType()}, during capability and
+   * cardinality analysis. The returned function must not be applied to values.
+   *
+   * Implementations backed by retained resources (for example cached lookups) must not acquire or hold those
+   * resources here. Capability checks call this and discard the result without a close hook, so a retained reference
+   * would be released only by the cleaner/GC and could block resource reclamation. The default returns
+   * {@link #getExtractionFn()} since most implementations hold no retained backing resource.
+   */
+  @Nullable
+  default ExtractionFn getExtractionFnForMetadata()
+  {
+    return getExtractionFn();
+  }
+
+  /**
    * Decorate a {@link DimensionSelector}, allowing custom transformation of underlying behavior (e.g. performing
    * extraction functions in the case of {@link ExtractionDimensionSpec}, regex filtering in the case of
    * {@link RegexFilteredDimensionSpec}, and so on).
