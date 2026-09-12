@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -278,7 +279,10 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
     }
     updatedLeftQuery = Preconditions.checkNotNull(newLeftDruidRel.toDruidQuery(false), "leftQuery");
 
-    if (newLeftDruidRel.getPartialDruidQuery().stage().compareTo(PartialDruidQuery.Stage.SELECT_PROJECT) <= 0) {
+    if (updatedLeftQuery.getQuery() instanceof GroupByQuery) {
+      // Left side has grouping: use the full query as a subquery.
+      leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
+    } else if (newLeftDruidRel.getPartialDruidQuery().stage().compareTo(PartialDruidQuery.Stage.SELECT_PROJECT) <= 0) {
       final Filter whereFilter = newLeftDruidRel.getPartialDruidQuery().getWhereFilter();
       final RowSignature leftSignature = DruidRels.dataSourceSignature(newLeftDruidRel);
       if (whereFilter == null) {
