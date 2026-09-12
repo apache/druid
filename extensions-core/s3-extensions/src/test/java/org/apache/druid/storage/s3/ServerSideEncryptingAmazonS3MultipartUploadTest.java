@@ -67,7 +67,9 @@ public class ServerSideEncryptingAmazonS3MultipartUploadTest
 
   @Container
   private static final MinIOContainer MINIO =
-      new MinIOContainer(DockerImageName.parse("minio/minio:latest")).withEnv("MINIO_DOMAIN", "localhost");
+      new MinIOContainer(
+          DockerImageName.parse("quay.io/minio/minio:latest").asCompatibleSubstituteFor("minio/minio")
+      ).withEnv("MINIO_DOMAIN", "localhost");
 
   @TempDir
   public File temporaryFolder;
