@@ -33,7 +33,9 @@ import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.SqlIntervalQualifier;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -371,7 +373,14 @@ public class Expressions
       retVal = new DruidLiteral(ExpressionType.DOUBLE, number == null ? null : number.doubleValue());
     } else if (SqlTypeFamily.INTERVAL_DAY_TIME == sqlTypeName.getFamily()) {
       // Calcite represents DAY-TIME intervals in milliseconds.
-      final long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
+      long milliseconds = ((Number) RexLiteral.value(rexNode)).longValue();
+      // Calcite has a known quirk where WEEK interval literals are stored as 1 hour in the
+      // INTERVAL_DAY_TIME family (see https://github.com/apache/druid/issues/18665).
+      // Detect the WEEK qualifier and convert the value to 7 days.
+      final SqlIntervalQualifier intervalQualifier = rexNode.getType().getIntervalQualifier();
+      if (intervalQualifier != null && intervalQualifier.getStartUnit() == TimeUnit.WEEK) {
+        milliseconds = milliseconds * 7 * 24;
+      }
       retVal = new DruidLiteral(ExpressionType.LONG, milliseconds);
     } else if (SqlTypeFamily.INTERVAL_YEAR_MONTH == sqlTypeName.getFamily()) {
       // Calcite represents YEAR-MONTH intervals in months.
