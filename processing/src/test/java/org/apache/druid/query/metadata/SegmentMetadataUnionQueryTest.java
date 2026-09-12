@@ -99,33 +99,29 @@ public class SegmentMetadataUnionQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataUnionQuery()
   {
-    SegmentAnalysis expected = new SegmentAnalysis(
-        QueryRunnerTestHelper.SEGMENT_ID.toString(),
-        Collections.singletonList(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    43524,
-                    1,
-                    "preferred",
-                    "preferred",
-                    null
+    SegmentAnalysis expected = new SegmentAnalysis.Builder(QueryRunnerTestHelper.SEGMENT_ID)
+        .interval(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z"))
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        43524,
+                        1,
+                        "preferred",
+                        "preferred",
+                        null
+                    )
                 )
             )
-        ),
-        805380,
-        4836,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(805380)
+        .numRows(4836)
+        .build();
     SegmentMetadataQuery query = new Druids.SegmentMetadataQueryBuilder()
         .dataSource(QueryRunnerTestHelper.UNION_DATA_SOURCE)
         .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)

@@ -40,6 +40,7 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
 import org.apache.druid.segment.file.SegmentFileMapper;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
@@ -296,6 +297,18 @@ public class PartialQueryableIndex implements QueryableIndex
   public List<OrderBy> getOrdering()
   {
     return ordering;
+  }
+
+  /**
+   * Doesn't include containers from any external mapper {@link #fileMapper} may have attached (see
+   * {@link PartialSegmentFileMapperV10}) — those aren't reflected in {@link #metadata}, so a bundle whose data
+   * spilled into an external file will be undercounted here.
+   */
+  @Nullable
+  @Override
+  public List<SegmentFileContainerMetadata> getFileContainers()
+  {
+    return metadata.getContainers();
   }
 
   @Nullable

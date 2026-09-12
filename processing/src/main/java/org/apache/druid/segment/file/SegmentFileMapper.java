@@ -61,6 +61,13 @@ public interface SegmentFileMapper extends Closeable
     return mapFile(name);
   }
 
+  /**
+   * Returns the {@link SegmentFileMetadata} describing this mapper's containers and internal files, or {@code null}
+   * if unsupported (e.g. legacy pre-V10 mappers that don't track this structure).
+   */
+  @Nullable
+  SegmentFileMetadata getSegmentFileMetadata();
+
   @Override
   void close();
 }

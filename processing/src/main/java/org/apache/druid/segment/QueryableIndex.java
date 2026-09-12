@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
@@ -144,6 +145,19 @@ public interface QueryableIndex extends Closeable, ColumnInspector
    */
   @Nullable
   default QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec, boolean withClusteringColumns)
+  {
+    return null;
+  }
+
+  /**
+   * Returns the on-disk containers backing this index (V10 file format bundles), or {@code null} if unknown or
+   * unsupported (e.g. legacy pre-V10 segments or in-memory indexes). Used by the {@code CONTAINERSIZE} segment
+   * metadata analysis type to report each container's owning bundle name and byte size. Implementations only report
+   * containers from the entry-point segment file; a bundle whose data spilled into an attached external file is
+   * undercounted, since the external file's own containers aren't included.
+   */
+  @Nullable
+  default List<SegmentFileContainerMetadata> getFileContainers()
   {
     return null;
   }

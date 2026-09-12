@@ -157,6 +157,7 @@ public class SegmentFileMapperV10 implements SegmentFileMapper
     this.externalMappers = externalMappers;
   }
 
+  @Override
   public SegmentFileMetadata getSegmentFileMetadata()
   {
     return segmentFileMetadata;
