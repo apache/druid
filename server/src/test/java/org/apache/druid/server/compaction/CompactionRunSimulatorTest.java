@@ -108,7 +108,9 @@ public class CompactionRunSimulatorTest
 
     final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
     Assertions.assertEquals(
-        Arrays.asList("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
+        Arrays.asList(
+            "dataSource", "interval", "numSegments", "bytes", "skipReason", "skipCategory", "reasonToSkip"
+        ),
         skippedTable.getColumnNames()
     );
     Assertions.assertEquals(
@@ -118,7 +120,8 @@ public class CompactionRunSimulatorTest
                 Intervals.of("2013-01-10/P1D"),
                 10,
                 1_000_000_000L,
-                1,
+                CompactionSkipReason.SKIP_OFFSET.name(),
+                CompactionSkipReason.Category.OUT_OF_SCOPE.name(),
                 "Skip offset from latest[P1D]"
             )
         ),
@@ -181,30 +184,44 @@ public class CompactionRunSimulatorTest
 
     final Table skippedTable = compactionStates.get(CompactionStatus.State.SKIPPED);
     Assertions.assertEquals(
-        List.of("dataSource", "interval", "numSegments", "bytes", "reasonToSkip"),
+        List.of("dataSource", "interval", "numSegments", "bytes", "skipReason", "skipCategory", "reasonToSkip"),
         skippedTable.getColumnNames()
     );
     final String rejectedMessage
         = "Rejected by search policy: Datasource/Interval is not in the list of 'eligibleCandidates'";
     Assertions.assertEquals(
         List.of(
-            List.of("wiki", Intervals.of("2013-01-02/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-03/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-07/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-05/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
+            rejectedRow("2013-01-02/P1D", rejectedMessage),
+            rejectedRow("2013-01-03/P1D", rejectedMessage),
+            rejectedRow("2013-01-07/P1D", rejectedMessage),
+            rejectedRow("2013-01-05/P1D", rejectedMessage),
+            rejectedRow("2013-01-06/P1D", rejectedMessage),
+            rejectedRow("2013-01-01/P1D", rejectedMessage),
+            rejectedRow("2013-01-09/P1D", rejectedMessage),
             List.of(
                 "wiki",
                 Intervals.of("2013-01-10/P1D"),
                 10,
                 1_000_000_000L,
-                1,
+                CompactionSkipReason.SKIP_OFFSET.name(),
+                CompactionSkipReason.Category.OUT_OF_SCOPE.name(),
                 "Skip offset from latest[P1D]"
             )
         ),
         skippedTable.getRows()
+    );
+  }
+
+  private static List<Object> rejectedRow(String interval, String message)
+  {
+    return List.of(
+        "wiki",
+        Intervals.of(interval),
+        10,
+        1_000_000_000L,
+        CompactionSkipReason.REJECTED_BY_SEARCH_POLICY.name(),
+        CompactionSkipReason.Category.DEFERRED.name(),
+        message
     );
   }
 

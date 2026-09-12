@@ -84,6 +84,8 @@ import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionSkipReason;
+import org.apache.druid.server.compaction.CompactionSkipStatistics;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
@@ -368,6 +370,41 @@ public class CompactSegmentsTest
   {
     policy = new FixedIntervalOrderPolicy(List.of());
     testRun();
+  }
+
+  @Test
+  public void testMakeStats_forIntervalsRejectedBySearchPolicy()
+  {
+    // A policy with no eligible candidates rejects every interval
+    policy = new FixedIntervalOrderPolicy(List.of());
+
+    final CompactSegments compactSegments
+        = new CompactSegments(statusTracker, new TestOverlordClient(JSON_MAPPER));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+
+    Assertions.assertEquals(0, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+
+    for (int i = 0; i < 3; i++) {
+      final AutoCompactionSnapshot snapshot
+          = compactSegments.getAutoCompactionSnapshot(DATA_SOURCE_PREFIX + i);
+
+      // Rejected intervals must be reported as skipped, not as awaiting compaction
+      Assertions.assertEquals(0, snapshot.getBytesAwaitingCompaction());
+      Assertions.assertEquals(0, snapshot.getSegmentCountAwaitingCompaction());
+      Assertions.assertEquals(0, snapshot.getBytesCompacted());
+      Assertions.assertTrue(snapshot.getBytesSkipped() > 0);
+
+      // ...and attributed to the search policy, which is a DEFERRED reason
+      final CompactionSkipStatistics rejected = snapshot
+          .getSkippedStatsByReason()
+          .stream()
+          .filter(skipStats -> skipStats.getReason() == CompactionSkipReason.REJECTED_BY_SEARCH_POLICY)
+          .findFirst()
+          .orElseThrow();
+      Assertions.assertEquals(CompactionSkipReason.Category.DEFERRED, rejected.getCategory());
+      Assertions.assertTrue(rejected.getSegmentCount() > 0);
+      Assertions.assertTrue(rejected.getIntervalCount() > 0);
+    }
   }
 
   @Test

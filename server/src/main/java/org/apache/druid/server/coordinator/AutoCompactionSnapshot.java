@@ -24,9 +24,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.compaction.CompactionSkipReason;
+import org.apache.druid.server.compaction.CompactionSkipStatistics;
 import org.apache.druid.server.compaction.CompactionStatistics;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class AutoCompactionSnapshot
@@ -62,6 +68,8 @@ public class AutoCompactionSnapshot
   private final long intervalCountCompacted;
   @JsonProperty
   private final long intervalCountSkipped;
+  @JsonProperty
+  private final List<CompactionSkipStatistics> skippedStatsByReason;
 
   public static Builder builder(String dataSource)
   {
@@ -81,7 +89,8 @@ public class AutoCompactionSnapshot
       @JsonProperty("segmentCountSkipped") long segmentCountSkipped,
       @JsonProperty("intervalCountAwaitingCompaction") long intervalCountAwaitingCompaction,
       @JsonProperty("intervalCountCompacted") long intervalCountCompacted,
-      @JsonProperty("intervalCountSkipped") long intervalCountSkipped
+      @JsonProperty("intervalCountSkipped") long intervalCountSkipped,
+      @JsonProperty("skippedStatsByReason") @Nullable List<CompactionSkipStatistics> skippedStatsByReason
   )
   {
     this.dataSource = dataSource;
@@ -96,6 +105,7 @@ public class AutoCompactionSnapshot
     this.intervalCountAwaitingCompaction = intervalCountAwaitingCompaction;
     this.intervalCountCompacted = intervalCountCompacted;
     this.intervalCountSkipped = intervalCountSkipped;
+    this.skippedStatsByReason = skippedStatsByReason == null ? List.of() : List.copyOf(skippedStatsByReason);
   }
 
   @NotNull
@@ -161,6 +171,15 @@ public class AutoCompactionSnapshot
     return intervalCountSkipped;
   }
 
+  /**
+   * Breakdown of the skipped stats by the reason the intervals were skipped.
+   * The totals of this list are the {@code *Skipped} fields of this snapshot.
+   */
+  public List<CompactionSkipStatistics> getSkippedStatsByReason()
+  {
+    return skippedStatsByReason;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -182,7 +201,8 @@ public class AutoCompactionSnapshot
            intervalCountSkipped == that.intervalCountSkipped &&
            dataSource.equals(that.dataSource) &&
            scheduleStatus == that.scheduleStatus &&
-           Objects.equals(message, that.message);
+           Objects.equals(message, that.message) &&
+           skippedStatsByReason.equals(that.skippedStatsByReason);
   }
 
   @Override
@@ -200,7 +220,8 @@ public class AutoCompactionSnapshot
         segmentCountSkipped,
         intervalCountAwaitingCompaction,
         intervalCountCompacted,
-        intervalCountSkipped
+        intervalCountSkipped,
+        skippedStatsByReason
     );
   }
 
@@ -220,6 +241,7 @@ public class AutoCompactionSnapshot
            ", intervalCountAwaitingCompaction=" + intervalCountAwaitingCompaction +
            ", intervalCountCompacted=" + intervalCountCompacted +
            ", intervalCountSkipped=" + intervalCountSkipped +
+           ", skippedStatsByReason=" + skippedStatsByReason +
            '}';
   }
 
@@ -232,6 +254,13 @@ public class AutoCompactionSnapshot
     private final CompactionStatistics compactedStats = new CompactionStatistics();
     private final CompactionStatistics skippedStats = new CompactionStatistics();
     private final CompactionStatistics waitingStats = new CompactionStatistics();
+
+    /**
+     * Breakdown of {@link #skippedStats} by reason. Kept in an {@link EnumMap}
+     * so that the reported order of reasons is stable across runs.
+     */
+    private final Map<CompactionSkipReason, CompactionStatistics> skippedStatsByReason
+        = new EnumMap<>(CompactionSkipReason.class);
 
     private Builder(
         @NotNull String dataSource
@@ -270,13 +299,20 @@ public class AutoCompactionSnapshot
       compactedStats.increment(entry);
     }
 
-    public void incrementSkippedStats(CompactionStatistics entry)
+    public void incrementSkippedStats(CompactionSkipReason reason, CompactionStatistics entry)
     {
       skippedStats.increment(entry);
+      skippedStatsByReason.computeIfAbsent(reason, r -> new CompactionStatistics())
+                          .increment(entry);
     }
 
     public AutoCompactionSnapshot build()
     {
+      final List<CompactionSkipStatistics> skipBreakdown = new ArrayList<>();
+      skippedStatsByReason.forEach(
+          (reason, stats) -> skipBreakdown.add(CompactionSkipStatistics.of(reason, stats))
+      );
+
       return new AutoCompactionSnapshot(
           dataSource,
           scheduleStatus,
@@ -289,7 +325,8 @@ public class AutoCompactionSnapshot
           skippedStats.getNumSegments(),
           waitingStats.getNumIntervals(),
           compactedStats.getNumIntervals(),
-          skippedStats.getNumIntervals()
+          skippedStats.getNumIntervals(),
+          skipBreakdown
       );
     }
   }

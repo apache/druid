@@ -68,10 +68,12 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionSkipReason;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
+import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
 import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -423,6 +425,58 @@ public class OverlordCompactionSchedulerTest
 
     serviceEmitter.verifyValue(Stats.Compaction.SUBMITTED_TASKS.getMetricName(), 1L);
     serviceEmitter.verifyValue(Stats.Compaction.PENDING_BYTES.getMetricName(), 100_000_000L);
+
+    scheduler.stopBeingLeader();
+  }
+
+  @Test
+  public void test_intervalsRejectedBySearchPolicy_areReportedAsSkipped()
+  {
+    createSegments(1, Granularities.DAY, JAN_20);
+
+    // The default 'minUncompactedCount' of this policy filters out the single
+    // uncompacted segment created above
+    compactionConfig.set(
+        new ClusterCompactionConfig(
+            1.0,
+            100,
+            new MostFragmentedIntervalFirstPolicy(null, null, null, null, null, null),
+            true,
+            null,
+            null
+        )
+    );
+
+    scheduler.becomeLeader();
+    scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
+
+    runScheduledJob();
+    Mockito.verify(taskQueue, Mockito.never()).add(ArgumentMatchers.any());
+
+    final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(dataSource);
+    expectedSnapshot.incrementSkippedStats(
+        CompactionSkipReason.REJECTED_BY_SEARCH_POLICY,
+        CompactionStatistics.create(100_000_000, null, 1, 1)
+    );
+
+    final AutoCompactionSnapshot snapshot = scheduler.getCompactionSnapshot(dataSource);
+    Assertions.assertEquals(expectedSnapshot.build(), snapshot);
+    Assertions.assertEquals(
+        CompactionSkipReason.Category.DEFERRED,
+        snapshot.getSkippedStatsByReason().get(0).getCategory()
+    );
+
+    // Skipped metrics carry both the reason and its category so that a dashboard
+    // can alert on the category without enumerating the reasons
+    serviceEmitter.verifyValue(
+        Stats.Compaction.SKIPPED_BYTES.getMetricName(),
+        Map.of(
+            "reason", CompactionSkipReason.REJECTED_BY_SEARCH_POLICY.name(),
+            "category", CompactionSkipReason.Category.DEFERRED.name()
+        ),
+        100_000_000L
+    );
+    serviceEmitter.verifyValue(Stats.Compaction.PENDING_BYTES.getMetricName(), 0L);
 
     scheduler.stopBeingLeader();
   }

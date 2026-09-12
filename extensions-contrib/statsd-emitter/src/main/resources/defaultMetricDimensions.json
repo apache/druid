@@ -199,9 +199,9 @@
   "segment/waitCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "interval/waitCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
 
-  "segment/skipCompact/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "segment/skipCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "interval/skipCompact/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "segment/skipCompact/bytes" : { "dimensions" : ["dataSource", "reason", "category"], "type" : "gauge" },
+  "segment/skipCompact/count" : { "dimensions" : ["dataSource", "reason", "category"], "type" : "count" },
+  "interval/skipCompact/count" : { "dimensions" : ["dataSource", "reason", "category"], "type" : "count" },
 
   "segment/compacted/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "segment/compacted/count" : { "dimensions" : ["dataSource"], "type" : "count" },
