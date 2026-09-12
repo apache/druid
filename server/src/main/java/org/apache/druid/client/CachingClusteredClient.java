@@ -470,6 +470,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
                 continue;
               }
               break;
+            case EXCLUDE_INCREMENTAL:
             case INCLUDE:
               break;
           }
