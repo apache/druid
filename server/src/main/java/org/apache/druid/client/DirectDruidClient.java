@@ -159,7 +159,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
     final ListenableFuture<InputStream> future;
     final String url = scheme + "://" + host + "/druid/v2/";
-    final String cancelUrl = url + query.getId();
+    final String cancelUrl = url + StringUtils.urlEncode(query.getId());
 
     try {
       log.debug("Querying queryId [%s] url [%s]", query.getId(), url);
