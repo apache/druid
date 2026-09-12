@@ -86,6 +86,28 @@ public class PullDependencies implements Runnable
                   .put("com.fasterxml.jackson.core", "jackson-databind")
                   .put("com.fasterxml.jackson.core", "jackson-core")
                   .put("com.fasterxml.jackson.core", "jackson-annotations")
+                  // Netty 4 is bundled in lib/ (used by the core Druid HTTP client). The netty-bom import
+                  // at the root pom appears to defeat scope=provided on transitive netty jars in some
+                  // extensions, so hard-exclude them here to keep them from being duplicated.
+                  .put("io.netty", "netty-buffer")
+                  .put("io.netty", "netty-codec")
+                  .put("io.netty", "netty-codec-base")
+                  .put("io.netty", "netty-codec-compression")
+                  .put("io.netty", "netty-codec-dns")
+                  .put("io.netty", "netty-codec-http")
+                  .put("io.netty", "netty-codec-http2")
+                  .put("io.netty", "netty-codec-marshalling")
+                  .put("io.netty", "netty-codec-protobuf")
+                  .put("io.netty", "netty-codec-socks")
+                  .put("io.netty", "netty-common")
+                  .put("io.netty", "netty-handler")
+                  .put("io.netty", "netty-handler-proxy")
+                  .put("io.netty", "netty-resolver")
+                  .put("io.netty", "netty-resolver-dns")
+                  .put("io.netty", "netty-transport")
+                  .put("io.netty", "netty-transport-classes-epoll")
+                  .put("io.netty", "netty-transport-native-unix-common")
+                  .put("software.amazon.awssdk", "netty-nio-client")
                   .build();
 
   private static final Dependencies SECURITY_VULNERABILITY_EXCLUSIONS =
