@@ -21,7 +21,7 @@ package org.apache.druid.k8s.discovery;
 
 import io.kubernetes.client.util.Watch;
 
-import java.net.SocketTimeoutException;
+import java.io.IOException;
 
 /**
  * Iterator over k8s pod watch events that is aligned with the needs of Druid service discovery rather than
@@ -29,7 +29,7 @@ import java.net.SocketTimeoutException;
  * a Kubernetes MODIFIED event for a pod whose containers are no longer ready (according to k8s readiness state) is surfaced as the
  * synthetic {@link #NOT_READY} type so that consumers can handle it as a removal from k8s service discovery.
  */
-public interface WatchResult
+public interface WatchResult extends AutoCloseable
 {
   String ADDED = "ADDED";
   String MODIFIED = "MODIFIED";
@@ -44,9 +44,7 @@ public interface WatchResult
    */
   String NOT_READY = "NOT_READY";
 
-  boolean hasNext() throws SocketTimeoutException;
+  boolean hasNext() throws IOException;
 
   Watch.Response<DiscoveryDruidNodeAndResourceVersion> next();
-
-  void close();
 }
