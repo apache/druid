@@ -345,6 +345,19 @@ public class CachingClusteredClient implements QuerySegmentWalker
       }
 
       final Set<SegmentServerSelector> segmentServers = computeSegmentsToQuery(timeline, specificSegments);
+      System.out.println("==== CachingClusteredClient: query[" + query.getId() + "] segments=" + segmentServers.size()
+                         + " versions=" + segmentServers.stream()
+                                                        .filter(s -> s.getServer() != null)
+                                                        .map(s -> s.getServer().getSegment().getVersion())
+                                                        .distinct()
+                                                        .sorted()
+                                                        .collect(Collectors.joining(",")));
+      log.infoSegmentIds(
+          segmentServers.stream()
+                        .filter(s -> s.getServer() != null)
+                        .map(s -> s.getServer().getSegment().getId()),
+          StringUtils.format("Query[%s] found segments from timeline lookup", query.getId())
+      );
       final CloneQueryMode cloneQueryMode = query.context().getCloneQueryMode();
       @Nullable
       final byte[] queryCacheKey = cacheKeyManager.computeSegmentLevelQueryCacheKey();
