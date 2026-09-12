@@ -110,11 +110,13 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     );
     final ClassLoader extensionClassLoader = IcebergArrowInputSourceReader.class.getClassLoader();
     final ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+    ArrowReader arrowReader = null;
+    boolean ownershipTransferred = false;
     try {
       Thread.currentThread().setContextClassLoader(extensionClassLoader);
-      final ArrowReader arrowReader = new ArrowReader(scan, batchSize, true);
+      arrowReader = new ArrowReader(scan, batchSize, true);
       final org.apache.iceberg.io.CloseableIterator<ColumnarBatch> batchIter = arrowReader.open(tasks);
-      return new ArrowInputRowIterator(
+      final CloseableIterator<InputRow> iterator = new ArrowInputRowIterator(
           batchIter,
           arrowReader,
           tasks,
@@ -122,9 +124,21 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
           scan.schema(),
           extensionClassLoader
       );
+      ownershipTransferred = true;
+      return iterator;
     }
     finally {
       Thread.currentThread().setContextClassLoader(originalClassLoader);
+      if (!ownershipTransferred) {
+        try {
+          if (arrowReader != null) {
+            arrowReader.close();
+          }
+        }
+        finally {
+          tasks.close();
+        }
+      }
     }
   }
 
@@ -381,14 +395,17 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
           }
         }
       }
-      catch (NullPointerException e) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-                            .ofCategory(DruidException.Category.UNSUPPORTED)
-                            .build(
-                                e,
-                                "Arrow reader does not support snapshots with data files written using "
-                                + "different schemas. Use the standard Iceberg reader."
-                            );
+      catch (RuntimeException e) {
+        if (e.getMessage() != null && e.getMessage().contains("vector")) {
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.UNSUPPORTED)
+                              .build(
+                                  e,
+                                  "Arrow reader does not support snapshots with data files written using "
+                                  + "different schemas. Use the standard Iceberg reader."
+                              );
+        }
+        throw e;
       }
       exhausted = true;
       return false;

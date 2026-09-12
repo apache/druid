@@ -34,6 +34,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DataFile;
+import org.apache.iceberg.DataFiles;
+import org.apache.iceberg.FileFormat;
 import org.apache.iceberg.PartitionSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.Table;
@@ -308,6 +310,30 @@ public class IcebergArrowInputSourceReaderTest
     finally {
       Thread.currentThread().setContextClassLoader(originalClassLoader);
     }
+  }
+
+  @Test
+  public void testArrowReaderClosesTasksWhenSetupFails() throws IOException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    final DataFile unsupportedFile = DataFiles.builder(table.spec())
+                                               .withPath(table.location() + "/unsupported.orc")
+                                               .withFormat(FileFormat.ORC)
+                                               .withRecordCount(1)
+                                               .withFileSizeInBytes(1)
+                                               .build();
+    table.newAppend().appendFile(unsupportedFile).commit();
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        INPUT_SCHEMA,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> readAll(reader));
   }
 
   @Test
