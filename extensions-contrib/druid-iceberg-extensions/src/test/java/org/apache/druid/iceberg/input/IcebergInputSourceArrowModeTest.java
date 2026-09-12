@@ -64,7 +64,9 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -243,6 +245,42 @@ public class IcebergInputSourceArrowModeTest
   }
 
   @Test
+  public void testArrowReaderIgnoreResidualsReturnsResidualRows() throws IOException
+  {
+    dropTableFromCatalog(tableIdentifier);
+    final PartitionSpec partitionSpec = PartitionSpec.builderFor(tableSchema).identity("id").build();
+    final Table table = testCatalog.retrieveCatalog().createTable(tableIdentifier, tableSchema, partitionSpec);
+    appendRows(
+        table,
+        partitionSpec,
+        ImmutableMap.of("id", "123988", "name", "Foo"),
+        ImmutableMap.of("id", "123988", "name", "Bar")
+    );
+
+    final IcebergInputSource src = arrowSource(
+        new IcebergEqualsFilter("name", "Foo"),
+        null,
+        ResidualFilterMode.IGNORE
+    );
+    final InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec(null, null, DateTimes.utc(0L)),
+        DimensionsSpec.builder().build(),
+        ColumnsFilter.all()
+    );
+
+    final InputSourceReader reader = src.reader(inputRowSchema, null, FileUtils.createTempDir());
+    final List<InputRow> rows = new ArrayList<>();
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      while (iterator.hasNext()) {
+        rows.add(iterator.next());
+      }
+    }
+    Assertions.assertEquals(2, rows.size());
+    Assertions.assertEquals("Foo", rows.get(0).getDimension("name").get(0));
+    Assertions.assertEquals("Bar", rows.get(1).getDimension("name").get(0));
+  }
+
+  @Test
   public void testWarehouseSourceNotRequiredInArrowMode()
   {
     Assertions.assertFalse(arrowSource(null, null, null).isSplittable());
@@ -332,13 +370,19 @@ public class IcebergInputSourceArrowModeTest
 
   private void appendRow(Table table, PartitionSpec partitionSpec, Map<String, Object> rowData) throws IOException
   {
+    appendRows(table, partitionSpec, rowData);
+  }
+
+  private void appendRows(
+      final Table table,
+      final PartitionSpec partitionSpec,
+      final Map<String, Object>... rows
+  ) throws IOException
+  {
     final String fname = UUID.randomUUID() + ".parquet";
     final File dataFile = new File(warehouseDir.getAbsolutePath() + "/" + fname);
     Assertions.assertTrue(dataFile.createNewFile());
     final OutputFile out = Files.localOutput(dataFile);
-    final GenericRecord row = GenericRecord.create(tableSchema);
-    row.setField("id", rowData.get("id"));
-    row.setField("name", rowData.get("name"));
     final DataWriter<Record> writer;
     if (partitionSpec.isUnpartitioned()) {
       writer = Parquet.writeData(out)
@@ -349,7 +393,10 @@ public class IcebergInputSourceArrowModeTest
                       .build();
     } else {
       final PartitionKey partitionKey = new PartitionKey(partitionSpec, tableSchema);
-      partitionKey.partition(row);
+      final GenericRecord partitionRow = GenericRecord.create(tableSchema);
+      partitionRow.setField("id", rows[0].get("id"));
+      partitionRow.setField("name", rows[0].get("name"));
+      partitionKey.partition(partitionRow);
       writer = Parquet.writeData(out)
                       .schema(tableSchema)
                       .createWriterFunc(GenericParquetWriter::create)
@@ -359,7 +406,12 @@ public class IcebergInputSourceArrowModeTest
                       .build();
     }
     try {
-      writer.write(row);
+      for (Map<String, Object> rowData : rows) {
+        final GenericRecord row = GenericRecord.create(tableSchema);
+        row.setField("id", rowData.get("id"));
+        row.setField("name", rowData.get("name"));
+        writer.write(row);
+      }
     }
     finally {
       writer.close();

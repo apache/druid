@@ -378,7 +378,8 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
           snapshotTime,
           icebergCatalog.isCaseSensitive(),
           inputRowSchema,
-          arrowBatchSize
+          arrowBatchSize,
+          residualFilterMode
       );
     }
 

@@ -79,6 +79,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   private final boolean caseSensitive;
   private final InputRowSchema schema;
   private final int batchSize;
+  private final ResidualFilterMode residualFilterMode;
 
   public IcebergArrowInputSourceReader(
       final Table table,
@@ -89,12 +90,26 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
       final int batchSize
   )
   {
+    this(table, icebergFilter, snapshotTime, caseSensitive, schema, batchSize, ResidualFilterMode.IGNORE);
+  }
+
+  public IcebergArrowInputSourceReader(
+      final Table table,
+      @Nullable final IcebergFilter icebergFilter,
+      @Nullable final DateTime snapshotTime,
+      final boolean caseSensitive,
+      final InputRowSchema schema,
+      final int batchSize,
+      final ResidualFilterMode residualFilterMode
+  )
+  {
     this.table = table;
     this.icebergFilter = icebergFilter;
     this.snapshotTime = snapshotTime;
     this.caseSensitive = caseSensitive;
     this.schema = schema;
     this.batchSize = batchSize;
+    this.residualFilterMode = residualFilterMode;
   }
 
   @Override
@@ -215,6 +230,9 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
     }
     if (icebergFilter != null) {
       scan = icebergFilter.filter(scan);
+      if (residualFilterMode == ResidualFilterMode.IGNORE) {
+        scan = scan.ignoreResiduals();
+      }
     }
     return scan;
   }
