@@ -60,7 +60,11 @@ public class DefaultDimensionSpecTest
   public void testCacheKey()
   {
     final DimensionSpec spec = new DefaultDimensionSpec("foo", "foo", ColumnType.FLOAT);
-    final byte[] expected = new byte[] {0, 7, 102, 111, 111, 7, 70, 76, 79, 65, 84};
+    final byte[] expected = new byte[]{
+        0,                                  // cache type id
+        7, 0, 0, 0, 3, 102, 111, 111,       // STRING_KEY, length 3, "foo"
+        7, 0, 0, 0, 5, 70, 76, 79, 65, 84   // STRING_KEY, length 5, "FLOAT"
+    };
     Assertions.assertArrayEquals(expected, spec.getCacheKey());
   }
 }
