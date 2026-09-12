@@ -333,6 +333,62 @@ public class EmbeddedClusterApis implements EmbeddedResource
   }
 
   /**
+   * Waits for all non-tombstone used segments of the given datasource to be
+   * reported as available in {@code sys.segments} and for the datasource to be
+   * present in the Broker SQL schema, by polling the Broker.
+   * <p>
+   * Unlike {@link #waitForAllSegmentsToBeAvailable}, this method does not depend
+   * on schema refresh metrics being emitted by the Broker and verifies the state
+   * that SQL queries actually observe.
+   *
+   * @param timeoutMillis maximum time to wait
+   */
+  public void waitForAllSegmentsToBeQueryable(
+      String dataSource,
+      EmbeddedCoordinator coordinator,
+      long timeoutMillis
+  )
+  {
+    final int numSegments = (int) coordinator
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.INCLUDING_OVERSHADOWED)
+        .stream()
+        .filter(segment -> !segment.isTombstone())
+        .count();
+
+    waitForResult(
+        () -> runSql(
+            "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s' AND is_available = 1",
+            dataSource
+        ),
+        result -> parseCountOrZero(result) >= numSegments
+    ).withTimeoutMillis(timeoutMillis).go();
+
+    waitForResult(
+        () -> runSql(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '%s'",
+            dataSource
+        ),
+        result -> "1".equals(result.trim())
+    ).withTimeoutMillis(timeoutMillis).go();
+  }
+
+  /**
+   * Parses a {@code COUNT(*)} result, treating an empty or non-numeric result
+   * (e.g. while the Broker is still initializing) as zero so that polling continues.
+   */
+  private static long parseCountOrZero(String result)
+  {
+    try {
+      return Long.parseLong(result.trim());
+    }
+    catch (NumberFormatException e) {
+      return 0L;
+    }
+  }
+
+  /**
    * Waits for all used segments (including overshadowed) of the given datasource
    * to be queryable by Brokers when centralized schema is enabled.
    */
