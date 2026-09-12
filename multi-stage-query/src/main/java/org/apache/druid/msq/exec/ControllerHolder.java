@@ -103,12 +103,32 @@ public class ControllerHolder
     return controller;
   }
 
-  /** Returns the final report once available, or a live snapshot while the query is running. */
+  /**
+   * Returns the final report once available, or a live snapshot while the query is running.
+   *
+   * A controller canceled before it starts never enters {@link Controller#run(QueryListener)},
+   * so {@link Controller#finalReport()} cannot be populated. In that case, the holder creates
+   * the canceled report itself so registry readers can see it while the completion listener runs.
+   * A canceled state alone is not sufficient: a controller canceled after starting still needs
+   * time to produce its real final report.
+   */
   @Nullable
   public TaskReport.ReportMap getReports()
   {
     final TaskReport.ReportMap report = controller.finalReport();
-    return report == null ? controller.liveReports() : report;
+    if (report != null) {
+      return report;
+    }
+
+    synchronized (this) {
+      if (state == State.CANCELED && controllerThread == null) {
+        return TaskReport.buildTaskReports(
+            new MSQTaskReport(controller.queryId(), makeCanceledReport(cancelReason))
+        );
+      }
+    }
+
+    return controller.liveReports();
   }
 
   @Nullable
