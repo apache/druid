@@ -45,6 +45,7 @@ All configuration parameters are under `druid.request.logging`.
 | `druid.request.logging.transportType` | Where to send events. `CONSOLE` logs JSON to the Druid log; `HTTP` POSTs to an OpenLineage API endpoint. | no | `CONSOLE` |
 | `druid.request.logging.transportUrl` | OpenLineage API endpoint URL. Required when `transportType=HTTP`. | no | — |
 | `druid.request.logging.excludedNativeQueryTypes` | Native query types to exclude from lineage emission. Internal broker queries like segment metadata lookups produce noisy, low-value events. | no | `["segmentMetadata", "dataSourceMetadata", "timeBoundary"]` |
+| `druid.request.logging.columnLineageEnabled` | Emit per-column lineage (the `schema` and `druid_columnUsage` dataset facets) for native queries. Set to `false` to emit table-level (datasource) lineage only, reducing event size. | no | `true` |
 | `druid.request.logging.emitQueueCapacity` | Maximum number of events buffered in the async HTTP emit queue. Events are dropped (with a warning) when the queue is full. Only applies when `transportType=HTTP`. | no | `1000` |
 | `druid.request.logging.emitThreadCount` | Number of background threads used to POST events to the HTTP endpoint. Only applies when `transportType=HTTP`. | no | `1` |
 | `druid.request.logging.trustStorePath` | Path to the TrustStore file for HTTPS transport. Only applies when `transportType=HTTP`. | no | — |
@@ -96,3 +97,24 @@ Each emitted event follows the [OpenLineage spec](https://openlineage.io/spec/2-
 |---|---|
 | `jobType` | `processingType=BATCH`, `integration=DRUID`, `jobType=QUERY`. Standard OpenLineage facet. |
 | `sql` | Raw SQL text. Present on SQL queries only. Standard OpenLineage facet. |
+
+### Input dataset facets
+
+For supported native query types (`scan`, `groupBy`, `topN`, `timeseries`), each input dataset carries column-level lineage describing which columns the query referenced and how. Columns are attributed to their base tables across joins (per side), sub-queries, unions, and datasource wrappers. Query types that are not supported, a bare `SELECT *` (a scan with no explicit columns), and any column that cannot be attributed to a base table (for example lookup or inline-data columns) fall back to table-level lineage only. This can be disabled entirely with `columnLineageEnabled=false`.
+
+| Facet | Description |
+|---|---|
+| `schema` | Standard OpenLineage `SchemaDatasetFacet` listing the referenced input column names (names only, sorted). |
+| `druid_columnUsage` | Druid-specific facet mapping each referenced column to the roles in which it was used. |
+
+Column usage roles (`druid_columnUsage`):
+
+| Role | Meaning |
+|---|---|
+| `PROJECTION` | Column is selected/projected (OpenLineage `IDENTITY`/`TRANSFORMATION`). |
+| `GROUP_BY` | Column is a grouping dimension. |
+| `AGGREGATION` | Column feeds an aggregator (e.g. `SUM`, `COUNT`). |
+| `FILTER` | Column appears in a filter / `WHERE`. |
+| `JOIN` | Column is used as a join key. |
+
+Virtual/expression columns are expanded to their underlying base columns, carrying the consuming role. `__time` appears only when explicitly referenced by a query part (not for the implicit interval). Output datasets (MSQ `INSERT`/`REPLACE`) do not carry column-level facets.

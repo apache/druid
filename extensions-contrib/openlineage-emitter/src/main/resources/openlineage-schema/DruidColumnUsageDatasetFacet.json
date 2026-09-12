@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/apache/druid/master/extensions-contrib/openlineage-emitter/src/main/resources/openlineage-schema/DruidColumnUsageDatasetFacet.json",
+  "title": "DruidColumnUsageDatasetFacet",
+  "description": "Druid-specific dataset facet capturing how each input column was referenced by the query. Roles align with OpenLineage transformation subtypes where applicable (GROUP_BY, AGGREGATION, FILTER, JOIN); PROJECTION corresponds to OpenLineage IDENTITY/TRANSFORMATION (a selected column).",
+  "type": "object",
+  "allOf": [
+    {"$ref": "https://openlineage.io/spec/2-0-2/OpenLineage.json#/definitions/DatasetFacet"}
+  ],
+  "properties": {
+    "fields": {
+      "type": "object",
+      "description": "Map of referenced column name to how it was used in this query.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "usages": {
+            "type": "array",
+            "description": "The roles in which the column was referenced by the query.",
+            "items": {
+              "type": "string",
+              "enum": ["PROJECTION", "GROUP_BY", "AGGREGATION", "FILTER", "JOIN"]
+            }
+          }
+        },
+        "required": ["usages"]
+      }
+    }
+  },
+  "required": ["fields"]
+}
