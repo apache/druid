@@ -102,6 +102,7 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
   {
     final TableScan scan = buildScan();
     validateNoDeleteFiles(scan);
+    validateDecimalPrecision(scan);
     final CloseableIterable<CombinedScanTask> tasks = TableScanUtil.planTasks(
         scan.planFiles(),
         scan.targetSplitSize(),
@@ -154,6 +155,21 @@ public class IcebergArrowInputSourceReader implements InputSourceReader
                                   + "Use a delete-aware input path."
                               );
         }
+      }
+    }
+  }
+
+  private void validateDecimalPrecision(final TableScan scan)
+  {
+    for (final Types.NestedField field : scan.schema().columns()) {
+      if (field.type().typeId() == Type.TypeID.DECIMAL
+          && ((Types.DecimalType) field.type()).precision() > 18) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build(
+                                "Arrow reader does not support decimal fields with precision greater than 18. "
+                                + "Use the standard Iceberg reader."
+                            );
       }
     }
   }

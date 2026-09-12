@@ -54,6 +54,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -124,6 +125,38 @@ public class IcebergArrowInputSourceReaderTest
     Assertions.assertEquals("bob", rows.get(1).getDimension("name").get(0));
     Assertions.assertEquals(3_000L, rows.get(2).getTimestampFromEpoch());
     Assertions.assertEquals("carol", rows.get(2).getDimension("name").get(0));
+  }
+
+  @Test
+  public void testHighPrecisionDecimalIsRejected() throws IOException
+  {
+    final Schema decimalSchema = new Schema(
+        Types.NestedField.required(1, "ts", Types.LongType.get()),
+        Types.NestedField.required(2, "amount", Types.DecimalType.of(20, 2))
+    );
+    final Table table = catalog.retrieveCatalog().createTable(tableId, decimalSchema);
+    final BigDecimal value = new BigDecimal("123456789012345678.90");
+    final GenericRecord record = GenericRecord.create(decimalSchema);
+    record.setField("ts", 1_000L);
+    record.setField("amount", value);
+    writeRows(table, decimalSchema, record);
+
+    final InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec("ts", "millis", null),
+        DimensionsSpec.builder().build(),
+        ColumnsFilter.all()
+    );
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        inputRowSchema,
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
+    );
+
+    final DruidException exception = Assertions.assertThrows(DruidException.class, reader::read);
+    Assertions.assertTrue(exception.getMessage().contains("precision greater than 18"));
   }
 
   @Test
