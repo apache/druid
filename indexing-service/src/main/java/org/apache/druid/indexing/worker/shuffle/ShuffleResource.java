@@ -112,6 +112,11 @@ public class ShuffleResource
     }
   }
 
+  /**
+   * Not directly invoked by any Druid service.
+   * {@code IntermediaryDataManager.deletePartitions()} is invoked explicitly by
+   * the {@code ParallelIndexSupervisorTask.cleanup()}.
+   */
   @DELETE
   @Path("/task/{supervisorTaskId}")
   public Response deletePartitions(@PathParam("supervisorTaskId") String supervisorTaskId)

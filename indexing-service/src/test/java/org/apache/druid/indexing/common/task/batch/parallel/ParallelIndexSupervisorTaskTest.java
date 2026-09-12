@@ -39,7 +39,7 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
-import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
+import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
@@ -49,7 +49,6 @@ import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
@@ -491,9 +490,9 @@ public class ParallelIndexSupervisorTaskTest
 
       // Compaction skips super.cleanUp but still runs killRecursively for intermediary deep-storage files.
       TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
-      final DataSegmentKiller killer = EasyMock.createNiceMock(DataSegmentKiller.class);
-      EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer).anyTimes();
-      EasyMock.replay(toolbox, killer);
+      final IntermediaryDataManager intermediaryDataManager = EasyMock.createNiceMock(IntermediaryDataManager.class);
+      EasyMock.expect(toolbox.getIntermediaryDataManager()).andReturn(intermediaryDataManager).anyTimes();
+      EasyMock.replay(toolbox, intermediaryDataManager);
 
       new ParallelIndexSupervisorTask(
               null,
@@ -558,11 +557,11 @@ public class ParallelIndexSupervisorTaskTest
 
       final String supervisorTaskId = "index_parallel_cleanup_supervisor_id";
       TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
-      final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
-      EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(supervisorTaskId));
+      final IntermediaryDataManager intermediaryDataManager = EasyMock.createStrictMock(IntermediaryDataManager.class);
+      EasyMock.expect(toolbox.getIntermediaryDataManager()).andReturn(intermediaryDataManager);
+      intermediaryDataManager.deletePartitions(supervisorTaskId);
       EasyMock.expectLastCall();
-      EasyMock.replay(toolbox, killer);
+      EasyMock.replay(toolbox, intermediaryDataManager);
 
       new ParallelIndexSupervisorTask(
           supervisorTaskId,
@@ -574,7 +573,7 @@ public class ParallelIndexSupervisorTaskTest
           true
       ).cleanUp(toolbox, null);
 
-      EasyMock.verify(toolbox, killer);
+      EasyMock.verify(toolbox, intermediaryDataManager);
     }
 
     @Test
@@ -585,14 +584,14 @@ public class ParallelIndexSupervisorTaskTest
       final String supervisorTaskId = "index_parallel_ds_2024-01-01";
       final TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
       final TaskConfig taskConfig = EasyMock.createMock(TaskConfig.class);
-      final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
+      final IntermediaryDataManager intermediaryDataManager = EasyMock.createStrictMock(IntermediaryDataManager.class);
 
-      EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(supervisorTaskId));
+      EasyMock.expect(toolbox.getIntermediaryDataManager()).andReturn(intermediaryDataManager);
+      intermediaryDataManager.deletePartitions(supervisorTaskId);
       EasyMock.expectLastCall();
       EasyMock.expect(toolbox.getConfig()).andReturn(taskConfig);
       EasyMock.expect(taskConfig.isEncapsulatedTask()).andReturn(false);
-      EasyMock.replay(toolbox, taskConfig, killer);
+      EasyMock.replay(toolbox, taskConfig, intermediaryDataManager);
 
       new ParallelIndexSupervisorTask(
           supervisorTaskId,
@@ -604,7 +603,7 @@ public class ParallelIndexSupervisorTaskTest
           false
       ).cleanUp(toolbox, null);
 
-      EasyMock.verify(toolbox, taskConfig, killer);
+      EasyMock.verify(toolbox, taskConfig, intermediaryDataManager);
     }
 
     @Test
@@ -615,14 +614,14 @@ public class ParallelIndexSupervisorTaskTest
       final String supervisorTaskId = "index_parallel_deep_storage_cleanup_fail";
       final TaskToolbox toolbox = EasyMock.createMock(TaskToolbox.class);
       final TaskConfig taskConfig = EasyMock.createMock(TaskConfig.class);
-      final DataSegmentKiller killer = EasyMock.createStrictMock(DataSegmentKiller.class);
+      final IntermediaryDataManager intermediaryDataManager = EasyMock.createStrictMock(IntermediaryDataManager.class);
 
-      EasyMock.expect(toolbox.getDataSegmentKiller()).andReturn(killer);
-      killer.killRecursively(DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(supervisorTaskId));
+      EasyMock.expect(toolbox.getIntermediaryDataManager()).andReturn(intermediaryDataManager);
+      intermediaryDataManager.deletePartitions(supervisorTaskId);
       EasyMock.expectLastCall().andThrow(new IOException("deep storage cleanup failed"));
       EasyMock.expect(toolbox.getConfig()).andReturn(taskConfig);
       EasyMock.expect(taskConfig.isEncapsulatedTask()).andReturn(false);
-      EasyMock.replay(toolbox, taskConfig, killer);
+      EasyMock.replay(toolbox, taskConfig, intermediaryDataManager);
 
       new ParallelIndexSupervisorTask(
           supervisorTaskId,
@@ -634,7 +633,7 @@ public class ParallelIndexSupervisorTaskTest
           false
       ).cleanUp(toolbox, null);
 
-      EasyMock.verify(toolbox, taskConfig, killer);
+      EasyMock.verify(toolbox, taskConfig, intermediaryDataManager);
     }
 
     private static ParallelIndexIngestionSpec buildParallelIngestionSpecForCleanUpTests()
