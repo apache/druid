@@ -352,18 +352,17 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       List<DataSegment> segmentsInInterval = entry.getValue();
       Assertions.assertEquals(expectedIntervalToNumSegments.get(interval).intValue(), segmentsInInterval.size());
       for (DataSegment segment : segmentsInInterval) {
-        HashBasedNumberedShardSpec shardSpec = null;
         if (segment.isTombstone()) {
           Assertions.assertSame(TombstoneShardSpec.class, segment.getShardSpec().getClass());
         } else {
           Assertions.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
-          shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-          Assertions.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
         }
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
         if (segment.isTombstone()) {
           Assertions.assertTrue(results.isEmpty());
         } else {
+          final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
+          Assertions.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
           final int hash = shardSpec.getPartitionFunction().hash(
               HashBasedNumberedShardSpec.serializeGroupKey(
                   getObjectMapper(),

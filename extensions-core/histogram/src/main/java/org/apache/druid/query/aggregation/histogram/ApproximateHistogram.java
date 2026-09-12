@@ -626,6 +626,8 @@ public class ApproximateHistogram
     // use preallocated arrays if passed
     if (mergedPositions == null) {
       mergedPositions = new float[this.size];
+    }
+    if (mergedBins == null) {
       mergedBins = new long[this.size];
     }
 

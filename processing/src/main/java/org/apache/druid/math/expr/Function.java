@@ -3268,13 +3268,15 @@ public interface Function extends NamedFunction
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      Long left = args.get(0).eval(bindings).asLong();
-      Long right = args.get(1).eval(bindings).asLong();
-      DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
+      final ExprEval<?> leftEval = args.get(0).eval(bindings);
+      final ExprEval<?> rightEval = args.get(1).eval(bindings);
+      final DateTimeZone timeZone = DateTimes.inferTzFromString(args.get(2).eval(bindings).asString());
 
-      if (left == null || right == null) {
+      if (leftEval.isNumericNull() || rightEval.isNumericNull()) {
         return ExprEval.ofLong(null);
       } else {
+        final long left = leftEval.asLong();
+        final long right = rightEval.asLong();
         return ExprEval.of(DateTimes.subMonths(right, left, timeZone));
       }
 

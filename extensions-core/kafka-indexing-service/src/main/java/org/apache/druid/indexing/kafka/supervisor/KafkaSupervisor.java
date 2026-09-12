@@ -145,7 +145,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected int getTaskGroupIdForPartition(KafkaTopicPartition partitionId)
   {
-    Integer taskCount = spec.getIoConfig().getTaskCount();
+    final int taskCount = spec.getIoConfig().getTaskCount();
     if (partitionId.isMultiTopicPartition()) {
       return Math.abs(31 * partitionId.topic().hashCode() + partitionId.partition()) % taskCount;
     } else {

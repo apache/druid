@@ -236,7 +236,9 @@ public class PrometheusEmitter implements Emitter
         server.close();
       }
     } else {
-      exec.shutdownNow();
+      if (exec != null) {
+        exec.shutdownNow();
+      }
       flush();
 
       try {
