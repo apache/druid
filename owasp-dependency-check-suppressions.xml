@@ -19,6 +19,21 @@
   -->
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
   <!-- False positives -->
+
+  <suppress>
+    <!-- False positive: the scanner matches the Java client version "1.2.4" against
+         cpe:2.3:a:memcached:memcached:1.2.4 (the C memcached server daemon).
+         elasticache-java-cluster-client is a Java Memcached CLIENT library; Druid uses it
+         solely to send cache get/set/delete commands to a remote Memcached server.
+         Druid does not run or embed a Memcached server process, so all CVEs mapped to
+         the memcached:memcached CPE are false positives for this artifact. -->
+    <notes><![CDATA[
+      file name: elasticache-java-cluster-client-1.2.4.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.amazonaws/elasticache-java-cluster-client@.*$</packageUrl>
+    <cpe>cpe:/a:memcached:memcached</cpe>
+  </suppress>
+
   <suppress>
     <notes><![CDATA[
      file name: json-path-2.9.0.jar jackson-core-2.12.7.jar
@@ -377,6 +392,18 @@
      <cve>CVE-2022-3171</cve>
    </suppress>
 
+  <suppress>
+    <!-- CVE-2022-3171: False positive. This CVE affects Google's protobuf-java (com.google.protobuf),
+         but the scanner matches it against dev.cel:protobuf via the broad protobuf CPE.
+         dev.cel:protobuf is part of the Common Expression Language library and is unrelated
+         to Google's protobuf-java parsing code that contains the vulnerability. -->
+    <notes><![CDATA[
+      file name: protobuf-0.13.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/dev\.cel/protobuf@.*$</packageUrl>
+    <cve>CVE-2022-3171</cve>
+  </suppress>
+
    <suppress>
      <notes><![CDATA[
      file name: ansi-regex:5.0.0
@@ -731,5 +758,136 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-.*@.*$</packageUrl>
     <cve>CVE-2026-33186</cve> <!-- Only applicable to gRPC Go (google.golang.org/grpc < 1.79.3), not gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2026-33186 -->
+  </suppress>
+
+
+  <suppress>
+    <!-- GHSA-w5hq-g745-h8pq: Missing bounds check in uuid v3/v5/v6 when the optional buf
+         argument is provided. Druid's web console uses only uuidv4() with no buf argument
+         (web-console/src/druid-models/workbench-query/workbench-query.ts), so the
+         vulnerable code path is never exercised.
+         Update to version 11.1.1 or 12.0.1 to remove this suppression
+          -->
+    <notes><![CDATA[
+      file name: package-lock.json (pkg:npm/uuid@7.0.3)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:npm/uuid@.*$</packageUrl>
+    <vulnerabilityName>GHSA-w5hq-g745-h8pq</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-53914: Unsafe deserialization in Kotlin's build cache metadata (Kotlin compiler/Gradle plugin).
+         This is a build-toolchain vulnerability, not a runtime stdlib issue. Druid has no Kotlin source files;
+         kotlin-stdlib is a transitive runtime dependency (via Iceberg) and Druid never invokes Kotlin's build cache. -->
+    <notes><![CDATA[
+      file name: kotlin-stdlib-2.4.10.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jetbrains\.kotlin/kotlin-stdlib@.*$</packageUrl>
+    <cve>CVE-2026-53914</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-33117: Vulnerability in Azure SDK for Java's Key Vault Keys local cryptographic verification path.
+         The CVE fires against azure-core, azure-core-http-netty, azure-identity, and azure-json due to broad CPE
+         matching, but none of these jars contain the vulnerable Key Vault code path. Druid uses these artifacts
+         for blob storage auth only and does not use the Key Vault cryptography client. -->
+    <notes><![CDATA[
+      file name: azure-core-1.58.1.jar azure-core-http-netty-1.16.5.jar azure-identity-1.18.4.jar azure-json-1.5.1.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.azure/azure-.*@.*$</packageUrl>
+    <cve>CVE-2026-33117</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-49845: SQL injection in Hive Metastore partition-name resolution.
+         CVE-2026-53561: SAML bearer-token authentication bypass in HiveServer2.
+         CVE-2026-55976: SSRF via avro.schema.url in Avro SerDe schema resolution.
+         All three affect Apache Hive server components (Metastore, HiveServer2).
+         Druid uses hive-storage-api only for the Murmur3 hash utility
+         (BloomKFilter.java) and ORC/Parquet column type definitions — it does not
+         run or connect to a Hive Metastore or HiveServer2. -->
+    <notes><![CDATA[
+      file name: hive-storage-api-4.2.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.hive/hive-storage-api@.*$</packageUrl>
+    <cve>CVE-2026-49845</cve>
+    <cve>CVE-2026-53561</cve>
+    <cve>CVE-2026-55976</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-54512, CVE-2026-54513: PolymorphicTypeValidator bypass in jackson-databind when
+         polymorphic typing is enabled with generic type parameters or array subtypes.
+         These CVEs affect jackson-databind shaded inside hadoop/parquet jars,
+         not Druid's own jackson-databind (2.22.x).
+         CVE-2026-68497: Not yet published in NVD, suppressed as appearing only inside shaded jars -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
+                 parquet-jackson-1.18.0.jar (shaded jackson-databind 2.22.1)
+    ]]></notes>
+    <filePath regex="true">.*/(hadoop-client-runtime|parquet-jackson)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-databind/pom\.xml$</filePath>
+    <cve>CVE-2026-54512</cve>
+    <cve>CVE-2026-54513</cve>
+    <cve>CVE-2026-68497</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-2332: Jetty HTTP/1.1 request smuggling via chunk extension quoted strings.
+         CVE-2026-10050: Jetty Digest auth password encoding using ISO-8859-1.
+         Both affect Jetty shaded inside hadoop-client-runtime-3.5.0.jar. Druid cannot upgrade
+         the Jetty version inside this shaded jar. The shaded Jetty is used only for Hadoop's
+         internal HTTP server (WebHDFS, etc.), not for Druid's own HTTP server (Jetty 12.x).
+         Druid does not use Hadoop's embedded Jetty server or Digest auth. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded org.eclipse.jetty* 9.4.58.v20250814)
+    ]]></notes>
+    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/org\.eclipse\.jetty[^/]*/[^/]*/pom\.xml$</filePath>
+    <cve>CVE-2026-2332</cve>
+    <cve>CVE-2026-10050</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-56741, CVE-2026-56740: DoS via JLine Telnet server (NAWS terminal dimensions and
+         NEW-ENVIRON flooding). JLine is shaded inside hadoop-client-runtime-3.5.0.jar and is used
+         only for Hadoop's interactive CLI shell. Druid does not expose a JLine Telnet server endpoint. -->
+    <notes><![CDATA[
+      file name: hadoop-client-runtime-3.5.0.jar (shaded jline 3.9.0)
+    ]]></notes>
+    <filePath regex="true">.*/(hadoop-client-runtime)-[0-9][^/]*\.jar/META-INF/maven/org\.jline/jline[^/]*/pom\.xml$</filePath>
+    <cve>CVE-2026-56741</cve>
+    <cve>CVE-2026-56740</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-24051, CVE-2026-39883, CVE-2026-29181: All three affect the OpenTelemetry Go SDK
+         (opentelemetry-go), not any Java library. The scanner matches opentelemetry-gcp-resources
+         (a Java artifact) against the Go SDK CPE due to the shared "opentelemetry" product name.
+         Druid's google-extensions use the Java opentelemetry-gcp-resources for GCP resource
+         detection; the vulnerable PATH hijacking and baggage-header amplification code exists
+         only in the Go implementation. -->
+    <notes><![CDATA[
+      file name: opentelemetry-gcp-resources-1.37.0-alpha.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.opentelemetry\.contrib/opentelemetry-gcp-resources@.*$</packageUrl>
+    <cve>CVE-2026-24051</cve>
+    <cve>CVE-2026-39883</cve>
+    <cve>CVE-2026-29181</cve>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-40542, CVE-2026-71290: Vulnerabilities in Apache HttpClient 5 (SCRAM mutual auth
+         and async hostname verification). CVE-2026-54399, CVE-2026-54428: DoS in Apache HttpComponents
+         Core 5 (excessive headers and HTTP/2 HPACK). All four affect httpclient5/httpcore5 shaded
+         inside docker-java-transport-zerodep-3.7.1.jar (a test-scoped dependency used only by
+         druid-testcontainers for Docker container management in tests). These are not present in
+         Druid's production runtime classpath. -->
+    <notes><![CDATA[
+      file name: docker-java-transport-zerodep-3.7.1.jar (shaded httpclient5 5.5.1 and httpcore5 5.3.6)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.(client5/httpclient5|core5/httpcore5)@.*$</packageUrl>
+    <cve>CVE-2026-40542</cve>
+    <cve>CVE-2026-71290</cve>
+    <cve>CVE-2026-54399</cve>
+    <cve>CVE-2026-54428</cve>
   </suppress>
 </suppressions>
