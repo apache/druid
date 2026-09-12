@@ -307,6 +307,17 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // noop, no additional action needed when segment is removed.
   }
 
+  @Override
+  protected void removeDataSourceAction(String dataSource)
+  {
+    // The last-segment callback can remove the table without another schema refresh.
+    emitMetric(
+        Metric.DATASOURCE_REMOVED,
+        1,
+        ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
+  }
+
   private Set<String> queryDataSources()
   {
     Set<String> dataSources = new HashSet<>();
