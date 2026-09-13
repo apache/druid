@@ -267,7 +267,7 @@ public class EmbeddedServiceClient
       StatusResponseHolder response = serviceClient.request(requestBuilder, responseHandler);
 
       // Handle all success status codes
-      final int statusCode = response.getStatus().getCode();
+      final int statusCode = response.getStatus().code();
       if (statusCode < 200 || statusCode >= 300) {
         throw new ISE(
             "Request[%s] failed with status[%s] content[%s].",

@@ -404,6 +404,9 @@ public class JettyServerModule extends JerseyServletModule
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
     try {
       initializer.initialize(server, injector);
+      if (config.isEnableResponseIdentityHeaders()) {
+        server.setHandler(new ResponseIdentityHeaderHandler(node, server.getHandler()));
+      }
     }
     catch (Exception e) {
       throw new RE(e, "server initialization exception");
@@ -479,6 +482,17 @@ public class JettyServerModule extends JerseyServletModule
           baseRequest.setAttribute(RequestDispatcher.ERROR_EXCEPTION, null);
           return super.handle(baseRequest, response, callback);
         }
+      });
+    }
+
+    if (config.isEnableResponseIdentityHeaders()) {
+      // Request parsing failures do not enter the server's handler chain, so add the identity at the error handler too.
+      final Request.Handler errorHandler = server.getErrorHandler() == null
+                                                   ? new ErrorHandler()
+                                                   : server.getErrorHandler();
+      server.setErrorHandler((request, response, callback) -> {
+        ResponseIdentityHeaderHandler.addIdentityHeaders(response, node);
+        return errorHandler.handle(request, response, callback);
       });
     }
 

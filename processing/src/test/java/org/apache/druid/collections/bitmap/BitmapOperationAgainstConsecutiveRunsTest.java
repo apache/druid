@@ -58,7 +58,8 @@ public class BitmapOperationAgainstConsecutiveRunsTest extends BitmapOperationTe
         }
       }
       minIntersection = MIN_INTERSECT;
-      for (int k = BITMAP_LENGTH / 2; k < BITMAP_LENGTH / 2 + minIntersection; ++k) {
+      final int minimumIntersection = Math.toIntExact(minIntersection);
+      for (int k = BITMAP_LENGTH / 2; k < BITMAP_LENGTH / 2 + minimumIntersection; ++k) {
         c.add(k);
         r.add(k);
         expectedUnion.set(k);
