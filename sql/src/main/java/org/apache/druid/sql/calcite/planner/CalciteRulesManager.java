@@ -331,15 +331,16 @@ public class CalciteRulesManager
           null,
           RelOptCostImpl.FACTORY
       );
-      final List<RelMetadataProvider> metadataProviders = new ArrayList<>();
-      metadataProviders.add(DefaultRelMetadataProvider.INSTANCE);
-      hepPlanner.registerMetadataProviders(metadataProviders);
       for (final RelOptMaterialization materialization : materializations) {
         hepPlanner.addMaterialization(materialization);
       }
       for (final RelOptLattice lattice : lattices) {
         hepPlanner.addLattice(lattice);
       }
+      // Modern Calcite routes rule metadata through the cluster's provider (the planner-level
+      // registerMetadataProviders is deprecated), so set it on the cluster as Programs.of does.
+      final List<RelMetadataProvider> metadataProviders = new ArrayList<>();
+      metadataProviders.add(DefaultRelMetadataProvider.INSTANCE);
       rel.getCluster().setMetadataProvider(ChainedRelMetadataProvider.of(metadataProviders));
       hepPlanner.setRoot(rel);
       return hepPlanner.findBestExp();

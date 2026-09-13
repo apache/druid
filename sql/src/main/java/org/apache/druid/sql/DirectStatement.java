@@ -203,6 +203,11 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       // measured from planningStartNanos (above), so any time already spent constructing the planner counts against
       // it and a query cannot get a fresh full budget after an expensive planner/schema setup.
       final long maxPlanningTimeMs = planner.getPlannerContext().getPlannerConfig().getMaxPlanningTimeMs();
+      // createPlanner() runs before the watchdog is armed, so an expensive planner/schema construction could
+      // already have consumed the whole budget. Enforce the deadline here before doing any more work.
+      if (planningDeadlineExceeded(maxPlanningTimeMs, planningStartNanos)) {
+        throw planningTimedOut(maxPlanningTimeMs);
+      }
       final long remainingBudgetMs = remainingPlanningBudgetMs(maxPlanningTimeMs, planningStartNanos);
       try (SqlPlanningTimeout timeout = SqlPlanningTimeout.arm(
           remainingBudgetMs,
@@ -236,9 +241,11 @@ public class DirectStatement extends AbstractStatement implements Cancelable
                 }
                 throw e;
               }
-              // Planning may have finished after the watchdog fired, e.g. in a non-cancellable section, or one that
-              // caught the interrupt and returned normally. Reject the late plan rather than executing it.
-              if (timeout.isTimedOut()) {
+              // Planning may have finished after the deadline: the watchdog fired but planning was in a
+              // non-cancellable section (or caught the interrupt and returned), or the watchdog callback was
+              // delayed past the deadline under scheduler jitter. Re-check the wall-clock deadline as well as the
+              // flag, and reject a late plan rather than executing it.
+              if (timeout.isTimedOut() || planningDeadlineExceeded(maxPlanningTimeMs, planningStartNanos)) {
                 throw planningTimedOut(maxPlanningTimeMs);
               }
               return resultSet;
@@ -266,8 +273,9 @@ public class DirectStatement extends AbstractStatement implements Cancelable
 
   /**
    * Planning budget still available given a total {@code maxPlanningTimeMs} and the time already elapsed since
-   * {@code planningStartNanos}. Returns {@code maxPlanningTimeMs} unchanged when it is non-positive (timeout disabled),
-   * otherwise at least 1ms so an already-overrun query still arms (and fires immediately).
+   * {@code planningStartNanos}. Returns {@code maxPlanningTimeMs} unchanged when it is non-positive (timeout disabled).
+   * Callers must first reject an already-exhausted budget via {@link #planningDeadlineExceeded}, so when the timeout
+   * is enabled this returns a strictly positive value.
    */
   private static long remainingPlanningBudgetMs(long maxPlanningTimeMs, long planningStartNanos)
   {
@@ -275,7 +283,17 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       return maxPlanningTimeMs;
     }
     final long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - planningStartNanos);
-    return Math.max(1, maxPlanningTimeMs - elapsedMs);
+    return maxPlanningTimeMs - elapsedMs;
+  }
+
+  /**
+   * Whether the configured planning deadline has already been exceeded by the wall-clock time elapsed since
+   * {@code planningStartNanos}. Always false when the timeout is disabled ({@code maxPlanningTimeMs <= 0}).
+   */
+  private static boolean planningDeadlineExceeded(long maxPlanningTimeMs, long planningStartNanos)
+  {
+    return maxPlanningTimeMs > 0
+           && TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - planningStartNanos) >= maxPlanningTimeMs;
   }
 
   private QueryTimeoutException planningTimedOut(long maxPlanningTimeMs)

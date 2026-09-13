@@ -629,4 +629,50 @@ public class SqlStatementTest
       stmt.close();
     }
   }
+
+  /**
+   * The planning budget covers planner construction too: if {@link DirectStatement#createPlanner()} (schema/planner
+   * setup) alone exhausts {@code maxPlanningTimeMs}, planning must fail with a {@link QueryTimeoutException} before any
+   * further work, rather than getting a fresh budget once the watchdog is armed.
+   */
+  @Test
+  @org.junit.jupiter.api.Timeout(30)
+  public void testPlanningTimeoutDuringPlannerConstruction()
+  {
+    SqlQueryPlus sqlReq = SqlQueryPlus
+        .builder("SELECT COUNT(*) AS cnt, 'foo' AS TheFoo FROM druid.foo")
+        .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS, 50))
+        .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+        .build();
+
+    // Simulate an expensive planner/schema construction that by itself exceeds the budget.
+    DirectStatement stmt = new DirectStatement(sqlToolbox, sqlReq, null)
+    {
+      @Override
+      protected org.apache.druid.sql.calcite.planner.DruidPlanner createPlanner()
+      {
+        try {
+          Thread.sleep(300);
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+        }
+        return super.createPlanner();
+      }
+    };
+
+    try {
+      stmt.plan();
+      fail("Expected planning to time out during planner construction");
+    }
+    catch (QueryTimeoutException e) {
+      Assertions.assertTrue(
+          e.getMessage().contains("exceeded the configured maximum planning time"),
+          "Unexpected message: " + e.getMessage()
+      );
+    }
+    finally {
+      stmt.close();
+    }
+  }
 }
