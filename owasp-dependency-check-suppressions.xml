@@ -890,4 +890,19 @@
     <cve>CVE-2026-54399</cve>
     <cve>CVE-2026-54428</cve>
   </suppress>
+
+  <suppress>
+    <!-- CVE-2026-87823: Out-of-bounds memory read in ByteBuffer frame-size methods via negative offset values.
+         CVE-2026-87795: Out-of-bounds memory read in ZstdDictCompress constructor via unvalidated offset/length.
+         Both are fixed in zstd-jni 1.5.7-14. Suppressed until zstd-jni is upgraded.
+         Based on the analysis in https://github.com/apache/druid/pull/20236#issuecomment-5646494509,
+         this vulnerability should not affect Druid since the relevant code paths do not get activated
+          -->
+    <notes><![CDATA[
+      file name: zstd-jni-1.5.7-11.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.github\.luben/zstd-jni@.*$</packageUrl>
+    <cve>CVE-2026-87823</cve>
+    <cve>CVE-2026-87795</cve>
+  </suppress>
 </suppressions>
