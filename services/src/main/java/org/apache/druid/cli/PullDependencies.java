@@ -95,7 +95,6 @@ public class PullDependencies implements Runnable
                   .put("io.netty", "netty-codec-compression")
                   .put("io.netty", "netty-codec-dns")
                   .put("io.netty", "netty-codec-http")
-                  .put("io.netty", "netty-codec-http2")
                   .put("io.netty", "netty-codec-marshalling")
                   .put("io.netty", "netty-codec-protobuf")
                   .put("io.netty", "netty-codec-socks")
@@ -107,7 +106,6 @@ public class PullDependencies implements Runnable
                   .put("io.netty", "netty-transport")
                   .put("io.netty", "netty-transport-classes-epoll")
                   .put("io.netty", "netty-transport-native-unix-common")
-                  .put("software.amazon.awssdk", "netty-nio-client")
                   .build();
 
   private static final Dependencies SECURITY_VULNERABILITY_EXCLUSIONS =
