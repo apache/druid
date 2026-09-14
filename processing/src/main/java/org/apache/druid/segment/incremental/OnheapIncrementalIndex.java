@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -52,12 +53,16 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.virtual.ExpressionPlan;
+import org.apache.druid.segment.virtual.ExpressionPlanCache;
+import org.apache.druid.segment.virtual.ExpressionPlanner;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
@@ -670,13 +675,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   /**
-   * Caches references to selector objects for each column instead of creating a new object each time in order to save
-   * heap space.
+   * Caches references to selector objects for each column and immutable expression plans instead of creating them for
+   * each row key in order to save heap space and avoid repeated expression planning.
    */
-  static class CachingColumnSelectorFactory implements ColumnSelectorFactory
+  static class CachingColumnSelectorFactory implements ColumnSelectorFactory, ExpressionPlanCache
   {
+    private static final ExpressionPlanCacheEntry[] NO_CACHED_EXPRESSION_PLANS = new ExpressionPlanCacheEntry[0];
+
     private final HashMap<String, ColumnValueSelector<?>> columnSelectorMap;
     private final ColumnSelectorFactory delegate;
+    private volatile ExpressionPlanCacheEntry[] cachedExpressionPlans = NO_CACHED_EXPRESSION_PLANS;
 
     public CachingColumnSelectorFactory(ColumnSelectorFactory delegate)
     {
@@ -704,6 +712,44 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       ColumnValueSelector<?> columnValueSelector = delegate.makeColumnValueSelector(columnName);
       existing = columnSelectorMap.putIfAbsent(columnName, columnValueSelector);
       return existing != null ? existing : columnValueSelector;
+    }
+
+    @Override
+    public ExpressionPlan getExpressionPlan(final Expr expression)
+    {
+      for (final ExpressionPlanCacheEntry cachedEntry : cachedExpressionPlans) {
+        if (cachedEntry.expression == expression) {
+          return cachedEntry.plan;
+        }
+      }
+
+      synchronized (this) {
+        final ExpressionPlanCacheEntry[] currentEntries = cachedExpressionPlans;
+        for (final ExpressionPlanCacheEntry cachedEntry : currentEntries) {
+          if (cachedEntry.expression == expression) {
+            return cachedEntry.plan;
+          }
+        }
+
+        final Expr singleThreadedExpression = Expr.singleThreaded(expression, this);
+        final ExpressionPlan expressionPlan = ExpressionPlanner.plan(this, singleThreadedExpression);
+        final ExpressionPlanCacheEntry[] updatedEntries = Arrays.copyOf(currentEntries, currentEntries.length + 1);
+        updatedEntries[currentEntries.length] = new ExpressionPlanCacheEntry(expression, expressionPlan);
+        cachedExpressionPlans = updatedEntries;
+        return expressionPlan;
+      }
+    }
+
+    private static final class ExpressionPlanCacheEntry
+    {
+      private final Expr expression;
+      private final ExpressionPlan plan;
+
+      private ExpressionPlanCacheEntry(final Expr expression, final ExpressionPlan plan)
+      {
+        this.expression = expression;
+        this.plan = plan;
+      }
     }
 
     @Nullable

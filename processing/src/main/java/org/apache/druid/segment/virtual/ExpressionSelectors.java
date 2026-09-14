@@ -133,10 +133,7 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    ExpressionPlan plan = ExpressionPlanner.plan(
-        columnSelectorFactory,
-        Expr.singleThreaded(expression, columnSelectorFactory)
-    );
+    final ExpressionPlan plan = plan(columnSelectorFactory, expression);
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
@@ -188,10 +185,7 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final ExpressionPlan plan = ExpressionPlanner.plan(
-        columnSelectorFactory,
-        Expr.singleThreaded(expression, columnSelectorFactory)
-    );
+    final ExpressionPlan plan = plan(columnSelectorFactory, expression);
 
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
@@ -233,6 +227,15 @@ public class ExpressionSelectors
         return ExpressionSingleValueDimensionSelector.fromValueSelector(baseSelector, extractionFn);
       }
     }
+  }
+
+  private static ExpressionPlan plan(ColumnSelectorFactory columnSelectorFactory, Expr expression)
+  {
+    if (columnSelectorFactory instanceof ExpressionPlanCache) {
+      return ((ExpressionPlanCache) columnSelectorFactory).getExpressionPlan(expression);
+    }
+    final Expr singleThreadedExpression = Expr.singleThreaded(expression, columnSelectorFactory);
+    return ExpressionPlanner.plan(columnSelectorFactory, singleThreadedExpression);
   }
 
 
