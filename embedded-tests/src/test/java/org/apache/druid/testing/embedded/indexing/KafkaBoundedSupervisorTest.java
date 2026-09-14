@@ -29,10 +29,17 @@ import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.apache.druid.testing.embedded.tools.EventSerializer;
+import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
+import org.apache.druid.testing.embedded.tools.StreamGenerator;
+import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -186,12 +193,26 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
         .build(dataSource, topic);
   }
 
+  private void publishRecordsToBothPartitions(String topic)
+  {
+    final EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
+    final StreamGenerator generator = new WikipediaStreamEventStreamGenerator(serializer, 100, 100);
+    final List<byte[]> records = generator.generateEvents(10);
+    final List<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    // Fixed per-partition end offsets require data in both partitions; Kafka's default partitioner need not balance it.
+    for (int i = 0; i < records.size(); i++) {
+      producerRecords.add(new ProducerRecord<>(topic, i % 2, null, records.get(i)));
+    }
+    kafkaServer.produceRecordsWithoutTransaction(producerRecords);
+    Assertions.assertEquals(Map.of("0", 500L, "1", 500L), kafkaServer.getPartitionOffsets(topic));
+  }
+
   @Test
   public void test_boundedSupervisor_withMismatchedMetadata_is_unhealthy()
   {
     final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 2);
-    publish1kRecords(topic, false);
+    publishRecordsToBothPartitions(topic);
 
     // Get the current end offsets for all partitions
     Map<String, Long> currentOffsets = kafkaServer.getPartitionOffsets(topic);
@@ -265,7 +286,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   {
     final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 2);
-    publish1kRecords(topic, false);
+    publishRecordsToBothPartitions(topic);
 
     // Run 1: ingest up to offset 100 on each partition and complete.
     Map<String, Long> startOffsets1 = new HashMap<>();
