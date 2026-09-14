@@ -20,6 +20,8 @@
 package org.apache.druid.security.basic.authentication.db.cache;
 
 import com.google.inject.Injector;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -31,11 +33,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -82,24 +79,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
     final CountDownLatch requestStarted = new CountDownLatch(1);
     final CountDownLatch requestInterrupted = new CountDownLatch(1);
 
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, path),
-        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK) {
-          @Override
-          public ChannelBuffer getContent()
-          {
-            requestStarted.countDown();
-            try {
-              Thread.sleep(10_000);
-              return null;
-            }
-            catch (InterruptedException e) {
-              requestInterrupted.countDown();
-              throw new RuntimeException(e);
-            }
-          }
-        }
-    );
+    serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, path), requestStarted, requestInterrupted);
 
     EasyMock.replay(injector);
 

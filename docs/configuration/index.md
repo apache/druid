@@ -556,6 +556,14 @@ Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be lo
 |`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
 |`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
+### Response identity headers
+
+This configuration applies to all Druid services.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.server.http.enableResponseIdentityHeaders`|If enabled, adds response headers containing the responding Druid service name, version, and advertised host and port. This can expose internal cluster topology and version information; only enable it when clients are authorized to receive this information.|`false`|
+
 ### API error response
 
 You can configure Druid API error responses to hide internal information like the Druid class name, stack trace, thread name, servlet name, code, line/column number, host, or IP address.
@@ -678,7 +686,9 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.readTimeout`|The timeout for data reads.|`PT15M`|
 |`druid.global.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.global.http.readTimeout`. Set this timeout = ~90% of `druid.global.http.readTimeout`|`PT4M`|
 |`druid.global.http.numMaxThreads`|Maximum number of I/O worker threads|`(number of cores) * 3 / 2 + 1`|
-|`druid.global.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.global.http.clientConnectTimeout`|Connect timeout (in milliseconds) for the HTTP client used to forward management API requests between Druid services. On the Router, this covers forwarding management API calls to the Coordinator or Overlord. On the Coordinator, this covers proxying `/druid/indexer/*` requests to the Overlord (when they run as separate processes). Does not affect Router query proxying to Brokers (see `druid.router.http.clientConnectTimeout`) or direct RPC connections between services (see `connectTimeout`).|500|
+|`druid.global.http.connectTimeout`|Connect timeout for the HTTP client used for most direct RPC between Druid services. This covers, among other things, Overlord-to-task and supervisor-to-task calls in the indexing service, Coordinator lookup management, dynamic config sync between services, MSQ tasks reading from data servers, and general Coordinator/Overlord/Broker service clients. Does not affect Broker-to-Historical query dispatch (see `druid.broker.http.connectTimeout`) or request forwarding (see `clientConnectTimeout`).|`PT10S`|
+|`druid.global.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
 
 ### Common endpoints configuration
 
@@ -1574,6 +1584,12 @@ In `druid.segmentCache.locationSelector.strategy`, one of `leastBytesUsed`, `rou
 
 Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can download different segments at the same time. In this case, with the `leastBytesUsed` strategy or `mostAvailableSize` strategy, Historicals may select a sub-optimal storage location because each decision is based on a snapshot of the storage location status of when a segment is requested to download.
 
+#### Loading segments
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.segment.timeline.fastIntervalSearch`|(Experimental) Boolean flag to enable faster searches of segments in the timeline stored in memory. The setting when enabled uses an index based on [Interval tree](https://en.wikipedia.org/wiki/Interval_tree) to organize the timeline in-memory, for faster loading and searching of segments.|false|
+
 #### Historical query configs
 
 ##### Concurrent requests
@@ -1816,7 +1832,8 @@ client has the following configuration options.
 |`druid.broker.http.unusedConnectionTimeout`|The timeout for idle connections in connection pool. The connection in the pool will be closed after this timeout and a new one will be established. This timeout should be less than `druid.broker.http.readTimeout`. Set this timeout = ~90% of `druid.broker.http.readTimeout`|`PT4M`|
 |`druid.broker.http.maxQueuedBytes`|Maximum number of bytes queued per query before exerting [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) on channels to the data servers.<br /><br />Similar to `druid.server.http.maxScatterGatherBytes`, except that `maxQueuedBytes` triggers [backpressure](../operations/basic-cluster-tuning.md#broker-backpressure) instead of query failure. Set to zero to disable. You can override this setting by using the [`maxQueuedBytes` query context parameter](../querying/query-context-reference.md). Druid supports [human-readable](human-readable-byte.md) format. |25 MB or 2% of maximum Broker heap size, whichever is greater.|
 |`druid.broker.http.numMaxThreads`|`Maximum number of I/O worker threads|(number of cores) * 3 / 2 + 1`|
-|`druid.broker.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.broker.http.connectTimeout`|Connect timeout for the HTTP client the Broker uses to dispatch queries to Historical and real-time processes.|`PT10S`|
+|`druid.broker.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
 
 
 ##### Retry policy
@@ -2334,4 +2351,4 @@ Supported query contexts:
 |`druid.router.http.numMaxThreads`|Maximum number of worker threads to handle HTTP requests and responses|`(number of cores) * 3 / 2 + 1`|
 |`druid.router.http.numRequestsQueued`|Maximum number of requests that may be queued to a destination|`1024`|
 |`druid.router.http.requestBuffersize`|Size of the content buffer for receiving requests. These buffers are only used for active connections that have requests with bodies that will not fit within the header buffer|`8 * 1024`|
-|`druid.router.http.clientConnectTimeout`|The timeout (in milliseconds) for establishing client connections.|500|
+|`druid.router.http.clientConnectTimeout`|Connect timeout (in milliseconds) for the HTTP client the Router uses to forward incoming queries to Brokers. Does not affect management API forwarding to the Coordinator or Overlord (see `druid.global.http.clientConnectTimeout`).|500|

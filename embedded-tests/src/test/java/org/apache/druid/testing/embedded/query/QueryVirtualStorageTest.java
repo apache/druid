@@ -295,15 +295,15 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0, emitter.getMetricEventLongSum(StorageMonitor.VSF_REJECT_COUNT));
     Assertions.assertTrue(emitter.getLatestMetricEventValue(StorageMonitor.VSF_USED_BYTES, 0).longValue() > 0);
 
-    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.STORAGE_CAPACITY.getMetricName()));
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.CACHE_CAPACITY.getMetricName()));
     Assertions.assertEquals(
         CACHE_SIZE,
-        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.STORAGE_CAPACITY.getMetricName())
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.CACHE_CAPACITY.getMetricName())
     );
-    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.TOTAL_CAPACITY.getMetricName()));
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.STORAGE_CAPACITY.getMetricName()));
     Assertions.assertEquals(
         MAX_SIZE,
-        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.TOTAL_CAPACITY.getMetricName())
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.STORAGE_CAPACITY.getMetricName())
     );
   }
 
