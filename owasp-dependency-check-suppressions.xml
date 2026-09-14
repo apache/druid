@@ -882,9 +882,9 @@
          druid-testcontainers for Docker container management in tests). These are not present in
          Druid's production runtime classpath. -->
     <notes><![CDATA[
-      file name: docker-java-transport-zerodep-3.7.1.jar (shaded httpclient5 5.5.1 and httpcore5 5.3.6)
+      file name: docker-java-transport-zerodep-3.7.1.jar (shaded httpclient5 5.5.1, httpcore5 5.3.6, and httpcore5-h2 5.3.6)
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.(client5/httpclient5|core5/httpcore5)@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.(client5/httpclient5|core5/httpcore5|core5/httpcore5-h2)@.*$</packageUrl>
     <cve>CVE-2026-40542</cve>
     <cve>CVE-2026-71290</cve>
     <cve>CVE-2026-54399</cve>
