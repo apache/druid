@@ -38,7 +38,11 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Used for writing segment files to Azure based deep storage
@@ -165,25 +169,61 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       throw new IOE("Cannot list directory [%s]", indexFilesDir);
     }
 
+    final String azureDirPath = azureBasePath + "/";
+    final Set<String> pushedBlobs = new HashSet<>();
+
     long size = 0;
     for (final File file : files) {
       if (file.isFile()) {
         size += file.length();
-        azureStorage.uploadBlockBlob(
-            file,
-            segmentConfig.getContainer(),
-            StringUtils.format("%s/%s", azureBasePath, file.getName()),
-            accountConfig.getMaxTries()
-        );
+        final String blobPath = azureDirPath + file.getName();
+        azureStorage.uploadBlockBlob(file, segmentConfig.getContainer(), blobPath, accountConfig.getMaxTries());
+        pushedBlobs.add(blobPath);
       } else {
         // Segment directories are expected to be flat.
         throw new IOE("Unexpected subdirectory [%s]", file.getName());
       }
     }
 
+    deleteStaleBlobs(azureDirPath, pushedBlobs);
+
     return segment.withSize(size)
-                  .withLoadSpec(makeLoadSpec(azureBasePath + "/"))
+                  .withLoadSpec(makeLoadSpec(azureDirPath))
                   .withBinaryVersion(binaryVersion);
+  }
+
+  /**
+   * Removes everything under {@code azureDirPath} that this push did not write.
+   * <p>
+   * A zipped push replaces the previous segment outright, because one {@code index.zip} blob overwrites another, and
+   * {@link #push} with {@code useUniquePath = false} is expected to replace a previous push the same way. Uploading
+   * file by file only overwrites the names the new segment happens to share, so without this a re-push could leave
+   * behind blobs of whatever was there before: a stale {@code index.zip} from a zipped push, or smoosh chunks from a
+   * larger prior v9 segment.
+   * <p>
+   * Note that this makes an unzipped push require permission to delete blobs under the segment path, which a zipped
+   * push does not.
+   */
+  private void deleteStaleBlobs(final String azureDirPath, final Set<String> pushedBlobs) throws IOException
+  {
+    final List<String> staleBlobs = azureStorage
+        .listBlobs(segmentConfig.getContainer(), azureDirPath, null, accountConfig.getMaxTries())
+        .stream()
+        .filter(blobPath -> !pushedBlobs.contains(blobPath))
+        .collect(Collectors.toList());
+
+    if (staleBlobs.isEmpty()) {
+      return;
+    }
+
+    log.info("Removing blobs %s left under [%s] by a previous push", staleBlobs, azureDirPath);
+    if (!azureStorage.batchDeleteFiles(segmentConfig.getContainer(), staleBlobs, accountConfig.getMaxTries())) {
+      throw new IOE(
+          "Could not remove blobs %s left under [%s] by a previous push, which would be loaded as part of this segment",
+          staleBlobs,
+          azureDirPath
+      );
+    }
   }
 
   @Override

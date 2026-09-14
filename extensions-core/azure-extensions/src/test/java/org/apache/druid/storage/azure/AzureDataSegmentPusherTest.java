@@ -20,7 +20,9 @@
 package org.apache.druid.storage.azure;
 
 import com.azure.storage.blob.models.BlobStorageException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
@@ -28,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.junit.jupiter.api.BeforeEach;
@@ -264,6 +267,10 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     );
     EasyMock.expectLastCall();
 
+    // nothing else is under the path, so there is nothing to clean up
+    EasyMock.expect(azureStorage.listBlobs(CONTAINER_NAME, expectedDir + "/", null, MAX_TRIES))
+            .andReturn(ImmutableList.of(expectedDir + "/version.bin", expectedDir + "/meta.smoosh"));
+
     replayAll();
 
     DataSegment segment = pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false);
@@ -273,6 +280,83 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     assertEquals(CONTAINER_NAME, segment.getLoadSpec().get("containerName"));
     assertEquals(AzureStorageDruidModule.SCHEME, segment.getLoadSpec().get("type"));
     assertEquals(2 * DATA.length, segment.getSize());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushNoZip_removesBlobsLeftByPreviousPush(@TempDir Path tempPath) throws Exception
+  {
+    AzureDataSegmentPusher pusher =
+        new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, NO_ZIP_CONFIG);
+
+    Files.write(DATA, tempPath.resolve("version.bin").toFile());
+
+    final String expectedDir = PREFIX + "/" + pusher.getStorageDir(SEGMENT_TO_PUSH, false);
+    azureStorage.uploadBlockBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.eq(expectedDir + "/version.bin"),
+        EasyMock.eq(MAX_TRIES)
+    );
+    EasyMock.expectLastCall();
+
+    // an index.zip from a zipped push and a smoosh chunk from a larger prior segment: nothing in the new segment
+    // references either, but the puller would list and download both
+    final String staleZip = expectedDir + "/index.zip";
+    final String staleChunk = expectedDir + "/00001.smoosh";
+    EasyMock.expect(azureStorage.listBlobs(CONTAINER_NAME, expectedDir + "/", null, MAX_TRIES))
+            .andReturn(ImmutableList.of(expectedDir + "/version.bin", staleZip, staleChunk));
+
+    final Capture<Iterable<String>> deleted = Capture.newInstance();
+    EasyMock.expect(azureStorage.batchDeleteFiles(
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.capture(deleted),
+        EasyMock.eq(MAX_TRIES)
+    )).andReturn(true);
+
+    replayAll();
+
+    pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false);
+
+    verifyAll();
+
+    // only the blobs this push did not write are removed
+    assertEquals(ImmutableSet.of(staleZip, staleChunk), ImmutableSet.copyOf(deleted.getValue()));
+  }
+
+  @Test
+  public void test_pushNoZip_staleBlobDeleteFails_throwsException(@TempDir Path tempPath) throws Exception
+  {
+    AzureDataSegmentPusher pusher =
+        new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, NO_ZIP_CONFIG);
+
+    Files.write(DATA, tempPath.resolve("version.bin").toFile());
+
+    final String expectedDir = PREFIX + "/" + pusher.getStorageDir(SEGMENT_TO_PUSH, false);
+    azureStorage.uploadBlockBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.eq(expectedDir + "/version.bin"),
+        EasyMock.eq(MAX_TRIES)
+    );
+    EasyMock.expectLastCall();
+
+    EasyMock.expect(azureStorage.listBlobs(CONTAINER_NAME, expectedDir + "/", null, MAX_TRIES))
+            .andReturn(ImmutableList.of(expectedDir + "/index.zip"));
+    EasyMock.expect(azureStorage.batchDeleteFiles(
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.anyObject(),
+        EasyMock.eq(MAX_TRIES)
+    )).andReturn(false);
+
+    replayAll();
+
+    // failing the push is better than publishing a segment that would load the leftovers alongside its own files
+    assertThrows(
+        RuntimeException.class,
+        () -> pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false)
+    );
 
     verifyAll();
   }
