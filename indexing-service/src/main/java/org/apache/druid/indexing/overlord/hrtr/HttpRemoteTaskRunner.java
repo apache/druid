@@ -1105,14 +1105,19 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         ImmutableWorkerInfo immutableWorker = null;
 
         synchronized (statusLock) {
-          // Compute the eligible-worker snapshot ONCE per pass instead of rebuilding it for every
-          // pending task. Within a single synchronized(statusLock) pass no worker reservation is made
-          // until the break below, so getWorkersEligibleToRunTasks() is invariant across the inner
-          // loop. Rebuilding it per pending task made this loop O(pendingTasks x workers x
-          // tasksPerWorker) and held statusLock for long periods under a large pending backlog,
-          // which stalled TaskQueue.add/manage and task submission cluster-wide.
-          final ImmutableMap<String, ImmutableWorkerInfo> eligibleWorkers =
-              ImmutableMap.copyOf(getWorkersEligibleToRunTasks());
+          // Reuse a single eligible-worker snapshot across this pass instead of rebuilding it for
+          // every pending task. Building the snapshot is O(workers x tasksAnnouncedPerWorker), so
+          // rebuilding it per pending task made this loop O(pendingTasks x workers x
+          // tasksAnnouncedPerWorker) while holding statusLock, which stalled TaskQueue.add/manage
+          // and task submission cluster-wide under a large pending backlog.
+          //
+          // The snapshot is built lazily, so idle wakeups (e.g. worker-sync notifications with no
+          // schedulable pending task) don't pay for it. It is used only to cheaply pre-filter
+          // pending tasks that clearly have no eligible worker; the actual assignment below is
+          // always re-selected against a fresh snapshot. WorkerHolder publishes task announcements
+          // without holding statusLock, so a worker's capacity can change mid-pass; re-selecting
+          // against a fresh snapshot before reserving ensures we never oversubscribe on stale data.
+          ImmutableMap<String, ImmutableWorkerInfo> eligibleWorkers = null;
           Iterator<String> iter = pendingTaskIds.iterator();
           while (iter.hasNext()) {
             String taskId = iter.next();
@@ -1139,7 +1144,18 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
               break;
             }
 
-            immutableWorker = findWorkerToRunTask(ti.getTask(), eligibleWorkers);
+            if (eligibleWorkers == null) {
+              eligibleWorkers = ImmutableMap.copyOf(getWorkersEligibleToRunTasks());
+            }
+
+            // Cheap pre-filter against the reused snapshot: skip tasks that clearly have no worker.
+            if (findWorkerToRunTask(ti.getTask(), eligibleWorkers) == null) {
+              continue;
+            }
+
+            // A candidate exists in the snapshot; re-select against a fresh snapshot before
+            // reserving so the assignment reflects current worker capacity (see comment above).
+            immutableWorker = findWorkerToRunTask(ti.getTask());
             if (immutableWorker == null) {
               continue;
             }
