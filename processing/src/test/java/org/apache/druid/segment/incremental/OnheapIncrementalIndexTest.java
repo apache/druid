@@ -621,7 +621,10 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
     final ColumnValueSelector<ExprEval> secondConstantSelector =
         ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
+    final ColumnValueSelector<ExprEval> thirdConstantSelector =
+        ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
     Assertions.assertNotSame(firstConstantSelector.getObject(), secondConstantSelector.getObject());
+    Assertions.assertNotSame(secondConstantSelector.getObject(), thirdConstantSelector.getObject());
 
     final AggregatorFactory aggregatorFactory = new LongSumAggregatorFactory(
         "sum",

@@ -719,7 +719,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     {
       for (final ExpressionPlanCacheEntry cachedEntry : cachedExpressionPlans) {
         if (cachedEntry.expression == expression) {
-          return cachedEntry.plan;
+          return cachedEntry.plan.withExpression(Expr.singleThreaded(expression, this));
         }
       }
 
@@ -736,7 +736,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         final ExpressionPlanCacheEntry[] updatedEntries = Arrays.copyOf(currentEntries, currentEntries.length + 1);
         updatedEntries[currentEntries.length] = new ExpressionPlanCacheEntry(expression, expressionPlan);
         cachedExpressionPlans = updatedEntries;
-        return expressionPlan.withExpression(Expr.singleThreaded(expression, this));
+        return expressionPlan.withExpression(singleThreadedExpression);
       }
     }
 
