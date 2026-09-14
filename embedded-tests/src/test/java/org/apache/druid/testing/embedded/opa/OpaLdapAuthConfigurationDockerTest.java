@@ -19,13 +19,13 @@
 
 package org.apache.druid.testing.embedded.opa;
 
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.testing.embedded.EmbeddedResource;
 import org.apache.druid.testing.embedded.auth.AbstractAuthConfigurationTest;
 import org.apache.druid.testing.embedded.auth.HttpUtil;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 

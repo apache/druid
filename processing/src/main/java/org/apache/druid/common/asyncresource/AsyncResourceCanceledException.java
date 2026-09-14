@@ -17,30 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input.table;
+package org.apache.druid.common.asyncresource;
 
-import io.netty.util.internal.ThreadLocalRandom;
-import org.apache.druid.server.coordination.DruidServerMetadata;
+import java.util.concurrent.CancellationException;
 
-import java.util.Set;
-import java.util.function.Function;
-
-public enum DataServerSelector
+/**
+ * Thrown by {@link AsyncResource#get()} when {@link AsyncResource#close()} canceled acquisition before the resource
+ * became available, i.e. the consumer that owned the resource gave up waiting for it. Extends
+ * {@link CancellationException} so that consumers who only care that something was canceled need no special handling.
+ */
+public class AsyncResourceCanceledException extends CancellationException
 {
-  RANDOM(servers -> servers.stream()
-                           .skip(ThreadLocalRandom.current().nextInt(servers.size()))
-                           .findFirst()
-                           .orElse(null));
-
-  private final Function<Set<DruidServerMetadata>, DruidServerMetadata> selectServer;
-
-  DataServerSelector(Function<Set<DruidServerMetadata>, DruidServerMetadata> selectServer)
+  public AsyncResourceCanceledException(String message)
   {
-    this.selectServer = selectServer;
-  }
-
-  public Function<Set<DruidServerMetadata>, DruidServerMetadata> getSelectServerFunction()
-  {
-    return selectServer;
+    super(message);
   }
 }
