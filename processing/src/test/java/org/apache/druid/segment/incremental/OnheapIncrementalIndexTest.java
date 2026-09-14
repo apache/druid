@@ -34,6 +34,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -539,8 +540,10 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     Assertions.assertNotSame(expression, structurallyEqualExpression);
 
     final ExpressionPlan firstPlan = selectorFactory.getExpressionPlan(expression);
-    Assertions.assertSame(firstPlan, selectorFactory.getExpressionPlan(expression));
+    final ExpressionPlan sameExpressionPlan = selectorFactory.getExpressionPlan(expression);
+    Assertions.assertNotSame(firstPlan, sameExpressionPlan);
     Assertions.assertSame(expression, firstPlan.getExpression());
+    Assertions.assertSame(expression, sameExpressionPlan.getExpression());
 
     final ExpressionPlan structurallyEqualPlan = selectorFactory.getExpressionPlan(structurallyEqualExpression);
     Assertions.assertNotSame(firstPlan, structurallyEqualPlan);
@@ -550,13 +553,20 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     Assertions.assertNotSame(structurallyEqualPlan, differentPlan);
     Assertions.assertSame(differentExpression, differentPlan.getExpression());
 
-    Assertions.assertSame(firstPlan, selectorFactory.getExpressionPlan(expression));
-    Assertions.assertSame(structurallyEqualPlan, selectorFactory.getExpressionPlan(structurallyEqualExpression));
-    Assertions.assertSame(differentPlan, selectorFactory.getExpressionPlan(differentExpression));
+    Assertions.assertNotSame(firstPlan, selectorFactory.getExpressionPlan(expression));
+    Assertions.assertNotSame(structurallyEqualPlan, selectorFactory.getExpressionPlan(structurallyEqualExpression));
+    Assertions.assertNotSame(differentPlan, selectorFactory.getExpressionPlan(differentExpression));
 
     final Expr functionExpression = Parser.parse("value + 1", TestExprMacroTable.INSTANCE);
     final ExpressionPlan functionPlan = selectorFactory.getExpressionPlan(functionExpression);
-    Assertions.assertSame(functionPlan, selectorFactory.getExpressionPlan(functionExpression));
+    final ExpressionPlan sameFunctionPlan = selectorFactory.getExpressionPlan(functionExpression);
+    Assertions.assertNotSame(functionPlan, sameFunctionPlan);
+    Assertions.assertNotSame(functionPlan.getExpression(), sameFunctionPlan.getExpression());
+
+    final Expr constantExpression = Parser.parse("'constant'", TestExprMacroTable.INSTANCE);
+    final ExpressionPlan firstConstantPlan = selectorFactory.getExpressionPlan(constantExpression);
+    final ExpressionPlan secondConstantPlan = selectorFactory.getExpressionPlan(constantExpression);
+    Assertions.assertNotSame(firstConstantPlan.getExpression(), secondConstantPlan.getExpression());
   }
 
   @Test
@@ -605,6 +615,13 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> firstSelector = ExpressionSelectors.makeExprEvalSelector(selectorFactory, expression);
     final ColumnValueSelector<?> secondSelector = ExpressionSelectors.makeExprEvalSelector(selectorFactory, expression);
     Assertions.assertNotSame(firstSelector, secondSelector);
+
+    final Expr constantExpression = Parser.parse("'constant'", TestExprMacroTable.INSTANCE);
+    final ColumnValueSelector<ExprEval> firstConstantSelector =
+        ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
+    final ColumnValueSelector<ExprEval> secondConstantSelector =
+        ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
+    Assertions.assertNotSame(firstConstantSelector.getObject(), secondConstantSelector.getObject());
 
     final AggregatorFactory aggregatorFactory = new LongSumAggregatorFactory(
         "sum",

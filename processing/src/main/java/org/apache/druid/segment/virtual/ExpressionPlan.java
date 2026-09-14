@@ -121,6 +121,26 @@ public class ExpressionPlan
   }
 
   /**
+   * Returns a copy of this plan with a caller-owned expression and the same planning metadata.
+   *
+   * Expression optimizations can produce expression nodes that are not thread-safe, so cached plans must not expose
+   * the same expression instance to multiple selectors.
+   */
+  public ExpressionPlan withExpression(final Expr expression)
+  {
+    return new ExpressionPlan(
+        baseInputInspector,
+        expression,
+        analysis,
+        traits,
+        outputType,
+        singleInputType,
+        unknownInputs,
+        unappliedInputs
+    );
+  }
+
+  /**
    * Returns true if this expression is a compile-time constant: it has no input bindings and contains no
    * non-deterministic sub-expressions (e.g. {@code now()}). Non-deterministic expressions are excluded because they
    * must be re-evaluated per query/row rather than folded to a single value at selector/index construction time.

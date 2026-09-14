@@ -675,8 +675,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   /**
-   * Caches references to selector objects for each column and immutable expression plans instead of creating them for
-   * each row key in order to save heap space and avoid repeated expression planning.
+   * Caches references to selector objects for each column and expression-plan metadata instead of creating them for each
+   * row key in order to save heap space and avoid repeated expression planning.
    */
   static class CachingColumnSelectorFactory implements ColumnSelectorFactory, ExpressionPlanCache
   {
@@ -727,7 +727,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         final ExpressionPlanCacheEntry[] currentEntries = cachedExpressionPlans;
         for (final ExpressionPlanCacheEntry cachedEntry : currentEntries) {
           if (cachedEntry.expression == expression) {
-            return cachedEntry.plan;
+            return cachedEntry.plan.withExpression(Expr.singleThreaded(expression, this));
           }
         }
 
@@ -736,7 +736,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         final ExpressionPlanCacheEntry[] updatedEntries = Arrays.copyOf(currentEntries, currentEntries.length + 1);
         updatedEntries[currentEntries.length] = new ExpressionPlanCacheEntry(expression, expressionPlan);
         cachedExpressionPlans = updatedEntries;
-        return expressionPlan;
+        return expressionPlan.withExpression(Expr.singleThreaded(expression, this));
       }
     }
 

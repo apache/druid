@@ -22,11 +22,12 @@ package org.apache.druid.segment.virtual;
 import org.apache.druid.math.expr.Expr;
 
 /**
- * Supplies expression plans cached for the lifetime of a column selector factory.
+ * Supplies expression plans backed by metadata cached for the lifetime of a column selector factory.
  *
- * A plan can only be reused while the column capabilities exposed by the selector factory are stable. Implementations
- * may use expression identity as the cache key, so callers should reuse the same parsed expression when possible.
- * Implementations must not share mutable expression selectors or aggregators through this cache.
+ * Cached metadata can only be reused while the column capabilities exposed by the selector factory are stable.
+ * Implementations may use expression identity as the cache key, so callers should reuse the same parsed expression when
+ * possible. Implementations must return a plan with a caller-owned expression and must not share mutable expression
+ * selectors or aggregators through this cache.
  */
 public interface ExpressionPlanCache
 {
