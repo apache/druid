@@ -321,6 +321,7 @@ public class CalciteRulesManager
    * {@code Programs.of} builds its {@code HepPlanner} with a {@code null} context, so it never observes our cancel
    * flag; a query that spends its planning budget in these Hep rule loops would otherwise ignore the planning timeout.
    */
+  @SuppressWarnings("deprecation")
   private static Program hepProgram(final HepProgram hepProgram, final PlannerContext plannerContext)
   {
     return (planner, rel, requiredOutputTraits, materializations, lattices) -> {
@@ -331,16 +332,18 @@ public class CalciteRulesManager
           null,
           RelOptCostImpl.FACTORY
       );
+      final List<RelMetadataProvider> metadataProviders = new ArrayList<>();
+      metadataProviders.add(DefaultRelMetadataProvider.INSTANCE);
+      // Deprecated, but retained deliberately to match Programs.of: HepPlanner#registerMetadataProviders prepends
+      // HepRelMetadataProvider to the list (needed to answer metadata requests on HepRelVertex during Hep planning).
+      // Dropping it would install only DefaultRelMetadataProvider on the cluster and can break metadata lookups.
+      hepPlanner.registerMetadataProviders(metadataProviders);
       for (final RelOptMaterialization materialization : materializations) {
         hepPlanner.addMaterialization(materialization);
       }
       for (final RelOptLattice lattice : lattices) {
         hepPlanner.addLattice(lattice);
       }
-      // Modern Calcite routes rule metadata through the cluster's provider (the planner-level
-      // registerMetadataProviders is deprecated), so set it on the cluster as Programs.of does.
-      final List<RelMetadataProvider> metadataProviders = new ArrayList<>();
-      metadataProviders.add(DefaultRelMetadataProvider.INSTANCE);
       rel.getCluster().setMetadataProvider(ChainedRelMetadataProvider.of(metadataProviders));
       hepPlanner.setRoot(rel);
       return hepPlanner.findBestExp();
@@ -361,7 +364,7 @@ public class CalciteRulesManager
     final List<Program> prePrograms = new ArrayList<>();
     prePrograms.add(new LoggingProgram("Start", isDebug));
     prePrograms.add(new InlineValuesSubQueryRule(plannerContext));
-    prePrograms.add(Programs.subQuery(DefaultRelMetadataProvider.INSTANCE));
+    prePrograms.add(buildSubQueryProgram(plannerContext));
     prePrograms.add(new LoggingProgram("Finished subquery program", isDebug));
     prePrograms.add(DecorrelateAndTrimFieldsProgram.INSTANCE);
     prePrograms.add(new LoggingProgram("Finished decorrelate and trim fields program", isDebug));
@@ -374,6 +377,34 @@ public class CalciteRulesManager
     }
 
     return Programs.sequence(prePrograms.toArray(new Program[0]));
+  }
+
+  /**
+   * Cancel-aware equivalent of {@link Programs#subQuery(org.apache.calcite.rel.metadata.RelMetadataProvider)} (mirrors
+   * its two Hep stages and rule collections for the pinned Calcite version). {@code Programs.subQuery} builds its
+   * {@link HepPlanner}s with a {@code null} context, so subquery rewriting would otherwise ignore the query's
+   * {@link org.apache.calcite.util.CancelFlag} and could keep the Broker planning thread busy past the timeout.
+   */
+  private static Program buildSubQueryProgram(final PlannerContext plannerContext)
+  {
+    final HepProgramBuilder toCorrelate = HepProgram.builder();
+    toCorrelate.addRuleCollection(ImmutableList.of(
+        CoreRules.FILTER_SUB_QUERY_TO_CORRELATE,
+        CoreRules.PROJECT_SUB_QUERY_TO_CORRELATE,
+        CoreRules.JOIN_SUB_QUERY_TO_CORRELATE,
+        CoreRules.PROJECT_OVER_SUM_TO_SUM0_RULE
+    ));
+    final HepProgramBuilder toMarkCorrelate = HepProgram.builder();
+    toMarkCorrelate.addRuleCollection(ImmutableList.of(
+        CoreRules.FILTER_SUB_QUERY_TO_MARK_CORRELATE,
+        CoreRules.PROJECT_SUB_QUERY_TO_MARK_CORRELATE,
+        CoreRules.JOIN_SUB_QUERY_TO_CORRELATE,
+        CoreRules.PROJECT_OVER_SUM_TO_SUM0_RULE
+    ));
+    return Programs.sequence(
+        hepProgram(toCorrelate.build(), plannerContext),
+        hepProgram(toMarkCorrelate.build(), plannerContext)
+    );
   }
 
   /**

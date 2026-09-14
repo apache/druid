@@ -203,12 +203,14 @@ public class DirectStatement extends AbstractStatement implements Cancelable
       // measured from planningStartNanos (above), so any time already spent constructing the planner counts against
       // it and a query cannot get a fresh full budget after an expensive planner/schema setup.
       final long maxPlanningTimeMs = planner.getPlannerContext().getPlannerConfig().getMaxPlanningTimeMs();
-      // createPlanner() runs before the watchdog is armed, so an expensive planner/schema construction could
-      // already have consumed the whole budget. Enforce the deadline here before doing any more work.
-      if (planningDeadlineExceeded(maxPlanningTimeMs, planningStartNanos)) {
+      // The budget is measured from planningStartNanos (above), so time already spent constructing the planner
+      // counts against it. Compute the remaining budget once and, if the timeout is enabled but already exhausted,
+      // fail immediately: arming with a non-positive budget would return a disabled (no-op) watchdog, letting a
+      // query that crossed the deadline keep the planning thread busy until it happens to return on its own.
+      final long remainingBudgetMs = remainingPlanningBudgetMs(maxPlanningTimeMs, planningStartNanos);
+      if (maxPlanningTimeMs > 0 && remainingBudgetMs <= 0) {
         throw planningTimedOut(maxPlanningTimeMs);
       }
-      final long remainingBudgetMs = remainingPlanningBudgetMs(maxPlanningTimeMs, planningStartNanos);
       try (SqlPlanningTimeout timeout = SqlPlanningTimeout.arm(
           remainingBudgetMs,
           planner.getPlannerContext().getCancelFlag(),
