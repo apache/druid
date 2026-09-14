@@ -35,10 +35,14 @@ jobs:
         run: .github/scripts/build-dist
       - name: Build the Docker image
         run: |
-          DOCKER_BUILDKIT=1 docker build \
+          set -o pipefail
+          {
+            cat distribution/docker/Dockerfile
+            printf '\nENV JAVA_TOOL_OPTIONS="-XX:+UseCompactObjectHeaders"\n'
+          } | DOCKER_BUILDKIT=1 docker build \
             --build-arg BUILD_FROM_SOURCE=false \
             -t "$DRUID_DIST_IMAGE_NAME" \
-            -f distribution/docker/Dockerfile .
+            -f - .
       - name: Run Docker tests
         id: run-it
         run: .github/scripts/run_docker-tests

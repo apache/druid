@@ -20,13 +20,14 @@
 package org.apache.druid.java.util.http.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.channel.ChannelException;
+import io.netty.handler.codec.DecoderException;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.timeout.ReadTimeoutException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
@@ -45,6 +46,7 @@ import java.net.URL;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tests with a bunch of goofy not-actually-http servers.
@@ -384,9 +386,20 @@ public class JankyServersTest
               StatusResponseHandler.getInstance()
           );
 
-      final ExecutionException exception = Assertions.assertThrows(ExecutionException.class, response::get);
-      Assertions.assertTrue(
-          exception.getMessage().contains("java.lang.IllegalArgumentException: invalid version format: GET")
+      // The "echo" server replies with the bytes of the request itself, so the response status line
+      // becomes "GET / HTTP/1.1". Netty 3's codec rejected this with an IllegalArgumentException;
+      // Netty 4's codec is more lenient and hands us a best-effort HttpResponse with a failed
+      // decoderResult(). NettyHttpClient checks decoderResult() and surfaces the failure so callers
+      // are not silently handed a synthesized response.
+      final ExecutionException exception = Assertions.assertThrows(
+          ExecutionException.class,
+          () -> response.get(5, TimeUnit.SECONDS)
+      );
+      Throwable cause = exception.getCause();
+      Assertions.assertNotNull(cause, "ExecutionException must have a cause");
+      Assertions.assertTrue(cause instanceof DecoderException
+          || cause.getMessage() != null && cause.getMessage().contains("invalid version format"),
+          "expected decoder failure, got " + cause
       );
     }
     finally {
@@ -410,8 +423,51 @@ public class JankyServersTest
 
       final ExecutionException exception = Assertions.assertThrows(ExecutionException.class, response::get);
       Assertions.assertTrue(
-          exception.getMessage().contains("org.jboss.netty.channel.ChannelException: Faulty channel in resource pool")
+          exception.getMessage().contains("io.netty.channel.ChannelException: Faulty channel in resource pool")
       );
+    }
+    finally {
+      lifecycle.stop();
+    }
+  }
+
+  @Test
+  public void testSilentProxyCONNECT() throws Throwable
+  {
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClientConfig config = HttpClientConfig
+          .builder()
+          .withSslContext(SSLContext.getDefault())
+          .withHttpProxyConfig(new HttpClientProxyConfig("localhost", silentServerSocket.getLocalPort(), null, null))
+          .withSslHandshakeTimeout(Duration.millis(500))
+          .build();
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle);
+
+      final long start = System.nanoTime();
+      final ListenableFuture<StatusResponseHolder> response = client
+          .go(
+              new Request(HttpMethod.GET, new URL("https://example.com/")),
+              StatusResponseHandler.getInstance()
+          );
+
+      final ExecutionException exception = Assertions.assertThrows(
+          ExecutionException.class,
+          () -> response.get(10, TimeUnit.SECONDS)
+      );
+      final long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+      // NettyHttpClient wraps the pool failure as "Faulty channel in resource pool"; walk the cause
+      // chain to find our CONNECT-timeout ChannelException underneath.
+      boolean foundConnectTimeout = false;
+      for (Throwable t = exception; t != null; t = t.getCause()) {
+        if (t.getMessage() != null && t.getMessage().contains("Timed out") && t.getMessage().contains("CONNECT")) {
+          foundConnectTimeout = true;
+          break;
+        }
+      }
+      Assertions.assertTrue(foundConnectTimeout, "expected CONNECT timeout in cause chain, got " + exception);
+      // Loose upper bound: request should have failed well before the get() timeout.
+      Assertions.assertTrue(elapsedMs < 5_000, "CONNECT wait was not bounded, took " + elapsedMs + "ms");
     }
     finally {
       lifecycle.stop();

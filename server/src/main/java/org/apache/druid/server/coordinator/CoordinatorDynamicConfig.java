@@ -77,6 +77,7 @@ public class CoordinatorDynamicConfig
 
   private final Set<String> turboLoadingNodes;
   private final Map<String, String> cloneServers;
+  private final CloneSyncCriteria cloneSyncCriteria;
 
   /**
    * Map from alias tier name to the set of actual tier names it represents.
@@ -143,6 +144,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
       @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
       @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
+      @JsonProperty("cloneSyncCriteria") @Nullable CloneSyncCriteria cloneSyncCriteria,
       @JsonProperty("historicalTierAliases") @Nullable Map<String, Set<String>> historicalTierAliases
   )
   {
@@ -189,6 +191,7 @@ public class CoordinatorDynamicConfig
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
     this.turboLoadingNodes = Configs.valueOrDefault(turboLoadingNodes, Set.of());
     this.cloneServers = Configs.valueOrDefault(cloneServers, Map.of());
+    this.cloneSyncCriteria = Configs.valueOrDefault(cloneSyncCriteria, new CloneSyncCriteria(null, null));
 
     this.historicalTierAliases = Configs.valueOrDefault(historicalTierAliases, Map.of());
     final Set<String> aliasKeys = this.historicalTierAliases.keySet();
@@ -392,6 +395,18 @@ public class CoordinatorDynamicConfig
     return cloneServers;
   }
 
+  /**
+   * Criteria defining when a target server specified in {@link #cloneServers}
+   * can be considered as {@link ServerCloneStatus.State#SYNCED}. A clone once
+   * marked as synced may again go out of sync in subsequent coordinator cycles
+   * if any of the conditions or sync criteria change.
+   */
+  @JsonProperty
+  public CloneSyncCriteria getCloneSyncCriteria()
+  {
+    return cloneSyncCriteria;
+  }
+
   @JsonProperty
   public Map<String, Set<String>> getHistoricalTierAliases()
   {
@@ -442,6 +457,7 @@ public class CoordinatorDynamicConfig
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", turboLoadingNodes=" + turboLoadingNodes +
            ", cloneServers=" + cloneServers +
+           ", cloneSyncCriteria=" + cloneSyncCriteria +
            ", historicalTierAliases=" + historicalTierAliases +
            '}';
   }
@@ -480,6 +496,7 @@ public class CoordinatorDynamicConfig
            && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
            && Objects.equals(debugDimensions, that.debugDimensions)
            && Objects.equals(cloneServers, that.cloneServers)
+           && Objects.equals(cloneSyncCriteria, that.cloneSyncCriteria)
            && Objects.equals(historicalTierAliases, that.historicalTierAliases);
   }
 
@@ -505,6 +522,7 @@ public class CoordinatorDynamicConfig
         debugDimensions,
         turboLoadingNodes,
         cloneServers,
+        cloneSyncCriteria,
         historicalTierAliases
     );
   }
@@ -562,6 +580,7 @@ public class CoordinatorDynamicConfig
     private Boolean smartSegmentLoading;
     private Set<String> turboLoadingNodes;
     private Map<String, String> cloneServers;
+    private CloneSyncCriteria cloneSyncCriteria;
     private Map<String, Set<String>> historicalTierAliases;
 
     public Builder()
@@ -588,6 +607,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
         @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes,
         @JsonProperty("cloneServers") @Nullable Map<String, String> cloneServers,
+        @JsonProperty("cloneSyncCriteria") @Nullable CloneSyncCriteria cloneSyncCriteria,
         @JsonProperty("historicalTierAliases") @Nullable Map<String, Set<String>> historicalTierAliases
     )
     {
@@ -609,6 +629,7 @@ public class CoordinatorDynamicConfig
       this.debugDimensions = debugDimensions;
       this.turboLoadingNodes = turboLoadingNodes;
       this.cloneServers = cloneServers;
+      this.cloneSyncCriteria = cloneSyncCriteria;
       this.historicalTierAliases = historicalTierAliases;
     }
 
@@ -708,6 +729,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withCloneSyncCriteria(CloneSyncCriteria cloneSyncCriteria)
+    {
+      this.cloneSyncCriteria = cloneSyncCriteria;
+      return this;
+    }
+
     public Builder withHistoricalTierAliases(Map<String, Set<String>> historicalTierAliases)
     {
       this.historicalTierAliases = historicalTierAliases;
@@ -742,6 +769,7 @@ public class CoordinatorDynamicConfig
           debugDimensions,
           turboLoadingNodes,
           cloneServers,
+          cloneSyncCriteria,
           historicalTierAliases
       );
     }
@@ -775,6 +803,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
           valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes()),
           valueOrDefault(cloneServers, defaults.getCloneServers()),
+          valueOrDefault(cloneSyncCriteria, defaults.getCloneSyncCriteria()),
           valueOrDefault(historicalTierAliases, defaults.getHistoricalTierAliases())
       );
     }

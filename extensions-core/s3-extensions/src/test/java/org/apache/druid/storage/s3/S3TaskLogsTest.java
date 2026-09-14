@@ -516,7 +516,8 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
-    Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskLog(KEY_1, -1 * (LOG_CONTENTS.length() - 1));
+    final Optional<InputStream> inputStreamOptional =
+        s3TaskLogs.streamTaskLog(KEY_1, 1L - LOG_CONTENTS.length());
     final String taskLogs;
     try (final BufferedReader reader = new BufferedReader(
         new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {

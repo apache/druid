@@ -161,6 +161,7 @@ public class CliIndexerServerModule implements Module
         oldConfig.getErrorResponseTransformStrategy(),
         oldConfig.getContentSecurityPolicy(),
         oldConfig.isEnableHSTS(),
+        oldConfig.isEnableResponseIdentityHeaders(),
         oldConfig.getUriCompliance(),
         oldConfig.isEnforceStrictSNIHostChecking()
     );
