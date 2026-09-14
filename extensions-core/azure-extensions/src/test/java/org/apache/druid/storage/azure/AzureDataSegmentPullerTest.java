@@ -155,7 +155,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_getSegmentFiles_nonRecoverableErrorRaisedWhenPullingSegmentFiles_doNotDeleteOutputDirectory(
+  public void test_getSegmentFiles_nonRecoverableErrorRaisedWhenPullingSegmentFiles_deleteOutputDirectory(
       @TempDir Path tempPath
   )
   {
@@ -170,11 +170,47 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
 
     replayAll();
 
+    // an unchecked failure is still a failed load: it has to reach the caller as a SegmentLoadingException so that
+    // SegmentLocalCacheManager can fall back to another storage location, and it must not leave outDir behind
     assertThrows(
-        RuntimeException.class,
+        SegmentLoadingException.class,
         () -> puller.getSegmentFiles(CONTAINER_NAME, BLOB_PATH, tempPath.toFile())
     );
-    assertTrue(tempPath.toFile().exists());
+    assertFalse(tempPath.toFile().exists());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_getSegmentFiles_unzippedSegment_copyFails_deletesPartialOutputDirectory(
+      @TempDir Path sourcePath,
+      @TempDir Path targetPath
+  ) throws IOException
+  {
+    final AzureAccountConfig config = new AzureAccountConfig();
+    final String versionBlob = UNZIPPED_BLOB_PATH + "version.bin";
+    final String smooshBlob = UNZIPPED_BLOB_PATH + "meta.smoosh";
+
+    EasyMock.expect(azureStorage.listBlobs(CONTAINER_NAME, UNZIPPED_BLOB_PATH, null, config.getMaxTries()))
+            .andReturn(ImmutableList.of(versionBlob, smooshBlob));
+    // the first blob copies fine, so outDir is partially populated when the second one fails for good
+    expectBlobContents(sourcePath, versionBlob, "version");
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, smooshBlob, azureStorage))
+            .andReturn(new AzureByteSource(azureStorage, CONTAINER_NAME, smooshBlob));
+    EasyMock.expect(azureStorage.getBlockBlobInputStream(0L, CONTAINER_NAME, smooshBlob))
+            .andThrow(new RuntimeException("error"));
+
+    replayAll();
+
+    AzureDataSegmentPuller puller = new AzureDataSegmentPuller(byteSourceFactory, azureStorage, config);
+
+    // FileUtils.retryCopy wraps the failure that exhausted its retries in a RuntimeException, which must not escape
+    // past the cleanup
+    assertThrows(
+        SegmentLoadingException.class,
+        () -> puller.getSegmentFiles(CONTAINER_NAME, UNZIPPED_BLOB_PATH, targetPath.toFile())
+    );
+    assertFalse(targetPath.toFile().exists());
 
     verifyAll();
   }

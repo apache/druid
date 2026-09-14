@@ -81,7 +81,7 @@ public class AzureDataSegmentPuller
       log.info("Loaded %d bytes from [%s] to [%s]", result.size(), actualBlobPath, outDir.getAbsolutePath());
       return result;
     }
-    catch (IOException e) {
+    catch (Exception e) {
       try {
         FileUtils.deleteDirectory(outDir);
       }
