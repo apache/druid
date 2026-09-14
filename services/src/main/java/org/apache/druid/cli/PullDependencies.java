@@ -86,9 +86,9 @@ public class PullDependencies implements Runnable
                   .put("com.fasterxml.jackson.core", "jackson-databind")
                   .put("com.fasterxml.jackson.core", "jackson-core")
                   .put("com.fasterxml.jackson.core", "jackson-annotations")
-                  // Netty 4 is bundled in lib/ (used by the core Druid HTTP client). The netty-bom import
-                  // at the root pom appears to defeat scope=provided on transitive netty jars in some
-                  // extensions, so hard-exclude them here to keep them from being duplicated.
+                  // Netty 4 is bundled in lib/ (used by the core Druid HTTP client). The netty-bom import at the root
+                  // pom appears to defeat scope=provided on transitive netty jars in some extensions, so exclude them
+                  // here to keep them from being duplicated.
                   .put("io.netty", "netty-buffer")
                   .put("io.netty", "netty-codec")
                   .put("io.netty", "netty-codec-base")
