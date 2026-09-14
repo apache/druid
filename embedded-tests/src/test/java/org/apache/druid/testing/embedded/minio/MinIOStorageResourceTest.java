@@ -50,16 +50,14 @@ public class MinIOStorageResourceTest
     // Verify container properties
     assertEquals("test-bucket", resource.getBucket());
     assertEquals("test/base", resource.getBaseKey());
-    assertEquals("minioadmin", resource.getAccessKey());
-    assertEquals("minioadmin", resource.getSecretKey());
 
     // Verify all the required properties are set
     verify(cluster).addCommonProperty("druid.storage.type", "s3");
     verify(cluster).addCommonProperty("druid.indexer.logs.type", "s3");
     verify(cluster).addCommonProperty("druid.s3.enablePathStyleAccess", "true");
     verify(cluster).addCommonProperty("druid.s3.protocol", "http");
-    verify(cluster).addCommonProperty("druid.s3.accessKey", "minioadmin");
-    verify(cluster).addCommonProperty("druid.s3.secretKey", "minioadmin");
+    verify(cluster).addCommonProperty("druid.s3.accessKey", resource.getAccessKey());
+    verify(cluster).addCommonProperty("druid.s3.secretKey", resource.getSecretKey());
     verify(cluster).addCommonProperty("druid.storage.bucket", "test-bucket");
     verify(cluster).addCommonProperty("druid.storage.baseKey", "test/base");
     verify(cluster).addCommonProperty("druid.indexer.logs.s3Bucket", "test-bucket");

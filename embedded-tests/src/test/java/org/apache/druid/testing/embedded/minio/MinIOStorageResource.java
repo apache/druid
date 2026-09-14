@@ -26,7 +26,8 @@ import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
-import org.testcontainers.containers.MinIOContainer;
+import org.testcontainers.localstack.LocalStackContainer;
+import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -37,19 +38,15 @@ import software.amazon.awssdk.services.sts.model.AssumeRoleRequest;
 import software.amazon.awssdk.services.sts.model.AssumeRoleResponse;
 import software.amazon.awssdk.services.sts.model.Credentials;
 
-import java.net.URI;
-
 /**
- * A MinIO container resource for use in embedded tests as deep storage.
- * Sets up MinIO as S3-compatible storage and configures Druid's S3 connector.
+ * A LocalStack container resource for use in embedded tests as S3-compatible deep storage.
+ * Uses the same LocalStack image as KinesisResource.
  */
-public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
+public class MinIOStorageResource extends TestcontainerResource<LocalStackContainer>
 {
-  private static final String MINIO_IMAGE = "minio/minio:latest";
+  private static final String IMAGE = "localstack/localstack:4.13.1";
   private static final String DEFAULT_BUCKET = "druid-deep-storage";
   private static final String DEFAULT_BASE_KEY = "druid/segments";
-  private static final String ACCESS_KEY = "minioadmin";
-  private static final String SECRET_KEY = "minioadmin";
 
   private final String bucket;
   private final String baseKey;
@@ -67,11 +64,10 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
   }
 
   @Override
-  protected MinIOContainer createContainer()
+  protected LocalStackContainer createContainer()
   {
-    return new MinIOContainer(MINIO_IMAGE)
-        .withUserName(getAccessKey())
-        .withPassword(getSecretKey());
+    return new LocalStackContainer(DockerImageName.parse(IMAGE))
+        .withServices("s3", "sts");
   }
 
   @Override
@@ -95,10 +91,10 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
     // Configure S3 connection properties
     cluster.addCommonProperty("druid.s3.endpoint.url", cluster.getEmbeddedHostname().useInUri(getEndpointUrl()));
-    // AWS SDK v2 requires a region; use a fixed value since MinIO doesn't validate it
-    cluster.addCommonProperty("druid.s3.endpoint.signingRegion", "us-east-1");
-    cluster.addCommonProperty("druid.s3.accessKey", getAccessKey());
-    cluster.addCommonProperty("druid.s3.secretKey", getSecretKey());
+    // LocalStack provides its own region
+    cluster.addCommonProperty("druid.s3.endpoint.signingRegion", getContainer().getRegion());
+    cluster.addCommonProperty("druid.s3.accessKey", getContainer().getAccessKey());
+    cluster.addCommonProperty("druid.s3.secretKey", getContainer().getSecretKey());
     cluster.addCommonProperty("druid.s3.enablePathStyleAccess", "true");
     cluster.addCommonProperty("druid.s3.protocol", "http");
     cluster.addCommonProperty("druid.s3.maxConnections", "150");
@@ -116,18 +112,20 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
   public String getAccessKey()
   {
-    return ACCESS_KEY;
+    ensureRunning();
+    return getContainer().getAccessKey();
   }
 
   public String getSecretKey()
   {
-    return SECRET_KEY;
+    ensureRunning();
+    return getContainer().getSecretKey();
   }
 
   public String getEndpointUrl()
   {
     ensureRunning();
-    return getContainer().getS3URL();
+    return getContainer().getEndpoint().toString();
   }
 
   public S3Client getS3Client()
@@ -142,7 +140,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
    *
    * @return S3InputSourceConfig with temporary credentials. The
    * {@code assumeRoleArn} and {@code assumeRoleExternalId} fields are set to null
-   * since MinIO does not support them.
+   * since they are not needed for test roles.
    */
   public S3InputSourceConfig createTempCredentialsForInputSource()
   {
@@ -150,9 +148,8 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
     final StsClient stsClient = createStsClient();
 
-    // SDK v2 requires a non-null roleArn. MinIO does not validate the ARN,
-    // but without an inline policy the resulting session may have no permissions.
     // An explicit S3 full-access policy ensures the temp credentials work.
+    // SDK v2 requires a non-null roleArn.
     final String s3FullAccessPolicy =
         "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:*\"],\"Resource\":[\"*\"]}]}";
     final AssumeRoleRequest assumeRoleRequest = AssumeRoleRequest.builder()
@@ -176,15 +173,20 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
     );
   }
 
+  private StaticCredentialsProvider getCredentials()
+  {
+    return StaticCredentialsProvider.create(
+        AwsBasicCredentials.create(getContainer().getAccessKey(), getContainer().getSecretKey())
+    );
+  }
+
   private S3Client createS3Client()
   {
     return S3Client
         .builder()
-        .endpointOverride(URI.create(getEndpointUrl()))
-        .region(Region.US_EAST_1)
-        .credentialsProvider(StaticCredentialsProvider.create(
-            AwsBasicCredentials.create(getAccessKey(), getSecretKey())
-        ))
+        .endpointOverride(getContainer().getEndpoint())
+        .region(Region.of(getContainer().getRegion()))
+        .credentialsProvider(getCredentials())
         .forcePathStyle(true)
         .build();
   }
@@ -193,11 +195,9 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
   {
     return StsClient
         .builder()
-        .endpointOverride(URI.create(getEndpointUrl()))
-        .region(Region.US_EAST_1)
-        .credentialsProvider(StaticCredentialsProvider.create(
-            AwsBasicCredentials.create(getAccessKey(), getSecretKey())
-        ))
+        .endpointOverride(getContainer().getEndpoint())
+        .region(Region.of(getContainer().getRegion()))
+        .credentialsProvider(getCredentials())
         .build();
   }
 }
