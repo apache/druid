@@ -129,13 +129,14 @@ public class InPlanningBenchmark
   private int inSubQueryThreshold;
 
   @Param({
-      "1", "10", "100", "1000", "10000", "11481", "100000", "1000000"
+      "1", "10", "100", "1000", "10000", "100000", "1000000"
   })
   private Integer inClauseLiteralsCount;
   private SqlEngine engine;
   @Nullable
   private PlannerFactory plannerFactory;
-  private String planOnlySql;
+  private String planOnlyLongSql;
+  private String planOnlyStringSql;
   private final Closer closer = Closer.create();
 
   @Setup(Level.Trial)
@@ -212,7 +213,8 @@ public class InPlanningBenchmark
         new DruidHookDispatcher()
     );
 
-    planOnlySql = createQuery("select long1 from foo where long1 in ", inClauseLiteralsCount, ValueType.LONG);
+    planOnlyLongSql = createQuery("select long1 from foo where long1 in ", inClauseLiteralsCount, ValueType.LONG);
+    planOnlyStringSql = createQuery("select string1 from foo where string1 in ", inClauseLiteralsCount, ValueType.STRING);
 
     String prefix = ("explain plan for select long1 from foo where long1 in ");
     final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
@@ -246,14 +248,17 @@ public class InPlanningBenchmark
   @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  public void queryInSqlPlanOnly(Blackhole blackhole)
+  public void queryLongInSqlPlanOnly(Blackhole blackhole)
   {
-    final Map<String, Object> context = ImmutableMap.of(
-        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false);
+    planOnly(planOnlyLongSql, blackhole);
+  }
 
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, planOnlySql, context)) {
-      blackhole.consume(planner.plan());
-    }
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryStringInSqlPlanOnly(Blackhole blackhole)
+  {
+    planOnly(planOnlyStringSql, blackhole);
   }
 
   @Benchmark
@@ -359,6 +364,16 @@ public class InPlanningBenchmark
         blackhole.consume(lastRow);
       }
       return resultSequence;
+    }
+  }
+
+  private void planOnly(final String sql, final Blackhole blackhole)
+  {
+    final Map<String, Object> context = ImmutableMap.of(
+        "inSubQueryThreshold", inSubQueryThreshold, "useCache", false);
+
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
+      blackhole.consume(planner.plan());
     }
   }
 }

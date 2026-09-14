@@ -114,11 +114,15 @@ public class ScalarInArrayOperatorConversion extends DirectOperatorConversion
 
       for (final RexNode arrayElement : arrayElements) {
         // Large IN lists are translated multiple times during planning, so avoid a temporary DruidLiteral here.
-        if (arrayElement instanceof RexLiteral
-            && SqlTypeName.INT_TYPES.contains(arrayElement.getType().getSqlTypeName())
-            && !RexLiteral.isNullLiteral(arrayElement)) {
-          arrayElementLiteralValues.add(((Number) RexLiteral.value(arrayElement)).longValue());
-          continue;
+        if (arrayElement instanceof RexLiteral && !RexLiteral.isNullLiteral(arrayElement)) {
+          final SqlTypeName sqlTypeName = arrayElement.getType().getSqlTypeName();
+          if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
+            arrayElementLiteralValues.add(((Number) RexLiteral.value(arrayElement)).longValue());
+            continue;
+          } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
+            arrayElementLiteralValues.add(RexLiteral.stringValue(arrayElement));
+            continue;
+          }
         }
 
         final DruidLiteral arrayElementEval = Expressions.calciteLiteralToDruidLiteral(plannerContext, arrayElement);
