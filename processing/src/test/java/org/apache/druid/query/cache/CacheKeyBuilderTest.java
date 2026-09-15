@@ -38,6 +38,7 @@ public class CacheKeyBuilderTest
   public void testCacheKeyBuilder()
   {
     final Cacheable cacheable = () -> new byte[]{10, 20};
+    final byte[] separatorLikeBytes = new byte[]{(byte) 0xFF};
 
     final byte[] actual = new CacheKeyBuilder((byte) 10)
         .appendBoolean(false)
@@ -46,7 +47,7 @@ public class CacheKeyBuilderTest
         .appendLong(Long.MAX_VALUE)
         .appendFloat(0.1f)
         .appendDouble(2.3)
-        .appendByteArray(CacheKeyBuilder.STRING_SEPARATOR) // test when an item is same with the separator
+        .appendByteArray(separatorLikeBytes)
         .appendFloatArray(new float[]{10.0f, 11.0f})
         .appendStrings(Lists.newArrayList("test1", "test2"))
         .appendCacheable(cacheable)
@@ -54,51 +55,70 @@ public class CacheKeyBuilderTest
         .appendCacheables(Lists.newArrayList(cacheable, null, cacheable))
         .build();
 
-    final int expectedSize = 1                                           // id
-                             + 1                                         // bool
-                             + 4                                         // 'test'
-                             + Integer.BYTES                             // 10
-                             + Long.BYTES                                // Long.MAX_VALUE
-                             + Float.BYTES                               // 0.1f
-                             + Double.BYTES                              // 2.3
-                             + CacheKeyBuilder.STRING_SEPARATOR.length   // byte array
-                             + Float.BYTES * 2                           // 10.0f, 11.0f
-                             + Integer.BYTES + 5 * 2 + 1                 // 'test1' 'test2'
-                             + cacheable.getCacheKey().length            // cacheable
-                             + Integer.BYTES + 4                         // cacheable list
-                             + 12;                                       // type keys
+    // Every item is a type key, then the length of its value, then the value; every element of a collection is
+    // likewise preceded by its own length.
+    final int itemHeader = 1 + Integer.BYTES;
+    final int expectedSize =
+        1                                                            // id
+        + itemHeader + 1                                             // bool
+        + itemHeader + 4                                             // 'test'
+        + itemHeader + Integer.BYTES                                 // 10
+        + itemHeader + Long.BYTES                                    // Long.MAX_VALUE
+        + itemHeader + Float.BYTES                                   // 0.1f
+        + itemHeader + Double.BYTES                                  // 2.3
+        + itemHeader + 1                                             // byte array
+        + itemHeader + Float.BYTES * 2                               // 10.0f, 11.0f
+        + itemHeader + (Integer.BYTES + 5 * 2 + 1)                   // 'test1' 0xFF 'test2'
+        + itemHeader + 2                                             // cacheable
+        + itemHeader                                                 // null cacheable
+        + itemHeader + (Integer.BYTES + (Integer.BYTES + 2) + Integer.BYTES + (Integer.BYTES + 2)); // cacheable list
     Assertions.assertEquals(expectedSize, actual.length);
 
     final byte[] expected = ByteBuffer.allocate(expectedSize)
                                       .put((byte) 10)
                                       .put(CacheKeyBuilder.BOOLEAN_KEY)
+                                      .putInt(1)
                                       .put((byte) 0)
                                       .put(CacheKeyBuilder.STRING_KEY)
+                                      .putInt(4)
                                       .put(StringUtils.toUtf8("test"))
                                       .put(CacheKeyBuilder.INT_KEY)
+                                      .putInt(Integer.BYTES)
                                       .putInt(10)
                                       .put(CacheKeyBuilder.LONG_KEY)
+                                      .putInt(Long.BYTES)
                                       .putLong(Long.MAX_VALUE)
                                       .put(CacheKeyBuilder.FLOAT_KEY)
+                                      .putInt(Float.BYTES)
                                       .putFloat(0.1f)
                                       .put(CacheKeyBuilder.DOUBLE_KEY)
+                                      .putInt(Double.BYTES)
                                       .putDouble(2.3)
                                       .put(CacheKeyBuilder.BYTE_ARRAY_KEY)
-                                      .put(CacheKeyBuilder.STRING_SEPARATOR)
+                                      .putInt(separatorLikeBytes.length)
+                                      .put(separatorLikeBytes)
                                       .put(CacheKeyBuilder.FLOAT_ARRAY_KEY)
+                                      .putInt(Float.BYTES * 2)
                                       .putFloat(10.0f)
                                       .putFloat(11.0f)
                                       .put(CacheKeyBuilder.STRING_LIST_KEY)
+                                      .putInt(Integer.BYTES + 5 * 2 + 1)
                                       .putInt(2)
                                       .put(StringUtils.toUtf8("test1"))
                                       .put(CacheKeyBuilder.STRING_SEPARATOR)
                                       .put(StringUtils.toUtf8("test2"))
                                       .put(CacheKeyBuilder.CACHEABLE_KEY)
+                                      .putInt(2)
                                       .put(cacheable.getCacheKey())
                                       .put(CacheKeyBuilder.CACHEABLE_KEY)
+                                      .putInt(0)
                                       .put(CacheKeyBuilder.CACHEABLE_LIST_KEY)
+                                      .putInt(Integer.BYTES + (Integer.BYTES + 2) + Integer.BYTES + (Integer.BYTES + 2))
                                       .putInt(3)
+                                      .putInt(2)
                                       .put(cacheable.getCacheKey())
+                                      .putInt(0)
+                                      .putInt(2)
                                       .put(cacheable.getCacheKey())
                                       .array();
 
@@ -299,13 +319,17 @@ public class CacheKeyBuilderTest
   @Test
   public void testIgnoringOrder()
   {
+    final int stringListSize = Integer.BYTES + (2 + 5 + 5) + CacheKeyBuilder.STRING_SEPARATOR.length * 2;
+    final int cacheableListSize = Integer.BYTES + (Integer.BYTES + 2) + (Integer.BYTES + 5) * 2;
+
     byte[] actual = new CacheKeyBuilder((byte) 10)
         .appendStringsIgnoringOrder(Lists.newArrayList("test2", "test1", "te"))
         .build();
 
-    byte[] expected = ByteBuffer.allocate(20)
+    byte[] expected = ByteBuffer.allocate(1 + 1 + Integer.BYTES + stringListSize)
                                 .put((byte) 10)
                                 .put(CacheKeyBuilder.STRING_LIST_KEY)
+                                .putInt(stringListSize)
                                 .putInt(3)
                                 .put(StringUtils.toUtf8("te"))
                                 .put(CacheKeyBuilder.STRING_SEPARATOR)
@@ -326,12 +350,16 @@ public class CacheKeyBuilderTest
         .appendCacheablesIgnoringOrder(Lists.newArrayList(c3, c2, c1))
         .build();
 
-    expected = ByteBuffer.allocate(18)
+    expected = ByteBuffer.allocate(1 + 1 + Integer.BYTES + cacheableListSize)
                          .put((byte) 10)
                          .put(CacheKeyBuilder.CACHEABLE_LIST_KEY)
+                         .putInt(cacheableListSize)
                          .putInt(3)
+                         .putInt(2)
                          .put(c1.getCacheKey())
+                         .putInt(5)
                          .put(c2.getCacheKey())
+                         .putInt(5)
                          .put(c3.getCacheKey())
                          .array();
 
