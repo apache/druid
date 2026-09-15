@@ -75,10 +75,11 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return null;
     }
 
+    final boolean forcePredicateFilter = delegate.getExtractionFnForMetadata() != null;
     if (isWhitelist) {
-      return filterAllowList(values, selector, delegate.getExtractionFn() != null);
+      return filterAllowList(values, selector, forcePredicateFilter);
     } else {
-      return filterDenyList(values, selector, delegate.getExtractionFn() != null);
+      return filterDenyList(values, selector, forcePredicateFilter);
     }
   }
 

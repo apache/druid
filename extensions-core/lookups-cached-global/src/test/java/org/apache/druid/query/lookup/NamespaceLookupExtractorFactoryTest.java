@@ -51,6 +51,7 @@ import org.mockito.ArgumentMatchers;
 
 import javax.ws.rs.core.Response;
 
+import java.io.Closeable;
 import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
@@ -260,6 +261,43 @@ public class NamespaceLookupExtractorFactoryTest
     verify(versionedCache).getVersion();
     verify(versionedCache, atLeastOnce()).asLookupExtractor(ArgumentMatchers.eq(false), ArgumentMatchers.any());
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
+  }
+
+  @Test
+  public void testAcquireRetainedLookupExtractor() throws Exception
+  {
+    final ExtractionNamespace extractionNamespace = () -> 0;
+    expectScheduleAndWaitOnce(extractionNamespace);
+    final Closeable retainedReference = mock(Closeable.class);
+    final Map<String, String> map = new HashMap<>();
+    map.put("foo", "bar");
+    final LookupExtractor lookupExtractor = new MapLookupExtractor(map, false);
+
+    when(entry.getCacheState()).thenReturn(versionedCache);
+    when(versionedCache.acquireReference()).thenReturn(retainedReference);
+    when(versionedCache.asLookupExtractor(ArgumentMatchers.eq(false), ArgumentMatchers.any())).thenReturn(lookupExtractor);
+    when(versionedCache.getVersion()).thenReturn("0");
+
+    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
+        extractionNamespace,
+        scheduler
+    );
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
+
+    final RetainedLookupExtractor retainedLookupExtractor =
+        namespaceLookupExtractorFactory.acquireRetainedLookupExtractor().orElseThrow(AssertionError::new);
+
+    Assertions.assertNotSame(lookupExtractor, retainedLookupExtractor);
+    Assertions.assertEquals("bar", retainedLookupExtractor.apply("foo"));
+    retainedLookupExtractor.close();
+
+    verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
+    verify(entry).getCacheState();
+    verify(versionedCache).acquireReference();
+    verify(versionedCache).getVersion();
+    verify(versionedCache).asLookupExtractor(ArgumentMatchers.eq(false), ArgumentMatchers.any());
+    verify(retainedReference).close();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache, retainedReference);
   }
 
 
