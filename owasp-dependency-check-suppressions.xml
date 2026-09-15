@@ -891,7 +891,7 @@
     <notes><![CDATA[
       file name: azure-core-1.58.1.jar azure-core-http-netty-1.16.5.jar azure-identity-1.18.4.jar azure-json-1.5.1.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.azure/azure-.*@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.azure/(azure-core|azure-core-http-netty|azure-identity|azure-json)@.*$</packageUrl>
     <cve>CVE-2026-33117</cve>
   </suppress>
 
