@@ -31,6 +31,8 @@ public enum Dimension
   DUTY("duty"),
   DUTY_GROUP("dutyGroup"),
   DESCRIPTION("description"),
+  REASON("reason"),
+  CATEGORY("category"),
   SERVER("server"),
   SUPERVISOR_ID("supervisorId"),
   CONFIG_TYPE("configType");

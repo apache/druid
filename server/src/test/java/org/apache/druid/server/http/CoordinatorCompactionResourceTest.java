@@ -52,7 +52,8 @@ public class CoordinatorCompactionResourceTest
       1,
       1,
       1,
-      1
+      1,
+      List.of()
   );
 
   @BeforeEach
