@@ -24,9 +24,7 @@ import org.apache.druid.error.DruidException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.io.Closeable;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class AsyncResourcesTest
 {
@@ -123,62 +121,4 @@ public class AsyncResourcesTest
     Assertions.assertThrows(DruidException.class, resource::get);
   }
 
-  @Test
-  public void testFromCloseableFutureClosesResultExactlyOnceOnClose()
-  {
-    final SettableFuture<CloseableProbe> future = SettableFuture.create();
-    final AsyncResource<CloseableProbe> resource = AsyncResources.fromFutureCloseable(future);
-    final CloseableProbe probe = new CloseableProbe();
-
-    future.set(probe);
-    Assertions.assertTrue(resource.isReady());
-    Assertions.assertSame(probe, resource.get());
-    Assertions.assertEquals(0, probe.closeCount.get(), "result must not be closed while the resource is open");
-
-    resource.close();
-    Assertions.assertEquals(1, probe.closeCount.get(), "closing the resource closes the managed result");
-  }
-
-  @Test
-  public void testFromCloseableFutureFailureSurfacesAtGet()
-  {
-    final SettableFuture<CloseableProbe> future = SettableFuture.create();
-    final AsyncResource<CloseableProbe> resource = AsyncResources.fromFutureCloseable(future);
-
-    final RuntimeException boom = new IllegalStateException("boom");
-    future.setException(boom);
-    Assertions.assertSame(boom, Assertions.assertThrows(RuntimeException.class, resource::get));
-  }
-
-  @Test
-  public void testFromCloseableFutureCloseBeforeCompleteStillClosesTheLateResult()
-  {
-    final SettableFuture<CloseableProbe> future = SettableFuture.create();
-    final AsyncResource<CloseableProbe> resource = AsyncResources.fromFutureCloseable(future);
-
-    Assertions.assertFalse(resource.isReady());
-    resource.close();
-
-    // The future must be left alone: a canceled future silently discards a value set afterwards, so the callback
-    // below would never see the result and nothing would ever close it.
-    Assertions.assertFalse(future.isCancelled(), "closing must not cancel the future");
-
-    final CloseableProbe probe = new CloseableProbe();
-    Assertions.assertTrue(future.set(probe), "the producer's completion must still be accepted");
-    Assertions.assertEquals(1, probe.closeCount.get(), "a result produced after close must be closed, not leaked");
-  }
-
-  /**
-   * Closeable that records how many times it was closed.
-   */
-  private static class CloseableProbe implements Closeable
-  {
-    private final AtomicInteger closeCount = new AtomicInteger(0);
-
-    @Override
-    public void close()
-    {
-      closeCount.incrementAndGet();
-    }
-  }
 }

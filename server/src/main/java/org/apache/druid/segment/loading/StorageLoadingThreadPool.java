@@ -183,32 +183,15 @@ public class StorageLoadingThreadPool
    * exposing the task's (non-null) result. The result is treated as a plain value with no lifecycle: closing the
    * returned resource does not close the result; closing it before completion cancels the task.
    *
-   * <p>This is the unmanaged counterpart of {@link #submitCloseableAsyncResource}; use that when the task's result
-   * owns a lifecycle.
+   * <p>The result must <b>not</b> own a lifecycle, since nothing here would close it. A task producing something
+   * closeable should populate a {@link org.apache.druid.common.asyncresource.SettableAsyncResource} itself, so that a
+   * result produced after the consumer gave up still gets closed rather than dropped by the canceled task.
    *
    * @see AsyncResources#fromFutureUnmanaged
    */
   public <T> AsyncResource<T> submitUnmanagedAsyncResource(Callable<T> task)
   {
     return AsyncResources.fromFutureUnmanaged(getExecutorService().submit(task));
-  }
-
-  /**
-   * Submit a task whose result <b>owns a lifecycle</b> and hand back an {@link AsyncResource} that manages it: closing
-   * the returned resource closes the result, and a result produced after that close is closed rather than leaked.
-   *
-   * <p>Closing before completion does not cancel the task: it runs to completion and its result is closed on arrival.
-   * Interrupting it would let the task hand a lifecycle-owning result to a canceled future, which drops it with
-   * nothing left to close it.
-   *
-   * <p>This is the managed counterpart of {@link #submitUnmanagedAsyncResource}; use that when the task's result is a
-   * plain value with no lifecycle.
-   *
-   * @see AsyncResources#fromFutureCloseable
-   */
-  public <T extends Closeable> AsyncResource<T> submitCloseableAsyncResource(Callable<T> task)
-  {
-    return AsyncResources.fromFutureCloseable(getExecutorService().submit(task));
   }
 
   @LifecycleStop
