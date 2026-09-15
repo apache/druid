@@ -77,7 +77,7 @@ export function formatCompactionInfo(compaction: CompactionInfo) {
           return 'Fully compacted';
         }
       } else {
-        return capitalizeFirst(status.scheduleStatus);
+        return capitalizeFirst(status.scheduleStatus.replace(/_/g, ' '));
       }
     } else {
       return 'Awaiting first run';

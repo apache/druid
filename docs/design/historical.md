@@ -28,7 +28,7 @@ Historical services cache data segments on local disk and serve queries from tha
 
 ## Configuration
 
-For Apache Druid Historical service configuration, see [Historical configuration](../configuration/index.md#historical).
+For Apache&circledR; Druid Historical service configuration, see [Historical configuration](../configuration/index.md#historical).
 
 For basic tuning guidance for the Historical service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#historical).
 

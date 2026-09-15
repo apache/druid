@@ -635,7 +635,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000}
         loading={segmentsState.loading}
         noDataText={
-          segmentsState.isEmpty()
+          segmentsState.data?.segments.length === 0
             ? `No segments${filters.toArray().length ? ' matching filter' : ''}`
             : segmentsState.getErrorMessage() || ''
         }

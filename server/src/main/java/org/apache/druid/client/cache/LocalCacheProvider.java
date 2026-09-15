@@ -20,8 +20,7 @@
 package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Min;
 
 /**
  * Deprecated, use {@CaffeineCacheProvider}

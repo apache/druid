@@ -332,10 +332,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   {
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignatures.fromRelDataType(
-            correlateRel.getRowType().getFieldNames(),
-            correlateRel.getRowType()
-        ),
+        RowSignatures.fromRelDataTypeWithUniqueFields(correlateRel.getRowType()),
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false,

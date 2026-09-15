@@ -21,8 +21,8 @@ package org.apache.druid.server.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class EscalatorTest
 {
@@ -30,7 +30,7 @@ public class EscalatorTest
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         NoopEscalator.getInstance(),
         objectMapper.readValue(
             objectMapper.writeValueAsString(NoopEscalator.getInstance()),

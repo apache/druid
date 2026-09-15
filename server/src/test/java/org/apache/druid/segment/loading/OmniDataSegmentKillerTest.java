@@ -25,24 +25,22 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
-import static org.hamcrest.Matchers.containsInAnyOrder;
-import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 public class OmniDataSegmentKillerTest
 {
@@ -68,8 +66,7 @@ public class OmniDataSegmentKillerTest
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
-    Assert.assertThrows(
-        "Unknown loader type[unknown-type]. Known types are [explode]",
+    Assertions.assertThrows(
         SegmentLoadingException.class,
         () -> segmentKiller.kill(segment)
     );
@@ -83,8 +80,7 @@ public class OmniDataSegmentKillerTest
 
     final Injector injector = createInjector(null);
     final OmniDataSegmentKiller segmentKiller = injector.getInstance(OmniDataSegmentKiller.class);
-    Assert.assertThrows(
-        "BadSegmentKiller must not have been initialized",
+    Assertions.assertThrows(
         RuntimeException.class,
         () -> segmentKiller.kill(segment)
     );
@@ -177,9 +173,13 @@ public class OmniDataSegmentKillerTest
     segmentKiller.kill(ImmutableList.of(segment1, segment2, segment3));
 
     Mockito.verify(killerSane, Mockito.times(1))
-           .kill((List<DataSegment>) argThat(containsInAnyOrder(segment1, segment2)));
+           .kill(ArgumentMatchers.<List<DataSegment>>argThat(
+               segments -> segments.size() == 2 && segments.containsAll(ImmutableList.of(segment1, segment2))
+           ));
     Mockito.verify(killerSaneTwo, Mockito.times(1))
-           .kill((List<DataSegment>) argThat(containsInAnyOrder(segment3)));
+           .kill(ArgumentMatchers.<List<DataSegment>>argThat(
+               segments -> segments.size() == 1 && segments.contains(segment3)
+           ));
   }
 
   @LazySingleton

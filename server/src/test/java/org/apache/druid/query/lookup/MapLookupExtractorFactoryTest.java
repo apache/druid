@@ -22,8 +22,8 @@ package org.apache.druid.query.lookup;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -36,19 +36,19 @@ public class MapLookupExtractorFactoryTest
   @Test
   public void testSimpleExtraction()
   {
-    Assert.assertEquals(FACTORY.get().apply(KEY), VALUE);
-    Assert.assertTrue(FACTORY.get().isOneToOne());
+    Assertions.assertEquals(FACTORY.get().apply(KEY), VALUE);
+    Assertions.assertTrue(FACTORY.get().isOneToOne());
   }
 
   @Test
   public void testReplaces()
   {
-    Assert.assertFalse(FACTORY.replaces(FACTORY));
-    Assert.assertFalse(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true)));
-    Assert.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), false)));
-    Assert.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY + "1", VALUE), true)));
-    Assert.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE + "1"), true)));
-    Assert.assertTrue(FACTORY.replaces(null));
+    Assertions.assertFalse(FACTORY.replaces(FACTORY));
+    Assertions.assertFalse(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true)));
+    Assertions.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), false)));
+    Assertions.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY + "1", VALUE), true)));
+    Assertions.assertTrue(FACTORY.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE + "1"), true)));
+    Assertions.assertTrue(FACTORY.replaces(null));
   }
 
   @Test
@@ -57,6 +57,6 @@ public class MapLookupExtractorFactoryTest
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
     LookupExtractorFactory lookupExtractorFactory = new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true);
-    Assert.assertEquals(lookupExtractorFactory, mapper.readerFor(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(lookupExtractorFactory)));
+    Assertions.assertEquals(lookupExtractorFactory, mapper.readerFor(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(lookupExtractorFactory)));
   }
 }

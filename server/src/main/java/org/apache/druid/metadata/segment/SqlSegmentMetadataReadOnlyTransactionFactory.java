@@ -24,8 +24,12 @@ import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionStatus;
+
+import java.util.function.Function;
 
 /**
  * Factory for read-only {@link SegmentMetadataTransaction}s that always read
@@ -40,17 +44,20 @@ public class SqlSegmentMetadataReadOnlyTransactionFactory implements SegmentMeta
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig tablesConfig;
+  private final SegmentsMetadataManagerConfig managerConfig;
   private final SQLMetadataConnector connector;
 
   @Inject
   public SqlSegmentMetadataReadOnlyTransactionFactory(
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig tablesConfig,
+      SegmentsMetadataManagerConfig managerConfig,
       SQLMetadataConnector connector
   )
   {
     this.jsonMapper = jsonMapper;
     this.tablesConfig = tablesConfig;
+    this.managerConfig = managerConfig;
     this.connector = connector;
   }
 
@@ -90,6 +97,22 @@ public class SqlSegmentMetadataReadOnlyTransactionFactory implements SegmentMeta
     throw DruidException.defensive("Only Overlord can perform write transactions on segment metadata.");
   }
 
+  @Override
+  public <T> T inReadOnlyNoCacheTransaction(Function<SqlSegmentsMetadataQuery, T> sqlQuery)
+  {
+    return connector.retryReadOnlyTransaction(
+        (handle, status) -> sqlQuery.apply(createSqlQueryForTransaction(handle)),
+        getQuietRetries(),
+        getMaxRetries()
+    );
+  }
+
+  @Override
+  public <T> T inReadWriteNoCacheTransaction(Function<SqlSegmentsMetadataQuery, T> sqlUpdate)
+  {
+    throw DruidException.defensive("Only Overlord can perform write transactions on segment metadata.");
+  }
+
   protected SegmentMetadataTransaction createSqlTransaction(
       String dataSource,
       Handle handle,
@@ -98,7 +121,9 @@ public class SqlSegmentMetadataReadOnlyTransactionFactory implements SegmentMeta
   {
     return new SqlSegmentMetadataTransaction(
         dataSource,
-        handle, transactionStatus, connector, tablesConfig, jsonMapper
+        handle,
+        createSqlQueryForTransaction(handle),
+        transactionStatus, connector, tablesConfig, jsonMapper
     );
   }
 
@@ -110,5 +135,10 @@ public class SqlSegmentMetadataReadOnlyTransactionFactory implements SegmentMeta
     try (transaction) {
       return callback.inTransaction(transaction);
     }
+  }
+
+  protected SqlSegmentsMetadataQuery createSqlQueryForTransaction(Handle handle)
+  {
+    return SqlSegmentsMetadataQuery.forHandle(handle, connector, tablesConfig, managerConfig, jsonMapper);
   }
 }

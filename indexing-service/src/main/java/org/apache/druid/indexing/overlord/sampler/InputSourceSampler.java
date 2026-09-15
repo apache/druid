@@ -127,7 +127,7 @@ public class InputSourceSampler
       );
       try (final CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample();
            final IncrementalIndex index = buildIncrementalIndex(nonNullSamplerConfig, nonNullDataSchema);
-           final Closer closer1 = closer) {
+           final Closer ignoredCloser = closer) {
         List<SamplerResponseRow> responseRows = new ArrayList<>(nonNullSamplerConfig.getNumRows());
         int numRowsIndexed = 0;
 

@@ -117,6 +117,17 @@ public class FilterDecomposeConcatRule extends RelOptRule implements Substitutio
                 operand -> rexBuilder.makeCall(SqlStdOperatorTable.IS_NULL, operand)
             )
         );
+      } else if (call.isA(SqlKind.SEARCH)
+                 && FlattenConcatRule.isNonTrivialStringConcat(call.getOperands().get(0))) {
+        // Expand SEARCH to OR(EQUALS, ...) so the EQUALS branch above decomposes each CONCAT comparison.
+        final RexNode expanded = RexUtil.expandSearch(rexBuilder, null, call);
+        final RexNode rewritten = expanded.accept(this);
+        //noinspection ObjectEquality
+        if (rewritten != expanded) {
+          return rewritten;
+        }
+        negate = false;
+        newCall = null;
       } else {
         negate = false;
         newCall = null;

@@ -48,6 +48,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -221,8 +222,13 @@ public class IndexerTableInputSpecSlicer implements InputSpecSlicer
       if (intervals.isEmpty()) {
         publishedUsedSegments = Collections.emptySet();
       } else {
-        publishedUsedSegments =
-            taskActionClient.submit(new RetrieveUsedSegmentsAction(dataSource, intervals));
+        publishedUsedSegments = taskActionClient.submit(
+            new RetrieveUsedSegmentsAction(
+                dataSource,
+                intervals,
+                SegmentDetail.none() // Even LoadSpec is not needed, because workers fetch them from the Coordinator.
+            )
+        );
       }
     }
     catch (IOException e) {

@@ -20,8 +20,7 @@
 package org.apache.druid.storage.azure;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Stores the configuration for writing task logs to Azure .

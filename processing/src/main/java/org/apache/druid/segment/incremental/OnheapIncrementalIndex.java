@@ -140,12 +140,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     initializeProjections(incrementalIndexSchema);
 
     if (incrementalIndexSchema.getClusterSpec() != null) {
-      if (!projections.isEmpty()) {
-        throw DruidException.defensive(
-            "clustered base table mode does not yet support aggregate projections — got [%d] projection(s)",
-            projections.size()
-        );
-      }
       this.clusteredBaseTable = new OnHeapClusteredBaseTable(
           incrementalIndexSchema.getClusterSpec(),
           incrementalIndexSchema.getVirtualColumns(),

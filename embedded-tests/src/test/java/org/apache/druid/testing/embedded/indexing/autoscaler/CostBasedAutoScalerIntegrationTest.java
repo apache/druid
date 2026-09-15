@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.indexing.autoscaler;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
@@ -36,9 +37,9 @@ import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
 import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.hamcrest.Matchers;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.joda.time.Period;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -73,6 +74,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
   private String topic;
   private final KafkaResource kafkaServer = new KafkaResource();
+  private ExecutorService backgroundPublishExecutor;
 
   @Override
   protected StreamIngestResource<?> getStreamIngestResource()
@@ -95,6 +97,14 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     kafkaServer.createTopicWithPartitions(topic, PARTITION_COUNT);
   }
 
+  @AfterEach
+  public void shutdownBackgroundPublishExecutor()
+  {
+    if (backgroundPublishExecutor != null) {
+      backgroundPublishExecutor.shutdownNow();
+    }
+  }
+
   @Test
   @Timeout(45)
   public void test_autoScaler_computesOptimalTaskCountAndProduceScaleDown()
@@ -108,7 +118,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(100)
         .taskCountStart(initialTaskCount)
         .scaleActionPeriodMillis(1900)
-        .minTriggerScaleActionFrequencyMillis(2000)
         // Weight configuration: strongly favor lag reduction over idle time
         .lagWeight(0.9)
         .idleWeight(0.1)
@@ -148,7 +157,8 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     // Produce additional records to create a backlog / lag
     // This ensures tasks are busy processing (low idle ratio)
-    Executors.newSingleThreadExecutor().submit(() -> {
+    backgroundPublishExecutor = Executors.newSingleThreadExecutor();
+    backgroundPublishExecutor.submit(() -> {
       for (int i = 0; i < 500; ++i) {
         publish1kRecords(topic, true);
       }
@@ -162,7 +172,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(50)
         .taskCountStart(lowInitialTaskCount)
         .scaleActionPeriodMillis(500)
-        .minTriggerScaleActionFrequencyMillis(1000)
         .lagWeight(0.8)
         .idleWeight(0.2)
         .build();
@@ -192,6 +201,54 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
   }
 
   @Test
+  public void test_autoScaler_computesOptimalTaskCountAndProducesScaleUp_withUtilizationRatio()
+  {
+
+    final int lowInitialTaskCount = 1;
+    // This ensures tasks are busy processing (low idle ratio)
+    backgroundPublishExecutor = Executors.newSingleThreadExecutor();
+    backgroundPublishExecutor.submit(() -> {
+      for (int i = 0; i < 500; ++i) {
+        publish1kRecords(topic, true);
+      }
+    });
+
+    final CostBasedAutoScalerConfig autoScalerConfig = CostBasedAutoScalerConfig
+        .builder()
+        .enableTaskAutoScaler(true)
+        .taskCountMin(1)
+        .taskCountMax(50)
+        .taskCountStart(lowInitialTaskCount)
+        .scaleActionPeriodMillis(500)
+        .lagWeight(0.8)
+        .idleWeight(0.2)
+        .usePollIdleRatio(false)
+        .build();
+
+    final KafkaSupervisorSpec kafkaSupervisorSpec = createKafkaSupervisorWithAutoScaler(
+        autoScalerConfig,
+        lowInitialTaskCount
+    );
+
+    Assertions.assertEquals(kafkaSupervisorSpec.getId(), cluster.callApi().postSupervisor(kafkaSupervisorSpec));
+
+    // Wait for the supervisor is running
+    overlord.latchableEmitter()
+            .waitForEvent(event -> event.hasMetricName("task/run/time")
+                                        .hasDimension(DruidMetrics.DATASOURCE, dataSource));
+
+    // With 50 partitions and high lag saturating the single task's processing rate,
+    // the utilization ratio must drive the cost function to recommend scaling up.
+    overlord.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
+                      .hasValueMatching(Matchers.greaterThan(1L))
+    );
+
+    // Suspend the supervisor
+    cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());
+  }
+
+  @Test
   @Timeout(value = 20, unit = TimeUnit.MINUTES)
   public void test_autoScaler_scalesUpAndDown_withSlowPublish()
       throws Exception
@@ -210,18 +267,17 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(4)
         .lagWeight(0.5)
         .idleWeight(0.5)
-        .minTriggerScaleActionFrequencyMillis(10L)
         .scaleActionPeriodMillis(10L)
         .minScaleDownDelay(Duration.standardSeconds(1))
         .build();
 
-    // taskDuration of 10s gives enough time to auto-scaler to fetch task metrics
+    // Keep task duration short so all generated segments can be published promptly while the auto-scaler observes them.
     final SupervisorSpec supervisor = createKafkaSupervisor(kafkaServer)
         .withTuningConfig(t -> t.withMaxRowsPerSegment(maxRowsPerSegment))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withTaskCount(1)
-                .withTaskDuration(Period.seconds(10))
+                .withTaskDuration(Period.seconds(1))
                 .withSupervisorRunPeriod(Period.millis(10))
                 .withAutoScalerConfig(autoScalerConfig)
         )
@@ -330,7 +386,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMin(1)
         .taskCountMax(10)
         .scaleActionPeriodMillis(100)
-        .minTriggerScaleActionFrequencyMillis(100)
         // High idle weight ensures scale-down when tasks are mostly idle (little data to process)
         .lagWeight(0.1)
         .idleWeight(0.9)
@@ -392,7 +447,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     final String getSupervisorPath = StringUtils.format("/druid/indexer/v1/supervisor/%s", supervisorId);
     final KafkaSupervisorSpec supervisorSpec = cluster.callApi().serviceClient().onLeaderOverlord(
         mapper -> new RequestBuilder(HttpMethod.GET, getSupervisorPath),
-        new TypeReference<>(){}
+        new TypeReference<>() {}
     );
     Assertions.assertNotNull(supervisorSpec);
     return supervisorSpec.getSpec().getIOConfig().getTaskCount();

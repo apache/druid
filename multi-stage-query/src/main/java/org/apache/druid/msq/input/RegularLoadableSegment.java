@@ -32,6 +32,7 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
@@ -127,13 +128,13 @@ public class RegularLoadableSegment implements LoadableSegment
   }
 
   @Override
-  public synchronized Optional<Segment> acquireIfCached()
+  public synchronized Optional<Segment> acquireIfCached(AcquireMode acquireMode)
   {
     if (acquired) {
       throw DruidException.defensive("Segment with descriptor[%s] is already acquired", descriptor);
     }
 
-    final Optional<Segment> cachedSegment = segmentManager.acquireCachedSegment(segmentId);
+    final Optional<Segment> cachedSegment = segmentManager.acquireCachedSegment(segmentId, acquireMode);
     if (cachedSegment.isPresent()) {
       acquired = true;
 
@@ -148,7 +149,7 @@ public class RegularLoadableSegment implements LoadableSegment
   }
 
   @Override
-  public synchronized AcquireSegmentAction acquire()
+  public synchronized AcquireSegmentAction acquire(AcquireMode acquireMode)
   {
     if (acquired) {
       throw DruidException.defensive("Segment with descriptor[%s] is already acquired", descriptor);
@@ -157,7 +158,7 @@ public class RegularLoadableSegment implements LoadableSegment
     acquired = true;
 
     if (cachedDataSegment != null) {
-      final AcquireSegmentAction action = segmentManager.acquireSegment(cachedDataSegment);
+      final AcquireSegmentAction action = segmentManager.acquireSegment(cachedDataSegment, acquireMode);
       return new AcquireSegmentAction(
           () -> LoadableSegmentUtils.countedLoad(
               action.getSegmentFuture(),
@@ -177,7 +178,7 @@ public class RegularLoadableSegment implements LoadableSegment
           Suppliers.memoize(() -> FutureUtils.transformAsync(
               dataSegmentFutureSupplier.get(),
               dataSegment -> LoadableSegmentUtils.countedLoad(
-                  closer.register(segmentManager.acquireSegment(dataSegment)).getSegmentFuture(),
+                  closer.register(segmentManager.acquireSegment(dataSegment, acquireMode)).getSegmentFuture(),
                   dataSegment.getSize(),
                   inputCounters
               )

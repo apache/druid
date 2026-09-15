@@ -21,13 +21,12 @@ package org.apache.druid.segment.projections;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.dimension.DimensionSpec;
-import org.apache.druid.segment.IdLookup;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.vector.ConstantVectorSelectors;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
@@ -42,6 +41,8 @@ import javax.annotation.Nullable;
  * Vectorized counterpart of {@link ClusteringColumnSelectorFactory}. Wraps a delegate
  * {@link VectorColumnSelectorFactory} and intercepts requests for clustering columns, returning constant-typed
  * vector selectors (via {@link ConstantVectorSelectors}). Other column requests pass through to delegating wrappers.
+ * As with the scalar wrapper, a clustering column whose name is also a query virtual column's output is NOT
+ * intercepted but left to the delegate (which resolves virtual columns before physical columns).
  *
  * The factory is mutable via {@link #setDelegate(VectorColumnSelectorFactory, Object[])}: a multi-group
  * {@code ConcatenatingVectorCursor} swaps the underlying delegate + clustering values on each group transition.
@@ -54,12 +55,15 @@ import javax.annotation.Nullable;
 public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelectorFactory
 {
   private final RowSignature clusteringColumns;
+  // Query virtual columns whose output names shadow a clustering column are deferred to the delegate; see class doc.
+  private final VirtualColumns queryVirtualColumns;
   private final int maxVectorSize;
   private VectorColumnSelectorFactory delegate;
   private Object[] clusteringValues;
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
   // cached inner state.
   private long generation;
+  private final ReadableVectorInspector readableVectorInspector = new DelegatingReadableVectorInspector(this);
 
   /**
    * Convenience overload that derives {@code maxVectorSize} from the supplied delegate. Used by single-group
@@ -81,9 +85,30 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
       int maxVectorSize
   )
   {
+    this(delegate, clusteringColumns, clusteringValues, maxVectorSize, VirtualColumns.EMPTY);
+  }
+
+  public ClusteringVectorColumnSelectorFactory(
+      VectorColumnSelectorFactory delegate,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues,
+      int maxVectorSize,
+      VirtualColumns queryVirtualColumns
+  )
+  {
     this.clusteringColumns = clusteringColumns;
+    this.queryVirtualColumns = queryVirtualColumns;
     this.maxVectorSize = maxVectorSize;
     setDelegate(delegate, clusteringValues);
+  }
+
+  /**
+   * Whether {@code column} should be served as this group's clustering constant: a clustering column not shadowed by a
+   * query virtual column of the same output name (see class doc).
+   */
+  private boolean servesClusteringConstant(String column)
+  {
+    return clusteringColumns.indexOf(column) >= 0 && !queryVirtualColumns.exists(column);
   }
 
   /**
@@ -122,7 +147,7 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   @Override
   public ReadableVectorInspector getReadableVectorInspector()
   {
-    return delegate.getReadableVectorInspector();
+    return readableVectorInspector;
   }
 
   @Override
@@ -134,55 +159,67 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   @Override
   public SingleValueDimensionVectorSelector makeSingleValueDimensionSelector(DimensionSpec dimensionSpec)
   {
-    final int idx = clusteringColumns.indexOf(dimensionSpec.getDimension());
-    if (idx < 0) {
-      return new DelegatingSingleValueDimensionVectorSelector(this, dimensionSpec);
-    }
-    return new ClusteringSingleValueDimensionVectorSelector(this, idx, dimensionSpec);
+    // clusteredValueGroups columns are never dictionary-encoded (see getColumnCapabilities), so the vector engine
+    // always uses object/value selectors and never requests a dimension vector selector here. A request would mean a
+    // column was wrongly advertised as dictionary-encoded.
+    throw DruidException.defensive(
+        "clusteredValueGroups columns are not dictionary-encoded; no single-value dimension vector selector for [%s]",
+        dimensionSpec.getDimension()
+    );
   }
 
   @Override
   public MultiValueDimensionVectorSelector makeMultiValueDimensionSelector(DimensionSpec dimensionSpec)
   {
-    final int idx = clusteringColumns.indexOf(dimensionSpec.getDimension());
-    if (idx < 0) {
-      return new DelegatingMultiValueDimensionVectorSelector(this, dimensionSpec);
-    }
-    // Clustering values are single-typed primitives. Multi-value requests on a clustering column shouldn't happen
-    // in practice; throw to surface caller bugs rather than silently misbehave.
+    // See makeSingleValueDimensionSelector: clusteredValueGroups columns are never dictionary-encoded, so a
+    // multi-value dimension vector selector is never requested either.
     throw DruidException.defensive(
-        "multi-value vector selector not supported for clustering column [" + dimensionSpec.getDimension() + "]"
+        "clusteredValueGroups columns are not dictionary-encoded; no multi-value dimension vector selector for [%s]",
+        dimensionSpec.getDimension()
     );
   }
 
   @Override
   public VectorValueSelector makeValueSelector(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
+    if (!servesClusteringConstant(column)) {
       return new DelegatingVectorValueSelector(this, column);
     }
-    return new ClusteringVectorValueSelector(this, idx);
+    return new ClusteringVectorValueSelector(this, clusteringColumns.indexOf(column));
   }
 
   @Override
   public VectorObjectSelector makeObjectSelector(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
+    if (!servesClusteringConstant(column)) {
       return new DelegatingVectorObjectSelector(this, column);
     }
-    return new ClusteringVectorObjectSelector(this, idx);
+    return new ClusteringVectorObjectSelector(this, clusteringColumns.indexOf(column));
   }
 
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
-      return delegate.getColumnCapabilities(column);
+    if (!servesClusteringConstant(column)) {
+      // Non-clustering columns (or a clustering column shadowed by a query VC, resolved by the delegate) are stored
+      // per cluster group with per-group local dictionaries that are NOT stable
+      // across the concatenating vector cursor. We must not advertise dictionary encoding: the vectorized group-by
+      // keys on the selector's (per-group-local) IDs when the column reports as dictionary-encoded
+      // (GroupByVectorColumnProcessorFactory#useDictionaryEncodedSelector), conflating distinct values across groups.
+      // Reporting non-dictionary-encoded routes it to the value-building vector selector, which is correct across
+      // groups.
+      final ColumnCapabilities delegateCapabilities = delegate.getColumnCapabilities(column);
+      if (delegateCapabilities == null) {
+        return null;
+      }
+      return ColumnCapabilitiesImpl.copyOf(delegateCapabilities)
+                                   .setDictionaryEncoded(false)
+                                   .setDictionaryValuesSorted(false)
+                                   .setDictionaryValuesUnique(false)
+                                   .setHasBitmapIndexes(false);
     }
+    final int idx = clusteringColumns.indexOf(column);
     final ColumnType type = clusteringColumns.getColumnType(idx).orElseThrow();
     if (type.is(ValueType.STRING)) {
       return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
@@ -190,73 +227,21 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
     return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
   }
 
-  private static final class ClusteringSingleValueDimensionVectorSelector implements SingleValueDimensionVectorSelector
+  /**
+   * A {@link ReadableVectorInspector} bound to the factory, not to one delegate: {@link #getCurrentVectorSize} and
+   * {@link #getId} follow whichever delegate is current, so an inspector grabbed once keeps tracking the active group
+   * across {@code ConcatenatingVectorCursor} transitions. {@link #getMaxVectorSize} is the factory's fixed max.
+   */
+  private static final class DelegatingReadableVectorInspector implements ReadableVectorInspector
   {
     private final ClusteringVectorColumnSelectorFactory parent;
-    private final int idx;
-    private final DimensionSpec spec;
-    private long cachedGeneration = -1;
-    private SingleValueDimensionVectorSelector cachedInner;
+    private int vectorId = NULL_ID;
+    private int lastDelegateId = NULL_ID;
+    private VectorColumnSelectorFactory lastDelegate;
 
-    private ClusteringSingleValueDimensionVectorSelector(
-        ClusteringVectorColumnSelectorFactory parent,
-        int idx,
-        DimensionSpec spec
-    )
+    private DelegatingReadableVectorInspector(ClusteringVectorColumnSelectorFactory parent)
     {
       this.parent = parent;
-      this.idx = idx;
-      this.spec = spec;
-    }
-
-    private SingleValueDimensionVectorSelector currentInner()
-    {
-      final long currentGeneration = parent.getGeneration();
-      if (cachedGeneration == currentGeneration) {
-        return cachedInner;
-      }
-      final Object raw = parent.currentValue(idx);
-      final String stringValue = raw == null ? null : String.valueOf(raw);
-      final String afterExtraction =
-          spec.getExtractionFn() == null ? stringValue : spec.getExtractionFn().apply(stringValue);
-      cachedInner = ConstantVectorSelectors.singleValueDimensionVectorSelector(
-          parent.getReadableVectorInspector(),
-          afterExtraction
-      );
-      cachedGeneration = currentGeneration;
-      return cachedInner;
-    }
-
-    @Override
-    public int[] getRowVector()
-    {
-      return currentInner().getRowVector();
-    }
-
-    @Override
-    public int getValueCardinality()
-    {
-      return currentInner().getValueCardinality();
-    }
-
-    @Nullable
-    @Override
-    public String lookupName(int id)
-    {
-      return currentInner().lookupName(id);
-    }
-
-    @Override
-    public boolean nameLookupPossibleInAdvance()
-    {
-      return currentInner().nameLookupPossibleInAdvance();
-    }
-
-    @Nullable
-    @Override
-    public IdLookup idLookup()
-    {
-      return currentInner().idLookup();
     }
 
     @Override
@@ -268,7 +253,23 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
     @Override
     public int getCurrentVectorSize()
     {
-      return parent.getReadableVectorInspector().getCurrentVectorSize();
+      return parent.getDelegate().getReadableVectorInspector().getCurrentVectorSize();
+    }
+
+    @Override
+    public int getId()
+    {
+      final VectorColumnSelectorFactory delegate = parent.getDelegate();
+      final int id = delegate.getReadableVectorInspector().getId();
+      if (id == NULL_ID) {
+        return NULL_ID;
+      }
+      if (delegate != lastDelegate || id != lastDelegateId) {
+        lastDelegate = delegate;
+        lastDelegateId = id;
+        vectorId++;
+      }
+      return vectorId;
     }
   }
 
@@ -381,148 +382,6 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
     public int getCurrentVectorSize()
     {
       return parent.getReadableVectorInspector().getCurrentVectorSize();
-    }
-  }
-
-  private static final class DelegatingSingleValueDimensionVectorSelector implements SingleValueDimensionVectorSelector
-  {
-    private final ClusteringVectorColumnSelectorFactory parent;
-    private final DimensionSpec spec;
-    private long cachedGeneration = -1;
-    private SingleValueDimensionVectorSelector cachedInner;
-
-    private DelegatingSingleValueDimensionVectorSelector(
-        ClusteringVectorColumnSelectorFactory parent,
-        DimensionSpec spec
-    )
-    {
-      this.parent = parent;
-      this.spec = spec;
-    }
-
-    private SingleValueDimensionVectorSelector currentInner()
-    {
-      final long currentGeneration = parent.getGeneration();
-      if (cachedGeneration != currentGeneration) {
-        cachedInner = parent.getDelegate().makeSingleValueDimensionSelector(spec);
-        cachedGeneration = currentGeneration;
-      }
-      return cachedInner;
-    }
-
-    @Override
-    public int[] getRowVector()
-    {
-      return currentInner().getRowVector();
-    }
-
-    @Override
-    public int getValueCardinality()
-    {
-      return currentInner().getValueCardinality();
-    }
-
-    @Nullable
-    @Override
-    public String lookupName(int id)
-    {
-      return currentInner().lookupName(id);
-    }
-
-    @Override
-    public boolean nameLookupPossibleInAdvance()
-    {
-      return currentInner().nameLookupPossibleInAdvance();
-    }
-
-    @Nullable
-    @Override
-    public IdLookup idLookup()
-    {
-      return currentInner().idLookup();
-    }
-
-    @Override
-    public int getMaxVectorSize()
-    {
-      return currentInner().getMaxVectorSize();
-    }
-
-    @Override
-    public int getCurrentVectorSize()
-    {
-      return currentInner().getCurrentVectorSize();
-    }
-  }
-
-  private static final class DelegatingMultiValueDimensionVectorSelector implements MultiValueDimensionVectorSelector
-  {
-    private final ClusteringVectorColumnSelectorFactory parent;
-    private final DimensionSpec spec;
-    private long cachedGeneration = -1;
-    private MultiValueDimensionVectorSelector cachedInner;
-
-    private DelegatingMultiValueDimensionVectorSelector(
-        ClusteringVectorColumnSelectorFactory parent,
-        DimensionSpec spec
-    )
-    {
-      this.parent = parent;
-      this.spec = spec;
-    }
-
-    private MultiValueDimensionVectorSelector currentInner()
-    {
-      final long currentGeneration = parent.getGeneration();
-      if (cachedGeneration != currentGeneration) {
-        cachedInner = parent.getDelegate().makeMultiValueDimensionSelector(spec);
-        cachedGeneration = currentGeneration;
-      }
-      return cachedInner;
-    }
-
-    @Override
-    public IndexedInts[] getRowVector()
-    {
-      return currentInner().getRowVector();
-    }
-
-    @Override
-    public int getValueCardinality()
-    {
-      return currentInner().getValueCardinality();
-    }
-
-    @Nullable
-    @Override
-    public String lookupName(int id)
-    {
-      return currentInner().lookupName(id);
-    }
-
-    @Override
-    public boolean nameLookupPossibleInAdvance()
-    {
-      return currentInner().nameLookupPossibleInAdvance();
-    }
-
-    @Nullable
-    @Override
-    public IdLookup idLookup()
-    {
-      return currentInner().idLookup();
-    }
-
-    @Override
-    public int getMaxVectorSize()
-    {
-      return currentInner().getMaxVectorSize();
-    }
-
-    @Override
-    public int getCurrentVectorSize()
-    {
-      return currentInner().getCurrentVectorSize();
     }
   }
 

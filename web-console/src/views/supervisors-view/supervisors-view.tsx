@@ -48,6 +48,7 @@ import {
   TaskGroupHandoffDialog,
 } from '../../dialogs';
 import type {
+  CompactionConfig,
   ConsoleViewId,
   IngestionSpec,
   QueryWithContext,
@@ -56,7 +57,11 @@ import type {
   SupervisorStatus,
   SupervisorStatusTask,
 } from '../../druid-models';
-import { getConsoleViewIcon, getTotalSupervisorStats } from '../../druid-models';
+import {
+  formatCompactionInfo,
+  getConsoleViewIcon,
+  getTotalSupervisorStats,
+} from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import {
   SMALL_TABLE_PAGE_SIZE,
@@ -207,6 +212,7 @@ export interface SupervisorsViewState {
   alertErrorMsg?: string;
 
   supervisorTableActionDialogId?: string;
+  supervisorTableActionDialogType?: string;
   supervisorTableActionDialogActions: BasicAction[];
 
   visibleColumns: LocalStorageBackedVisibility;
@@ -357,7 +363,10 @@ export class SupervisorsView extends React.PureComponent<
               return {
                 supervisor_id: deepGet(sup, 'id'),
                 datasource: deepGet(sup, 'dataSource'),
-                type: deepGet(sup, 'spec.tuningConfig.type'),
+                type:
+                  deepGet(sup, 'spec.type') ||
+                  deepGet(sup, 'spec.ioConfig.type') ||
+                  deepGet(sup, 'spec.tuningConfig.type'),
                 source:
                   deepGet(sup, 'spec.ioConfig.topic') ||
                   deepGet(sup, 'spec.ioConfig.stream') ||
@@ -802,6 +811,7 @@ export class SupervisorsView extends React.PureComponent<
   private onSupervisorDetail(supervisor: SupervisorQueryResultRow) {
     this.setState({
       supervisorTableActionDialogId: supervisor.supervisor_id,
+      supervisorTableActionDialogType: supervisor.type,
       supervisorTableActionDialogActions: this.getSupervisorActions(supervisor),
     });
   }
@@ -866,7 +876,7 @@ export class SupervisorsView extends React.PureComponent<
             pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000} // We are hiding the page selector
             loading={supervisorsState.loading}
             noDataText={
-              supervisorsState.isEmpty()
+              supervisorsState.data?.supervisors.length === 0
                 ? 'No supervisors'
                 : supervisorsState.getErrorMessage() || ''
             }
@@ -1060,6 +1070,13 @@ export class SupervisorsView extends React.PureComponent<
                   aggregateLag,
                 )}`}</span>
               ) : null;
+            } else if (original.type === 'autocompact') {
+              const compactionConfig: CompactionConfig | undefined = original.spec?.spec;
+              if (!supervisorStatusPayload || !compactionConfig) return null;
+              return formatCompactionInfo({
+                status: supervisorStatusPayload,
+                config: compactionConfig,
+              });
             } else {
               return null;
             }
@@ -1311,6 +1328,7 @@ export class SupervisorsView extends React.PureComponent<
       supervisorSpecDialogOpen,
       alertErrorMsg,
       supervisorTableActionDialogId,
+      supervisorTableActionDialogType,
       supervisorTableActionDialogActions,
       visibleColumns,
     } = this.state;
@@ -1378,8 +1396,14 @@ export class SupervisorsView extends React.PureComponent<
         {supervisorTableActionDialogId && (
           <SupervisorTableActionDialog
             supervisorId={supervisorTableActionDialogId}
+            supervisorType={supervisorTableActionDialogType}
             actions={supervisorTableActionDialogActions}
-            onClose={() => this.setState({ supervisorTableActionDialogId: undefined })}
+            onClose={() =>
+              this.setState({
+                supervisorTableActionDialogId: undefined,
+                supervisorTableActionDialogType: undefined,
+              })
+            }
           />
         )}
       </div>

@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -85,7 +86,6 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
@@ -1385,7 +1385,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     ).collect(Collectors.toList());
   }
 
+  /**
+   * @deprecated Use {@link #getBlacklistedWorkerInfos()} instead.
+   */
+  @Deprecated
+  @SuppressWarnings("PMD.ConfusingMethodName")
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
+  {
+    return getBlacklistedWorkerInfos();
+  }
+
+  public Collection<ImmutableWorkerInfo> getBlacklistedWorkerInfos()
   {
     return ImmutableList.copyOf(Collections2.transform(blackListedWorkers.values(), WorkerHolder::toImmutable));
   }
@@ -1683,7 +1693,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     Map<String, Long> totalBlacklistedPeons = new HashMap<>();
-    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+    for (ImmutableWorkerInfo worker : getBlacklistedWorkerInfos()) {
       String workerCategory = worker.getWorker().getCategory();
       int workerBlacklistedPeons = worker.getWorker().getCapacity();
       totalBlacklistedPeons.compute(

@@ -35,21 +35,21 @@ import javax.annotation.Nullable;
 public class DiskNormalizedCostBalancerStrategyConfig
 {
   /**
-   * Default minimum fractional cost reduction required before a segment will
-   * be moved off a server that is already projected to hold it. A value of
-   * {@code 0.05} means the destination must be at least 5% cheaper than the
-   * source for the move to happen.
+   * Default projected disk utilization difference that the strategy ignores
+   * before applying the exponential utilization penalty. A value of
+   * {@code 0.05} means servers within 5 percentage points of the least-used
+   * candidate are ordered by the normal cost strategy.
    */
-  static final double DEFAULT_MOVE_COST_SAVINGS_THRESHOLD = 0.05;
+  static final double DEFAULT_UTILIZATION_THRESHOLD = 0.05;
 
   /**
-   * Minimum fractional cost reduction required to move a segment off a server
-   * that is already projected to hold it. For example, a value of {@code 0.05} means the
-   * destination must be at least 5% cheaper than the source before a move
-   * fires.
+   * Projected disk utilization difference that the strategy ignores before
+   * applying the exponential utilization penalty. For example, a value of
+   * {@code 0.05} means servers within 5 percentage points of the least-used
+   * candidate are ordered by the normal cost strategy.
    */
   @JsonProperty
-  private final double moveCostSavingsThreshold;
+  private final double utilizationThreshold;
 
   public DiskNormalizedCostBalancerStrategyConfig()
   {
@@ -58,20 +58,20 @@ public class DiskNormalizedCostBalancerStrategyConfig
 
   @JsonCreator
   public DiskNormalizedCostBalancerStrategyConfig(
-      @JsonProperty("moveCostSavingsThreshold") @Nullable Double moveCostSavingsThreshold
+      @JsonProperty("utilizationThreshold") @Nullable Double utilizationThreshold
   )
   {
-    this.moveCostSavingsThreshold = Configs.valueOrDefault(moveCostSavingsThreshold, DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
+    this.utilizationThreshold = Configs.valueOrDefault(utilizationThreshold, DEFAULT_UTILIZATION_THRESHOLD);
 
     Preconditions.checkArgument(
-        this.moveCostSavingsThreshold >= 0.0 && this.moveCostSavingsThreshold < 1.0,
-        "'druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold'[%s] must be in [0.0, 1.0)",
-        this.moveCostSavingsThreshold
+        this.utilizationThreshold > 0.0 && this.utilizationThreshold < 1.0,
+        "'druid.coordinator.balancer.diskNormalized.utilizationThreshold'[%s] must be in (0.0, 1.0)",
+        this.utilizationThreshold
     );
   }
 
-  public double getMoveCostSavingsThreshold()
+  public double getUtilizationThreshold()
   {
-    return moveCostSavingsThreshold;
+    return utilizationThreshold;
   }
 }

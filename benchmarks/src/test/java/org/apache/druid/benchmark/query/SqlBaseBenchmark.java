@@ -100,7 +100,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
@@ -289,17 +289,33 @@ public class SqlBaseBenchmark
           );
           realtimeSegments.put(dataSegment, index);
         } else {
-          final QueryableIndex index = segmentGenerator.generate(
-              dataSegment,
-              schema.getGeneratorSchemaInfo(),
-              schema.getDimensionsSpec(),
-              schema.getTransformSpec(),
-              getIndexSpec(),
-              schema.getQueryGranularity(),
-              schema.getProjections(),
-              rowsPerSegment,
-              CalciteTests.getJsonMapper()
-          );
+          final QueryableIndex index;
+          if (schema.isUseV10()) {
+            // clustered (and the unclustered comparison) segments use the V10 writer
+            index = segmentGenerator.generateV10(
+                dataSegment,
+                schema.getGeneratorSchemaInfo(),
+                schema.getDimensionsSpec(),
+                schema.getTransformSpec(),
+                getIndexSpec(),
+                schema.getQueryGranularity(),
+                schema.getClusterSpec(),
+                rowsPerSegment,
+                CalciteTests.getJsonMapper()
+            );
+          } else {
+            index = segmentGenerator.generate(
+                dataSegment,
+                schema.getGeneratorSchemaInfo(),
+                schema.getDimensionsSpec(),
+                schema.getTransformSpec(),
+                getIndexSpec(),
+                schema.getQueryGranularity(),
+                schema.getProjections(),
+                rowsPerSegment,
+                CalciteTests.getJsonMapper()
+            );
+          }
           log.info(
               "Segment metadata: %s",
               CalciteTests.getJsonMapper().writerWithDefaultPrettyPrinter().writeValueAsString(index.getMetadata())
@@ -373,7 +389,7 @@ public class SqlBaseBenchmark
     }
   }
 
-  private void checkIncompatibleParameters()
+  protected void checkIncompatibleParameters()
   {
     // we only support NONE object storage encoding for auto column with mmap segments
     if (ObjectStorageEncoding.NONE.equals(jsonObjectStorageEncoding)) {
@@ -464,8 +480,8 @@ public class SqlBaseBenchmark
     ObjectMapper injected = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     injected.registerModules(new HllSketchModule().getJacksonModules());
 
-    final DruidSchemaCatalog rootSchema =
-        QueryFrameworkUtils.createMockRootSchema(
+    final DruidSchemaCatalogProvider schemaProvider =
+        QueryFrameworkUtils.createMockRootSchemaProvider(
             injector,
             conglomerate,
             walker,
@@ -476,7 +492,7 @@ public class SqlBaseBenchmark
     final SqlEngine engine = CalciteTests.createMockSqlEngine(walker, conglomerate);
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        schemaProvider,
         createOperatorTable(injector),
         injector.getInstance(ExprMacroTable.class),
         plannerConfig,

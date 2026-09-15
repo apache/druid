@@ -28,6 +28,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -48,12 +49,10 @@ import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -61,36 +60,34 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-@RunWith(Parameterized.class)
 public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 {
   private static final boolean ROUND = true;
 
-  private final AggregationTestHelper groupByHelper;
-  private final AggregationTestHelper timeseriesHelper;
-  private final QueryContexts.Vectorize vectorize;
-  private final StringEncoding stringEncoding;
+  private AggregationTestHelper groupByHelper;
+  private AggregationTestHelper timeseriesHelper;
+  private QueryContexts.Vectorize vectorize;
+  private StringEncoding stringEncoding;
 
-  @Rule
-  public final TemporaryFolder groupByFolder = new TemporaryFolder();
+  @TempDir
+  private File groupByFolder;
 
-  @Rule
-  public final TemporaryFolder timeseriesFolder = new TemporaryFolder();
+  @TempDir
+  private File timeseriesFolder;
 
-  public HllSketchAggregatorTest(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding)
+  public void initHllSketchAggregatorTest(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding)
   {
     HllSketchModule.registerSerde();
     groupByHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new HllSketchModule().getJacksonModules(), config, groupByFolder
     );
-    timeseriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
+    timeseriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         new HllSketchModule().getJacksonModules(), timeseriesFolder
     );
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
     this.stringEncoding = stringEncoding;
   }
 
-  @Parameterized.Parameters(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -106,9 +103,11 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @Test
-  public void ingestSketches() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void ingestSketches(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
         buildInputRowSchema(List.of("dim", "multiDim")),
@@ -120,14 +119,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildGroupByQuery("HLLSketchMerge", "sketch", !ROUND, stringEncoding)
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(200, (double) row.get(0), 0.1);
+    Assertions.assertEquals(200, (double) row.get(0), 0.1);
   }
 
-  @Test
-  public void ingestSketchesTimeseries() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void ingestSketchesTimeseries(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     final File inputFile = new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile());
     final InputRowSchema inputRowSchema = buildInputRowSchema(List.of("dim", "multiDim"));
     final DelimitedInputFormat inputFormat = buildInputFormat(List.of("timestamp", "dim", "multiDim", "sketch"));
@@ -136,7 +137,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     final int minTimestamp = 0;
     final int maxRowCount = 10;
 
-    File segmentDir1 = timeseriesFolder.newFolder();
+    File segmentDir1 = FileUtils.createTempDirInLocation(timeseriesFolder.toPath(), "hll");
     timeseriesHelper.createIndex(
         inputFile,
         inputRowSchema,
@@ -149,7 +150,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         true
     );
 
-    File segmentDir2 = timeseriesFolder.newFolder();
+    File segmentDir2 = FileUtils.createTempDirInLocation(timeseriesFolder.toPath(), "hll");
     timeseriesHelper.createIndex(
         inputFile,
         inputRowSchema,
@@ -167,14 +168,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildTimeseriesQuery("HLLSketchMerge", "sketch", !ROUND)
     );
     List<Result<TimeseriesResultValue>> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     Result<TimeseriesResultValue> row = results.get(0);
-    Assert.assertEquals(200, (double) row.getValue().getMetric("sketch"), 0.1);
+    Assertions.assertEquals(200, (double) row.getValue().getMetric("sketch"), 0.1);
   }
 
-  @Test
-  public void buildSketchesAtIngestionTime() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void buildSketchesAtIngestionTime(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildInputRowSchema(List.of("dim")),
@@ -186,14 +189,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildGroupByQuery("HLLSketchMerge", "sketch", !ROUND, stringEncoding)
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(200, (double) row.get(0), 0.1);
+    Assertions.assertEquals(200, (double) row.get(0), 0.1);
   }
 
-  @Test
-  public void buildSketchesAtIngestionTimeTimeseries() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void buildSketchesAtIngestionTimeTimeseries(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<Result<TimeseriesResultValue>> seq = timeseriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildInputRowSchema(List.of("dim")),
@@ -205,14 +210,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildTimeseriesQuery("HLLSketchMerge", "sketch", !ROUND)
     );
     List<Result<TimeseriesResultValue>> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     Result<TimeseriesResultValue> row = results.get(0);
-    Assert.assertEquals(200, (double) row.getValue().getMetric("sketch"), 0.1);
+    Assertions.assertEquals(200, (double) row.getValue().getMetric("sketch"), 0.1);
   }
 
-  @Test
-  public void buildSketchesAtQueryTime() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void buildSketchesAtQueryTime(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildInputRowSchema(List.of("dim", "multiDim", "id")),
@@ -224,14 +231,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildGroupByQuery("HLLSketchBuild", "id", !ROUND, stringEncoding)
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(200, (double) row.get(0), 0.1);
+    Assertions.assertEquals(200, (double) row.get(0), 0.1);
   }
 
-  @Test
-  public void buildSketchesAtQueryTimeTimeseries() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void buildSketchesAtQueryTimeTimeseries(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<Result<TimeseriesResultValue>> seq = timeseriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildInputRowSchema(List.of("dim", "multiDim", "id")),
@@ -243,14 +252,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildTimeseriesQuery("HLLSketchBuild", "id", !ROUND)
     );
     List<Result<TimeseriesResultValue>> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     Result<TimeseriesResultValue> row = results.get(0);
-    Assert.assertEquals(200, (double) row.getValue().getMetric("sketch"), 0.1);
+    Assertions.assertEquals(200, (double) row.getValue().getMetric("sketch"), 0.1);
   }
 
-  @Test
-  public void unsuccessfulComplexTypesInHLL() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void unsuccessfulComplexTypesInHLL(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     try {
       Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
           new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
@@ -264,14 +275,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
       );
     }
     catch (RuntimeException e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.getMessage().contains("Invalid input [index_hll] of type [COMPLEX<hyperUnique>] for [HLLSketchBuild]"));
     }
   }
 
-  @Test
-  public void buildSketchesAtQueryTimeMultiValue() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void buildSketchesAtQueryTimeMultiValue(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildInputRowSchema(List.of("dim", "multiDim", "id")),
@@ -283,14 +296,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildGroupByQuery("HLLSketchBuild", "multiDim", !ROUND, stringEncoding)
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(14, (double) row.get(0), 0.1);
+    Assertions.assertEquals(14, (double) row.get(0), 0.1);
   }
 
-  @Test
-  public void roundBuildSketch() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void roundBuildSketch(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_raw.tsv").getFile()),
         buildInputRowSchema(List.of("dim", "multiDim", "id")),
@@ -302,14 +317,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildGroupByQuery("HLLSketchBuild", "id", ROUND, stringEncoding)
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(200L, (long) row.get(0));
+    Assertions.assertEquals(200L, (long) row.get(0));
   }
 
-  @Test
-  public void roundMergeSketch() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void roundMergeSketch(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
         buildInputRowSchema(List.of("dim", "multiDim")),
@@ -321,14 +338,16 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         buildGroupByQuery("HLLSketchMerge", "sketch", ROUND, stringEncoding)
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(200L, (long) row.get(0));
+    Assertions.assertEquals(200L, (long) row.get(0));
   }
 
-  @Test
-  public void testPostAggs() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void testPostAggs(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile()),
         buildInputRowSchema(List.of("dim", "multiDim")),
@@ -389,19 +408,21 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
                                    + "  Coupon Count   : 200\n";
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
-    Assert.assertEquals(200, (double) row.get(0), 0.1);
-    Assert.assertEquals(200, (double) row.get(1), 0.1);
-    Assert.assertArrayEquals(new double[]{200, 200, 200}, (double[]) row.get(2), 0.1);
-    Assert.assertEquals(expectedSummary, row.get(3));
+    Assertions.assertEquals(200, (double) row.get(0), 0.1);
+    Assertions.assertEquals(200, (double) row.get(1), 0.1);
+    Assertions.assertArrayEquals(new double[]{200, 200, 200}, (double[]) row.get(2), 0.1);
+    Assertions.assertEquals(expectedSummary, row.get(3));
     // union with self = self
-    Assert.assertEquals(expectedSummary, ((HllSketchHolder) row.get(4)).getSketch().toString());
+    Assertions.assertEquals(expectedSummary, ((HllSketchHolder) row.get(4)).getSketch().toString());
   }
 
-  @Test
-  public void testRelocation()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
+  public void testRelocation(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding)
   {
+    initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     HllSketchHolder sketchHolder = new HllSketchHolder(null, new HllSketch());
     sketchHolder.getSketch().update(1);
@@ -412,7 +433,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         columnSelectorFactory,
         HllSketchHolder.class
     );
-    Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
+    Assertions.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
   private static InputRowSchema buildInputRowSchema(List<String> dimensions)
@@ -508,4 +529,5 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
                  .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize.toString()))
                  .build();
   }
+
 }

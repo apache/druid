@@ -19,11 +19,14 @@
 
 package org.apache.druid.data.input.impl;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -69,6 +72,17 @@ public final class AdaptedBaseTableProjectionSpec implements BaseTableProjection
   }
 
   @Override
+  public AdaptedBaseTableProjectionSpec withAdditionalColumns(@Nullable List<DimensionSchema> additionalColumns)
+  {
+    if (CollectionUtils.isNullOrEmpty(additionalColumns)) {
+      return this;
+    }
+    final List<DimensionSchema> revised = new ArrayList<>(dimensionsSpec.getDimensions());
+    revised.addAll(additionalColumns);
+    return new AdaptedBaseTableProjectionSpec(granularitySpec, dimensionsSpec.withDimensions(revised), metrics);
+  }
+
+  @Override
   public VirtualColumns getVirtualColumns()
   {
     return VirtualColumns.EMPTY;
@@ -90,6 +104,20 @@ public final class AdaptedBaseTableProjectionSpec implements BaseTableProjection
   public List<OrderBy> getOrdering()
   {
     return ordering;
+  }
+
+  @Override
+  public Granularity getQueryGranularity()
+  {
+    return granularitySpec.getQueryGranularity();
+  }
+
+  @Override
+  public BaseTableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity)
+  {
+    throw DruidException.defensive(
+        "Cannot apply query granularity to a legacy DataSchema adapter"
+    );
   }
 
   /**

@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.tdigestsketch;
 
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class TDigestSketchObjectStrategyTest
@@ -28,6 +28,6 @@ public class TDigestSketchObjectStrategyTest
   public void testReadRetainsBufferReference()
   {
     TDigestSketchObjectStrategy strategy = new TDigestSketchObjectStrategy();
-    Assert.assertFalse(strategy.readRetainsBufferReference());
+    Assertions.assertFalse(strategy.readRetainsBufferReference());
   }
 }

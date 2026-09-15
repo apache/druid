@@ -23,10 +23,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,8 +39,8 @@ public class FileEntityTest
 {
   private static final String CONTENT = "the quick brown fox\n";
 
-  @TempDir
-  File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void test_openRaw_returnsRawBytesWithoutDecompressing() throws IOException
@@ -98,7 +99,7 @@ public class FileEntityTest
 
   private File writeFile(final String name, final String content) throws IOException
   {
-    final File file = new File(tempDir, name);
+    final File file = temporaryFolder.newFile(name);
     Files.write(file.toPath(), StringUtils.toUtf8(content));
     return file;
   }
@@ -106,16 +107,14 @@ public class FileEntityTest
   private File gzipFile(final String name, final String content) throws IOException
   {
     final File source = writeFile("source-for-" + name, content);
-    final File gzFile = new File(tempDir, name);
+    final File gzFile = temporaryFolder.newFile(name);
     CompressionUtils.gzip(source, gzFile);
     return gzFile;
   }
 
   private File makeDir(final String name) throws IOException
   {
-    final File dir = new File(tempDir, name);
-    Files.createDirectories(dir.toPath());
-    return dir;
+    return temporaryFolder.newFolder(name);
   }
 
   private static byte[] fetchBuffer()

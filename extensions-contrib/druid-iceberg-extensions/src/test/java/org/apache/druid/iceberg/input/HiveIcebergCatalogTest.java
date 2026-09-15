@@ -24,8 +24,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.HashMap;
@@ -54,8 +54,8 @@ public class HiveIcebergCatalogTest
         mapper,
         new Configuration()
     );
-    Assert.assertEquals("hive", hiveCatalog.retrieveCatalog().name());
-    Assert.assertEquals(2, hiveCatalogNullProps.getCatalogProperties().size());
+    Assertions.assertEquals("hive", hiveCatalog.retrieveCatalog().name());
+    Assertions.assertEquals(2, hiveCatalogNullProps.getCatalogProperties().size());
   }
 
   @Test
@@ -74,7 +74,7 @@ public class HiveIcebergCatalogTest
         mapper,
         new Configuration()
     );
-    Assert.assertEquals("hdfs://testuri", hiveCatalog.getCatalogUri());
+    Assertions.assertEquals("hdfs://testuri", hiveCatalog.getCatalogUri());
 
   }
 }

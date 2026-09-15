@@ -529,7 +529,7 @@ def distribute_memory(services, total_memory):
         if service in MINIMUM_MEMORY_MB and allocated_memory < MINIMUM_MEMORY_MB.get(service):
             allocated_memory = MINIMUM_MEMORY_MB.get(service)
 
-        service_memory_config[service], allocated_memory = build_memory_config(service, allocated_memory)
+        service_memory_config[service] = build_memory_config(service, allocated_memory)[0]
 
     print_if_verbose('\nMemory distribution for services:')
     for key, value in service_memory_config.items():

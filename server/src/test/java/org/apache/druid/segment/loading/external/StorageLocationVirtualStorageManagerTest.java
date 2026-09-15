@@ -27,11 +27,12 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,8 +50,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class StorageLocationVirtualStorageManagerTest
 {
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private StorageLocation location;
   private StorageLocationVirtualStorageManager manager;
@@ -58,8 +59,7 @@ public class StorageLocationVirtualStorageManagerTest
   @BeforeEach
   public void setup() throws IOException
   {
-    File locationPath = new File(tempFolder, "storage");
-    Files.createDirectories(locationPath.toPath());
+    File locationPath = temporaryFolder.newFolder("storage");
     location = new StorageLocation(locationPath, 10_000_000L, null);
     manager = new StorageLocationVirtualStorageManager(
         Collections.singletonList(location),

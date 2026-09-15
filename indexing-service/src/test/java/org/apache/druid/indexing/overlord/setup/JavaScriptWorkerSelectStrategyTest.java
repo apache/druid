@@ -29,17 +29,11 @@ import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class JavaScriptWorkerSelectStrategyTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final JavaScriptWorkerSelectStrategy STRATEGY = new JavaScriptWorkerSelectStrategy(
       "function (config, zkWorkers, task) {\n"
       + "var batch_workers = new java.util.ArrayList();\n"
@@ -82,7 +76,7 @@ public class JavaScriptWorkerSelectStrategyTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         STRATEGY,
         mapper.readValue(
             mapper.writeValueAsString(STRATEGY),
@@ -104,11 +98,12 @@ public class JavaScriptWorkerSelectStrategyTest
 
     final String strategyString = mapper.writeValueAsString(STRATEGY);
 
-    expectedException.expect(JsonMappingException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IllegalStateException.class));
-    expectedException.expectMessage("JavaScript is disabled");
-
-    mapper.readValue(strategyString, WorkerSelectStrategy.class);
+    final JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(strategyString, WorkerSelectStrategy.class)
+    );
+    Assertions.assertInstanceOf(IllegalStateException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("JavaScript is disabled"));
   }
 
   @Test
@@ -127,7 +122,7 @@ public class JavaScriptWorkerSelectStrategyTest
         createMockTask("index_parallel")
     );
     // batch tasks should be sent to worker1
-    Assert.assertEquals(worker1, workerForBatchTask);
+    Assertions.assertEquals(worker1, workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
         new HttpRemoteTaskRunnerConfig(),
@@ -135,7 +130,7 @@ public class JavaScriptWorkerSelectStrategyTest
         createMockTask("other_type")
     );
     // all other tasks should be sent to worker2
-    Assert.assertEquals(worker2, workerForOtherTask);
+    Assertions.assertEquals(worker2, workerForOtherTask);
   }
 
   @Test
@@ -150,7 +145,7 @@ public class JavaScriptWorkerSelectStrategyTest
         workerMap,
         createMockTask("other_type")
     );
-    Assert.assertNull(workerForOtherTask);
+    Assertions.assertNull(workerForOtherTask);
   }
 
   @Test
@@ -165,7 +160,7 @@ public class JavaScriptWorkerSelectStrategyTest
         workerMap,
         createMockTask("index_parallel")
     );
-    Assert.assertNull(workerForBatchTask);
+    Assertions.assertNull(workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
         new HttpRemoteTaskRunnerConfig(),
@@ -173,7 +168,7 @@ public class JavaScriptWorkerSelectStrategyTest
         createMockTask("otherTask")
     );
     // all other tasks should be sent to worker2
-    Assert.assertNull(workerForOtherTask);
+    Assertions.assertNull(workerForOtherTask);
   }
 
   @Test
@@ -188,7 +183,7 @@ public class JavaScriptWorkerSelectStrategyTest
         workerMap,
         createMockTask("index_parallel")
     );
-    Assert.assertNull(workerForBatchTask);
+    Assertions.assertNull(workerForBatchTask);
 
     ImmutableWorkerInfo workerForOtherTask = STRATEGY.findWorkerForTask(
         new HttpRemoteTaskRunnerConfig(),
@@ -196,7 +191,7 @@ public class JavaScriptWorkerSelectStrategyTest
         createMockTask("otherTask")
     );
     // all other tasks should be sent to worker2
-    Assert.assertNull(workerForOtherTask);
+    Assertions.assertNull(workerForOtherTask);
   }
 
   @Test
@@ -212,7 +207,7 @@ public class JavaScriptWorkerSelectStrategyTest
         workerMap,
         createMockTask("index_parallel")
     );
-    Assert.assertEquals(workerMap.get("10.0.0.2"), workerForBatchTask);
+    Assertions.assertEquals(workerMap.get("10.0.0.2"), workerForBatchTask);
 
   }
 

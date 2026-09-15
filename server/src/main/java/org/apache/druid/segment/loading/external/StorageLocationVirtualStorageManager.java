@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading.external;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.asyncresource.AsyncResource;
@@ -38,7 +37,6 @@ import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
@@ -102,6 +100,14 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
       FilePopulator populator
   )
   {
+    // Hold a load permit only around the actual populate (the deep-storage read), not the reservation/hold or the
+    // per-identifier population lock below (the permit is acquired inside populate, which runs on mount).
+    final FilePopulator permittedPopulator = file -> {
+      try (StorageLoadingThreadPool.LoadPermit ignored = loadingThreadPool.acquireLoadPermit()) {
+        populator.populate(file);
+      }
+    };
+
     // Get or create lock for this identifier
     final PopulationLock lock = populationLocks.computeIfAbsent(identifier, ignored -> new PopulationLock());
 
@@ -127,7 +133,7 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
             // Reserve space and acquire a hold, using a cache entry that will call the populator on mount.
             final StorageLocation.ReservationHold<CacheEntry> hold = location.addWeakReservationHold(
                 cacheId,
-                () -> new DownloadableCacheEntry(cacheId, sizeBytes, populator, locationFile)
+                () -> new DownloadableCacheEntry(cacheId, sizeBytes, permittedPopulator, locationFile)
                 {
                   final AtomicBoolean mounted = new AtomicBoolean(false);
 
@@ -233,34 +239,9 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
     }
 
     if (loadingThreadPool.isAvailable()) {
-      final SettableAsyncResource<CachedFile> resource = new SettableAsyncResource<>();
-      final ListenableFuture<?> future = loadingThreadPool.getExecutorService().submit(
-          () -> {
-            try {
-              final Semaphore loadingPermits = loadingThreadPool.getPermits();
-              if (loadingPermits != null) {
-                loadingPermits.acquire();
-              }
-              try {
-                final CachedFile theCachedFile = reserveAndPopulate(identifier, sizeSupplier, populator);
-                if (!resource.set(ResourceHolder.fromCloseable(theCachedFile))) {
-                  theCachedFile.close();
-                }
-              }
-              finally {
-                if (loadingPermits != null) {
-                  loadingPermits.release();
-                }
-              }
-            }
-            catch (Throwable e) {
-              resource.setException(e);
-            }
-          }
+      return loadingThreadPool.submitCloseableAsyncResource(
+          () -> reserveAndPopulate(identifier, sizeSupplier, populator)
       );
-
-      resource.setCanceler(() -> future.cancel(true));
-      return resource;
     } else {
       final SettableAsyncResource<CachedFile> resource = new SettableAsyncResource<>();
       try {

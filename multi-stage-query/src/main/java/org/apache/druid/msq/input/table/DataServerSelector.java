@@ -19,8 +19,8 @@
 
 package org.apache.druid.msq.input.table;
 
+import io.netty.util.internal.ThreadLocalRandom;
 import org.apache.druid.server.coordination.DruidServerMetadata;
-import org.jboss.netty.util.internal.ThreadLocalRandom;
 
 import java.util.Set;
 import java.util.function.Function;

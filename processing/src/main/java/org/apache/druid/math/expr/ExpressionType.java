@@ -103,6 +103,9 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
           return LONG_ARRAY;
         case DOUBLE:
           return DOUBLE_ARRAY;
+        case ARRAY:
+        case COMPLEX:
+          return elementType;
       }
     }
     return elementType;
@@ -138,6 +141,9 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
             return DOUBLE_ARRAY;
           case STRING:
             return STRING_ARRAY;
+          case ARRAY:
+          case COMPLEX:
+            break;
         }
         return ExpressionTypeFactory.getInstance().ofArray(fromColumnTypeStrict(valueType.getElementType()));
       case COMPLEX:
@@ -175,6 +181,9 @@ public class ExpressionType extends BaseTypeSignature<ExprType>
             return DOUBLE_ARRAY;
           case STRING:
             return STRING_ARRAY;
+          case ARRAY:
+          case COMPLEX:
+            break;
         }
         return ExpressionTypeFactory.getInstance().ofArray(fromColumnType(valueType.getElementType()));
       case COMPLEX:

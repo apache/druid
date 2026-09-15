@@ -35,7 +35,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -140,14 +142,13 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
   )
   {
     final List<BundleContainerRef> refs = new ArrayList<>();
-    collectMatchingContainers(fileMapper.getSegmentFileMetadata(), bundleName, null, refs);
+    for (int containerIndex : fileMapper.getContainerIndicesForBundle(bundleName)) {
+      refs.add(new BundleContainerRef(null, containerIndex));
+    }
     for (String externalFilename : fileMapper.getExternalFilenames()) {
-      collectMatchingContainers(
-          fileMapper.getExternalMapper(externalFilename).getSegmentFileMetadata(),
-          bundleName,
-          externalFilename,
-          refs
-      );
+      for (int containerIndex : fileMapper.getExternalMapper(externalFilename).getContainerIndicesForBundle(bundleName)) {
+        refs.add(new BundleContainerRef(externalFilename, containerIndex));
+      }
     }
     return List.copyOf(refs);
   }
@@ -174,8 +175,10 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
   // metadata + parents safe from drop-time unmap even if the dependency is statically reserved.
   @GuardedBy("entryLock")
   private final List<Closeable> dependencyReferences = new ArrayList<>();
-  @GuardedBy("entryLock")
-  private boolean mounted;
+  // volatile so isMounted() can read it without blocking behind a concurrent doActualUnmount() holding entryLock
+  // across container eviction. Other reads of this field still go through entryLock since they're paired with other
+  // guarded state (e.g. doMount's mounted + location check).
+  private volatile boolean mounted;
 
   // Reference-counted gate over the actual cleanup work (evict containers, release parent holds, unregister from
   // metadata). Set on successful mount; unmount() closes the wrapper which defers running cleanup until all outstanding
@@ -216,13 +219,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
   @Override
   public boolean isMounted()
   {
-    entryLock.lock();
-    try {
-      return mounted;
-    }
-    finally {
-      entryLock.unlock();
-    }
+    return mounted;
   }
 
   public SegmentId getSegmentId()
@@ -284,7 +281,12 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
       if (!mountFuture.compareAndSet(null, ours)) {
         continue;
       }
-      try {
+      // Hold this entry against reclaim while the mount establishes state; reclaim passes over held entries only,
+      // and an entry evicted mid-mount finishes into a location that no longer knows about it. Internal, since a
+      // mount is not somebody waiting on the bundle, and null when the entry is already gone - nothing to protect.
+      final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> selfHold =
+          mountLocation.addInternalWeakReservationHoldIfExists(id);
+      try (selfHold) {
         doMount(mountLocation);
         ours.set(null);
       }
@@ -292,6 +294,10 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
         // clear the gate so the next caller gets a fresh attempt
         mountFuture.set(null);
         ours.setException(t);
+        // If it is already gone, no unmount() will follow to sweep them up, so reap them here.
+        if (!isStillRegistered(mountLocation)) {
+          reapContainersOfUncommittedMount();
+        }
         switch (t) {
           case IOException ioException -> throw ioException;
           case RuntimeException runtimeException -> throw runtimeException;
@@ -314,13 +320,72 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
    */
   private void verifyStillReservedOrRollback(StorageLocation mountLocation)
   {
-    if (!mountLocation.isReserved(id) && !mountLocation.isWeakReserved(id)) {
+    if (!isStillRegistered(mountLocation)) {
       LOG.debug(
           "Aborting mount of bundle[%s] in location[%s]; entry was evicted while mounting",
           id,
           mountLocation.getPath()
       );
       unmount();
+    }
+  }
+
+  /**
+   * Whether the cache still knows about this entry.
+   */
+  private boolean isStillRegistered(StorageLocation mountLocation)
+  {
+    return mountLocation.isReserved(id) || mountLocation.isWeakReserved(id);
+  }
+
+  /**
+   * Evict containers left behind by a mount that never committed. A failed mount deliberately keeps the containers it
+   * had already initialized so a retry can reuse them (see {@link #doMount}); this entry being torn down is that retry
+   * never coming, and nothing else will clean them up since {@link #doActualUnmount} runs only for a mount that
+   * committed.
+   */
+  private void reapContainersOfUncommittedMount()
+  {
+    final SettableFuture<Void> ours = SettableFuture.create();
+    if (!mountFuture.compareAndSet(null, ours)) {
+      // something else is mounting, bail out
+      return;
+    }
+    try {
+      // Null once the metadata entry has unmounted, which closes the file mapper; evictContainer would throw on it.
+      final PartialSegmentFileMapperV10 fileMapper = metadataEntry.getFileMapper();
+      if (fileMapper != null) {
+        evictOwnedContainers(fileMapper);
+      }
+    }
+    finally {
+      // Clear the gate before completing it, so a mount that joined while we held it finds a fresh gate to claim
+      // rather than this one. It fails instead of believing a mount happened, which is accurate: it asked to mount an
+      // entry that was being torn down.
+      mountFuture.set(null);
+      ours.setException(DruidException.defensive("Bundle[%s] was torn down while mounting", id));
+    }
+  }
+
+  /**
+   * Evict every container this bundle owns, routing each ref to the mapper that owns it. Best-effort: a container that
+   * fails to evict is logged rather than aborting the rest, since every caller is already tearing down.
+   */
+  private void evictOwnedContainers(PartialSegmentFileMapperV10 fileMapper)
+  {
+    for (BundleContainerRef ref : containerRefs) {
+      try {
+        fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
+      }
+      catch (Throwable t) {
+        LOG.warn(
+            t,
+            "Failed to evict container[%s/%d] for bundle[%s]",
+            ref.externalFilename(),
+            ref.containerIndex(),
+            id
+        );
+      }
     }
   }
 
@@ -365,7 +430,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     try {
       // 1. Cache holds on metadata + parents (prevents cache eviction of weak dependencies)
       final StorageLocation.ReservationHold<?> metadataHold =
-          mountLocation.addWeakReservationHoldIfExists(metadataEntry.getId());
+          mountLocation.addInternalWeakReservationHoldIfExists(metadataEntry.getId());
       if (metadataHold == null) {
         throw DruidException.defensive(
             "Cannot acquire metadata hold for [%s]; metadata entry not registered with location[%s]",
@@ -377,7 +442,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
 
       for (PartialSegmentBundleCacheEntryIdentifier parentId : parentEntryIds) {
         final StorageLocation.ReservationHold<?> parentHold =
-            mountLocation.addWeakReservationHoldIfExists(parentId);
+            mountLocation.addInternalWeakReservationHoldIfExists(parentId);
         if (parentHold == null) {
           throw DruidException.defensive(
               "Cannot acquire parent hold for [%s]; parent entry not registered with location[%s]",
@@ -390,7 +455,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
 
       // 2. References on metadata + parents (gates their deferred cleanup on this bundle's lifetime; matters for
       // statically-reserved dependencies where a drop fires `release()` directly without going through cache)
-      acquiredRefs.add(metadataEntry.acquireReference());
+      acquiredRefs.add(metadataEntry.acquireMetadataReference());
       for (PartialSegmentBundleCacheEntryIdentifier parentId : parentEntryIds) {
         final CacheEntry parentEntry = mountLocation.getCacheEntry(parentId);
         if (!(parentEntry instanceof PartialSegmentBundleCacheEntry)) {
@@ -422,8 +487,11 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
         location = mountLocation;
         holds.addAll(acquired);
         dependencyReferences.addAll(acquiredRefs);
-        mounted = true;
+        // Must be set before `mounted` is published below: `mounted` is volatile and isMounted() reads it without
+        // entryLock, so a lock-free caller must never be able to observe isMounted() == true before the reference
+        // gate exists.
         references.set(new ReferenceCountingCloseableObject<Closeable>(this::doActualUnmount) {});
+        mounted = true;
       }
       finally {
         entryLock.unlock();
@@ -432,19 +500,6 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     }
     finally {
       if (!committed) {
-        // Evict any containers that were successfully initialized before the failure. Mirrors the eager
-        // SegmentCacheEntry behavior: retry from a clean slate is simpler than reasoning about partial on-disk state.
-        // evictContainer is a no-op for containers that were never initialized, so we can iterate the full set
-        // without tracking how far the initialization loop got.
-        for (BundleContainerRef ref : containerRefs) {
-          try {
-            fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
-          }
-          catch (Throwable t) {
-            LOG.warn(t, "Failed to evict container[%s/%d] for bundle[%s] during mount rollback",
-                     ref.externalFilename(), ref.containerIndex(), id);
-          }
-        }
         if (registered) {
           try {
             metadataEntry.unregisterBundle(this);
@@ -485,7 +540,11 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     final ReferenceCountingCloseableObject<Closeable> current = references.get();
     if (current != null && !current.isClosed()) {
       current.close();
+      return;
     }
+    // Nothing mounted to tear down, so doActualUnmount will not run for this entry; sweep up after any mount that
+    // failed partway and left containers behind.
+    reapContainersOfUncommittedMount();
   }
 
   /**
@@ -534,14 +593,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
       final PartialSegmentFileMapperV10 fileMapper = metadataEntry.getFileMapper();
       // file mapper may be null if metadata was already unmounted (out-of-order shutdown); evictContainer would NPE
       if (fileMapper != null) {
-        for (BundleContainerRef ref : containerRefs) {
-          try {
-            fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
-          }
-          catch (Throwable t) {
-            LOG.warn(t, "Failed to evict container[%s/%d] for bundle[%s]", ref.externalFilename(), ref.containerIndex(), id);
-          }
-        }
+        evictOwnedContainers(fileMapper);
       }
       refsToRelease = new ArrayList<>(dependencyReferences);
       dependencyReferences.clear();
@@ -569,19 +621,50 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     metadataEntry.unregisterBundle(this);
   }
 
-  private static void collectMatchingContainers(
-      SegmentFileMetadata fileMeta,
-      String bundleName,
-      @Nullable String externalFilename,
-      List<BundleContainerRef> out
-  )
+  /**
+   * The distinct set of bundle names present across the segment's main file and every attached external file. A
+   * container written without an explicit {@link SegmentFileBuilder#startFileBundle} call (or from a segment that
+   * predates the bundle field) reports {@link SegmentFileBuilder#ROOT_BUNDLE_NAME}. Shared by the bootstrap
+   * discovery path and {@link #resolveBundleName}.
+   */
+  public static Set<String> bundleNames(PartialSegmentFileMapperV10 fileMapper)
   {
-    final List<SegmentFileContainerMetadata> containers = fileMeta.getContainers();
-    for (int ci = 0; ci < containers.size(); ci++) {
-      if (bundleName.equals(containers.get(ci).getBundle())) {
-        out.add(new BundleContainerRef(externalFilename, ci));
-      }
+    // Union of each mapper's own bundle names (each computed once at mapper construction).
+    final Set<String> names = new HashSet<>(fileMapper.getBundleNames());
+    for (String externalFilename : fileMapper.getExternalFilenames()) {
+      names.addAll(fileMapper.getExternalMapper(externalFilename).getBundleNames());
     }
+    return names;
+  }
+
+  /**
+   * Resolve the bundle name to actually acquire for a query that asked for {@code requestedBundleName}. Normally the
+   * requested name itself, but when no container exists with that name AND the segment's <em>only</em> bundle is
+   * {@link SegmentFileBuilder#ROOT_BUNDLE_NAME}, this method resolves to the root bundle so the whole segment becomes
+   * a single catch-all bundle and the query does not fail. This is to handle legacy v10 segments that might exist from
+   * before the bundle name was stored in the metadata.
+   * <p>
+   * The fallback is deliberately gated on root being the segment's sole bundle:
+   * <ul>
+   *   <li>A segment with named bundles present never silently reroutes a missing request to root, that stays a hard
+   *       error (a genuinely missing bundle is a bug).</li>
+   *   <li>A future writer that legitimately writes some files to the root bundle <em>alongside</em> named bundles is
+   *       unaffected: its reader asks for {@code __root__} by name, which exists, so the fallback never fires.</li>
+   * </ul>
+   */
+  public static String resolveBundleName(PartialSegmentFileMapperV10 fileMapper, String requestedBundleName)
+  {
+    if (!findContainersForBundle(fileMapper, requestedBundleName).isEmpty()) {
+      return requestedBundleName;
+    }
+    final Set<String> present = bundleNames(fileMapper);
+    // legacy v10 segments from before bundle field was persisted in the segment
+    if (present.size() == 1 && present.contains(SegmentFileBuilder.ROOT_BUNDLE_NAME)) {
+      return SegmentFileBuilder.ROOT_BUNDLE_NAME;
+    }
+    // Requested bundle is absent and there are named bundles present: leave the name as-is so the caller fails
+    // loudly (forBundle throws "no containers") rather than silently serving the wrong data.
+    return requestedBundleName;
   }
 
   private static void awaitMount(SettableFuture<Void> future) throws IOException

@@ -19,7 +19,12 @@
 
 package org.apache.druid.common.asyncresource;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.io.Closeable;
 import java.util.List;
@@ -56,9 +61,90 @@ public class AsyncResources
   }
 
   /**
-   * Returns an {@link AsyncResource} that collects a list of underlying resources into a single lifecycle.
-   * Calling {@link AsyncResource#close()} on the returned async resource causes the underlying async resource
-   * to be closed.
+   * Returns an {@link AsyncResource} backed by a {@link ListenableFuture}: it becomes ready when the future
+   * completes, exposing the future's (non-null) result via {@link AsyncResource#get()}. Closing the returned
+   * resource before the future completes cancels the future ({@code cancel(true)}).
+   * <p>
+   * The result object must <b>not</b> have a lifecycle; closing the resource does not close the result. Use this for
+   * futures whose result is a plain value or a completion signal; use {@link #fromFutureCloseable} or
+   * {@link #ofCloseable} if the result has a lifecycle of its own.
+   */
+  public static <T> AsyncResource<T> fromFutureUnmanaged(final ListenableFuture<T> future)
+  {
+    final SettableAsyncResource<T> retVal = new SettableAsyncResource<>();
+    retVal.setCanceler(() -> future.cancel(true));
+    Futures.addCallback(
+        future,
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(T result)
+          {
+            retVal.set(result, null);
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            retVal.setException(t);
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
+    return retVal;
+  }
+
+  /**
+   * Returns an {@link AsyncResource} backed by a {@link ListenableFuture} whose result <b>owns a lifecycle</b>: it
+   * becomes ready when the future completes, exposing the result via {@link AsyncResource#get()}, and the result is
+   * managed as a {@link Closeable}. Closing the resource closes the result, and a result that completes <i>after</i>
+   * the resource was already closed is closed rather than leaked.
+   *
+   * <p>Closing the returned resource deliberately does <b>not</b> cancel the future. Cancellation is what makes
+   * futures-of-closeables unsafe in the first place: a task that produces its value anyway hands it to a canceled
+   * future, which drops it silently, and nothing is left to close it. Leaving the future alone means the result
+   * always arrives through the callback below, which closes it when the resource is already gone. The cost is that
+   * work already submitted runs to completion; a producer that wants real cancellation should populate a
+   * {@link SettableAsyncResource} itself and give it a {@link SettableAsyncResource#setCanceler canceler} that can
+   * abort safely.
+   *
+   * <p>This is the managed counterpart of {@link #fromFutureUnmanaged}; use that for a future whose result is a plain
+   * value or a completion signal with no lifecycle.
+   */
+  public static <T extends Closeable> AsyncResource<T> fromFutureCloseable(final ListenableFuture<T> future)
+  {
+    final SettableAsyncResource<T> retVal = new SettableAsyncResource<>();
+    Futures.addCallback(
+        future,
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(T result)
+          {
+            // Lost the race with close(): the resource is already closed, so set() returns false and we own
+            // closing the now-orphaned result.
+            if (!retVal.set(ResourceHolder.fromCloseable(result))) {
+              CloseableUtils.closeAndSuppressExceptions(result, ignored -> {});
+            }
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            retVal.setException(t);
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
+    return retVal;
+  }
+
+  /**
+   * Returns an {@link AsyncResource} whose value is the result of calling {@code function} on an underlying resource.
+   *
+   * <p>Once this method returns, the returned {@link AsyncResource} is the caller's to close, and closing it also
+   * closes {@code sourceResource}, so the caller must not close {@code sourceResource} itself. If this method throws,
+   * nothing has been taken over and the caller still owns {@code sourceResource}.
    *
    * <p>The transformation generally happens eagerly in the thread that provides the source resource, so it is
    * important that it run quickly.
@@ -77,8 +163,10 @@ public class AsyncResources
 
   /**
    * Returns an {@link AsyncResource} that collects a list of underlying resources into a single lifecycle.
-   * Calling {@link AsyncResource#close()} on the returned async resource causes the underlying async resources
-   * to also be closed.
+   *
+   * <p>Once this method returns, the returned {@link AsyncResource} is the caller's to close, and closing it also
+   * closes every resource in {@code asyncResources}, so the caller must not close them itself. If this method throws,
+   * nothing has been taken over and the caller still owns all of them.
    */
   public static <T> AsyncResource<List<T>> collect(final List<AsyncResource<T>> asyncResources)
   {
@@ -93,8 +181,13 @@ public class AsyncResources
    * given a chance to substitute a fallback value. Recovery generally happens eagerly in the thread that provides
    * the source resource, so it is important that it run quickly.
    *
-   * <p>When recovery happens, the {@code sourceResource} is closed immediately. Otherwise, the {@code sourceResoruce}
-   * is closed when the resource returned by this function is closed.
+   * <p>The {@code recoverFn} is not called when the source was canceled by {@link AsyncResource#close()}: there is
+   * no consumer left to recover for.
+   *
+   * <p>Once this method returns, the returned {@link AsyncResource} is the caller's to close and the caller must not
+   * close {@code sourceResource} itself: it is closed immediately when recovery happens, and otherwise when the
+   * returned resource is closed. If this method throws, nothing has been taken over and the caller still owns
+   * {@code sourceResource}.
    *
    * <p>The target of {@code function} need not be {@link Closeable}, and even if it is {@link Closeable}, it
    * is not closed (only the source is closed). This transform utility is meant for transformations that do

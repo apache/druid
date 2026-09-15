@@ -31,6 +31,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
+import jakarta.validation.Validator;
 import org.apache.druid.frame.wire.FrameWireTransferable;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.JsonNonNull;
@@ -43,7 +44,6 @@ import org.apache.druid.query.rowsandcols.serde.RowsAndColumnsDeserializer;
 import org.apache.druid.query.rowsandcols.serde.RowsAndColumnsSerializer;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 
-import javax.validation.Validator;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Properties;

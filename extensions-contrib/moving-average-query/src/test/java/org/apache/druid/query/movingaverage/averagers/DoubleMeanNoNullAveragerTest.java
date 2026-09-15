@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -32,30 +32,30 @@ public class DoubleMeanNoNullAveragerTest
   {
     BaseAverager<Number, Double> avg = new DoubleMeanNoNullAverager(3, "test", "field", 1);
 
-    Assert.assertEquals(Double.NaN, avg.computeResult(), 0.0);
+    Assertions.assertEquals(Double.NaN, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 3.0), new HashMap<>());
-    Assert.assertEquals(3.0, avg.computeResult(), 0.0);
+    Assertions.assertEquals(3.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 3.0), new HashMap<>());
-    Assert.assertEquals(3.0, avg.computeResult(), 0.0);
+    Assertions.assertEquals(3.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 0), new HashMap<>());
-    Assert.assertEquals(2.0, avg.computeResult(), 0.0);
+    Assertions.assertEquals(2.0, avg.computeResult(), 0.0);
 
     avg.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
     avg.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
     avg.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
-    Assert.assertEquals(2.0, avg.computeResult(), 0.0);
+    Assertions.assertEquals(2.0, avg.computeResult(), 0.0);
 
     avg.skip();
-    Assert.assertEquals(2.0, avg.computeResult(), 0.0);
+    Assertions.assertEquals(2.0, avg.computeResult(), 0.0);
 
     // testing cycleSize functionality
     BaseAverager<Number, Double> averager = new DoubleMeanNoNullAverager(14, "test", "field", 7);
 
     averager.addElement(Collections.singletonMap("field", 2.0), new HashMap<>());
-    Assert.assertEquals(2.0, averager.computeResult(), 0.0);
+    Assertions.assertEquals(2.0, averager.computeResult(), 0.0);
 
     averager.addElement(Collections.singletonMap("field", 4.0), new HashMap<>());
     averager.addElement(Collections.singletonMap("field", 5.0), new HashMap<>());
@@ -71,9 +71,9 @@ public class DoubleMeanNoNullAveragerTest
     averager.addElement(Collections.singletonMap("field", 15.0), new HashMap<>());
     averager.addElement(Collections.singletonMap("field", 16.0), new HashMap<>());
 
-    Assert.assertEquals(7.5, averager.computeResult(), 0.0);
+    Assertions.assertEquals(7.5, averager.computeResult(), 0.0);
 
     averager.addElement(Collections.singletonMap("field", 3.0), new HashMap<>());
-    Assert.assertEquals(8.5, averager.computeResult(), 0.0);
+    Assertions.assertEquals(8.5, averager.computeResult(), 0.0);
   }
 }

@@ -53,19 +53,30 @@ import java.util.Map;
  */
 public class QueryableProjection<T>
 {
+  private final String name;
   private final CursorBuildSpec cursorBuildSpec;
   private final Map<String, String> remapColumns;
   private final T rowSelector;
 
   public QueryableProjection(
+      String name,
       CursorBuildSpec cursorBuildSpec,
       Map<String, String> remapColumns,
       T rowSelector
   )
   {
+    this.name = name;
     this.cursorBuildSpec = cursorBuildSpec;
     this.remapColumns = remapColumns;
     this.rowSelector = rowSelector;
+  }
+
+  /**
+   * Name of the projection schema that matched the query.
+   */
+  public String getName()
+  {
+    return name;
   }
 
   /**

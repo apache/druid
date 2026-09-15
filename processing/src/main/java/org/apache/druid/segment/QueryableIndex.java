@@ -135,12 +135,15 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   }
 
   /**
-   * Returns a {@link QueryableIndex} sub-view scoped to a single cluster group's column data. Mirrors
-   * {@link #getProjectionQueryableIndex(String)} but for cluster groups, addressed by reference rather than name.
+   * Returns a {@link QueryableIndex} sub-view scoped to a single cluster group's column data.
    * Default returns {@code null}; only clustered segments override.
+   * <p>
+   * Clustering columns are constant within a group. When {@code withClusteringColumns} is true (query paths) they are
+   * additionally exposed as constant columns so filters and selectors can resolve them; when false
+   * (the merge/persist path) they are omitted (since they are stored as metadata instead of actual columns).
    */
   @Nullable
-  default QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec)
+  default QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec, boolean withClusteringColumns)
   {
     return null;
   }

@@ -84,6 +84,8 @@ Except for the properties above, there are some extra properties which can be cu
 | Properties |Description|Default|Required|
 |--------------------|-----------|-------|--------|
 |`druid.cache.password`| Password to access redis server/cluster | None |no|
+|`druid.cache.enableTls`| Whether to connect to the redis server/cluster over TLS | false |no|
+|`druid.cache.skipTlsHostnameVerification`| When TLS is enabled, skip verifying that the server certificate matches the redis hostname | false |no|
 |`druid.cache.expiration`|Expiration for cache entries | P1D |no|
 |`druid.cache.timeout`|Timeout for connecting to Redis and reading entries from Redis|PT2S|no|
 |`druid.cache.maxTotalConnections`|Max total connections to Redis|8|no|

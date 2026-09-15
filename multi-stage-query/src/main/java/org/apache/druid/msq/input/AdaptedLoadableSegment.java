@@ -31,6 +31,7 @@ import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.timeline.DataSegment;
@@ -129,16 +130,21 @@ public class AdaptedLoadableSegment implements LoadableSegment
   }
 
   /**
-   * Adapted segments are not managed by SegmentManager, so they are never cached.
+   * Adapted segments are not managed by SegmentManager, so they are never cached. The {@code acquireMode} is ignored:
+   * an adapted segment is produced by its own async supplier, not the cache manager's full-vs-partial machinery.
    */
   @Override
-  public Optional<Segment> acquireIfCached()
+  public Optional<Segment> acquireIfCached(AcquireMode acquireMode)
   {
     return Optional.empty();
   }
 
+  /**
+   * The {@code acquireMode} is ignored: an adapted segment is produced by its own async supplier, not the cache
+   * manager's full-vs-partial machinery.
+   */
   @Override
-  public AcquireSegmentAction acquire()
+  public AcquireSegmentAction acquire(AcquireMode acquireMode)
   {
     if (!acquired.compareAndSet(false, true)) {
       throw DruidException.defensive("Segment with descriptor[%s] is already acquired", descriptor);

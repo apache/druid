@@ -34,20 +34,16 @@ import org.apache.druid.server.QueryPrioritizationStrategy;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ThresholdBasedQueryPrioritizationStrategyTest
 {
   private final Integer adjustment = 10;
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
   private Druids.TimeseriesQueryBuilder queryBuilder;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.queryBuilder = Druids.newTimeseriesQueryBuilder()
@@ -68,7 +64,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
                                         .context(ImmutableMap.of())
                                         .build();
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of()).isPresent()
     );
   }
@@ -90,7 +86,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
                                         .context(ImmutableMap.of())
                                         .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         -adjustment,
         (int) strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of()).get()
     );
@@ -113,7 +109,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
                                         .context(ImmutableMap.of())
                                         .build();
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of()).isPresent()
     );
   }
@@ -135,7 +131,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
                                         .context(ImmutableMap.of())
                                         .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         -adjustment,
         (int) strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of()).get()
     );
@@ -158,7 +154,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
                                         .context(ImmutableMap.of())
                                         .build();
 
-    Assert.assertFalse(
+    Assertions.assertFalse(
         strategy.computePriority(
             QueryPlus.wrap(query),
             ImmutableSet.of(EasyMock.createMock(SegmentServerSelector.class))
@@ -183,7 +179,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
                                         .context(ImmutableMap.of())
                                         .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         -adjustment,
         (int) strategy.computePriority(
             QueryPlus.wrap(query),
@@ -215,7 +211,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
     SegmentServerSelector segmentServerSelector = EasyMock.createMock(SegmentServerSelector.class);
     EasyMock.expect(segmentServerSelector.getSegmentDescriptor()).andReturn(new SegmentDescriptor(new Interval(startDate, endDate), "", 0)).times(2);
     EasyMock.replay(segmentServerSelector);
-    Assert.assertFalse(
+    Assertions.assertFalse(
             strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of(segmentServerSelector)).isPresent()
     );
   }
@@ -239,7 +235,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
     SegmentServerSelector segmentServerSelector = EasyMock.createMock(SegmentServerSelector.class);
     EasyMock.expect(segmentServerSelector.getSegmentDescriptor()).andReturn(new SegmentDescriptor(new Interval(startDate, endDate), "", 0)).times(2);
     EasyMock.replay(segmentServerSelector);
-    Assert.assertEquals(
+    Assertions.assertEquals(
             -adjustment,
             (int) strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of(segmentServerSelector)).get()
     );

@@ -82,6 +82,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -210,6 +211,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // QueryRunner returned by this method is closed. (We can't do the acquisition and releasing at the level of
     // each FireHydrant's runner, since then it wouldn't be properly all-or-nothing on a per-Sink basis.)
     final List<SinkSegmentReference> allSegmentReferences = new ArrayList<>();
+    // Distinct Sinks (Druid segments) actually queried by this node. Tracked separately from
+    // allSegmentReferences, which holds one reference per FireHydrant (subsegment) and would overcount.
+    final Set<SegmentId> queriedSinks = new HashSet<>();
     final Map<SegmentDescriptor, SegmentId> segmentIdMap = new HashMap<>();
     final LinkedHashMap<SegmentDescriptor, List<QueryRunner<T>>> allRunners = new LinkedHashMap<>();
     final ConcurrentHashMap<String, SinkMetricsEmittingQueryRunner.SegmentMetrics> segmentMetricsAccumulator = new ConcurrentHashMap<>();
@@ -241,6 +245,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
           allRunners.put(descriptor, Collections.singletonList(new NoopQueryRunner<>()));
         } else {
           allSegmentReferences.addAll(sinkSegmentReferences);
+          queriedSinks.add(sinkSegmentId);
 
           allRunners.put(
               descriptor,
@@ -354,6 +359,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         );
       }
 
+      final int segmentCount = queriedSinks.size();
+
       // 1) Populate resource id to the query
       // 2) Merge results using the toolChest, finalize if necessary.
       // 3) Measure CPU time of that operation.
@@ -370,7 +377,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                       ),
                       segmentMetricsAccumulator,
                       Collections.emptySet(),
-                      null
+                      null,
+                      segmentCount
                   ),
                   toolChest,
                   emitter,
@@ -452,12 +460,15 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   * This class is responsible for emitting query/segment/time, query/wait/time and query/segmentAndCache/Time metrics for a Sink.
+   * This class is responsible for emitting query/segment/time, query/wait/time, query/segmentAndCache/Time and
+   * query/segments/count metrics for a Sink.
    * It accumulates query/segment/time and query/segmentAndCache/time metric for each FireHydrant at the level of Sink.
    * query/wait/time metric is the time taken to process the first FireHydrant for the Sink.
    * <p>
    * This class operates in two distinct modes based on whether {@link SinkMetricsEmittingQueryRunner#segmentId} is null or non-null.
-   * When segmentId is non-null, it accumulates the metrics. When segmentId is null, it emits the accumulated metrics.
+   * When segmentId is non-null, it accumulates the per-segment metrics. When segmentId is null, it emits the accumulated
+   * per-segment metrics. Unlike those, query/segments/count is a single per-query total (the number of Sinks scanned by
+   * this node), so it is emitted exactly once by the segmentId-null runner that receives a non-null {@code segmentCount}.
    * <p>
    * This class is derived from {@link org.apache.druid.query.MetricsEmittingQueryRunner}.
    */
@@ -470,6 +481,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     private final Set<String> metricsToCompute;
     @Nullable
     private final String segmentId;
+    @Nullable
+    private final Integer segmentCount;
     private final long creationTimeNs;
 
     private SinkMetricsEmittingQueryRunner(
@@ -481,12 +494,34 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         @Nullable String segmentId
     )
     {
+      this(
+          emitter,
+          queryToolChest,
+          queryRunner,
+          segmentMetricsAccumulator,
+          metricsToCompute,
+          segmentId,
+          null
+      );
+    }
+
+    private SinkMetricsEmittingQueryRunner(
+        ServiceEmitter emitter,
+        QueryToolChest<T, ? extends Query<T>> queryToolChest,
+        QueryRunner<T> queryRunner,
+        ConcurrentHashMap<String, SegmentMetrics> segmentMetricsAccumulator,
+        Set<String> metricsToCompute,
+        @Nullable String segmentId,
+        @Nullable Integer segmentCount
+    )
+    {
       this.emitter = emitter;
       this.queryToolChest = queryToolChest;
       this.queryRunner = queryRunner;
       this.segmentMetricsAccumulator = segmentMetricsAccumulator;
       this.metricsToCompute = metricsToCompute;
       this.segmentId = segmentId;
+      this.segmentCount = segmentCount;
       this.creationTimeNs = System.nanoTime();
     }
 
@@ -542,6 +577,21 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                   catch (Exception e) {
                     // Query should not fail, because of emitter failure. Swallowing the exception.
                     log.error(e, "Failed to emit metrics for segment[%s]", segmentAndMetrics.getKey());
+                  }
+                }
+
+                // Emit total segmentCount once per query
+                if (segmentCount != null) {
+                  final QueryMetrics<?> segmentCountMetrics =
+                      queryPlus.withoutThreadUnsafeState().withQueryMetrics(queryToolChest).getQueryMetrics();
+                  segmentCountMetrics.reportQueriedSegmentCount(segmentCount);
+
+                  try {
+                    segmentCountMetrics.emit(emitter);
+                  }
+                  catch (Exception e) {
+                    // Query should not fail, because of emitter failure. Swallowing the exception.
+                    log.error(e, "Failed to emit queried segment count metric.");
                   }
                 }
               }

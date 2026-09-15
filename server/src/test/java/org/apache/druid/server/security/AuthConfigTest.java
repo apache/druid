@@ -22,12 +22,10 @@ package org.apache.druid.server.security;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.QueryContexts;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class AuthConfigTest
 {
@@ -38,13 +36,26 @@ public class AuthConfigTest
   }
 
   @Test
+  public void testEmitAuthMetricsDefaultsFalse()
+  {
+    Assertions.assertFalse(new AuthConfig().isEmitAuthMetrics());
+    Assertions.assertFalse(AuthConfig.newBuilder().build().isEmitAuthMetrics());
+  }
+
+  @Test
+  public void testEmitAuthMetricsCanBeEnabled()
+  {
+    Assertions.assertTrue(AuthConfig.newBuilder().setEmitAuthMetrics(true).build().isEmitAuthMetrics());
+  }
+
+  @Test
   public void testContextSecurity()
   {
     // No security
     {
       AuthConfig config = new AuthConfig();
       Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
-      assertTrue(config.contextKeysToAuthorize(keys).isEmpty());
+      Assertions.assertTrue(config.contextKeysToAuthorize(keys).isEmpty());
     }
 
     // Default security
@@ -53,7 +64,7 @@ public class AuthConfigTest
           .setAuthorizeQueryContextParams(true)
           .build();
       Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
-      assertEquals(ImmutableSet.of("a", "b"), config.contextKeysToAuthorize(keys));
+      Assertions.assertEquals(ImmutableSet.of("a", "b"), config.contextKeysToAuthorize(keys));
     }
 
     // Specify unsecured keys (white-list)
@@ -63,7 +74,7 @@ public class AuthConfigTest
           .setUnsecuredContextKeys(ImmutableSet.of("a"))
           .build();
       Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
-      assertEquals(ImmutableSet.of("b"), config.contextKeysToAuthorize(keys));
+      Assertions.assertEquals(ImmutableSet.of("b"), config.contextKeysToAuthorize(keys));
     }
 
     // Specify secured keys (black-list)
@@ -73,7 +84,7 @@ public class AuthConfigTest
           .setSecuredContextKeys(ImmutableSet.of("a"))
           .build();
       Set<String> keys = ImmutableSet.of("a", "b", QueryContexts.CTX_SQL_QUERY_ID);
-      assertEquals(ImmutableSet.of("a"), config.contextKeysToAuthorize(keys));
+      Assertions.assertEquals(ImmutableSet.of("a"), config.contextKeysToAuthorize(keys));
     }
 
     // Specify both
@@ -84,7 +95,7 @@ public class AuthConfigTest
           .setSecuredContextKeys(ImmutableSet.of("b", "c"))
           .build();
       Set<String> keys = ImmutableSet.of("a", "b", "c", "d", QueryContexts.CTX_SQL_QUERY_ID);
-      assertEquals(ImmutableSet.of("c"), config.contextKeysToAuthorize(keys));
+      Assertions.assertEquals(ImmutableSet.of("c"), config.contextKeysToAuthorize(keys));
     }
   }
 }

@@ -25,10 +25,10 @@ import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,25 +39,25 @@ public class SingleFileTaskReportFileWriterTest
 {
   private static final String TASK_ID = "mytask";
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testReport() throws IOException
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File file = tempFolder.newFile();
+    final File file = temporaryFolder.newFile("report.json");
     final SingleFileTaskReportFileWriter writer = new SingleFileTaskReportFileWriter(file);
     writer.setObjectMapper(mapper);
     final TaskReport.ReportMap reportsMap = TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(TASK_ID, null)
     );
     writer.write(TASK_ID, reportsMap);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         reportsMap,
         mapper.readValue(Files.readAllBytes(file.toPath()), new TypeReference<Map<String, TaskReport>>() {})
     );
 
-    Assert.assertEquals(file.getAbsolutePath(), writer.getReportsFile(TASK_ID).getAbsolutePath());
+    Assertions.assertEquals(file.getAbsolutePath(), writer.getReportsFile(TASK_ID).getAbsolutePath());
   }
 }

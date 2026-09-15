@@ -20,6 +20,8 @@
 package org.apache.druid.security.basic.authentication.db.cache;
 
 import com.google.inject.Injector;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -29,27 +31,24 @@ import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void test_stop_interruptsPollingThread() throws InterruptedException, IOException
@@ -77,25 +76,10 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
     );
 
     // Block the second request so that it can be interrupted by stop()
-    final AtomicBoolean isInterrupted = new AtomicBoolean(false);
+    final CountDownLatch requestStarted = new CountDownLatch(1);
+    final CountDownLatch requestInterrupted = new CountDownLatch(1);
 
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, path),
-        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK) {
-          @Override
-          public ChannelBuffer getContent()
-          {
-            try {
-              Thread.sleep(10_000);
-              return null;
-            }
-            catch (InterruptedException e) {
-              isInterrupted.set(true);
-              throw new RuntimeException(e);
-            }
-          }
-        }
-    );
+    serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, path), requestStarted, requestInterrupted);
 
     EasyMock.replay(injector);
 
@@ -109,13 +93,11 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
 
     // Start the manager and wait for a while to ensure that polling has started
     manager.start();
-    Thread.sleep(10);
+    Assertions.assertTrue(requestStarted.await(5, TimeUnit.SECONDS));
 
     // Stop the manager and verify that the polling thread has been interrupted
     manager.stop();
-    Thread.sleep(10);
-
-    Assert.assertTrue(isInterrupted.get());
+    Assertions.assertTrue(requestInterrupted.await(5, TimeUnit.SECONDS));
 
     EasyMock.verify(injector);
   }

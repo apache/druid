@@ -20,8 +20,8 @@
 package org.apache.druid.inputsource.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -33,6 +33,6 @@ public class HdfsInputSourceAdapterTest
     Configuration conf = new Configuration();
     HdfsInputSourceConfig inputSourceConfig = new HdfsInputSourceConfig(null);
     HdfsInputSourceFactory hdfsInputSourceAdapter = new HdfsInputSourceFactory(conf, inputSourceConfig);
-    Assert.assertTrue(hdfsInputSourceAdapter.create(Arrays.asList("hdfs://localhost:7020/bar/def.parquet", "hdfs://localhost:7020/bar/abc.parquet")) instanceof HdfsInputSource);
+    Assertions.assertTrue(hdfsInputSourceAdapter.create(Arrays.asList("hdfs://localhost:7020/bar/def.parquet", "hdfs://localhost:7020/bar/abc.parquet")) instanceof HdfsInputSource);
   }
 }

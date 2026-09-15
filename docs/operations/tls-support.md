@@ -33,7 +33,7 @@ and `druid.tlsPort` properties on each process. Please see `Configuration` secti
 
 ## Jetty server configuration
 
-Apache Druid uses Jetty as its embedded web server. 
+Apache&circledR; Druid uses Jetty as its embedded web server. 
 
 To get familiar with TLS/SSL, along with related concepts like keys and certificates,
 read [Configuring Secure Protocols](https://www.eclipse.org/jetty/documentation/jetty-12/operations-guide/index.html#og-protocols-ssl) in the Jetty documentation.

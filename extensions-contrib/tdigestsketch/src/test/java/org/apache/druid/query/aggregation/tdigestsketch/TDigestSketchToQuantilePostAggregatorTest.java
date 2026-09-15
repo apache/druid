@@ -23,15 +23,11 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TDigestSketchToQuantilePostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws Exception
@@ -45,9 +41,9 @@ public class TDigestSketchToQuantilePostAggregatorTest
         TDigestSketchToQuantilePostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
-    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
@@ -56,7 +52,7 @@ public class TDigestSketchToQuantilePostAggregatorTest
     PostAggregator postAgg =
         new TDigestSketchToQuantilePostAggregator("post", new ConstantPostAggregator("", 100), 0.5);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "TDigestSketchToQuantilePostAggregator{name='post', field=ConstantPostAggregator{name='', constantValue=100}, fraction=0.5}",
         postAgg.toString()
     );

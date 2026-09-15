@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.IAE;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ArrayOfStringsNullSafeSerdeTest
 {
@@ -71,11 +71,11 @@ public class ArrayOfStringsNullSafeSerdeTest
   {
     // bytes for length = -2
     final byte[] bytes = {-2, -1, -1, -1};
-    IAE exception = Assert.assertThrows(
+    IAE exception = Assertions.assertThrows(
         IAE.class,
         () -> serde.deserializeFromMemory(Memory.wrap(bytes), 1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Illegal strLength [-2] at offset [4]. Must be -1, 0 or a positive integer.",
         exception.getMessage()
     );
@@ -84,9 +84,9 @@ public class ArrayOfStringsNullSafeSerdeTest
   private void testSerde(String... inputArray)
   {
     byte[] bytes = serde.serializeToByteArray(inputArray);
-    Assert.assertEquals(serde.sizeOf(inputArray), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(inputArray), bytes.length);
     String[] deserialized = serde.deserializeFromMemory(Memory.wrap(bytes), inputArray.length);
-    Assert.assertArrayEquals(inputArray, deserialized);
+    Assertions.assertArrayEquals(inputArray, deserialized);
   }
 
 }

@@ -33,18 +33,16 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class KllFloatsSketchToHistogramPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws JsonProcessingException
@@ -62,8 +60,8 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -76,7 +74,7 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "KllFloatsSketchToHistogramPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, splitPoints=[0.25, 0.75], numBins=null}",
         postAgg.toString()
     );
@@ -85,15 +83,16 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
   @Test
   public void testComparator()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing histograms is not supported");
-    final PostAggregator postAgg = new KllFloatsSketchToHistogramPostAggregator(
-        "post",
-        new FieldAccessPostAggregator("field1", "sketch"),
-        new float[]{0.25f, 0.75f},
-        null
-    );
-    postAgg.getComparator();
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      final PostAggregator postAgg = new KllFloatsSketchToHistogramPostAggregator(
+          "post",
+          new FieldAccessPostAggregator("field1", "sketch"),
+          new float[]{0.25f, 0.75f},
+          null
+      );
+      postAgg.getComparator();
+    });
+    assertTrue(exception.getMessage().contains("Comparing histograms is not supported"));
   }
 
   @Test
@@ -122,10 +121,10 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(2, histogram.length);
-    Assert.assertTrue(Double.isNaN(histogram[0]));
-    Assert.assertTrue(Double.isNaN(histogram[1]));
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(2, histogram.length);
+    Assertions.assertTrue(Double.isNaN(histogram[0]));
+    Assertions.assertTrue(Double.isNaN(histogram[1]));
   }
 
   @Test
@@ -152,10 +151,10 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(2, histogram.length);
-    Assert.assertEquals(3.0, histogram[0], 0);
-    Assert.assertEquals(3.0, histogram[1], 0);
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(2, histogram.length);
+    Assertions.assertEquals(3.0, histogram[0], 0);
+    Assertions.assertEquals(3.0, histogram[1], 0);
   }
 
   @Test
@@ -182,10 +181,10 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(2, histogram.length);
-    Assert.assertEquals(0.0, histogram[0], 0);
-    Assert.assertEquals(6.0, histogram[1], 0);
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(2, histogram.length);
+    Assertions.assertEquals(0.0, histogram[0], 0);
+    Assertions.assertEquals(6.0, histogram[1], 0);
   }
 
   @Test
@@ -212,10 +211,10 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(2, histogram.length);
-    Assert.assertEquals(3.0, histogram[0], 0);
-    Assert.assertEquals(3.0, histogram[1], 0);
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(2, histogram.length);
+    Assertions.assertEquals(3.0, histogram[0], 0);
+    Assertions.assertEquals(3.0, histogram[1], 0);
   }
 
   @Test
@@ -242,10 +241,10 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(2, histogram.length);
-    Assert.assertEquals(1.0, histogram[0], 0);
-    Assert.assertEquals(0.0, histogram[1], 0);
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(2, histogram.length);
+    Assertions.assertEquals(1.0, histogram[0], 0);
+    Assertions.assertEquals(0.0, histogram[1], 0);
   }
 
   @Test
@@ -272,11 +271,11 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(3, histogram.length);
-    Assert.assertEquals(1.0, histogram[0], 0);
-    Assert.assertEquals(0.0, histogram[1], 0);
-    Assert.assertEquals(0.0, histogram[2], 0);
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(3, histogram.length);
+    Assertions.assertEquals(1.0, histogram[0], 0);
+    Assertions.assertEquals(0.0, histogram[1], 0);
+    Assertions.assertEquals(0.0, histogram[2], 0);
   }
 
   @Test
@@ -303,10 +302,10 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(2, histogram.length);
-    Assert.assertEquals(3.0, histogram[0], 0);
-    Assert.assertEquals(0.0, histogram[1], 0);
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(2, histogram.length);
+    Assertions.assertEquals(3.0, histogram[0], 0);
+    Assertions.assertEquals(0.0, histogram[1], 0);
   }
 
   @Test
@@ -333,11 +332,11 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
     );
 
     final double[] histogram = (double[]) postAgg.compute(fields);
-    Assert.assertNotNull(histogram);
-    Assert.assertEquals(3, histogram.length);
-    Assert.assertEquals(3.0, histogram[0], 0);
-    Assert.assertEquals(0.0, histogram[1], 0);
-    Assert.assertEquals(0.0, histogram[2], 0);
+    Assertions.assertNotNull(histogram);
+    Assertions.assertEquals(3, histogram.length);
+    Assertions.assertEquals(3.0, histogram[0], 0);
+    Assertions.assertEquals(0.0, histogram[1], 0);
+    Assertions.assertEquals(0.0, histogram[2], 0);
   }
 
   @Test
@@ -361,7 +360,7 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("sketch", null)

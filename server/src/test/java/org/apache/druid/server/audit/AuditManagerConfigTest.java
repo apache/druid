@@ -24,8 +24,8 @@ import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -44,14 +44,14 @@ public class AuditManagerConfigTest
 
     provider.inject(new Properties(), injector.getInstance(JsonConfigurator.class));
     final AuditManagerConfig config = provider.get();
-    Assert.assertTrue(config instanceof SQLAuditManagerConfig);
+    Assertions.assertTrue(config instanceof SQLAuditManagerConfig);
 
     final SQLAuditManagerConfig sqlAuditConfig = (SQLAuditManagerConfig) config;
-    Assert.assertTrue(sqlAuditConfig.isAuditSystemRequests());
-    Assert.assertFalse(sqlAuditConfig.isSkipNullField());
-    Assert.assertFalse(sqlAuditConfig.isIncludePayloadAsDimensionInMetric());
-    Assert.assertEquals(-1, sqlAuditConfig.getMaxPayloadSizeBytes());
-    Assert.assertEquals(7 * 86400 * 1000, sqlAuditConfig.getAuditHistoryMillis());
+    Assertions.assertTrue(sqlAuditConfig.isAuditSystemRequests());
+    Assertions.assertFalse(sqlAuditConfig.isSkipNullField());
+    Assertions.assertFalse(sqlAuditConfig.isIncludePayloadAsDimensionInMetric());
+    Assertions.assertEquals(-1, sqlAuditConfig.getMaxPayloadSizeBytes());
+    Assertions.assertEquals(7 * 86400 * 1000, sqlAuditConfig.getAuditHistoryMillis());
   }
 
   @Test
@@ -68,13 +68,13 @@ public class AuditManagerConfigTest
 
     provider.inject(props, injector.getInstance(JsonConfigurator.class));
     final AuditManagerConfig config = provider.get();
-    Assert.assertTrue(config instanceof LoggingAuditManagerConfig);
+    Assertions.assertTrue(config instanceof LoggingAuditManagerConfig);
 
     final LoggingAuditManagerConfig logAuditConfig = (LoggingAuditManagerConfig) config;
-    Assert.assertTrue(logAuditConfig.isAuditSystemRequests());
-    Assert.assertFalse(logAuditConfig.isSkipNullField());
-    Assert.assertEquals(-1, logAuditConfig.getMaxPayloadSizeBytes());
-    Assert.assertEquals(AuditLogger.Level.INFO, logAuditConfig.getLogLevel());
+    Assertions.assertTrue(logAuditConfig.isAuditSystemRequests());
+    Assertions.assertFalse(logAuditConfig.isSkipNullField());
+    Assertions.assertEquals(-1, logAuditConfig.getMaxPayloadSizeBytes());
+    Assertions.assertEquals(AuditLogger.Level.INFO, logAuditConfig.getLogLevel());
   }
 
   @Test
@@ -94,13 +94,13 @@ public class AuditManagerConfigTest
     provider.inject(props, injector.getInstance(JsonConfigurator.class));
 
     final AuditManagerConfig config = provider.get();
-    Assert.assertTrue(config instanceof LoggingAuditManagerConfig);
+    Assertions.assertTrue(config instanceof LoggingAuditManagerConfig);
 
     final LoggingAuditManagerConfig logAuditConfig = (LoggingAuditManagerConfig) config;
-    Assert.assertTrue(logAuditConfig.isAuditSystemRequests());
-    Assert.assertFalse(logAuditConfig.isSkipNullField());
-    Assert.assertEquals(-1, logAuditConfig.getMaxPayloadSizeBytes());
-    Assert.assertEquals(AuditLogger.Level.WARN, logAuditConfig.getLogLevel());
+    Assertions.assertTrue(logAuditConfig.isAuditSystemRequests());
+    Assertions.assertFalse(logAuditConfig.isSkipNullField());
+    Assertions.assertEquals(-1, logAuditConfig.getMaxPayloadSizeBytes());
+    Assertions.assertEquals(AuditLogger.Level.WARN, logAuditConfig.getLogLevel());
   }
 
   @Test
@@ -122,13 +122,13 @@ public class AuditManagerConfigTest
     provider.inject(props, injector.getInstance(JsonConfigurator.class));
 
     final AuditManagerConfig config = provider.get();
-    Assert.assertTrue(config instanceof SQLAuditManagerConfig);
+    Assertions.assertTrue(config instanceof SQLAuditManagerConfig);
 
     final SQLAuditManagerConfig sqlAuditConfig = (SQLAuditManagerConfig) config;
-    Assert.assertTrue(sqlAuditConfig.isSkipNullField());
-    Assert.assertTrue(sqlAuditConfig.isIncludePayloadAsDimensionInMetric());
-    Assert.assertEquals(100, sqlAuditConfig.getMaxPayloadSizeBytes());
-    Assert.assertEquals(1000L, sqlAuditConfig.getAuditHistoryMillis());
+    Assertions.assertTrue(sqlAuditConfig.isSkipNullField());
+    Assertions.assertTrue(sqlAuditConfig.isIncludePayloadAsDimensionInMetric());
+    Assertions.assertEquals(100, sqlAuditConfig.getMaxPayloadSizeBytes());
+    Assertions.assertEquals(1000L, sqlAuditConfig.getAuditHistoryMillis());
   }
 
   private Injector createInjector()

@@ -21,25 +21,24 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 public class LookupConfigTest
 {
 
   ObjectMapper mapper = TestHelper.makeJsonMapper();
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSerDesr() throws IOException
   {
-    LookupConfig lookupConfig = new LookupConfig(Files.createTempFile(tempDir, "junit", null).toFile().getAbsolutePath());
+    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
     Assertions.assertEquals(
         lookupConfig,
         mapper.readerFor(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig))

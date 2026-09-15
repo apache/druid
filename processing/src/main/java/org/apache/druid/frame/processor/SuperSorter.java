@@ -184,6 +184,9 @@ public class SuperSorter
   private SettableFuture<OutputChannels> allDone = null;
 
   @GuardedBy("runWorkersLock")
+  private boolean totalMergersForUltimateLevelSet = false;
+
+  @GuardedBy("runWorkersLock")
   SuperSorterProgressTracker superSorterProgressTracker;
 
   @GuardedBy("runWorkersLock")
@@ -299,7 +302,7 @@ public class SuperSorter
           () -> {
             synchronized (runWorkersLock) {
               if (outputPartitionsFuture.isDone()) { // Update the progress tracker
-                superSorterProgressTracker.setTotalMergersForUltimateLevel(getOutputPartitions().size());
+                setTotalMergersForUltimateLevel();
               }
               runWorkersIfPossible();
               setAllDoneIfPossible();
@@ -415,7 +418,7 @@ public class SuperSorter
         }
 
         // OK to use wrap, not wrapReadOnly, because nil channels are already read-only.
-        allDone.set(OutputChannels.wrap(channels));
+        setAllDone(OutputChannels.wrap(channels));
       } else if (rowLimit == 0 && activeProcessors == 0) {
         // We had a row limit, and got it all the way down to zero.
         // Generate empty output channels for any partitions that we haven't written yet.
@@ -427,18 +430,34 @@ public class SuperSorter
         }
 
         // OK to use wrap, not wrapReadOnly, because all channels in this list are already read-only.
-        allDone.set(OutputChannels.wrap(outputChannels));
+        setAllDone(OutputChannels.wrap(outputChannels));
       } else if (totalMergingLevels != UNKNOWN_LEVEL
                  && outputsReadyByLevel.containsKey(totalMergingLevels - 1)
                  && (outputsReadyByLevel.get(totalMergingLevels - 1).size() ==
                      getTotalMergersInLevel(totalMergingLevels - 1))) {
         // We're done!!
         // OK to use wrap, not wrapReadOnly, because all channels in this list are already read-only.
-        allDone.set(OutputChannels.wrap(outputChannels));
+        setAllDone(OutputChannels.wrap(outputChannels));
       }
     }
     catch (Throwable e) {
       allDone.setException(e);
+    }
+  }
+
+  @GuardedBy("runWorkersLock")
+  private void setAllDone(final OutputChannels channels)
+  {
+    setTotalMergersForUltimateLevel();
+    allDone.set(channels);
+  }
+
+  @GuardedBy("runWorkersLock")
+  private void setTotalMergersForUltimateLevel()
+  {
+    if (!totalMergersForUltimateLevelSet) {
+      superSorterProgressTracker.setTotalMergersForUltimateLevel(getOutputPartitions().size());
+      totalMergersForUltimateLevelSet = true;
     }
   }
 

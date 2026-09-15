@@ -33,11 +33,12 @@ import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.TestVectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
 
 public class HllSketchMergeAggregatorFactoryTest
 {
@@ -55,7 +56,7 @@ public class HllSketchMergeAggregatorFactoryTest
   private ColumnSelectorFactory metricFactory;
   private VectorColumnSelectorFactory vectorFactory;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     targetRound = new HllSketchMergeAggregatorFactory(
@@ -82,50 +83,55 @@ public class HllSketchMergeAggregatorFactoryTest
     vectorFactory = new TestVectorColumnSelectorFactory().addCapabilities(FIELD_NAME, columnCapabilities);
   }
 
-  @Test(expected = AggregatorFactoryNotMergeableException.class)
-  public void testGetMergingFactoryBadName() throws Exception
+  @Test
+  public void testGetMergingFactoryBadName()
   {
-    HllSketchMergeAggregatorFactory other = new HllSketchMergeAggregatorFactory(
-        NAME + "-diff",
-        FIELD_NAME,
-        LG_K,
-        TGT_HLL_TYPE,
-        STRING_ENCODING,
-        SHOULD_FINALIZE,
-        ROUND
-    );
-    targetRound.getMergingFactory(other);
+    Assertions.assertThrows(AggregatorFactoryNotMergeableException.class, () -> {
+      HllSketchMergeAggregatorFactory other = new HllSketchMergeAggregatorFactory(
+          NAME + "-diff",
+          FIELD_NAME,
+          LG_K,
+          TGT_HLL_TYPE,
+          STRING_ENCODING,
+          SHOULD_FINALIZE,
+          ROUND
+      );
+      targetRound.getMergingFactory(other);
+    });
   }
 
-  @Test(expected = AggregatorFactoryNotMergeableException.class)
-  public void testGetMergingFactoryBadType() throws Exception
+  @Test
+  public void testGetMergingFactoryBadType()
   {
-    HllSketchBuildAggregatorFactory other = new HllSketchBuildAggregatorFactory(
-        NAME,
-        FIELD_NAME,
-        LG_K,
-        TGT_HLL_TYPE,
-        STRING_ENCODING,
-        SHOULD_FINALIZE,
-        ROUND
-    );
-    targetRound.getMergingFactory(other);
+    Assertions.assertThrows(AggregatorFactoryNotMergeableException.class, () -> {
+      HllSketchBuildAggregatorFactory other = new HllSketchBuildAggregatorFactory(
+          NAME,
+          FIELD_NAME,
+          LG_K,
+          TGT_HLL_TYPE,
+          STRING_ENCODING,
+          SHOULD_FINALIZE,
+          ROUND
+      );
+      targetRound.getMergingFactory(other);
+    });
   }
 
-  @Test(expected = AggregatorFactoryNotMergeableException.class)
-  public void testGetMergingFactoryDifferentStringEncoding() throws Exception
+  @Test
+  public void testGetMergingFactoryDifferentStringEncoding()
   {
-    HllSketchMergeAggregatorFactory other = new HllSketchMergeAggregatorFactory(
-        NAME,
-        FIELD_NAME,
-        LG_K,
-        TGT_HLL_TYPE,
-        StringEncoding.UTF8,
-        SHOULD_FINALIZE,
-        ROUND
-    );
-    HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
-    Assert.assertEquals(LG_K, result.getLgK());
+    Assertions.assertThrows(AggregatorFactoryNotMergeableException.class, () -> {
+      HllSketchMergeAggregatorFactory other = new HllSketchMergeAggregatorFactory(
+          NAME,
+          FIELD_NAME,
+          LG_K,
+          TGT_HLL_TYPE,
+          StringEncoding.UTF8,
+          SHOULD_FINALIZE,
+          ROUND
+      );
+      targetRound.getMergingFactory(other);
+    });
   }
 
   @Test
@@ -142,7 +148,7 @@ public class HllSketchMergeAggregatorFactoryTest
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
-    Assert.assertEquals(LG_K, result.getLgK());
+    Assertions.assertEquals(LG_K, result.getLgK());
   }
 
   @Test
@@ -159,7 +165,7 @@ public class HllSketchMergeAggregatorFactoryTest
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
-    Assert.assertEquals(largerLgK, result.getLgK());
+    Assertions.assertEquals(largerLgK, result.getLgK());
   }
 
   @Test
@@ -176,7 +182,7 @@ public class HllSketchMergeAggregatorFactoryTest
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
-    Assert.assertEquals(TGT_HLL_TYPE, result.getTgtHllType());
+    Assertions.assertEquals(TGT_HLL_TYPE, result.getTgtHllType());
   }
 
   @Test
@@ -193,35 +199,35 @@ public class HllSketchMergeAggregatorFactoryTest
         ROUND
     );
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
-    Assert.assertEquals(largerTgtHllType, result.getTgtHllType());
+    Assertions.assertEquals(largerTgtHllType, result.getTgtHllType());
   }
 
   @Test
   public void testGetMergingFactoryThisNoRoundOtherNoRound() throws Exception
   {
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetNoRound.getMergingFactory(targetNoRound);
-    Assert.assertFalse(result.isRound());
+    Assertions.assertFalse(result.isRound());
   }
 
   @Test
   public void testGetMergingFactoryThisNoRoundOtherRound() throws Exception
   {
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetNoRound.getMergingFactory(targetRound);
-    Assert.assertTrue(result.isRound());
+    Assertions.assertTrue(result.isRound());
   }
 
   @Test
   public void testGetMergingFactoryThisRoundOtherNoRound() throws Exception
   {
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetNoRound);
-    Assert.assertTrue(result.isRound());
+    Assertions.assertTrue(result.isRound());
   }
 
   @Test
   public void testGetMergingFactoryThisRoundOtherRound() throws Exception
   {
     HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
-    Assert.assertTrue(result.isRound());
+    Assertions.assertTrue(result.isRound());
   }
 
   @Test
@@ -242,7 +248,7 @@ public class HllSketchMergeAggregatorFactoryTest
 
     final String serializedString = jsonMapper.writeValueAsString(factory);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"type\":\"HLLSketchMerge\",\"name\":\"foo\",\"fieldName\":\"bar\",\"lgK\":18,\"tgtHllType\":\"HLL_8\","
         + "\"stringEncoding\":\"utf8\",\"shouldFinalize\":false,\"round\":true}",
         serializedString
@@ -253,7 +259,7 @@ public class HllSketchMergeAggregatorFactoryTest
         AggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, factory2);
+    Assertions.assertEquals(factory, factory2);
   }
 
   @Test
@@ -274,7 +280,7 @@ public class HllSketchMergeAggregatorFactoryTest
 
     final String serializedString = jsonMapper.writeValueAsString(factory);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"type\":\"HLLSketchMerge\","
         + "\"name\":\"foo\","
         + "\"fieldName\":\"bar\","
@@ -289,7 +295,7 @@ public class HllSketchMergeAggregatorFactoryTest
         AggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, factory2);
+    Assertions.assertEquals(factory, factory2);
   }
 
   @Test
@@ -302,8 +308,8 @@ public class HllSketchMergeAggregatorFactoryTest
   public void testWithName() throws Exception
   {
     HllSketchAggregatorFactory factory = (HllSketchAggregatorFactory) targetRound.getMergingFactory(targetRound);
-    Assert.assertEquals(factory, factory.withName(targetRound.getName()));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName(targetRound.getName()));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 
   @Test
@@ -314,8 +320,8 @@ public class HllSketchMergeAggregatorFactoryTest
             FIELD_NAME,
             ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA)
         );
-    Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorize(metricFactory));
-    Assert.assertEquals(
+    Throwable exception = Assertions.assertThrows(DruidException.class, () -> targetRound.factorize(metricFactory));
+    Assertions.assertEquals(
         "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
         exception.getMessage()
     );
@@ -324,8 +330,8 @@ public class HllSketchMergeAggregatorFactoryTest
   @Test
   public void testFactorizeBufferedOnUnsupportedComplexColumn()
   {
-    Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorizeBuffered(metricFactory));
-    Assert.assertEquals(
+    Throwable exception = Assertions.assertThrows(DruidException.class, () -> targetRound.factorizeBuffered(metricFactory));
+    Assertions.assertEquals(
         "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
         exception.getMessage()
     );
@@ -334,8 +340,8 @@ public class HllSketchMergeAggregatorFactoryTest
   @Test
   public void testFactorizeVectorOnUnsupportedComplexColumn()
   {
-    Throwable exception = Assert.assertThrows(DruidException.class, () -> targetRound.factorizeVector(vectorFactory));
-    Assert.assertEquals(
+    Throwable exception = Assertions.assertThrows(DruidException.class, () -> targetRound.factorizeVector(vectorFactory));
+    Assertions.assertEquals(
         "Using aggregator [HLLSketchMerge] is not supported for complex columns with type [COMPLEX<json>].",
         exception.getMessage()
     );

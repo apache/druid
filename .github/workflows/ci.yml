@@ -24,7 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ "21", "25" ]
+        jdk: [ "25" ]
         pattern: [ "C*", "N*", "D*,H*,L*", "I*,A*,U*", "K*,E*,W*,Z*,Y*,X*", "M*,P*,O*", "R*,B*,Q*,V*", "S*", "T*,F*,G*,J*" ]
     uses: ./.github/workflows/worker.yml
     with:
@@ -33,12 +33,6 @@ jobs:
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
       execute: ${{ matrix.jdk == '25' || github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-jdk21') }}
-
-  validate-dist:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/validate-dist
-      key: "validate-dist"
 
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"

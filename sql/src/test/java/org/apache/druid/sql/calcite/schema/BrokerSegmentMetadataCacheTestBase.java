@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.schema;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -34,7 +35,10 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -50,8 +54,17 @@ public class BrokerSegmentMetadataCacheTestBase extends SegmentMetadataCacheTest
   public SpecificSegmentsQuerySegmentWalker walker;
   public TestTimelineServerView serverView;
 
+  @TempDir
+  private Path temporaryDirectory;
+
+  protected File newTempFolder()
+  {
+    return FileUtils.createTempDirInLocation(temporaryDirectory, "metadata-cache-");
+  }
+
   public void setUp() throws Exception
   {
+    temporaryFolder.create();
     setUpData();
     setUpCommon();
 
@@ -96,5 +109,12 @@ public class BrokerSegmentMetadataCacheTestBase extends SegmentMetadataCacheTest
     final List<DataSegment> realtimeSegments = ImmutableList.of(realtimeSegment1);
     serverView = new TestTimelineServerView(walker.getSegments(), realtimeSegments);
     druidServers = serverView.getDruidServers();
+  }
+
+  @Override
+  public void tearDown() throws Exception
+  {
+    super.tearDown();
+    temporaryFolder.delete();
   }
 }

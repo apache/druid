@@ -27,7 +27,7 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-This topic describes the status and configuration API endpoints for [automatic compaction using Coordinator duties](../data-management/automatic-compaction.md#auto-compaction-using-coordinator-duties) in Apache Druid. You can configure automatic compaction in the Druid web console or API.
+This topic describes the status and configuration API endpoints for [automatic compaction using Coordinator duties](../data-management/automatic-compaction.md#auto-compaction-using-coordinator-duties) in Apache&circledR; Druid. You can configure automatic compaction in the Druid web console or API.
 
 :::info[Experimental]
 

@@ -28,8 +28,8 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -69,12 +69,12 @@ public class RoundRobinServerSelectorTest
     // Verify that only eligible servers are returned in order of available size
     Iterator<ServerHolder> pickedServers = selector.getServersInTierToLoadSegment(TIER, segment);
 
-    Assert.assertTrue(pickedServers.hasNext());
-    Assert.assertEquals(serverXL, pickedServers.next());
-    Assert.assertEquals(serverL, pickedServers.next());
-    Assert.assertEquals(serverM, pickedServers.next());
+    Assertions.assertTrue(pickedServers.hasNext());
+    Assertions.assertEquals(serverXL, pickedServers.next());
+    Assertions.assertEquals(serverL, pickedServers.next());
+    Assertions.assertEquals(serverM, pickedServers.next());
 
-    Assert.assertFalse(pickedServers.hasNext());
+    Assertions.assertFalse(pickedServers.hasNext());
   }
 
   @Test
@@ -95,18 +95,18 @@ public class RoundRobinServerSelectorTest
 
     // Verify that only eligible servers are returned in order of available size
     Iterator<ServerHolder> pickedServers = selector.getServersInTierToLoadSegment(TIER, segment);
-    Assert.assertTrue(pickedServers.hasNext());
-    Assert.assertEquals(serverXL, pickedServers.next());
+    Assertions.assertTrue(pickedServers.hasNext());
+    Assertions.assertEquals(serverXL, pickedServers.next());
 
     // Second iterator starts from previous position but resets allowed number of iterations
     pickedServers = selector.getServersInTierToLoadSegment(TIER, segment);
-    Assert.assertTrue(pickedServers.hasNext());
+    Assertions.assertTrue(pickedServers.hasNext());
 
-    Assert.assertEquals(serverL, pickedServers.next());
-    Assert.assertEquals(serverM, pickedServers.next());
-    Assert.assertEquals(serverXL, pickedServers.next());
+    Assertions.assertEquals(serverL, pickedServers.next());
+    Assertions.assertEquals(serverM, pickedServers.next());
+    Assertions.assertEquals(serverXL, pickedServers.next());
 
-    Assert.assertFalse(pickedServers.hasNext());
+    Assertions.assertFalse(pickedServers.hasNext());
   }
 
   @Test
@@ -116,7 +116,7 @@ public class RoundRobinServerSelectorTest
     final RoundRobinServerSelector selector = new RoundRobinServerSelector(cluster);
 
     Iterator<ServerHolder> eligibleServers = selector.getServersInTierToLoadSegment(TIER, segment);
-    Assert.assertFalse(eligibleServers.hasNext());
+    Assertions.assertFalse(eligibleServers.hasNext());
   }
 
   @Test
@@ -133,7 +133,7 @@ public class RoundRobinServerSelectorTest
 
     // Verify that only eligible servers are returned in order of available size
     Iterator<ServerHolder> eligibleServers = selector.getServersInTierToLoadSegment(TIER, segment);
-    Assert.assertFalse(eligibleServers.hasNext());
+    Assertions.assertFalse(eligibleServers.hasNext());
   }
 
   private ServerHolder createHistorical(String name, long size)
