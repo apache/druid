@@ -22,6 +22,8 @@ package org.apache.druid.sql.calcite.planner;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.calcite.interpreter.Bindables;
+import org.apache.calcite.plan.Contexts;
+import org.apache.calcite.plan.RelOptCostImpl;
 import org.apache.calcite.plan.RelOptLattice;
 import org.apache.calcite.plan.RelOptMaterialization;
 import org.apache.calcite.plan.RelOptPlanner;
@@ -29,13 +31,16 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.hep.HepMatchOrder;
+import org.apache.calcite.plan.hep.HepPlanner;
 import org.apache.calcite.plan.hep.HepProgram;
 import org.apache.calcite.plan.hep.HepProgramBuilder;
 import org.apache.calcite.plan.volcano.AbstractConverter;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
+import org.apache.calcite.rel.metadata.ChainedRelMetadataProvider;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.metadata.RelMetadataProvider;
 import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
@@ -303,10 +308,46 @@ public class CalciteRulesManager
     cleanupRules.addRuleInstance(CoreRules.PROJECT_MERGE);
     cleanupRules.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
     return Programs.sequence(
-        Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
+        hepProgram(builder.build(), plannerContext),
         new DruidTrimFieldsProgram(),
-        Programs.of(cleanupRules.build(), true, DefaultRelMetadataProvider.INSTANCE)
+        hepProgram(cleanupRules.build(), plannerContext)
     );
+  }
+
+  /**
+   * Equivalent to {@link Programs#of(HepProgram, boolean, org.apache.calcite.rel.metadata.RelMetadataProvider)} with
+   * {@code noDag=true} and {@link DefaultRelMetadataProvider}, except the {@link HepPlanner} is given a
+   * {@link org.apache.calcite.plan.Context} carrying the per-query {@link org.apache.calcite.util.CancelFlag}.
+   * {@code Programs.of} builds its {@code HepPlanner} with a {@code null} context, so it never observes our cancel
+   * flag; a query that spends its planning budget in these Hep rule loops would otherwise ignore the planning timeout.
+   */
+  @SuppressWarnings("deprecation")
+  private static Program hepProgram(final HepProgram hepProgram, final PlannerContext plannerContext)
+  {
+    return (planner, rel, requiredOutputTraits, materializations, lattices) -> {
+      final HepPlanner hepPlanner = new HepPlanner(
+          hepProgram,
+          Contexts.of(plannerContext.getCancelFlag()),
+          true,
+          null,
+          RelOptCostImpl.FACTORY
+      );
+      final List<RelMetadataProvider> metadataProviders = new ArrayList<>();
+      metadataProviders.add(DefaultRelMetadataProvider.INSTANCE);
+      // Deprecated, but retained deliberately to match Programs.of: HepPlanner#registerMetadataProviders prepends
+      // HepRelMetadataProvider to the list (needed to answer metadata requests on HepRelVertex during Hep planning).
+      // Dropping it would install only DefaultRelMetadataProvider on the cluster and can break metadata lookups.
+      hepPlanner.registerMetadataProviders(metadataProviders);
+      for (final RelOptMaterialization materialization : materializations) {
+        hepPlanner.addMaterialization(materialization);
+      }
+      for (final RelOptLattice lattice : lattices) {
+        hepPlanner.addLattice(lattice);
+      }
+      rel.getCluster().setMetadataProvider(ChainedRelMetadataProvider.of(metadataProviders));
+      hepPlanner.setRoot(rel);
+      return hepPlanner.findBestExp();
+    };
   }
 
   /**
@@ -323,7 +364,7 @@ public class CalciteRulesManager
     final List<Program> prePrograms = new ArrayList<>();
     prePrograms.add(new LoggingProgram("Start", isDebug));
     prePrograms.add(new InlineValuesSubQueryRule(plannerContext));
-    prePrograms.add(Programs.subQuery(DefaultRelMetadataProvider.INSTANCE));
+    prePrograms.add(buildSubQueryProgram(plannerContext));
     prePrograms.add(new LoggingProgram("Finished subquery program", isDebug));
     prePrograms.add(DecorrelateAndTrimFieldsProgram.INSTANCE);
     prePrograms.add(new LoggingProgram("Finished decorrelate and trim fields program", isDebug));
@@ -336,6 +377,34 @@ public class CalciteRulesManager
     }
 
     return Programs.sequence(prePrograms.toArray(new Program[0]));
+  }
+
+  /**
+   * Cancel-aware equivalent of {@link Programs#subQuery(org.apache.calcite.rel.metadata.RelMetadataProvider)} (mirrors
+   * its two Hep stages and rule collections for the pinned Calcite version). {@code Programs.subQuery} builds its
+   * {@link HepPlanner}s with a {@code null} context, so subquery rewriting would otherwise ignore the query's
+   * {@link org.apache.calcite.util.CancelFlag} and could keep the Broker planning thread busy past the timeout.
+   */
+  private static Program buildSubQueryProgram(final PlannerContext plannerContext)
+  {
+    final HepProgramBuilder toCorrelate = HepProgram.builder();
+    toCorrelate.addRuleCollection(ImmutableList.of(
+        CoreRules.FILTER_SUB_QUERY_TO_CORRELATE,
+        CoreRules.PROJECT_SUB_QUERY_TO_CORRELATE,
+        CoreRules.JOIN_SUB_QUERY_TO_CORRELATE,
+        CoreRules.PROJECT_OVER_SUM_TO_SUM0_RULE
+    ));
+    final HepProgramBuilder toMarkCorrelate = HepProgram.builder();
+    toMarkCorrelate.addRuleCollection(ImmutableList.of(
+        CoreRules.FILTER_SUB_QUERY_TO_MARK_CORRELATE,
+        CoreRules.PROJECT_SUB_QUERY_TO_MARK_CORRELATE,
+        CoreRules.JOIN_SUB_QUERY_TO_CORRELATE,
+        CoreRules.PROJECT_OVER_SUM_TO_SUM0_RULE
+    ));
+    return Programs.sequence(
+        hepProgram(toCorrelate.build(), plannerContext),
+        hepProgram(toMarkCorrelate.build(), plannerContext)
+    );
   }
 
   /**
@@ -357,7 +426,7 @@ public class CalciteRulesManager
     builder.addRuleInstance(CoreRules.SORT_PROJECT_TRANSPOSE);
     builder.addRuleInstance(DruidStripUnionArmCastRule.instance());
 
-    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
+    return hepProgram(builder.build(), plannerContext);
   }
 
   /**
@@ -408,7 +477,7 @@ public class CalciteRulesManager
 
     builder.addGroupEnd();
 
-    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
+    return hepProgram(builder.build(), plannerContext);
   }
 
   private static class SaveLogicalPlanProgram implements Program
