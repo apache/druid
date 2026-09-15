@@ -287,15 +287,28 @@ public class EmbeddedClusterApis implements EmbeddedResource
         segmentCount,
         "Segment count mismatch"
     );
-    Assertions.assertEquals(
-        String.valueOf(segmentCount),
-        runSql(
-            "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'"
-            + " AND is_overshadowed = 0 AND is_available = 1",
-            dataSource
-        ),
-        "Segment count mismatch in sys.segments table"
-    );
+
+    // The Broker learns about segment changes asynchronously from the Coordinator, so the
+    // sys.segments table may briefly lag behind the metadata store. Poll instead of asserting once.
+    final String expectedCount = String.valueOf(segmentCount);
+    final String sql = "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'"
+                       + " AND is_overshadowed = 0 AND is_available = 1";
+    try {
+      waitForResult(() -> runSql(sql, dataSource), expectedCount::equals)
+          .withTimeoutMillis(60_000)
+          .go();
+    }
+    catch (ISE e) {
+      throw new AssertionError(
+          StringUtils.format(
+              "Segment count mismatch in sys.segments table: expected[%s] segments for datasource[%s]. %s",
+              expectedCount,
+              dataSource,
+              e.getMessage()
+          ),
+          e
+      );
+    }
   }
 
   /**
