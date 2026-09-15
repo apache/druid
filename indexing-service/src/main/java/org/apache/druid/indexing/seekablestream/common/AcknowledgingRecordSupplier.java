@@ -19,9 +19,8 @@
 
 package org.apache.druid.indexing.seekablestream.common;
 
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.impl.ByteEntity;
-
-import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;

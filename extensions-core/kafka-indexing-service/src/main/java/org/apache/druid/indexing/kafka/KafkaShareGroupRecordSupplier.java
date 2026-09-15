@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.seekablestream.common.AcknowledgeType;
@@ -36,7 +37,6 @@ import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import javax.annotation.Nonnull;
-import javax.validation.constraints.NotNull;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
