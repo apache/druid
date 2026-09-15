@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -53,6 +54,7 @@ public interface Transform
    * Returns the function for this transform. The RowFunction takes an entire row as input and returns a column value
    * as output.
    */
+  @Nullable
   RowFunction getRowFunction();
 
   /**
