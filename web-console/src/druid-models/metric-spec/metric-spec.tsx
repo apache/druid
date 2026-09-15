@@ -368,7 +368,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
     required: true,
     info: (
       <>
-        Number of buckets for the histogram. The range <Code>[lowerLimit, upperLimit]</Code> will be
+        Number of buckets for the histogram. The range <Code>[lowerLimit, upperLimit)</Code> will be
         divided into <Code>numBuckets</Code> intervals of equal size.
       </>
     ),
@@ -382,7 +382,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
     info: (
       <>
         <p>
-          Specifies how values outside of <Code>[lowerLimit, upperLimit]</Code> will be handled.
+          Specifies how values outside of <Code>[lowerLimit, upperLimit)</Code> will be handled.
         </p>
         <p>
           Supported modes are <Code>ignore</Code>, <Code>overflow</Code>, and <Code>clip</Code>. See

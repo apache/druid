@@ -51,11 +51,11 @@ import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -264,6 +264,23 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     return slices;
   }
 
+
+  /**
+   * Create the {@link ReadableInputQueue} for this stage's base inputs. Override to change how the queue acquires
+   * segments: the default acquires them fully up front ({@link AcquireMode#FULL}), which is safe for any processor.
+   * Leaf processors that read segments through the async cursor API
+   * ({@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync}) can override to {@link AcquireMode#PARTIAL}
+   * so only the columns a query actually touches are downloaded.
+   */
+  protected ReadableInputQueue makeReadableInputQueue(
+      final StandardPartitionReader partitionReader,
+      final List<PhysicalInputSlice> slices,
+      final int loadahead
+  )
+  {
+    return new ReadableInputQueue(partitionReader, slices, loadahead, AcquireMode.FULL);
+  }
+
   /**
    * Read base inputs, where "base" is meant in the same sense as in {@link ExecutionVertex}: the primary datasource
    * that drives query processing.
@@ -294,12 +311,10 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     }
 
     final List<PhysicalInputSlice> filteredSlices = filterBaseInput(physicalInputSlices);
-    final Integer segmentLoadAheadCount =
-        MultiStageQueryContext.getSegmentLoadAheadCount(context.workOrder().getWorkerContext());
-    return new ReadableInputQueue(
+    return makeReadableInputQueue(
         new StandardPartitionReader(context),
         filteredSlices,
-        segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount() * 2
+        context.segmentLoadAheadCount()
     );
   }
 

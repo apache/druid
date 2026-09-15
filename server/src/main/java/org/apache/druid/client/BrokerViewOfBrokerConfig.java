@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
@@ -36,8 +37,8 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 
-import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 /**
@@ -54,11 +55,13 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   private final DefaultQueryConfig defaultQueryConfig;
 
   /**
-   * Pre-computed merge of {@link DefaultQueryConfig#getContext()} and
+   * The dynamic config plus the merge of {@link DefaultQueryConfig#getContext()} and
    * {@link BrokerDynamicConfig#getQueryContext()}, recomputed on each config sync.
-   * Dynamic config values override static defaults. {@link QueryContext} provides immutability.
+   *
+   * <p>volatile, not synchronized: read on the query hot path, see {@link BaseBrokerViewOfConfig}. Both halves
+   * live in one field so a query cannot observe them from different generations.
    */
-  private volatile QueryContext resolvedDefaultQueryContext;
+  private volatile QueryConfigSnapshot querySnapshot;
 
   @Inject
   public BrokerViewOfBrokerConfig(
@@ -69,7 +72,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   )
   {
     this.defaultQueryConfig = defaultQueryConfig;
-    this.resolvedDefaultQueryContext = QueryContext.of(defaultQueryConfig.getContext());
+    this.querySnapshot = new QueryConfigSnapshot(QueryContext.of(defaultQueryConfig.getContext()).asMap(), null);
     this.coordinatorClient =
         new CoordinatorClientImpl(
             clientFactory.makeClient(
@@ -89,7 +92,7 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   {
     this.coordinatorClient = coordinatorClient;
     this.defaultQueryConfig = defaultQueryConfig;
-    this.resolvedDefaultQueryContext = QueryContext.of(defaultQueryConfig.getContext());
+    this.querySnapshot = new QueryConfigSnapshot(QueryContext.of(defaultQueryConfig.getContext()).asMap(), null);
   }
 
   @Override
@@ -109,13 +112,16 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
    * resolved default query context by merging static defaults with dynamic overrides.
    */
   @Override
-  public synchronized void setDynamicConfig(@NotNull BrokerDynamicConfig updatedConfig)
+  public void setDynamicConfig(@NotNull BrokerDynamicConfig updatedConfig)
   {
     super.setDynamicConfig(updatedConfig);
-    resolvedDefaultQueryContext = QueryContext.of(QueryContexts.override(
-        defaultQueryConfig.getContext(),
-        updatedConfig.getQueryContext().asMap()
-    ));
+    querySnapshot = new QueryConfigSnapshot(
+        QueryContext.of(QueryContexts.override(
+            defaultQueryConfig.getContext(),
+            updatedConfig.getQueryContext().asMap()
+        )).asMap(),
+        updatedConfig
+    );
   }
 
   /**
@@ -125,6 +131,23 @@ public class BrokerViewOfBrokerConfig extends BaseBrokerViewOfConfig<BrokerDynam
   @Override
   public Map<String, Object> getContext()
   {
-    return resolvedDefaultQueryContext.asMap();
+    return querySnapshot.getResolvedDefaultQueryContext();
+  }
+
+  /**
+   * Snapshot for a single query to resolve its context and blocklist against, instead of re-reading the live config.
+   */
+  public QueryConfigSnapshot snapshotForQuery()
+  {
+    return querySnapshot;
+  }
+
+  /**
+   * Reads through {@link #querySnapshot} so this and {@link #snapshotForQuery()} always agree.
+   */
+  @Override
+  public BrokerDynamicConfig getDynamicConfig()
+  {
+    return querySnapshot.getDynamicConfig();
   }
 }

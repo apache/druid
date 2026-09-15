@@ -19,9 +19,7 @@
 
 package org.apache.druid.segment.generator;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -134,22 +132,14 @@ public class DataGenerator
       }
     }
 
-    columnGenerators = new ArrayList<>();
-    columnGenerators.addAll(
-        Lists.transform(
-            columnSchemas,
-            new Function<>()
-            {
-              @Override
-              public ColumnValueGenerator apply(
-                  GeneratorColumnSchema input
-              )
-              {
-                return input.makeGenerator(seed);
-              }
-            }
-        )
-    );
+    // Seed each column with a distinct seed (offset by its position) rather than the same seed for every column.
+    // Columns that use the same underlying distribution implementation would otherwise draw from identically-seeded
+    // RNGs in lockstep and become almost perfectly correlated, which makes cross-column filters + group-bys collapse
+    // to a single group. Offsetting the seed per column keeps the columns independent while remaining deterministic.
+    columnGenerators = new ArrayList<>(columnSchemas.size());
+    for (int i = 0; i < columnSchemas.size(); i++) {
+      columnGenerators.add(columnSchemas.get(i).makeGenerator(seed + i));
+    }
 
     return this;
   }

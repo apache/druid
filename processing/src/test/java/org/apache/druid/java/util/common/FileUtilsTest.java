@@ -20,27 +20,30 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Predicates;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 
 public class FileUtilsTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testMap() throws IOException
   {
-    File dataFile = new File(temporaryFolder, "data");
+    File dataFile = new File(temporaryFolder.getRoot(), "data");
     long buffersMemoryBefore = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
       raf.write(42);
@@ -54,9 +57,64 @@ public class FileUtilsTest
   }
 
   @Test
+  public void testDeleteDirectoryAndEmptyAncestorsRemovesEmptyIntermediateDirs() throws IOException
+  {
+    // base/mid/leaf, where 'leaf' is the scratch dir and 'mid' is an intermediate dir mkdirp created along the way.
+    final File mid = new File(temporaryFolder.getRoot(), "mid");
+    final File leaf = new File(mid, "leaf");
+    FileUtils.mkdirp(leaf);
+
+    FileUtils.deleteDirectoryAndEmptyAncestors(leaf, temporaryFolder.getRoot());
+
+    Assertions.assertFalse(leaf.exists(), "leaf should be deleted");
+    Assertions.assertFalse(mid.exists(), "empty intermediate dir should be deleted");
+    Assertions.assertTrue(temporaryFolder.getRoot().exists(), "base (stopAt) must survive");
+  }
+
+  @Test
+  public void testDeleteDirectoryAndEmptyAncestorsStopsAtNonEmptyAncestor() throws IOException
+  {
+    // Shared intermediate dir with two sibling leaves; deleting one leaf must leave the shared parent (and sibling).
+    final File shared = new File(temporaryFolder.getRoot(), "shared");
+    final File leafA = new File(shared, "leafA");
+    final File leafB = new File(shared, "leafB");
+    FileUtils.mkdirp(leafA);
+    FileUtils.mkdirp(leafB);
+
+    FileUtils.deleteDirectoryAndEmptyAncestors(leafA, temporaryFolder.getRoot());
+
+    Assertions.assertFalse(leafA.exists(), "deleted leaf should be gone");
+    Assertions.assertTrue(leafB.exists(), "sibling leaf must survive");
+    Assertions.assertTrue(shared.exists(), "non-empty shared ancestor must survive");
+
+    // Deleting the last sibling then reclaims the now-empty shared ancestor, stopping at base.
+    FileUtils.deleteDirectoryAndEmptyAncestors(leafB, temporaryFolder.getRoot());
+    Assertions.assertFalse(shared.exists(), "shared ancestor should be reclaimed once empty");
+    Assertions.assertTrue(temporaryFolder.getRoot().exists(), "base (stopAt) must survive");
+  }
+
+  @Test
+  public void testDeleteDirectoryAndEmptyAncestorsDeletesNonEmptyLeafButNeverStopAt() throws IOException
+  {
+    // The leaf itself is deleted recursively even when non-empty; a leaf directly under stopAt leaves stopAt intact.
+    final File leaf = new File(temporaryFolder.getRoot(), "leaf");
+    FileUtils.mkdirp(leaf);
+    Assertions.assertTrue(new File(leaf, "buffer").createNewFile());
+
+    FileUtils.deleteDirectoryAndEmptyAncestors(leaf, temporaryFolder.getRoot());
+
+    Assertions.assertFalse(leaf.exists(), "non-empty leaf should be deleted recursively");
+    Assertions.assertTrue(temporaryFolder.getRoot().exists(), "base (stopAt) must survive");
+
+    // Passing stopAt itself is a no-op.
+    FileUtils.deleteDirectoryAndEmptyAncestors(temporaryFolder.getRoot(), temporaryFolder.getRoot());
+    Assertions.assertTrue(temporaryFolder.getRoot().exists(), "stopAt must never be deleted");
+  }
+
+  @Test
   public void testMapFileTooLarge() throws IOException
   {
-    File dataFile = new File(temporaryFolder, "data");
+    File dataFile = new File(temporaryFolder.getRoot(), "data");
     try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
       raf.write(42);
       raf.setLength(1 << 20); // 1 MiB
@@ -71,7 +129,7 @@ public class FileUtilsTest
   @Test
   public void testMapRandomAccessFileTooLarge() throws IOException
   {
-    File dataFile = new File(temporaryFolder, "data");
+    File dataFile = new File(temporaryFolder.getRoot(), "data");
     try (RandomAccessFile raf = new RandomAccessFile(dataFile, "rw")) {
       raf.write(42);
       raf.setLength(1 << 20); // 1 MiB
@@ -88,7 +146,7 @@ public class FileUtilsTest
   @Test
   public void testWriteAtomically() throws IOException
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolder.getRoot();
     final File tmpFile = new File(tmpDir, "file1");
     FileUtils.writeAtomically(tmpFile, out -> {
       out.write(StringUtils.toUtf8("foo"));
@@ -117,6 +175,53 @@ public class FileUtilsTest
   }
 
   @Test
+  public void testResolveFileWithinDirectory()
+  {
+    final File resolved = FileUtils.resolveFileWithinDirectory(temporaryFolder.getRoot(), "nested/file");
+
+    Assertions.assertEquals(
+        temporaryFolder.getRoot().toPath().toAbsolutePath().resolve(Path.of("nested", "file")).normalize(),
+        resolved.toPath()
+    );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsTraversal()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(temporaryFolder.getRoot(), "../outside")
+    );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsAbsolutePath()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(
+            temporaryFolder.getRoot(),
+            temporaryFolder.getRoot().toPath().resolve("inside").toAbsolutePath().toString()
+        )
+    );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsInvalidPath()
+  {
+    final IAE exception = Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(temporaryFolder.getRoot(), "invalid\0path")
+    );
+
+    Assertions.assertEquals(
+        StringUtils.format("Path[%s] is not within directory[%s]", "invalid\0path", temporaryFolder.getRoot()),
+        exception.getMessage()
+    );
+    Assertions.assertInstanceOf(InvalidPathException.class, exception.getCause());
+  }
+
+  @Test
   public void testCreateTempDir() throws IOException
   {
     final File tempDir = FileUtils.createTempDir();
@@ -134,7 +239,7 @@ public class FileUtilsTest
   @Test
   public void testCreateTempDirInLocation() throws IOException
   {
-    final File baseDir = temporaryFolder;
+    final File baseDir = temporaryFolder.getRoot();
     File tmp = FileUtils.createTempDirInLocation(baseDir.toPath(), null);
     Assertions.assertTrue(tmp.getName().startsWith("druid"));
     Assertions.assertEquals(
@@ -182,7 +287,7 @@ public class FileUtilsTest
   @Test
   public void testMkdirp() throws IOException
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolder.getRoot();
     final File testDirectory = new File(tmpDir, "test");
 
     FileUtils.mkdirp(testDirectory);
@@ -195,7 +300,7 @@ public class FileUtilsTest
   @Test
   public void testMkdirpCannotCreateOverExistingFile() throws IOException
   {
-    final File tmpFile = File.createTempFile("tmp", null, temporaryFolder);
+    final File tmpFile = File.createTempFile("tmp", null, temporaryFolder.getRoot());
 
     Throwable t = Assertions.assertThrows(IOException.class, () -> FileUtils.mkdirp(tmpFile));
     MatcherAssert.assertThat(
@@ -207,7 +312,7 @@ public class FileUtilsTest
   @Test
   public void testMkdirpCannotCreateInNonWritableDirectory() throws IOException
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolder.getRoot();
     final File testDirectory = new File(tmpDir, "test");
     tmpDir.setWritable(false);
     final IOException e = Assertions.assertThrows(IOException.class, () -> FileUtils.mkdirp(testDirectory));
@@ -226,7 +331,7 @@ public class FileUtilsTest
   @Test
   public void testCopyLarge() throws IOException
   {
-    final File dstDirectory = temporaryFolder;
+    final File dstDirectory = temporaryFolder.getRoot();
     final File dstFile = new File(dstDirectory, "dst");
     final String data = "test data to write";
 
@@ -248,8 +353,8 @@ public class FileUtilsTest
   {
     // Will be a LINK.
 
-    final File fromFile = File.createTempFile("from", null, temporaryFolder);
-    final File toDir = new File(temporaryFolder, "toDir");
+    final File fromFile = File.createTempFile("from", null, temporaryFolder.getRoot());
+    final File toDir = new File(temporaryFolder.getRoot(), "toDir");
     toDir.mkdir();
     final File toFile = new File(toDir, "toFile");
 
@@ -270,8 +375,8 @@ public class FileUtilsTest
   {
     // Will be a COPY, because the destination file already exists and therefore Files.createLink fails.
 
-    final File fromFile = File.createTempFile("from", null, temporaryFolder);
-    final File toFile = File.createTempFile("dst", null, temporaryFolder);
+    final File fromFile = File.createTempFile("from", null, temporaryFolder.getRoot());
+    final File toFile = File.createTempFile("dst", null, temporaryFolder.getRoot());
 
     Files.write(fromFile.toPath(), StringUtils.toUtf8("foo"));
     final FileUtils.LinkOrCopyResult linkOrCopyResult = FileUtils.linkOrCopy(fromFile, toFile);

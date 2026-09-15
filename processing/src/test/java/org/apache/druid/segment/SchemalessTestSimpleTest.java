@@ -58,11 +58,11 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -72,19 +72,17 @@ import java.util.List;
 
 /**
  */
-@RunWith(Parameterized.class)
 public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
 {
 
-  @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {
     List<Object[]> argumentArrays = new ArrayList<>();
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
-      final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
+      final IncrementalIndex incrementalIndex = schemalessIndexTest.createIncrementalIndex();
       final QueryableIndex persistedIncrementalIndex = TestIndex.persistAndMemoryMap(incrementalIndex);
-      final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
+      final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.createMergedIncrementalIndex();
       argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("test"))});
       argumentArrays.add(new Object[] {new QueryableIndexSegment(persistedIncrementalIndex, SegmentId.dummy("test"))});
       argumentArrays.add(new Object[] {new QueryableIndexSegment(mergedIncrementalIndex, SegmentId.dummy("test"))});
@@ -115,180 +113,186 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
       Collections.singletonList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
-  private final Segment segment;
-
-  public SchemalessTestSimpleTest(Segment segment)
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testFullOnTimeseries(final Segment segment) throws IOException
   {
-    this.segment = segment;
-  }
+    try (segment) {
+      TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                    .dataSource(dataSource)
+                                    .granularity(ALL_GRAN)
+                                    .intervals(fullOnInterval)
+                                    .aggregators(
+                                        Lists.newArrayList(
+                                            Iterables.concat(
+                                                commonAggregators,
+                                                Lists.newArrayList(
+                                                    new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                                                    new DoubleMinAggregatorFactory("minIndex", "index")
+                                                )
+                                            )
+                                        )
+                                    )
+                                    .postAggregators(addRowsIndexConstant)
+                                    .build();
 
-  @Test
-  public void testFullOnTimeseries()
-  {
-    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                  .dataSource(dataSource)
-                                  .granularity(ALL_GRAN)
-                                  .intervals(fullOnInterval)
-                                  .aggregators(
-                                      Lists.newArrayList(
-                                          Iterables.concat(
-                                              commonAggregators,
-                                              Lists.newArrayList(
-                                                  new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                                                  new DoubleMinAggregatorFactory("minIndex", "index")
-                                              )
-                                          )
-                                      )
-                                  )
-                                  .postAggregators(addRowsIndexConstant)
-                                  .build();
-
-    List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
-        new Result(
-            DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TimeseriesResultValue(
-                ImmutableMap.<String, Object>builder()
-                    .put("rows", 11L)
-                    .put("index", 900.0)
-                    .put("addRowsIndexConstant", 912.0)
-                    .put("uniques", 2.000977198748901D)
-                    .put("maxIndex", 100.0)
-                    .put("minIndex", 100.0)
-                    .build()
-            )
-        )
-    );
-    QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
+      List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
+          new Result(
+              DateTimes.of("2011-01-12T00:00:00.000Z"),
+              new TimeseriesResultValue(
+                  ImmutableMap.<String, Object>builder()
+                      .put("rows", 11L)
+                      .put("index", 900.0)
+                      .put("addRowsIndexConstant", 912.0)
+                      .put("uniques", 2.000977198748901D)
+                      .put("maxIndex", 100.0)
+                      .put("minIndex", 100.0)
+                      .build()
+              )
+          )
+      );
+      QueryRunner runner = TestQueryRunners.makeTimeSeriesQueryRunner(segment);
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
+    }
   }
 
 
   //  @Test TODO: Handling of null values is inconsistent right now, need to make it all consistent and re-enable test
   // TODO: Complain to Eric when you see this.  It shouldn't be like this...
-  @Ignore
+  @Disabled
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
   @SuppressWarnings("unused")
-  public void testFullOnTopN()
+  public void testFullOnTopN(final Segment segment) throws IOException
   {
-    TopNQuery query = new TopNQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(ALL_GRAN)
-        .dimension(marketDimension)
-        .metric(indexMetric)
-        .threshold(3)
-        .intervals(fullOnInterval)
-        .aggregators(
-            Lists.newArrayList(
-                Iterables.concat(
-                    commonAggregators,
-                    Lists.newArrayList(
-                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
-                        new DoubleMinAggregatorFactory("minIndex", "index")
-                    )
-                )
-            )
-        )
-        .postAggregators(addRowsIndexConstant)
-        .build();
+    try (segment) {
+      TopNQuery query = new TopNQueryBuilder()
+          .dataSource(dataSource)
+          .granularity(ALL_GRAN)
+          .dimension(marketDimension)
+          .metric(indexMetric)
+          .threshold(3)
+          .intervals(fullOnInterval)
+          .aggregators(
+              Lists.newArrayList(
+                  Iterables.concat(
+                      commonAggregators,
+                      Lists.newArrayList(
+                          new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                          new DoubleMinAggregatorFactory("minIndex", "index")
+                      )
+                  )
+              )
+          )
+          .postAggregators(addRowsIndexConstant)
+          .build();
 
-    List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<>(
-            DateTimes.of("2011-01-12T00:00:00.000Z"),
-            TopNResultValue.create(
-                Arrays.asList(
-                    new DimensionAndMetricValueExtractor(
-                        ImmutableMap.<String, Object>builder()
-                            .put("market", "spot")
-                            .put("rows", 4L)
-                            .put("index", 400.0D)
-                            .put("addRowsIndexConstant", 405.0D)
-                            .put("uniques", 1.0002442201269182D)
-                            .put("maxIndex", 100.0)
-                            .put("minIndex", 100.0)
-                            .build()
-                    ),
-                    new DimensionAndMetricValueExtractor(
-                        ImmutableMap.<String, Object>builder()
-                            .put("market", "")
-                            .put("rows", 2L)
-                            .put("index", 200.0D)
-                            .put("addRowsIndexConstant", 203.0D)
-                            .put("uniques", 0.0)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
-                    ),
-                    new DimensionAndMetricValueExtractor(
-                        ImmutableMap.<String, Object>builder()
-                            .put("market", "total_market")
-                            .put("rows", 2L)
-                            .put("index", 200.0D)
-                            .put("addRowsIndexConstant", 203.0D)
-                            .put("uniques", 1.0002442201269182D)
-                            .put("maxIndex", 100.0D)
-                            .put("minIndex", 100.0D)
-                            .build()
-                    )
-                )
-            )
-        )
-    );
+      List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
+          new Result<>(
+              DateTimes.of("2011-01-12T00:00:00.000Z"),
+              TopNResultValue.create(
+                  Arrays.asList(
+                      new DimensionAndMetricValueExtractor(
+                          ImmutableMap.<String, Object>builder()
+                              .put("market", "spot")
+                              .put("rows", 4L)
+                              .put("index", 400.0D)
+                              .put("addRowsIndexConstant", 405.0D)
+                              .put("uniques", 1.0002442201269182D)
+                              .put("maxIndex", 100.0)
+                              .put("minIndex", 100.0)
+                              .build()
+                      ),
+                      new DimensionAndMetricValueExtractor(
+                          ImmutableMap.<String, Object>builder()
+                              .put("market", "")
+                              .put("rows", 2L)
+                              .put("index", 200.0D)
+                              .put("addRowsIndexConstant", 203.0D)
+                              .put("uniques", 0.0)
+                              .put("maxIndex", 100.0D)
+                              .put("minIndex", 100.0D)
+                              .build()
+                      ),
+                      new DimensionAndMetricValueExtractor(
+                          ImmutableMap.<String, Object>builder()
+                              .put("market", "total_market")
+                              .put("rows", 2L)
+                              .put("index", 200.0D)
+                              .put("addRowsIndexConstant", 203.0D)
+                              .put("uniques", 1.0002442201269182D)
+                              .put("maxIndex", 100.0D)
+                              .put("minIndex", 100.0D)
+                              .build()
+                      )
+                  )
+              )
+          )
+      );
 
-    try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
-      QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
+      try (CloseableStupidPool<ByteBuffer> pool = TestQueryRunners.createDefaultNonBlockingPool()) {
+        QueryRunner runner = TestQueryRunners.makeTopNQueryRunner(segment, pool);
+        TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
+      }
+    }
+  }
+
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testFullOnSearch(final Segment segment) throws IOException
+  {
+    try (segment) {
+      SearchQuery query = Druids.newSearchQueryBuilder()
+                                .dataSource(dataSource)
+                                .granularity(ALL_GRAN)
+                                .intervals(fullOnInterval)
+                                .query("a")
+                                .build();
+
+      List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
+          new Result<>(
+              DateTimes.of("2011-01-12T00:00:00.000Z"),
+              new SearchResultValue(
+                  Arrays.asList(
+                      new SearchHit(placementishDimension, "a"),
+                      new SearchHit(qualityDimension, "automotive"),
+                      new SearchHit(placementDimension, "mezzanine"),
+                      new SearchHit(marketDimension, "total_market")
+                  )
+              )
+          )
+      );
+
+      QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
       TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
     }
   }
 
-  @Test
-  public void testFullOnSearch()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testTimeBoundary(final Segment segment) throws IOException
   {
-    SearchQuery query = Druids.newSearchQueryBuilder()
-                              .dataSource(dataSource)
-                              .granularity(ALL_GRAN)
-                              .intervals(fullOnInterval)
-                              .query("a")
-                              .build();
+    try (segment) {
+      TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
+                                      .dataSource("testing")
+                                      .build();
 
-    List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
-        new Result<>(
-            DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new SearchResultValue(
-                Arrays.asList(
-                    new SearchHit(placementishDimension, "a"),
-                    new SearchHit(qualityDimension, "automotive"),
-                    new SearchHit(placementDimension, "mezzanine"),
-                    new SearchHit(marketDimension, "total_market")
-                )
-            )
-        )
-    );
+      List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
+          new Result<>(
+              DateTimes.of("2011-01-12T00:00:00.000Z"),
+              new TimeBoundaryResultValue(
+                  ImmutableMap.of(
+                      TimeBoundaryQuery.MIN_TIME,
+                      DateTimes.of("2011-01-12T00:00:00.000Z"),
+                      TimeBoundaryQuery.MAX_TIME,
+                      DateTimes.of("2011-01-13T00:00:00.000Z")
+                  )
+              )
+          )
+      );
 
-    QueryRunner runner = TestQueryRunners.makeSearchQueryRunner(segment);
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
-  }
-
-  @Test
-  public void testTimeBoundary()
-  {
-    TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
-                                    .dataSource("testing")
-                                    .build();
-
-    List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
-        new Result<>(
-            DateTimes.of("2011-01-12T00:00:00.000Z"),
-            new TimeBoundaryResultValue(
-                ImmutableMap.of(
-                    TimeBoundaryQuery.MIN_TIME,
-                    DateTimes.of("2011-01-12T00:00:00.000Z"),
-                    TimeBoundaryQuery.MAX_TIME,
-                    DateTimes.of("2011-01-13T00:00:00.000Z")
-                )
-            )
-        )
-    );
-
-    QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
-    TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
+      QueryRunner runner = TestQueryRunners.makeTimeBoundaryQueryRunner(segment);
+      TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
+    }
   }
 }

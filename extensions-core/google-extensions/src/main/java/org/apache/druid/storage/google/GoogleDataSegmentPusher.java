@@ -35,6 +35,7 @@ import org.apache.druid.utils.CompressionUtils;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Map;
 
 public class GoogleDataSegmentPusher implements DataSegmentPusher
@@ -93,7 +94,7 @@ public class GoogleDataSegmentPusher implements DataSegmentPusher
     File indexFile = null;
 
     try {
-      indexFile = File.createTempFile("index", ".zip");
+      indexFile = Files.createTempFile("index", ".zip").toFile();
       final long indexSize = CompressionUtils.zip(indexFilesDir, indexFile);
       final String indexPath = buildPath(storageDirSuffix + "/" + "index.zip");
 

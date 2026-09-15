@@ -21,20 +21,20 @@ package org.apache.druid.java.util.metrics.cgroups;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MemoryTest
 {
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -42,8 +42,8 @@ public class MemoryTest
   @BeforeEach
   public void setUp() throws Exception
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File memoryDir = new File(

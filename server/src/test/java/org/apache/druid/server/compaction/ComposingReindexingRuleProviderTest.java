@@ -454,6 +454,7 @@ public class ComposingReindexingRuleProviderTest
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         Granularities.DAY,
         true,
+        null,
         ImmutableList.of(
             new AggregateProjectionSpec(
                 "test_projection",

@@ -20,13 +20,13 @@
 package org.apache.druid.guice.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-import javax.validation.constraints.Min;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -75,6 +75,23 @@ public class DruidHttpClientConfig
 
   @JsonProperty
   private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);
+
+  /**
+   * Connect timeout for the HTTP client used for direct RPC between Druid services (broker → historical
+   * query dispatch, service clients, coordinator polls, and so on). Defaults to 10s, matching the
+   * pre-Netty-4-upgrade default; without this setting Netty 4's own default of 30s would apply.
+   * Distinct from {@link #clientConnectTimeout}, which is only applied to the HTTP client used by
+   * request-forwarding servlets (Router query proxying, management API forwarding).
+   */
+  @JsonProperty
+  private Period connectTimeout = new Period("PT10S");
+
+  /**
+   * Netty ByteBufAllocator to use for the direct-RPC HTTP client. One of "adaptive" (default, matches Netty's own
+   * picked default; adaptive between pooled and unpooled based on load), "pooled" (always pooled), or "unpooled".
+   */
+  @JsonProperty
+  private String allocator = "adaptive";
 
   public int getNumConnections()
   {
@@ -136,6 +153,16 @@ public class DruidHttpClientConfig
   public long getClientConnectTimeout()
   {
     return clientConnectTimeout;
+  }
+
+  public Duration getConnectTimeout()
+  {
+    return connectTimeout == null ? null : connectTimeout.toStandardDuration();
+  }
+
+  public String getAllocator()
+  {
+    return allocator;
   }
 
   private static HumanReadableBytes computeDefaultMaxQueuedBytes()

@@ -21,6 +21,7 @@ package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.Valid;
 
 /**
  * General configurations for Amazon S3 storage.
@@ -42,6 +43,7 @@ public class S3StorageConfig
    * @see S3StorageDruidModule#configure
    */
   @JsonProperty("transfer")
+  @Valid
   private final S3TransferConfig s3TransferConfig;
 
   @JsonCreator

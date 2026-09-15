@@ -31,6 +31,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
+import org.apache.druid.msq.dart.guice.DartWorkerConfig;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.WorkerContext;
@@ -60,6 +61,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
   private final Injector injector;
   private final ServiceClientFactory serviceClientFactory;
   private final DruidProcessingConfig processingConfig;
+  private final DartWorkerConfig workerConfig;
   private final SegmentWrangler segmentWrangler;
   private final SegmentManager segmentManager;
   private final VirtualStorageManager virtualStorageManager;
@@ -80,6 +82,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
       Injector injector,
       @EscalatedGlobal ServiceClientFactory serviceClientFactory,
       DruidProcessingConfig processingConfig,
+      DartWorkerConfig workerConfig,
       SegmentWrangler segmentWrangler,
       SegmentManager segmentManager,
       VirtualStorageManager virtualStorageManager,
@@ -99,6 +102,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
     this.injector = injector;
     this.serviceClientFactory = serviceClientFactory;
     this.processingConfig = processingConfig;
+    this.workerConfig = workerConfig;
     this.segmentWrangler = segmentWrangler;
     this.coordinatorClient = coordinatorClient;
     this.segmentManager = segmentManager;
@@ -128,6 +132,7 @@ public class DartWorkerContextFactoryImpl implements DartWorkerContextFactory
         injector,
         createWorkerClient(queryId),
         processingConfig,
+        workerConfig,
         segmentWrangler,
         segmentManager,
         virtualStorageManager,

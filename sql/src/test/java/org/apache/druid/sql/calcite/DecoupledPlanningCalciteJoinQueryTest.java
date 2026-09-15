@@ -26,7 +26,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class DecoupledPlanningCalciteJoinQueryTest extends CalciteJoinQueryTest
 {

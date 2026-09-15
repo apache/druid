@@ -21,10 +21,11 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +35,7 @@ public class TestMetadataRuleManager implements MetadataRuleManager
 {
   private final Map<String, List<Rule>> rules = new HashMap<>();
 
-  private static final String DEFAULT_DATASOURCE = "_default";
+  private static final String DEFAULT_DATASOURCE = MetadataRuleManagerConfig.DEFAULT_RULE_NAME;
 
   public TestMetadataRuleManager()
   {
@@ -63,30 +64,9 @@ public class TestMetadataRuleManager implements MetadataRuleManager
   }
 
   @Override
-  public Map<String, List<Rule>> getAllRules()
+  public RetentionRulesSnapshot getRulesSnapshot()
   {
-    return rules;
-  }
-
-  @Override
-  public List<Rule> getRules(final String dataSource)
-  {
-    List<Rule> retVal = rules.get(dataSource);
-    return retVal == null ? new ArrayList<>() : retVal;
-  }
-
-  @Override
-  public List<Rule> getRulesWithDefault(final String dataSource)
-  {
-    List<Rule> retVal = new ArrayList<>();
-    final Map<String, List<Rule>> theRules = rules;
-    if (theRules.get(dataSource) != null) {
-      retVal.addAll(theRules.get(dataSource));
-    }
-    if (theRules.get(DEFAULT_DATASOURCE) != null) {
-      retVal.addAll(theRules.get(DEFAULT_DATASOURCE));
-    }
-    return retVal;
+    return new RetentionRulesSnapshot(rules, DEFAULT_DATASOURCE);
   }
 
   @Override

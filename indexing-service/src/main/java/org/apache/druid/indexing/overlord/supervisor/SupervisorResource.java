@@ -39,6 +39,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -165,26 +166,39 @@ public class SupervisorResource
                            .build();
           }
 
-          if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
-            return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", false)).build();
+          final SupervisorSpecUpdateResult updateResult =
+              manager.createOrUpdateAndStartSupervisor(spec, Boolean.TRUE.equals(skipRestartIfUnmodified));
+
+          if (updateResult.isModified() || updateResult.isRestarted()) {
+            auditSupervisorUpdate(spec, req);
           }
 
-          manager.createOrUpdateAndStartSupervisor(spec);
-
-          final String auditPayload
-              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
-          auditManager.doAudit(
-              AuditEntry.builder()
-                        .key(spec.getId())
-                        .type("supervisor")
-                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                        .payload(auditPayload)
-                        .build()
-          );
-
-          return Response.ok(ImmutableMap.of("id", spec.getId(), "restarted", true)).build();
+          return Response.ok(
+              Map.of(
+                  "id", spec.getId(),
+                  "modified", updateResult.isModified(),
+                  "restarted", updateResult.isRestarted()
+              )
+          ).build();
         }
+    );
+  }
+
+  /**
+   * Audits supervisor spec submissions that changed or restarted the supervisor.
+   */
+  private void auditSupervisorUpdate(final SupervisorSpec spec, final HttpServletRequest req)
+  {
+    final String auditPayload
+        = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+    auditManager.doAudit(
+        AuditEntry.builder()
+                  .key(spec.getId())
+                  .type("supervisor")
+                  .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                  .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                  .payload(auditPayload)
+                  .build()
     );
   }
 
@@ -523,6 +537,31 @@ public class SupervisorResource
     );
   }
 
+  @POST
+  @Path("/{id}/autoscaler/simulate")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response simulateAutoscaling(
+      @PathParam("id") String supervisorId,
+      CostBasedAutoScalerConfig autoScalerConfig,
+      @QueryParam("maxProcessingRatePerTask") int maxProcessingRatePerTask,
+      @QueryParam("currentTaskCount") Integer currentTaskCount,
+      @Context HttpServletRequest request
+  )
+  {
+    return asLeaderWithSupervisorManager(
+        manager -> Response.ok(
+            manager.simulateAutoscaling(
+                supervisorId,
+                autoScalerConfig,
+                maxProcessingRatePerTask,
+                currentTaskCount
+            )
+        ).build()
+    );
+  }
+
   @GET
   @Path("/history")
   @Produces(MediaType.APPLICATION_JSON)
@@ -551,7 +590,12 @@ public class SupervisorResource
   {
     if (count != null && count <= 0) {
       return Response.status(Response.Status.BAD_REQUEST)
-                     .entity(ImmutableMap.of("error", StringUtils.format("Count must be greater than zero if set (count was %d)", count)))
+                     .entity(ImmutableMap.of("error",
+                                             StringUtils.format(
+                                                 "Count must be greater than zero if set (count was %d)",
+                                                 count
+                                             )
+                     ))
                      .build();
     }
 

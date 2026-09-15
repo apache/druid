@@ -87,15 +87,27 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
   }
 
   /**
-   * Base type to mark {@link Segment} returned by {@link ReferenceCountedObjectProvider<Segment>} as 'leaf' segments,
-   * to distinguish from other transformations which can be done on top of this segment, such as by
-   * {@link SegmentMapFunction}
+   * Marker interface for {@link Segment} types returned by {@link ReferenceCountedObjectProvider<Segment>}, used to
+   * distinguish 'leaf' segments (segments held by a refcount, eligible to be wrapped by transformations like
+   * {@link SegmentMapFunction} or {@link RestrictedSegment}) from arbitrary {@link Segment} implementations.
+   * <p>
+   * Most implementations should extend {@link BaseLeafReference} to inherit the standard delegating implementations
+   * of {@link Segment#getId}, {@link Segment#getDataInterval}, etc. A {@link Segment} that already provides its own
+   * delegation (e.g. {@link PartialQueryableIndexSegment}) can implement this interface directly as a pure marker.
    */
-  public abstract static class LeafReference implements Segment
+  public interface LeafReference extends Segment
+  {
+  }
+
+  /**
+   * Convenient base for {@link LeafReference} implementations that wrap a {@link Segment} and delegate the standard
+   * accessors to it. Subclasses implement {@link Segment#as} and {@link Segment#close}.
+   */
+  public abstract static class BaseLeafReference implements LeafReference
   {
     protected final Segment baseSegment;
 
-    public LeafReference(Segment baseSegment)
+    public BaseLeafReference(Segment baseSegment)
     {
       this.baseSegment = baseSegment;
     }
@@ -138,7 +150,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
    * Wraps a {@link Segment} and decrements reference to this segment of {@link ReferenceCountedSegmentProvider} on
    * close (instead of closing the segment itself which is managed through the provider)
    */
-  public final class ReferenceClosingSegment extends LeafReference
+  public final class ReferenceClosingSegment extends BaseLeafReference
   {
     private final Closeable referenceCloseable;
     private final AtomicBoolean isClosed = new AtomicBoolean(false);
@@ -178,7 +190,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     }
   }
 
-  public static final class UnmanagedReference extends LeafReference
+  public static final class UnmanagedReference extends BaseLeafReference
   {
     public UnmanagedReference(Segment delegate)
     {
@@ -199,7 +211,7 @@ public class ReferenceCountedSegmentProvider extends ReferenceCountingCloseableO
     }
   }
 
-  public static final class CloseableWrappedReference extends LeafReference
+  public static final class CloseableWrappedReference extends BaseLeafReference
   {
     private final Closeable closeable;
 

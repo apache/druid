@@ -21,7 +21,6 @@ package org.apache.druid.storage.hdfs;
 
 import com.google.common.io.ByteStreams;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.utils.CompressionUtils;
@@ -29,12 +28,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -58,20 +57,16 @@ public class HdfsDataSegmentPullerTest
   private static byte[] pathByteContents = StringUtils.toUtf8(pathContents);
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupStatic() throws IOException
   {
-    hdfsTmpDir = File.createTempFile("hdfsHandlerTest", "dir");
-    if (!hdfsTmpDir.delete()) {
-      throw new IOE("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath());
-    }
+    hdfsTmpDir = FileUtils.createTempDir("hdfsHandlerTest");
     conf = new Configuration(true);
     fileSystem = new LocalFileSystem();
     fileSystem.initialize(hdfsTmpDir.toURI(), conf);
     fileSystem.setWorkingDirectory(new Path(hdfsTmpDir.toURI()));
 
-    final File tmpFile = File.createTempFile("hdfsHandlerTest", ".data");
-    tmpFile.delete();
+    final File tmpFile = new File(hdfsTmpDir, "input.data");
     try {
       Files.copy(new ByteArrayInputStream(pathByteContents), tmpFile.toPath());
       try (OutputStream stream = fileSystem.create(filePath)) {
@@ -83,7 +78,7 @@ public class HdfsDataSegmentPullerTest
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownStatic() throws IOException
   {
     FileUtils.deleteDirectory(hdfsTmpDir);
@@ -93,13 +88,13 @@ public class HdfsDataSegmentPullerTest
 
   private HdfsDataSegmentPuller puller;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     puller = new HdfsDataSegmentPuller(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     fileSystem.delete(perTestPath, true);
@@ -118,7 +113,7 @@ public class HdfsDataSegmentPullerTest
     try (final OutputStream stream = new FileOutputStream(tmpFile)) {
       ByteStreams.copy(new ByteArrayInputStream(pathByteContents), stream);
     }
-    Assert.assertTrue(tmpFile.exists());
+    Assertions.assertTrue(tmpFile.exists());
 
     final File outFile = new File(outTmpDir, tmpFile.getName());
     outFile.delete();
@@ -127,11 +122,11 @@ public class HdfsDataSegmentPullerTest
       CompressionUtils.zip(tmpDir, stream);
     }
     try {
-      Assert.assertFalse(outFile.exists());
+      Assertions.assertFalse(outFile.exists());
       puller.getSegmentFiles(fileSystem.makeQualified(zipPath), outTmpDir);
-      Assert.assertTrue(outFile.exists());
+      Assertions.assertTrue(outFile.exists());
 
-      Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
+      Assertions.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
     }
     finally {
       if (tmpFile.exists()) {
@@ -164,11 +159,11 @@ public class HdfsDataSegmentPullerTest
       ByteStreams.copy(inputStream, gzStream);
     }
     try {
-      Assert.assertFalse(outFile.exists());
+      Assertions.assertFalse(outFile.exists());
       puller.getSegmentFiles(fileSystem.makeQualified(zipPath), outTmpDir);
-      Assert.assertTrue(outFile.exists());
+      Assertions.assertTrue(outFile.exists());
 
-      Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
+      Assertions.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
     }
     finally {
       if (outFile.exists()) {
@@ -195,11 +190,11 @@ public class HdfsDataSegmentPullerTest
       ByteStreams.copy(inputStream, outputStream);
     }
     try {
-      Assert.assertFalse(outFile.exists());
+      Assertions.assertFalse(outFile.exists());
       puller.getSegmentFiles(fileSystem.makeQualified(perTestPath), outTmpDir);
-      Assert.assertTrue(outFile.exists());
+      Assertions.assertTrue(outFile.exists());
 
-      Assert.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
+      Assertions.assertArrayEquals(pathByteContents, Files.readAllBytes(outFile.toPath()));
     }
     finally {
       if (outFile.exists()) {

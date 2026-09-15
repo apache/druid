@@ -22,20 +22,18 @@ package org.apache.druid.consul.discovery;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.server.DruidNode;
+import org.apache.http.NoHttpResponseException;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(JUnit4.class)
 public class ConsulDruidNodeAnnouncerTest
 {
   private final DiscoveryDruidNode testNode = new DiscoveryDruidNode(
@@ -55,13 +53,13 @@ public class ConsulDruidNodeAnnouncerTest
   private ConsulApiClient mockConsulApiClient;
   private ConsulDruidNodeAnnouncer announcer;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mockConsulApiClient = EasyMock.createMock(ConsulApiClient.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     // Don't call stop() here - each test will handle its own lifecycle
@@ -87,9 +85,35 @@ public class ConsulDruidNodeAnnouncerTest
     announcer = new ConsulDruidNodeAnnouncer(mockConsulApiClient, config);
     announcer.start();
     announcer.announce(testNode);
-    Assert.assertEquals(testNode, nodeCapture.getValue());
+    Assertions.assertEquals(testNode, nodeCapture.getValue());
 
     // Explicitly stop to trigger cleanup
+    announcer.stop();
+
+    EasyMock.verify(mockConsulApiClient);
+  }
+
+  @Test
+  public void testAnnounceRetriesTransientFailure() throws Exception
+  {
+    mockConsulApiClient.registerService(EasyMock.eq(testNode));
+    EasyMock.expectLastCall().andThrow(new NoHttpResponseException("Consul did not respond"));
+
+    mockConsulApiClient.registerService(EasyMock.eq(testNode));
+    EasyMock.expectLastCall().once();
+
+    mockConsulApiClient.passTtlCheck(EasyMock.anyString(), EasyMock.anyString());
+    EasyMock.expectLastCall().anyTimes();
+
+    mockConsulApiClient.deregisterService(EasyMock.anyString());
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(mockConsulApiClient);
+
+    announcer = new ConsulDruidNodeAnnouncer(mockConsulApiClient, config);
+    announcer.start();
+
+    announcer.announce(testNode);
     announcer.stop();
 
     EasyMock.verify(mockConsulApiClient);
@@ -122,7 +146,7 @@ public class ConsulDruidNodeAnnouncerTest
 
     // Verify service ID format
     String expectedServiceId = "druid-broker-test-host-8082";
-    Assert.assertEquals(expectedServiceId, deregisterCapture.getValue());
+    Assertions.assertEquals(expectedServiceId, deregisterCapture.getValue());
   }
 
   @Test
@@ -146,10 +170,10 @@ public class ConsulDruidNodeAnnouncerTest
 
     try {
       announcer.announce(testNode);
-      Assert.fail("Expected RuntimeException");
+      Assertions.fail("Expected RuntimeException");
     }
     catch (RuntimeException e) {
-      Assert.assertTrue(e.getMessage().contains("Failed to announce"));
+      Assertions.assertTrue(e.getMessage().contains("Failed to announce"));
     }
 
     // Don't need to stop since no nodes were announced
@@ -211,10 +235,10 @@ public class ConsulDruidNodeAnnouncerTest
 
     try {
       announcer.announce(testNode);
-      Assert.fail("Expected failure on first announce");
+      Assertions.fail("Expected failure on first announce");
     }
     catch (RuntimeException expected) {
-      Assert.assertTrue(expected.getMessage().contains("Failed to announce"));
+      Assertions.assertTrue(expected.getMessage().contains("Failed to announce"));
     }
 
     announcer.announce(testNode); // succeeds
@@ -258,7 +282,7 @@ public class ConsulDruidNodeAnnouncerTest
     t1.start();
     t2.start();
 
-    Assert.assertTrue("Announce tasks did not finish", latch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS), "Announce tasks did not finish");
 
     announcer.stop();
 

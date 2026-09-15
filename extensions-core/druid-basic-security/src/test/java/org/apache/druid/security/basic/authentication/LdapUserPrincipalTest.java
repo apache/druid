@@ -19,15 +19,15 @@
 
 package org.apache.druid.security.basic.authentication;
 
-import junit.framework.TestCase;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.naming.directory.SearchResult;
 import java.time.Instant;
 
-public class LdapUserPrincipalTest extends TestCase
+public class LdapUserPrincipalTest
 {
 
   private static final BasicAuthenticatorCredentials USER_CREDENTIALS = new BasicAuthenticatorCredentials(
@@ -44,29 +44,34 @@ public class LdapUserPrincipalTest extends TestCase
       Instant.ofEpochMilli(CREATED_MILLIS)
   );
 
+  @Test
   public void testIsNotExpired()
   {
-    Assert.assertFalse(PRINCIPAL.isExpired(1, 10, CREATED_MILLIS + 500));
+    Assertions.assertFalse(PRINCIPAL.isExpired(1, 10, CREATED_MILLIS + 500));
   }
 
+  @Test
   public void testIsObviouslyExpired()
   {
     // real clock now should be so much bigger than CREATED_MILLIS....so it must have expired...
-    Assert.assertTrue(PRINCIPAL.isExpired(100, 1000));
+    Assertions.assertTrue(PRINCIPAL.isExpired(100, 1000));
   }
 
+  @Test
   public void testIsExpiredWhenMaxDurationIsSmall()
   {
-    Assert.assertTrue(PRINCIPAL.isExpired(10, 1, CREATED_MILLIS + 1001));
+    Assertions.assertTrue(PRINCIPAL.isExpired(10, 1, CREATED_MILLIS + 1001));
   }
 
+  @Test
   public void testIsExpiredWhenDurationIsSmall()
   {
-    Assert.assertTrue(PRINCIPAL.isExpired(1, 10, CREATED_MILLIS + 1001));
+    Assertions.assertTrue(PRINCIPAL.isExpired(1, 10, CREATED_MILLIS + 1001));
   }
 
-  public void testIsExpiredWhenDurationsAreSmall() 
+  @Test
+  public void testIsExpiredWhenDurationsAreSmall()
   {
-    Assert.assertTrue(PRINCIPAL.isExpired(1, 1, CREATED_MILLIS + 1001));
+    Assertions.assertTrue(PRINCIPAL.isExpired(1, 1, CREATED_MILLIS + 1001));
   }
 }

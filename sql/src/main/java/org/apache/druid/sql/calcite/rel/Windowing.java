@@ -81,10 +81,9 @@ import java.util.Objects;
  * 1. The support is not yet fully aware of the difference between RANGE and ROWS when evaluating peers. (Note: The
  * built-in functions are all implemented with the correctly defined semantics, so ranking functions that are
  * defined to use RANGE do the right thing)
- * 2. No support for framing last/first functions
- * 3. No nth function
- * 4. No finalization, meaning that aggregators like sketches that rely on finalization might return surprising results
- * 5. No big big test suite of loveliness
+ * 2. No nth function
+ * 3. No finalization, meaning that aggregators like sketches that rely on finalization might return surprising results
+ * 4. No big big test suite of loveliness
  */
 public class Windowing
 {
@@ -96,9 +95,9 @@ public class Windowing
       .put("LEAD", (agg) ->
           new WindowOffsetProcessor(agg.getColumn(0), agg.getOutputName(), agg.getConstantInt(1, 1)))
       .put("FIRST_VALUE", (agg) ->
-          new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName()))
+          new WindowFirstProcessor(agg.getColumn(0), agg.getOutputName(), agg.getGroup().getWindowFrame()))
       .put("LAST_VALUE", (agg) ->
-          new WindowLastProcessor(agg.getColumn(0), agg.getOutputName()))
+          new WindowLastProcessor(agg.getColumn(0), agg.getOutputName(), agg.getGroup().getWindowFrame()))
       .put("CUME_DIST", (agg) ->
           new WindowCumeDistProcessor(agg.getGroup().getOrderingColumNames(), agg.getOutputName()))
       .put("DENSE_RANK", (agg) ->

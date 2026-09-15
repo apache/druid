@@ -30,6 +30,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.messages.PostCounters;
+import org.apache.druid.msq.dart.guice.DartWorkerConfig;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.exec.FrameContext;
@@ -57,6 +58,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.utils.CloseableUtils;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 
@@ -93,6 +95,13 @@ public class DartWorkerContext implements WorkerContext
   private final int threadCount;
 
   /**
+   * Worker-local segment load-ahead count from {@link DartWorkerConfig#getSegmentLoadAheadCount()}, or null if unset.
+   * Used as the default in {@link #segmentLoadAheadCount(WorkOrder)} when the query context does not supply a value.
+   */
+  @Nullable
+  private final Integer segmentLoadAheadCountConfig;
+
+  /**
    * Lazy initialized upon call to {@link #frameContext(WorkOrder)}.
    */
   @MonotonicNonNull
@@ -109,6 +118,7 @@ public class DartWorkerContext implements WorkerContext
       final Injector injector,
       final DartWorkerClient workerClient,
       final DruidProcessingConfig processingConfig,
+      final DartWorkerConfig workerConfig,
       final SegmentWrangler segmentWrangler,
       final SegmentManager segmentManager,
       final VirtualStorageManager virtualStorageManager,
@@ -148,6 +158,9 @@ public class DartWorkerContext implements WorkerContext
     final int baseThreadCount = processingConfig.getNumThreads();
     final Integer maxThreads = MultiStageQueryContext.getMaxThreads(queryContext);
     this.threadCount = (maxThreads != null && maxThreads > 0) ? Math.min(baseThreadCount, maxThreads) : baseThreadCount;
+
+    // Worker-local segment load-ahead config from this worker's DartWorkerConfig.
+    this.segmentLoadAheadCountConfig = workerConfig.getSegmentLoadAheadCount();
   }
 
   @Override
@@ -275,6 +288,32 @@ public class DartWorkerContext implements WorkerContext
   public int threadCount()
   {
     return threadCount;
+  }
+
+  @Override
+  public int segmentLoadAheadCount(final WorkOrder workOrder)
+  {
+    final Integer fromContext = MultiStageQueryContext.getSegmentLoadAheadCount(workOrder.getWorkerContext());
+    return resolveSegmentLoadAheadCount(fromContext, segmentLoadAheadCountConfig, threadCount);
+  }
+
+  /**
+   * Determine which of the three potential sources of segment load ahead count to use.
+   * <p>
+   * Precedence is: a value supplied in the query context wins when set; otherwise the worker-local config is used
+   * when set to a positive value; lastly we fall back to {@code 2 * threadCount}.
+   */
+  static int resolveSegmentLoadAheadCount(
+      @Nullable final Integer fromContext,
+      @Nullable final Integer workerConfig,
+      final int threadCount
+  )
+  {
+    if (fromContext != null) {
+      return fromContext;
+    }
+    final boolean hasWorkerConfig = workerConfig != null && workerConfig > 0;
+    return hasWorkerConfig ? workerConfig : threadCount * 2;
   }
 
   @Override

@@ -23,7 +23,6 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.math.LongMath;
-import junitparams.converters.Nullable;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -43,9 +42,11 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+
+import javax.annotation.Nullable;
 
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -95,7 +96,7 @@ public class RowBasedCursorFactoryTest
   // VectorProcessors used by the "allProcessors" tasks.
   private static final LinkedHashMap<String, Function<Cursor, Supplier<Object>>> PROCESSORS = new LinkedHashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     PROCESSORS.clear();
@@ -260,7 +261,7 @@ public class RowBasedCursorFactoryTest
   public void test_getRowSignature()
   {
     final RowBasedCursorFactory<Integer> adapter = createIntAdapter();
-    Assert.assertEquals(ROW_SIGNATURE, adapter.getRowSignature());
+    Assertions.assertEquals(ROW_SIGNATURE, adapter.getRowSignature());
   }
 
   @Test
@@ -269,8 +270,8 @@ public class RowBasedCursorFactoryTest
     final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.FLOAT.name());
-    Assert.assertEquals(ValueType.FLOAT, capabilities.getType());
-    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
+    Assertions.assertEquals(ValueType.FLOAT, capabilities.getType());
+    Assertions.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
   }
 
   @Test
@@ -279,8 +280,8 @@ public class RowBasedCursorFactoryTest
     final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.DOUBLE.name());
-    Assert.assertEquals(ValueType.DOUBLE, capabilities.getType());
-    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
+    Assertions.assertEquals(ValueType.DOUBLE, capabilities.getType());
+    Assertions.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
   }
 
   @Test
@@ -289,8 +290,8 @@ public class RowBasedCursorFactoryTest
     final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.LONG.name());
-    Assert.assertEquals(ValueType.LONG, capabilities.getType());
-    Assert.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
+    Assertions.assertEquals(ValueType.LONG, capabilities.getType());
+    Assertions.assertFalse(capabilities.hasMultipleValues().isMaybeTrue());
   }
 
   @Test
@@ -299,12 +300,12 @@ public class RowBasedCursorFactoryTest
     final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(ValueType.STRING.name());
-    Assert.assertEquals(ValueType.STRING, capabilities.getType());
+    Assertions.assertEquals(ValueType.STRING, capabilities.getType());
 
     // Note: unlike numeric types, STRING-typed columns might have multiple values, so they report as incomplete. It
     // would be good in the future to support some way of changing this, when it is known ahead of time that
     // multi-valuedness is definitely happening or is definitely impossible.
-    Assert.assertTrue(capabilities.hasMultipleValues().isUnknown());
+    Assertions.assertTrue(capabilities.hasMultipleValues().isUnknown());
   }
 
   @Test
@@ -316,9 +317,9 @@ public class RowBasedCursorFactoryTest
 
     // Note: unlike numeric types, COMPLEX-typed columns report that they are incomplete for everything
     // except hasMultipleValues.
-    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, capabilities.toColumnType());
-    Assert.assertFalse(capabilities.hasMultipleValues().isTrue());
-    Assert.assertTrue(capabilities.isDictionaryEncoded().isUnknown());
+    Assertions.assertEquals(ColumnType.UNKNOWN_COMPLEX, capabilities.toColumnType());
+    Assertions.assertFalse(capabilities.hasMultipleValues().isTrue());
+    Assertions.assertTrue(capabilities.isDictionaryEncoded().isUnknown());
   }
 
   @Test
@@ -327,14 +328,14 @@ public class RowBasedCursorFactoryTest
     final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
 
     final ColumnCapabilities capabilities = adapter.getColumnCapabilities(UNKNOWN_TYPE_NAME);
-    Assert.assertNull(capabilities);
+    Assertions.assertNull(capabilities);
   }
 
   @Test
   public void test_getColumnCapabilities_nonexistent()
   {
     final RowBasedCursorFactory<Integer> adapter = createIntAdapter(0, 1, 2);
-    Assert.assertNull(adapter.getColumnCapabilities("nonexistent"));
+    Assertions.assertNull(adapter.getColumnCapabilities("nonexistent"));
   }
 
   @Test
@@ -344,12 +345,12 @@ public class RowBasedCursorFactoryTest
 
     for (String columnName : ROW_SIGNATURE.getColumnNames()) {
       if (UNKNOWN_TYPE_NAME.equals(columnName)) {
-        Assert.assertNull(columnName, adapter.getColumnCapabilities(columnName));
+        Assertions.assertNull(adapter.getColumnCapabilities(columnName), columnName);
       } else {
-        Assert.assertEquals(
-            columnName,
+        Assertions.assertEquals(
             ValueType.valueOf(columnName).name(),
-            adapter.getColumnCapabilities(columnName).asTypeString()
+            adapter.getColumnCapabilities(columnName).asTypeString(),
+            columnName
         );
       }
     }
@@ -364,7 +365,7 @@ public class RowBasedCursorFactoryTest
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("0"),
               ImmutableList.of("1"),
@@ -374,7 +375,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(2, numCloses.get());
+    Assertions.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -388,7 +389,7 @@ public class RowBasedCursorFactoryTest
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("1")
           ),
@@ -397,7 +398,7 @@ public class RowBasedCursorFactoryTest
     }
 
 
-    Assert.assertEquals(2, numCloses.get());
+    Assertions.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -411,7 +412,7 @@ public class RowBasedCursorFactoryTest
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("0"),
               ImmutableList.of("1")
@@ -420,7 +421,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(2, numCloses.get());
+    Assertions.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -444,7 +445,7 @@ public class RowBasedCursorFactoryTest
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("1")
           ),
@@ -452,7 +453,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(2, numCloses.get());
+    Assertions.assertEquals(2, numCloses.get());
   }
 
 
@@ -466,7 +467,7 @@ public class RowBasedCursorFactoryTest
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("2"),
               ImmutableList.of("1"),
@@ -476,7 +477,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assertions.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -489,13 +490,13 @@ public class RowBasedCursorFactoryTest
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(),
           walkCursor(cursor, READ_STRING)
       );
     }
 
-    Assert.assertEquals(2, numCloses.get());
+    Assertions.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -508,7 +509,7 @@ public class RowBasedCursorFactoryTest
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("1")
           ),
@@ -516,7 +517,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(2, numCloses.get());
+    Assertions.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -528,7 +529,7 @@ public class RowBasedCursorFactoryTest
                                                      .setInterval(Intervals.of("1970/1971"))
                                                      .build();
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of(DateTimes.of("1970-01-01T00"), "0"),
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
@@ -540,7 +541,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assertions.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -553,7 +554,7 @@ public class RowBasedCursorFactoryTest
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
@@ -563,7 +564,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assertions.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -577,7 +578,7 @@ public class RowBasedCursorFactoryTest
                                                      .build();
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of(DateTimes.of("1970-01-01T02"), "2"),
               ImmutableList.of(DateTimes.of("1970-01-01T01"), "1"),
@@ -587,7 +588,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(1, numCloses.get());
+    Assertions.assertEquals(1, numCloses.get());
   }
 
   @Test
@@ -597,7 +598,7 @@ public class RowBasedCursorFactoryTest
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               Lists.newArrayList(
 
@@ -692,7 +693,7 @@ public class RowBasedCursorFactoryTest
       );
     }
 
-    Assert.assertEquals(2, numCloses.get());
+    Assertions.assertEquals(2, numCloses.get());
   }
 
   @Test
@@ -706,13 +707,13 @@ public class RowBasedCursorFactoryTest
 
     try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(),
           walkCursor(cursor, new ArrayList<>(PROCESSORS.values()))
       );
     }
 
-    Assert.assertEquals(2, numCloses.get());
+    Assertions.assertEquals(2, numCloses.get());
   }
 
   private static List<List<Object>> walkCursor(

@@ -392,6 +392,7 @@ public class RunWorkOrder
         frameContext,
         counterTracker,
         workerContext.threadCount(),
+        workerContext.segmentLoadAheadCount(workOrder),
         cancellationId,
         listener
     );

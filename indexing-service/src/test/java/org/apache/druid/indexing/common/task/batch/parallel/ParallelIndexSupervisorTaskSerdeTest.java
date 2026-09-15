@@ -37,10 +37,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -55,9 +53,6 @@ public class ParallelIndexSupervisorTaskSerdeTest
   private static final ObjectMapper OBJECT_MAPPER = new TestUtils().getTestObjectMapper();
   private static final List<Interval> INTERVALS = Collections.singletonList(Intervals.of("2018/2019"));
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void serde() throws IOException
   {
@@ -70,7 +65,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
         .build();
 
     String json = OBJECT_MAPPER.writeValueAsString(task);
-    Assert.assertEquals(task, OBJECT_MAPPER.readValue(json, Task.class));
+    Assertions.assertEquals(task, OBJECT_MAPPER.readValue(json, Task.class));
   }
 
   @Test
@@ -87,7 +82,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
         .build();
 
     PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
-    Assert.assertTrue(partitionsSpec instanceof HashedPartitionsSpec);
+    Assertions.assertTrue(partitionsSpec instanceof HashedPartitionsSpec);
   }
 
   @Test
@@ -105,24 +100,25 @@ public class ParallelIndexSupervisorTaskSerdeTest
         .build();
 
     PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
-    Assert.assertTrue(partitionsSpec instanceof HashedPartitionsSpec);
+    Assertions.assertTrue(partitionsSpec instanceof HashedPartitionsSpec);
   }
 
   @Test
   public void forceGuaranteedRollupWithSingleDimPartitionsMissingDimension()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("partitionDimensions must be specified");
-
-    new ParallelIndexSupervisorTaskBuilder()
-        .ingestionSpec(
-            new ParallelIndexIngestionSpecBuilder()
-                .forceGuaranteedRollup(true)
-                .partitionsSpec(new SingleDimensionPartitionsSpec(1, null, null, true))
-                .inputIntervals(INTERVALS)
-                .build()
-        )
-        .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new ParallelIndexSupervisorTaskBuilder()
+            .ingestionSpec(
+                new ParallelIndexIngestionSpecBuilder()
+                    .forceGuaranteedRollup(true)
+                    .partitionsSpec(new SingleDimensionPartitionsSpec(1, null, null, true))
+                    .inputIntervals(INTERVALS)
+                    .build()
+            )
+            .build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("partitionDimensions must be specified"));
   }
 
   @Test
@@ -139,7 +135,7 @@ public class ParallelIndexSupervisorTaskSerdeTest
         .build();
 
     PartitionsSpec partitionsSpec = task.getIngestionSchema().getTuningConfig().getPartitionsSpec();
-    Assert.assertTrue(partitionsSpec instanceof SingleDimensionPartitionsSpec);
+    Assertions.assertTrue(partitionsSpec instanceof SingleDimensionPartitionsSpec);
   }
 
   private static class ParallelIndexSupervisorTaskBuilder

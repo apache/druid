@@ -22,7 +22,7 @@ title: "Query processing"
   ~ under the License.
   -->
 
-This topic provides a high-level overview of how Apache Druid distributes and processes queries.
+This topic provides a high-level overview of how Apache&circledR; Druid distributes and processes queries.
 
 The general flow is as follows:
 

@@ -20,10 +20,10 @@
 package org.apache.druid.data.input;
 
 import com.google.common.collect.ImmutableSet;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 
-import javax.validation.constraints.NotNull;
 import java.util.Set;
 
 /**

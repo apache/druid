@@ -32,9 +32,9 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
@@ -78,7 +78,7 @@ public class SamplerResourceTest
     }
   };
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
@@ -125,7 +125,7 @@ public class SamplerResourceTest
         samplerSpec
     );
 
-    Assert.assertThrows(ForbiddenException.class, () -> samplerResource.post(samplerSpec, req));
+    Assertions.assertThrows(ForbiddenException.class, () -> samplerResource.post(samplerSpec, req));
   }
 
   @Test
@@ -174,17 +174,17 @@ public class SamplerResourceTest
         samplerSpec
     );
 
-    Assert.assertThrows(UOE.class, () -> samplerResource.post(samplerSpec, req));
+    Assertions.assertThrows(UOE.class, () -> samplerResource.post(samplerSpec, req));
   }
 
   private void expectAuthorizationTokenCheck(String username)
   {
     AuthenticationResult authenticationResult = new AuthenticationResult(username, "druid", null, null);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .atLeastOnce();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
 
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
     EasyMock.expectLastCall().anyTimes();

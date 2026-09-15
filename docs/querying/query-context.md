@@ -27,7 +27,7 @@ description:
   -->
   
 
-The query context gives you fine-grained control over how Apache Druid executes your individual queries. While the default settings in Druid work well for most queries, you can set the query context to handle specific requirements and optimize performance.
+The query context gives you fine-grained control over how Apache&circledR; Druid executes your individual queries. While the default settings in Druid work well for most queries, you can set the query context to handle specific requirements and optimize performance.
 
 Common use cases for the query context include:
 - Override default timeouts for long-running queries or complex aggregations.

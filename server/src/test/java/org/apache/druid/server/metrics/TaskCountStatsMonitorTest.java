@@ -25,9 +25,9 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -41,7 +41,7 @@ public class TaskCountStatsMonitorTest
                                                        .with(Dimension.TASK_TYPE, "kill")
                                                        .build();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     statsProvider = new TaskCountStatsProvider()
@@ -94,7 +94,7 @@ public class TaskCountStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(9, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(9, emitter.getNumEmittedEvents());
 
     emitter.verifyValue("task/success/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);
     emitter.verifyValue("task/failed/count", Map.of("dataSource", "d1", "taskType", "index"), 1L);

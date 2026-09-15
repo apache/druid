@@ -25,8 +25,8 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-This topic describes the API endpoints to manage and monitor supervisors for Apache Druid.
-The topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
+This topic describes the API endpoints to manage and monitor supervisors for Apache&circledR; Druid.
+The topic uses the Apache Kafka&circledR; term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 

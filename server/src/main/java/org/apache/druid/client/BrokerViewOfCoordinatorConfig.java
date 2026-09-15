@@ -22,9 +22,9 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
-import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
@@ -40,7 +40,6 @@ import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.BrokerDynamicConfigResource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
-import javax.validation.constraints.NotNull;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -54,10 +53,11 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
 {
   private final CoordinatorClient coordinatorClient;
 
-  @GuardedBy("this")
-  private Set<String> targetCloneServers;
-  @GuardedBy("this")
-  private Set<String> sourceCloneServers;
+  // volatile, not synchronized: getCurrentServersToIgnore() is called per-segment during query planning.
+  // Under high concurrency, synchronized causes monitor convoy with 100x throughput degradation.
+  // Each field is an immutable Set reference, so volatile provides sufficient visibility.
+  private volatile Set<String> targetCloneServers = Set.of();
+  private volatile Set<String> sourceCloneServers = Set.of();
 
   @Inject
   public BrokerViewOfCoordinatorConfig(
@@ -100,7 +100,7 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
    * servers based on the new dynamic configuration.
    */
   @Override
-  public synchronized void setDynamicConfig(@NotNull CoordinatorDynamicConfig updatedConfig)
+  public void setDynamicConfig(@NotNull CoordinatorDynamicConfig updatedConfig)
   {
     super.setDynamicConfig(updatedConfig);
     final Map<String, String> cloneServers = updatedConfig.getCloneServers();
@@ -135,8 +135,10 @@ public class BrokerViewOfCoordinatorConfig extends BaseBrokerViewOfConfig<Coordi
 
   /**
    * Get the list of servers that should not be queried based on the cloneQueryMode parameter.
+   * Each branch reads only one volatile field, so readers may see targetCloneServers and sourceCloneServers
+   * from different setDynamicConfig() calls — this is acceptable since no CloneQueryMode needs both.
    */
-  private synchronized Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
+  private Set<String> getCurrentServersToIgnore(CloneQueryMode cloneQueryMode)
   {
     switch (cloneQueryMode) {
       case PREFERCLONES:

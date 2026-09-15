@@ -21,8 +21,8 @@ package org.apache.druid.frame.processor;
 
 import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -39,7 +39,7 @@ public class ReturnOrAwaitTest
 
     MatcherAssert.assertThat(
         ReturnOrAwait.awaitAllFutures(Collections.singletonList(Futures.immediateFuture(1))).toString(),
-        CoreMatchers.startsWith("await futures=[com.google.")
+        Matchers.startsWith("await futures=[com.google.")
     );
   }
 }

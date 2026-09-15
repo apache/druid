@@ -25,10 +25,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,10 +40,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class FrontCodedIndexedTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters(name = "byteOrder: {0} useIncrementalBuckets: {1}")
   public static Collection<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
@@ -75,8 +76,8 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         buffer,
         buffer.order()
     ).get();
-    Assert.assertEquals("helloo", StringUtils.fromUtf8(codedUtf8Indexed.get(1)));
-    Assert.assertEquals("helloozy", StringUtils.fromUtf8(codedUtf8Indexed.get(4)));
+    Assertions.assertEquals("helloo", StringUtils.fromUtf8(codedUtf8Indexed.get(1)));
+    Assertions.assertEquals("helloozy", StringUtils.fromUtf8(codedUtf8Indexed.get(4)));
 
     Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
     Iterator<String> newListIterator = theList.iterator();
@@ -84,13 +85,13 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     while (newListIterator.hasNext() && utf8Iterator.hasNext()) {
       final String next = newListIterator.next();
       final ByteBuffer nextUtf8 = utf8Iterator.next();
-      Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
+      Assertions.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
       nextUtf8.position(0);
-      Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
-      Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
+      Assertions.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+      Assertions.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
       ctr++;
     }
-    Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+    Assertions.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
   }
 
 
@@ -105,11 +106,11 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         buffer,
         buffer.order()
     ).get();
-    Assert.assertEquals("hello", StringUtils.fromUtf8(codedUtf8Indexed.get(0)));
-    Assert.assertEquals("helloo", StringUtils.fromUtf8(codedUtf8Indexed.get(1)));
-    Assert.assertEquals("hellooo", StringUtils.fromUtf8(codedUtf8Indexed.get(2)));
-    Assert.assertEquals("hellooz", StringUtils.fromUtf8(codedUtf8Indexed.get(3)));
-    Assert.assertEquals("helloozy", StringUtils.fromUtf8(codedUtf8Indexed.get(4)));
+    Assertions.assertEquals("hello", StringUtils.fromUtf8(codedUtf8Indexed.get(0)));
+    Assertions.assertEquals("helloo", StringUtils.fromUtf8(codedUtf8Indexed.get(1)));
+    Assertions.assertEquals("hellooo", StringUtils.fromUtf8(codedUtf8Indexed.get(2)));
+    Assertions.assertEquals("hellooz", StringUtils.fromUtf8(codedUtf8Indexed.get(3)));
+    Assertions.assertEquals("helloozy", StringUtils.fromUtf8(codedUtf8Indexed.get(4)));
 
     Iterator<String> newListIterator = theList.iterator();
     Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
@@ -117,13 +118,13 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     while (utf8Iterator.hasNext() && newListIterator.hasNext()) {
       final String next = newListIterator.next();
       final ByteBuffer nextUtf8 = utf8Iterator.next();
-      Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
+      Assertions.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
       nextUtf8.position(0);
-      Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
-      Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
+      Assertions.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+      Assertions.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
       ctr++;
     }
-    Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+    Assertions.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
   }
 
   @Test
@@ -150,14 +151,14 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       while (utf8Iterator.hasNext() && newListIterator.hasNext()) {
         final String next = newListIterator.next();
         final ByteBuffer nextUtf8 = utf8Iterator.next();
-        Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
+        Assertions.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
         nextUtf8.position(0);
-        Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
-        Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
+        Assertions.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+        Assertions.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
         ctr++;
       }
-      Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
-      Assert.assertEquals(ctr, sizeBase + sizeAdjust);
+      Assertions.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+      Assertions.assertEquals(ctr, sizeBase + sizeAdjust);
     }
   }
 
@@ -187,17 +188,17 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         final String next = newListIterator.next();
         final ByteBuffer nextUtf8 = utf8Iterator.next();
         if (next == null) {
-          Assert.assertNull(nextUtf8);
+          Assertions.assertNull(nextUtf8);
         } else {
-          Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
+          Assertions.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
           nextUtf8.position(0);
-          Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+          Assertions.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
         }
-        Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
+        Assertions.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
         ctr++;
       }
-      Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
-      Assert.assertEquals(ctr, sizeBase + sizeAdjust + 1);
+      Assertions.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+      Assertions.assertEquals(ctr, sizeBase + sizeAdjust + 1);
     }
   }
 
@@ -213,13 +214,13 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         buffer,
         buffer.order()
     ).get();
-    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("a")));
-    Assert.assertEquals(0, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
-    Assert.assertEquals(1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloo")));
-    Assert.assertEquals(-3, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloob")));
-    Assert.assertEquals(4, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloozy")));
-    Assert.assertEquals(-6, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloozz")));
-    Assert.assertEquals(-6, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("wat")));
+    Assertions.assertEquals(-1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("a")));
+    Assertions.assertEquals(0, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+    Assertions.assertEquals(1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloo")));
+    Assertions.assertEquals(-3, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloob")));
+    Assertions.assertEquals(4, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloozy")));
+    Assertions.assertEquals(-6, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloozz")));
+    Assertions.assertEquals(-6, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("wat")));
   }
 
 
@@ -237,14 +238,14 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         buffer,
         buffer.order()
     ).get();
-    Assert.assertEquals(0, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer(null)));
-    Assert.assertEquals(-2, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("a")));
-    Assert.assertEquals(1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
-    Assert.assertEquals(2, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloo")));
-    Assert.assertEquals(-4, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloob")));
-    Assert.assertEquals(5, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloozy")));
-    Assert.assertEquals(-7, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloozz")));
-    Assert.assertEquals(-7, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("wat")));
+    Assertions.assertEquals(0, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer(null)));
+    Assertions.assertEquals(-2, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("a")));
+    Assertions.assertEquals(1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+    Assertions.assertEquals(2, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloo")));
+    Assertions.assertEquals(-4, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloob")));
+    Assertions.assertEquals(5, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloozy")));
+    Assertions.assertEquals(-7, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("helloozz")));
+    Assertions.assertEquals(-7, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("wat")));
   }
 
   @Test
@@ -268,13 +269,13 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     while (newListIterator.hasNext() && utf8Iterator.hasNext()) {
       final String next = newListIterator.next();
       final ByteBuffer nextUtf8 = utf8Iterator.next();
-      Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
+      Assertions.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
       nextUtf8.position(0);
-      Assert.assertEquals("mismatch row " + ctr, next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
-      Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
+      Assertions.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)), "mismatch row " + ctr);
+      Assertions.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
       ctr++;
     }
-    Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+    Assertions.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
   }
 
   @Test
@@ -290,17 +291,17 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         buffer.order()
     ).get();
 
-    Assert.assertNull(codedUtf8Indexed.get(0));
-    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
-    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
+    Assertions.assertNull(codedUtf8Indexed.get(0));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
 
-    Assert.assertEquals(0, codedUtf8Indexed.indexOf(null));
-    Assert.assertEquals(-2, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+    Assertions.assertEquals(0, codedUtf8Indexed.indexOf(null));
+    Assertions.assertEquals(-2, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
 
     Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
-    Assert.assertTrue(utf8Iterator.hasNext());
-    Assert.assertNull(utf8Iterator.next());
-    Assert.assertFalse(utf8Iterator.hasNext());
+    Assertions.assertTrue(utf8Iterator.hasNext());
+    Assertions.assertNull(utf8Iterator.next());
+    Assertions.assertFalse(utf8Iterator.hasNext());
   }
 
   @Test
@@ -316,17 +317,17 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         buffer.order()
     ).get();
 
-    Assert.assertEquals(0, codedUtf8Indexed.size());
-    Throwable t = Assert.assertThrows(IAE.class, () -> codedUtf8Indexed.get(0));
-    Assert.assertEquals("Index[0] >= size[0]", t.getMessage());
-    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
-    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
+    Assertions.assertEquals(0, codedUtf8Indexed.size());
+    Throwable t = Assertions.assertThrows(IAE.class, () -> codedUtf8Indexed.get(0));
+    Assertions.assertEquals("Index[0] >= size[0]", t.getMessage());
+    Assertions.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
 
-    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(null));
-    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+    Assertions.assertEquals(-1, codedUtf8Indexed.indexOf(null));
+    Assertions.assertEquals(-1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
 
     Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
-    Assert.assertFalse(utf8Iterator.hasNext());
+    Assertions.assertFalse(utf8Iterator.hasNext());
   }
 
   @Test
@@ -364,17 +365,17 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         final String next = newListIterator.next();
         final ByteBuffer nextUtf8 = utf8Iterator.next();
         if (next == null) {
-          Assert.assertNull(nextUtf8);
+          Assertions.assertNull(nextUtf8);
         } else {
-          Assert.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
+          Assertions.assertEquals(next, StringUtils.fromUtf8(nextUtf8));
           nextUtf8.position(0);
-          Assert.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
+          Assertions.assertEquals(next, StringUtils.fromUtf8(codedUtf8Indexed.get(ctr)));
         }
-        Assert.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
+        Assertions.assertEquals(ctr, codedUtf8Indexed.indexOf(nextUtf8));
         ctr++;
       }
-      Assert.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
-      Assert.assertEquals(ctr, numValues + 1);
+      Assertions.assertEquals(newListIterator.hasNext(), utf8Iterator.hasNext());
+      Assertions.assertEquals(ctr, numValues + 1);
     }
   }
 
@@ -383,7 +384,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
   {
     OnHeapMemorySegmentWriteOutMedium medium = new OnHeapMemorySegmentWriteOutMedium();
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> new FrontCodedIndexedWriter(
             medium,
@@ -393,7 +394,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> new FrontCodedIndexedWriter(
             medium,
@@ -403,7 +404,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> new FrontCodedIndexedWriter(
             medium,
@@ -436,15 +437,15 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     while (sortedStrings.hasNext()) {
       final String next = sortedStrings.next();
       final byte[] nextBytes = StringUtils.toUtf8Nullable(next);
-      Assert.assertEquals(index, writer.write(nextBytes));
+      Assertions.assertEquals(index, writer.write(nextBytes));
       if (nextBytes == null) {
-        Assert.assertNull(writer.get(index));
+        Assertions.assertNull(writer.get(index));
       } else {
-        Assert.assertArrayEquals(nextBytes, writer.get(index));
+        Assertions.assertArrayEquals(nextBytes, writer.get(index));
       }
       index++;
     }
-    Assert.assertEquals(index, writer.getCardinality());
+    Assertions.assertEquals(index, writer.getCardinality());
 
     // check 'get' again so that we aren't always reading from current page
     index = 0;
@@ -453,9 +454,9 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
       final String next = sortedStrings.next();
       final byte[] nextBytes = StringUtils.toUtf8Nullable(next);
       if (nextBytes == null) {
-        Assert.assertNull("row " + index, writer.get(index));
+        Assertions.assertNull(writer.get(index), "row " + index);
       } else {
-        Assert.assertArrayEquals("row " + index, nextBytes, writer.get(index));
+        Assertions.assertArrayEquals(nextBytes, writer.get(index), "row " + index);
       }
       index++;
     }
@@ -484,7 +485,7 @@ public class FrontCodedIndexedTest extends InitializedNullHandlingTest
     long size = writer.getSerializedSize();
     buffer.position(0);
     writer.writeTo(channel, null);
-    Assert.assertEquals(size, buffer.position());
+    Assertions.assertEquals(size, buffer.position());
     buffer.position(0);
     return size;
   }

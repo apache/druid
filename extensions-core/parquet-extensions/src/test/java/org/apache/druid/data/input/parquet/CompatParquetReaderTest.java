@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -65,13 +65,13 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     List<InputRow> rows = readAllRows(reader);
     List<InputRow> rowsAsBinary = readAllRows(readerNotAsString);
 
-    Assert.assertEquals("hey this is &é(-è_çà)=^$ù*! Ω^^", rows.get(0).getDimension("field").get(0));
-    Assert.assertEquals(1471800234, rows.get(0).getTimestampFromEpoch());
-    Assert.assertEquals(
+    Assertions.assertEquals("hey this is &é(-è_çà)=^$ù*! Ω^^", rows.get(0).getDimension("field").get(0));
+    Assertions.assertEquals(1471800234, rows.get(0).getTimestampFromEpoch());
+    Assertions.assertEquals(
         "aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg==",
         rowsAsBinary.get(0).getDimension("field").get(0)
     );
-    Assert.assertEquals(1471800234, rowsAsBinary.get(0).getTimestampFromEpoch());
+    Assertions.assertEquals(1471800234, rowsAsBinary.get(0).getTimestampFromEpoch());
 
     reader = createReader(
         file,
@@ -91,13 +91,13 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "  \"field\" : \"hey this is &é(-è_çà)=^$ù*! Ω^^\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
 
     final String expectedJsonBinary = "{\n"
                                 + "  \"field\" : \"aGV5IHRoaXMgaXMgJsOpKC3DqF/Dp8OgKT1eJMO5KiEgzqleXg==\",\n"
                                 + "  \"ts\" : 1471800234\n"
                                 + "}";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedJsonBinary,
         DEFAULT_JSON_WRITER.writeValueAsString(sampledAsBinary.get(0).getRawValues())
     );
@@ -126,10 +126,10 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
 
     List<InputRow> rows = readAllRows(reader);
 
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("-1", rows.get(0).getDimension("col").get(0));
-    Assert.assertEquals(-1, rows.get(0).getMetric("metric1"));
-    Assert.assertTrue(rows.get(4).getDimension("col").isEmpty());
+    Assertions.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("-1", rows.get(0).getDimension("col").get(0));
+    Assertions.assertEquals(-1, rows.get(0).getMetric("metric1"));
+    Assertions.assertTrue(rows.get(4).getDimension("col").isEmpty());
 
     reader = createReader(
         file,
@@ -140,7 +140,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"col\" : -1\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -212,30 +212,30 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
 
     List<InputRow> rows = readAllRows(reader);
 
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("true", rows.get(0).getDimension("boolColumn").get(0));
-    Assert.assertEquals("0", rows.get(0).getDimension("byteColumn").get(0));
-    Assert.assertEquals("1", rows.get(0).getDimension("shortColumn").get(0));
-    Assert.assertEquals("2", rows.get(0).getDimension("intColumn").get(0));
-    Assert.assertEquals("0", rows.get(0).getDimension("longColumn").get(0));
-    Assert.assertEquals("0.2", rows.get(0).getDimension("doubleColumn").get(0));
-    Assert.assertEquals("val_0", rows.get(0).getDimension("binaryColumn").get(0));
-    Assert.assertEquals("val_0", rows.get(0).getDimension("stringColumn").get(0));
-    Assert.assertEquals("SPADES", rows.get(0).getDimension("enumColumn").get(0));
-    Assert.assertTrue(rows.get(0).getDimension("maybeBoolColumn").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("maybeByteColumn").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("maybeShortColumn").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("maybeIntColumn").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("maybeLongColumn").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("maybeDoubleColumn").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("maybeBinaryColumn").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("maybeStringColumn").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("maybeEnumColumn").isEmpty());
-    Assert.assertEquals("arr_0", rows.get(0).getDimension("stringsColumn").get(0));
-    Assert.assertEquals("arr_1", rows.get(0).getDimension("stringsColumn").get(1));
-    Assert.assertEquals("0", rows.get(0).getDimension("intSetColumn").get(0));
-    Assert.assertEquals("val_1", rows.get(0).getDimension("extractByLogicalMap").get(0));
-    Assert.assertEquals("1", rows.get(0).getDimension("extractByComplexLogicalMap").get(0));
+    Assertions.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("true", rows.get(0).getDimension("boolColumn").get(0));
+    Assertions.assertEquals("0", rows.get(0).getDimension("byteColumn").get(0));
+    Assertions.assertEquals("1", rows.get(0).getDimension("shortColumn").get(0));
+    Assertions.assertEquals("2", rows.get(0).getDimension("intColumn").get(0));
+    Assertions.assertEquals("0", rows.get(0).getDimension("longColumn").get(0));
+    Assertions.assertEquals("0.2", rows.get(0).getDimension("doubleColumn").get(0));
+    Assertions.assertEquals("val_0", rows.get(0).getDimension("binaryColumn").get(0));
+    Assertions.assertEquals("val_0", rows.get(0).getDimension("stringColumn").get(0));
+    Assertions.assertEquals("SPADES", rows.get(0).getDimension("enumColumn").get(0));
+    Assertions.assertTrue(rows.get(0).getDimension("maybeBoolColumn").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("maybeByteColumn").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("maybeShortColumn").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("maybeIntColumn").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("maybeLongColumn").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("maybeDoubleColumn").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("maybeBinaryColumn").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("maybeStringColumn").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("maybeEnumColumn").isEmpty());
+    Assertions.assertEquals("arr_0", rows.get(0).getDimension("stringsColumn").get(0));
+    Assertions.assertEquals("arr_1", rows.get(0).getDimension("stringsColumn").get(1));
+    Assertions.assertEquals("0", rows.get(0).getDimension("intSetColumn").get(0));
+    Assertions.assertEquals("val_1", rows.get(0).getDimension("extractByLogicalMap").get(0));
+    Assertions.assertEquals("1", rows.get(0).getDimension("extractByComplexLogicalMap").get(0));
 
     reader = createReader(
         file,
@@ -302,7 +302,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    } ]\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -325,10 +325,10 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("1", rows.get(0).getDimension("repeatedInt").get(0));
-    Assert.assertEquals("2", rows.get(0).getDimension("repeatedInt").get(1));
-    Assert.assertEquals("3", rows.get(0).getDimension("repeatedInt").get(2));
+    Assertions.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("1", rows.get(0).getDimension("repeatedInt").get(0));
+    Assertions.assertEquals("2", rows.get(0).getDimension("repeatedInt").get(1));
+    Assertions.assertEquals("3", rows.get(0).getDimension("repeatedInt").get(2));
 
     reader = createReader(
         file,
@@ -339,7 +339,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"repeatedInt\" : [ 1, 2, 3 ]\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
 
@@ -364,10 +364,10 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
-    Assert.assertEquals("5", rows.get(1).getDimension("primitive").get(0));
-    Assert.assertEquals("4", rows.get(1).getDimension("extracted1").get(0));
-    Assert.assertEquals("6", rows.get(1).getDimension("extracted2").get(0));
+    Assertions.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
+    Assertions.assertEquals("5", rows.get(1).getDimension("primitive").get(0));
+    Assertions.assertEquals("4", rows.get(1).getDimension("extracted1").get(0));
+    Assertions.assertEquals("6", rows.get(1).getDimension("extracted2").get(0));
 
     reader = createReader(
         file,
@@ -382,7 +382,7 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"repeatedMessage\" : [ 3 ]\n"
                                 + "  } ]\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -407,14 +407,14 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("10", rows.get(0).getDimension("optionalPrimitive").get(0));
-    Assert.assertEquals("9", rows.get(0).getDimension("requiredPrimitive").get(0));
-    Assert.assertTrue(rows.get(0).getDimension("repeatedPrimitive").isEmpty());
-    Assert.assertTrue(rows.get(0).getDimension("extractedOptional").isEmpty());
-    Assert.assertEquals("9", rows.get(0).getDimension("extractedRequired").get(0));
-    Assert.assertEquals("9", rows.get(0).getDimension("extractedRepeated").get(0));
-    Assert.assertEquals("10", rows.get(0).getDimension("extractedRepeated").get(1));
+    Assertions.assertEquals("2018-09-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("10", rows.get(0).getDimension("optionalPrimitive").get(0));
+    Assertions.assertEquals("9", rows.get(0).getDimension("requiredPrimitive").get(0));
+    Assertions.assertTrue(rows.get(0).getDimension("repeatedPrimitive").isEmpty());
+    Assertions.assertTrue(rows.get(0).getDimension("extractedOptional").isEmpty());
+    Assertions.assertEquals("9", rows.get(0).getDimension("extractedRequired").get(0));
+    Assertions.assertEquals("9", rows.get(0).getDimension("extractedRepeated").get(0));
+    Assertions.assertEquals("10", rows.get(0).getDimension("extractedRepeated").get(1));
 
     reader = createReader(
         file,
@@ -432,6 +432,6 @@ public class CompatParquetReaderTest extends BaseParquetReaderTest
                                 + "    \"someId\" : 9\n"
                                 + "  }\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 }

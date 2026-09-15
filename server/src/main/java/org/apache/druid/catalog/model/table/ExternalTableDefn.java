@@ -21,7 +21,6 @@ package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.ModelProperties.ObjectPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
@@ -282,12 +281,6 @@ public class ExternalTableDefn extends TableDefn
   public TableFunction tableFn(ResolvedTable table)
   {
     return new ResolvedExternalTable(table).resolve(registry).tableFn();
-  }
-
-  @Override
-  protected void validateColumn(ColumnSpec colSpec)
-  {
-    // Validate type in next PR
   }
 
   /**

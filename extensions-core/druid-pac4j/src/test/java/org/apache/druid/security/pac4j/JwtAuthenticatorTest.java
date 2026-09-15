@@ -22,14 +22,15 @@ package org.apache.druid.security.pac4j;
 import com.google.common.collect.ImmutableMap;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.proc.BadJOSEException;
+import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.pac4j.oidc.profile.creator.TokenValidator;
 
 import javax.servlet.FilterChain;
@@ -38,6 +39,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Date;
 
 public class JwtAuthenticatorTest
 {
@@ -70,9 +72,9 @@ public class JwtAuthenticatorTest
     authFilter.doFilter(req, resp, filterChain);
 
     EasyMock.verify(req, resp, filterChain);
-    Assert.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
-    Assert.assertNull(jwtAuthenticator.getInitParameters());
-    Assert.assertNull(jwtAuthenticator.authenticateJDBCContext(ImmutableMap.of()));
+    Assertions.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
+    Assertions.assertNull(jwtAuthenticator.getInitParameters());
+    Assertions.assertNull(jwtAuthenticator.authenticateJDBCContext(ImmutableMap.of()));
   }
 
   @Test
@@ -117,9 +119,9 @@ public class JwtAuthenticatorTest
     EasyMock.expect(tokenValidator.validate(EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(new IDTokenClaimsSet(new Issuer("foo"),
                                             new Subject("testsub"),
-                                            Collections.emptyList(),
-                                            null,
-                                            null
+                                            Collections.singletonList(new Audience("testClient")),
+                                            new Date(1000),
+                                            new Date(0)
             ));
     EasyMock.replay(tokenValidator);
 
@@ -137,9 +139,9 @@ public class JwtAuthenticatorTest
     authFilter.doFilter(req, resp, filterChain);
 
     EasyMock.verify(req, resp, filterChain);
-    Assert.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
-    Assert.assertNull(jwtAuthenticator.getInitParameters());
-    Assert.assertNull(jwtAuthenticator.authenticateJDBCContext(ImmutableMap.of()));
+    Assertions.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
+    Assertions.assertNull(jwtAuthenticator.getInitParameters());
+    Assertions.assertNull(jwtAuthenticator.authenticateJDBCContext(ImmutableMap.of()));
   }
 
   @Test
@@ -159,9 +161,9 @@ public class JwtAuthenticatorTest
     EasyMock.expect(tokenValidator.validate(EasyMock.anyObject(), EasyMock.anyObject()))
             .andReturn(new IDTokenClaimsSet(new Issuer("test"),
                                             new Subject("testsub"),
-                                            Collections.emptyList(),
-                                            null,
-                                            null
+                                            Collections.singletonList(new Audience("testClient")),
+                                            new Date(1000),
+                                            new Date(0)
             ));
     EasyMock.replay(tokenValidator);
 
@@ -179,8 +181,8 @@ public class JwtAuthenticatorTest
     authFilter.doFilter(req, resp, filterChain);
 
     EasyMock.verify(req, resp, filterChain);
-    Assert.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
-    Assert.assertNull(jwtAuthenticator.getInitParameters());
-    Assert.assertNull(jwtAuthenticator.authenticateJDBCContext(ImmutableMap.of()));
+    Assertions.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
+    Assertions.assertNull(jwtAuthenticator.getInitParameters());
+    Assertions.assertNull(jwtAuthenticator.authenticateJDBCContext(ImmutableMap.of()));
   }
 }

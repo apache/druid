@@ -582,7 +582,7 @@ FROM test_array;
 #-------------------------------------------------------------------------
 SELECT nvl(json_value(a_nested, '$[0]' RETURNING boolean array), ARRAY[1, 0, NULL]) AS col
 FROM test_array;
-Illegal
+Parameters must be of the same type
 !error
 
 #-------------------------------------------------------------------------
@@ -590,7 +590,7 @@ Illegal
 #-------------------------------------------------------------------------
 SELECT nvl(json_value(a_nested, '$[7][0]' RETURNING boolean array), ARRAY[1, 0, NULL]) AS col
 FROM test_array;
-Illegal
+Parameters must be of the same type
 !error
 
 #-------------------------------------------------------------------------

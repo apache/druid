@@ -20,8 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Min;
 
 /**
  */

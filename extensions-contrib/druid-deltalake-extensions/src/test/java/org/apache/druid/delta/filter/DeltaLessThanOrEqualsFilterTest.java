@@ -29,11 +29,10 @@ import io.delta.kernel.types.ShortType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
+import org.apache.druid.delta.DeltaAssertions;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DeltaLessThanOrEqualsFilterTest
 {
@@ -53,8 +52,8 @@ public class DeltaLessThanOrEqualsFilterTest
 
     Predicate predicate = lteFilter.getFilterPredicate(SCHEMA);
 
-    Assert.assertEquals("<=", predicate.getName());
-    Assert.assertEquals(2, predicate.getChildren().size());
+    Assertions.assertEquals("<=", predicate.getName());
+    Assertions.assertEquals(2, predicate.getChildren().size());
   }
 
   @Test
@@ -62,14 +61,12 @@ public class DeltaLessThanOrEqualsFilterTest
   {
     DeltaLessThanOrEqualsFilter lteFilter = new DeltaLessThanOrEqualsFilter("long_col", "twentyOne");
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(
             DruidException.class,
             () -> lteFilter.getFilterPredicate(SCHEMA)
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "column[long_col] has an invalid value[twentyOne]. The value must be a number, as the column's data type is [long]."
-        )
+        "column[long_col] has an invalid value[twentyOne]. The value must be a number, as the column's data type is [long]."
     );
   }
 }

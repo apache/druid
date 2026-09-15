@@ -280,6 +280,16 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
+    return publish(publisher, committer, sequenceNames, java.util.function.Function.identity());
+  }
+
+  public ListenableFuture<SegmentsAndCommitMetadata> publish(
+      final TransactionalSegmentPublisher publisher,
+      final Committer committer,
+      final Collection<String> sequenceNames,
+      final java.util.function.Function<Set<DataSegment>, Set<DataSegment>> segmentAnnotateFunction
+  )
+  {
     final List<SegmentIdWithShardSpec> theSegments = getSegmentIdsWithShardSpecs(sequenceNames);
 
     final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transformAsync(
@@ -291,7 +301,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             null,
             sam,
             publisher,
-            java.util.function.Function.identity()
+            segmentAnnotateFunction
         ),
         MoreExecutors.directExecutor()
     );

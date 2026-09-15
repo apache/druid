@@ -93,7 +93,7 @@ jobs:
           images=(
             apache/kafka:4.2.0
             postgres:16-alpine
-            minio/minio:latest
+            quay.io/minio/minio:latest
             hashicorp/consul:1.18
             tabulario/iceberg-rest:1.6.0
             localstack/localstack:4.13.1

@@ -101,6 +101,8 @@ public class BasicDataSourceExt extends BasicDataSource
   }
 
   @VisibleForTesting
+  // This test accessor returns the properties tracked by this subclass; the superclass getter is package-private.
+  // codeql[java/non-overriding-package-private]
   public Properties getConnectionProperties()
   {
     return connectionProperties;

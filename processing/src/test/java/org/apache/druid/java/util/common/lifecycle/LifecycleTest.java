@@ -26,8 +26,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -116,8 +116,8 @@ public class LifecycleTest
     finally {
       lifecycle.stop();
     }
-    Assert.assertEquals(numThreads - 1, threadFailedCount.get());
-    Assert.assertEquals(0, handlerFailedCount.get());
+    Assertions.assertEquals(numThreads - 1, threadFailedCount.get());
+    Assertions.assertEquals(0, handlerFailedCount.get());
     executorService.shutdownNow();
   }
 
@@ -153,7 +153,7 @@ public class LifecycleTest
     lifecycle.stop();
     lifecycle.stop();
     lifecycle.stop();
-    Assert.assertEquals(0, failedCount.get());
+    Assertions.assertEquals(0, failedCount.get());
     Exception ex = null;
     try {
       exceptionalHandler.stop();
@@ -161,7 +161,7 @@ public class LifecycleTest
     catch (Exception e) {
       ex = e;
     }
-    Assert.assertNotNull("Should have exception", ex);
+    Assertions.assertNotNull(ex, "Should have exception");
   }
 
   @Test
@@ -187,15 +187,15 @@ public class LifecycleTest
 
     lifecycle.start();
 
-    Assert.assertEquals(10, startOrder.size());
-    Assert.assertEquals(0, stopOrder.size());
-    Assert.assertEquals(expectedOrder, startOrder);
+    Assertions.assertEquals(10, startOrder.size());
+    Assertions.assertEquals(0, stopOrder.size());
+    Assertions.assertEquals(expectedOrder, startOrder);
 
     lifecycle.stop();
 
-    Assert.assertEquals(10, startOrder.size());
-    Assert.assertEquals(10, stopOrder.size());
-    Assert.assertEquals(Lists.reverse(expectedOrder), stopOrder);
+    Assertions.assertEquals(10, startOrder.size());
+    Assertions.assertEquals(10, stopOrder.size());
+    Assertions.assertEquals(Lists.reverse(expectedOrder), stopOrder);
   }
 
   @Test
@@ -251,13 +251,13 @@ public class LifecycleTest
 
     lifecycle.start();
 
-    Assert.assertEquals(expectedOrder, startOrder);
-    Assert.assertEquals(0, stopOrder.size());
+    Assertions.assertEquals(expectedOrder, startOrder);
+    Assertions.assertEquals(0, stopOrder.size());
 
     lifecycle.stop();
 
-    Assert.assertEquals(expectedOrder, startOrder);
-    Assert.assertEquals(expectedStopOrder, stopOrder);
+    Assertions.assertEquals(expectedOrder, startOrder);
+    Assertions.assertEquals(expectedStopOrder, stopOrder);
   }
 
   public static class ObjectToBeLifecycled
@@ -323,18 +323,18 @@ public class LifecycleTest
 
     try {
       lifecycle.addHandler(DUMMY_HANDLER);
-      Assert.fail("Expected exception");
+      Assertions.fail("Expected exception");
     }
     catch (IllegalStateException e) {
-      Assert.assertTrue(e.getMessage().contains("Cannot add a handler"));
+      Assertions.assertTrue(e.getMessage().contains("Cannot add a handler"));
     }
 
     try {
       lifecycle.addMaybeStartHandler(DUMMY_HANDLER);
-      Assert.fail("Expected exception");
+      Assertions.fail("Expected exception");
     }
     catch (IllegalStateException e) {
-      Assert.assertTrue(e.getMessage().contains("Cannot add a handler"));
+      Assertions.assertTrue(e.getMessage().contains("Cannot add a handler"));
     }
   }
 }

@@ -24,8 +24,8 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -41,6 +41,6 @@ public class SurrogateActionTest
     );
 
     final String json = objectMapper.writeValueAsString(surrogateAction);
-    Assert.assertEquals(surrogateAction.toString(), objectMapper.readValue(json, TaskAction.class).toString());
+    Assertions.assertEquals(surrogateAction.toString(), objectMapper.readValue(json, TaskAction.class).toString());
   }
 }

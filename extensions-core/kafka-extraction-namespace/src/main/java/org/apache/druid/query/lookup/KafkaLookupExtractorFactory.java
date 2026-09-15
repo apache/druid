@@ -30,6 +30,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -46,7 +47,6 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Collections;

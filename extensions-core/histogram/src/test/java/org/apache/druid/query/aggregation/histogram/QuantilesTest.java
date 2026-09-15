@@ -23,11 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class QuantilesTest
 {
@@ -46,35 +48,35 @@ public class QuantilesTest
     );
 
     Object theObject = mapper.readValue(theString, Object.class);
-    Assert.assertThat(theObject, CoreMatchers.instanceOf(LinkedHashMap.class));
+    assertThat(theObject, CoreMatchers.instanceOf(LinkedHashMap.class));
 
     LinkedHashMap theMap = (LinkedHashMap) theObject;
 
     ArrayList theProbabilities = (ArrayList<Float>) theMap.get("probabilities");
 
-    Assert.assertEquals(probabilities.length, theProbabilities.size());
+    Assertions.assertEquals(probabilities.length, theProbabilities.size());
     for (int i = 0; i < theProbabilities.size(); ++i) {
-      Assert.assertEquals(probabilities[i], ((Number) theProbabilities.get(i)).floatValue(), 0.0001f);
+      Assertions.assertEquals(probabilities[i], ((Number) theProbabilities.get(i)).floatValue(), 0.0001f);
     }
 
     ArrayList theQuantiles = (ArrayList<Float>) theMap.get("quantiles");
 
-    Assert.assertEquals(quantiles.length, theQuantiles.size());
+    Assertions.assertEquals(quantiles.length, theQuantiles.size());
     for (int i = 0; i < theQuantiles.size(); ++i) {
-      Assert.assertEquals(quantiles[i], ((Number) theQuantiles.get(i)).floatValue(), 0.0001f);
+      Assertions.assertEquals(quantiles[i], ((Number) theQuantiles.get(i)).floatValue(), 0.0001f);
     }
 
-    Assert.assertEquals(
-        "serialized min. matches expected min.",
+    Assertions.assertEquals(
         min,
         ((Number) theMap.get("min")).floatValue(),
-        0.0001f
+        0.0001f,
+        "serialized min. matches expected min."
     );
-    Assert.assertEquals(
-        "serialized max. matches expected max.",
+    Assertions.assertEquals(
         max,
         ((Number) theMap.get("max")).floatValue(),
-        0.0001f
+        0.0001f,
+        "serialized max. matches expected max."
     );
 
 

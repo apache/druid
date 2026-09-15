@@ -161,7 +161,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir));
+    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir, segmentBaseDir));
   }
 
   @Override
@@ -789,11 +789,13 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected static class PersistedIdConversions implements Closeable
   {
     private final File tempDir;
+    private final File baseDir;
     private final Closer closer;
 
-    protected PersistedIdConversions(File tempDir)
+    protected PersistedIdConversions(File tempDir, File baseDir)
     {
       this.tempDir = tempDir;
+      this.baseDir = baseDir;
       this.closer = Closer.create();
     }
 
@@ -813,7 +815,10 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
         closer.close();
       }
       finally {
-        FileUtils.deleteDirectory(tempDir);
+        // tempDir may be nested under baseDir (its name can carry a bundle prefix such as "__base/<col>", so mkdirp
+        // created intermediate directories). Delete tempDir and any now-empty intermediate directories up to baseDir
+        // so no empty scratch directory is left behind in the finalized segment directory.
+        FileUtils.deleteDirectoryAndEmptyAncestors(tempDir, baseDir);
       }
     }
   }

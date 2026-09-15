@@ -24,8 +24,19 @@ WHERE c_long IN
     (SELECT col
      FROM (
            VALUES('[2]'),('[3, [4, 5]]'),('2'),('3'),('999')) AS t(col));
-Unhandled Query Planning Failure
-!error
++---+
+| c |
++---+
+|   |
+|   |
+|   |
+|   |
+|   |
+|   |
++---+
+(6 rows)
+
+!ok
 
 #-------------------------------------------------------------------------
 # TESTCASE: test_subquery_with_where TEST_ID: A7_B33_C1

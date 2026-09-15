@@ -34,11 +34,10 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
-
 
 public class TimewarpOperatorTest
 {
@@ -55,21 +54,21 @@ public class TimewarpOperatorTest
       final DateTime t = DateTimes.of("2014-01-23");
       final DateTime tOffset = DateTimes.of("2014-01-09");
 
-      Assert.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.UTC)));
+      Assertions.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.UTC)));
     }
 
     {
       final DateTime t = DateTimes.of("2014-08-02");
       final DateTime tOffset = DateTimes.of("2014-01-11");
 
-      Assert.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.UTC)));
+      Assertions.assertEquals(tOffset, t.plus(testOperator.computeOffset(t.getMillis(), DateTimeZone.UTC)));
     }
 
     {
       final DateTime t = DateTimes.of("2014-08-02T-07");
       final DateTime tOffset = DateTimes.of("2014-01-11T-08");
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           tOffset,
           t.plus(testOperator.computeOffset(t.getMillis(), DateTimes.inferTzFromString("America/Los_Angeles")))
       );
@@ -116,7 +115,7 @@ public class TimewarpOperatorTest
               .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             new Result<>(
                 DateTimes.of("2014-07-31"),
@@ -133,7 +132,6 @@ public class TimewarpOperatorTest
         ),
         queryRunner.run(QueryPlus.wrap(query)).toList()
     );
-
 
     TimewarpOperator<Result<TimeBoundaryResultValue>> timeBoundaryOperator = new TimewarpOperator<>(
         new Interval(DateTimes.of("2014-01-01"), DateTimes.of("2014-01-15")),
@@ -173,7 +171,7 @@ public class TimewarpOperatorTest
               .dataSource("dummy")
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList(
             new Result<>(
                 DateTimes.of("2014-08-02"),
@@ -226,7 +224,7 @@ public class TimewarpOperatorTest
               .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             new Result<>(
                 DateTimes.of("2014-07-31T-07"),
@@ -286,7 +284,7 @@ public class TimewarpOperatorTest
               .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             new Result<>(
                 DateTimes.of("2014-07-31T-07"),
@@ -311,7 +309,7 @@ public class TimewarpOperatorTest
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
         (queryPlus, responseContext) -> {
           final Query<Result<TimeseriesResultValue>> query = queryPlus.getQuery();
-          Assert.assertTrue(query.getIntervals().isEmpty());
+          Assertions.assertTrue(query.getIntervals().isEmpty());
           return Sequences.empty();
         },
         DateTimes.of("2014-08-02").getMillis()
@@ -324,7 +322,7 @@ public class TimewarpOperatorTest
               .aggregators(Collections.singletonList(new CountAggregatorFactory("count")))
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.emptyList(),
         queryRunner.run(QueryPlus.wrap(query)).toList()
     );

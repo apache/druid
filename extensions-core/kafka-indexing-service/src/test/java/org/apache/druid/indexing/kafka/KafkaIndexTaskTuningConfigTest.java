@@ -24,18 +24,22 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorTuningConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaTuningConfigBuilder;
 import org.apache.druid.indexing.kafka.test.TestModifiedKafkaIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.DimensionValueSetPartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class KafkaIndexTaskTuningConfigTest
 {
@@ -62,19 +66,19 @@ public class KafkaIndexTaskTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNull(config.getBasePersistDirectory());
-    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(150000, config.getMaxRowsInMemory());
-    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
-    Assert.assertNull(config.getMaxTotalRows());
-    Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
-    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpecForIntermediatePersists());
-    Assert.assertFalse(config.isReportParseExceptions());
-    Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
-    Assert.assertEquals(1, config.getNumPersistThreads());
-    Assert.assertEquals(-1, config.getMaxColumnsToMerge());
+    Assertions.assertNull(config.getBasePersistDirectory());
+    Assertions.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
+    Assertions.assertEquals(150000, config.getMaxRowsInMemory());
+    Assertions.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
+    Assertions.assertNull(config.getMaxTotalRows());
+    Assertions.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
+    Assertions.assertEquals(0, config.getMaxPendingPersists());
+    Assertions.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
+    Assertions.assertEquals(IndexSpec.getDefault(), config.getIndexSpecForIntermediatePersists());
+    Assertions.assertFalse(config.isReportParseExceptions());
+    Assertions.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
+    Assertions.assertEquals(1, config.getNumPersistThreads());
+    Assertions.assertEquals(-1, config.getMaxColumnsToMerge());
   }
 
   @Test
@@ -106,26 +110,154 @@ public class KafkaIndexTaskTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNull(config.getBasePersistDirectory());
-    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(100, config.getMaxRowsInMemory());
-    Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
-    Assert.assertNotEquals(null, config.getMaxTotalRows());
-    Assert.assertEquals(1000, config.getMaxTotalRows().longValue());
-    Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(100, config.getMaxPendingPersists());
-    Assert.assertEquals(true, config.isReportParseExceptions());
-    Assert.assertEquals(100, config.getHandoffConditionTimeout());
-    Assert.assertEquals(
+    Assertions.assertNull(config.getBasePersistDirectory());
+    Assertions.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
+    Assertions.assertEquals(100, config.getMaxRowsInMemory());
+    Assertions.assertEquals(100, config.getMaxRowsPerSegment().intValue());
+    Assertions.assertNotEquals(null, config.getMaxTotalRows());
+    Assertions.assertEquals(1000, config.getMaxTotalRows().longValue());
+    Assertions.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
+    Assertions.assertEquals(100, config.getMaxPendingPersists());
+    Assertions.assertEquals(true, config.isReportParseExceptions());
+    Assertions.assertEquals(100, config.getHandoffConditionTimeout());
+    Assertions.assertEquals(
         IndexSpec.builder().withMetricCompression(CompressionStrategy.NONE).build(),
         config.getIndexSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         IndexSpec.builder().withDimensionCompression(CompressionStrategy.UNCOMPRESSED).build(),
         config.getIndexSpecForIntermediatePersists()
     );
-    Assert.assertEquals(2, config.getNumPersistThreads());
-    Assert.assertEquals(-1, config.getMaxColumnsToMerge());
+    Assertions.assertEquals(2, config.getNumPersistThreads());
+    Assertions.assertEquals(-1, config.getMaxColumnsToMerge());
+  }
+
+  @Test
+  public void testSerdeWithStreamingPartitionsSpec() throws Exception
+  {
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": {\"partitionDimensions\": [\"tenant\", \"region\"]}\n"
+                           + "}";
+
+    final KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, TuningConfig.class)),
+        TuningConfig.class
+    );
+
+    Assertions.assertEquals(
+        new DimensionValueSetPartitionsSpec(List.of("tenant", "region")),
+        config.getStreamingPartitionsSpec()
+    );
+    Assertions.assertEquals(List.of("tenant", "region"), partitionDimensionsOf(config));
+  }
+
+  @Test
+  public void testSerdeWithoutStreamingPartitionsSpecIsNull() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue("{\"type\": \"kafka\"}", TuningConfig.class)),
+        TuningConfig.class
+    );
+    Assertions.assertNull(config.getStreamingPartitionsSpec());
+  }
+
+  @Test
+  public void testSerdeWithEmptyPartitionDimensions() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[]");
+    Assertions.assertEquals(Collections.emptyList(), partitionDimensionsOf(config));
+  }
+
+  @Test
+  public void testSerdeWithNullPartitionDimensionsCoalescesToEmpty() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("null");
+    Assertions.assertEquals(Collections.emptyList(), partitionDimensionsOf(config));
+  }
+
+  @Test
+  public void testSerdeWithEmptyStringPartitionDimension() throws Exception
+  {
+    // An empty-string dimension name is preserved verbatim (it simply never matches an ingested value).
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"\"]");
+    Assertions.assertEquals(List.of(""), partitionDimensionsOf(config));
+  }
+
+  @Test
+  public void testSerdeWithNumericLookingPartitionDimension() throws Exception
+  {
+    // Dimension names are plain strings; a numeric-looking name is just a string.
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"123\"]");
+    Assertions.assertEquals(List.of("123"), partitionDimensionsOf(config));
+  }
+
+  @Test
+  public void testSerdeWithNullElementInPartitionDimensions() throws Exception
+  {
+    final KafkaIndexTaskTuningConfig config = roundTripWithStreamingPartitionsSpec("[\"tenant\", null]");
+    Assertions.assertEquals(Arrays.asList("tenant", null), partitionDimensionsOf(config));
+  }
+
+  @Test
+  public void testSerdeWithExplicitDimValueSetType() throws Exception
+  {
+    // An explicit "type": "dim_value_set" round-trips to the same spec as the untyped (default) form.
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": "
+                           + "{\"type\": \"dim_value_set\", \"partitionDimensions\": [\"tenant\", \"region\"]}\n"
+                           + "}";
+
+    final KafkaIndexTaskTuningConfig config = (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, TuningConfig.class)),
+        TuningConfig.class
+    );
+
+    Assertions.assertEquals(
+        new DimensionValueSetPartitionsSpec(List.of("tenant", "region")),
+        config.getStreamingPartitionsSpec()
+    );
+    Assertions.assertEquals(List.of("tenant", "region"), partitionDimensionsOf(config));
+  }
+
+  @Test
+  public void testSerdeWithUnknownStreamingPartitionsSpecTypeIsRejected()
+  {
+    // An explicit but unknown type (e.g. a typo, or a subtype whose extension isn't loaded on this peon) must fail
+    // rather than silently falling back to the default DimensionValueSetPartitionsSpec.
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": "
+                           + "{\"type\": \"dim_value_sets\", \"partitionDimensions\": [\"tenant\"]}\n"
+                           + "}";
+
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> mapper.readValue(jsonStr, TuningConfig.class)
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("dim_value_sets"),
+        "Expected the unknown type id to be surfaced, got: " + e.getMessage()
+    );
+  }
+
+  private KafkaIndexTaskTuningConfig roundTripWithStreamingPartitionsSpec(String partitionDimensionsJson)
+      throws IOException
+  {
+    final String jsonStr = "{\n"
+                           + "  \"type\": \"kafka\",\n"
+                           + "  \"streamingPartitionsSpec\": {\"partitionDimensions\": " + partitionDimensionsJson + "}\n"
+                           + "}";
+    return (KafkaIndexTaskTuningConfig) mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(jsonStr, TuningConfig.class)),
+        TuningConfig.class
+    );
+  }
+
+  private static List<String> partitionDimensionsOf(KafkaIndexTaskTuningConfig config)
+  {
+    return ((DimensionValueSetPartitionsSpec) config.getStreamingPartitionsSpec()).getPartitionDimensions();
   }
 
   @Test
@@ -146,19 +278,19 @@ public class KafkaIndexTaskTuningConfigTest
         .build();
     KafkaIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
-    Assert.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
-    Assert.assertEquals(1, copy.getMaxRowsInMemory());
-    Assert.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
-    Assert.assertNotEquals(null, copy.getMaxTotalRows());
-    Assert.assertEquals(10L, copy.getMaxTotalRows().longValue());
-    Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
-    Assert.assertNull(copy.getBasePersistDirectory());
-    Assert.assertEquals(4, copy.getMaxPendingPersists());
-    Assert.assertEquals(IndexSpec.getDefault(), copy.getIndexSpec());
-    Assert.assertTrue(copy.isReportParseExceptions());
-    Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
-    Assert.assertEquals(2, copy.getNumPersistThreads());
-    Assert.assertEquals(5, copy.getMaxColumnsToMerge());
+    Assertions.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
+    Assertions.assertEquals(1, copy.getMaxRowsInMemory());
+    Assertions.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
+    Assertions.assertNotEquals(null, copy.getMaxTotalRows());
+    Assertions.assertEquals(10L, copy.getMaxTotalRows().longValue());
+    Assertions.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
+    Assertions.assertNull(copy.getBasePersistDirectory());
+    Assertions.assertEquals(4, copy.getMaxPendingPersists());
+    Assertions.assertEquals(IndexSpec.getDefault(), copy.getIndexSpec());
+    Assertions.assertTrue(copy.isReportParseExceptions());
+    Assertions.assertEquals(5L, copy.getHandoffConditionTimeout());
+    Assertions.assertEquals(2, copy.getNumPersistThreads());
+    Assertions.assertEquals(5, copy.getMaxColumnsToMerge());
   }
 
   @Test
@@ -186,33 +318,34 @@ public class KafkaIndexTaskTuningConfigTest
         42,
         2,
         -1,
-        false
+        false,
+        null
     );
 
     String serialized = mapper.writeValueAsString(base);
     TestModifiedKafkaIndexTaskTuningConfig deserialized =
         mapper.readValue(serialized, TestModifiedKafkaIndexTaskTuningConfig.class);
 
-    Assert.assertNull(deserialized.getExtra());
-    Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
-    Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
-    Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
-    Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
-    Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
-    Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
-    Assert.assertNull(deserialized.getBasePersistDirectory());
-    Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
-    Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
-    Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
-    Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
-    Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
-    Assert.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
-    Assert.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
-    Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
-    Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
-    Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
-    Assert.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
-    Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assertions.assertNull(deserialized.getExtra());
+    Assertions.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
+    Assertions.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
+    Assertions.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
+    Assertions.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
+    Assertions.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
+    Assertions.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
+    Assertions.assertNull(deserialized.getBasePersistDirectory());
+    Assertions.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
+    Assertions.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
+    Assertions.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
+    Assertions.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
+    Assertions.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
+    Assertions.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
+    Assertions.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
+    Assertions.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
+    Assertions.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
+    Assertions.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
+    Assertions.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
+    Assertions.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
   }
 
   @Test
@@ -246,25 +379,25 @@ public class KafkaIndexTaskTuningConfigTest
     KafkaIndexTaskTuningConfig deserialized =
         mapper.readValue(serialized, KafkaIndexTaskTuningConfig.class);
 
-    Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
-    Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
-    Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
-    Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
-    Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
-    Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
-    Assert.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
-    Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
-    Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
-    Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
-    Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
-    Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
-    Assert.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
-    Assert.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
-    Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
-    Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
-    Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
-    Assert.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
-    Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assertions.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
+    Assertions.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
+    Assertions.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
+    Assertions.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
+    Assertions.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
+    Assertions.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
+    Assertions.assertEquals(base.getBasePersistDirectory(), deserialized.getBasePersistDirectory());
+    Assertions.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
+    Assertions.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
+    Assertions.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
+    Assertions.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
+    Assertions.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
+    Assertions.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
+    Assertions.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
+    Assertions.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
+    Assertions.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
+    Assertions.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
+    Assertions.assertEquals(base.getNumPersistThreads(), deserialized.getNumPersistThreads());
+    Assertions.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
   }
 
   @Test

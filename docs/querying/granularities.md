@@ -24,7 +24,7 @@ sidebar_label: "Granularities"
   -->
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes the native
  language. For information about time functions available in SQL, refer to the
  [SQL documentation](sql-scalar.md#date-and-time-functions).
@@ -70,7 +70,7 @@ The minimum and maximum granularities are `none` and `all`, described as follows
 
 #### Example:
 
-Suppose you have data below stored in Apache Druid with millisecond ingestion granularity,
+Suppose you have data below stored in Apache&circledR; Druid with millisecond ingestion granularity,
 
 ``` json
 {"timestamp": "2013-08-31T01:02:33Z", "page": "AAA", "language" : "en"}

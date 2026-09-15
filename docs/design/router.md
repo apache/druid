@@ -31,7 +31,7 @@ In addition to query routing, the Router also runs the [web console](../operatio
 
 ## Configuration
 
-For Apache Druid Router service configuration, see [Router configuration](../configuration/index.md#router).
+For Apache&circledR; Druid Router service configuration, see [Router configuration](../configuration/index.md#router).
 
 For basic tuning guidance for the Router service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#router).
 

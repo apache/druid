@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.CatalogException.DuplicateKeyException;
 import org.apache.druid.catalog.CatalogException.NotFoundException;
-import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
@@ -39,13 +38,13 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,34 +52,34 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@Category(CatalogTest.class)
+@Tag("CatalogTest")
 public class TableManagerTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
-          new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final JUnit5TestDerbyConnector DERBY_CONNECTOR_RULE =
+          new JUnit5TestDerbyConnector();
   private CatalogManager manager;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     MetadataStorageManager metastoreMgr = new MetadataStorageManager(
         JSON_MAPPER,
-        derbyConnectorRule.getConnector(),
-        () -> derbyConnectorRule.getMetadataConnectorConfig(),
-        derbyConnectorRule.metadataTablesConfigSupplier()
+        DERBY_CONNECTOR_RULE.getConnector(),
+        () -> DERBY_CONNECTOR_RULE.getMetadataConnectorConfig(),
+        DERBY_CONNECTOR_RULE.metadataTablesConfigSupplier()
         );
     manager = new SQLCatalogManager(metastoreMgr);
     manager.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (manager != null) {

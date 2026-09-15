@@ -22,10 +22,10 @@ package org.apache.druid.server.metrics;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ public class QueryCountStatsMonitorTest
   private MonitorsConfig monitorsConfig;
   private ExecutorService executorService;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     monitorsConfig = new MonitorsConfig(
@@ -93,7 +93,7 @@ public class QueryCountStatsMonitorTest
     executorService = Executors.newSingleThreadExecutor();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     executorService.shutdown();
@@ -109,7 +109,7 @@ public class QueryCountStatsMonitorTest
     emitter.flush();
     // Trigger metric emission
     monitor.doMonitor(emitter);
-    Assert.assertEquals(5, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(5, emitter.getNumEmittedEvents());
     emitter.verifyValue("query/success/count", 1L);
     emitter.verifyValue("query/failed/count", 2L);
     emitter.verifyValue("query/interrupted/count", 3L);
@@ -130,7 +130,7 @@ public class QueryCountStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(6, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(6, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("query/success/count", 1L);
     emitter.verifyValue("query/failed/count", 2L);

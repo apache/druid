@@ -23,7 +23,7 @@ sidebar_label: Front-coded dictionaries
   ~ under the License.
 -->
 
-Apache Druid stores STRING columns using dictionary encoding for better compression, where each string value is added to a lexicographically sorted dictionary and the actual column just stores a pointer to a dictionary entry.
+Apache&circledR; Druid stores STRING columns using dictionary encoding for better compression, where each string value is added to a lexicographically sorted dictionary and the actual column just stores a pointer to a dictionary entry.
 Front coding is an optional incremental encoding strategy that lets you further compress STRING and [COMPLEX&lt;json&gt;](../querying/nested-columns.md) columns in Druid with minimal performance impact.
 Front-coded dictionaries can reduce storage and improve performance by optimizing values with a shared common prefix to avoid storing duplicate data.
 For example, if you are tracking website visits, most URLs start with `https://domain.xyz/`, and front coding is able to exploit this pattern for more optimal compression when storing such datasets.

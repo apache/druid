@@ -19,17 +19,27 @@
 
 package org.apache.druid.server.security;
 
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class AuthorizerMapper
 {
   private Map<String, Authorizer> authorizerMap;
 
-  public AuthorizerMapper(
-      Map<String, Authorizer> authorizerMap
-  )
+  @Nullable
+  private final ServiceEmitter serviceEmitter;
+
+  public AuthorizerMapper(Map<String, Authorizer> authorizerMap)
+  {
+    this(authorizerMap, null);
+  }
+
+  public AuthorizerMapper(Map<String, Authorizer> authorizerMap, @Nullable ServiceEmitter serviceEmitter)
   {
     this.authorizerMap = authorizerMap;
+    this.serviceEmitter = serviceEmitter;
   }
 
   public Authorizer getAuthorizer(String name)
@@ -40,5 +50,11 @@ public class AuthorizerMapper
   public Map<String, Authorizer> getAuthorizerMap()
   {
     return authorizerMap;
+  }
+
+  @Nullable
+  public ServiceEmitter getServiceEmitter()
+  {
+    return serviceEmitter;
   }
 }

@@ -35,6 +35,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -91,6 +92,67 @@ public class DataSourcesSnapshot
     );
   }
 
+  /**
+   * Builds a new snapshot from this one by recomputing only the datasources that
+   * changed, reusing this snapshot's {@link ImmutableDruidDataSource}, timeline,
+   * and overshadowed-segment computation for every unchanged datasource.
+   * <p>
+   * Note that a changed datasource has its entire timeline rebuilt even if only a
+   * single one of its segments changed; the saving is that untouched datasources
+   * are reused as is. Overshadowing is computed per-datasource, so reusing the
+   * prior overshadowed segments for unchanged datasources is correct. The result
+   * is identical to a full {@link #fromUsedSegments} rebuild of the same final
+   * state, at a cost proportional to the changed datasources rather than all of them.
+   *
+   * @param datasourcesToRefresh Datasource → its complete current set of used
+   *                             segments, for each datasource that changed. Sets
+   *                             must be non-empty; removals are conveyed via
+   *                             {@code removedDataSources}.
+   * @param removedDataSources   Datasources whose caches are now empty/gone.
+   * @param snapshotTime         Time of this snapshot (poll start time).
+   */
+  public DataSourcesSnapshot updateSnapshotForDataSources(
+      Map<String, Set<DataSegment>> datasourcesToRefresh,
+      Set<String> removedDataSources,
+      DateTime snapshotTime
+  )
+  {
+    final Map<String, String> properties = Map.of("created", snapshotTime.toString());
+    final Map<String, ImmutableDruidDataSource> dataSources = new HashMap<>(dataSourcesWithAllUsedSegments);
+    final Map<String, SegmentTimeline> timelines = new HashMap<>(usedSegmentsTimelinesPerDataSource);
+
+    final Set<String> changedDataSources = new HashSet<>(removedDataSources);
+    changedDataSources.addAll(datasourcesToRefresh.keySet());
+
+    removedDataSources.forEach(ds -> {
+      dataSources.remove(ds);
+      timelines.remove(ds);
+    });
+    datasourcesToRefresh.forEach((ds, segments) -> {
+      dataSources.put(ds, new ImmutableDruidDataSource(ds, properties, segments));
+      timelines.put(ds, SegmentTimeline.forSegments(segments));
+    });
+
+    // Reuse prior overshadowed segments for unchanged datasources; recompute only the changed ones.
+    final List<DataSegment> overshadowed = new ArrayList<>();
+    for (DataSegment segment : overshadowedSegments) {
+      if (!changedDataSources.contains(segment.getDataSource())) {
+        overshadowed.add(segment);
+      }
+    }
+    for (String ds : datasourcesToRefresh.keySet()) {
+      final ImmutableDruidDataSource dataSource = dataSources.get(ds);
+      final SegmentTimeline timeline = timelines.get(ds);
+      for (DataSegment segment : dataSource.getSegments()) {
+        if (timeline.isOvershadowed(segment)) {
+          overshadowed.add(segment);
+        }
+      }
+    }
+
+    return new DataSourcesSnapshot(snapshotTime, dataSources, timelines, overshadowed);
+  }
+
   private final DateTime snapshotTime;
   private final Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments;
   private final Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource;
@@ -108,6 +170,23 @@ public class DataSourcesSnapshot
         dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
     );
     this.overshadowedSegments = ImmutableSet.copyOf(determineOvershadowedSegments());
+  }
+
+  /**
+   * Constructor used by {@link #updateSnapshotForDataSources} where timelines and
+   * overshadowed segments have already been computed incrementally.
+   */
+  private DataSourcesSnapshot(
+      DateTime snapshotTime,
+      Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
+      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource,
+      Collection<DataSegment> overshadowedSegments
+  )
+  {
+    this.snapshotTime = snapshotTime;
+    this.dataSourcesWithAllUsedSegments = dataSourcesWithAllUsedSegments;
+    this.usedSegmentsTimelinesPerDataSource = usedSegmentsTimelinesPerDataSource;
+    this.overshadowedSegments = ImmutableSet.copyOf(overshadowedSegments);
   }
 
   /**

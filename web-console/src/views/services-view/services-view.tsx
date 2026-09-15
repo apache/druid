@@ -680,7 +680,9 @@ ORDER BY
               data={services}
               loading={servicesState.loading}
               noDataText={
-                servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
+                servicesState.data?.services.length === 0
+                  ? 'No services'
+                  : servicesState.getErrorMessage() || ''
               }
               filterable
               filtered={filters.toFilters()}

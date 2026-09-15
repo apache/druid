@@ -25,7 +25,7 @@ import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
-import org.junit.AssumptionViolatedException;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DecoupledDartCalciteNestedDataQueryTest.NestedDataQueryMSQComponentSupplier.class)
@@ -55,6 +55,6 @@ public class DecoupledDartCalciteNestedDataQueryTest extends CalciteNestedDataQu
   @Override
   protected void msqIncompatible()
   {
-    throw new AssumptionViolatedException("Case marked as msqIncompatible; not trying dart right now");
+    Assumptions.assumeFalse(true, "Case marked as msqIncompatible; not trying dart right now");
   }
 }

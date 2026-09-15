@@ -1,0 +1,41 @@
+{
+    "user_roles": {
+        "admin": ["admin"],
+        "druid_system": ["admin"],
+        "datasourceOnlyUser": ["datasource_only"],
+        "datasourceAndContextParamsUser": ["datasource_and_context"],
+        "datasourceAndSysUser": ["datasource_and_sys"],
+        "datasourceWithStateUser": ["datasource_with_state"],
+        "stateOnlyUser": ["state_only"]
+    },
+    "role_grants": {
+        "admin": [
+            { "action": "READ", "resource": { "type": ".*", "name": ".*" } },
+            { "action": "WRITE", "resource": { "type": ".*", "name": ".*" } }
+        ],
+        "datasource_only": [
+            { "action": "READ", "resource": { "type": "DATASOURCE", "name": "auth_test" } }
+        ],
+        "datasource_and_context": [
+            { "action": "READ", "resource": { "type": "DATASOURCE", "name": "auth_test" } },
+            { "action": "WRITE", "resource": { "type": "QUERY_CONTEXT", "name": "engine" } },
+            { "action": "WRITE", "resource": { "type": "QUERY_CONTEXT", "name": "auth_test_ctx" } }
+        ],
+        "datasource_and_sys": [
+            { "action": "READ", "resource": { "type": "DATASOURCE", "name": "auth_test" } },
+            { "action": "READ", "resource": { "type": "SYSTEM_TABLE", "name": "segments" } },
+            { "action": "READ", "resource": { "type": "SYSTEM_TABLE", "name": "servers" } },
+            { "action": "READ", "resource": { "type": "SYSTEM_TABLE", "name": "server_segments" } },
+            { "action": "READ", "resource": { "type": "SYSTEM_TABLE", "name": "tasks" } }
+        ],
+        "datasource_with_state": [
+            { "action": "READ", "resource": { "type": "DATASOURCE", "name": "auth_test" } },
+            { "action": "READ", "resource": { "type": "SYSTEM_TABLE", "name": ".*" } },
+            { "action": "READ", "resource": { "type": "STATE", "name": ".*" } }
+        ],
+        "state_only": [
+            { "action": "READ", "resource": { "type": "STATE", "name": ".*" } },
+            { "action": "READ", "resource": { "type": "SYSTEM_TABLE", "name": ".*" } }
+        ]
+    }
+}

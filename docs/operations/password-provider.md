@@ -23,7 +23,7 @@ title: "Password providers"
   -->
 
 
-Passwords help secure Apache Druid systems such as the metadata store and the keystore that contains server certificates, and so on.
+Passwords help secure Apache&circledR; Druid systems such as the metadata store and the keystore that contains server certificates, and so on.
 
 These passwords have corresponding runtime properties associated with them, for example `druid.metadata.storage.connector.password` corresponds to the metadata store password.
 

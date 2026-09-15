@@ -22,7 +22,7 @@ package org.apache.druid.compressedbigdecimal.aggregator.sum;
 import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalSqlAggregatorTestBase;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class CompressedBigDecimalSumSqlAggregatorTest extends CompressedBigDecimalSqlAggregatorTestBase
 {

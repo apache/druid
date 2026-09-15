@@ -475,6 +475,14 @@ public class DruidSqlParserUtils
         );
       }
 
+      // Aliases like "CLUSTERED BY col AS alias" are not allowed.
+      if (clusteredByNode.isA(ImmutableSet.of(SqlKind.AS))) {
+        throw InvalidSqlInput.exception(
+            "Invalid CLUSTERED BY clause [%s]: cannot use an alias.",
+            clusteredByNode
+        );
+      }
+
       // Calcite already throws Ordinal out of range exception for positive non-existent ordinals. This negative ordinal check
       // is for completeness and is fixed in later Calcite versions.
       if (clusteredByNode instanceof SqlNumericLiteral) {
