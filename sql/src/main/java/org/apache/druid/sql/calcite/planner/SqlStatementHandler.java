@@ -57,6 +57,11 @@ public interface SqlStatementHandler
     ObjectMapper jsonMapper();
     DateTimeZone timeZone();
     PlannerHook hook();
+
+    /**
+     * The factory that created the enclosing planner, for statements that need to plan a nested query of their own.
+     */
+    PlannerFactory plannerFactory();
   }
 
   abstract class BaseStatementHandler implements SqlStatementHandler

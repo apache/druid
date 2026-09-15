@@ -138,6 +138,7 @@ public class NativeSqlEngine implements SqlEngine
       case ALLOW_TOP_LEVEL_UNION_ALL:
       case TIME_BOUNDARY_QUERY:
       case GROUPBY_IMPLICITLY_SORTS:
+      case CAN_DDL:
         return true;
       case CAN_INSERT:
       case CAN_REPLACE:
