@@ -256,7 +256,6 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
           resource.setException(t);
         }
       });
-      // No-op if the task already finished or the consumer already closed; both of those release the hold themselves.
       resource.setCanceler(() -> future.cancel(true));
       return resource;
     } else {
