@@ -922,7 +922,7 @@
       file name: hadoop-client-runtime-3.5.0.jar (shaded jackson-databind 2.18.6)
                  parquet-jackson-1.18.0.jar (shaded jackson-databind 2.22.1)
     ]]></notes>
-    <filePath regex="true">.*/(hadoop-client-runtime|parquet-jackson)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-databind/pom\.xml$</filePath>
+    <filePath regex="true">(?:.*/)?(hadoop-client-runtime|parquet-jackson)-[0-9][^/]*\.jar/META-INF/maven/com\.fasterxml\.jackson\.core/jackson-databind/pom\.xml$</filePath>
     <cve>CVE-2026-54512</cve>
     <cve>CVE-2026-54513</cve>
     <cve>CVE-2026-68497</cve>
@@ -981,7 +981,7 @@
     <notes><![CDATA[
       file name: docker-java-transport-zerodep-3.7.1.jar (shaded httpclient5 5.5.1 and httpcore5 5.3.6)
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.(client5/httpclient5|core5/httpcore5)@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.httpcomponents\.(client5/httpclient5|core5/(httpcore5|httpcore5-h2))@.*$</packageUrl>
     <cve>CVE-2026-40542</cve>
     <cve>CVE-2026-71290</cve>
     <cve>CVE-2026-54399</cve>
@@ -998,7 +998,7 @@
     <notes><![CDATA[
       file name: zstd-jni-1.5.7-11.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/com\.github\.luben/zstd-jni@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/com\.github\.luben/zstd-jni@1\.5\.7-7$</packageUrl>
     <cve>CVE-2026-87823</cve>
     <cve>CVE-2026-87795</cve>
   </suppress>
