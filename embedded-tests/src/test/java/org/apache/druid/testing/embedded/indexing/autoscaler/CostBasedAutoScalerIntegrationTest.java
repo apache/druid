@@ -48,6 +48,8 @@ import org.junit.jupiter.api.Timeout;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler.OPTIMAL_TASK_COUNT_METRIC;
 
@@ -312,7 +314,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
 
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    Assertions.assertEquals(String.valueOf(totalRecords.get()), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(String.valueOf(totalRecords), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     final List<TaskStatusPlus> tasks = cluster.callApi().getTasks(dataSource, "complete");
     Assertions.assertFalse(tasks.isEmpty());
