@@ -556,7 +556,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       expectedReports = buildExpectedTaskReportSequential(
           task.getId(),
           expectedUnparseableEvents,
-          new RowIngestionMetersTotals(0, 0, 0, 0, 0),
+          new RowIngestionMetersTotals(0, 0, 0, 0, 0, 0),
           expectedTotals
       );
     } else {
