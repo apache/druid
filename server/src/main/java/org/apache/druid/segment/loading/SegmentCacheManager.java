@@ -20,7 +20,6 @@
 package org.apache.druid.segment.loading;
 
 import org.apache.druid.segment.CursorFactory;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
@@ -122,14 +121,16 @@ public interface SegmentCacheManager
   Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode);
 
   /**
-   * Returns a {@link AcquireSegmentAction} for a given {@link DataSegment}, which returns a reference provider for the
-   * {@link Segment} if already present in the cache, or tries to fetch from deep storage and map if not. The
-   * {@link Segment} returned by the provider returned by this method are considered an open reference, cache
-   * implementations must not allow the segment to be dropped until it has been closed. As such, the returned
-   * {@link Segment} from {@link ReferenceCountedObjectProvider#acquireReference()} must be closed when the caller is
-   * finished doing segment things.
+   * Returns an {@link AcquireSegmentAction} for a given {@link DataSegment}: an async handle delivering an
+   * {@link AcquireSegmentResult} whose pre-acquired {@link Segment} reference is served from the cache if already
+   * present, or fetched from deep storage and mapped if not (the load, if any, starts immediately). The delivered
+   * {@link Segment} is an open reference: cache implementations must not allow the segment to be dropped until it
+   * has been closed, and its close releases everything associated with the acquisition (the reference plus any
+   * eviction-protective cache holds). Callers own the action: release the result and close the segment when done, or
+   * close the action without releasing to cancel an in-flight load / discard a delivered result. See
+   * {@link AcquireSegmentAction} for the consumer protocol.
    * <p>
-   * The {@code acquireMode} controls how much of the segment is downloaded before the action's future resolves. With
+   * The {@code acquireMode} controls how much of the segment is downloaded before the action becomes ready. With
    * {@link AcquireMode#FULL} the segment is fully materialized up front. With {@link AcquireMode#PARTIAL}, when the
    * segment's {@link LoadSpec} supports range reads, only a minimal amount of metadata is downloaded and additional
    * loading is deferred to the async methods callers use to interact with the returned segment; partial-ineligible

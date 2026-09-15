@@ -40,7 +40,6 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -159,6 +158,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.AcquireMode;
+import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -1463,46 +1463,47 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
-          FutureUtils.getUnchecked(
-              segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL).getSegmentFuture(),
-              false
-          );
-          final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
-          final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
+          // Keep the acquire open across the direct file reads below so the (possibly ephemeral) cache keeps the
+          // segment files on disk; closing the un-released action afterwards releases everything.
+          try (AcquireSegmentAction acquireAction = segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL)) {
+            acquireAction.await();
+            final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
+            final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 
-          // assert rowSignature
-          Assertions.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(cursorFactory.getRowSignature()));
+            // assert rowSignature
+            Assertions.assertEquals(expectedRowSignature, resultSignatureFromRowSignature(cursorFactory.getRowSignature()));
 
-          // assert rollup
-          Assertions.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
+            // assert rollup
+            Assertions.assertEquals(expectedRollUp, queryableIndex.getMetadata().isRollup());
 
-          // assert query granularity
-          Assertions.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
+            // assert query granularity
+            Assertions.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
 
-          // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
-          // so treat null as empty
-          Assertions.assertArrayEquals(
-              expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
-              queryableIndex.getMetadata().getAggregators() == null
-              ? new AggregatorFactory[0]
-              : queryableIndex.getMetadata().getAggregators()
-          );
+            // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
+            // so treat null as empty
+            Assertions.assertArrayEquals(
+                expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
+                queryableIndex.getMetadata().getAggregators() == null
+                ? new AggregatorFactory[0]
+                : queryableIndex.getMetadata().getAggregators()
+            );
 
-          if (expectedProjections != null) {
-            Assertions.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
-          }
+            if (expectedProjections != null) {
+              Assertions.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+            }
 
-          if (expectedClusterGroups != null) {
-            Assertions.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
-            Assertions.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
-          }
+            if (expectedClusterGroups != null) {
+              Assertions.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
+              Assertions.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
+            }
 
-          for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
-            // transforming rows for sketch assertions
-            List<Object> transformedRow = row.stream()
-                                             .map(MSQTestBase.this::segmentToAssertionValueMapper)
-                                             .collect(Collectors.toList());
-            segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
+            for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
+              // transforming rows for sketch assertions
+              List<Object> transformedRow = row.stream()
+                                               .map(MSQTestBase.this::segmentToAssertionValueMapper)
+                                               .collect(Collectors.toList());
+              segmentIdVsOutputRowsMap.computeIfAbsent(dataSegment.getId(), r -> new ArrayList<>()).add(transformedRow);
+            }
           }
         }
 
