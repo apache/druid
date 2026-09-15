@@ -562,32 +562,31 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
       return false;
     }
 
-    ByteBuffer otherBuffer = ((HyperLogLogCollector) o).storageBuffer;
+    final ByteBuffer otherBuffer = ((HyperLogLogCollector) o).storageBuffer;
 
-    if (storageBuffer != null ? false : otherBuffer != null) {
-      return false;
-    }
-
-    if (storageBuffer == null && otherBuffer == null) {
-      return true;
+    if (storageBuffer == null || otherBuffer == null) {
+      return storageBuffer == otherBuffer;
     }
 
     final ByteBuffer denseStorageBuffer;
     if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer.duplicate());
+      final HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer.duplicate());
       denseCollector.convertToDenseStorage();
       denseStorageBuffer = denseCollector.storageBuffer;
     } else {
       denseStorageBuffer = storageBuffer;
     }
 
+    final ByteBuffer denseOtherBuffer;
     if (otherBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer.duplicate());
+      final HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer.duplicate());
       otherCollector.convertToDenseStorage();
-      otherBuffer = otherCollector.storageBuffer;
+      denseOtherBuffer = otherCollector.storageBuffer;
+    } else {
+      denseOtherBuffer = otherBuffer;
     }
 
-    return denseStorageBuffer.equals(otherBuffer);
+    return denseStorageBuffer.equals(denseOtherBuffer);
   }
 
   @Override
