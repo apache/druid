@@ -117,7 +117,7 @@ public class SQLCatalogManager implements CatalogManager
     if (!metastoreManager.config().isCreateTables()) {
       return;
     }
-    connector.createTable(
+    connector.createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
