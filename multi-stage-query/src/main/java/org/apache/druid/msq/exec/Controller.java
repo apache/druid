@@ -26,6 +26,7 @@ import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.error.CancellationReason;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.query.QueryContext;
@@ -132,8 +133,18 @@ public interface Controller
    */
   boolean hasWorker(String workerId);
 
+  /**
+   * Returns the current live report snapshot, or null if query execution has not started.
+   */
   @Nullable
   TaskReport.ReportMap liveReports();
+
+  /**
+   * Returns the final report once the query is complete, or null while the query is running.
+   * The final report is published before {@link QueryListener#onQueryComplete(MSQTaskReportPayload)} is called.
+   */
+  @Nullable
+  TaskReport.ReportMap finalReport();
 
   ControllerContext getControllerContext();
 

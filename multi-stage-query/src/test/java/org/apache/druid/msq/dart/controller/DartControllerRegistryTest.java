@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
@@ -41,6 +43,11 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class DartControllerRegistryTest
 {
@@ -73,6 +80,53 @@ public class DartControllerRegistryTest
 
     Assertions.assertEquals(1, registry.getAllControllers().size());
     Assertions.assertSame(holder, registry.getController("dart1"));
+  }
+
+  @Test
+  public void test_reportLookupDuringDeregistration() throws Exception
+  {
+    final CountDownLatch retainingReport = new CountDownLatch(1);
+    final CountDownLatch releaseReport = new CountDownLatch(1);
+    final CountDownLatch lookupStarted = new CountDownLatch(1);
+    final DartControllerRegistry registry = new DartControllerRegistry(makeConfig(10, Period.hours(1)))
+    {
+      @Override
+      protected DartQueryInfo createQueryInfo(final ControllerHolder holder)
+      {
+        retainingReport.countDown();
+        try {
+          Assertions.assertTrue(releaseReport.await(10, TimeUnit.SECONDS));
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new RuntimeException(e);
+        }
+        return super.createQueryInfo(holder);
+      }
+    };
+    final ControllerHolder holder = makeControllerHolder("dart1", "sql1", "user1");
+    final TaskReport.ReportMap report = TaskReport.buildTaskReports(new MSQTaskReport("dart1", reportPayload));
+    final ExecutorService executor = Execs.multiThreaded(2, "report-publication-test-%s");
+    registry.register(holder);
+    try {
+      final Future<?> deregistration = executor.submit(() -> registry.deregister(holder, report));
+      Assertions.assertTrue(retainingReport.await(10, TimeUnit.SECONDS));
+      final Future<QueryInfoAndReport> lookup = executor.submit(() -> {
+        lookupStarted.countDown();
+        return registry.getQueryDetailsBySqlQueryId("sql1");
+      });
+      Assertions.assertTrue(lookupStarted.await(10, TimeUnit.SECONDS));
+      // A lookup must wait for publication instead of reporting that the completed query is missing.
+      Assertions.assertThrows(TimeoutException.class, () -> lookup.get(100, TimeUnit.MILLISECONDS));
+      releaseReport.countDown();
+      deregistration.get(10, TimeUnit.SECONDS);
+      Assertions.assertSame(report, lookup.get(10, TimeUnit.SECONDS).getReportMap());
+    }
+    finally {
+      releaseReport.countDown();
+      executor.shutdownNow();
+      Assertions.assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+    }
   }
 
   @Test

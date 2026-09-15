@@ -274,6 +274,9 @@ public class ControllerImpl implements Controller
   // For live reports. Written by the main controller thread, read by HTTP threads.
   private final AtomicReference<QueryDefinition> queryDefRef = new AtomicReference<>();
 
+  // Final report. Written before notifying the query listener, read by HTTP threads.
+  private final AtomicReference<TaskReport.ReportMap> finalReport = new AtomicReference<>();
+
   // Last reported CounterSnapshots per stage per worker
   // For live reports. Written by the main controller thread, read by HTTP threads.
   private final CounterSnapshotsTree taskCountersForLiveReports = new CounterSnapshotsTree();
@@ -362,17 +365,23 @@ public class ControllerImpl implements Controller
   @Override
   public void run(final QueryListener queryListener) throws Exception
   {
+    final QueryListener reportPublishingListener = new CaptureReportQueryListener(
+        queryListener,
+        queryId(),
+        finalReport
+    );
+
     final MSQTaskReportPayload reportPayload;
     try (final Closer closer = Closer.create()) {
-      reportPayload = runInternal(queryListener, closer);
+      reportPayload = runInternal(reportPublishingListener, closer);
     }
     catch (Throwable e) {
       log.error(e, "Controller internal execution encountered exception.");
-      queryListener.onQueryComplete(makeStatusReportForException(e));
+      reportPublishingListener.onQueryComplete(makeStatusReportForException(e));
       throw e;
     }
     // Call onQueryComplete after Closer is fully closed, ensuring no controller-related processing is ongoing.
-    queryListener.onQueryComplete(reportPayload);
+    reportPublishingListener.onQueryComplete(reportPayload);
   }
 
 
@@ -1060,6 +1069,13 @@ public class ControllerImpl implements Controller
           queryKernel.setResultsCompleteForStageAndWorker(stageId, workerNumber, convertedResultObject);
         }
     );
+  }
+
+  @Override
+  @Nullable
+  public TaskReport.ReportMap finalReport()
+  {
+    return finalReport.get();
   }
 
   @Override
