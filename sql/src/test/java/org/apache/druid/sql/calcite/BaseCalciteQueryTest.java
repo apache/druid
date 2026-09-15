@@ -109,6 +109,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1555,14 +1556,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public File getResourceAsTemporaryFile(final String resource)
   {
     final File file = newTempFile("resourceAsTempFile");
-    final InputStream stream = getClass().getResourceAsStream(resource);
-
-    if (stream == null) {
-      throw new RE(StringUtils.format("No such resource [%s]", resource));
-    }
-
-    try {
-      ByteStreams.copy(stream, Files.newOutputStream(file.toPath()));
+    try (final InputStream stream = BaseCalciteQueryTest.class.getResourceAsStream(resource)) {
+      if (stream == null) {
+        throw new RE(StringUtils.format("No such resource [%s]", resource));
+      }
+      try (final OutputStream outputStream = Files.newOutputStream(file.toPath())) {
+        ByteStreams.copy(stream, outputStream);
+      }
     }
     catch (IOException e) {
       throw new RuntimeException(e);

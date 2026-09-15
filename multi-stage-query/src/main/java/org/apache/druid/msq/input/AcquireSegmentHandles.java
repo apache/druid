@@ -120,7 +120,8 @@ final class AcquireSegmentHandles
           delivered = obtainResult.get();
         }
         catch (Throwable t) {
-          // a real load failure, or "Closed" when the canceler won the race (in which case outer absorbs silently)
+          // a real load failure, or AsyncResourceCanceledException when the canceler closed inner and its close
+          // fired this callback (in which case outer, itself mid-close, absorbs the setException silently)
           outer.setException(t);
           closeInnerOnce.run();
           return;

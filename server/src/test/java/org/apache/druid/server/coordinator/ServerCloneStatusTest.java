@@ -29,7 +29,16 @@ public class ServerCloneStatusTest
   @Test
   public void testSerde() throws Exception
   {
-    ServerCloneStatus metrics = new ServerCloneStatus("host2", "host1", ServerCloneStatus.State.IN_PROGRESS, 3012, 10, 100);
+    ServerCloneStatus metrics = new ServerCloneStatus(
+        "host2",
+        "host1",
+        ServerCloneStatus.State.IN_PROGRESS,
+        3012,
+        10,
+        1,
+        1,
+        100
+    );
     byte[] bytes = DefaultObjectMapper.INSTANCE.writeValueAsBytes(metrics);
     ServerCloneStatus deserialized = DefaultObjectMapper.INSTANCE.readValue(bytes, ServerCloneStatus.class);
     Assertions.assertEquals(deserialized, metrics);

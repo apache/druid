@@ -39,9 +39,10 @@ import javax.annotation.Nullable;
  * caller owns closing the result (or the segment inside it); {@link #close()} on this handle becomes a no-op.
  * <p>
  * Closing the handle without releasing cancels an in-flight load (releasing any cache holds placed for it), or
- * closes an already-delivered result. Note that ready callbacks are never fired if the handle is closed before the
- * result arrives, and that {@link #close()} is <b>not</b> idempotent (it throws if called twice), close exactly
- * once.
+ * closes an already-delivered result. Closing before the result arrives fires any pending ready callbacks so that
+ * waiting consumers learn the acquisition was aborted ({@link #get()} and {@link #release()} then throw
+ * {@link org.apache.druid.common.asyncresource.AsyncResourceCanceledException}). Note that {@link #close()} is
+ * <b>not</b> idempotent (it throws if called twice), close exactly once.
  */
 public class AcquireSegmentAction extends SettableAsyncResource<AcquireSegmentResult>
 {

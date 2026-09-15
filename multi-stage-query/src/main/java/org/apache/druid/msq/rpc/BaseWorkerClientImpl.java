@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.ChannelClosedForWritesException;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
@@ -46,7 +47,6 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nonnull;
 import javax.ws.rs.core.HttpHeaders;

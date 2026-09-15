@@ -34,12 +34,6 @@ jobs:
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
       execute: ${{ matrix.jdk == '25' || github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-jdk21') }}
 
-  validate-dist:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/validate-dist
-      key: "validate-dist"
-
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"
     needs: [run-unit-tests, run-separated-tests]

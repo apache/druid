@@ -929,6 +929,16 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     return null;
   }
 
+  /**
+   * Number of published segments whose row count exceeds {@code maxRowsPerSegment} times the oversize ratio.
+   * Null when the check does not apply (for example dynamic partitioning, or when no target is configured).
+   */
+  @Nullable
+  protected Long getTaskCompletionOversizedSegments()
+  {
+    return null;
+  }
+
   protected TaskReport.ReportMap buildLiveIngestionStatsReport(
       IngestionState ingestionState,
       Map<String, Object> unparseableEvents,
@@ -945,6 +955,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 false,
                 0L,
+                null,
                 null,
                 null,
                 null
@@ -1008,7 +1019,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             segmentAvailabilityWaitTimeMs,
             Collections.emptyMap(),
             segmentsRead,
-            segmentsPublished
+            segmentsPublished,
+            getTaskCompletionOversizedSegments()
         )
     );
   }

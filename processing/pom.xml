@@ -34,9 +34,8 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <sigar.base.version>1.6.5</sigar.base.version>
-    <sigar.version>1.6.5.132-6</sigar.version>
-    <oshi.version>7.5.0</oshi.version>
+    <oshi.version>7.6.1</oshi.version>
+    <mariadb.legacy.version>2.7.3</mariadb.legacy.version>
   </properties>
 
   <dependencies>
@@ -199,10 +198,6 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
     </dependency>
     <dependency>
@@ -211,11 +206,19 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-codec-base</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-codec-http</artifactId>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
     </dependency>
     <dependency>
       <groupId>joda-time</groupId>
@@ -320,21 +323,6 @@
       <artifactId>async-http-client</artifactId>
     </dependency>
 
-    <!-- Extra dependencies for server-metrics -->
-    <dependency>
-      <groupId>org.hyperic</groupId>
-      <artifactId>sigar</artifactId>
-      <version>${sigar.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.hyperic</groupId>
-      <artifactId>sigar-dist</artifactId>
-      <version>${sigar.version}</version>
-      <type>zip</type>
-      <!-- "Provided" because this dependency is used only during the build itself: some files from this
-      dependency are copied as resources. See maven-dependency-plugin configuration and <resources> below. -->
-      <scope>provided</scope>
-    </dependency>
     <dependency>
       <groupId>com.github.oshi</groupId>
       <artifactId>oshi-core</artifactId>
@@ -495,19 +483,20 @@
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
-            <id>copy-sigar-lib-to-resources</id>
-            <phase>generate-resources</phase>
+            <id>copy-mariadb-legacy-test-driver</id>
+            <phase>generate-test-resources</phase>
             <goals>
-              <goal>unpack-dependencies</goal>
+              <goal>copy</goal>
             </goals>
             <configuration>
-              <includeGroupIds>org.hyperic</includeGroupIds>
-              <includeArtifactIds>sigar-dist</includeArtifactIds>
-              <includes>**/sigar-bin/lib/*</includes>
-              <excludes>**/sigar-bin/lib/*jar</excludes>
-              <outputDirectory>
-                ${project.build.directory}
-              </outputDirectory>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.mariadb.jdbc</groupId>
+                  <artifactId>mariadb-java-client</artifactId>
+                  <version>${mariadb.legacy.version}</version>
+                  <outputDirectory>${project.build.directory}/mariadb-legacy</outputDirectory>
+                </artifactItem>
+              </artifactItems>
             </configuration>
           </execution>
         </executions>
@@ -520,6 +509,11 @@
 
           <!-- use normal classpath instead of manifest jar for JvmUtilsTest.testSystemClassPath -->
           <useManifestOnlyJar>false</useManifestOnlyJar>
+          <systemPropertyVariables>
+            <druid.test.mariadbLegacyDriver>
+              ${project.build.directory}/mariadb-legacy/mariadb-java-client-${mariadb.legacy.version}.jar
+            </druid.test.mariadbLegacyDriver>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>
@@ -542,11 +536,6 @@
         <includes>
           <include>loggingEmitterAllowedMetrics.json</include>
         </includes>
-      </resource>
-      <resource>
-        <directory>
-          ${project.build.directory}/hyperic-sigar-${sigar.base.version}/sigar-bin/lib
-        </directory>
       </resource>
     </resources>
   </build>

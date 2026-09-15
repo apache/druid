@@ -46,7 +46,7 @@ import java.util.Set;
  * <p>First, look for {@link SqlIdentifier} which correspond to a {@link IdentifierNamespace}, where
  * {@link SqlValidatorNamespace} is calcite-speak for sources of data and {@link IdentifierNamespace} specifically are
  * namespaces which are identified by a single variable, e.g. table names. These are translated into resources
- * using {@link PlannerContext#getSchemaResourceType}.
+ * using {@link PlannerContext#getSchemaResource}.
  *
  * <p>Second, look for {@link AuthorizableOperator} and call {@link AuthorizableOperator#computeResources}.
  *
@@ -100,9 +100,9 @@ public class SqlResourceCollectorShuttle extends SqlShuttle
             plannerContext.addLookupToLoad(resourceName);
           }
 
-          final String resourceType = plannerContext.getSchemaResourceType(schema, resourceName);
-          if (resourceType != null) {
-            resourceActions.add(new ResourceAction(new Resource(resourceName, resourceType), Action.READ));
+          final Resource resource = plannerContext.getSchemaResource(schema, resourceName);
+          if (resource != null) {
+            resourceActions.add(new ResourceAction(resource, Action.READ));
           }
         } else if (qualifiedNameParts.size() > 2) {
           // Don't expect to see more than 2 names (catalog?).

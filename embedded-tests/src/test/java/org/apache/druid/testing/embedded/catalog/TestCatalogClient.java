@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.catalog;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.catalog.http.CatalogResource;
 import org.apache.druid.catalog.http.TableEditRequest;
 import org.apache.druid.catalog.model.TableId;
@@ -31,7 +32,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedServiceClient;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.util.List;
 

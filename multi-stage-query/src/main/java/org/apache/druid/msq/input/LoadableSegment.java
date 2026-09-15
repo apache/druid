@@ -83,8 +83,9 @@ public interface LoadableSegment
    * {@link AcquireSegmentAction#await}, then {@link AcquireSegmentAction#release()} to take ownership of the
    * {@link org.apache.druid.segment.loading.AcquireSegmentResult} — closing the delivered {@link Segment} releases
    * everything associated with the acquisition. Closing the action without releasing cancels an in-flight load or
-   * discards a delivered result; close-after-release is a no-op, and ready callbacks are dropped if the action is
-   * closed before it becomes ready.
+   * discards a delivered result; close-after-release is a no-op, and closing before the action becomes ready fires
+   * any pending ready callbacks (release/get then throw
+   * {@link org.apache.druid.common.asyncresource.AsyncResourceCanceledException}).
    *
    * The consumer that successfully releases the result must call {@link #countDelivered} exactly once, at the moment
    * ownership transfers.

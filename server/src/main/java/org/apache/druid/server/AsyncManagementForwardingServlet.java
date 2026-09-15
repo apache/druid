@@ -30,6 +30,8 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.ResponseIdentityHeaderHandler;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -38,6 +40,7 @@ import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.client.Response;
 import org.eclipse.jetty.ee8.proxy.AsyncProxyServlet;
+import org.eclipse.jetty.http.HttpField;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -75,6 +78,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   private final DruidLeaderSelector coordLeaderSelector;
   private final DruidLeaderSelector overlordLeaderSelector;
   private final AuthorizerMapper authorizerMapper;
+  private final ServerConfig serverConfig;
 
   @Inject
   public AsyncManagementForwardingServlet(
@@ -83,7 +87,8 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       @Global DruidHttpClientConfig httpClientConfig,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
       @IndexingService DruidLeaderSelector overlordLeaderSelector,
-      AuthorizerMapper authorizerMapper
+      AuthorizerMapper authorizerMapper,
+      ServerConfig serverConfig
   )
   {
     this.jsonMapper = jsonMapper;
@@ -92,6 +97,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     this.coordLeaderSelector = coordLeaderSelector;
     this.overlordLeaderSelector = overlordLeaderSelector;
     this.authorizerMapper = authorizerMapper;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -196,8 +202,41 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       Response serverResponse
   )
   {
+    ResponseIdentityHeaderHandler.rememberLocalIdentity(clientRequest, proxyResponse);
+    ResponseIdentityHeaderHandler.clearRouterIdentity(proxyResponse);
     StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
+  }
+
+  @Override
+  protected void onProxyResponseFailure(
+      final HttpServletRequest clientRequest,
+      final HttpServletResponse proxyResponse,
+      final Response serverResponse,
+      final Throwable failure
+  )
+  {
+    ResponseIdentityHeaderHandler.restoreLocalIdentity(clientRequest, proxyResponse);
+    super.onProxyResponseFailure(clientRequest, proxyResponse, serverResponse, failure);
+  }
+
+  @Override
+  protected HttpField filterServerResponseHeader(
+      final HttpServletRequest clientRequest,
+      final Response serverResponse,
+      final HttpField field
+  )
+  {
+    // Identity headers are an all-or-nothing triple. Forward an identity field only when this Router has the feature
+    // enabled and the upstream response contains all three fields, so a client never observes a partial identity.
+    if (!ResponseIdentityHeaderHandler.shouldProxyIdentityHeader(
+        serverConfig.isEnableResponseIdentityHeaders(),
+        serverResponse,
+        field
+    )) {
+      return null;
+    }
+    return super.filterServerResponseHeader(clientRequest, serverResponse, field);
   }
 
   /**

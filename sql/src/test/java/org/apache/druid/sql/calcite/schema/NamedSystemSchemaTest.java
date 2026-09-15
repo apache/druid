@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -63,7 +64,7 @@ public class NamedSystemSchemaTest extends CalciteTestBase
   {
     EasyMock.expect(plannerConfig.isAuthorizeSystemTablesDirectly()).andReturn(false).once();
     EasyMock.replay(plannerConfig);
-    Assertions.assertNull(target.getSchemaResourceType("servers"));
+    Assertions.assertNull(target.getSchemaResource("servers"));
     EasyMock.verify(plannerConfig);
   }
 
@@ -72,7 +73,7 @@ public class NamedSystemSchemaTest extends CalciteTestBase
   {
     EasyMock.expect(plannerConfig.isAuthorizeSystemTablesDirectly()).andReturn(true).once();
     EasyMock.replay(plannerConfig);
-    Assertions.assertEquals(ResourceType.SYSTEM_TABLE, target.getSchemaResourceType("servers"));
+    Assertions.assertEquals(new Resource("servers", ResourceType.SYSTEM_TABLE), target.getSchemaResource("servers"));
     EasyMock.verify(plannerConfig);
   }
 }

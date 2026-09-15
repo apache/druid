@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.druid.common.asyncresource.AsyncResourceCanceledException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.Segment;
@@ -160,6 +161,20 @@ public class AcquireSegmentActionTest
     result.close();
     result.close();
     Assertions.assertEquals(1, segment.closeCount.get());
+  }
+
+  @Test
+  public void testCloseBeforeReadyFiresCallbacksAndReleaseReportsCancellation()
+  {
+    final AtomicInteger callbackFired = new AtomicInteger();
+    final AcquireSegmentAction action = new AcquireSegmentAction();
+    action.addReadyCallback(callbackFired::incrementAndGet);
+    // close-before-ready cancels the acquisition but still fires pending callbacks, so a waiting consumer wakes and
+    // learns the load was aborted rather than waiting forever
+    action.close();
+    Assertions.assertEquals(1, callbackFired.get());
+    Assertions.assertThrows(AsyncResourceCanceledException.class, action::release);
+    Assertions.assertThrows(AsyncResourceCanceledException.class, action::get);
   }
 
   @Test

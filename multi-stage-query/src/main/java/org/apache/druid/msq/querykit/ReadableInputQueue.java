@@ -485,9 +485,10 @@ public class ReadableInputQueue implements Closeable
       }
     }
 
-    // Explicitly fail the futures of the loads we just cancelled. This is load-bearing — ready callbacks are dropped
-    // when a handle is closed before becoming ready, so without this the frame processors awaiting these futures
-    // would hang forever.
+    // Explicitly fail the futures of the loads we just cancelled. This is load-bearing — closing a handle fires its
+    // pending ready callback, but that callback finds its entry already claimed from loadingSegments above and
+    // returns without completing the future, so without this the frame processors awaiting these futures would hang
+    // forever.
     for (final SettableFuture<ReadableInput> future : futuresToFail) {
       future.setException(DruidException.defensive("Input queue closed while segment load was in flight"));
     }

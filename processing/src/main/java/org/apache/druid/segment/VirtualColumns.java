@@ -282,7 +282,14 @@ public class VirtualColumns implements Cacheable
       toCheckForEquivalence = otherVirtualColumn.rewriteRequiredColumns(equivalenceRewriteMap);
     }
 
-    return equivalence.get().get(toCheckForEquivalence.getEquivalanceKey());
+    VirtualColumn matched = equivalence.get().get(toCheckForEquivalence.getEquivalanceKey());
+    if (matched != null &&
+        // guardrail check for expression collision when a virtual column shadows the physical column
+        // e.x. otherNode v0 = dim1 and VCs dim1 = dim2 plus q = dim1, q can be treated as equivalent to v0 even though it reads physical column dim2
+        getNode(matched.getOutputName()).getDependencies().size() == otherNode.getDependencies().size()) {
+      return matched;
+    }
+    return null;
   }
 
   /**

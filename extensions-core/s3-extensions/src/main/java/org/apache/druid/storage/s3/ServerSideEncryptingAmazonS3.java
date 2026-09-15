@@ -389,6 +389,7 @@ public class ServerSideEncryptingAmazonS3
                             MultipartConfiguration.builder().minimumPartSizeInBytes(transferConfig.getMinimumUploadPartSize())
                                 .thresholdInBytes(transferConfig.getMultipartUploadThreshold())
                                 .build());
+      S3Utils.configureLegacyMd5(awsClientConfig, clientBuilder, asyncClientBuilder);
     }
 
     // Configure HTTP client with proxy if needed

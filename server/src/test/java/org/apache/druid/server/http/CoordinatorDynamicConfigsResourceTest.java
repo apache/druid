@@ -84,7 +84,7 @@ public class CoordinatorDynamicConfigsResourceTest
   public void testGetCloneStatus()
   {
     List<ServerCloneStatus> statusMetrics = ImmutableList.of(
-        new ServerCloneStatus("hist3", "hist1", ServerCloneStatus.State.IN_PROGRESS, 2, 0, 1000),
+        new ServerCloneStatus("hist3", "hist1", ServerCloneStatus.State.IN_PROGRESS, 2, 0, 1, 1, 1000),
         ServerCloneStatus.unknown("hist4", "hist3")
     );
 

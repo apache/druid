@@ -49,7 +49,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Tests for {@link ReadableInputQueue}'s segment-load lifecycle: close-while-loading must promptly fail the futures
- * handed to frame processors (ready callbacks are dropped on close-before-ready, so this is load-bearing), delivered
+ * handed to frame processors (the queue claims each pending load before closing its handle, so the close-fired ready
+ * callback finds nothing to deliver and the queue's explicit failure is what completes the future), delivered
  * segments transfer exactly once, and everything un-transferred is closed by the queue.
  */
 class ReadableInputQueueTest
