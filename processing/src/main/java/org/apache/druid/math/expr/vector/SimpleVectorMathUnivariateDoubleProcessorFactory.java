@@ -36,7 +36,9 @@ import javax.annotation.Nullable;
  *
  * If a non-null {@link SimdSupportedUnaryOp} is supplied to the constructor and
  * {@link ExpressionProcessing#useVectorApi()} is true, this factory will return SIMD-specialized processors backed
- * by the JDK incubator {@code jdk.incubator.vector} API instead of the standard scalar implementations.
+ * by the JDK incubator {@code jdk.incubator.vector} API instead of the standard scalar implementations. For ops
+ * whose SIMD path routes through VO_MATHLIB (SVML/SLEEF), dispatch additionally requires
+ * {@link ExpressionProcessing#useVectorMathApi()}, see the flag javadoc for the semantic caveats.
  */
 public class SimpleVectorMathUnivariateDoubleProcessorFactory extends VectorMathUnivariateDoubleProcessorFactory
 {
@@ -67,7 +69,7 @@ public class SimpleVectorMathUnivariateDoubleProcessorFactory extends VectorMath
   @Override
   public final ExprVectorProcessor<double[]> longProcessor(Expr.VectorInputBindingInspector inspector, Expr arg)
   {
-    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeLongToDoubleUnary(arg.asVectorProcessor(inspector), simdOp, longFunction);
     }
     return new DoubleUnivariateLongFunctionVectorProcessor(
@@ -79,7 +81,7 @@ public class SimpleVectorMathUnivariateDoubleProcessorFactory extends VectorMath
   @Override
   public final ExprVectorProcessor<double[]> doubleProcessor(Expr.VectorInputBindingInspector inspector, Expr arg)
   {
-    if (simdOp != null && ExpressionProcessing.useVectorApi()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeDoubleUnary(arg.asVectorProcessor(inspector), simdOp, doubleFunction);
     }
     return new DoubleUnivariateDoubleFunctionVectorProcessor(
