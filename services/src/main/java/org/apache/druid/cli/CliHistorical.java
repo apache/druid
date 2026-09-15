@@ -33,13 +33,10 @@ import org.apache.druid.guice.CacheModule;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.HistoricalServiceModule;
 import org.apache.druid.guice.Jerseys;
-import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
-import org.apache.druid.guice.QueryRunnerFactoryModule;
-import org.apache.druid.guice.QueryableModule;
-import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.NativeQueryEngineModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
@@ -49,8 +46,6 @@ import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
-import org.apache.druid.server.QueryResource;
-import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.ServerManager;
 import org.apache.druid.server.coordination.SegmentCacheBootstrapper;
@@ -59,7 +54,6 @@ import org.apache.druid.server.http.HistoricalResource;
 import org.apache.druid.server.http.SegmentListerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
-import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
@@ -92,18 +86,13 @@ public class CliHistorical extends ServerRunnable
   {
     return ImmutableList.of(
         new DruidProcessingModule(),
-        new QueryableModule(),
-        new QueryRunnerFactoryModule(),
-        new SegmentWranglerModule(),
-        new JoinableFactoryModule(),
+        NativeQueryEngineModule.builder().build(),
         new HistoricalServiceModule(),
         binder -> {
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/historical");
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8083);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8283);
           binder.bindConstant().annotatedWith(PruneLastCompactionState.class).to(true);
-          binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
-
           LifecycleModule.register(binder, Server.class);
           binder.bind(ServerManager.class).in(LazySingleton.class);
           binder.bind(SegmentManager.class).in(LazySingleton.class);
@@ -111,11 +100,8 @@ public class CliHistorical extends ServerRunnable
 
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
-          binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
-          Jerseys.addResource(binder, QueryResource.class);
           Jerseys.addResource(binder, SegmentListerResource.class);
           Jerseys.addResource(binder, HistoricalResource.class);
-          LifecycleModule.register(binder, QueryResource.class);
 
           LifecycleModule.register(binder, SegmentCacheBootstrapper.class);
 

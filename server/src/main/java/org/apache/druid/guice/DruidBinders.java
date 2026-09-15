@@ -32,6 +32,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.server.DataSourceQueryHandler;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
@@ -139,6 +140,17 @@ public class DruidBinders
   }
 
   public static MapBinder<Class<? extends DataSource>, SegmentWrangler> segmentWranglerBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<>() {},
+        new TypeLiteral<>() {}
+    );
+  }
+
+  public static MapBinder<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlerBinder(
+      Binder binder
+  )
   {
     return MapBinder.newMapBinder(
         binder,
