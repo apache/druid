@@ -17,29 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.server.initialization.jetty;
 
-import org.hyperic.sigar.Sigar;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-public class SigarLoadTest
+import java.util.Properties;
+
+public class CliIndexerServerModuleTest
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
-
-  @BeforeEach
-  public void before()
-  {
-    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
-  }
-
   @Test
-  public void testSigarLoad()
+  public void testAdjustedServerConfigPreservesResponseIdentityHeaders()
   {
-    Sigar sigar = SigarUtil.getSigar();
-    Assertions.assertTrue(sigar.getPid() > 0);
+    final ServerConfig oldConfig = new ServerConfig()
+    {
+      @Override
+      public boolean isEnableResponseIdentityHeaders()
+      {
+        return true;
+      }
+    };
+
+    final ServerConfig adjustedConfig = new CliIndexerServerModule(new Properties()).makeAdjustedServerConfig(oldConfig);
+
+    Assertions.assertTrue(adjustedConfig.isEnableResponseIdentityHeaders());
   }
 }

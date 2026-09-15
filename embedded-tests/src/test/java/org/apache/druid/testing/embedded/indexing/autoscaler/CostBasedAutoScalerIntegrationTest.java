@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.indexing.autoscaler;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
@@ -35,7 +36,6 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
 import org.hamcrest.Matchers;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.jupiter.api.AfterEach;
@@ -259,13 +259,13 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .minScaleDownDelay(Duration.standardSeconds(1))
         .build();
 
-    // taskDuration of 10s gives enough time to auto-scaler to fetch task metrics
+    // Keep task duration short so all generated segments can be published promptly while the auto-scaler observes them.
     final SupervisorSpec supervisor = createKafkaSupervisor(kafkaServer)
         .withTuningConfig(t -> t.withMaxRowsPerSegment(maxRowsPerSegment))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withTaskCount(1)
-                .withTaskDuration(Period.seconds(10))
+                .withTaskDuration(Period.seconds(1))
                 .withSupervisorRunPeriod(Period.millis(10))
                 .withAutoScalerConfig(autoScalerConfig)
         )

@@ -41,7 +41,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v6
 
-    - uses: actions/setup-java@v5
+    # JavaScript/TypeScript and Python are analyzed directly from source and do
+    # not need a Java runtime or Maven build.
+    - name: Set up Java
+      if: ${{ matrix.language == 'java' }}
+      uses: actions/setup-java@v5
       with:
         distribution: 'zulu'
         java-version: '25'
@@ -60,7 +64,9 @@ jobs:
         # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
         queries: +security-and-quality
 
-    - run: |
+    - name: Build Java sources
+      if: ${{ matrix.language == 'java' }}
+      run: |
         echo "Building using custom commands"
         mvn clean package -f "pom.xml" -B -V -e -Dfindbugs.skip -Dcheckstyle.skip -Dpmd.skip=true -Denforcer.skip -Dmaven.javadoc.skip -DskipTests -Dmaven.test.skip.exec -Dlicense.skip=true -Dweb.console.skip=true -Dcyclonedx.skip=true
 

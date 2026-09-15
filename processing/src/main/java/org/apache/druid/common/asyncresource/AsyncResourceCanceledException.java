@@ -17,22 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.common.asyncresource;
 
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Test;
+import java.util.concurrent.CancellationException;
 
-public class SigarPidDiscovererTest
+/**
+ * Thrown by {@link AsyncResource#get()} when {@link AsyncResource#close()} canceled acquisition before the resource
+ * became available, i.e. the consumer that owned the resource gave up waiting for it. Extends
+ * {@link CancellationException} so that consumers who only care that something was canceled need no special handling.
+ */
+public class AsyncResourceCanceledException extends CancellationException
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
-
-  @Test
-  public void simpleTest()
+  public AsyncResourceCanceledException(String message)
   {
-    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
-
-    // Just make sure we don't crash
-    SigarPidDiscoverer.instance().getPid();
+    super(message);
   }
 }

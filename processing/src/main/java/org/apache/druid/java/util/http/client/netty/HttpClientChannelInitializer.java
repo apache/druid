@@ -17,26 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.java.util.metrics;
+package org.apache.druid.java.util.http.client.netty;
 
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpContentDecompressor;
 
-public class NoopSysMonitorTest
+/**
+ */
+public class HttpClientChannelInitializer extends ChannelInitializer<Channel>
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
-
-  @Test
-  public void testDoMonitor()
+  @Override
+  protected void initChannel(Channel ch)
   {
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
-
-    ServiceEmitter serviceEmitter = Mockito.mock(ServiceEmitter.class);
-    NoopSysMonitor noopSysMonitor = new NoopSysMonitor();
-
-    Assertions.assertFalse(noopSysMonitor.doMonitor(serviceEmitter));
+    ChannelPipeline pipeline = ch.pipeline();
+    pipeline.addLast("codec", new HttpClientCodec());
+    pipeline.addLast("inflater", new HttpContentDecompressor(false, 0));
   }
 }
