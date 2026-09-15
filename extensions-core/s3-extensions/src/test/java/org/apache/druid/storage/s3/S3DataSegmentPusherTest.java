@@ -23,10 +23,12 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.Capture;
+import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -221,6 +224,67 @@ public class S3DataSegmentPusherTest
     Assertions.assertEquals(
         ImmutableSet.of(staleZip, staleChunk),
         deleteRequest.getValue().delete().objects().stream().map(ObjectIdentifier::key).collect(Collectors.toSet())
+    );
+  }
+
+  @Test
+  public void testPushNoZipBatchesStaleObjectDeletesWithDefaultConfig() throws Exception
+  {
+    ServerSideEncryptingAmazonS3 s3Client = EasyMock.createStrictMock(ServerSideEncryptingAmazonS3.class);
+
+    Grant grant = Grant.builder()
+        .grantee(Grantee.builder().id("ownerId").type(Type.CANONICAL_USER).build())
+        .permission(Permission.FULL_CONTROL)
+        .build();
+    EasyMock.expect(s3Client.getBucketOwnerGrant(EasyMock.eq("bucket"))).andReturn(grant).once();
+
+    s3Client.upload(EasyMock.anyString(), EasyMock.anyString(), EasyMock.anyObject(File.class), EasyMock.anyObject(Grant.class));
+    EasyMock.expectLastCall().once();
+
+    // maxListingLength defaults to 1024, which is a legal listing size but more keys than DeleteObjects accepts, so
+    // the deletes have to be split even though the listing is not
+    final String prefix = "key/foo/2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z/0/0/";
+    final int staleCount = S3Utils.MAX_MULTI_OBJECT_DELETE_SIZE + 1;
+    final List<S3Object> listing = new ArrayList<>();
+    listing.add(S3Object.builder().key(prefix + "version.bin").size(4L).build());
+    for (int i = 0; i < staleCount; i++) {
+      listing.add(S3Object.builder().key(StringUtils.format("%s%05d.smoosh", prefix, i)).size(8L).build());
+    }
+    EasyMock.expect(s3Client.listObjectsV2(EasyMock.anyObject(ListObjectsV2Request.class)))
+            .andReturn(ListObjectsV2Response.builder().contents(listing).isTruncated(false).build())
+            .once();
+
+    final Capture<DeleteObjectsRequest> deleteRequests = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(s3Client.deleteObjects(EasyMock.capture(deleteRequests)))
+            .andReturn(DeleteObjectsResponse.builder().build())
+            .times(2);
+
+    EasyMock.replay(s3Client);
+
+    S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
+    config.setBucket("bucket");
+    config.setBaseKey("key");
+    Assertions.assertEquals(1024, config.getMaxListingLength());
+
+    validate(
+        false,
+        "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/",
+        s3Client,
+        config,
+        false,
+        new byte[]{0x0, 0x0, 0x0, 0x1}
+    );
+
+    // no request may carry more keys than S3 accepts, and between them they remove every stale object
+    for (DeleteObjectsRequest request : deleteRequests.getValues()) {
+      Assertions.assertTrue(
+          request.delete().objects().size() <= S3Utils.MAX_MULTI_OBJECT_DELETE_SIZE,
+          "DeleteObjects request carried " + request.delete().objects().size() + " keys"
+      );
+    }
+    Assertions.assertEquals(
+        staleCount,
+        deleteRequests.getValues().stream().mapToInt(request -> request.delete().objects().size()).sum()
     );
   }
 
