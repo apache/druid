@@ -94,16 +94,26 @@ public interface DataSegmentKiller
   }
 
   /**
-   * Like a nuke. Use wisely. Used by the 'reset-cluster' command, and of the built-in deep storage implementations, it
-   * is only implemented by local and HDFS.
+   * Deletes all files (segment or otherwise) under the configured deep storage root.
+   *
+   * @deprecated since this is a relatively risky operation and is currently not
+   * being used anywhere in the core Druid code.
    */
+  @Deprecated
   void killAll() throws IOException;
 
   /**
-   * Recursively removes a directory (or object-store prefix) under the configured deep storage root. The path is
-   * relative to that root: no leading slash, no {@code ..} segments, no backslashes. If the path does not exist, this
-   * is a no-op. The default implementation does nothing; extensions that cannot recurse should keep the default.
-   * HDFS currently only implements this method.
+   * Recursively removes a directory (or object-store prefix) under the configured
+   * deep storage root. Currently used by the {@code IntermediaryDataManager} to
+   * clean up intermediary data at the end of an {@code ParallelIndexSupervisorTask}.
+   * <p>
+   * The default implementation does nothing, extensions that cannot recurse
+   * should keep the default. {@code HdfsDataSegmentKiller} is the only variant
+   * that currently implements this method.
+   *
+   * @param relativePath Path to delete relative to the root and should not contain
+   *                     any leading slash, {@code ..} segments, or backslashes.
+   *                     If this path does not exist, the method is a no-op.
    *
    * @throws IOException if deletion fails
    */
