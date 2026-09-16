@@ -684,6 +684,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
     private final HashMap<String, ColumnValueSelector<?>> columnSelectorMap;
     private final ColumnSelectorFactory delegate;
+    // This copy-on-write array is intentional. The cache has one entry per expression metric, and sequential identity
+    // lookup had lower ingestion overhead than IdentityHashMap lookup in benchmarks with up to 50 expressions. Publishing
+    // the expression-plan pairs in one volatile snapshot also lets readers remain lock-free and prevents torn pair reads.
     private volatile ExpressionPlanCacheEntry[] cachedExpressionPlans = NO_CACHED_EXPRESSION_PLANS;
 
     public CachingColumnSelectorFactory(ColumnSelectorFactory delegate)
