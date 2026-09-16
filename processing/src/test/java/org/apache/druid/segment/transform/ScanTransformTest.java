@@ -232,7 +232,35 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     Assertions.assertEquals("b", result.get(0).getRaw("tag"));
   }
 
-  // --- Transformer integration tests ---
+  @Test
+  public void testUnnestWithScanQueryLimitIsNotApplied()
+  {
+    // BUG: ScanTransformer never consults getScanRowsLimit()/getScanRowsOffset(), so an embedded
+    // "limit": 1 is silently ignored and every unnested row is still emitted. This test currently
+    // fails, documenting the gap described in review comment "Apply ScanQuery pagination during
+    // expansion" — once pagination is honored, this should assert result.size() == 1.
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                   .dataSource(UnnestDataSource.create(
+                                       new TableDataSource("__input__"),
+                                       new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                                       null
+                                   ))
+                                   .eternityInterval()
+                                   .columns((List<String>) null)
+                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                   .limit(1)
+                                   .build();
+
+    final BaseTransformer transformer = new ScanTransformSpec(query).toTransformer();
+    final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b", "c"));
+
+    final List<InputRow> result = transformer.transformToList(input);
+    Assertions.assertEquals(
+        1,
+        result.size(),
+        "limit:1 on the embedded scan query should cap expansion to 1 row, but all 3 unnested rows were emitted"
+    );
+  }
 
   @Test
   public void testTransformerWithSingleScanTransform()
