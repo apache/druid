@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -63,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -578,7 +578,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     final int threadCount = 8;
     final int iterationsPerThread = 2_000;
     final CountDownLatch startLatch = new CountDownLatch(1);
-    final ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+    final ExecutorService executor = Execs.multiThreaded(threadCount, "expression-plan-cache-test-%d");
 
     try {
       final List<Future<?>> futures = new ArrayList<>(threadCount);
