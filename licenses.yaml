@@ -1222,7 +1222,7 @@ name: org.bitbucket.b_c jose4j
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 0.9.6
+version: 0.9.7
 libraries:
   - org.bitbucket.b_c: jose4j
 
