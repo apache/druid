@@ -40,6 +40,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -68,28 +69,10 @@ public class DruidRexExecutor implements RexExecutor
   )
   {
     for (RexNode constExp : constExps) {
-      if (constExp instanceof RexCall
-          && ((RexCall) constExp).getOperator() == SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR
-          && SqlTypeName.CHAR_TYPES.contains(constExp.getType().getComponentType().getSqlTypeName())) {
-        final List<RexNode> operands = ((RexCall) constExp).getOperands();
-        boolean literalStrings = true;
-        for (final RexNode operand : operands) {
-          if (!(operand instanceof RexLiteral)
-              || !SqlTypeName.CHAR_TYPES.contains(operand.getType().getSqlTypeName())) {
-            literalStrings = false;
-            break;
-          }
-        }
-        if (literalStrings) {
-          // Literal strings already have their runtime values. Avoid formatting
-          // a large array as a Druid expression only to parse it again.
-          final List<String> values = new ArrayList<>(operands.size());
-          for (final RexNode operand : operands) {
-            values.add(((RexLiteral) operand).getValueAs(String.class));
-          }
-          reducedValues.add(rexBuilder.makeLiteral(values, constExp.getType(), true));
-          continue;
-        }
+      final RexNode reducedArray = tryReduceLiteralArray(rexBuilder, constExp);
+      if (reducedArray != null) {
+        reducedValues.add(reducedArray);
+        continue;
       }
       final DruidExpression druidExpression = Expressions.toDruidExpression(
           plannerContext,
@@ -269,5 +252,41 @@ public class DruidRexExecutor implements RexExecutor
       }
     }
     return constExp.toString();
+  }
+
+  /**
+   * Avoids expression formatting and parsing for literal string and integer arrays.
+   * Returns null when the expression requires evaluation by Druid's expression engine.
+   */
+  @Nullable
+  private static RexNode tryReduceLiteralArray(final RexBuilder rexBuilder, final RexNode expression)
+  {
+    if (!(expression instanceof RexCall)
+        || ((RexCall) expression).getOperator() != SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR) {
+      return null;
+    }
+    final SqlTypeName elementType = expression.getType().getComponentType().getSqlTypeName();
+    final boolean strings = SqlTypeName.CHAR_TYPES.contains(elementType);
+    if (!strings && !SqlTypeName.INT_TYPES.contains(elementType)) {
+      return null;
+    }
+    final List<RexNode> operands = ((RexCall) expression).getOperands();
+    for (final RexNode operand : operands) {
+      if (!(operand instanceof RexLiteral)
+          || !(strings ? SqlTypeName.CHAR_TYPES : SqlTypeName.INT_TYPES).contains(operand.getType().getSqlTypeName())) {
+        return null;
+      }
+    }
+    final List<Object> values = new ArrayList<>(operands.size());
+    for (final RexNode operand : operands) {
+      if (strings) {
+        values.add(((RexLiteral) operand).getValueAs(String.class));
+      } else {
+        // Match the evaluator's conversion through Druid LONG before building Calcite literals.
+        final Number value = (Number) RexLiteral.value(operand);
+        values.add(value == null ? null : BigDecimal.valueOf(value.longValue()));
+      }
+    }
+    return rexBuilder.makeLiteral(values, expression.getType(), true);
   }
 }

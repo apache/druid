@@ -136,6 +136,7 @@ public class InPlanningBenchmark
   @Nullable
   private PlannerFactory plannerFactory;
   private String planOnlyStringSql;
+  private String planOnlyLongSql;
   private final Closer closer = Closer.create();
 
   @Setup(Level.Trial)
@@ -213,6 +214,7 @@ public class InPlanningBenchmark
     );
 
     planOnlyStringSql = createQuery("select string1 from foo where string1 in ", inClauseLiteralsCount, ValueType.STRING);
+    planOnlyLongSql = createQuery("select long1 from foo where long1 in ", inClauseLiteralsCount, ValueType.LONG);
 
     String prefix = ("explain plan for select long1 from foo where long1 in ");
     final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
@@ -259,10 +261,23 @@ public class InPlanningBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryStringInSqlPlanOnly(Blackhole blackhole)
   {
+    planOnly(planOnlyStringSql, blackhole);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryLongInSqlPlanOnly(Blackhole blackhole)
+  {
+    planOnly(planOnlyLongSql, blackhole);
+  }
+
+  private void planOnly(final String sql, final Blackhole blackhole)
+  {
     final Map<String, Object> context = ImmutableMap.of(
         "inSubQueryThreshold", inSubQueryThreshold, "useCache", false);
 
-    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, planOnlyStringSql, context)) {
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
       blackhole.consume(planner.plan());
     }
   }

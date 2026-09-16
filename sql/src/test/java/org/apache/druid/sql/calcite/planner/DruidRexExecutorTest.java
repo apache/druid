@@ -325,6 +325,53 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testIntegerLiteralArraysReduction()
+  {
+    for (final SqlTypeName typeName : SqlTypeName.INT_TYPES) {
+      final ArraySqlType arrayType = new ArraySqlType(
+          typeFactory.createTypeWithNullability(typeFactory.createSqlType(typeName), true), false
+      );
+      final List<BigDecimal> values = Arrays.asList(BigDecimal.valueOf(-1), BigDecimal.ZERO, null, BigDecimal.TEN);
+      final RexNode array = rexBuilder.makeLiteral(values, arrayType, true);
+      final List<RexNode> reduced = new ArrayList<>();
+      new DruidRexExecutor(PLANNER_CONTEXT).reduce(rexBuilder, ImmutableList.of(array), reduced);
+      Assertions.assertEquals(ImmutableList.of(array), reduced, typeName.toString());
+    }
+  }
+
+  @Test
+  public void testLongLiteralArrayBoundaries()
+  {
+    final ArraySqlType arrayType = new ArraySqlType(
+        typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.BIGINT), true), false
+    );
+    for (final List<BigDecimal> values : Arrays.<List<BigDecimal>>asList(
+        Arrays.asList(BigDecimal.valueOf(Long.MIN_VALUE), null, BigDecimal.valueOf(Long.MAX_VALUE)),
+        Collections.singletonList(null)
+    )) {
+      final RexNode array = rexBuilder.makeLiteral(values, arrayType, true);
+      final List<RexNode> reduced = new ArrayList<>();
+      new DruidRexExecutor(PLANNER_CONTEXT).reduce(rexBuilder, ImmutableList.of(array), reduced);
+      Assertions.assertEquals(ImmutableList.of(array), reduced);
+    }
+  }
+
+  @Test
+  public void testIntegerArrayExpressionUsesEvaluator()
+  {
+    final RexNode array = rexBuilder.makeCall(
+        SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+        rexBuilder.makeCall(SqlStdOperatorTable.PLUS, rexBuilder.makeBigintLiteral(BigDecimal.ONE),
+                           rexBuilder.makeBigintLiteral(BigDecimal.TEN))
+    );
+    final List<RexNode> reduced = new ArrayList<>();
+    new DruidRexExecutor(PLANNER_CONTEXT).reduce(rexBuilder, ImmutableList.of(array), reduced);
+    Assertions.assertEquals(
+        rexBuilder.makeLiteral(ImmutableList.of(BigDecimal.valueOf(11)), array.getType(), true), reduced.get(0)
+    );
+  }
+
+  @Test
   public void testMultiValueStringNotReduced()
   {
     DruidRexExecutor rexy = new DruidRexExecutor(PLANNER_CONTEXT);
