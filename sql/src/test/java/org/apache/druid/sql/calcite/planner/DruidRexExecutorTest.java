@@ -23,11 +23,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
@@ -66,10 +68,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class DruidRexExecutorTest extends InitializedNullHandlingTest
 {
@@ -297,17 +302,10 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
   @Test
   public void testArrayOfStringLiteralsReduction()
   {
-    final DruidRexExecutor executor = new DruidRexExecutor(PLANNER_CONTEXT);
-    final ArraySqlType arrayType = new ArraySqlType(
-        typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.VARCHAR, 30), true),
-        false
-    );
-    final RexNode array = rexBuilder.makeLiteral(
-        Arrays.asList("", "a'b", "back\\slash", "中文", null), arrayType, true
-    );
-    final List<RexNode> reduced = new ArrayList<>();
-    executor.reduce(rexBuilder, ImmutableList.of(array), reduced);
-    Assertions.assertEquals(ImmutableList.of(array), reduced);
+    for (final SqlTypeName typeName : SqlTypeName.CHAR_TYPES) {
+      assertLiteralArrayReduction(typeName, Arrays.asList("", "a'b", "back\\slash", "中文", null));
+      assertLiteralArrayReduction(typeName, Collections.singletonList(null));
+    }
   }
 
   @Test
@@ -317,6 +315,7 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
         SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
         rexBuilder.makeCall(SqlStdOperatorTable.CONCAT, rexBuilder.makeLiteral("a"), rexBuilder.makeLiteral("b"))
     );
+    Assertions.assertNull(DruidRexExecutor.tryReduceLiteralArray(rexBuilder, array));
     final List<RexNode> reduced = new ArrayList<>();
     new DruidRexExecutor(PLANNER_CONTEXT).reduce(rexBuilder, ImmutableList.of(array), reduced);
     Assertions.assertEquals(
@@ -328,31 +327,21 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
   public void testIntegerLiteralArraysReduction()
   {
     for (final SqlTypeName typeName : SqlTypeName.INT_TYPES) {
-      final ArraySqlType arrayType = new ArraySqlType(
-          typeFactory.createTypeWithNullability(typeFactory.createSqlType(typeName), true), false
+      assertLiteralArrayReduction(
+          typeName,
+          Arrays.asList(BigDecimal.valueOf(-1), BigDecimal.ZERO, null, BigDecimal.TEN)
       );
-      final List<BigDecimal> values = Arrays.asList(BigDecimal.valueOf(-1), BigDecimal.ZERO, null, BigDecimal.TEN);
-      final RexNode array = rexBuilder.makeLiteral(values, arrayType, true);
-      final List<RexNode> reduced = new ArrayList<>();
-      new DruidRexExecutor(PLANNER_CONTEXT).reduce(rexBuilder, ImmutableList.of(array), reduced);
-      Assertions.assertEquals(ImmutableList.of(array), reduced, typeName.toString());
     }
   }
 
   @Test
   public void testLongLiteralArrayBoundaries()
   {
-    final ArraySqlType arrayType = new ArraySqlType(
-        typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.BIGINT), true), false
-    );
     for (final List<BigDecimal> values : Arrays.<List<BigDecimal>>asList(
         Arrays.asList(BigDecimal.valueOf(Long.MIN_VALUE), null, BigDecimal.valueOf(Long.MAX_VALUE)),
         Collections.singletonList(null)
     )) {
-      final RexNode array = rexBuilder.makeLiteral(values, arrayType, true);
-      final List<RexNode> reduced = new ArrayList<>();
-      new DruidRexExecutor(PLANNER_CONTEXT).reduce(rexBuilder, ImmutableList.of(array), reduced);
-      Assertions.assertEquals(ImmutableList.of(array), reduced);
+      assertLiteralArrayReduction(SqlTypeName.BIGINT, values);
     }
   }
 
@@ -364,11 +353,156 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
         rexBuilder.makeCall(SqlStdOperatorTable.PLUS, rexBuilder.makeBigintLiteral(BigDecimal.ONE),
                            rexBuilder.makeBigintLiteral(BigDecimal.TEN))
     );
+    Assertions.assertNull(DruidRexExecutor.tryReduceLiteralArray(rexBuilder, array));
     final List<RexNode> reduced = new ArrayList<>();
     new DruidRexExecutor(PLANNER_CONTEXT).reduce(rexBuilder, ImmutableList.of(array), reduced);
     Assertions.assertEquals(
         rexBuilder.makeLiteral(ImmutableList.of(BigDecimal.valueOf(11)), array.getType(), true), reduced.get(0)
     );
+  }
+
+  @Test
+  public void testLiteralArrayReductionRejectsUnsupportedTypes()
+  {
+    for (final SqlTypeName typeName : Arrays.asList(
+        SqlTypeName.DECIMAL,
+        SqlTypeName.DOUBLE,
+        SqlTypeName.BOOLEAN,
+        SqlTypeName.DATE
+    )) {
+      final RelDataType elementType = typeFactory.createSqlType(typeName);
+      final RexNode array = rexBuilder.makeCall(
+          typeFactory.createArrayType(elementType, -1), SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+          ImmutableList.of(rexBuilder.makeNullLiteral(elementType))
+      );
+      Assertions.assertNull(DruidRexExecutor.tryReduceLiteralArray(rexBuilder, array), typeName.toString());
+    }
+    Assertions.assertNull(DruidRexExecutor.tryReduceLiteralArray(rexBuilder, rexBuilder.makeLiteral("a")));
+    Assertions.assertNull(DruidRexExecutor.tryReduceLiteralArray(
+        rexBuilder,
+        rexBuilder.makeCall(SqlStdOperatorTable.CONCAT, rexBuilder.makeLiteral("a"), rexBuilder.makeLiteral("b"))
+    ));
+  }
+
+  @Test
+  public void testLiteralArrayReductionRejectsCastsAndMismatchedOperands()
+  {
+    final RelDataType stringType = typeFactory.createSqlType(SqlTypeName.VARCHAR, 30);
+    final RelDataType arrayType = typeFactory.createArrayType(stringType, -1);
+    for (final RexNode operand : ImmutableList.of(
+        rexBuilder.makeAbstractCast(stringType, rexBuilder.makeLiteral("a"), false),
+        rexBuilder.makeBigintLiteral(BigDecimal.ONE)
+    )) {
+      final RexNode array = rexBuilder.makeCall(
+          arrayType,
+          SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+          ImmutableList.of(rexBuilder.makeLiteral("a"), operand)
+      );
+      Assertions.assertNull(DruidRexExecutor.tryReduceLiteralArray(rexBuilder, array));
+    }
+  }
+
+  @Test
+  public void testLiteralArrayReductionNormalizesDifferentElementTypes()
+  {
+    final RelDataType charType = typeFactory.createSqlType(SqlTypeName.CHAR, 3);
+    final RelDataType arrayType = typeFactory.createArrayType(charType, -1);
+    final RexNode array = rexBuilder.makeCall(
+        arrayType,
+        SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+        ImmutableList.of(rexBuilder.makeLiteral("a"), rexBuilder.makeLiteral("abc"))
+    );
+    final RexNode reduced = DruidRexExecutor.tryReduceLiteralArray(rexBuilder, array);
+    Assertions.assertNotSame(array, reduced);
+    Assertions.assertEquals(rexBuilder.makeLiteral(Arrays.asList("a", "abc"), arrayType, true), reduced);
+  }
+
+  @Test
+  public void testLiteralArrayReductionNormalizesMixedIntegerTypes()
+  {
+    final RelDataType arrayType = typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.BIGINT), -1);
+    final RexNode array = rexBuilder.makeCall(
+        arrayType,
+        SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+        ImmutableList.of(
+            rexBuilder.makeLiteral(BigDecimal.ONE, typeFactory.createSqlType(SqlTypeName.INTEGER), false),
+            rexBuilder.makeBigintLiteral(BigDecimal.TEN)
+        )
+    );
+    final RexNode reduced = DruidRexExecutor.tryReduceLiteralArray(rexBuilder, array);
+    Assertions.assertNotNull(reduced);
+    Assertions.assertNotSame(array, reduced);
+    Assertions.assertEquals(
+        rexBuilder.makeLiteral(Arrays.asList(BigDecimal.ONE, BigDecimal.TEN), arrayType, true), reduced
+    );
+  }
+
+  @Test
+  public void testLiteralArrayReductionNormalizesDifferentCharsets()
+  {
+    assertCharacterTypeNormalization(StandardCharsets.ISO_8859_1, "primary");
+  }
+
+  @Test
+  public void testLiteralArrayReductionNormalizesDifferentCollations()
+  {
+    assertCharacterTypeNormalization(StandardCharsets.UTF_8, "tertiary");
+  }
+
+  private void assertCharacterTypeNormalization(final Charset operandCharset, final String operandStrength)
+  {
+    final RelDataType charType = typeFactory.createSqlType(SqlTypeName.CHAR, 1);
+    final RelDataType componentType = typeFactory.createTypeWithCharsetAndCollation(
+        charType,
+        StandardCharsets.UTF_8,
+        new SqlCollation(SqlCollation.Coercibility.IMPLICIT, Locale.US, StandardCharsets.UTF_8, "primary")
+    );
+    final RelDataType operandType = typeFactory.createTypeWithCharsetAndCollation(
+        charType,
+        operandCharset,
+        new SqlCollation(SqlCollation.Coercibility.IMPLICIT, Locale.US, operandCharset, operandStrength)
+    );
+    final RexNode operand = rexBuilder.makeLiteral("a", operandType, false);
+    Assertions.assertInstanceOf(RexLiteral.class, operand);
+    Assertions.assertEquals(operandType, operand.getType());
+    Assertions.assertNotEquals(componentType, operand.getType());
+    final RelDataType arrayType = typeFactory.createArrayType(componentType, -1);
+    final RexNode array = rexBuilder.makeCall(
+        arrayType,
+        SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+        ImmutableList.of(operand)
+    );
+    final RexNode reduced = DruidRexExecutor.tryReduceLiteralArray(rexBuilder, array);
+    Assertions.assertNotNull(reduced);
+    Assertions.assertNotSame(array, reduced);
+    Assertions.assertEquals(rexBuilder.makeLiteral(ImmutableList.of("a"), arrayType, true), reduced);
+    Assertions.assertEquals(arrayType, reduced.getType());
+  }
+
+  private void assertLiteralArrayReduction(final SqlTypeName typeName, final List<?> values)
+  {
+    final RelDataType elementType = SqlTypeName.CHAR_TYPES.contains(typeName)
+                                    ? typeFactory.createSqlType(typeName, 30)
+                                    : typeFactory.createSqlType(typeName);
+    final RelDataType arrayType = typeFactory.createArrayType(
+        typeFactory.createTypeWithNullability(elementType, true), -1
+    );
+    final List<RexNode> operands = new ArrayList<>();
+    for (final Object value : values) {
+      final RexNode operand = value == null
+                              ? rexBuilder.makeNullLiteral(elementType)
+                              : rexBuilder.makeLiteral(value, elementType, false);
+      Assertions.assertInstanceOf(RexLiteral.class, operand);
+      operands.add(operand);
+    }
+    final RexNode array = rexBuilder.makeCall(arrayType, SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR, operands);
+    final RexNode reduced = DruidRexExecutor.tryReduceLiteralArray(rexBuilder, array);
+    Assertions.assertNotNull(reduced);
+    if (typeName == SqlTypeName.VARCHAR && values.stream().anyMatch(value -> value != null)) {
+      Assertions.assertEquals(rexBuilder.makeLiteral(values, arrayType, true), reduced);
+    } else {
+      Assertions.assertSame(array, reduced);
+    }
   }
 
   @Test

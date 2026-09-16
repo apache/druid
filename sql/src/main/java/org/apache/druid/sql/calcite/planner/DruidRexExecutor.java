@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexExecutor;
@@ -27,6 +28,7 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.Evals;
@@ -254,39 +256,64 @@ public class DruidRexExecutor implements RexExecutor
     return constExp.toString();
   }
 
-  /**
-   * Avoids expression formatting and parsing for literal string and integer arrays.
-   * Returns null when the expression requires evaluation by Druid's expression engine.
-   */
+  ///
+  /// Reduces literal string and integer arrays without formatting, parsing, or evaluating a Druid expression.
+  ///
+  /// Reuses the original array call when every literal's type matches the array component type, ignoring nullability.
+  /// These literals already have the required types and values, so rebuilding them would only add allocations.
+  /// Nullability differences do not require conversion: a non-null literal may belong to an array with nullable elements,
+  /// and reusing the call preserves both null values and the original array type.
+  ///
+  /// Otherwise, literals in the supported family are rebuilt using the component type. This preserves normalization
+  /// such as padding CHAR(1) values for a CHAR(3) array, converting INTEGER to BIGINT, or applying the target character
+  /// set and collation. RexBuilder.makeLiteral rebuilds the array call and its elements, not a single array literal.
+  ///
+  /// Returns null for unsupported types or non-literal operands (including CAST calls), leaving them to the existing
+  /// Druid expression evaluation path.
+  ///
   @Nullable
-  private static RexNode tryReduceLiteralArray(final RexBuilder rexBuilder, final RexNode expression)
+  @VisibleForTesting
+  static RexNode tryReduceLiteralArray(final RexBuilder rexBuilder, final RexNode expression)
   {
-    if (!(expression instanceof RexCall)
-        || ((RexCall) expression).getOperator() != SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR) {
+    if (!(expression instanceof RexCall)) {
       return null;
     }
+    if (!((RexCall) expression).getOperator().equals(SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR)) {
+      return null;
+    }
+
     final SqlTypeName elementType = expression.getType().getComponentType().getSqlTypeName();
-    final boolean strings = SqlTypeName.CHAR_TYPES.contains(elementType);
-    if (!strings && !SqlTypeName.INT_TYPES.contains(elementType)) {
+    final boolean isString = SqlTypeName.CHAR_TYPES.contains(elementType);
+    if (!isString && !SqlTypeName.INT_TYPES.contains(elementType)) {
       return null;
     }
+
     final List<RexNode> operands = ((RexCall) expression).getOperands();
+    boolean reuseOperands = true;
     for (final RexNode operand : operands) {
       if (!(operand instanceof RexLiteral)
-          || !(strings ? SqlTypeName.CHAR_TYPES : SqlTypeName.INT_TYPES).contains(operand.getType().getSqlTypeName())) {
+          || !(isString ? SqlTypeName.CHAR_TYPES : SqlTypeName.INT_TYPES).contains(operand.getType().getSqlTypeName())) {
         return null;
       }
+      reuseOperands = reuseOperands && SqlTypeUtil.equalSansNullability(
+          rexBuilder.getTypeFactory(), expression.getType().getComponentType(), operand.getType()
+      );
     }
+
+    if (reuseOperands) {
+      // Already-normalized literals need neither evaluation nor rebuilding. Keep the original array type as well.
+      return expression;
+    }
+
     final List<Object> values = new ArrayList<>(operands.size());
     for (final RexNode operand : operands) {
-      if (strings) {
+      if (isString) {
         values.add(((RexLiteral) operand).getValueAs(String.class));
       } else {
-        // Match the evaluator's conversion through Druid LONG before building Calcite literals.
-        final Number value = (Number) RexLiteral.value(operand);
-        values.add(value == null ? null : BigDecimal.valueOf(value.longValue()));
+        values.add(RexLiteral.value(operand));
       }
     }
+
     return rexBuilder.makeLiteral(values, expression.getType(), true);
   }
 }
