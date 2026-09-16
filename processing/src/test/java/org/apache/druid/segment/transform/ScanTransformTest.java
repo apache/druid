@@ -233,12 +233,10 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testUnnestWithScanQueryLimitIsNotApplied()
+  public void testScanQueryLimitCapsPerRowExpansion()
   {
-    // BUG: ScanTransformer never consults getScanRowsLimit()/getScanRowsOffset(), so an embedded
-    // "limit": 1 is silently ignored and every unnested row is still emitted. This test currently
-    // fails, documenting the gap described in review comment "Apply ScanQuery pagination during
-    // expansion" — once pagination is honored, this should assert result.size() == 1.
+    // The query re-executes fresh for each input row, so this row's own unnested elements are the
+    // query's entire result set for that execution — limit:1 caps it to the first unnested element.
     final ScanQuery query = Druids.newScanQueryBuilder()
                                    .dataSource(UnnestDataSource.create(
                                        new TableDataSource("__input__"),
@@ -255,11 +253,64 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b", "c"));
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assertions.assertEquals(
-        1,
-        result.size(),
-        "limit:1 on the embedded scan query should cap expansion to 1 row, but all 3 unnested rows were emitted"
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("a", result.get(0).getRaw("tag"));
+  }
+
+  @Test
+  public void testScanQueryOffsetSkipsPerRowExpansion()
+  {
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                   .dataSource(UnnestDataSource.create(
+                                       new TableDataSource("__input__"),
+                                       new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                                       null
+                                   ))
+                                   .eternityInterval()
+                                   .columns((List<String>) null)
+                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                   .offset(1)
+                                   .limit(1)
+                                   .build();
+
+    final BaseTransformer transformer = new ScanTransformSpec(query).toTransformer();
+    final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b", "c"));
+
+    final List<InputRow> result = transformer.transformToList(input);
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("b", result.get(0).getRaw("tag"));
+  }
+
+  @Test
+  public void testScanQueryLimitAppliesIndependentlyPerInputRow()
+  {
+    // limit is bound to each execution of the query, i.e. each input row's own expansion — not a
+    // running total across the multiple input rows a reader processes over its lifetime.
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                   .dataSource(UnnestDataSource.create(
+                                       new TableDataSource("__input__"),
+                                       new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                                       null
+                                   ))
+                                   .eternityInterval()
+                                   .columns((List<String>) null)
+                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                   .limit(1)
+                                   .build();
+
+    final BaseTransformer transformer = new ScanTransformSpec(query).toTransformer();
+
+    final List<InputRow> firstResult = transformer.transformToList(
+        makeRow("user", "alice", "tags", List.of("a", "b"))
     );
+    final List<InputRow> secondResult = transformer.transformToList(
+        makeRow("user", "bob", "tags", List.of("x", "y"))
+    );
+
+    Assertions.assertEquals(1, firstResult.size());
+    Assertions.assertEquals("a", firstResult.get(0).getRaw("tag"));
+    Assertions.assertEquals(1, secondResult.size());
+    Assertions.assertEquals("x", secondResult.get(0).getRaw("tag"));
   }
 
   @Test

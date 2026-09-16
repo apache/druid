@@ -189,8 +189,22 @@ public class ScanTransformer implements BaseTransformer
       selectors[i] = selectorFactory.makeColumnValueSelector(columns.get(i));
     }
 
+    // The query re-executes fresh for each input row (cursor reset above), so this row's own unnested
+    // expansion is the query's entire result set for this execution — offset/limit bound that set,
+    // the same way they'd bound any other scan query's result set. This is necessarily per input row
+    // rather than global across the ingestion job: there is no single ordered stream spanning rows
+    // (let alone across the parallel/rolling readers of a real ingestion job) for them to paginate.
+    final long offset = query.getScanRowsOffset();
+    final long limit = query.getScanRowsLimit();
+    long skipped = 0;
+
     final List<InputRow> result = new ArrayList<>();
-    while (!cursor.isDone()) {
+    while (!cursor.isDone() && result.size() < limit) {
+      if (skipped < offset) {
+        skipped++;
+        cursor.advance();
+        continue;
+      }
       final Map<String, Object> event = new LinkedHashMap<>();
       for (int i = 0; i < columns.size(); i++) {
         event.put(columns.get(i), selectors[i].getObject());

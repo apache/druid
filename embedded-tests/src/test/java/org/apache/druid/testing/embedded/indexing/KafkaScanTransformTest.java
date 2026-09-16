@@ -543,11 +543,14 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(60)
-  public void test_scanQueryLimitIsNotApplied() throws JsonProcessingException
+  public void test_scanQueryLimitCapsPerRecordExpansion() throws JsonProcessingException
   {
-    // BUG: ScanTransformer never consults ScanQuery#getScanRowsLimit()/getScanRowsOffset(). A single
-    // Kafka record with a 3-element "tags" array, unnested through a ScanTransformSpec whose embedded
-    // ScanQuery sets limit:1, should ingest exactly 1 row — instead all 3 unnested rows are ingested.
+    // Each Kafka record is unnested independently through a ScanTransformSpec whose embedded
+    // ScanQuery sets limit:3: limit/offset bound each record's own unnest expansion, since that
+    // expansion is the query's entire result set for that execution, not a running total across
+    // records. Records with array lengths 0, 1, 3, 6, 10 should therefore ingest 0, 1, 3, 3, 3 rows
+    // respectively (10 total) — below-limit arrays pass through untouched, at/above-limit arrays
+    // are capped to the first 3 elements.
     // Uses its own topic/datasource (rather than the shared `dataSource`/`topic` set up in setupAll)
     // so it doesn't interfere with the other tests in this class, while reusing the same cluster.
     final String limitDataSource = EmbeddedClusterApis.createTestDatasourceName();
@@ -564,7 +567,7 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
               .eternityInterval()
               .columns((List<String>) null)
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
-              .limit(1)
+              .limit(3)
               .build()
     );
 
@@ -591,32 +594,52 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
 
     Assertions.assertEquals(limitDataSource, cluster.callApi().postSupervisor(spec));
 
-    kafka.publishRecordsToTopic(
-        limitTopic,
-        List.of(
-            TestHelper.JSON_MAPPER.writeValueAsBytes(
-                Map.of(
-                    "__time", "2024-01-01T00:00:00Z",
-                    "user", "alice",
-                    "tags", List.of("a", "b", "c")
-                )
-            )
-        )
+    final Map<String, Integer> tagCountByUser = Map.of(
+        "u0", 0,
+        "u1", 1,
+        "u3", 3,
+        "u6", 6,
+        "u10", 10
     );
+    final List<byte[]> records = new ArrayList<>();
+    for (final Map.Entry<String, Integer> entry : tagCountByUser.entrySet()) {
+      final List<String> tags = new ArrayList<>();
+      for (int i = 0; i < entry.getValue(); i++) {
+        tags.add(entry.getKey() + "_tag" + i);
+      }
+      records.add(TestHelper.JSON_MAPPER.writeValueAsBytes(
+          Map.of(
+              "__time", "2024-01-01T00:00:00Z",
+              "user", entry.getKey(),
+              "tags", tags
+          )
+      ));
+    }
+    kafka.publishRecordsToTopic(limitTopic, records);
 
-    // At least 1 row is processed regardless of whether limit is honored, so this wait condition
-    // holds either way — the bug surfaces in the row count assertion below, not here.
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
                       .hasDimension(DruidMetrics.DATASOURCE, limitDataSource),
-        agg -> agg.hasSumAtLeast(1)
+        agg -> agg.hasSumAtLeast(tagCountByUser.size())
     );
 
     Assertions.assertEquals(
-        "1",
+        "10",
         cluster.runSql(StringUtils.format("SELECT COUNT(*) FROM \"%s\"", limitDataSource)).trim(),
-        "limit:1 on the embedded scan query should cap ingestion to 1 row, but all 3 unnested rows "
-        + "were ingested"
+        "limit:3 should cap each record's own unnest expansion to at most 3 rows"
+    );
+
+    final String perUserCounts = cluster.runSql(
+        StringUtils.format(
+            "SELECT \"user\", COUNT(*) FROM \"%s\" GROUP BY \"user\" ORDER BY \"user\"",
+            limitDataSource
+        )
+    ).trim();
+    Assertions.assertEquals(
+        "u1,1\nu10,3\nu3,3\nu6,3",
+        perUserCounts,
+        "each record's row count should be min(array length, limit=3); u0 (empty array) contributes "
+        + "no rows at all, independent of limit"
     );
   }
 }
