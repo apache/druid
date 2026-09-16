@@ -113,7 +113,8 @@ public class ScalarInArrayOperatorConversion extends DirectOperatorConversion
       final List<Object> arrayElementLiteralValues = new ArrayList<>(arrayElements.size());
 
       for (final RexNode arrayElement : arrayElements) {
-        // Large IN lists are translated multiple times during planning, so avoid a temporary DruidLiteral here.
+        // Extract non-null integer and string RexLiterals directly to avoid temporary
+        // DruidLiteral allocations for large IN lists.
         if (arrayElement instanceof RexLiteral && !RexLiteral.isNullLiteral(arrayElement)) {
           final SqlTypeName sqlTypeName = arrayElement.getType().getSqlTypeName();
           if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
