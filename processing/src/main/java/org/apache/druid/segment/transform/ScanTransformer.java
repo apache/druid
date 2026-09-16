@@ -23,6 +23,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.DataSource;
@@ -209,7 +210,8 @@ public class ScanTransformer implements BaseTransformer
    * <p>Handles both {@link MapBasedInputRow} (JSON/Kafka-style ingestion) and {@link ListBasedInputRow}
    * (CSV/TSV/delimited ingestion, via {@code DelimitedValueReader}) — both expose their raw field names
    * via a {@code Map}-shaped view ({@code getEvent()} / {@code asMap()}). Any other {@link InputRow}
-   * implementation has no generic way to enumerate its raw fields, so it falls back to an empty set.
+   * implementation has no generic way to enumerate its raw fields; rather than silently dropping metric
+   * values for such rows, this throws so the gap is caught instead of surfacing as null/0 aggregations.
    */
   private static Set<String> resolveNonDimensionEventFields(final InputRow inputRow)
   {
@@ -219,7 +221,11 @@ public class ScanTransformer implements BaseTransformer
     } else if (inputRow instanceof ListBasedInputRow) {
       allFields = ((ListBasedInputRow) inputRow).asMap().keySet();
     } else {
-      return Set.of();
+      throw DruidException.defensive(
+          "ScanTransformer does not support input rows of type[%s]; only MapBasedInputRow and "
+          + "ListBasedInputRow are supported",
+          inputRow.getClass().getName()
+      );
     }
     final Set<String> nonDimensionFields = new LinkedHashSet<>(allFields);
     nonDimensionFields.removeAll(inputRow.getDimensions());

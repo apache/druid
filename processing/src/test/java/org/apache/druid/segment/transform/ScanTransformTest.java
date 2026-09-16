@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
@@ -561,5 +562,77 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     }
     Assertions.assertEquals("a", result.get(0).getRaw("tag"));
     Assertions.assertEquals("b", result.get(1).getRaw("tag"));
+  }
+
+  @Test
+  public void testUnsupportedInputRowTypeThrowsDefensiveException()
+  {
+    // Extension InputRow implementations (e.g. DeltaInputRow from druid-deltalake-extensions) implement
+    // InputRow directly rather than extending MapBasedInputRow/ListBasedInputRow, and have no generic
+    // Map-shaped view of their raw fields. ScanTransformer has no way to preserve non-dimension event
+    // fields (e.g. metrics) for such rows, so it must fail loudly instead of silently dropping them.
+    final InputRow input = new OpaqueInputRow(makeRow("user", "alice", "tags", List.of("a", "b")));
+    final BaseTransformer transformer = makeTransformer(makeUnnestQuery("tags", "tag"));
+
+    DruidExceptionMatcher.defensive().expectMessageContains(
+        "ScanTransformer does not support input rows of type"
+    ).assertThrowsAndMatches(() -> transformer.transformToList(input));
+  }
+
+  /**
+   * A minimal {@link InputRow} that delegates to another row without extending
+   * {@link MapBasedInputRow} or {@link ListBasedInputRow} — simulates an extension-provided row type
+   * such as {@code DeltaInputRow}, which has no generic Map-shaped view of its raw fields.
+   */
+  private static class OpaqueInputRow implements InputRow
+  {
+    private final InputRow delegate;
+
+    private OpaqueInputRow(final InputRow delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public List<String> getDimensions()
+    {
+      return delegate.getDimensions();
+    }
+
+    @Override
+    public long getTimestampFromEpoch()
+    {
+      return delegate.getTimestampFromEpoch();
+    }
+
+    @Override
+    public org.joda.time.DateTime getTimestamp()
+    {
+      return delegate.getTimestamp();
+    }
+
+    @Override
+    public List<String> getDimension(String dimension)
+    {
+      return delegate.getDimension(dimension);
+    }
+
+    @Override
+    public Object getRaw(String dimension)
+    {
+      return delegate.getRaw(dimension);
+    }
+
+    @Override
+    public Number getMetric(String metric)
+    {
+      return delegate.getMetric(metric);
+    }
+
+    @Override
+    public int compareTo(org.apache.druid.data.input.Row o)
+    {
+      return delegate.compareTo(o);
+    }
   }
 }
