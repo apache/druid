@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.JsonParserIterator;
@@ -51,7 +52,6 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentStatusInCluster;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -270,7 +270,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
         ),
         HttpResponseException.class,
         e -> {
-          if (e != null && e.getResponse().getStatus().getCode() == 404) {
+          if (e != null && e.getResponse().getStatus().code() == 404) {
             return BrokerDynamicConfig.builder().build();
           }
           throw new RuntimeException(e);
