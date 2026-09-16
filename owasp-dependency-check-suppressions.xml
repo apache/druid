@@ -1002,4 +1002,20 @@
     <cve>CVE-2026-87823</cve>
     <cve>CVE-2026-87795</cve>
   </suppress>
+
+  <suppress>
+    <!-- CVE-2026-90559: Out-of-bounds write in Snappy.uncompress(ByteBuffer, ByteBuffer) — the
+         destination buffer capacity is never validated against the decompressed size, allowing
+         attacker-controlled compressed input to crash the JVM. No fix is available upstream yet
+         (xerial/snappy-java#728, opened 2026-08-14).
+         Druid does not call org.xerial.snappy directly; snappy-java is a transitive dependency
+         (pulled in by Kafka, Parquet, etc.). Druid's own snappy decompression uses Apache Commons
+         Compress (FramedSnappyCompressorInputStream), not the xerial Snappy.uncompress path.
+         The vulnerable ByteBuffer overload is therefore not reachable from Druid code. -->
+    <notes><![CDATA[
+      file name: snappy-java-1.1.10.7.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.xerial\.snappy/snappy-java@.*$</packageUrl>
+    <cve>CVE-2026-90559</cve>
+  </suppress>
 </suppressions>
