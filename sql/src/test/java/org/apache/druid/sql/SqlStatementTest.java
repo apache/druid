@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
@@ -59,8 +60,10 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
+import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
+import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -72,6 +75,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 
 import javax.servlet.http.HttpServletRequest;
@@ -588,7 +592,7 @@ public class SqlStatementTest
    * that flag and the failure is surfaced as a timeout.
    */
   @Test
-  @org.junit.jupiter.api.Timeout(30)
+  @Timeout(30)
   public void testPlanningTimeout()
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
@@ -601,11 +605,9 @@ public class SqlStatementTest
     DirectStatement stmt = new DirectStatement(sqlToolbox, sqlReq, null)
     {
       @Override
-      protected org.apache.druid.sql.calcite.planner.PlannerResult createPlan(
-          org.apache.druid.sql.calcite.planner.DruidPlanner planner
-      )
+      protected PlannerResult createPlan(DruidPlanner planner)
       {
-        final org.apache.calcite.util.CancelFlag cancelFlag = planner.getPlannerContext().getCancelFlag();
+        final CancelFlag cancelFlag = planner.getPlannerContext().getCancelFlag();
         // Busy-wait like a CPU-bound Calcite planning phase that periodically checks for cancellation.
         while (!cancelFlag.isCancelRequested() && !Thread.currentThread().isInterrupted()) {
           // spin until the planning-timeout watchdog aborts us
@@ -636,7 +638,7 @@ public class SqlStatementTest
    * further work, rather than getting a fresh budget once the watchdog is armed.
    */
   @Test
-  @org.junit.jupiter.api.Timeout(30)
+  @Timeout(30)
   public void testPlanningTimeoutDuringPlannerConstruction()
   {
     SqlQueryPlus sqlReq = SqlQueryPlus
@@ -649,7 +651,7 @@ public class SqlStatementTest
     DirectStatement stmt = new DirectStatement(sqlToolbox, sqlReq, null)
     {
       @Override
-      protected org.apache.druid.sql.calcite.planner.DruidPlanner createPlanner()
+      protected DruidPlanner createPlanner()
       {
         try {
           Thread.sleep(300);
