@@ -76,6 +76,7 @@ public class DruidRexExecutor implements RexExecutor
         reducedValues.add(reducedArray);
         continue;
       }
+
       final DruidExpression druidExpression = Expressions.toDruidExpression(
           plannerContext,
           EMPTY_ROW_SIGNATURE,
