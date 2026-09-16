@@ -35,6 +35,8 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.sql.calcite.parser.DruidSqlAlterTable;
+import org.apache.druid.sql.calcite.parser.DruidSqlCreateTable;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -97,6 +99,7 @@ public class DruidPlanner implements Closeable
   private final PlannerContext plannerContext;
   private final SqlEngine engine;
   private final PlannerHook hook;
+  private final PlannerFactory plannerFactory;
   private State state = State.START;
   private SqlStatementHandler handler;
   private boolean authorized;
@@ -105,9 +108,11 @@ public class DruidPlanner implements Closeable
       final FrameworkConfig frameworkConfig,
       final PlannerContext plannerContext,
       final SqlEngine engine,
-      final PlannerHook hook
+      final PlannerHook hook,
+      final PlannerFactory plannerFactory
   )
   {
+    this.plannerFactory = plannerFactory;
     this.frameworkConfig = frameworkConfig;
     this.planner = new CalcitePlanner(frameworkConfig);
     this.plannerContext = plannerContext;
@@ -147,6 +152,16 @@ public class DruidPlanner implements Closeable
     }
 
     SqlStatementHandler.HandlerContext handlerContext = new HandlerContextImpl();
+
+    if (query instanceof DruidSqlCreateTable || query instanceof DruidSqlAlterTable) {
+      // The grammar does not admit EXPLAIN of a DDL statement; this guards the case anyway, since a DDL statement
+      // has no query to explain.
+      if (explain != null) {
+        throw InvalidSqlInput.exception("EXPLAIN is not supported for [%s]", query.getKind());
+      }
+      return createDdlHandler(handlerContext, query);
+    }
+
     if (query.getKind() == SqlKind.INSERT) {
       if (query instanceof DruidSqlInsert) {
         return new IngestHandler.InsertHandler(handlerContext, (DruidSqlInsert) query, explain);
@@ -159,6 +174,35 @@ public class DruidPlanner implements Closeable
       return new QueryHandler.SelectHandler(handlerContext, query, explain);
     }
     throw InvalidSqlInput.exception("Unsupported SQL statement [%s]", node.getKind());
+  }
+
+  private static SqlStatementHandler createDdlHandler(
+      final SqlStatementHandler.HandlerContext handlerContext,
+      final SqlNode query
+  )
+  {
+    if (query instanceof DruidSqlCreateTable) {
+      return new CatalogDdlHandler.CreateTableHandler(handlerContext, (DruidSqlCreateTable) query);
+    }
+    if (query instanceof DruidSqlAlterTable.AddColumn) {
+      return new CatalogDdlHandler.AddColumnHandler(handlerContext, (DruidSqlAlterTable.AddColumn) query);
+    }
+    if (query instanceof DruidSqlAlterTable.DropColumn) {
+      return new CatalogDdlHandler.DropColumnHandler(handlerContext, (DruidSqlAlterTable.DropColumn) query);
+    }
+    if (query instanceof DruidSqlAlterTable.AlterColumn) {
+      return new CatalogDdlHandler.AlterColumnHandler(handlerContext, (DruidSqlAlterTable.AlterColumn) query);
+    }
+    if (query instanceof DruidSqlAlterTable.AddProjection) {
+      return new CatalogDdlHandler.AddProjectionHandler(handlerContext, (DruidSqlAlterTable.AddProjection) query);
+    }
+    if (query instanceof DruidSqlAlterTable.DropProjection) {
+      return new CatalogDdlHandler.DropProjectionHandler(handlerContext, (DruidSqlAlterTable.DropProjection) query);
+    }
+    if (query instanceof DruidSqlAlterTable.SetProperties) {
+      return new CatalogDdlHandler.SetPropertiesHandler(handlerContext, (DruidSqlAlterTable.SetProperties) query);
+    }
+    throw DruidException.defensive("Unhandled catalog DDL statement [%s]", query.getClass().getSimpleName());
   }
 
   /**
@@ -318,6 +362,12 @@ public class DruidPlanner implements Closeable
     public PlannerHook hook()
     {
       return hook;
+    }
+
+    @Override
+    public PlannerFactory plannerFactory()
+    {
+      return plannerFactory;
     }
   }
 
