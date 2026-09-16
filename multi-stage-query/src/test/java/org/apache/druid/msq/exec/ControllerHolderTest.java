@@ -498,7 +498,7 @@ public class ControllerHolderTest
           {
             listenerCalled.countDown();
             try {
-              Assertions.assertTrue(releaseListener.await(10, TimeUnit.SECONDS));
+              releaseListener.await();
             }
             catch (InterruptedException e) {
               Thread.currentThread().interrupt();
@@ -512,7 +512,11 @@ public class ControllerHolderTest
 
     try {
       Assertions.assertTrue(listenerCalled.await(10, TimeUnit.SECONDS));
-      final TaskReport.ReportMap reports = registry.getQueryDetailsBySqlQueryId("sql-1").getReportMap();
+      final ListenableFuture<TaskReport.ReportMap> reportsFuture =
+          controllerThreadPool.getRunExecutorService().submit(
+              () -> registry.getQueryDetailsBySqlQueryId("sql-1").getReportMap()
+          );
+      final TaskReport.ReportMap reports = reportsFuture.get(5, TimeUnit.SECONDS);
       Assertions.assertNotNull(reports);
       final MSQTaskReport report = (MSQTaskReport) reports.get(MSQTaskReport.REPORT_KEY);
       Assertions.assertNotNull(report);

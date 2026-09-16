@@ -221,11 +221,13 @@ public class ControllerHolder
             }
           } else {
             // Canceled before running.
-            final MSQTaskReportPayload canceledReport = makeCanceledReport(cancelReason);
-            reportMap = TaskReport.buildTaskReports(new MSQTaskReport(controller.queryId(), canceledReport));
+            final MSQTaskReportPayload canceledReport;
             synchronized (this) {
-              listener.onQueryComplete(canceledReport);
+              canceledReport = makeCanceledReport(cancelReason);
             }
+            reportMap = TaskReport.buildTaskReports(new MSQTaskReport(controller.queryId(), canceledReport));
+            // Invoke the listener outside the holder lock so report lookups can acquire the lock while it runs.
+            listener.onQueryComplete(canceledReport);
           }
         }
         catch (Throwable e) {
