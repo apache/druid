@@ -25,6 +25,7 @@ import org.apache.calcite.rex.RexExecutor;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
@@ -67,6 +68,29 @@ public class DruidRexExecutor implements RexExecutor
   )
   {
     for (RexNode constExp : constExps) {
+      if (constExp instanceof RexCall
+          && ((RexCall) constExp).getOperator() == SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR
+          && SqlTypeName.CHAR_TYPES.contains(constExp.getType().getComponentType().getSqlTypeName())) {
+        final List<RexNode> operands = ((RexCall) constExp).getOperands();
+        boolean literalStrings = true;
+        for (final RexNode operand : operands) {
+          if (!(operand instanceof RexLiteral)
+              || !SqlTypeName.CHAR_TYPES.contains(operand.getType().getSqlTypeName())) {
+            literalStrings = false;
+            break;
+          }
+        }
+        if (literalStrings) {
+          // Literal strings already have their runtime values. Avoid formatting
+          // a large array as a Druid expression only to parse it again.
+          final List<String> values = new ArrayList<>(operands.size());
+          for (final RexNode operand : operands) {
+            values.add(((RexLiteral) operand).getValueAs(String.class));
+          }
+          reducedValues.add(rexBuilder.makeLiteral(values, constExp.getType(), true));
+          continue;
+        }
+      }
       final DruidExpression druidExpression = Expressions.toDruidExpression(
           plannerContext,
           EMPTY_ROW_SIGNATURE,

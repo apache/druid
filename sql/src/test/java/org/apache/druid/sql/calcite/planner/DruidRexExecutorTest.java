@@ -67,6 +67,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -290,6 +291,36 @@ public class DruidRexExecutorTest extends InitializedNullHandlingTest
             RowSignature.empty(),
             reduced.get(0)
         )
+    );
+  }
+
+  @Test
+  public void testArrayOfStringLiteralsReduction()
+  {
+    final DruidRexExecutor executor = new DruidRexExecutor(PLANNER_CONTEXT);
+    final ArraySqlType arrayType = new ArraySqlType(
+        typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.VARCHAR, 30), true),
+        false
+    );
+    final RexNode array = rexBuilder.makeLiteral(
+        Arrays.asList("", "a'b", "back\\slash", "中文", null), arrayType, true
+    );
+    final List<RexNode> reduced = new ArrayList<>();
+    executor.reduce(rexBuilder, ImmutableList.of(array), reduced);
+    Assertions.assertEquals(ImmutableList.of(array), reduced);
+  }
+
+  @Test
+  public void testStringArrayExpressionUsesEvaluator()
+  {
+    final RexNode array = rexBuilder.makeCall(
+        SqlStdOperatorTable.ARRAY_VALUE_CONSTRUCTOR,
+        rexBuilder.makeCall(SqlStdOperatorTable.CONCAT, rexBuilder.makeLiteral("a"), rexBuilder.makeLiteral("b"))
+    );
+    final List<RexNode> reduced = new ArrayList<>();
+    new DruidRexExecutor(PLANNER_CONTEXT).reduce(rexBuilder, ImmutableList.of(array), reduced);
+    Assertions.assertEquals(
+        rexBuilder.makeLiteral(ImmutableList.of("ab"), array.getType(), true), reduced.get(0)
     );
   }
 
