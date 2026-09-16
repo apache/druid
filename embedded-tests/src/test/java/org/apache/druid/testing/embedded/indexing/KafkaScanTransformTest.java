@@ -540,4 +540,83 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
     );
     Assertions.assertTrue(columns.contains("total_rate"));
   }
+
+  @Test
+  @Timeout(60)
+  public void test_scanQueryLimitIsNotApplied() throws JsonProcessingException
+  {
+    // BUG: ScanTransformer never consults ScanQuery#getScanRowsLimit()/getScanRowsOffset(). A single
+    // Kafka record with a 3-element "tags" array, unnested through a ScanTransformSpec whose embedded
+    // ScanQuery sets limit:1, should ingest exactly 1 row — instead all 3 unnested rows are ingested.
+    // Uses its own topic/datasource (rather than the shared `dataSource`/`topic` set up in setupAll)
+    // so it doesn't interfere with the other tests in this class, while reusing the same cluster.
+    final String limitDataSource = EmbeddedClusterApis.createTestDatasourceName();
+    final String limitTopic = EmbeddedClusterApis.createTestDatasourceName();
+    kafka.createTopicWithPartitions(limitTopic, 1);
+
+    final ScanTransformSpec transformSpec = new ScanTransformSpec(
+        Druids.newScanQueryBuilder()
+              .dataSource(UnnestDataSource.create(
+                  new TableDataSource("__input__"),
+                  new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                  null
+              ))
+              .eternityInterval()
+              .columns((List<String>) null)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+              .limit(1)
+              .build()
+    );
+
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec("__time", "auto", null))
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, null, null))
+                .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
+                .withTransform(transformSpec)
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withJsonInputFormat()
+                .withTaskCount(1)
+                .withTaskDuration(Period.hours(1))
+                .withConsumerProperties(kafka.consumerProperties())
+                .withStartDelay(Period.millis(10))
+                .withSupervisorRunPeriod(Period.millis(500))
+                .withUseEarliestSequenceNumber(true)
+                .withCompletionTimeout(Period.seconds(5))
+        )
+        .build(limitDataSource, limitTopic);
+
+    Assertions.assertEquals(limitDataSource, cluster.callApi().postSupervisor(spec));
+
+    kafka.publishRecordsToTopic(
+        limitTopic,
+        List.of(
+            TestHelper.JSON_MAPPER.writeValueAsBytes(
+                Map.of(
+                    "__time", "2024-01-01T00:00:00Z",
+                    "user", "alice",
+                    "tags", List.of("a", "b", "c")
+                )
+            )
+        )
+    );
+
+    // At least 1 row is processed regardless of whether limit is honored, so this wait condition
+    // holds either way — the bug surfaces in the row count assertion below, not here.
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/events/processed")
+                      .hasDimension(DruidMetrics.DATASOURCE, limitDataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
+
+    Assertions.assertEquals(
+        "1",
+        cluster.runSql(StringUtils.format("SELECT COUNT(*) FROM \"%s\"", limitDataSource)).trim(),
+        "limit:1 on the embedded scan query should cap ingestion to 1 row, but all 3 unnested rows "
+        + "were ingested"
+    );
+  }
 }
