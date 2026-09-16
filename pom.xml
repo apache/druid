@@ -471,12 +471,12 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.85.2</version>
+                <version>1.86</version>
             </dependency>
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.85</version>
+                <version>1.86</version>
             </dependency>
             <!-- Transitive dependency of hive-common in druid-kerberos, druid-ranger-security and
             druid-iceberg-extension  -->
@@ -1929,7 +1929,7 @@
                     <dependency>
                         <groupId>org.bouncycastle</groupId>
                         <artifactId>bcpkix-jdk18on</artifactId>
-                        <version>1.85</version>
+                        <version>1.86</version>
                     </dependency>
                 </dependencies>
                 <configuration>
