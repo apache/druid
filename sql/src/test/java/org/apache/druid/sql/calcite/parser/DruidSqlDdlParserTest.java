@@ -291,7 +291,7 @@ public class DruidSqlDdlParserTest
   public void testAlterTableAddProjectionIfNotExists()
   {
     final DruidSqlAlterTable.AddProjection alter = parseAlter(
-        "ALTER TABLE t ADD IF NOT EXISTS PROJECTION p AS (SELECT a GROUP BY a)",
+        "ALTER TABLE t ADD PROJECTION IF NOT EXISTS p AS (SELECT a GROUP BY a)",
         DruidSqlAlterTable.AddProjection.class
     );
     assertTrue(alter.isIfNotExists());
@@ -395,6 +395,28 @@ public class DruidSqlDdlParserTest
     assertTrue(parseCreate("CREATE TABLE sealed SEALED (a VARCHAR)").isSealed());
   }
 
+  /**
+   * IF is non-reserved, so a projection may be named "if"; the modifier is recognized only as the full IF NOT EXISTS
+   * sequence.
+   */
+  @Test
+  public void testAddProjectionNamedIf()
+  {
+    final DruidSqlAlterTable.AddProjection plain = parseAlter(
+        "ALTER TABLE t ADD PROJECTION if AS (SELECT a GROUP BY a)",
+        DruidSqlAlterTable.AddProjection.class
+    );
+    assertEquals("if", plain.getProjection().getName().toString());
+    assertFalse(plain.isIfNotExists());
+
+    final DruidSqlAlterTable.AddProjection both = parseAlter(
+        "ALTER TABLE t ADD PROJECTION IF NOT EXISTS if AS (SELECT a GROUP BY a)",
+        DruidSqlAlterTable.AddProjection.class
+    );
+    assertEquals("if", both.getProjection().getName().toString());
+    assertTrue(both.isIfNotExists());
+  }
+
   @Test
   public void testAlterTableAddBaseProjection()
   {
@@ -456,7 +478,7 @@ public class DruidSqlDdlParserTest
         "ALTER TABLE \"tbl\" DROP COLUMN \"a\"",
         "ALTER TABLE \"tbl\" ALTER COLUMN \"a\" SET DATA TYPE BIGINT",
         "ALTER TABLE \"tbl\" ADD PROJECTION \"p\" AS (SELECT \"a\" GROUP BY \"a\")",
-        "ALTER TABLE \"tbl\" ADD IF NOT EXISTS PROJECTION \"p\" AS (SELECT \"a\" GROUP BY \"a\")",
+        "ALTER TABLE \"tbl\" ADD PROJECTION IF NOT EXISTS \"p\" AS (SELECT \"a\" GROUP BY \"a\")",
         "ALTER TABLE \"tbl\" DROP PROJECTION \"p\"",
         "ALTER TABLE \"tbl\" DROP PROJECTION IF EXISTS \"p\"",
         "ALTER TABLE \"tbl\" SET PROPERTIES (\"sealed\" = TRUE)"

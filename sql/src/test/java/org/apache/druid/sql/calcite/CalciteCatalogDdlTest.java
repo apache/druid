@@ -38,7 +38,10 @@ import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.filter.RangeFilter;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -68,7 +71,6 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -162,6 +164,41 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         ),
         WRITER.calls.get(0).spec.columns()
     );
+  }
+
+  /**
+   * The statement layer does not gate a plain column's complex type on the local registry, that happens with the
+   * Coordinator's write-time validation ({@link DatasourceDefn#validateColumn}). The recording writer here stands in
+   * for the Coordinator, so the statement succeeds; the rejection itself is covered in {@code DatasourceTableTest} and
+   * end-to-end over a real Coordinator in {@code CatalogDdlAndIngestTest}.
+   */
+  @Test
+  public void testCreateTableStatementDoesNotGateOnLocalTypeRegistry()
+  {
+    execute("CREATE TABLE tbl (sketch TYPE('COMPLEX<noSuchType>'))");
+    assertEquals(
+        ImmutableList.of(new ColumnSpec("sketch", "COMPLEX<noSuchType>", null)),
+        WRITER.calls.get(0).spec.columns()
+    );
+  }
+
+  /**
+   * A column of a {@code __base} layout, by contrast, is checked before the writer is ever called: its declared type
+   * drives the physical segment schema, so translating the layout resolves it through the dimension-handler registry
+   * on the spot and rejects the statement up front.
+   */
+  @Test
+  public void testBaseProjectionRejectsUnregisteredComplexType()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP, sketch TYPE('COMPLEX<noSuchType>'),"
+            + " PROJECTION __base AS (SELECT tenant, __time, sketch CLUSTERED BY tenant))"
+        )
+    );
+    assertTrue(e.getMessage().contains("Complex type[noSuchType]"), e.getMessage());
+    assertTrue(WRITER.calls.isEmpty());
   }
 
   @Test
@@ -513,7 +550,7 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
 
   /**
    * A time bound written in the body is moved into the query's intervals during planning, and has to be put back:
-   * a projection stores a filter, not an interval.
+   * a projection stores a filter, not an interval, and the range is the lossless encoding of the interval.
    */
   @Test
   public void testProjectionWithTimeFilter()
@@ -523,8 +560,10 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         + " PROJECTION recent AS (SELECT page, SUM(cnt) AS total"
         + " WHERE __time >= TIMESTAMP '2020-01-01 00:00:00' GROUP BY page))"
     );
-    assertNotNull(projection(0).getSpec().getFilter(), "time filter must survive as a filter");
-    assertTrue(projection(0).getSpec().getFilter().getRequiredColumns().contains("__time"));
+    assertEquals(
+        new RangeFilter("__time", ColumnType.LONG, 1577836800000L, JodaUtils.MAX_INSTANT, false, true, null),
+        projection(0).getSpec().getFilter()
+    );
   }
 
   @Test
@@ -563,7 +602,7 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   public void testAlterTableAddProjectionIfNotExists()
   {
     WRITER.existing.put(TableId.datasource("tbl"), tableWithColumns("a"));
-    execute("ALTER TABLE tbl ADD IF NOT EXISTS PROJECTION p AS (SELECT a GROUP BY a)");
+    execute("ALTER TABLE tbl ADD PROJECTION IF NOT EXISTS p AS (SELECT a GROUP BY a)");
     assertTrue(WRITER.lastCall("addProjection").ifNotExists);
   }
 
@@ -769,7 +808,10 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         + " PROJECTION by_tenant AS (SELECT tenant, SUM(v) AS sum_v GROUP BY tenant))"
     );
     final TableSpec spec = WRITER.calls.get(0).spec;
-    assertNotNull(spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
+    assertEquals(
+        new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null),
+        spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
     assertEquals(1, ((List<?>) spec.properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY)).size());
   }
 
@@ -786,7 +828,10 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     );
 
     final TableSpec spec = WRITER.calls.get(0).spec;
-    assertNotNull(spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
+    assertEquals(
+        new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null),
+        spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
     assertNull(spec.properties().get(DatasourceDefn.SEALED_PROPERTY));
   }
 
@@ -888,10 +933,10 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     // Whether a layout already exists is the Coordinator's call, inside its update transaction, so the statement only
     // hands over the translated layout and the IF NOT EXISTS flag. EditorTest covers the rule itself.
     final RecordingCatalogTableWriter.Call call = WRITER.lastCall("setBaseTable");
-    assertNotNull(call.baseTable);
+    assertEquals(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null), call.baseTable);
     assertFalse(call.ifNotExists);
 
-    execute("ALTER TABLE tbl ADD IF NOT EXISTS PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant)");
+    execute("ALTER TABLE tbl ADD PROJECTION IF NOT EXISTS __base AS (SELECT tenant, __time CLUSTERED BY tenant)");
     assertTrue(WRITER.lastCall("setBaseTable").ifNotExists);
   }
 

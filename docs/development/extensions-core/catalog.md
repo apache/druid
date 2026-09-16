@@ -117,13 +117,17 @@ PARTITIONED BY DAY
 CLUSTERED BY user_id
 ```
 
+A complex type must be provided by a loaded extension: the statement fails if the named type is not registered, so a
+typo or a missing extension surfaces when the table is defined rather than at the first ingestion or query that
+touches the column. The extension must be loaded on the Coordinator, which validates catalog writes.
+
 `ALTER TABLE` supports one change per statement, so that each statement is a single atomic catalog operation:
 
 ```sql
 ALTER TABLE <table> ADD COLUMN <column> <type>
 ALTER TABLE <table> DROP COLUMN <column>
 ALTER TABLE <table> ALTER COLUMN <column> SET DATA TYPE <type>
-ALTER TABLE <table> ADD [IF NOT EXISTS] PROJECTION <name> AS ( <select> )
+ALTER TABLE <table> ADD PROJECTION [IF NOT EXISTS] <name> AS ( <select> )
 ALTER TABLE <table> DROP PROJECTION [IF EXISTS] <name>
 ALTER TABLE <table> SET PROPERTIES ( <property> = <value> [, ...] )
 ```
@@ -180,7 +184,7 @@ aggregates as separate columns and divide at query time. A projection can store 
 Projections may also be added to and removed from an existing table:
 
 ```sql
-ALTER TABLE "druid"."visits" ADD [IF NOT EXISTS] PROJECTION by_agent AS (
+ALTER TABLE "druid"."visits" ADD PROJECTION [IF NOT EXISTS] by_agent AS (
   SELECT user_agent, SUM(pages_visited) AS total_pages GROUP BY user_agent
 )
 ALTER TABLE "druid"."visits" DROP PROJECTION [IF EXISTS] by_agent
@@ -206,7 +210,7 @@ CREATE TABLE "druid"."events" SEALED (
   user_id BIGINT,
   payload TYPE('COMPLEX<json>'),
   PROJECTION __base AS (
-    SELECT tenant, ABS(user_id) % 128 AS bucket, __time, user_id, payload
+    SELECT tenant, MOD(ABS(user_id), 128) AS bucket, __time, user_id, payload
     CLUSTERED BY tenant, bucket
   )
 )

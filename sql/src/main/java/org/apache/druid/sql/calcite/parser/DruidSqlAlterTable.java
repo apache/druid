@@ -240,7 +240,7 @@ public abstract class DruidSqlAlterTable extends SqlCall
   }
 
   /**
-   * {@code ALTER TABLE <name> ADD [IF NOT EXISTS] PROJECTION <name> AS ( ... )}.
+   * {@code ALTER TABLE <name> ADD PROJECTION [IF NOT EXISTS] <name> AS ( ... )}.
    */
   public static class AddProjection extends DruidSqlAlterTable
   {
@@ -292,11 +292,11 @@ public abstract class DruidSqlAlterTable extends SqlCall
     @Override
     protected void unparseOperation(SqlWriter writer, int leftPrec, int rightPrec)
     {
-      writer.keyword("ADD");
+      writer.keyword("ADD PROJECTION");
       if (ifNotExists) {
         writer.keyword("IF NOT EXISTS");
       }
-      projection.unparse(writer, 0, 0);
+      projection.unparseAfterKeyword(writer);
     }
 
     private static class Operator extends SqlSpecialOperator

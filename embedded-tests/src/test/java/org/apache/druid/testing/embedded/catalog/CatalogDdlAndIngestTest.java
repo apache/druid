@@ -232,6 +232,24 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
   }
 
   @Test
+  public void testCreateTableUnregisteredComplexTypeFails()
+  {
+    final Exception e = assertThrows(
+        Exception.class,
+        () -> cluster.callApi().runSql(
+            "CREATE TABLE \"%s\" (__time TIMESTAMP, sketch TYPE('COMPLEX<noSuchType>'))",
+            dataSource
+        )
+    );
+    assertTrue(
+        e.getMessage().contains(
+            "Column [sketch] declares complex type [COMPLEX<noSuchType>], which is not registered on this server"
+        ),
+        e.getMessage()
+    );
+  }
+
+  @Test
   public void testCreateTableAlreadyExistsFails()
   {
     final String tableName = dataSource;
@@ -320,7 +338,7 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
         )
     );
     cluster.callApi().runSql(
-        "ALTER TABLE \"%s\" ADD IF NOT EXISTS PROJECTION p AS (SELECT a, SUM(b) AS sum_b GROUP BY a)",
+        "ALTER TABLE \"%s\" ADD PROJECTION IF NOT EXISTS p AS (SELECT a, SUM(b) AS sum_b GROUP BY a)",
         tableName
     );
     assertEquals(1, projectionsOf(tableName).size());

@@ -85,7 +85,7 @@ void AddDruidTableElement(List<SqlNode> columns, List<SqlNode> projections) :
 }
 {
   LOOKAHEAD(<PROJECTION> SimpleIdentifier() ( <AS> | <LPAREN> <SELECT> ))
-  projection = DruidProjectionDefinition()
+  <PROJECTION> projection = DruidProjectionDefinition()
   {
     projections.add(projection);
   }
@@ -112,7 +112,7 @@ SqlProjectionSpec DruidProjectionDefinition() :
   SqlNodeList clusteredBy = null;
 }
 {
-  <PROJECTION> { s = span(); }
+  { s = span(); }
   name = SimpleIdentifier()
   [ <AS> ]
   <LPAREN>
@@ -194,7 +194,8 @@ SqlNode DruidSqlAlterTable() :
         return new DruidSqlAlterTable.AddColumn(s.end(this), id, column);
       }
     |
-      [ <IF> <NOT> <EXISTS> { ifNotExists = true; } ] projection = DruidProjectionDefinition()
+      // A projection may be named "if", so two tokens decide whether IF starts the modifier or the name.
+      <PROJECTION> [ LOOKAHEAD(2) <IF> <NOT> <EXISTS> { ifNotExists = true; } ] projection = DruidProjectionDefinition()
       {
         return new DruidSqlAlterTable.AddProjection(s.end(this), id, projection, ifNotExists);
       }

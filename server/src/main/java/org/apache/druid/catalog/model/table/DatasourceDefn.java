@@ -40,7 +40,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.TypeSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.serde.ComplexMetrics;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,6 +131,34 @@ public class DatasourceDefn extends TableDefn
   }
 
   /**
+   * A datasource column's declared complex type must be registered by an extension or it will be rejected at catalog
+   * write time rather than at the first ingest or query that touches the column.
+   * <p>
+   * Reads never validate, so a spec stored before its type's extension left the load list keeps resolving, and
+   * surfaces on its next edit like any other invalid stored spec.
+   */
+  @Override
+  protected void validateColumn(ColumnSpec colSpec)
+  {
+    super.validateColumn(colSpec);
+    TypeSignature<ValueType> type = Columns.druidType(colSpec);
+    while (type != null && type.isArray()) {
+      type = type.getElementType();
+    }
+    if (type != null
+        && type.is(ValueType.COMPLEX)
+        && type.getComplexTypeName() != null
+        && ComplexMetrics.getSerdeForType(type.getComplexTypeName()) == null) {
+      throw InvalidInput.exception(
+          "Column [%s] declares complex type [%s], which is not registered on this server. Load the extension that"
+          + " provides the type, or correct the type name",
+          colSpec.name(),
+          colSpec.dataType()
+      );
+    }
+  }
+
+  /**
    * Cross-validate the declared projections. Names must be unique, a projection must not be coarser than the segments
    * it lives in, and the types it groups by must agree with the types the table declares. For a sealed table the
    * declared columns are the whole schema, so a projection that reads a column the table does not declare can never be
@@ -170,10 +201,9 @@ public class DatasourceDefn extends TableDefn
       for (String required : requiredColumns(spec)) {
         if (!available.contains(required)) {
           throw InvalidInput.exception(
-              "Projection [%s] references column [%s], which table [%s] does not declare",
+              "Projection [%s] references column [%s], which the table does not declare",
               spec.getName(),
-              required,
-              table.spec().type()
+              required
           );
         }
       }

@@ -104,6 +104,15 @@ public class SqlProjectionSpec extends SqlCall
   public void unparse(SqlWriter writer, int leftPrec, int rightPrec)
   {
     writer.keyword("PROJECTION");
+    unparseAfterKeyword(writer);
+  }
+
+  /**
+   * Unparses everything after the {@code PROJECTION} keyword. Split out because {@code ALTER TABLE ADD PROJECTION}
+   * prints {@code IF NOT EXISTS} between the keyword and the name.
+   */
+  public void unparseAfterKeyword(SqlWriter writer)
+  {
     name.unparse(writer, 0, 0);
     writer.keyword("AS");
     final SqlWriter.Frame frame = writer.startList("(", ")");

@@ -91,6 +91,12 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
    */
   private static final RelDataType RESULT_TYPE = resultType();
 
+  /**
+   * The runtime property that gates these statements. Read from {@link PlannerConfig} rather than the query context
+   * so that a user cannot turn the feature on for their own statement.
+   */
+  public static final String ENABLE_CATALOG_DDL_PROPERTY = "druid.sql.planner.enableCatalogDdl";
+
   protected final SqlIdentifier tableIdentifier;
   protected TableId tableId;
 
@@ -99,18 +105,6 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     super(handlerContext);
     this.tableIdentifier = tableIdentifier;
   }
-
-  /**
-   * The runtime property that gates these statements. Read from {@link PlannerConfig} rather than the query context
-   * so that a user cannot turn the feature on for their own statement.
-   */
-  public static final String ENABLE_CATALOG_DDL_PROPERTY = "druid.sql.planner.enableCatalogDdl";
-
-  /**
-   * The reserved name of the base-table projection, which describes the physical layout of the table itself. Handled
-   * as a separate catalog property, not as one of the aggregate projections.
-   */
-  public static final String BASE_PROJECTION_NAME = "__base";
 
   @Override
   public void validate()
@@ -268,7 +262,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
           "Projection [%s] cannot use CLUSTERED BY: an aggregate projection is ordered by its grouping columns."
           + " Only the [%s] projection, which describes the table's own layout, chooses a clustering",
           name,
-          BASE_PROJECTION_NAME
+          Projections.BASE_TABLE_PROJECTION_NAME
       );
     }
     return new DatasourceProjectionMetadata(
@@ -398,7 +392,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
           if (!seenProjections.add(name)) {
             throw InvalidSqlInput.exception("Projection [%s] is declared more than once", name);
           }
-          if (BASE_PROJECTION_NAME.equals(name)) {
+          if (Projections.BASE_TABLE_PROJECTION_NAME.equals(name)) {
             // SEALED is a choice, not a requirement: a column the table does not declare is appended after the
             // declared layout at ingest time; declaring SEALED rejects such columns instead.
             properties.put(
@@ -573,7 +567,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       final List<ColumnSpec> columns =
           existing.spec().columns() == null ? Collections.emptyList() : existing.spec().columns();
 
-      if (BASE_PROJECTION_NAME.equals(projectionName)) {
+      if (Projections.BASE_TABLE_PROJECTION_NAME.equals(projectionName)) {
         // The base table is a property of the table, not one of its projections, so it is set rather than appended.
         // Whether one is already defined is decided by the Coordinator inside its update transaction; checking it
         // from the read above would let two concurrent statements both find it absent.
@@ -630,7 +624,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     @Override
     protected void execute(CatalogTableWriter writer)
     {
-      if (BASE_PROJECTION_NAME.equals(projectionName)) {
+      if (Projections.BASE_TABLE_PROJECTION_NAME.equals(projectionName)) {
         // Removing the layout leaves the declared columns alone; only future segments are affected. Whether there is
         // one to remove is decided inside the Coordinator's update transaction, as for adding it.
         writer.dropBaseTable(tableId, alterTable.isIfExists());

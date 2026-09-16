@@ -38,6 +38,7 @@ import org.apache.druid.catalog.model.facade.DatasourceFacade.ColumnFacade;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -66,6 +67,10 @@ import java.util.Map;
 @Tag("CatalogTest")
 public class DatasourceTableTest extends InitializedNullHandlingTest
 {
+  static {
+    BuiltInTypesModule.registerHandlersAndSerde();
+  }
+
   private static final Logger LOG = new Logger(DatasourceTableTest.class);
 
   private final ObjectMapper mapper = DefaultObjectMapper.INSTANCE;
@@ -469,12 +474,37 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
       Assertions.assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [ARRAY<FOO>]"));
     }
     {
-      // Parse-level validation only: any well-formed complex type is accepted at the logical layer, whether or not
-      // its serde is registered on this server.
+      // A registered complex type is accepted: json is registered by the static BuiltInTypesModule call above, as it
+      // is on any server by the module itself.
+      TableSpec spec = builder.copy()
+          .column("foo", "COMPLEX<json>")
+          .buildSpec();
+      expectValidationSucceeds(spec);
+    }
+    {
+      // A well-formed complex type that no loaded extension registers is a typo or a missing extension either way,
+      // and is rejected at write time rather than at the first ingest or query that touches the column.
       TableSpec spec = builder.copy()
           .column("foo", "COMPLEX<thetaSketch>")
           .buildSpec();
-      expectValidationSucceeds(spec);
+      DruidException e = Assertions.assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      Assertions.assertEquals(
+          "Column [foo] declares complex type [COMPLEX<thetaSketch>], which is not registered on this server."
+          + " Load the extension that provides the type, or correct the type name",
+          e.getMessage()
+      );
+    }
+    {
+      // The registry check reaches through array wrappers to the element type.
+      TableSpec spec = builder.copy()
+          .column("foo", "ARRAY<COMPLEX<thetaSketch>>")
+          .buildSpec();
+      DruidException e = Assertions.assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      Assertions.assertEquals(
+          "Column [foo] declares complex type [ARRAY<COMPLEX<thetaSketch>>], which is not registered on this server."
+          + " Load the extension that provides the type, or correct the type name",
+          e.getMessage()
+      );
     }
   }
 
@@ -532,7 +562,10 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> projectionRegistry.resolve(sealedWithUndeclared).validate()
     );
-    Assertions.assertTrue(e.getMessage().contains("references column [nope]"));
+    Assertions.assertEquals(
+        "Projection [bad] references column [nope], which the table does not declare",
+        e.getMessage()
+    );
 
     // Ingestion may add columns to a table that is not sealed, so the same projection is allowed there.
     projectionRegistry.resolve(
