@@ -107,13 +107,13 @@ public class ControllerHolder
   @Nullable
   public TaskReport.ReportMap getReports()
   {
-    final TaskReport.ReportMap report = controller.finalReport();
+    final TaskReport.ReportMap report = controller.liveReports();
     if (report != null) {
       return report;
     }
 
-    // A controller canceled before it starts never enters Controller#run, so Controller#finalReport
-    // cannot be populated. Return the canceled report here while the completion listener runs.
+    // A controller canceled before it starts never enters Controller#run, so Controller#liveReports
+    // remains null. Return the canceled report here while the completion listener runs.
     // Check controllerThread as well as state because a running controller can be canceled before
     // it publishes its real final report.
     synchronized (this) {
@@ -209,7 +209,7 @@ public class ControllerHolder
               }
             }
 
-            reportMap = controller.finalReport();
+            reportMap = controller.liveReports();
             if (reportMap != null) {
               final TaskReport taskReport = reportMap.get(MSQTaskReport.REPORT_KEY);
               if (taskReport instanceof MSQTaskReport) {
@@ -241,9 +241,9 @@ public class ControllerHolder
         }
         finally {
           if (reportMap == null) {
-            // ControllerImpl publishes its final report before invoking the completion listener, including when
-            // controller.run() exits with an exception.
-            reportMap = controller.finalReport();
+            // ControllerImpl publishes its final report through liveReports before invoking the completion listener,
+            // including when controller.run() exits with an exception.
+            reportMap = controller.liveReports();
           }
 
           if (controllerRegistry != null) {

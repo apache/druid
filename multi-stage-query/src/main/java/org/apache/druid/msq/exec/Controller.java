@@ -134,17 +134,12 @@ public interface Controller
   boolean hasWorker(String workerId);
 
   /**
-   * Returns the current live report snapshot, or null if query execution has not started.
+   * Returns the current live report snapshot, or null if query execution has not started. Once the query is complete,
+   * returns the final report, which is published before
+   * {@link QueryListener#onQueryComplete(MSQTaskReportPayload)} is called.
    */
   @Nullable
   TaskReport.ReportMap liveReports();
-
-  /**
-   * Returns the final report once the query is complete, or null while the query is running.
-   * The final report is published before {@link QueryListener#onQueryComplete(MSQTaskReportPayload)} is called.
-   */
-  @Nullable
-  TaskReport.ReportMap finalReport();
 
   ControllerContext getControllerContext();
 

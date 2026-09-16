@@ -1073,15 +1073,13 @@ public class ControllerImpl implements Controller
 
   @Override
   @Nullable
-  public TaskReport.ReportMap finalReport()
-  {
-    return finalReport.get();
-  }
-
-  @Override
-  @Nullable
   public TaskReport.ReportMap liveReports()
   {
+    final TaskReport.ReportMap completedReport = finalReport.get();
+    if (completedReport != null) {
+      return completedReport;
+    }
+
     final QueryDefinition queryDef = queryDefRef.get();
 
     if (queryDef == null) {
