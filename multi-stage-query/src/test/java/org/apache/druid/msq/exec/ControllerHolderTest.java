@@ -398,7 +398,7 @@ public class ControllerHolderTest
       }
 
       @Override
-      public TaskReport.ReportMap liveReports()
+      public TaskReport.ReportMap getLiveOrFinalReport()
       {
         return finalReports.get();
       }
@@ -469,7 +469,7 @@ public class ControllerHolderTest
       }
 
       @Override
-      public TaskReport.ReportMap liveReports()
+      public TaskReport.ReportMap getLiveOrFinalReport()
       {
         return null;
       }
@@ -646,7 +646,7 @@ public class ControllerHolderTest
     }
 
     @Override
-    public TaskReport.ReportMap liveReports()
+    public TaskReport.ReportMap getLiveOrFinalReport()
     {
       return TaskReport.buildTaskReports(new MSQTaskReport(queryId, makeSuccessReport()));
     }

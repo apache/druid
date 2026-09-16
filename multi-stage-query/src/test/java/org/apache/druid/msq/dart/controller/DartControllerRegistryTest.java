@@ -214,7 +214,7 @@ public class DartControllerRegistryTest
     // Set up live reports
     final TaskReport.ReportMap liveReportMap = new TaskReport.ReportMap();
     liveReportMap.put(MSQTaskReport.REPORT_KEY, new MSQTaskReport("dart1", reportPayload));
-    Mockito.when(controller.liveReports()).thenReturn(liveReportMap);
+    Mockito.when(controller.getLiveOrFinalReport()).thenReturn(liveReportMap);
 
     final ControllerHolder holder = new ControllerHolder(
         controller,
@@ -247,7 +247,7 @@ public class DartControllerRegistryTest
     Mockito.when(controller.queryId()).thenReturn("dart1");
     Mockito.when(controller.getControllerContext()).thenReturn(controllerContext);
     Mockito.when(controllerContext.selfNode()).thenReturn(Mockito.mock(DruidNode.class));
-    Mockito.when(controller.liveReports()).thenReturn(null);
+    Mockito.when(controller.getLiveOrFinalReport()).thenReturn(null);
 
     final ControllerHolder holder = new ControllerHolder(
         controller,

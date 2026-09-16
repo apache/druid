@@ -1073,7 +1073,7 @@ public class ControllerImpl implements Controller
 
   @Override
   @Nullable
-  public TaskReport.ReportMap liveReports()
+  public TaskReport.ReportMap getLiveOrFinalReport()
   {
     final TaskReport.ReportMap completedReport = finalReport.get();
     if (completedReport != null) {

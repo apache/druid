@@ -139,7 +139,7 @@ public interface Controller
    * {@link QueryListener#onQueryComplete(MSQTaskReportPayload)} is called.
    */
   @Nullable
-  TaskReport.ReportMap liveReports();
+  TaskReport.ReportMap getLiveOrFinalReport();
 
   ControllerContext getControllerContext();
 
