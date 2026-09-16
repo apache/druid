@@ -5759,7 +5759,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 1.15.0
+version: 1.20.0
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -6235,7 +6235,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Felix Geisendörfer
-version: 4.0.4
+version: 4.0.6
 license_file_path: licenses/bin/form-data.MIT
 
 ---
