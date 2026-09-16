@@ -27,9 +27,9 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -42,7 +42,7 @@ public class ShareGroupIndexTaskTest
 {
   private ObjectMapper mapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper = new DefaultObjectMapper();
@@ -60,38 +60,38 @@ public class ShareGroupIndexTaskTest
   public void testTaskType()
   {
     final ShareGroupIndexTask task = createTask("task_1");
-    Assert.assertEquals("index_kafka_share_group", task.getType());
+    Assertions.assertEquals("index_kafka_share_group", task.getType());
   }
 
   @Test
   public void testTaskIsAlwaysReady() throws Exception
   {
     final ShareGroupIndexTask task = createTask("task_2");
-    Assert.assertTrue(task.isReady(null));
+    Assertions.assertTrue(task.isReady(null));
   }
 
   @Test
   public void testTaskDataSource()
   {
     final ShareGroupIndexTask task = createTask("task_3");
-    Assert.assertEquals("test_datasource", task.getDataSource());
+    Assertions.assertEquals("test_datasource", task.getDataSource());
   }
 
   @Test
   public void testTaskIdGeneration()
   {
     final ShareGroupIndexTask task = createTask(null);
-    Assert.assertNotNull(task.getId());
-    Assert.assertTrue(task.getId().contains("index_kafka_share_group"));
+    Assertions.assertNotNull(task.getId());
+    Assertions.assertTrue(task.getId().contains("index_kafka_share_group"));
   }
 
   @Test
   public void testGracefulStop()
   {
     final ShareGroupIndexTask task = createTask("task_4");
-    Assert.assertFalse(task.isStopRequested());
+    Assertions.assertFalse(task.isStopRequested());
     task.stopGracefully(null);
-    Assert.assertTrue(task.isStopRequested());
+    Assertions.assertTrue(task.isStopRequested());
   }
 
   @Test
@@ -99,8 +99,8 @@ public class ShareGroupIndexTaskTest
   {
     final ShareGroupIndexTask task = createTask("task_5");
     final ShareGroupIndexTaskIOConfig ioConfig = task.getIOConfig();
-    Assert.assertEquals("test-topic", ioConfig.getTopic());
-    Assert.assertEquals("test-share-group", ioConfig.getGroupId());
+    Assertions.assertEquals("test-topic", ioConfig.getTopic());
+    Assertions.assertEquals("test-share-group", ioConfig.getGroupId());
   }
 
   @Test
@@ -110,29 +110,29 @@ public class ShareGroupIndexTaskTest
     final String json = mapper.writeValueAsString(task);
 
     // Verify the type field is present
-    Assert.assertTrue(json.contains("index_kafka_share_group"));
+    Assertions.assertTrue(json.contains("index_kafka_share_group"));
 
     final ShareGroupIndexTask deserialized = mapper.readValue(json, ShareGroupIndexTask.class);
-    Assert.assertEquals(task.getId(), deserialized.getId());
-    Assert.assertEquals(task.getDataSource(), deserialized.getDataSource());
-    Assert.assertEquals(task.getType(), deserialized.getType());
-    Assert.assertEquals(task.getIOConfig().getTopic(), deserialized.getIOConfig().getTopic());
-    Assert.assertEquals(task.getIOConfig().getGroupId(), deserialized.getIOConfig().getGroupId());
+    Assertions.assertEquals(task.getId(), deserialized.getId());
+    Assertions.assertEquals(task.getDataSource(), deserialized.getDataSource());
+    Assertions.assertEquals(task.getType(), deserialized.getType());
+    Assertions.assertEquals(task.getIOConfig().getTopic(), deserialized.getIOConfig().getTopic());
+    Assertions.assertEquals(task.getIOConfig().getGroupId(), deserialized.getIOConfig().getGroupId());
   }
 
   @Test
   public void testInputSourceResources()
   {
     final ShareGroupIndexTask task = createTask("task_6");
-    Assert.assertNotNull(task.getInputSourceResources());
-    Assert.assertFalse(task.getInputSourceResources().isEmpty());
+    Assertions.assertNotNull(task.getInputSourceResources());
+    Assertions.assertFalse(task.getInputSourceResources().isEmpty());
   }
 
   @Test
   public void testDefaultPriorityIsRealtime()
   {
     final ShareGroupIndexTask task = createTask("task_priority_default");
-    Assert.assertEquals(Tasks.DEFAULT_REALTIME_TASK_PRIORITY, task.getPriority());
+    Assertions.assertEquals(Tasks.DEFAULT_REALTIME_TASK_PRIORITY, task.getPriority());
   }
 
   @Test
@@ -142,7 +142,7 @@ public class ShareGroupIndexTaskTest
         "task_priority_override",
         ImmutableMap.of(Tasks.PRIORITY_KEY, 99)
     );
-    Assert.assertEquals(99, task.getPriority());
+    Assertions.assertEquals(99, task.getPriority());
   }
 
   private ShareGroupIndexTask createTask(String id)
@@ -171,6 +171,7 @@ public class ShareGroupIndexTaskTest
     );
 
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
+        null,
         null,
         null,
         null,

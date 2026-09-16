@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.kafka;
 
 import com.google.common.collect.ImmutableMap;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -38,7 +38,7 @@ public class ShareGroupConsumerPropertiesTest
         "ssl.protocol", "TLSv1.3"
     );
     final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(input);
-    Assert.assertEquals(input, sanitized);
+    Assertions.assertEquals(input, sanitized);
   }
 
   @Test
@@ -49,9 +49,9 @@ public class ShareGroupConsumerPropertiesTest
         "auto.offset.reset", "earliest"
     );
     final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(input);
-    Assert.assertEquals(1, sanitized.size());
-    Assert.assertEquals("broker:9092", sanitized.get("bootstrap.servers"));
-    Assert.assertFalse(sanitized.containsKey("auto.offset.reset"));
+    Assertions.assertEquals(1, sanitized.size());
+    Assertions.assertEquals("broker:9092", sanitized.get("bootstrap.servers"));
+    Assertions.assertFalse(sanitized.containsKey("auto.offset.reset"));
   }
 
   @Test
@@ -63,8 +63,8 @@ public class ShareGroupConsumerPropertiesTest
       input.put(key, "some-value");
     }
     final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(input);
-    Assert.assertEquals(1, sanitized.size());
-    Assert.assertEquals("broker:9092", sanitized.get("bootstrap.servers"));
+    Assertions.assertEquals(1, sanitized.size());
+    Assertions.assertEquals("broker:9092", sanitized.get("bootstrap.servers"));
   }
 
   @Test
@@ -77,7 +77,7 @@ public class ShareGroupConsumerPropertiesTest
     input.put("c.third", 3);
 
     final Map<String, Object> sanitized = ShareGroupConsumerProperties.sanitize(input);
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new String[]{"a.first", "b.second", "c.third"},
         sanitized.keySet().toArray(new String[0])
     );
@@ -86,7 +86,7 @@ public class ShareGroupConsumerPropertiesTest
   @Test
   public void testSanitizeOnEmptyMap()
   {
-    Assert.assertTrue(ShareGroupConsumerProperties.sanitize(ImmutableMap.of()).isEmpty());
+    Assertions.assertTrue(ShareGroupConsumerProperties.sanitize(ImmutableMap.of()).isEmpty());
   }
 
   @Test
@@ -102,11 +102,11 @@ public class ShareGroupConsumerPropertiesTest
 
     ShareGroupConsumerProperties.sanitize(props);
 
-    Assert.assertEquals("broker:9092", props.getProperty("bootstrap.servers"));
+    Assertions.assertEquals("broker:9092", props.getProperty("bootstrap.servers"));
     for (String key : ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS) {
-      Assert.assertFalse(
-          "expected unsupported key removed: " + key,
-          props.containsKey(key)
+      Assertions.assertFalse(
+          props.containsKey(key),
+          "expected unsupported key removed: " + key
       );
     }
   }
@@ -120,23 +120,23 @@ public class ShareGroupConsumerPropertiesTest
 
     ShareGroupConsumerProperties.sanitize(props);
 
-    Assert.assertEquals(2, props.size());
-    Assert.assertEquals("broker:9092", props.getProperty("bootstrap.servers"));
-    Assert.assertEquals("share-group-client", props.getProperty("client.id"));
+    Assertions.assertEquals(2, props.size());
+    Assertions.assertEquals("broker:9092", props.getProperty("bootstrap.servers"));
+    Assertions.assertEquals("share-group-client", props.getProperty("client.id"));
   }
 
   @Test
   public void testUnsupportedConfigsContainsKnownKafka42Keys()
   {
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("auto.offset.reset"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("enable.auto.commit"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.instance.id"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("isolation.level"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("partition.assignment.strategy"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("interceptor.classes"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("session.timeout.ms"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("heartbeat.interval.ms"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.protocol"));
-    Assert.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.remote.assignor"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("auto.offset.reset"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("enable.auto.commit"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.instance.id"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("isolation.level"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("partition.assignment.strategy"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("interceptor.classes"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("session.timeout.ms"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("heartbeat.interval.ms"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.protocol"));
+    Assertions.assertTrue(ShareGroupConsumerProperties.UNSUPPORTED_CONFIGS.contains("group.remote.assignor"));
   }
 }

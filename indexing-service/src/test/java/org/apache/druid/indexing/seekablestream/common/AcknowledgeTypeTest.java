@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.seekablestream.common;
 
 import org.apache.druid.data.input.impl.ByteEntity;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.List;
@@ -35,18 +35,18 @@ public class AcknowledgeTypeTest
   public void testValuesContainsAllExpectedConstants()
   {
     final AcknowledgeType[] values = AcknowledgeType.values();
-    Assert.assertEquals(4, values.length);
-    Assert.assertEquals(AcknowledgeType.ACCEPT, values[0]);
-    Assert.assertEquals(AcknowledgeType.RELEASE, values[1]);
-    Assert.assertEquals(AcknowledgeType.REJECT, values[2]);
-    Assert.assertEquals(AcknowledgeType.RENEW, values[3]);
+    Assertions.assertEquals(4, values.length);
+    Assertions.assertEquals(AcknowledgeType.ACCEPT, values[0]);
+    Assertions.assertEquals(AcknowledgeType.RELEASE, values[1]);
+    Assertions.assertEquals(AcknowledgeType.REJECT, values[2]);
+    Assertions.assertEquals(AcknowledgeType.RENEW, values[3]);
   }
 
   @Test
   public void testValueOfRoundTripsForEachConstant()
   {
     for (AcknowledgeType type : AcknowledgeType.values()) {
-      Assert.assertSame(type, AcknowledgeType.valueOf(type.name()));
+      Assertions.assertSame(type, AcknowledgeType.valueOf(type.name()));
     }
   }
 
@@ -112,6 +112,6 @@ public class AcknowledgeTypeTest
         };
 
     stub.wakeup();
-    Assert.assertFalse(stub.acquisitionLockTimeoutMs().isPresent());
+    Assertions.assertFalse(stub.acquisitionLockTimeoutMs().isPresent());
   }
 }

@@ -27,22 +27,33 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
+import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
+import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.seekablestream.StreamChunkReader;
 import org.apache.druid.indexing.seekablestream.common.AcknowledgeType;
 import org.apache.druid.indexing.seekablestream.common.AcknowledgingRecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverSegmentLockHelper;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.kafka.common.errors.WakeupException;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
@@ -58,11 +69,18 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class ShareGroupIndexTaskRunnerTest
 {
+  private static final SegmentIdWithShardSpec RESTORED_SEGMENT = new SegmentIdWithShardSpec(
+      "test_datasource",
+      Intervals.of("2025-01-01/2025-01-02"),
+      "version",
+      new NumberedShardSpec(3, 4)
+  );
+
   private ObjectMapper mapper;
   private ShareGroupIndexTask task;
   private TaskToolbox toolbox;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper = new DefaultObjectMapper();
@@ -83,6 +101,7 @@ public class ShareGroupIndexTaskRunnerTest
         null
     );
     final KafkaIndexTaskTuningConfig tuningConfig = new KafkaIndexTaskTuningConfig(
+        null,
         null,
         null,
         null,
@@ -127,9 +146,9 @@ public class ShareGroupIndexTaskRunnerTest
   @Test
   public void testStopGracefullyBeforeRunTaskIsSafe()
   {
-    Assert.assertFalse(task.isStopRequested());
+    Assertions.assertFalse(task.isStopRequested());
     task.stopGracefully(null);
-    Assert.assertTrue(task.isStopRequested());
+    Assertions.assertTrue(task.isStopRequested());
   }
 
   @Test
@@ -143,14 +162,14 @@ public class ShareGroupIndexTaskRunnerTest
             org.apache.druid.indexing.seekablestream.common.AcknowledgingRecordSupplier.class
         )
     );
-    Assert.assertNotNull(runner);
+    Assertions.assertNotNull(runner);
     runner.requestWakeup();
   }
 
   @Test
   public void testCommitFailureMetricName()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ingest/shareGroup/commitFailures",
         ShareGroupIndexTaskRunner.METRIC_COMMIT_FAILURES
     );
@@ -177,8 +196,91 @@ public class ShareGroupIndexTaskRunnerTest
         toolbox
     );
 
-    Assert.assertTrue(status.isSuccess());
-    Assert.assertEquals(0, supplier.pollCallCount());
+    Assertions.assertTrue(status.isSuccess());
+    Assertions.assertEquals(0, supplier.pollCallCount());
+  }
+
+  @Test
+  public void testRunLoop_reacquiresSegmentLockForRestoredSegment() throws Exception
+  {
+    final ShareGroupIndexTask segmentLockTask = buildTask(
+        "segment_lock_task",
+        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false)
+    );
+    final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
+    final TaskLock taskLock = Mockito.mock(TaskLock.class);
+    Mockito.when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    Mockito.when(taskActionClient.submit(Mockito.any(SegmentLockAcquireAction.class)))
+           .thenReturn(LockResult.ok(taskLock, null));
+
+    final AppenderatorDriverSegmentLockHelper lockHelper = startAndCaptureRestoreLockHelper(segmentLockTask);
+    Assertions.assertTrue(lockHelper.lock(RESTORED_SEGMENT));
+
+    final ArgumentCaptor<SegmentLockAcquireAction> actionCaptor =
+        ArgumentCaptor.forClass(SegmentLockAcquireAction.class);
+    Mockito.verify(taskActionClient).submit(actionCaptor.capture());
+    final SegmentLockAcquireAction action = actionCaptor.getValue();
+    Assertions.assertEquals(TaskLockType.APPEND, action.getLockType());
+    Assertions.assertEquals(RESTORED_SEGMENT.getInterval(), action.getInterval());
+    Assertions.assertEquals(RESTORED_SEGMENT.getVersion(), action.getVersion());
+    Assertions.assertEquals(RESTORED_SEGMENT.getShardSpec().getPartitionNum(), action.getPartitionId());
+    Assertions.assertEquals(1000L, action.getTimeoutMs());
+  }
+
+  @Test
+  public void testRunLoop_restoredSegmentLockAcquisitionFailureReturnsFalse() throws Exception
+  {
+    final ShareGroupIndexTask segmentLockTask = buildTask(
+        "segment_lock_task",
+        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, false)
+    );
+    final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
+    Mockito.when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    Mockito.when(taskActionClient.submit(Mockito.any(SegmentLockAcquireAction.class)))
+           .thenReturn(LockResult.fail());
+
+    final AppenderatorDriverSegmentLockHelper lockHelper = startAndCaptureRestoreLockHelper(segmentLockTask);
+    Assertions.assertFalse(lockHelper.lock(RESTORED_SEGMENT));
+  }
+
+  @Test
+  public void testRunLoop_reacquiresTimeChunkLockForRestoredSegment() throws Exception
+  {
+    final ShareGroupIndexTask timeChunkTask = buildTask(
+        "time_chunk_lock_task",
+        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true)
+    );
+    final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
+    final TaskLock taskLock = Mockito.mock(TaskLock.class);
+    Mockito.when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    Mockito.when(taskActionClient.submit(Mockito.any(TimeChunkLockAcquireAction.class))).thenReturn(taskLock);
+
+    final AppenderatorDriverSegmentLockHelper lockHelper = startAndCaptureRestoreLockHelper(timeChunkTask);
+    Assertions.assertTrue(lockHelper.lock(RESTORED_SEGMENT));
+
+    final ArgumentCaptor<TimeChunkLockAcquireAction> actionCaptor =
+        ArgumentCaptor.forClass(TimeChunkLockAcquireAction.class);
+    Mockito.verify(taskActionClient).submit(actionCaptor.capture());
+    final TimeChunkLockAcquireAction action = actionCaptor.getValue();
+    Assertions.assertEquals(TaskLockType.APPEND, action.getType());
+    Assertions.assertEquals(RESTORED_SEGMENT.getInterval(), action.getInterval());
+    Assertions.assertEquals(1000L, action.getTimeoutMs());
+    Mockito.verify(taskLock).assertNotRevoked();
+  }
+
+  @Test
+  public void testRunLoop_restoredTimeChunkLockAcquisitionFailureReturnsFalse() throws Exception
+  {
+    final ShareGroupIndexTask timeChunkTask = buildTask(
+        "time_chunk_lock_task",
+        ImmutableMap.of(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true)
+    );
+    final TaskActionClient taskActionClient = Mockito.mock(TaskActionClient.class);
+    Mockito.when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
+    Mockito.when(taskActionClient.submit(Mockito.any(TimeChunkLockAcquireAction.class))).thenReturn(null);
+
+    final AppenderatorDriverSegmentLockHelper lockHelper = startAndCaptureRestoreLockHelper(timeChunkTask);
+    Assertions.assertFalse(lockHelper.lock(RESTORED_SEGMENT));
   }
 
   @Test
@@ -200,8 +302,8 @@ public class ShareGroupIndexTaskRunnerTest
         toolbox
     );
 
-    Assert.assertTrue(status.isSuccess());
-    Assert.assertEquals(task.getId(), status.getId());
+    Assertions.assertTrue(status.isSuccess());
+    Assertions.assertEquals(task.getId(), status.getId());
   }
 
   @Test
@@ -235,8 +337,8 @@ public class ShareGroupIndexTaskRunnerTest
         toolbox
     );
 
-    Assert.assertTrue(status.isSuccess());
-    Assert.assertTrue(supplier.acknowledgedAtLeastOnce());
+    Assertions.assertTrue(status.isSuccess());
+    Assertions.assertTrue(supplier.acknowledgedAtLeastOnce());
   }
 
   @Test
@@ -265,10 +367,10 @@ public class ShareGroupIndexTaskRunnerTest
           task.getTuningConfig(),
           toolbox
       );
-      Assert.fail("expected ISE for failed segment allocation");
+      Assertions.fail("expected ISE for failed segment allocation");
     }
     catch (org.apache.druid.java.util.common.ISE expected) {
-      Assert.assertTrue(expected.getMessage().contains("Could not allocate segment"));
+      Assertions.assertTrue(expected.getMessage().contains("Could not allocate segment"));
     }
   }
 
@@ -279,17 +381,22 @@ public class ShareGroupIndexTaskRunnerTest
     final ShareGroupIndexTask taskB = buildTask("share_group_task_B");
     final java.util.Set<String> seqNamesUsedByA = runOnceAndCaptureSequenceNames(taskA);
     final java.util.Set<String> seqNamesUsedByB = runOnceAndCaptureSequenceNames(taskB);
-    Assert.assertFalse("Task A should call driver.add at least once", seqNamesUsedByA.isEmpty());
-    Assert.assertFalse("Task B should call driver.add at least once", seqNamesUsedByB.isEmpty());
+    Assertions.assertFalse(seqNamesUsedByA.isEmpty(), "Task A should call driver.add at least once");
+    Assertions.assertFalse(seqNamesUsedByB.isEmpty(), "Task B should call driver.add at least once");
     final java.util.Set<String> shared = new java.util.HashSet<>(seqNamesUsedByA);
     shared.retainAll(seqNamesUsedByB);
-    Assert.assertTrue(
-        "Concurrent share-group tasks must not share segment sequence names; shared=" + shared,
-        shared.isEmpty()
+    Assertions.assertTrue(
+        shared.isEmpty(),
+        "Concurrent share-group tasks must not share segment sequence names; shared=" + shared
     );
   }
 
   private ShareGroupIndexTask buildTask(String id)
+  {
+    return buildTask(id, null);
+  }
+
+  private ShareGroupIndexTask buildTask(String id, Map<String, Object> context)
   {
     return new ShareGroupIndexTask(
         id,
@@ -297,9 +404,36 @@ public class ShareGroupIndexTaskRunnerTest
         task.getDataSchema(),
         task.getTuningConfig(),
         task.getIOConfig(),
-        null,
+        context,
         mapper
     );
+  }
+
+  private AppenderatorDriverSegmentLockHelper startAndCaptureRestoreLockHelper(
+      ShareGroupIndexTask runnerTask
+  ) throws Exception
+  {
+    runnerTask.stopGracefully(null);
+    final StreamAppenderatorDriver driver = mockDriver();
+    final Appenderator appenderator = Mockito.mock(Appenderator.class);
+    final FakeRecordSupplier supplier = new FakeRecordSupplier(0, runnerTask);
+    final StreamChunkReader chunkReader = Mockito.mock(StreamChunkReader.class);
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(runnerTask, toolbox, mapper);
+
+    runner.runLoop(
+        driver,
+        appenderator,
+        supplier,
+        chunkReader,
+        runnerTask.getIOConfig(),
+        runnerTask.getTuningConfig(),
+        toolbox
+    );
+
+    final ArgumentCaptor<AppenderatorDriverSegmentLockHelper> lockHelperCaptor =
+        ArgumentCaptor.forClass(AppenderatorDriverSegmentLockHelper.class);
+    Mockito.verify(driver).startJob(lockHelperCaptor.capture());
+    return lockHelperCaptor.getValue();
   }
 
   private java.util.Set<String> runOnceAndCaptureSequenceNames(ShareGroupIndexTask t) throws Exception
@@ -346,7 +480,7 @@ public class ShareGroupIndexTaskRunnerTest
         toolbox
     );
 
-    Assert.assertTrue(status.isSuccess());
+    Assertions.assertTrue(status.isSuccess());
   }
 
   private StreamAppenderatorDriver mockDriver()

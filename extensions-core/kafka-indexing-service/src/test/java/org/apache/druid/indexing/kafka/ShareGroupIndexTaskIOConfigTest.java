@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -34,7 +34,7 @@ public class ShareGroupIndexTaskIOConfigTest
 {
   private ObjectMapper mapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper = new DefaultObjectMapper();
@@ -60,11 +60,11 @@ public class ShareGroupIndexTaskIOConfigTest
     final String json = mapper.writeValueAsString(config);
     final ShareGroupIndexTaskIOConfig deserialized = mapper.readValue(json, ShareGroupIndexTaskIOConfig.class);
 
-    Assert.assertEquals("test-topic", deserialized.getTopic());
-    Assert.assertEquals("my-share-group", deserialized.getGroupId());
-    Assert.assertEquals(consumerProps, deserialized.getConsumerProperties());
-    Assert.assertNull(deserialized.getInputFormat());
-    Assert.assertEquals(5000L, deserialized.getPollTimeout());
+    Assertions.assertEquals("test-topic", deserialized.getTopic());
+    Assertions.assertEquals("my-share-group", deserialized.getGroupId());
+    Assertions.assertEquals(consumerProps, deserialized.getConsumerProperties());
+    Assertions.assertNull(deserialized.getInputFormat());
+    Assertions.assertEquals(5000L, deserialized.getPollTimeout());
   }
 
   @Test
@@ -84,10 +84,10 @@ public class ShareGroupIndexTaskIOConfigTest
     final String json = mapper.writeValueAsString(config);
     final ShareGroupIndexTaskIOConfig deserialized = mapper.readValue(json, ShareGroupIndexTaskIOConfig.class);
 
-    Assert.assertEquals("test-topic", deserialized.getTopic());
-    Assert.assertEquals("my-share-group", deserialized.getGroupId());
+    Assertions.assertEquals("test-topic", deserialized.getTopic());
+    Assertions.assertEquals("my-share-group", deserialized.getGroupId());
     // Default poll timeout from KafkaSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS
-    Assert.assertTrue(deserialized.getPollTimeout() > 0);
+    Assertions.assertTrue(deserialized.getPollTimeout() > 0);
   }
 
   @Test
@@ -102,45 +102,54 @@ public class ShareGroupIndexTaskIOConfigTest
                         + "}";
 
     final ShareGroupIndexTaskIOConfig config = mapper.readValue(json, ShareGroupIndexTaskIOConfig.class);
-    Assert.assertEquals("events", config.getTopic());
-    Assert.assertEquals("druid-share", config.getGroupId());
-    Assert.assertEquals("broker:9092", config.getConsumerProperties().get("bootstrap.servers"));
-    Assert.assertEquals(2000L, config.getPollTimeout());
+    Assertions.assertEquals("events", config.getTopic());
+    Assertions.assertEquals("druid-share", config.getGroupId());
+    Assertions.assertEquals("broker:9092", config.getConsumerProperties().get("bootstrap.servers"));
+    Assertions.assertEquals(2000L, config.getPollTimeout());
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testTopicRequired()
   {
-    new ShareGroupIndexTaskIOConfig(
-        null,
-        "my-share-group",
-        ImmutableMap.of("bootstrap.servers", "localhost:9092"),
-        null,
-        null
+    Assertions.assertThrows(
+        NullPointerException.class,
+        () -> new ShareGroupIndexTaskIOConfig(
+            null,
+            "my-share-group",
+            ImmutableMap.of("bootstrap.servers", "localhost:9092"),
+            null,
+            null
+        )
     );
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testGroupIdRequired()
   {
-    new ShareGroupIndexTaskIOConfig(
-        "test-topic",
-        null,
-        ImmutableMap.of("bootstrap.servers", "localhost:9092"),
-        null,
-        null
+    Assertions.assertThrows(
+        NullPointerException.class,
+        () -> new ShareGroupIndexTaskIOConfig(
+            "test-topic",
+            null,
+            ImmutableMap.of("bootstrap.servers", "localhost:9092"),
+            null,
+            null
+        )
     );
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testConsumerPropertiesRequired()
   {
-    new ShareGroupIndexTaskIOConfig(
-        "test-topic",
-        "my-share-group",
-        null,
-        null,
-        null
+    Assertions.assertThrows(
+        NullPointerException.class,
+        () -> new ShareGroupIndexTaskIOConfig(
+            "test-topic",
+            "my-share-group",
+            null,
+            null,
+            null
+        )
     );
   }
 
@@ -155,7 +164,7 @@ public class ShareGroupIndexTaskIOConfigTest
         null
     );
     final String str = config.toString();
-    Assert.assertTrue(str.contains("test-topic"));
-    Assert.assertTrue(str.contains("my-share-group"));
+    Assertions.assertTrue(str.contains("test-topic"));
+    Assertions.assertTrue(str.contains("my-share-group"));
   }
 }

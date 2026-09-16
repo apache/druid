@@ -30,10 +30,10 @@ import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.TopicIdPartition;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.Uuid;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.nio.charset.StandardCharsets;
@@ -56,14 +56,14 @@ public class KafkaShareGroupRecordSupplierTest
   private KafkaShareGroupRecordSupplier supplier;
 
   @SuppressWarnings("unchecked")
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mockConsumer = mock(KafkaShareConsumer.class);
     supplier = new KafkaShareGroupRecordSupplier(mockConsumer);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     supplier.close();
@@ -78,7 +78,7 @@ public class KafkaShareGroupRecordSupplierTest
     supplier.subscribe(topics);
     verify(mockConsumer).subscribe(topics);
 
-    Assert.assertEquals(topics, supplier.subscription());
+    Assertions.assertEquals(topics, supplier.subscription());
   }
 
   @Test
@@ -108,22 +108,22 @@ public class KafkaShareGroupRecordSupplierTest
     final List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> result =
         supplier.poll(1000);
 
-    Assert.assertEquals(2, result.size());
+    Assertions.assertEquals(2, result.size());
 
     // Verify first record
     final OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity> polled1 =
         result.stream().filter(r -> r.getSequenceNumber() == 100L).findFirst().orElse(null);
-    Assert.assertNotNull(polled1);
-    Assert.assertEquals("test-topic", polled1.getStream());
-    Assert.assertEquals(0, polled1.getPartitionId().partition());
-    Assert.assertNotNull(polled1.getData());
-    Assert.assertEquals(1, polled1.getData().size());
+    Assertions.assertNotNull(polled1);
+    Assertions.assertEquals("test-topic", polled1.getStream());
+    Assertions.assertEquals(0, polled1.getPartitionId().partition());
+    Assertions.assertNotNull(polled1.getData());
+    Assertions.assertEquals(1, polled1.getData().size());
 
     // Verify second record
     final OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity> polled2 =
         result.stream().filter(r -> r.getSequenceNumber() == 200L).findFirst().orElse(null);
-    Assert.assertNotNull(polled2);
-    Assert.assertEquals(1, polled2.getPartitionId().partition());
+    Assertions.assertNotNull(polled2);
+    Assertions.assertEquals(1, polled2.getPartitionId().partition());
   }
 
   @Test
@@ -139,8 +139,8 @@ public class KafkaShareGroupRecordSupplierTest
     final List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> result =
         supplier.poll(1000);
 
-    Assert.assertEquals(1, result.size());
-    Assert.assertTrue(result.get(0).getData().isEmpty());
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertTrue(result.get(0).getData().isEmpty());
   }
 
   @Test
@@ -149,7 +149,7 @@ public class KafkaShareGroupRecordSupplierTest
     when(mockConsumer.poll(any(Duration.class))).thenReturn(ConsumerRecords.empty());
     final List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> result =
         supplier.poll(100);
-    Assert.assertTrue(result.isEmpty());
+    Assertions.assertTrue(result.isEmpty());
   }
 
   @Test
@@ -273,12 +273,12 @@ public class KafkaShareGroupRecordSupplierTest
     when(mockConsumer.commitSync()).thenReturn(kafkaResult);
 
     final Map<KafkaTopicPartition, Optional<Exception>> result = supplier.commitSync();
-    Assert.assertEquals(1, result.size());
+    Assertions.assertEquals(1, result.size());
 
     final Map.Entry<KafkaTopicPartition, Optional<Exception>> entry = result.entrySet().iterator().next();
-    Assert.assertEquals(Optional.of("test-topic"), entry.getKey().topic());
-    Assert.assertEquals(0, entry.getKey().partition());
-    Assert.assertFalse(entry.getValue().isPresent());
+    Assertions.assertEquals(Optional.of("test-topic"), entry.getKey().topic());
+    Assertions.assertEquals(0, entry.getKey().partition());
+    Assertions.assertFalse(entry.getValue().isPresent());
   }
 
   @Test
@@ -292,11 +292,11 @@ public class KafkaShareGroupRecordSupplierTest
     when(mockConsumer.commitSync()).thenReturn(kafkaResult);
 
     final Map<KafkaTopicPartition, Optional<Exception>> result = supplier.commitSync();
-    Assert.assertEquals(1, result.size());
+    Assertions.assertEquals(1, result.size());
 
     final Optional<Exception> maybeError = result.values().iterator().next();
-    Assert.assertTrue(maybeError.isPresent());
-    Assert.assertEquals("commit failed", maybeError.get().getMessage());
+    Assertions.assertTrue(maybeError.isPresent());
+    Assertions.assertEquals("commit failed", maybeError.get().getMessage());
   }
 
   @Test
@@ -319,8 +319,8 @@ public class KafkaShareGroupRecordSupplierTest
   {
     Mockito.when(mockConsumer.acquisitionLockTimeoutMs()).thenReturn(Optional.of(45_000));
     final Optional<Integer> lockMs = supplier.acquisitionLockTimeoutMs();
-    Assert.assertTrue(lockMs.isPresent());
-    Assert.assertEquals(Integer.valueOf(45_000), lockMs.get());
+    Assertions.assertTrue(lockMs.isPresent());
+    Assertions.assertEquals(Integer.valueOf(45_000), lockMs.get());
   }
 
   @Test
@@ -347,14 +347,14 @@ public class KafkaShareGroupRecordSupplierTest
   @Test
   public void testGetPartitionIdsReturnsEmptySet()
   {
-    Assert.assertEquals(Set.of(), supplier.getPartitionIds("any-stream"));
+    Assertions.assertEquals(Set.of(), supplier.getPartitionIds("any-stream"));
   }
 
   @Test
   public void testAcquisitionLockTimeoutMsEmpty()
   {
     Mockito.when(mockConsumer.acquisitionLockTimeoutMs()).thenReturn(Optional.empty());
-    Assert.assertTrue(supplier.acquisitionLockTimeoutMs().isEmpty());
+    Assertions.assertTrue(supplier.acquisitionLockTimeoutMs().isEmpty());
   }
 
   @Test
@@ -391,10 +391,10 @@ public class KafkaShareGroupRecordSupplierTest
     offsets.put(new KafkaTopicPartition(true, testTopic, 0), List.of(99L));
     try {
       supplier.acknowledge(offsets, AcknowledgeType.ACCEPT);
-      Assert.fail("expected IllegalStateException for unknown offset");
+      Assertions.fail("expected IllegalStateException for unknown offset");
     }
     catch (IllegalStateException expected) {
-      Assert.assertTrue(expected.getMessage().contains("Cannot acknowledge unknown record"));
+      Assertions.assertTrue(expected.getMessage().contains("Cannot acknowledge unknown record"));
     }
   }
 

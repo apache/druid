@@ -35,12 +35,15 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.common.LockGranularity;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockReleaseAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
+import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.TaskLocks;
+import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.task.InputRowFilter;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.input.InputRowSchemas;
@@ -59,6 +62,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
@@ -94,6 +98,8 @@ public class ShareGroupIndexTaskRunner
   private final TaskToolbox toolbox;
   private final ObjectMapper configMapper;
   private final String sequenceName;
+  private final LockGranularity lockGranularity;
+  private final TaskLockType lockType;
   private final Function<ShareGroupIndexTaskIOConfig,
       AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity>> supplierFactory;
 
@@ -122,6 +128,12 @@ public class ShareGroupIndexTaskRunner
     this.toolbox = toolbox;
     this.configMapper = configMapper;
     this.sequenceName = task.getId();
+    final boolean useTimeChunkLocks = Configs.valueOrDefault(
+        task.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK),
+        Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
+    );
+    this.lockGranularity = useTimeChunkLocks ? LockGranularity.TIME_CHUNK : LockGranularity.SEGMENT;
+    this.lockType = TaskLocks.determineLockTypeForAppend(task.getContext());
     this.supplierFactory = supplierFactory != null ? supplierFactory : this::createDefaultRecordSupplier;
   }
 
@@ -159,14 +171,6 @@ public class ShareGroupIndexTaskRunner
         rowIngestionMeters,
         parseExceptionHandler
     );
-
-    final LockGranularity lockGranularity = Configs.valueOrDefault(
-        task.getContextValue(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK),
-        Tasks.DEFAULT_FORCE_TIME_CHUNK_LOCK
-    )
-        ? LockGranularity.TIME_CHUNK
-        : LockGranularity.SEGMENT;
-    final TaskLockType lockType = TaskLocks.determineLockTypeForAppend(task.getContext());
 
     final Appenderator appenderator = toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
         toolbox.getSegmentLoaderConfig(),
@@ -301,7 +305,7 @@ public class ShareGroupIndexTaskRunner
 
     try {
       recordSupplier.subscribe(Collections.singleton(ioConfig.getTopic()));
-      driver.startJob(segmentId -> true);
+      driver.startJob(this::acquireLockForRestoredSegment);
       while (!task.isStopRequested()) {
 
         final List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> records;
@@ -460,6 +464,39 @@ public class ShareGroupIndexTaskRunner
     }
 
     return TaskStatus.success(task.getId());
+  }
+
+  private boolean acquireLockForRestoredSegment(SegmentIdWithShardSpec segmentId)
+  {
+    try {
+      if (lockGranularity == LockGranularity.SEGMENT) {
+        return toolbox.getTaskActionClient().submit(
+            new SegmentLockAcquireAction(
+                lockType,
+                segmentId.getInterval(),
+                segmentId.getVersion(),
+                segmentId.getShardSpec().getPartitionNum(),
+                1000L
+            )
+        ).isOk();
+      } else {
+        final TaskLock lock = toolbox.getTaskActionClient().submit(
+            new TimeChunkLockAcquireAction(
+                lockType,
+                segmentId.getInterval(),
+                1000L
+            )
+        );
+        if (lock == null) {
+          return false;
+        }
+        lock.assertNotRevoked();
+        return true;
+      }
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /** Interrupts an in-flight poll so the loop can exit on graceful stop. */
