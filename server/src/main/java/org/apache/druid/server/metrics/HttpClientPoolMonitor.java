@@ -63,11 +63,8 @@ public class HttpClientPoolMonitor extends AbstractMonitor
       for (Map.Entry<?, ResourcePool.Stats> pool : client.getValue().drainStats().entrySet()) {
         final ResourcePool.Stats stats = pool.getValue();
         final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder()
-                                                                    .setDimension(CLIENT_DIMENSION, client.getKey())
-                                                                    .setDimension(
-                                                                        SERVER_DIMENSION,
-                                                                        serverOf(pool.getKey())
-                                                                    );
+            .setDimension(CLIENT_DIMENSION, client.getKey())
+            .setDimension(SERVER_DIMENSION, serverOf(pool.getKey()));
         emitter.emit(builder.setMetric(OPENED_METRIC, stats.opened()));
         emitter.emit(builder.setMetric(CLOSED_METRIC, stats.closed()));
         emitter.emit(builder.setMetric(ERRORED_METRIC, stats.errored()));
