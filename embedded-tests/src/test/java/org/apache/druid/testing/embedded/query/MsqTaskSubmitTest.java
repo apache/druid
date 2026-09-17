@@ -20,12 +20,12 @@
 package org.apache.druid.testing.embedded.query;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -75,8 +75,8 @@ public class MsqTaskSubmitTest extends QueryTestBase
     StatusResponseHolder response = future.get();
 
     Assertions.assertEquals(
-        HttpResponseStatus.ACCEPTED.getCode(),
-        response.getStatus().getCode(),
+        HttpResponseStatus.ACCEPTED.code(),
+        response.getStatus().code(),
         "MSQ task submission should return 202 Accepted"
     );
 
