@@ -1018,4 +1018,18 @@
     <packageUrl regex="true">^pkg:maven/org\.xerial\.snappy/snappy-java@.*$</packageUrl>
     <cve>CVE-2026-90559</cve>
   </suppress>
+
+  <suppress>
+    <!-- CVE-2026-73334: Improper KMS URL validation in org.apache.parquet.crypto.keytools —
+         a file-controlled KMS URL is forwarded to a pluggable KmsClient without host validation,
+         allowing a malicious Parquet file to redirect KMS token requests to an attacker-controlled
+         host. Affects parquet 1.12 through 1.18; fix expected in 1.19.
+         Druid does not use Parquet's envelope encryption or the crypto.keytools package at all.
+         Druid uses Parquet only for columnar data read/write with no KmsClient integration. -->
+    <notes><![CDATA[
+      file name: parquet-column-1.16.0.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.parquet/parquet-.*@.*$</packageUrl>
+    <cve>CVE-2026-73334</cve>
+  </suppress>
 </suppressions>
