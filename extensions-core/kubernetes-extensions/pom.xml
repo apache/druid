@@ -111,6 +111,12 @@
       <artifactId>easymock</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.squareup.okhttp3</groupId>
+      <artifactId>mockwebserver3</artifactId>
+      <version>${okhttp.version}</version>
+      <scope>test</scope>
+    </dependency>
 
     <!-- others -->
     <dependency>
