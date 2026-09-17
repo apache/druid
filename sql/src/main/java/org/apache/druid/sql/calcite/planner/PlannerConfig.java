@@ -208,6 +208,9 @@ public class PlannerConfig
   public boolean isPlanningTimeLimited()
   {
     return maxPlanningTimeMs > PLANNING_TIME_NOT_LIMITED;
+  }
+
+  /**
    * Whether catalog DDL statements (CREATE TABLE, ALTER TABLE) may be executed. Off by default: the Broker's SQL
    * endpoint is typically reachable by far more people than the Coordinator's catalog API, so enabling this widens
    * what an existing datasource WRITE permission allows. Deliberately not overridable from the query context.
