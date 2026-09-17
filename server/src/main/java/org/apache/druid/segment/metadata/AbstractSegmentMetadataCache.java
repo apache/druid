@@ -605,8 +605,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               }
               removeSegmentAction(segment.getId());
               if (segmentsMap.isEmpty()) {
-                tables.remove(segment.getDataSource());
-                removeDataSourceAction(segment.getDataSource());
+                // Emit the removal action only if this call actually removed the table, so that a concurrent
+                // refresh which also finds the datasource gone cannot report the same removal twice.
+                if (tables.remove(segment.getDataSource()) != null) {
+                  removeDataSourceAction(segment.getDataSource());
+                }
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
                 return null;
               } else {
@@ -630,7 +633,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   protected abstract void removeSegmentAction(SegmentId segmentId);
 
   /**
-   * Called under the cache lock after the last segment and its datasource table have been removed.
+   * Called under the cache lock after the last segment of a datasource has been removed and its table was actually
+   * removed from {@link #tables} by that removal. It is not called when no table existed for the datasource, so a
+   * single datasource removal triggers this action at most once even if a refresh observes the removal concurrently.
    */
   protected void removeDataSourceAction(String dataSource)
   {

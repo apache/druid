@@ -754,6 +754,34 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     // A later refresh must not process stale rebuild state and emit the removal metric again.
     schema.refresh(new HashSet<>(), new HashSet<>());
     emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+
+    // A refresh that had already captured the datasource for rebuild before the last segment was removed
+    // (or that is handed the datasource explicitly) finds no table left to remove and must not emit again.
+    schema.refresh(new HashSet<>(), new HashSet<>(Set.of("foo")));
+    Assertions.assertNull(schema.getDatasource("foo"));
+    emitter.verifyEmitted(Metric.DATASOURCE_REMOVED, Map.of(DruidMetrics.DATASOURCE, "foo"), 1);
+  }
+
+  @Test
+  public void testRefreshOfUnknownDatasourceDoesNotEmitRemovalMetric() throws IOException
+  {
+    final BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        Mockito.mock(TimelineServerView.class),
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        emitter,
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+    runningSchema = schema;
+
+    // No table was ever built for this datasource, so there is nothing to report as removed.
+    schema.refresh(new HashSet<>(), new HashSet<>(Set.of("never-existed")));
+    Assertions.assertNull(schema.getDatasource("never-existed"));
+    emitter.verifyNotEmitted(Metric.DATASOURCE_REMOVED);
   }
 
   @Test

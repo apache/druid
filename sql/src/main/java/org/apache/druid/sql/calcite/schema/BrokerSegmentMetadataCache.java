@@ -251,11 +251,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
       if (rowSignature == null) {
         log.info("datasource [%s] no longer exists, all metadata removed.", dataSource);
-        tables.remove(dataSource);
-        emitMetric(
-            Metric.DATASOURCE_REMOVED,
-            1,
-            ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource));
+        // The last-segment callback may already have removed the table and emitted the metric while this refresh
+        // was in flight. Only emit if this refresh is the one that actually removed the table.
+        if (tables.remove(dataSource) != null) {
+          emitDataSourceRemoved(dataSource);
+        }
         continue;
       }
 
@@ -311,6 +311,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   protected void removeDataSourceAction(String dataSource)
   {
     // The last-segment callback can remove the table without another schema refresh.
+    emitDataSourceRemoved(dataSource);
+  }
+
+  private void emitDataSourceRemoved(String dataSource)
+  {
     emitMetric(
         Metric.DATASOURCE_REMOVED,
         1,
