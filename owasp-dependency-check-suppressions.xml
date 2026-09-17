@@ -996,7 +996,7 @@
          this vulnerability should not affect Druid since the relevant code paths do not get activated
           -->
     <notes><![CDATA[
-      file name: zstd-jni-1.5.7-11.jar
+      file name: zstd-jni-1.5.7-7.jar
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.github\.luben/zstd-jni@1\.5\.7-7$</packageUrl>
     <cve>CVE-2026-87823</cve>
