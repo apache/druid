@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -40,6 +41,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
@@ -338,6 +340,19 @@ public class CompactionTaskTest
     dimensions.add(MIXED_TYPE_COLUMN_MAP.get(segmentInterval).getName());
     return dimensions;
   }
+
+  /**
+   * A clustered base table over two of the columns the test segments carry, so a non-sealed compaction has real
+   * undeclared columns to discover.
+   */
+  private static final ClusteredValueGroupsBaseTableProjectionSpec TENANT_BASE_TABLE =
+      ClusteredValueGroupsBaseTableProjectionSpec.builder()
+          .columns(
+              new StringDimensionSchema("string_dim_0"),
+              new LongDimensionSchema(ColumnHolder.TIME_COLUMN_NAME)
+          )
+          .clusteringColumns("string_dim_0")
+          .build();
 
   private static CompactionTask.CompactionTuningConfig createTuningConfig()
   {
@@ -792,6 +807,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -826,6 +842,77 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testCreateIngestionSchemaWithSealedBaseTableSkipsSegmentAnalysis() throws IOException
+  {
+    // A sealed base table is the complete declaration of the datasource, so the schema is exactly what was declared
+    // and the existing segments are never read.
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            TENANT_BASE_TABLE,
+            true,
+            METRIC_BUILDER,
+            false
+        ).values()
+    );
+
+    Assertions.assertEquals(
+        ImmutableList.of("string_dim_0", ColumnHolder.TIME_COLUMN_NAME),
+        dataSchema.getDimensionsSpec().getDimensionNames()
+    );
+    Assertions.assertEquals(TENANT_BASE_TABLE, dataSchema.getBaseTable());
+  }
+
+  @Test
+  public void testCreateIngestionSchemaWithUnsealedBaseTableAppendsUndeclaredColumns() throws IOException
+  {
+    // The declaration is partial, so the columns the segments carry but the spec does not declare are discovered and
+    // appended after the declared ones rather than dropped on the floor.
+    final DataSchema dataSchema = Iterables.getOnlyElement(
+        CompactionTask.createInputDataSchemas(
+            toolbox,
+            LockGranularity.TIME_CHUNK,
+            new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+            null,
+            null,
+            null,
+            new ClientCompactionTaskGranularitySpec(Granularities.MONTH, null, null),
+            null,
+            TENANT_BASE_TABLE,
+            false,
+            METRIC_BUILDER,
+            false
+        ).values()
+    );
+
+    final List<String> dimensions = dataSchema.getDimensionsSpec().getDimensionNames();
+    // The declared shape is untouched: the clustering prefix still leads and __time keeps its declared position.
+    Assertions.assertEquals(
+        ImmutableList.of("string_dim_0", ColumnHolder.TIME_COLUMN_NAME),
+        dimensions.subList(0, 2)
+    );
+    Assertions.assertEquals(
+        ImmutableList.of("string_dim_0"),
+        ((ClusteredValueGroupsBaseTableProjectionSpec) dataSchema.getBaseTable()).getClusteringColumnNames()
+    );
+    // Every other column of the existing segments came along, each exactly once.
+    for (String dimension : findDimensions(0, SEGMENT_INTERVALS.get(0))) {
+      Assertions.assertTrue(dimensions.contains(dimension), dimension);
+    }
+    Assertions.assertEquals(new HashSet<>(dimensions).size(), dimensions.size(), dimensions.toString());
+    // Only dimensions are carried over; the source segments' aggregators are not, since a clustered base table has no
+    // metric columns to put them in.
+    Assertions.assertEquals(0, dataSchema.getAggregators().length);
+  }
+
+  @Test
   public void testCreateIngestionSchemaWithTargetPartitionSize() throws IOException
   {
     final CompactionTask.CompactionTuningConfig tuningConfig = TuningConfigBuilder
@@ -856,6 +943,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -921,6 +1009,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -987,6 +1076,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1060,6 +1150,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1113,6 +1204,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1159,6 +1251,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1212,6 +1305,7 @@ public class CompactionTaskTest
               null,
               null,
               null,
+              true,
               METRIC_BUILDER,
               false
           );
@@ -1247,6 +1341,7 @@ public class CompactionTaskTest
               null,
               null,
               null,
+              true,
               METRIC_BUILDER,
               false
           );
@@ -1292,6 +1387,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1339,6 +1435,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1387,6 +1484,7 @@ public class CompactionTaskTest
         ),
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1437,6 +1535,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1485,6 +1584,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, null, null),
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1533,6 +1633,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, null, true),
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1566,6 +1667,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, null, null),
         null,
         null,
+        true,
         METRIC_BUILDER,
         false
     );
@@ -1601,6 +1703,7 @@ public class CompactionTaskTest
         new ClientCompactionTaskGranularitySpec(null, null, null),
         null,
         null,
+        true,
         METRIC_BUILDER,
         true
     );

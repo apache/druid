@@ -333,6 +333,59 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
   }
 
   @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsAppendedColumns()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec declared = tenantSpec();
+    final ClusteredValueGroupsBaseTableProjectionSpec recorded =
+        declared.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("city")));
+
+    // What a non-sealed compaction records is a superset of what the config declares; comparing it strictly would
+    // recompact the datasource on every run.
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded));
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded, false));
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+    // Equality is the zero-appended-columns case.
+    Assertions.assertTrue(declared.hasEqualCompactionState(declared, true));
+    // The relaxation is one-directional: dropping a column the config declares is still a change.
+    Assertions.assertFalse(recorded.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsStillComparesEverythingElse()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec declared = tenantSpec();
+
+    // Query granularity is compared by its own check, so it is excluded from both sides here too.
+    Assertions.assertTrue(
+        declared.hasEqualCompactionState(declared.withQueryGranularity(Granularities.HOUR), true)
+    );
+    // A changed declared column is a change even though the column count only grew.
+    final ClusteredValueGroupsBaseTableProjectionSpec reordered =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new LongDimensionSchema("__time"),
+                new StringDimensionSchema("region"),
+                new StringDimensionSchema("city")
+            )
+            .clusteringColumns("tenant")
+            .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(reordered, true));
+    // A changed clustering column is a change.
+    final ClusteredValueGroupsBaseTableProjectionSpec reclustered =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new LongDimensionSchema("__time"),
+                new StringDimensionSchema("city")
+            )
+            .clusteringColumns("tenant", "region")
+            .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(reclustered, true));
+  }
+
+  @Test
   void testWithAdditionalColumnsNullAndEmptyAreNoOps()
   {
     final ClusteredValueGroupsBaseTableProjectionSpec spec = tenantSpec();

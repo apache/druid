@@ -104,4 +104,19 @@ public interface BaseTableProjectionSpec
   {
     return equals(other);
   }
+
+  /**
+   * Variant of {@link #hasEqualCompactionState(BaseTableProjectionSpec)} for a base table that is not the complete
+   * declaration of its table. When {@code allowUndeclaredColumns} is set, {@code other} is also equivalent if it is
+   * this spec extended by {@link #withAdditionalColumns}: those extra columns come from the segments rather than from
+   * the config, so comparing them strictly would make every segment look permanently out of date and recompact it on
+   * every run.
+   * <p>
+   * The default ignores the relaxation and compares strictly; an implementation that can absorb undeclared columns
+   * overrides this to express what "extended by" means for its own state.
+   */
+  default boolean hasEqualCompactionState(BaseTableProjectionSpec other, boolean allowUndeclaredColumns)
+  {
+    return hasEqualCompactionState(other);
+  }
 }
