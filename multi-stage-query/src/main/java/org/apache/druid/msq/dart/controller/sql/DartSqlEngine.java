@@ -147,6 +147,7 @@ public class DartSqlEngine implements SqlEngine
       case WINDOW_LEAF_OPERATOR:
       case UNNEST:
       case ALLOW_BINDABLE_PLAN:
+      case CAN_DDL:
         return true;
 
       case CAN_INSERT:
