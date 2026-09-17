@@ -265,12 +265,8 @@ public class DruidRexExecutor implements RexExecutor
   /// Nullability differences do not require conversion: a non-null literal may belong to an array with nullable elements,
   /// and reusing the call preserves both null values and the original array type.
   ///
-  /// Otherwise, literals in the supported family are rebuilt using the component type. This preserves normalization
-  /// such as padding CHAR(1) values for a CHAR(3) array, converting INTEGER to BIGINT, or applying the target character
-  /// set and collation. RexBuilder.makeLiteral rebuilds the array call and its elements, not a single array literal.
-  ///
-  /// Returns null for unsupported types or non-literal operands (including CAST calls), leaving them to the existing
-  /// Druid expression evaluation path.
+  /// Returns null for mismatched element types, unsupported types, or non-literal operands (including CAST calls).
+  /// These retain the existing Druid expression evaluation path, including any required type normalization.
   ///
   @Nullable
   @VisibleForTesting
@@ -290,31 +286,15 @@ public class DruidRexExecutor implements RexExecutor
     }
 
     final List<RexNode> operands = ((RexCall) expression).getOperands();
-    boolean reuseOperands = true;
     for (final RexNode operand : operands) {
       if (!(operand instanceof RexLiteral)
-          || !(isString ? SqlTypeName.CHAR_TYPES : SqlTypeName.INT_TYPES).contains(operand.getType().getSqlTypeName())) {
+          || !SqlTypeUtil.equalSansNullability(
+              rexBuilder.getTypeFactory(), expression.getType().getComponentType(), operand.getType()
+          )) {
         return null;
       }
-      reuseOperands = reuseOperands && SqlTypeUtil.equalSansNullability(
-          rexBuilder.getTypeFactory(), expression.getType().getComponentType(), operand.getType()
-      );
     }
 
-    if (reuseOperands) {
-      // Already-normalized literals need neither evaluation nor rebuilding. Keep the original array type as well.
-      return expression;
-    }
-
-    final List<Object> values = new ArrayList<>(operands.size());
-    for (final RexNode operand : operands) {
-      if (isString) {
-        values.add(((RexLiteral) operand).getValueAs(String.class));
-      } else {
-        values.add(RexLiteral.value(operand));
-      }
-    }
-
-    return rexBuilder.makeLiteral(values, expression.getType(), true);
+    return expression;
   }
 }
