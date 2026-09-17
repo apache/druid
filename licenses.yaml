@@ -751,7 +751,7 @@ name: Apache Commons Configuration
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.10.1
+version: 2.13.0
 libraries:
   - org.apache.commons: commons-configuration2
 
@@ -2652,7 +2652,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.10.2
+version: 1.11.2
 libraries:
   - at.yawk.lz4: lz4-java
 
@@ -3647,7 +3647,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 3.48.1
+version: 3.55.1
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
