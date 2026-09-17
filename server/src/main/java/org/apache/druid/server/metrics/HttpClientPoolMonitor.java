@@ -36,8 +36,17 @@ import java.util.Map;
  */
 public class HttpClientPoolMonitor extends AbstractMonitor
 {
-  private static final String CLIENT_DIMENSION = "httpClient";
-  private static final String SERVER_DIMENSION = "server";
+  public static final String CLIENT_DIMENSION = "httpClient";
+  public static final String SERVER_DIMENSION = "server";
+
+  public static final String OPENED_METRIC = "httpClient/pool/opened";
+  public static final String CLOSED_METRIC = "httpClient/pool/closed";
+  public static final String ERRORED_METRIC = "httpClient/pool/errored";
+  public static final String TIMED_OUT_METRIC = "httpClient/pool/timedOut";
+  public static final String TAKEN_METRIC = "httpClient/pool/taken";
+  public static final String RETURNED_METRIC = "httpClient/pool/returned";
+  public static final String USED_METRIC = "httpClient/pool/used";
+  public static final String IDLE_METRIC = "httpClient/pool/idle";
 
   private final HttpClientPoolRegistry registry;
 
@@ -59,14 +68,14 @@ public class HttpClientPoolMonitor extends AbstractMonitor
                                                                         SERVER_DIMENSION,
                                                                         serverOf(pool.getKey())
                                                                     );
-        emitter.emit(builder.setMetric("httpClient/pool/opened", stats.opened()));
-        emitter.emit(builder.setMetric("httpClient/pool/closed", stats.closed()));
-        emitter.emit(builder.setMetric("httpClient/pool/errored", stats.errored()));
-        emitter.emit(builder.setMetric("httpClient/pool/timedOut", stats.timedOut()));
-        emitter.emit(builder.setMetric("httpClient/pool/taken", stats.taken()));
-        emitter.emit(builder.setMetric("httpClient/pool/returned", stats.returned()));
-        emitter.emit(builder.setMetric("httpClient/pool/used", stats.used()));
-        emitter.emit(builder.setMetric("httpClient/pool/idle", stats.idle()));
+        emitter.emit(builder.setMetric(OPENED_METRIC, stats.opened()));
+        emitter.emit(builder.setMetric(CLOSED_METRIC, stats.closed()));
+        emitter.emit(builder.setMetric(ERRORED_METRIC, stats.errored()));
+        emitter.emit(builder.setMetric(TIMED_OUT_METRIC, stats.timedOut()));
+        emitter.emit(builder.setMetric(TAKEN_METRIC, stats.taken()));
+        emitter.emit(builder.setMetric(RETURNED_METRIC, stats.returned()));
+        emitter.emit(builder.setMetric(USED_METRIC, stats.used()));
+        emitter.emit(builder.setMetric(IDLE_METRIC, stats.idle()));
       }
     }
     return true;

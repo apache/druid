@@ -37,10 +37,8 @@ public class HttpClientPoolMonitorTest
 {
   private static final String HISTORICAL1_URL = "https://historical1.example.com:8283";
   private static final String HISTORICAL2_URL = "https://historical2.example.com:8283";
-  private static final Map<String, Object> HISTORICAL1 =
-      Map.of("httpClient", "global", "server", "historical1.example.com:8283");
-  private static final Map<String, Object> HISTORICAL2 =
-      Map.of("httpClient", "global", "server", "historical2.example.com:8283");
+  private static final Map<String, Object> HISTORICAL1 = dimensions("historical1.example.com:8283");
+  private static final Map<String, Object> HISTORICAL2 = dimensions("historical2.example.com:8283");
 
   private HttpClientPoolRegistry registry;
   private StubServiceEmitter emitter;
@@ -72,10 +70,10 @@ public class HttpClientPoolMonitorTest
 
     new HttpClientPoolMonitor(registry).doMonitor(emitter);
 
-    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/taken", HISTORICAL1));
-    Assertions.assertEquals(List.of(2L), emitter.getMetricValues("httpClient/pool/taken", HISTORICAL2));
-    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/opened", HISTORICAL1));
-    Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/idle", HISTORICAL2));
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues(HttpClientPoolMonitor.TAKEN_METRIC, HISTORICAL1));
+    Assertions.assertEquals(List.of(2L), emitter.getMetricValues(HttpClientPoolMonitor.TAKEN_METRIC, HISTORICAL2));
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues(HttpClientPoolMonitor.OPENED_METRIC, HISTORICAL1));
+    Assertions.assertEquals(List.of(1), emitter.getMetricValues(HttpClientPoolMonitor.IDLE_METRIC, HISTORICAL2));
   }
 
   /**
@@ -93,9 +91,9 @@ public class HttpClientPoolMonitorTest
     emitter.flush();
 
     monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/opened", HISTORICAL1));
-    Assertions.assertEquals(List.of(0L), emitter.getMetricValues("httpClient/pool/taken", HISTORICAL1));
-    Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/idle", HISTORICAL1));
+    Assertions.assertEquals(List.of(0L), emitter.getMetricValues(HttpClientPoolMonitor.OPENED_METRIC, HISTORICAL1));
+    Assertions.assertEquals(List.of(0L), emitter.getMetricValues(HttpClientPoolMonitor.TAKEN_METRIC, HISTORICAL1));
+    Assertions.assertEquals(List.of(1), emitter.getMetricValues(HttpClientPoolMonitor.IDLE_METRIC, HISTORICAL1));
   }
 
   /**
@@ -110,15 +108,15 @@ public class HttpClientPoolMonitorTest
 
     final ResourceContainer<String> lent = pool.take(HISTORICAL1_URL);
     monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/used", HISTORICAL1));
-    Assertions.assertEquals(List.of(0), emitter.getMetricValues("httpClient/pool/idle", HISTORICAL1));
+    Assertions.assertEquals(List.of(1), emitter.getMetricValues(HttpClientPoolMonitor.USED_METRIC, HISTORICAL1));
+    Assertions.assertEquals(List.of(0), emitter.getMetricValues(HttpClientPoolMonitor.IDLE_METRIC, HISTORICAL1));
 
     lent.returnResource();
     emitter.flush();
     monitor.doMonitor(emitter);
-    Assertions.assertEquals(List.of(1L), emitter.getMetricValues("httpClient/pool/returned", HISTORICAL1));
-    Assertions.assertEquals(List.of(0), emitter.getMetricValues("httpClient/pool/used", HISTORICAL1));
-    Assertions.assertEquals(List.of(1), emitter.getMetricValues("httpClient/pool/idle", HISTORICAL1));
+    Assertions.assertEquals(List.of(1L), emitter.getMetricValues(HttpClientPoolMonitor.RETURNED_METRIC, HISTORICAL1));
+    Assertions.assertEquals(List.of(0), emitter.getMetricValues(HttpClientPoolMonitor.USED_METRIC, HISTORICAL1));
+    Assertions.assertEquals(List.of(1), emitter.getMetricValues(HttpClientPoolMonitor.IDLE_METRIC, HISTORICAL1));
   }
 
   /**
@@ -135,10 +133,7 @@ public class HttpClientPoolMonitorTest
 
     Assertions.assertEquals(
         List.of(1L),
-        emitter.getMetricValues(
-            "httpClient/pool/taken",
-            Map.of("httpClient", "global", "server", "1.2.3.4:8283")
-        )
+        emitter.getMetricValues(HttpClientPoolMonitor.TAKEN_METRIC, dimensions("1.2.3.4:8283"))
     );
   }
 
@@ -164,7 +159,7 @@ public class HttpClientPoolMonitorTest
   public void testNothingIsEmittedWithoutARegisteredPool()
   {
     new HttpClientPoolMonitor(registry).doMonitor(emitter);
-    Assertions.assertEquals(List.of(), emitter.getMetricEvents("httpClient/pool/opened"));
+    Assertions.assertEquals(List.of(), emitter.getMetricEvents(HttpClientPoolMonitor.OPENED_METRIC));
   }
 
   /**
@@ -175,7 +170,12 @@ public class HttpClientPoolMonitorTest
   {
     registry.register("global", pool);
     new HttpClientPoolMonitor(registry).doMonitor(emitter);
-    Assertions.assertEquals(List.of(), emitter.getMetricEvents("httpClient/pool/opened"));
+    Assertions.assertEquals(List.of(), emitter.getMetricEvents(HttpClientPoolMonitor.OPENED_METRIC));
+  }
+
+  private static Map<String, Object> dimensions(String server)
+  {
+    return Map.of(HttpClientPoolMonitor.CLIENT_DIMENSION, "global", HttpClientPoolMonitor.SERVER_DIMENSION, server);
   }
 
   private static class TestResourceFactory implements ResourceFactory<String, String>
