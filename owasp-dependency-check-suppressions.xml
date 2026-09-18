@@ -1029,7 +1029,7 @@
     <notes><![CDATA[
       file name: parquet-column-1.16.0.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.parquet/parquet-.*@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.parquet/parquet-column@1\.16\.0$</packageUrl>
     <cve>CVE-2026-73334</cve>
   </suppress>
 </suppressions>
