@@ -19,9 +19,15 @@
 
 package org.apache.druid.testing.embedded.indexing;
 
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TableProjectionSpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexing.common.task.IndexTask;
+import org.apache.druid.indexing.common.task.TaskBuilder;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
@@ -104,6 +110,56 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
         cluster.runSql("SELECT * FROM %s", dataSource)
     );
     Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+  }
+
+  /**
+   * Batch ingestion driven by a plain {@link TableProjectionSpec} base table instead of the legacy top-level schema
+   * fields. The spec lowers into the standard ingest inputs, so declared column order becomes segment sort order
+   * (item before __time here — not the legacy time-first sort) and the spec's query-granularity carrier floors
+   * {@code __time}, both observable in the ingested segment.
+   */
+  @Test
+  @Timeout(60)
+  public void test_runIndexTask_withBaseTableSpec()
+  {
+    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
+    final TableProjectionSpec baseTable = TableProjectionSpec
+        .builder()
+        .columns(
+            new StringDimensionSchema("item"),
+            new LongDimensionSchema("__time"),
+            new LongDimensionSchema("value")
+        )
+        .build()
+        .withQueryGranularity(Granularities.HOUR);
+    final IndexTask task = TaskBuilder
+        .ofTypeIndex()
+        .isoTimestampColumn("time")
+        .csvInputFormatWithColumns("time", "item", "value")
+        .inlineInputSourceWithData(
+            "2025-06-01T05:30:00.000Z,cherry,3"
+            + "\n2025-06-01T01:45:00.000Z,banana,2"
+            + "\n2025-06-01T09:10:00.000Z,apple,1"
+        )
+        .dataSchema(
+            schema -> schema
+                .withBaseTable(baseTable)
+                .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
+        )
+        .dataSource(dataSource)
+        .withId(taskId);
+
+    cluster.callApi().runTask(task, overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    // A scan without ORDER BY returns rows in segment order: sorted by item first (declared order), with __time
+    // floored to the hour by the carrier, even though the rows arrived unsorted with unfloored timestamps.
+    Assertions.assertEquals(
+        "apple,1,2025-06-01T09:00:00.000Z"
+        + "\nbanana,2,2025-06-01T01:00:00.000Z"
+        + "\ncherry,3,2025-06-01T05:00:00.000Z",
+        cluster.runSql("SELECT item, \"value\", __time FROM %s", dataSource)
+    );
   }
 
   @Test

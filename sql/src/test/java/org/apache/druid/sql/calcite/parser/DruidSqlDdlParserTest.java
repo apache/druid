@@ -456,6 +456,11 @@ public class DruidSqlDdlParserTest
         "CREATE TABLE \"tbl\" (\"a\" VARCHAR, \"__time\" TIMESTAMP,"
         + " PROJECTION \"__base\" AS (SELECT \"a\", \"__time\" CLUSTERED BY \"a\"))"
     );
+    // Without CLUSTERED BY, the base projection declares the plain-table layout.
+    assertUnparseRoundTrips(
+        "CREATE TABLE \"tbl\" (\"a\" VARCHAR, \"__time\" TIMESTAMP,"
+        + " PROJECTION \"__base\" AS (SELECT \"a\", \"__time\"))"
+    );
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" DROP PROJECTION \"p\"");
   }
 

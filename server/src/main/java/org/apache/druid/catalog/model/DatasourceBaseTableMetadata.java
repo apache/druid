@@ -36,6 +36,7 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
 @JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = TableBaseTableMetadata.TYPE_NAME, value = TableBaseTableMetadata.class),
     @JsonSubTypes.Type(
         name = ClusteredValueGroupsBaseTableMetadata.TYPE_NAME,
         value = ClusteredValueGroupsBaseTableMetadata.class

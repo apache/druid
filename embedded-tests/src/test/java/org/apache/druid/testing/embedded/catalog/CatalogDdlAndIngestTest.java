@@ -408,6 +408,53 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
   }
 
   /**
+   * A {@code __base} projection without {@code CLUSTERED BY} declares the plain-table layout: declared column order is
+   * the segment storage and sort order, and {@code TIME_FLOOR(__time, <period>)} declares the table's query
+   * granularity. Rows arrive unsorted with unfloored timestamps and come back sorted by the declared order (item
+   * before {@code __time}) with {@code __time} floored to the hour.
+   */
+  @Test
+  public void testCreatePlainBaseTableThenIngestAndQuery()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (\n"
+        + "  item VARCHAR,\n"
+        + "  __time TIMESTAMP,\n"
+        + "  val BIGINT,\n"
+        + "  PROJECTION __base AS (SELECT item, TIME_FLOOR(__time, 'PT1H') AS __time, val)\n"
+        + ")\n"
+        + "PARTITIONED BY DAY",
+        tableName
+    );
+
+    final TableMetadata table = client.readTable(TableId.datasource(tableName));
+    assertNotNull(table.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
+
+    ingest(
+        "INSERT INTO \"%s\"\n"
+        + "SELECT TIME_PARSE(a) AS __time, b AS item, c AS val\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"inline\",\"data\":\"2022-12-26T05:30:10,cherry,3"
+        + "\\n2022-12-26T01:45:20,banana,2\\n2022-12-26T09:10:30,apple,1\"}',\n"
+        + "    '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"a\",\"b\",\"c\"]}'\n"
+        + "  )\n"
+        + ") EXTEND (a VARCHAR, b VARCHAR, c BIGINT)\n",
+        tableName
+    );
+
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        tableName,
+        "apple,2022-12-26T09:00:00.000Z,1\n"
+        + "banana,2022-12-26T01:00:00.000Z,2\n"
+        + "cherry,2022-12-26T05:00:00.000Z,3"
+    );
+  }
+
+  /**
    * The same layout without SEALED: a column the query produces but the table does not declare is stored after the
    * declared layout rather than rejected or dropped, and the clustering the table declared is unchanged.
    */
