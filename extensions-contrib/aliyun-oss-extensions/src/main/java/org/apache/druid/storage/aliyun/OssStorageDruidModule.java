@@ -76,6 +76,11 @@ public class OssStorageDruidModule implements DruidModule
              .addBinding(SCHEME)
              .to(OssTimestampVersionedDataFinder.class)
              .in(LazySingleton.class);
+
+    // Segment killer, mover and archiver use type "oss_zip" (instead of "oss") to align with OssLoadSpec.
+    // This means OssDataSegmentKiller cannot currently be injected as DataSegmentKiller
+    // and would only be invoked via OmniDataSegmentKiller.
+    // If needed in the future, the OssDataSegmentKiller would need to be bound to the "oss" scheme as well.
     Binders.dataSegmentKillerBinder(binder)
            .addBinding(SCHEME_ZIP)
            .to(OssDataSegmentKiller.class)
