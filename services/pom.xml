@@ -242,12 +242,6 @@
             <artifactId>maven-artifact</artifactId>
         </dependency>
         <dependency>
-            <!-- Used directly by ExportMetadata (javax.xml.bind.DatatypeConverter), unrelated to
-                 maven-resolver; kept independent of the old maven-resolver-provider bootstrap. -->
-            <groupId>jakarta.xml.bind</groupId>
-            <artifactId>jakarta.xml.bind-api</artifactId>
-        </dependency>
-        <dependency>
             <!-- plexus-utils 4.x (pulled transitively via maven-artifact/maven-model-builder) moved
                  its XML pull-parser classes (org.codehaus.plexus.util.xml.pull.*) out into this
                  module; maven-model-builder needs them at runtime to parse POMs. -->
