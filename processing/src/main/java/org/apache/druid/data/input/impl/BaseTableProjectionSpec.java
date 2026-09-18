@@ -47,6 +47,7 @@ import java.util.List;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
+    @JsonSubTypes.Type(name = TableProjectionSpec.TYPE_NAME, value = TableProjectionSpec.class),
     @JsonSubTypes.Type(
         name = ClusteredValueGroupsBaseTableProjectionSpec.TYPE_NAME,
         value = ClusteredValueGroupsBaseTableProjectionSpec.class
