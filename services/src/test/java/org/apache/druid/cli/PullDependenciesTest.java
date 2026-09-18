@@ -23,17 +23,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.TemporaryFolderExtension;
-import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
-import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
-import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
 import org.eclipse.aether.graph.DefaultDependencyNode;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyNode;
-import org.eclipse.aether.impl.DefaultServiceLocator;
 import org.eclipse.aether.repository.Authentication;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.Proxy;
@@ -42,9 +38,7 @@ import org.eclipse.aether.resolution.ArtifactRequest;
 import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.DependencyRequest;
 import org.eclipse.aether.resolution.DependencyResult;
-import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
-import org.eclipse.aether.spi.connector.transport.TransporterFactory;
-import org.eclipse.aether.transport.http.HttpTransporterFactory;
+import org.eclipse.aether.supplier.RepositorySystemSupplier;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
 import org.junit.jupiter.api.Assertions;
@@ -302,7 +296,7 @@ public class PullDependenciesTest
     pullDependencies.proxyUsername = "user";
     pullDependencies.proxyPassword = "password";
 
-    DefaultRepositorySystemSession session = (DefaultRepositorySystemSession) pullDependencies.getRepositorySystemSession();
+    RepositorySystemSession session = pullDependencies.getRepositorySystemSession();
 
     LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
     Assertions.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
@@ -327,7 +321,7 @@ public class PullDependenciesTest
   public void testGetRepositorySystemSessionWithoutProxyConfiguration()
   {
     pullDependencies.useProxy = false;
-    DefaultRepositorySystemSession session = (DefaultRepositorySystemSession) pullDependencies.getRepositorySystemSession();
+    RepositorySystemSession session = pullDependencies.getRepositorySystemSession();
     LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
     Assertions.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
     Proxy proxy = session.getProxySelector().getProxy(
@@ -340,23 +334,17 @@ public class PullDependenciesTest
   {
     public static RepositorySystem newRepositorySystem()
     {
-      DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
-      locator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
-      locator.addService(TransporterFactory.class, HttpTransporterFactory.class);
-      return locator.getService(RepositorySystem.class);
+      return new RepositorySystemSupplier().get();
     }
 
-    public static DefaultRepositorySystemSession newRepositorySystemSession(
+    public static RepositorySystemSession newRepositorySystemSession(
         RepositorySystem system,
         String localRepoPath
     )
     {
-      DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
-
-      LocalRepository localRepo = new LocalRepository(localRepoPath);
-      session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, localRepo));
-
-      return session;
+      return system.createSessionBuilder()
+                    .withLocalRepositories(new LocalRepository(localRepoPath))
+                    .build();
     }
   }
 

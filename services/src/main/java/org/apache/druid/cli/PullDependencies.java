@@ -32,17 +32,13 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.maven.artifact.resolver.ArtifactNotFoundException;
-import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
-import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
-import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyNode;
-import org.eclipse.aether.impl.DefaultServiceLocator;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.Proxy;
 import org.eclipse.aether.repository.RemoteRepository;
@@ -50,9 +46,7 @@ import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.DependencyRequest;
 import org.eclipse.aether.resolution.DependencyResolutionException;
 import org.eclipse.aether.resolution.DependencyResult;
-import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
-import org.eclipse.aether.spi.connector.transport.TransporterFactory;
-import org.eclipse.aether.transport.http.HttpTransporterFactory;
+import org.eclipse.aether.supplier.RepositorySystemSupplier;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.filter.DependencyFilterUtils;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
@@ -201,17 +195,22 @@ public class PullDependencies implements Runnable
 
   private RepositorySystem getRepositorySystem()
   {
-    DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
-    locator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
-    locator.addService(TransporterFactory.class, HttpTransporterFactory.class);
-    return locator.getService(RepositorySystem.class);
+    // RepositorySystemSupplier (maven-resolver-supplier-mvn3) replaces the pre-2.0
+    // DefaultServiceLocator/ServiceLocator bootstrap. It wires up the basic repository
+    // connector and the Apache HTTP transporter out of the box.
+    return new RepositorySystemSupplier().get();
   }
 
   protected RepositorySystemSession getRepositorySystemSession()
   {
-    DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
-    LocalRepository localRepo = new LocalRepository(localRepository);
-    session.setLocalRepositoryManager(repositorySystem.newLocalRepositoryManager(session, localRepo));
+    RepositorySystemSession.SessionBuilder sessionBuilder = repositorySystem.createSessionBuilder()
+                                                                             .withLocalRepositories(new LocalRepository(localRepository))
+                                                                             // Some artifacts' POMs (e.g. those inheriting from org.apache.commons:commons-parent)
+                                                                             // use JDK-version-conditional <profiles>. The model builder invoked while
+                                                                             // resolving descriptors needs "java.version" (and friends) to evaluate those
+                                                                             // profile activations; without this the build fails with
+                                                                             // "Failed to determine Java version for profile ...".
+                                                                             .setSystemProperties(System.getProperties());
 
     // Set up the proxy configuration if required
     if (useProxy) {
@@ -228,10 +227,10 @@ public class PullDependencies implements Runnable
       final DefaultProxySelector proxySelector = new DefaultProxySelector();
       proxySelector.add(proxy, null);
 
-      session.setProxySelector(proxySelector);
+      sessionBuilder.setProxySelector(proxySelector);
     }
 
-    return session;
+    return sessionBuilder.build();
   }
 
   protected List<RemoteRepository> getRemoteRepositories()

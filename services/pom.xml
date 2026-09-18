@@ -202,51 +202,59 @@
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-connector-basic</artifactId>
-            <version>1.3.1</version>
+            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-transport-http</artifactId>
-            <version>1.3.1</version>
+            <artifactId>maven-resolver-transport-apache</artifactId>
+            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-util</artifactId>
-            <version>1.3.1</version>
+            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-impl</artifactId>
-            <version>1.3.1</version>
+            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-spi</artifactId>
-            <version>1.3.1</version>
+            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-api</artifactId>
-            <version>1.3.1</version>
+            <version>${maven.resolver.version}</version>
+        </dependency>
+        <dependency>
+            <!-- Replaces the pre-2.0 DefaultServiceLocator/MavenRepositorySystemUtils bootstrap
+                 (formerly provided by org.apache.maven:maven-resolver-provider) used in
+                 PullDependencies to construct a RepositorySystem/RepositorySystemSession. -->
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-supplier-mvn3</artifactId>
+            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-artifact</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-resolver-provider</artifactId>
-            <version>3.6.0</version>
+            <!-- Used directly by ExportMetadata (javax.xml.bind.DatatypeConverter), unrelated to
+                 maven-resolver; kept independent of the old maven-resolver-provider bootstrap. -->
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
         </dependency>
         <dependency>
+            <!-- plexus-utils 4.x (pulled transitively via maven-artifact/maven-model-builder) moved
+                 its XML pull-parser classes (org.codehaus.plexus.util.xml.pull.*) out into this
+                 module; maven-model-builder needs them at runtime to parse POMs. -->
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-xml</artifactId>
             <version>3.1.0</version>
             <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.xml.bind</groupId>
-            <artifactId>jakarta.xml.bind-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>
@@ -283,9 +291,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- Widened from test to compile: maven-resolver-transport-apache needs Apache
+                 HttpClient (not just httpcore, which it already pulls transitively) at runtime
+                 to talk to remote repositories. -->
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
