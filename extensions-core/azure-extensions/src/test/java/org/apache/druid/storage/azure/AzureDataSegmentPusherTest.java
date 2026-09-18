@@ -280,6 +280,65 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     assertEquals(CONTAINER_NAME, segment.getLoadSpec().get("containerName"));
     assertEquals(AzureStorageDruidModule.SCHEME, segment.getLoadSpec().get("type"));
     assertEquals(2 * DATA.length, segment.getSize());
+    // V1 (test fixture) → not V10 → rangeable stamped as false
+    assertEquals(Boolean.FALSE, segment.getLoadSpec().get("rangeable"));
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushNoZip_v10_stampsRangeableTrue(@TempDir Path tempPath) throws Exception
+  {
+    AzureDataSegmentPusher pusher =
+        new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, NO_ZIP_CONFIG);
+
+    // version.bin = [0, 0, 0, 0x0A] → IndexIO.V10_VERSION, a single range-readable druid.segment
+    Files.write(new byte[]{0x0, 0x0, 0x0, 0x0A}, tempPath.resolve("version.bin").toFile());
+
+    final String expectedDir = PREFIX + "/" + pusher.getStorageDir(SEGMENT_TO_PUSH, false);
+    azureStorage.uploadBlockBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.eq(expectedDir + "/version.bin"),
+        EasyMock.eq(MAX_TRIES)
+    );
+    EasyMock.expectLastCall();
+    EasyMock.expect(azureStorage.listBlobs(CONTAINER_NAME, expectedDir + "/", null, MAX_TRIES))
+            .andReturn(ImmutableList.of(expectedDir + "/version.bin"));
+
+    replayAll();
+
+    DataSegment segment = pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false);
+
+    assertEquals(10, (int) segment.getBinaryVersion());
+    assertEquals(Boolean.TRUE, segment.getLoadSpec().get("rangeable"));
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_pushZip_doesNotStampRangeable(@TempDir Path tempPath) throws Exception
+  {
+    // The zip path uses the no-flag makeLoadSpec overload; openRangeReader returns null on the zip short circuit
+    // regardless, but the loadSpec stays compact for zipped segments by omitting the field entirely.
+    AzureDataSegmentPusher pusher =
+        new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, ZIP_CONFIG);
+
+    Files.write(DATA, tempPath.resolve("version.bin").toFile());
+
+    azureStorage.uploadBlockBlob(
+        EasyMock.anyObject(File.class),
+        EasyMock.eq(CONTAINER_NAME),
+        EasyMock.anyString(),
+        EasyMock.eq(MAX_TRIES)
+    );
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    DataSegment segment = pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false);
+
+    assertFalse(segment.getLoadSpec().containsKey("rangeable"));
 
     verifyAll();
   }
