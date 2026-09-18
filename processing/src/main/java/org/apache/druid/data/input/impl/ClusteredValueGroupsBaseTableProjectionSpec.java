@@ -230,6 +230,30 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
   }
 
   /**
+   * Since {@link #withAdditionalColumns} appends undeclared columns after the declared ones and changes nothing
+   * else, {@code other} is this spec extended exactly when it declares the same clustering columns and virtual
+   * columns and its column list starts with this one. List equality is the zero-appended-columns case, so this
+   * subsumes {@link #hasEqualCompactionState(BaseTableProjectionSpec)}.
+   */
+  @Override
+  public boolean hasEqualCompactionState(BaseTableProjectionSpec other, boolean allowUndeclaredColumns)
+  {
+    if (!allowUndeclaredColumns) {
+      return hasEqualCompactionState(other);
+    }
+    if (!(other instanceof ClusteredValueGroupsBaseTableProjectionSpec)) {
+      return false;
+    }
+    final ClusteredValueGroupsBaseTableProjectionSpec mine = withoutQueryGranularity();
+    final ClusteredValueGroupsBaseTableProjectionSpec theirs =
+        ((ClusteredValueGroupsBaseTableProjectionSpec) other).withoutQueryGranularity();
+    return mine.clusteringColumns.equals(theirs.clusteringColumns)
+           && mine.virtualColumns.equals(theirs.virtualColumns)
+           && theirs.columns.size() >= mine.columns.size()
+           && theirs.columns.subList(0, mine.columns.size()).equals(mine.columns);
+  }
+
+  /**
    * Appends the given columns after the declared ones, which keeps the clustering columns the leading prefix of
    * {@link #getColumns()}.
    */
