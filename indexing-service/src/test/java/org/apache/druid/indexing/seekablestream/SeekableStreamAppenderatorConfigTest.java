@@ -193,6 +193,7 @@ public class SeekableStreamAppenderatorConfigTest
           null,
           numThreads,
           null,
+          null,
           numMergeBuffers,
           null,
           null,
