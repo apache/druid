@@ -161,10 +161,11 @@ const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
 const formatLeftToBeCompacted = formatBytes;
 
-function progress(done: number, awaiting: number): number {
-  const d = done + awaiting;
-  if (!d) return 0;
-  return done / d;
+function progress(done: NumberLike, awaiting: NumberLike): number {
+  const doneNumber = Number(done);
+  const total = doneNumber + Number(awaiting);
+  if (!total) return 0;
+  return doneNumber / total;
 }
 
 const PERCENT_BRACES = [formatPercent(1)];
@@ -1569,9 +1570,8 @@ GROUP BY 1, 2`;
             width: 200,
             accessor: ({ compaction }) => {
               const status = compaction?.status;
-              return status?.bytesCompacted
-                ? status.bytesCompacted / (status.bytesAwaitingCompaction + status.bytesCompacted)
-                : 0;
+              if (!status) return 0;
+              return progress(status.bytesCompacted, status.bytesAwaitingCompaction);
             },
             filterable: false,
             className: 'padded',
