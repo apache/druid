@@ -69,6 +69,9 @@
   "ingest/events/processed": [
     "dataSource"
   ],
+  "ingest/events/filtered": [
+    "dataSource"
+  ],
   "ingest/rows/output": [
     "dataSource"
   ],
