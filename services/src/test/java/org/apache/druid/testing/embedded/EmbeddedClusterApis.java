@@ -61,6 +61,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /**
  * Contains various utility methods to interact with an {@link EmbeddedDruidCluster}.
@@ -281,7 +282,8 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void verifyNumVisibleSegmentsIs(int numExpectedSegments, String dataSource, EmbeddedOverlord overlord)
   {
-    int segmentCount = getVisibleUsedSegments(dataSource, overlord).size();
+    final Set<DataSegment> visibleSegments = getVisibleUsedSegments(dataSource, overlord);
+    final int segmentCount = visibleSegments.size();
     Assertions.assertEquals(
         numExpectedSegments,
         segmentCount,
@@ -289,12 +291,18 @@ public class EmbeddedClusterApis implements EmbeddedResource
     );
 
     // The Broker learns about segment changes asynchronously from the Coordinator, so the
-    // sys.segments table may briefly lag behind the metadata store. Poll instead of asserting once.
+    // sys.segments table may briefly lag behind the metadata store. Match the segment IDs as well
+    // as the count because compaction can replace segments without changing their number.
     final String expectedCount = String.valueOf(segmentCount);
+    final String expectedSegmentIds = visibleSegments
+        .stream()
+        .map(segment -> StringUtils.format("'%s'", StringUtils.escapeSql(segment.getId().toString())))
+        .collect(Collectors.joining(", "));
     final String sql = "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'"
-                       + " AND is_overshadowed = 0 AND is_available = 1";
+                       + " AND is_overshadowed = 0 AND is_available = 1"
+                       + (expectedSegmentIds.isEmpty() ? "" : " AND segment_id IN (" + expectedSegmentIds + ")");
     try {
-      waitForResult(() -> runSql(sql, dataSource), expectedCount::equals)
+      waitForResult(() -> runSql(sql, StringUtils.escapeSql(dataSource)), expectedCount::equals)
           .withTimeoutMillis(60_000)
           .go();
     }
