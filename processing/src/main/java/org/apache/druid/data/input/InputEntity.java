@@ -95,6 +95,10 @@ public interface InputEntity
    */
   default CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
   {
+    // Ensure the directory exists before creating a temp file in it. Some callers (e.g. the MSQ external-input
+    // reader) supply a per-stage subdirectory that is derived lazily and not otherwise created, so createTempFile
+    // would fail with "No such file or directory". This mirrors FileOutputChannelFactory#openChannel.
+    FileUtils.mkdirp(temporaryDirectory);
     final File tempFile = File.createTempFile("druid-input-entity", ".tmp", temporaryDirectory);
     LOG.debug("Fetching entity into file[%s]", tempFile.getAbsolutePath());
 
