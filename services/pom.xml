@@ -200,39 +200,26 @@
             <artifactId>guice-servlet</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-connector-basic</artifactId>
-            <version>${maven.resolver.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-transport-apache</artifactId>
-            <version>${maven.resolver.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-util</artifactId>
-            <version>${maven.resolver.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-impl</artifactId>
-            <version>${maven.resolver.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-spi</artifactId>
-            <version>${maven.resolver.version}</version>
-        </dependency>
-        <dependency>
+            <!-- Used directly by PullDependencies (RepositorySystem/RepositorySystemSession). -->
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-api</artifactId>
             <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
+            <!-- Used directly by PullDependencies (JavaScopes, DependencyFilterUtils,
+                 AuthenticationBuilder, DefaultProxySelector). -->
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-util</artifactId>
+            <version>${maven.resolver.version}</version>
+        </dependency>
+        <dependency>
             <!-- Replaces the pre-2.0 DefaultServiceLocator/MavenRepositorySystemUtils bootstrap
                  (formerly provided by org.apache.maven:maven-resolver-provider) used in
-                 PullDependencies to construct a RepositorySystem/RepositorySystemSession. -->
+                 PullDependencies to construct a RepositorySystem/RepositorySystemSession.
+                 It transitively brings in maven-resolver-connector-basic, -impl, -spi,
+                 -transport-apache, and -transport-file at a consistent version, so those
+                 don't need to be declared here directly - nothing in this module's source
+                 references them; they're only used via ServiceLoader/SPI at runtime. -->
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-supplier-mvn3</artifactId>
             <version>${maven.resolver.version}</version>
@@ -431,15 +418,6 @@
                     <ignoredUsedUndeclaredDependencies>
                         <ignoredUsedUndeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUsedUndeclaredDependency>
                     </ignoredUsedUndeclaredDependencies>
-                    <usedDependencies>
-                        <!-- Not referenced directly in source: RepositorySystemSupplier (from
-                             maven-resolver-supplier-mvn3) wires these up via ServiceLoader/SPI
-                             at runtime in PullDependencies. -->
-                        <dependency>org.apache.maven.resolver:maven-resolver-connector-basic</dependency>
-                        <dependency>org.apache.maven.resolver:maven-resolver-transport-apache</dependency>
-                        <dependency>org.apache.maven.resolver:maven-resolver-impl</dependency>
-                        <dependency>org.apache.maven.resolver:maven-resolver-spi</dependency>
-                    </usedDependencies>
                 </configuration>
             </plugin>
         </plugins>
