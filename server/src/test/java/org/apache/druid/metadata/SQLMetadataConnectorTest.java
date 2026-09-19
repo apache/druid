@@ -67,7 +67,7 @@ public class SQLMetadataConnectorTest
   }
 
   @Test
-  public void testCreateTables()
+  public void testCreateTablesIfNotExists()
   {
     final List<String> tables = new ArrayList<>();
     tables.add(tablesConfig.getConfigTable());
@@ -135,11 +135,11 @@ public class SQLMetadataConnectorTest
   }
 
   @Test
-  public void testCreateIndexOnNoTable()
+  public void testCreateIndexIfNotExistsOnNoTable()
   {
     String tableName = "noTable";
     try {
-      connector.createIndex(
+      connector.createIndexIfNotExists(
           tableName,
           "some_string",
           Lists.newArrayList("a", "b")

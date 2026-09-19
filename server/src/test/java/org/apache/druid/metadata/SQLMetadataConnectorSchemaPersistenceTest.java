@@ -47,7 +47,7 @@ public class SQLMetadataConnectorSchemaPersistenceTest
   }
 
   @Test
-  public void testCreateTables()
+  public void testCreateTablesIfNotExists()
   {
     final List<String> tables = new ArrayList<>();
     tables.add(tablesConfig.getConfigTable());

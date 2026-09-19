@@ -240,7 +240,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Creates the given table and indexes if the table doesn't already exist.
    */
-  public void createTable(final String tableName, final Iterable<String> sql)
+  public void createTableIfNotExists(final String tableName, final Iterable<String> sql)
   {
     try {
       retryWithHandle(handle -> {
@@ -292,7 +292,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createPendingSegmentsTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -306,6 +306,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  sequence_prev_id VARCHAR(255) NOT NULL,\n"
                 + "  sequence_name_prev_id_sha1 VARCHAR(255) NOT NULL,\n"
                 + "  payload %2$s NOT NULL,\n"
+                + "  upgraded_from_segment_id VARCHAR(255),\n"
+                + "  task_allocator_id VARCHAR(255),\n"
                 + "  PRIMARY KEY (id),\n"
                 + "  UNIQUE (sequence_name_prev_id_sha1)\n"
                 + ")",
@@ -313,17 +315,21 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_DATASOURCE_END",
         List.of("dataSource", quoteColumn("end"))
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_DATASOURCE_SEQUENCE",
         List.of("dataSource", "sequence_name")
     );
-    alterPendingSegmentsTable(tableName);
+    createIndexIfNotExists(
+        tableName,
+        "IDX_%S_DATASOURCE_TASK_ALLOCATOR_ID",
+        List.of("dataSource", "task_allocator_id")
+    );
   }
 
   /**
@@ -333,7 +339,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   public void createDataSourceTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -371,7 +377,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       columns.add("num_rows BIGINT");
     }
 
-    StringBuilder createStatementBuilder = new StringBuilder("CREATE TABLE %1$s (");
+    final StringBuilder createStatementBuilder = new StringBuilder("CREATE TABLE %1$s (");
 
     for (String column : columns) {
       createStatementBuilder.append(column);
@@ -380,7 +386,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     createStatementBuilder.append("PRIMARY KEY (id)\n)");
 
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -390,7 +396,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         )
     );
 
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_DATASOURCE_USED_END_START",
         List.of(
@@ -400,13 +406,22 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             "start"
         )
     );
+
+    // Index to cover the query to find the segments that were upgraded from a
+    // given segment ID in 'retrieveUpgradedToSegmentIds' task action
+    createIndexIfNotExists(
+        tableName,
+        "IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
+        List.of("dataSource", "upgraded_from_segment_id")
+    );
+
     // Covering index for the used-segment ID scan performed on every metadata
     // cache sync (SELECT id, dataSource, used_status_last_updated WHERE used=true).
     // Includes id explicitly so the scan is index-only on all backends (not only
     // engines like InnoDB that append the primary key to secondary indexes).
     // Its leading 'used' column also serves plain 'WHERE used = ?' lookups, so a
     // separate IDX_%S_USED index is not created.
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_USED_USLU_DATASOURCE",
         List.of("used", "used_status_last_updated", "dataSource", "id")
@@ -415,7 +430,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   private void createUpgradeSegmentsTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -430,7 +445,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_TASK",
         List.of("task_id")
@@ -439,7 +454,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createRulesTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -454,7 +469,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_DATASOURCE",
         List.of("dataSource")
@@ -463,7 +478,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createConfigTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -480,13 +495,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void prepareTaskEntryTable(final String tableName)
   {
-    createEntryTable(tableName);
-    alterEntryTableAddTypeAndGroupId(tableName);
+    createTaskTable(tableName);
+    alterTaskTableAddTypeAndGroupId(tableName);
   }
 
-  public void createEntryTable(final String tableName)
+  public void createTaskTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -497,25 +512,27 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  payload %2$s NOT NULL,\n"
                 + "  status_payload %2$s NOT NULL,\n"
                 + "  active BOOLEAN NOT NULL DEFAULT FALSE,\n"
+                + "  type VARCHAR(255),\n"
+                + "  group_id VARCHAR(255),\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
                 tableName, getPayloadType(), getCollation()
             )
         )
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_ACTIVE_CREATED_DATE",
         List.of("active", "created_date")
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_DATASOURCE_ACTIVE",
         List.of("datasource", "active")
     );
   }
 
-  private void alterEntryTableAddTypeAndGroupId(final String tableName)
+  private void alterTaskTableAddTypeAndGroupId(final String tableName)
   {
     List<String> statements = new ArrayList<>();
     if (tableHasColumn(tableName, "type")) {
@@ -563,7 +580,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       alterTable(tableName, statements);
     }
 
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_DATASOURCE_TASK_ALLOCATOR_ID",
         List.of("dataSource", "task_allocator_id")
@@ -572,7 +589,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createLockTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -586,7 +603,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_TASK_ID",
         List.of("task_id")
@@ -595,7 +612,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createSupervisorsTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -610,7 +627,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_SPEC_ID",
         List.of("spec_id")
@@ -620,6 +637,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   /**
    * Adds new columns (used_status_last_updated) to the "segments" table.
    * Conditionally, add schema_fingerprint, num_rows columns.
+   * This method is a no-op for a freshly created segment table in a new Druid cluster.
    */
   protected void alterSegmentTable()
   {
@@ -665,14 +683,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
     alterTable(tableName, alterCommands);
 
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
         List.of("dataSource", "upgraded_from_segment_id")
     );
     // Migration for existing tables: covering index backing the used-segment ID
     // scan on every cache sync (see createSegmentTable).
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%S_USED_USLU_DATASOURCE",
         List.of("used", "used_status_last_updated", "dataSource", "id")
@@ -818,7 +836,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public void createPendingSegmentsTable()
   {
     if (config.get().isCreateTables()) {
-      createPendingSegmentsTable(tablesConfigSupplier.get().getPendingSegmentsTable());
+      final String tableName = tablesConfigSupplier.get().getPendingSegmentsTable();
+      createPendingSegmentsTable(tableName);
+      alterPendingSegmentsTable(tableName);
     }
   }
 
@@ -1012,7 +1032,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   private void createAuditTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -1030,17 +1050,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%s_KEY_TIME",
         List.of("audit_key", "created_date")
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%s_TYPE_TIME",
         List.of("type", "created_date")
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%s_AUDIT_TIME",
         List.of("created_date")
@@ -1130,7 +1150,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public void createSegmentSchemasTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -1150,12 +1170,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
             )
         )
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%s_FINGERPRINT",
         List.of("fingerprint")
     );
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%s_USED",
         List.of("used", "used_status_last_updated")
@@ -1178,7 +1198,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   public void createIndexingStatesTable(final String tableName)
   {
-    createTable(
+    createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
@@ -1197,7 +1217,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         )
     );
 
-    createIndex(
+    createIndexIfNotExists(
         tableName,
         "IDX_%s_USED",
         List.of("used", "used_status_last_updated")
@@ -1265,14 +1285,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Create index on the table {@code tableName} with retry if not already exist, to be called after {@link #createTable}.
+   * Create index on the table {@code tableName} with retry if not already exist, to be called after {@link #createTableIfNotExists}.
    * Format of index name is either specified via {@code fullIndexNameFormat} or {@link #generateShortIndexName}.
    *
    * @param tableName           Name of the table to create index on
    * @param fullIndexNameFormat Template to create index ID. If specified, the only placeholder should be for the tableName. Otherwise, uses the format: {@code IDX_{table name}_{columns}}.
    * @param indexCols           List of un-escaped column names to be indexed on (case-sensitive).
    */
-  public void createIndex(
+  public void createIndexIfNotExists(
       final String tableName,
       @Nullable final String fullIndexNameFormat,
       final List<String> indexCols
@@ -1320,12 +1340,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   /**
    * Drops an index on {@code tableName} if it exists, under either the full or
-   * short naming convention (see {@link #createIndex}). No-op if absent, so it is
+   * short naming convention (see {@link #createIndexIfNotExists}). No-op if absent, so it is
    * safe to call on every startup.
    *
    * @param tableName           Name of the table the index is on
-   * @param fullIndexNameFormat Same format string that was passed to {@link #createIndex}
-   * @param indexCols           Same columns that were passed to {@link #createIndex}
+   * @param fullIndexNameFormat Same format string that was passed to {@link #createIndexIfNotExists}
+   * @param indexCols           Same columns that were passed to {@link #createIndexIfNotExists}
    */
   public void dropIndex(
       final String tableName,
