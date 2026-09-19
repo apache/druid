@@ -19,46 +19,32 @@
 
 package org.apache.druid.msq.exec;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
-import javax.annotation.Nullable;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * A {@link QueryListener} wrapper that captures the report from {@link #onQueryComplete(MSQTaskReportPayload)}.
+ * A {@link QueryListener} wrapper that captures the final report before delegating query completion.
  */
 public class CaptureReportQueryListener implements QueryListener
 {
   private final QueryListener delegate;
+  private final String queryId;
+  private final AtomicReference<TaskReport.ReportMap> reportReference;
 
-  @Nullable
-  private volatile MSQTaskReportPayload report;
-
-  public CaptureReportQueryListener(final QueryListener delegate)
+  public CaptureReportQueryListener(
+      final QueryListener delegate,
+      final String queryId,
+      final AtomicReference<TaskReport.ReportMap> reportReference
+  )
   {
     this.delegate = delegate;
-  }
-
-  /**
-   * Whether this listener has captured a report. Will be true if the query has completed, false otherwise.
-   */
-  public boolean hasReport()
-  {
-    return report != null;
-  }
-
-  /**
-   * Retrieves the report. Can only be called once the query is complete.
-   */
-  public MSQTaskReportPayload getReport()
-  {
-    if (report == null) {
-      throw DruidException.defensive("Query not complete, cannot call getReport()");
-    }
-
-    return report;
+    this.queryId = queryId;
+    this.reportReference = reportReference;
   }
 
   @Override
@@ -88,7 +74,7 @@ public class CaptureReportQueryListener implements QueryListener
   @Override
   public void onQueryComplete(final MSQTaskReportPayload report)
   {
-    this.report = report;
+    reportReference.set(TaskReport.buildTaskReports(new MSQTaskReport(queryId, report)));
     delegate.onQueryComplete(report);
   }
 }
