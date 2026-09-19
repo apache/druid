@@ -264,12 +264,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
         // and a new datasource is added
         log.info("datasource [%s] schema has not been initialized yet, "
                  + "check coordinator logs if this message is persistent.", dataSource);
-        // this is a harmless call
-        tables.remove(dataSource);
-        emitMetric(
-            Metric.DATASOURCE_REMOVED,
-            1,
-            ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource));
+        // Usually there is no table to remove here. If there was one, a concurrent last-segment callback may have
+        // removed it and emitted the metric already, so only emit if this refresh actually removed the table.
+        if (tables.remove(dataSource) != null) {
+          emitDataSourceRemoved(dataSource);
+        }
         continue;
       }
 
