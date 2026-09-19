@@ -203,14 +203,12 @@
             <!-- Used directly by PullDependencies (RepositorySystem/RepositorySystemSession). -->
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-api</artifactId>
-            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <!-- Used directly by PullDependencies (JavaScopes, DependencyFilterUtils,
                  AuthenticationBuilder, DefaultProxySelector). -->
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-util</artifactId>
-            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <!-- Replaces the pre-2.0 DefaultServiceLocator/MavenRepositorySystemUtils bootstrap
@@ -222,7 +220,6 @@
                  references them; they're only used via ServiceLoader/SPI at runtime. -->
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-supplier-mvn3</artifactId>
-            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>

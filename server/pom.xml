@@ -134,12 +134,10 @@
                  distribution classpath. -->
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-connector-basic</artifactId>
-            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-transport-apache</artifactId>
-            <version>${maven.resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
