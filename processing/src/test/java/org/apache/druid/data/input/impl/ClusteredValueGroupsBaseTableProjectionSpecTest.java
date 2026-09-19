@@ -21,7 +21,10 @@ package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -34,6 +37,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -87,6 +91,68 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
         () -> spec.withQueryGranularity(Granularities.ALL)
     );
     Assertions.assertTrue(e.getMessage().contains("ALL"));
+  }
+
+  @Test
+  void testWithQueryGranularityDurationIsRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> tenantSpec().withQueryGranularity(new DurationGranularity(3_600_000, null))
+    );
+    Assertions.assertTrue(e.getMessage().contains("only period granularities in the UTC time zone"), e.getMessage());
+  }
+
+  @Test
+  void testWithQueryGranularityNonUtcPeriodIsRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> tenantSpec().withQueryGranularity(
+            new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzFromString("America/Los_Angeles"))
+        )
+    );
+    Assertions.assertTrue(e.getMessage().contains("only period granularities in the UTC time zone"), e.getMessage());
+  }
+
+  @Test
+  void testNonUtcGranularityCarrierRejectedAtConstruction()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                Granularities.toVirtualColumn(
+                    new PeriodGranularity(new Period("P1D"), null, DateTimes.inferTzFromString("America/Los_Angeles")),
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                )
+            ))
+            .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("only period granularities in the UTC time zone"), e.getMessage());
+  }
+
+  @Test
+  void testUndecodableGranularityCarrierRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                new ExpressionVirtualColumn(
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+                    "__time",
+                    ColumnType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            ))
+            .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("does not encode a query granularity"), e.getMessage());
   }
 
   @Test

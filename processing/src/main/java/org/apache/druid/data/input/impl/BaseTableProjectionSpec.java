@@ -21,13 +21,17 @@ package org.apache.druid.data.input.impl;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
+import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -104,5 +108,41 @@ public interface BaseTableProjectionSpec
   default boolean hasEqualCompactionState(BaseTableProjectionSpec other)
   {
     return equals(other);
+  }
+
+  /**
+   * Validates that {@code queryGranularity} can be used by a base-table spec: only period granularities in the UTC
+   * time zone are currently allowed.
+   */
+  static void validateQueryGranularity(Granularity queryGranularity, String typeName)
+  {
+    if (!(queryGranularity instanceof PeriodGranularity periodGranularity)
+        || !DateTimeZone.UTC.equals(periodGranularity.getTimeZone())) {
+      throw InvalidInput.exception(
+          "Query granularity[%s] is not supported for [%s] base tables; only period granularities in the UTC time"
+          + " zone are supported",
+          queryGranularity,
+          typeName
+      );
+    }
+  }
+
+  /**
+   * Validates a {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} supplied directly to a spec (catalog JSON, or
+   * a translated DDL body): it must decode to a granularity {@link #validateQueryGranularity} accepts, so a
+   * spec cannot be constructed claiming a granularity that reads back as something else.
+   */
+  static void validateGranularity(VirtualColumn granularityCarrier, String typeName)
+  {
+    final Granularity granularity = Granularities.fromVirtualColumn(granularityCarrier);
+    if (granularity == null || Granularities.NONE.equals(granularity) || Granularities.ALL.equals(granularity)) {
+      throw InvalidInput.exception(
+          "virtual column [%s] does not encode a query granularity; declare it as a timestamp_floor of [%s], or"
+          + " omit it",
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+          ColumnHolder.TIME_COLUMN_NAME
+      );
+    }
+    validateQueryGranularity(granularity, typeName);
   }
 }

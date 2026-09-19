@@ -161,6 +161,7 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
         || virtualColumns.getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME) != null) {
       return this;
     }
+    BaseTableProjectionSpec.validateQueryGranularity(queryGranularity, TYPE_NAME);
     final VirtualColumn granularityVirtualColumn =
         Granularities.toVirtualColumn(queryGranularity, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     final List<VirtualColumn> merged = new ArrayList<>(Arrays.asList(virtualColumns.getVirtualColumns()));
@@ -279,6 +280,7 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
             Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
         );
       }
+      BaseTableProjectionSpec.validateGranularity(virtualColumn, TYPE_NAME);
     }
   }
 

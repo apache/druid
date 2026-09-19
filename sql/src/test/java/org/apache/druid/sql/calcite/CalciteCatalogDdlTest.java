@@ -913,6 +913,29 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   }
 
   /**
+   * {@code __time} is stored in UTC, so a base table's query granularity must be a UTC period: a session time zone
+   * reaching the body's TIME_FLOOR (the same way it reaches an aggregate projection's) makes the granularity
+   * non-UTC, and the statement is rejected rather than storing buckets that do not align with the stored values.
+   */
+  @Test
+  public void testPlainBaseProjectionRejectsNonUtcQueryGranularity()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "SET sqlTimeZone = 'America/Los_Angeles';\n"
+            + "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT tenant, TIME_FLOOR(__time, 'P1D') AS __time))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains("only period granularities in the UTC time zone are supported"),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
    * The plain write path stores columns as they arrive, so a plain base table rejects computed columns.
    */
   @Test
