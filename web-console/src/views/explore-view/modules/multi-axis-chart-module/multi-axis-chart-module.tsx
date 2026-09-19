@@ -27,6 +27,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
 import {
+  bigIntsToNumbers,
   formatInteger,
   formatIsoDateRange,
   formatNumber,
@@ -114,7 +115,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           throw new Error(`Must have a column of type TIMESTAMP for the multi-axis chart to work`);
         }
 
-        return (await runSqlQuery(query, signal)).toObjectArray();
+        return bigIntsToNumbers((await runSqlQuery(query, signal)).toObjectArray());
       },
     });
 

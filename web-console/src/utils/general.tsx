@@ -41,6 +41,27 @@ export function isNumberLikeNaN(x: NumberLike): boolean {
   return isNaN(Number(x));
 }
 
+/**
+ * Query results and API responses are parsed with JSONBig, so any integer with 16+ digits arrives
+ * as a BigInt. Charting libraries can not do arithmetic on those, so flatten them back to numbers.
+ */
+export function bigIntsToNumbers<T extends Record<string, any>>(rows: T[]): T[] {
+  return rows.map(row => {
+    let changed = false;
+    const res: Record<string, any> = {};
+    for (const k of Object.keys(row)) {
+      const v = row[k];
+      if (typeof v === 'bigint') {
+        res[k] = Number(v);
+        changed = true;
+      } else {
+        res[k] = v;
+      }
+    }
+    return changed ? (res as T) : row;
+  });
+}
+
 export function nonEmptyString(s: unknown): s is string {
   return typeof s === 'string' && s !== '';
 }

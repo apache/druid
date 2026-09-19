@@ -26,7 +26,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
 import { ColorAssigner } from '../../../../singletons';
-import { formatEmpty, formatNumber } from '../../../../utils';
+import { bigIntsToNumbers, formatEmpty, formatNumber } from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
 import { ModuleRepository } from '../../module-repository/module-repository';
@@ -131,7 +131,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       query: dataQueries,
       processQuery: async ({ mainQuery, limit, splitExpression, othersPartialQuery }, signal) => {
         const result = await runSqlQuery({ query: mainQuery }, signal);
-        const data = result.toObjectArray();
+        const data = bigIntsToNumbers(result.toObjectArray());
 
         if (splitExpression && othersPartialQuery) {
           const pieValues = result.getColumnByIndex(0)!;
@@ -140,7 +140,11 @@ ModuleRepository.registerModule<PieChartParameterValues>({
             const othersResult = await runSqlQuery({
               query: othersPartialQuery.addWhere(splitExpression.notIn(pieValues.slice(0, limit))),
             });
-            data.push({ name: 'Others', value: othersResult.rows[0][0], __isOthers: true });
+            data.push({
+              name: 'Others',
+              value: Number(othersResult.rows[0][0]),
+              __isOthers: true,
+            });
           }
         }
 
