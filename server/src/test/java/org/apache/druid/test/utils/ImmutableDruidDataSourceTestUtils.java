@@ -60,13 +60,17 @@ public class ImmutableDruidDataSourceTestUtils
    * test code
    * @param expected expected list
    * @param actual actual list
-   * @return
    */
-  public static boolean assertEquals(List<ImmutableDruidDataSource> expected, List<ImmutableDruidDataSource> actual)
+  public static void assertEquals(
+      @Nullable List<ImmutableDruidDataSource> expected,
+      @Nullable List<ImmutableDruidDataSource> actual
+  )
   {
     if (expected == null) {
-      return actual == null;
+      Assertions.assertNull(actual);
+      return;
     }
+    Assertions.assertNotNull(actual);
 
     Assertions.assertEquals(expected.size(), actual.size(),
         "expected and actual ImmutableDruidDataSource lists should be of equal size");
@@ -77,7 +81,6 @@ public class ImmutableDruidDataSourceTestUtils
           "ImmutableDruidDataSource's equalsForTesting()" + " method");
       }
     }
-    return true;
   }
 
   private static boolean contains(ImmutableDruidDataSource expected, List<ImmutableDruidDataSource> actualList)
