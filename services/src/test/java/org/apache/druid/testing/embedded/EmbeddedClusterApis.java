@@ -349,6 +349,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
       long timeoutMillis
   )
   {
+    final String escapedDataSource = StringUtils.escapeSql(dataSource);
     final int numSegments = (int) coordinator
         .bindings()
         .segmentsMetadataStorage()
@@ -360,7 +361,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
     waitForResult(
         () -> runSql(
             "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s' AND is_available = 1",
-            dataSource
+            escapedDataSource
         ),
         result -> parseCountOrZero(result) >= numSegments
     ).withTimeoutMillis(timeoutMillis).go();
@@ -368,7 +369,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
     waitForResult(
         () -> runSql(
             "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = '%s'",
-            dataSource
+            escapedDataSource
         ),
         result -> "1".equals(result.trim())
     ).withTimeoutMillis(timeoutMillis).go();
