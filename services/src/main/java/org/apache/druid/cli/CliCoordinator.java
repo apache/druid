@@ -49,11 +49,12 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.MetadataManagerModule;
-import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.NativeQueryEngineModule;
 import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SegmentSchemaCacheModule;
 import org.apache.druid.guice.SupervisorCleanupModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.JettyHttpClientModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -69,9 +70,12 @@ import org.apache.druid.metadata.MetadataStorageProvider;
 import org.apache.druid.msq.guice.MSQDurableStorageModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
+import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -177,8 +181,38 @@ public class CliCoordinator extends ServerRunnable
 
     if (isSegmentSchemaCacheEnabled) {
       validateCentralizedDatasourceSchemaConfig(properties);
+      modules.add(
+          NativeQueryEngineModule.builder()
+                                 .scanOnly()
+                                 // Segment metadata queries historically use Coordinator-specific scheduler and
+                                 // default-query configuration prefixes. Override the generic native-engine bindings
+                                 // here to preserve that behavior without coupling it to SegmentSchemaCacheModule.
+                                 .withOverrideModule(
+                                     new Module()
+                                     {
+                                       @Override
+                                       public void configure(final Binder binder)
+                                       {
+                                         JsonConfigProvider.bind(
+                                             binder,
+                                             "druid.coordinator.query.scheduler",
+                                             QuerySchedulerProvider.class,
+                                             Global.class
+                                         );
+                                         JsonConfigProvider.bind(
+                                             binder,
+                                             "druid.coordinator.query.default",
+                                             DefaultQueryConfig.class
+                                         );
+                                         binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
+                                       }
+                                     }
+                                 )
+                                 .build()
+      );
       modules.add(new SegmentSchemaCacheModule());
-      modules.add(new QueryableModule());
+    } else {
+      modules.add(NativeQueryEngineModule.builder().scanOnly().build());
     }
 
     modules.add(
@@ -194,7 +228,6 @@ public class CliCoordinator extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8281);
 
             binder.bind(MetadataStorage.class).toProvider(MetadataStorageProvider.class);
-
             JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator", CoordinatorRunConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.kill", CoordinatorKillConfigs.class);

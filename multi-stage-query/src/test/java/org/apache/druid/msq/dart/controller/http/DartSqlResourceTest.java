@@ -563,6 +563,33 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   @Test
+  public void test_doPost_nativeCapableSystemTableUsesBindablePlan()
+  {
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(CalciteTests.TEST_SUPERUSER_NAME));
+    Mockito.when(httpServletRequest.startAsync())
+           .thenReturn(asyncContext);
+
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT COUNT(*) FROM sys.tasks",
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+        Collections.emptyList()
+    );
+
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
+    Assertions.assertEquals("[[4]]\n", StringUtils.fromUtf8(asyncResponse.baos.toByteArray()));
+  }
+
+  @Test
   public void test_doPost_sysTableJoinedToDatasource()
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();
