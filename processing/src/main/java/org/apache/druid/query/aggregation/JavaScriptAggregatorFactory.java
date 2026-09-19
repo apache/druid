@@ -232,18 +232,18 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   public byte[] getCacheKey()
   {
     try {
-      MessageDigest md = MessageDigest.getInstance("SHA-1");
-      byte[] fieldNameBytes = StringUtils.toUtf8(Joiner.on(",").join(fieldNames));
-      byte[] sha1 = md.digest(StringUtils.toUtf8(fnAggregate + fnReset + fnCombine));
+      final MessageDigest md = MessageDigest.getInstance("SHA-256");
+      final byte[] fieldNameBytes = StringUtils.toUtf8(Joiner.on(",").join(fieldNames));
+      final byte[] scriptDigest = md.digest(StringUtils.toUtf8(fnAggregate + fnReset + fnCombine));
 
-      return ByteBuffer.allocate(1 + fieldNameBytes.length + sha1.length)
+      return ByteBuffer.allocate(1 + fieldNameBytes.length + scriptDigest.length)
                        .put(AggregatorUtil.JS_CACHE_TYPE_ID)
                        .put(fieldNameBytes)
-                       .put(sha1)
+                       .put(scriptDigest)
                        .array();
     }
     catch (NoSuchAlgorithmException e) {
-      throw new RuntimeException("Unable to get SHA1 digest instance", e);
+      throw new RuntimeException("Unable to get SHA-256 digest instance", e);
     }
   }
 
