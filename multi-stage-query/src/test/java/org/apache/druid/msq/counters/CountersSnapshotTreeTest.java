@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
+import java.util.Optional;
 
 public class CountersSnapshotTreeTest
 {
@@ -44,7 +45,7 @@ public class CountersSnapshotTreeTest
     channelCounters.addFile(10, 13);
     channelCounters.addTotalFiles(14);
     // fake load to set some counters
-    channelCounters.addLoad(new AcquireSegmentResult(null, 1234L, 1L, 1L));
+    channelCounters.addLoad(new AcquireSegmentResult(Optional.empty(), 1234L, 1L, 1L));
 
     final CounterSnapshotsTree snapshotsTree = new CounterSnapshotsTree();
     snapshotsTree.put(1, 2, new CounterSnapshots(ImmutableMap.of("ctr", channelCounters.snapshot())));

@@ -231,8 +231,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
             segmentReferences.add(
                 new SegmentReference(
                     segment.getDescriptor(),
-                    segmentMapFunction.apply(ref),
-                    null
+                    segmentMapFunction.apply(ref)
                 )
             );
           } else if (segmentManager.canLoadSegmentOnDemand(dataSegment)) {

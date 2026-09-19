@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -85,7 +84,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -331,31 +329,44 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // header through the same reader the download uses, so warming it means the gate below can only be reached from
     // inside ensureAllDownloaded. A partial acquire downloads nothing else, so no container is resident yet.
     try (AcquireSegmentAction warm = manager.acquireSegment(gatedSegment, AcquireMode.PARTIAL)) {
-      warm.getSegmentFuture().get();
+      warm.await();
+      final StorageLocation location = manager.getLocations().get(0);
 
       final DownloadGate gate = new DownloadGate();
       DOWNLOAD_GATE.set(gate);
       try {
         final AcquireSegmentAction full = manager.acquireSegment(gatedSegment, AcquireMode.FULL);
-        // Held across the close() below: getSegmentFuture() refuses to hand out the future once the action is closed,
-        // and the load task keeps running either way - closing an action cancels the caller's interest, not the task.
-        final ListenableFuture<AcquireSegmentResult> future = full.getSegmentFuture();
 
         Assertions.assertTrue(
             gate.entered.await(60, TimeUnit.SECONDS),
             "the full download should have reached a container fetch"
         );
+        // No container file has finished downloading yet: the first fetch is parked at the gate.
+        final long loadBytesAtGate = location.getWeakStats().getLoadBytes();
 
-        // Abandon the acquire while a fetch is parked mid-write. This closes the action's HoldHolder on THIS thread,
-        // which is what used to unmount the bundles - and evict the containers - out from under the running download.
+        // Abandon the acquire while a fetch is parked mid-write. The load task owns every bundle hold until it
+        // finishes (close cancels the caller's interest, not the running task), so this must not unmount the bundles
+        // - and evict the containers - out from under the running download the way releasing the holds here used to.
         full.close();
         gate.release.countDown();
 
-        // The download must still finish against containers that are all still there. Before the download owned its
-        // own bundle references, this failed: either an NPE from a fetch whose container file had been deleted, or
-        // ensureAllDownloaded's post-condition once the eviction cleared residency behind it.
-        final AcquireSegmentResult result = future.get(60, TimeUnit.SECONDS);
-        Assertions.assertNotNull(result);
+        // The download must still finish against containers that are all still there. Nothing observes the abandoned
+        // result directly (the producer closes it when delivery fails against the closed action), so completion shows
+        // up in the location's load-complete accounting: the gated fetch - exactly where an eviction-under-the-
+        // download used to fail - must complete its container file, and the task's holds must all unwind afterward.
+        final long deadline = System.currentTimeMillis() + 60_000;
+        while (location.getWeakStats().getLoadBytes() <= loadBytesAtGate && System.currentTimeMillis() < deadline) {
+          Thread.sleep(10);
+        }
+        Assertions.assertTrue(
+            location.getWeakStats().getLoadBytes() > loadBytesAtGate,
+            "the abandoned download should still complete container files"
+        );
+        // Only the warm action's metadata hold should remain once the abandoned task unwinds.
+        while (location.getWeakStats().getHoldCount() > 1 && System.currentTimeMillis() < deadline) {
+          Thread.sleep(10);
+        }
+        Assertions.assertEquals(1, location.getWeakStats().getHoldCount(), "task holds did not drain");
       }
       finally {
         DOWNLOAD_GATE.set(null);
@@ -367,8 +378,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
   void testAcquirePartialSegmentReturnsPartialAwareSegment() throws ExecutionException, InterruptedException, IOException
   {
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-      final AcquireSegmentResult result = action.getSegmentFuture().get();
-      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+      action.await();
+      final AcquireSegmentResult result = action.release();
+      try (Segment segment = result.getSegment().orElseThrow()) {
         Assertions.assertEquals(SEGMENT_ID, segment.getId());
         Assertions.assertInstanceOf(PartialQueryableIndexSegment.class, segment);
 
@@ -388,8 +400,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
       throws ExecutionException, InterruptedException, IOException
   {
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-      final AcquireSegmentResult result = action.getSegmentFuture().get();
-      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+      action.await();
+      final AcquireSegmentResult result = action.release();
+      try (Segment segment = result.getSegment().orElseThrow()) {
         final CursorFactory factory = segment.as(CursorFactory.class);
         Assertions.assertNotNull(factory);
         // Drive the async path; with the manager's executor the future will complete in the background.
@@ -419,7 +432,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // A lazy (PARTIAL) acquire mounts only the metadata entry (downloads the header); bundles stay lazy until a cursor
     // is built, so exactly one weak reservation + one weak load is expected.
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-      try (Segment ignored = action.getSegmentFuture().get().getReferenceProvider().acquireReference().orElseThrow()) {
+      action.await();
+      try (Segment ignored = action.release().getSegment().orElseThrow()) {
         final StorageLocation.WeakStats stats = loc.getWeakStats();
 
         // The header download is recorded as an actual load (previously partial mounts recorded no load at all).
@@ -446,7 +460,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
   void testSecondAcquireReturnsCachedSegment() throws ExecutionException, InterruptedException, IOException
   {
     try (AcquireSegmentAction first = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-      try (Segment ignored = first.getSegmentFuture().get().getReferenceProvider().acquireReference().orElseThrow()) {
+      first.await();
+      try (Segment ignored = first.release().getSegment().orElseThrow()) {
         // entry is registered + mounted
       }
     }
@@ -473,13 +488,14 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final long initialHoldBytes = loc.getWeakStats().getHoldBytes();
 
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-      final AcquireSegmentResult result = action.getSegmentFuture().get();
-      // The action holds a SIEVE-protective hold on the metadata entry for its entire lifetime.
+      action.await();
+      final AcquireSegmentResult result = action.release();
+      // The acquire folds a SIEVE-protective hold on the metadata entry into the delivered segment's close.
       Assertions.assertTrue(
           loc.getWeakStats().getHoldBytes() > initialHoldBytes,
-          "metadata storage-location hold must be active for the acquire action's lifetime"
+          "metadata storage-location hold must be active while the delivered segment is open"
       );
-      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+      try (Segment segment = result.getSegment().orElseThrow()) {
         try (var asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN)) {
           final CountDownLatch ready = new CountDownLatch(1);
           asyncHolder.addReadyCallback(ready::countDown);
@@ -513,8 +529,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
       throws ExecutionException, InterruptedException, IOException
   {
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-      final AcquireSegmentResult result = action.getSegmentFuture().get();
-      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+      action.await();
+      final AcquireSegmentResult result = action.release();
+      try (Segment segment = result.getSegment().orElseThrow()) {
         // base-table cursor: drives the base bundle to mount via the cache layer
         final CursorBuildSpec scanSpec = CursorBuildSpec.FULL_SCAN;
         try (var asyncHolder = segment.as(CursorFactory.class).makeCursorHolderAsync(scanSpec)) {
@@ -551,8 +568,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
                    .size(0)
                    .build();
     try (AcquireSegmentAction action = manager.acquireSegment(clusteredSegment, AcquireMode.PARTIAL)) {
-      final AcquireSegmentResult result = action.getSegmentFuture().get();
-      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+      action.await();
+      final AcquireSegmentResult result = action.release();
+      try (Segment segment = result.getSegment().orElseThrow()) {
         Assertions.assertEquals(CLUSTERED_SEGMENT_ID, segment.getId());
 
         // group-by tenant + sum(x) matches the aggregate projection. Building this cursor drives the 'proj' bundle to
@@ -605,8 +623,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final PartialSegmentBundleCacheEntryIdentifier aggBundleId =
         new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.FULL)) {
-      final AcquireSegmentResult result = action.getSegmentFuture().get();
-      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+      action.await();
+      final AcquireSegmentResult result = action.release();
+      try (Segment segment = result.getSegment().orElseThrow()) {
         Assertions.assertInstanceOf(PartialQueryableIndexSegment.class, segment);
 
         // Sync makeCursorHolder must succeed, everything was force-downloaded during acquire.
@@ -641,13 +660,61 @@ class SegmentLocalCacheManagerPartialAcquireTest
   }
 
   @Test
+  void testFullAcquireBundleHoldsSurviveActionCloseUntilSegmentClose()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    // The FULL acquire folds the metadata hold + every bundle hold into the delivered segment's close, so releasing
+    // the result and closing the action must NOT release the pins: they live exactly as long as the segment, which
+    // is what the sync cursor factory's isFullyDownloaded() expectation needs under SIEVE eviction pressure.
+    final StorageLocation loc = manager.getLocations().get(0);
+    final PartialSegmentBundleCacheEntryIdentifier baseBundleId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME);
+    final PartialSegmentBundleCacheEntryIdentifier aggBundleId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+
+    final AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.FULL);
+    action.await();
+    final AcquireSegmentResult result = action.release();
+    action.close();
+
+    try (Segment segment = result.getSegment().orElseThrow()) {
+      // Simulate SIEVE eviction under cache pressure: the pins held by the segment must keep the bundles in place
+      // even though the action is long gone.
+      loc.removeUnheldWeakEntry(baseBundleId);
+      loc.removeUnheldWeakEntry(aggBundleId);
+      Assertions.assertTrue(
+          loc.isWeakReserved(baseBundleId),
+          "base bundle pin must survive action close while the segment is open"
+      );
+      Assertions.assertTrue(
+          loc.isWeakReserved(aggBundleId),
+          "agg bundle pin must survive action close while the segment is open"
+      );
+      Assertions.assertTrue(loc.getWeakStats().getHoldBytes() > 0, "segment must hold the bundles it mounted");
+
+      // Still fully resident, so the sync cursor factory succeeds.
+      try (CursorHolder holder = segment.as(CursorFactory.class).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        Assertions.assertNotNull(holder);
+      }
+    }
+
+    // After the segment closes, everything is unheld and free to reclaim (child-before-parent: the agg bundle holds
+    // the base bundle, so the base stays reserved until the agg is gone).
+    loc.removeUnheldWeakEntry(aggBundleId);
+    Assertions.assertFalse(loc.isWeakReserved(aggBundleId), "agg bundle evictable once the segment closes");
+    loc.removeUnheldWeakEntry(baseBundleId);
+    Assertions.assertFalse(loc.isWeakReserved(baseBundleId), "base bundle evictable once the agg bundle is gone");
+  }
+
+  @Test
   void testLazyColumnDownloadsAreRecordedInWeakLoadStats()
       throws ExecutionException, InterruptedException, IOException
   {
     final StorageLocation loc = manager.getLocations().get(0);
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-      final AcquireSegmentResult result = action.getSegmentFuture().get();
-      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+      action.await();
+      final AcquireSegmentResult result = action.release();
+      try (Segment segment = result.getSegment().orElseThrow()) {
         // After a lazy mount only the metadata header has been pulled; no column files yet.
         final long headerLoadBytes = loc.getWeakStats().getLoadBytes();
         Assertions.assertTrue(headerLoadBytes > 0, "lazy mount records the header load");
@@ -718,7 +785,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
       // Fully download + mount, then release the eager acquire so the bundles become unheld (resident but evictable) —
       // the state a previously-queried segment is in when the next query's acquireCachedSegment(FULL) finds it.
       try (AcquireSegmentAction action = plain.acquireSegment(partialSegment, AcquireMode.FULL)) {
-        action.getSegmentFuture().get();
+        // closing the un-released action closes the delivered segment, releasing every hold placed by the acquire
+        action.await();
       }
       Assertions.assertTrue(loc.isWeakReserved(baseBundleId), "base bundle resident after eager acquire");
       Assertions.assertTrue(loc.isWeakReserved(aggBundleId), "agg bundle resident after eager acquire");
@@ -780,8 +848,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
 
     try {
       try (AcquireSegmentAction action = disabledManager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-        final AcquireSegmentResult result = action.getSegmentFuture().get();
-        try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+        action.await();
+        final AcquireSegmentResult result = action.release();
+        try (Segment segment = result.getSegment().orElseThrow()) {
           Assertions.assertEquals(SEGMENT_ID, segment.getId());
           Assertions.assertFalse(
               segment instanceof PartialQueryableIndexSegment,
@@ -1030,22 +1099,34 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final StorageLocation location = manager.getLocations().get(0);
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
 
-    // Two acquires holding the same freshly reserved entry, neither of which resolves its future, so nothing mounts
-    // it. The acquire that created the entry gives up first - a canceled or timed out query, say.
+    // Two acquires holding the same freshly reserved entry. The acquire that created the entry gives up first - a
+    // canceled or timed out query, say - and its hold release (which happens when its load task unwinds, since the
+    // task owns the hold for its whole run) must not remove the entry out from under the second acquire.
     final PartialSegmentMetadataCacheEntry entry;
     final Closer acquires = Closer.create();
     try {
-      // The first acquire reserves the entry; the second joins it. Both are registered with the closer so a failed
-      // assertion cannot leak a hold into the shared manager fixture; AcquireSegmentAction.close() is idempotent, so
-      // closing the first one early below is safe.
-      final AcquireSegmentAction creator = acquires.register(
-          manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)
+      // Only the second acquire is registered with the closer (so a failed assertion cannot leak a hold into the
+      // shared manager fixture); the first is closed early below, and close() is deliberately not idempotent, so it
+      // must not also be registered.
+      final AcquireSegmentAction creator = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL);
+      try {
+        acquires.register(manager.acquireSegment(partialSegment, AcquireMode.PARTIAL));
+        entry = Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, location.getCacheEntry(id));
+      }
+      finally {
+        creator.close();
+      }
+      // The abandoned acquire's hold releases asynchronously (its load task either never runs, or finishes and finds
+      // no one to deliver to), so wait for it to actually let go before asserting the entry survived.
+      final long deadline = System.currentTimeMillis() + 30_000;
+      while (location.getWeakStats().getHoldCount() > 1 && System.currentTimeMillis() < deadline) {
+        Thread.sleep(5);
+      }
+      Assertions.assertEquals(
+          1,
+          location.getWeakStats().getHoldCount(),
+          "the abandoned acquire's hold should release once its task unwinds"
       );
-      acquires.register(manager.acquireSegment(partialSegment, AcquireMode.PARTIAL));
-      entry = Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, location.getCacheEntry(id));
-      Assertions.assertFalse(entry.isMounted());
-
-      creator.close();
       Assertions.assertSame(
           entry,
           location.getCacheEntry(id),
@@ -1056,14 +1137,15 @@ class SegmentLocalCacheManagerPartialAcquireTest
       acquires.close();
     }
     // The second acquire letting go does not remove it either - removal is the creating hold's job - so it is left
-    // registered and unmounted, reclaimable, and reusable by the next acquire.
+    // registered, reclaimable, and reusable by the next acquire. (The abandoned acquires' background tasks may or may
+    // not have mounted it already; either way the acquire below is served from this same entry.)
     Assertions.assertSame(entry, location.getCacheEntry(id));
-    Assertions.assertFalse(entry.isMounted());
 
     // A later acquire mounts that same entry and serves the segment from it.
     try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-      final AcquireSegmentResult result = action.getSegmentFuture().get();
-      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+      action.await();
+      final AcquireSegmentResult result = action.release();
+      try (Segment segment = result.getSegment().orElseThrow()) {
         Assertions.assertEquals(SEGMENT_ID, segment.getId());
         final TimeBoundaryInspector inspector = segment.as(TimeBoundaryInspector.class);
         Assertions.assertNotNull(inspector);
@@ -1072,136 +1154,6 @@ class SegmentLocalCacheManagerPartialAcquireTest
       }
       Assertions.assertSame(entry, location.getCacheEntry(id));
       Assertions.assertTrue(entry.isMounted());
-    }
-  }
-
-  @Test
-  void testAbandonedAcquireWhoseMountFailsResolvesToAnUnavailableSegmentToo() throws Exception
-  {
-    // Deep storage that can produce a range reader now but not serve a read later: openRangeReader() checks the V10
-    // file at acquire time, and the test deletes it before the load task gets to run.
-    final File vanishingStorage = temporaryFolder.newFolder("vanishing_storage");
-    final File v10File = new File(vanishingStorage, IndexIO.V10_FILE_NAME);
-    Files.copy(new File(DEEP_STORAGE_DIR, IndexIO.V10_FILE_NAME).toPath(), v10File.toPath());
-    final DataSegment vanishingSegment = DataSegment.builder(SEGMENT_ID)
-                                                    .shardSpec(NoneShardSpec.instance())
-                                                    .loadSpec(Map.of("type", "local", "path", vanishingStorage.getAbsolutePath()))
-                                                    .size(0)
-                                                    .build();
-
-    final File gatedCacheRoot = temporaryFolder.newFolder("gated_cache_mount_failure");
-    final SegmentLoaderConfig gatedConfig = SegmentLoaderConfig.builder()
-        .locations(new StorageLocationConfig(gatedCacheRoot, 1024L * 1024L * 1024L, null))
-        .virtualStorage(true)
-        .virtualStoragePartialDownloadsEnabled(true)
-        .virtualStorageUseVirtualThreads(false)
-        .virtualStorageLoadThreads(1)
-        .build();
-    final List<StorageLocation> storageLocations = gatedConfig.toStorageLocations();
-    final StorageLoadingThreadPool gatedPool = StorageLoadingThreadPool.createFromConfig(gatedConfig);
-    final SegmentLocalCacheManager gatedManager = new SegmentLocalCacheManager(
-        storageLocations,
-        gatedConfig,
-        gatedPool,
-        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
-        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
-        jsonMapper
-    );
-
-    final CountDownLatch atGate = new CountDownLatch(1);
-    final CountDownLatch openGate = new CountDownLatch(1);
-    try {
-      // (intentionally unused) local so errorprone's CheckReturnValue is satisfied
-      @SuppressWarnings("unused")
-      ListenableFuture<?> unused = gatedPool.getExecutorService().submit(() -> {
-        atGate.countDown();
-        return openGate.await(30, TimeUnit.SECONDS);
-      });
-      Assertions.assertTrue(atGate.await(30, TimeUnit.SECONDS), "loading thread must reach the gate");
-
-      final ListenableFuture<AcquireSegmentResult> future;
-      try (AcquireSegmentAction action = gatedManager.acquireSegment(vanishingSegment, AcquireMode.PARTIAL)) {
-        future = action.getSegmentFuture();
-      }
-      // The mount will now fail on its header read rather than rolling back cleanly, so the loss surfaces from
-      // mount() instead of from the pin - which is no reason to fail a query that has already given up.
-      Assertions.assertTrue(v10File.delete(), "test needs the deep-storage file gone before the mount runs");
-      openGate.countDown();
-
-      final AcquireSegmentResult result = future.get(30, TimeUnit.SECONDS);
-      Assertions.assertTrue(
-          result.getReferenceProvider().acquireReference().isEmpty(),
-          "an abandoned acquire whose mount failed must resolve to an unavailable segment"
-      );
-    }
-    finally {
-      openGate.countDown();
-      gatedManager.drop(vanishingSegment);
-      gatedManager.shutdown();
-      gatedPool.stop();
-    }
-  }
-
-  @Test
-  void testAbandonedAcquireResolvesToAnUnavailableSegmentRatherThanFailing() throws Exception
-  {
-    // One fixed loading thread, so the test can hold the load task at a gate while it abandons the acquire.
-    final File gatedCacheRoot = temporaryFolder.newFolder("gated_cache");
-    final SegmentLoaderConfig gatedConfig = SegmentLoaderConfig.builder()
-        .locations(new StorageLocationConfig(gatedCacheRoot, 1024L * 1024L * 1024L, null))
-        .virtualStorage(true)
-        .virtualStoragePartialDownloadsEnabled(true)
-        .virtualStorageUseVirtualThreads(false)
-        .virtualStorageLoadThreads(1)
-        .build();
-    final List<StorageLocation> storageLocations = gatedConfig.toStorageLocations();
-    final StorageLoadingThreadPool gatedPool = StorageLoadingThreadPool.createFromConfig(gatedConfig);
-    final SegmentLocalCacheManager gatedManager = new SegmentLocalCacheManager(
-        storageLocations,
-        gatedConfig,
-        gatedPool,
-        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
-        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
-        jsonMapper
-    );
-
-    final CountDownLatch atGate = new CountDownLatch(1);
-    final CountDownLatch openGate = new CountDownLatch(1);
-    try {
-      // (intentionally unused) local so errorprone's CheckReturnValue is satisfied
-      @SuppressWarnings("unused")
-      ListenableFuture<?> unused = gatedPool.getExecutorService().submit(() -> {
-        atGate.countDown();
-        return openGate.await(30, TimeUnit.SECONDS);
-      });
-      Assertions.assertTrue(atGate.await(30, TimeUnit.SECONDS), "loading thread must reach the gate");
-
-      // Start the acquire (its load task queues behind the gate) and then abandon it (like a canceled or timed
-      // out query does); closing the action releases the hold that was keeping the reserved entry resident.
-      final ListenableFuture<AcquireSegmentResult> future;
-      try (AcquireSegmentAction action = gatedManager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
-        future = action.getSegmentFuture();
-      }
-      openGate.countDown();
-
-      // The task now mounts an entry the location no longer knows about, so it can never pin it. Nothing is waiting
-      // on the result, and a segment that is not there is not a reason to fail a query.
-      final AcquireSegmentResult result = future.get(30, TimeUnit.SECONDS);
-      Assertions.assertTrue(
-          result.getReferenceProvider().acquireReference().isEmpty(),
-          "an abandoned acquire must resolve to an unavailable segment"
-      );
-      Assertions.assertNull(
-          gatedManager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
-          "the abandoned entry must not be left behind in the cache"
-      );
-    }
-    finally {
-      openGate.countDown();
-      gatedManager.drop(partialSegment);
-      gatedManager.shutdown();
-      // shutdown() only stops the manager's own executor; the loading pool is stopped through its lifecycle hook
-      gatedPool.stop();
     }
   }
 
