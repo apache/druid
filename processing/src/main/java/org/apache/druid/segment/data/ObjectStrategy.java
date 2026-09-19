@@ -53,6 +53,25 @@ public interface ObjectStrategy<T> extends Comparator<T>
   byte[] toBytes(@Nullable T val);
 
   /**
+   * Converts an Object to bytes, handling the case where the input is already a byte[].
+   * This is needed when complex types are read from realtime segments, where
+   * {@link org.apache.druid.segment.ColumnValueSelector#getObject()} returns the already-serialized byte[] form
+   * rather than the deserialized object form. In that case, we can return the byte[] directly instead of
+   * trying to cast it to {@code T} and re-serialize it, which would cause a {@link ClassCastException}.
+   *
+   * @see <a href="https://github.com/apache/druid/issues/18340">GitHub issue #18340</a>
+   */
+  @Nullable
+  default byte[] objectToBytes(@Nullable Object val)
+  {
+    if (val instanceof byte[]) {
+      return (byte[]) val;
+    } else {
+      return toBytes((T) val);
+    }
+  }
+
+  /**
    * Whether {@link #compare} is valid or not.
    */
   default boolean canCompare()
