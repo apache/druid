@@ -47,6 +47,7 @@ import org.eclipse.aether.resolution.DependencyRequest;
 import org.eclipse.aether.resolution.DependencyResolutionException;
 import org.eclipse.aether.resolution.DependencyResult;
 import org.eclipse.aether.supplier.RepositorySystemSupplier;
+import org.eclipse.aether.supplier.SessionBuilderSupplier;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.filter.DependencyFilterUtils;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
@@ -203,14 +204,21 @@ public class PullDependencies implements Runnable
 
   protected RepositorySystemSession getRepositorySystemSession()
   {
-    RepositorySystemSession.SessionBuilder sessionBuilder = repositorySystem.createSessionBuilder()
-                                                                             .withLocalRepositories(new LocalRepository(localRepository))
-                                                                             // Some artifacts' POMs (e.g. those inheriting from org.apache.commons:commons-parent)
-                                                                             // use JDK-version-conditional <profiles>. The model builder invoked while
-                                                                             // resolving descriptors needs "java.version" (and friends) to evaluate those
-                                                                             // profile activations; without this the build fails with
-                                                                             // "Failed to determine Java version for profile ...".
-                                                                             .setSystemProperties(System.getProperties());
+    // SessionBuilderSupplier (maven-resolver-supplier-mvn3) sets up Maven-equivalent
+    // DependencySelector/DependencyManager/DependencyTraverser defaults on the builder -
+    // in particular, the scope-based selector that keeps a dependency's own "test"/"provided"
+    // scoped and optional dependencies from propagating transitively, matching real Maven
+    // resolution behavior. A bare repositorySystem.createSessionBuilder() has none of that,
+    // and will walk into every transitive branch (e.g. druid-processing's test-scope
+    // equalsverifier dependency and its own dead/unreachable declared repositories).
+    RepositorySystemSession.SessionBuilder sessionBuilder = new SessionBuilderSupplier(repositorySystem).get()
+                                                                                                          .withLocalRepositories(new LocalRepository(localRepository))
+                                                                                                          // Some artifacts' POMs (e.g. those inheriting from org.apache.commons:commons-parent)
+                                                                                                          // use JDK-version-conditional <profiles>. The model builder invoked while
+                                                                                                          // resolving descriptors needs "java.version" (and friends) to evaluate those
+                                                                                                          // profile activations; without this the build fails with
+                                                                                                          // "Failed to determine Java version for profile ...".
+                                                                                                          .setSystemProperties(System.getProperties());
 
     // Set up the proxy configuration if required
     if (useProxy) {

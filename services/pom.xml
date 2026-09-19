@@ -431,6 +431,15 @@
                     <ignoredUsedUndeclaredDependencies>
                         <ignoredUsedUndeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUsedUndeclaredDependency>
                     </ignoredUsedUndeclaredDependencies>
+                    <usedDependencies>
+                        <!-- Not referenced directly in source: RepositorySystemSupplier (from
+                             maven-resolver-supplier-mvn3) wires these up via ServiceLoader/SPI
+                             at runtime in PullDependencies. -->
+                        <dependency>org.apache.maven.resolver:maven-resolver-connector-basic</dependency>
+                        <dependency>org.apache.maven.resolver:maven-resolver-transport-apache</dependency>
+                        <dependency>org.apache.maven.resolver:maven-resolver-impl</dependency>
+                        <dependency>org.apache.maven.resolver:maven-resolver-spi</dependency>
+                    </usedDependencies>
                 </configuration>
             </plugin>
         </plugins>
