@@ -94,10 +94,13 @@ public class PlannerConfig
   /**
    * Maximum wall-clock time, in milliseconds, allowed for planning a SQL query. When exceeded, planning is aborted and
    * the query fails with a {@link org.apache.druid.query.QueryTimeoutException}. A non-positive value (default
-   * {@link #PLANNING_TIME_NOT_LIMITED}) disables the timeout. Overridable per query via
-   * {@link #CTX_KEY_MAX_PLANNING_TIME_MS}.
+   * {@link #PLANNING_TIME_NOT_LIMITED}) disables the timeout.
+   *
+   * <p>Intentionally not a {@code druid.sql.planner.*} runtime property: it is set per query via the
+   * {@link #CTX_KEY_MAX_PLANNING_TIME_MS} query context parameter, and a cluster-wide default can be set with the
+   * {@code druid.query.default.context.maxPlanningTimeMs} runtime property (or the Broker's dynamic {@code queryContext}
+   * config), so it is not also exposed as a dedicated planner property.
    */
-  @JsonProperty
   private long maxPlanningTimeMs = PLANNING_TIME_NOT_LIMITED;
 
   @JsonProperty
