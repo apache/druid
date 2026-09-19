@@ -48,6 +48,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -299,7 +300,7 @@ public class PullDependenciesTest
     RepositorySystemSession session = pullDependencies.getRepositorySystemSession();
 
     LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
-    Assertions.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
+    Assertions.assertEquals(Path.of(pullDependencies.localRepository).toAbsolutePath(), localRepo.getBasePath().toAbsolutePath());
 
     Proxy proxy = session.getProxySelector().getProxy(
         new RemoteRepository.Builder("test", "default", "http://example.com").build()
@@ -323,7 +324,7 @@ public class PullDependenciesTest
     pullDependencies.useProxy = false;
     RepositorySystemSession session = pullDependencies.getRepositorySystemSession();
     LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
-    Assertions.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
+    Assertions.assertEquals(Path.of(pullDependencies.localRepository).toAbsolutePath(), localRepo.getBasePath().toAbsolutePath());
     Proxy proxy = session.getProxySelector().getProxy(
         new RemoteRepository.Builder("test", "default", "http://example.com").build()
     );
@@ -343,7 +344,7 @@ public class PullDependenciesTest
     )
     {
       return system.createSessionBuilder()
-                    .withLocalRepositories(new LocalRepository(localRepoPath))
+                    .withLocalRepositoryBaseDirectories(Path.of(localRepoPath))
                     .build();
     }
   }

@@ -39,7 +39,6 @@ import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyNode;
-import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.Proxy;
 import org.eclipse.aether.repository.RemoteRepository;
 import org.eclipse.aether.resolution.ArtifactResult;
@@ -55,6 +54,7 @@ import org.eclipse.aether.util.repository.DefaultProxySelector;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -212,7 +212,7 @@ public class PullDependencies implements Runnable
     // and will walk into every transitive branch (e.g. druid-processing's test-scope
     // equalsverifier dependency and its own dead/unreachable declared repositories).
     RepositorySystemSession.SessionBuilder sessionBuilder = new SessionBuilderSupplier(repositorySystem).get()
-                                                                                                          .withLocalRepositories(new LocalRepository(localRepository))
+                                                                                                          .withLocalRepositoryBaseDirectories(Path.of(localRepository))
                                                                                                           // Some artifacts' POMs (e.g. those inheriting from org.apache.commons:commons-parent)
                                                                                                           // use JDK-version-conditional <profiles>. The model builder invoked while
                                                                                                           // resolving descriptors needs "java.version" (and friends) to evaluate those
