@@ -21,11 +21,13 @@ package org.apache.druid.sql.calcite.expression.builtin;
 
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexCall;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DimFilter;
@@ -111,6 +113,19 @@ public class ScalarInArrayOperatorConversion extends DirectOperatorConversion
       final List<Object> arrayElementLiteralValues = new ArrayList<>(arrayElements.size());
 
       for (final RexNode arrayElement : arrayElements) {
+        // Extract non-null integer and string RexLiterals directly to avoid temporary
+        // DruidLiteral allocations for large IN lists.
+        if (arrayElement instanceof RexLiteral && !RexLiteral.isNullLiteral(arrayElement)) {
+          final SqlTypeName sqlTypeName = arrayElement.getType().getSqlTypeName();
+          if (SqlTypeName.INT_TYPES.contains(sqlTypeName)) {
+            arrayElementLiteralValues.add(((Number) RexLiteral.value(arrayElement)).longValue());
+            continue;
+          } else if (SqlTypeName.STRING_TYPES.contains(sqlTypeName)) {
+            arrayElementLiteralValues.add(RexLiteral.stringValue(arrayElement));
+            continue;
+          }
+        }
+
         final DruidLiteral arrayElementEval = Expressions.calciteLiteralToDruidLiteral(plannerContext, arrayElement);
         if (arrayElementEval == null) {
           return null;
