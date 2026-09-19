@@ -39,6 +39,7 @@ import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.DependencyRequest;
 import org.eclipse.aether.resolution.DependencyResult;
 import org.eclipse.aether.supplier.RepositorySystemSupplier;
+import org.eclipse.aether.supplier.SessionBuilderSupplier;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
 import org.junit.jupiter.api.Assertions;
@@ -343,9 +344,9 @@ public class PullDependenciesTest
         String localRepoPath
     )
     {
-      return system.createSessionBuilder()
-                    .withLocalRepositoryBaseDirectories(Path.of(localRepoPath))
-                    .build();
+      return new SessionBuilderSupplier(system).get()
+                                                .withLocalRepositoryBaseDirectories(Path.of(localRepoPath))
+                                                .build();
     }
   }
 
