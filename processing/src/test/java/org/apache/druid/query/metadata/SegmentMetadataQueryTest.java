@@ -235,108 +235,104 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata(PROJECTION2_SCHEMA, PROJECTION2_ROWS)
     );
 
-    expectedSegmentAnalysis1 = new SegmentAnalysis(
-        id1.toString(),
-        ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "__time",
-                new ColumnAnalysis(
-                    ColumnType.LONG,
-                    ValueType.LONG.toString(),
-                    false,
-                    false,
-                    12090,
-                    null,
-                    null,
-                    null,
-                    null
-                ),
-                "index",
-                new ColumnAnalysis(
-                    ColumnType.DOUBLE,
-                    ValueType.DOUBLE.toString(),
-                    false,
-                    false,
-                    9672,
-                    null,
-                    null,
-                    null,
-                    null
-                ),
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    placementSize,
-                    1,
-                    "preferred",
-                    "preferred",
-                    null
+    expectedSegmentAnalysis1 = new SegmentAnalysis.Builder(id1)
+        .interval(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z"))
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "__time",
+                    new ColumnAnalysis(
+                        ColumnType.LONG,
+                        ValueType.LONG.toString(),
+                        false,
+                        false,
+                        12090,
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    "index",
+                    new ColumnAnalysis(
+                        ColumnType.DOUBLE,
+                        ValueType.DOUBLE.toString(),
+                        false,
+                        false,
+                        9672,
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        placementSize,
+                        1,
+                        "preferred",
+                        "preferred",
+                        null
+                    )
                 )
             )
-        ),
-        overallSize,
-        1209,
-        expectedAggregators,
-        expectedProjections,
-        null,
-        null,
-        null
-    );
-    expectedSegmentAnalysis2 = new SegmentAnalysis(
-        id2.toString(),
-        ImmutableList.of(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "__time",
-                new ColumnAnalysis(
-                    ColumnType.LONG,
-                    ValueType.LONG.toString(),
-                    false,
-                    false,
-                    12090,
-                    null,
-                    null,
-                    null,
-                    null
-                ),
-                "index",
-                new ColumnAnalysis(
-                    ColumnType.DOUBLE,
-                    ValueType.DOUBLE.toString(),
-                    false,
-                    false,
-                    9672,
-                    null,
-                    null,
-                    null,
-                    null
-                ),
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    placementSize,
-                    1,
-                    null,
-                    null,
-                    null
+        )
+        .size(overallSize)
+        .numRows(1209)
+        .aggregators(expectedAggregators)
+        .projections(expectedProjections)
+        .build();
+    expectedSegmentAnalysis2 = new SegmentAnalysis.Builder(id2)
+        .interval(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z"))
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "__time",
+                    new ColumnAnalysis(
+                        ColumnType.LONG,
+                        ValueType.LONG.toString(),
+                        false,
+                        false,
+                        12090,
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    "index",
+                    new ColumnAnalysis(
+                        ColumnType.DOUBLE,
+                        ValueType.DOUBLE.toString(),
+                        false,
+                        false,
+                        9672,
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        placementSize,
+                        1,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        overallSize,
-        1209,
-        expectedAggregators,
-        expectedProjections,
-        null,
-        null,
-        null
-    );
+        )
+        .size(overallSize)
+        .numRows(1209)
+        .aggregators(expectedAggregators)
+        .projections(expectedProjections)
+        .build();
   }
 
   @Test
@@ -347,6 +343,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
 
     Assertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
   }
+
 
   @Test
   public void testSegmentMetadataQueryOnRestricted()
@@ -378,45 +375,42 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithRollupMerge()
   {
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        null,
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    0,
-                    0,
-                    null,
-                    null,
-                    null
-                ),
-                "placementish",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    true,
-                    false,
-                    0,
-                    0,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        0,
+                        0,
+                        null,
+                        null,
+                        null
+                    ),
+                    "placementish",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        true,
+                        false,
+                        0,
+                        0,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        0,
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        null,
-        null,
-        null,
-        null,
-        rollup1 != rollup2 ? null : rollup1
-    );
+        )
+        .size(0)
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .rollup(rollup1 != rollup2 ? null : rollup1)
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
@@ -453,45 +447,41 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithHasMultipleValuesMerge()
   {
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        null,
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    0,
-                    1,
-                    null,
-                    null,
-                    null
-                ),
-                "placementish",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    true,
-                    false,
-                    0,
-                    9,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        0,
+                        1,
+                        null,
+                        null,
+                        null
+                    ),
+                    "placementish",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        true,
+                        false,
+                        0,
+                        9,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        0,
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(0)
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
@@ -528,45 +518,41 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithComplexColumnMerge()
   {
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        null,
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    0,
-                    1,
-                    null,
-                    null,
-                    null
-                ),
-                "quality_uniques",
-                new ColumnAnalysis(
-                    ColumnType.ofComplex("hyperUnique"),
-                    "hyperUnique",
-                    false,
-                    true,
-                    0,
-                    null,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        0,
+                        1,
+                        null,
+                        null,
+                        null
+                    ),
+                    "quality_uniques",
+                    new ColumnAnalysis(
+                        ColumnType.ofComplex("hyperUnique"),
+                        "hyperUnique",
+                        false,
+                        true,
+                        0,
+                        null,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        0,
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(0)
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
@@ -673,52 +659,53 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
 
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        ImmutableList.of(expectedSegmentAnalysis1.getIntervals().get(0)),
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "__time",
-                new ColumnAnalysis(
-                    ColumnType.LONG,
-                    ValueType.LONG.toString(),
-                    false,
-                    false,
-                    12090 * 2,
-                    null,
-                    null,
-                    null,
-                    null
-                ),
-                "index",
-                new ColumnAnalysis(
-                    ColumnType.DOUBLE,
-                    ValueType.DOUBLE.toString(),
-                    false,
-                    false,
-                    9672 * 2,
-                    null,
-                    null,
-                    null,
-                    null
-                ),
-                column,
-                analysis
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .interval(expectedSegmentAnalysis1.getIntervals().get(0))
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "__time",
+                    new ColumnAnalysis(
+                        ColumnType.LONG,
+                        ValueType.LONG.toString(),
+                        false,
+                        false,
+                        12090 * 2,
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    "index",
+                    new ColumnAnalysis(
+                        ColumnType.DOUBLE,
+                        ValueType.DOUBLE.toString(),
+                        false,
+                        false,
+                        9672 * 2,
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    column,
+                    analysis
+                )
             )
-        ),
-        expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize(),
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        expectedAggregators,
-        ImmutableMap.of(
-            PROJECTION1_SCHEMA.getName(),
-            new AggregateProjectionMetadata(PROJECTION1_SCHEMA, PROJECTION1_ROWS * 2),
-            PROJECTION2_SCHEMA.getName(),
-            new AggregateProjectionMetadata(PROJECTION2_SCHEMA, PROJECTION2_ROWS * 2)
-        ),
-        null,
-        null,
-        null
-    );
+        )
+        .size(expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize())
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .aggregators(expectedAggregators)
+        .projections(
+            ImmutableMap.of(
+                PROJECTION1_SCHEMA.getName(),
+                new AggregateProjectionMetadata(PROJECTION1_SCHEMA, PROJECTION1_ROWS * 2),
+                PROJECTION2_SCHEMA.getName(),
+                new AggregateProjectionMetadata(PROJECTION2_SCHEMA, PROJECTION2_ROWS * 2)
+            )
+        )
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
@@ -749,33 +736,29 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithNoAnalysisTypesMerge()
   {
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        null,
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    0,
-                    0,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        0,
+                        0,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        0,
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(0)
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
@@ -816,33 +799,30 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     for (AggregatorFactory agg : TestIndex.METRIC_AGGS) {
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        null,
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    0,
-                    0,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        0,
+                        0,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        0,
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        expectedAggregators,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(0)
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .aggregators(expectedAggregators)
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
@@ -883,33 +863,30 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     for (AggregatorFactory agg : TestIndex.METRIC_AGGS) {
       expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
     }
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        null,
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    0,
-                    0,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        0,
+                        0,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        0,
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        expectedAggregators,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(0)
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .aggregators(expectedAggregators)
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
@@ -947,33 +924,30 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithTimestampSpecMerge()
   {
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        null,
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    0,
-                    0,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        0,
+                        0,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        0,
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        null,
-        null,
-        new TimestampSpec("ts", "iso", null),
-        null,
-        null
-    );
+        )
+        .size(0)
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .timestampSpec(new TimestampSpec("ts", "iso", null))
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
@@ -1010,33 +984,30 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithQueryGranularityMerge()
   {
-    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
-        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString(),
-        null,
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                "placement",
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.toString(),
-                    false,
-                    false,
-                    0,
-                    0,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis.Builder(
+        differentIds ? "merged" : SegmentId.dummy(DATASOURCE).toString())
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    "placement",
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.toString(),
+                        false,
+                        false,
+                        0,
+                        0,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        0,
-        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
-        null,
-        null,
-        null,
-        Granularities.NONE,
-        null
-    );
+        )
+        .size(0)
+        .numRows(expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows())
+        .queryGranularity(Granularities.NONE)
+        .build();
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
