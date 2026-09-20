@@ -40,6 +40,7 @@ Iceberg refers to these metastores as catalogs. The Iceberg extension lets you c
 For a given catalog, Iceberg input source reads the table name from the catalog, applies the filters, and extracts all the underlying live data files up to the latest snapshot.
 The data files can be in Parquet, ORC, or Avro formats. The data files typically reside in a warehouse location, which can be in HDFS, S3, or the local filesystem.
 The `druid-iceberg-extensions` extension relies on the existing input source connectors in Druid to read the data files from the warehouse. Therefore, the Iceberg input source can be considered as an intermediate input source, which provides the file paths for other input source implementations.
+Iceberg V2 tables with row-level delete files (position deletes and equality deletes) are supported automatically when the table format is Parquet.
 
 ## Hive metastore catalog
 
@@ -194,6 +195,44 @@ Example:
 
 When `residualFilterMode` is set to `fail` and a residual filter is detected, the job will fail with an error message indicating which filter expression produced the residual. This helps ensure data quality by preventing unintended rows from being ingested.
 
+## Iceberg V2 delete file support
+
+Iceberg V2 tables support row-level deletes through two types of delete files:
+
+| Delete file type | Description |
+|---|---|
+| Position delete | Deletes specific rows by file path and row position |
+| Equality delete | Deletes any row where specified column values match a set of keys |
+
+The Iceberg extension automatically detects delete files during table scan planning. No changes to the ingestion spec are required — the same spec works for both V1 and V2 tables.
+
+**How it works:**
+
+- **V1 path (no delete files):** Data file paths are extracted and read via the configured `warehouseSource`. All three formats (Parquet, ORC, Avro) are supported.
+- **V2 path (delete files present):** The extension reads data files and delete files directly using Iceberg's native Parquet reader, applying deletes row by row before producing Druid rows. The `warehouseSource` field is still required in the spec but is not used for reading.
+
+:::note
+Iceberg V2 delete file support currently requires **Parquet** format for both data files and delete files. ORC and Avro V2 tables are not yet supported.
+:::
+
+Example ingestion spec for a V2 table (identical to a V1 spec — no extra configuration needed):
+
+```json
+{
+  "type": "iceberg",
+  "tableName": "events",
+  "namespace": "analytics",
+  "icebergCatalog": {
+    "type": "hive",
+    "warehousePath": "hdfs://namenode/warehouse",
+    "catalogUri": "thrift://metastore:9083"
+  },
+  "warehouseSource": {
+    "type": "hdfs"
+  }
+}
+```
+
 ## Known limitations
 
 This section lists the known limitations that apply to the Iceberg extension.
@@ -202,3 +241,4 @@ This section lists the known limitations that apply to the Iceberg extension.
 - The Iceberg input source reads every single live file on the Iceberg table up to the latest snapshot, which makes the table scan less performant. It is recommended to use Iceberg filters on partition columns in the ingestion spec in order to limit the number of data files being retrieved. Since, Druid doesn't store the last ingested iceberg snapshot ID, it cannot identify the files created between that snapshot and the latest snapshot on Iceberg.
 - It does not handle Iceberg [schema evolution](https://iceberg.apache.org/docs/latest/evolution/) yet. In cases where an existing Iceberg table column is deleted and recreated with the same name, ingesting this table into Druid may bring the data for this column before it was deleted.
 - The Hive catalog has not been tested on Hadoop 2.x.x and is not guaranteed to work with Hadoop 2.
+- Iceberg V2 delete file support (position deletes and equality deletes) is only available for tables in **Parquet** format. ORC and Avro V2 tables are not currently supported.

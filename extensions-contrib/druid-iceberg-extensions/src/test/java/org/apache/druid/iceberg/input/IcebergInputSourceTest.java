@@ -325,11 +325,6 @@ public class IcebergInputSourceTest
         exception.getMessage().contains("residual")
     );
   }
-
-  // =====================================================================================
-  // Iceberg V2 tests
-  // =====================================================================================
-
   /**
    * Creates a V2 format table with 3 records, writes a position-delete file that deletes row at
    * position 1, and verifies that only 2 rows survive.
@@ -1008,7 +1003,7 @@ public class IcebergInputSourceTest
     DataWriter<GenericRecord> dataWriter =
         Parquet.writeData(outputFile)
                .schema(schema)
-               .createWriterFunc(GenericParquetWriter::buildWriter)
+               .createWriterFunc(GenericParquetWriter::create)
                .overwrite()
                .withSpec(PartitionSpec.unpartitioned())
                .build();
@@ -1051,7 +1046,7 @@ public class IcebergInputSourceTest
     OutputFile outputFile = table.io().newOutputFile(deleteFilePath);
     PositionDeleteWriter<GenericRecord> writer =
         Parquet.writeDeletes(outputFile)
-               .createWriterFunc(GenericParquetWriter::buildWriter)
+               .createWriterFunc(GenericParquetWriter::create)
                .overwrite()
                .withSpec(PartitionSpec.unpartitioned())
                .buildPositionWriter();
@@ -1084,7 +1079,7 @@ public class IcebergInputSourceTest
     int[] fieldIdArray = equalityFieldIds.stream().mapToInt(Integer::intValue).toArray();
     EqualityDeleteWriter<GenericRecord> writer =
         Parquet.writeDeletes(outputFile)
-               .createWriterFunc(GenericParquetWriter::buildWriter)
+               .createWriterFunc(GenericParquetWriter::create)
                .overwrite()
                .withSpec(PartitionSpec.unpartitioned())
                .rowSchema(eqDeleteSchema)
@@ -1117,7 +1112,7 @@ public class IcebergInputSourceTest
     DataWriter<GenericRecord> dataWriter =
         Parquet.writeData(outputFile)
                .schema(schema)
-               .createWriterFunc(GenericParquetWriter::buildWriter)
+               .createWriterFunc(GenericParquetWriter::create)
                .overwrite()
                .withSpec(PartitionSpec.unpartitioned())
                .build();

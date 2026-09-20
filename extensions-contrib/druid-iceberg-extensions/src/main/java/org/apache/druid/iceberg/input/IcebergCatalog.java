@@ -150,7 +150,7 @@ public abstract class IcebergCatalog
         }
       }
 
-      if (detectedResidual == null) {
+      if (detectedResidual != null) {
         String message = StringUtils.format(
             "Iceberg filter produced residual expression that requires row-level filtering. "
             + "This typically means the filter is on a non-partition column. "
@@ -236,3 +236,4 @@ public abstract class IcebergCatalog
         .map(t -> t.file().path().toString())
         .collect(Collectors.toList());
   }
+}
