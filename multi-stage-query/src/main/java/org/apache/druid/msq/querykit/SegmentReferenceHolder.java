@@ -20,7 +20,6 @@
 package org.apache.druid.msq.querykit;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.SegmentReference;
 
@@ -35,20 +34,16 @@ public class SegmentReferenceHolder
 {
   private final AtomicReference<SegmentReference> segmentReference = new AtomicReference<>();
   @Nullable
-  private final ChannelCounters inputCounters;
-  @Nullable
   private final String description;
   private final SegmentDescriptor descriptor;
 
   public SegmentReferenceHolder(
       SegmentReference segmentReference,
-      @Nullable ChannelCounters inputCounters,
       @Nullable String description
   )
   {
     this.segmentReference.set(Preconditions.checkNotNull(segmentReference, "segmentReference"));
     this.descriptor = Preconditions.checkNotNull(segmentReference, "segmentReference").getSegmentDescriptor();
-    this.inputCounters = inputCounters;
     this.description = description;
   }
 
@@ -69,15 +64,6 @@ public class SegmentReferenceHolder
   public SegmentDescriptor getDescriptor()
   {
     return descriptor;
-  }
-
-  /**
-   * Input counters that should be incremented as we read, or null if none should be incremented.
-   */
-  @Nullable
-  public ChannelCounters getInputCounters()
-  {
-    return inputCounters;
   }
 
   /**

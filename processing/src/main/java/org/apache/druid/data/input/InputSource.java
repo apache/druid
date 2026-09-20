@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.UOE;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.File;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -77,6 +78,15 @@ public interface InputSource
    * this method.
    */
   boolean needsFormat();
+
+  /**
+   * If this input source is representable as a set of files, return pointers to those files.
+   */
+  @Nullable
+  default List<InputFilePointer> asFilePointers()
+  {
+    return null;
+  }
 
   /**
    * Creates an {@link InputSourceReader}.

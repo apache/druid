@@ -26,7 +26,6 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.ProvidesIntoSet;
 import com.google.inject.name.Named;
 import org.apache.druid.cli.ServerRunnable.DiscoverySideEffectsProvider;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeAnnouncer;
 import org.apache.druid.discovery.DruidService;
@@ -37,19 +36,22 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class DiscoverySideEffectsProviderTest
 {
   private NodeRole nodeRole;
@@ -61,14 +63,12 @@ public class DiscoverySideEffectsProviderTest
   @Mock
   private DruidNodeAnnouncer discoverableOnlyAnnouncer;
   @Mock
-  private ServiceAnnouncer legacyAnnouncer;
-  @Mock
   private Lifecycle lifecycle;
   private List<Lifecycle.Handler> lifecycleHandlers;
 
   private ServerRunnable.DiscoverySideEffectsProvider target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     nodeRole = NodeRole.HISTORICAL;
@@ -77,14 +77,14 @@ public class DiscoverySideEffectsProviderTest
       DiscoveryDruidNode discoveryDruidNode = invocation.getArgument(0);
       boolean isAllServicesDiscoverable =
           discoveryDruidNode.getServices().values().stream().allMatch(DruidService::isDiscoverable);
-      Assert.assertTrue(isAllServicesDiscoverable);
+      Assertions.assertTrue(isAllServicesDiscoverable);
       return null;
     }).when(discoverableOnlyAnnouncer).announce(ArgumentMatchers.any(DiscoveryDruidNode.class));
     Mockito
         .doAnswer((invocation) -> lifecycleHandlers.add(invocation.getArgument(0)))
         .when(lifecycle)
         .addHandler(ArgumentMatchers.any(Lifecycle.Handler.class), ArgumentMatchers.eq(Lifecycle.Stage.ANNOUNCEMENTS));
-    target = DiscoverySideEffectsProvider.withLegacyAnnouncer();
+    target = DiscoverySideEffectsProvider.create();
   }
 
   @Test
@@ -94,8 +94,8 @@ public class DiscoverySideEffectsProviderTest
         ImmutableList.of(new DiscoverableServiceTestModule(), new UndiscoverableServiceTestModule())
     ).injectMembers(target);
     ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
-    Assert.assertNotNull(child);
-    Assert.assertEquals(1, lifecycleHandlers.size());
+    Assertions.assertNotNull(child);
+    Assertions.assertEquals(1, lifecycleHandlers.size());
     // Start the lifecycle handler. This will make announcements via the announcer
     lifecycleHandlers.get(0).start();
   }
@@ -105,8 +105,8 @@ public class DiscoverySideEffectsProviderTest
   {
     createInjector(ImmutableList.of()).injectMembers(target);
     ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
-    Assert.assertNotNull(child);
-    Assert.assertEquals(1, lifecycleHandlers.size());
+    Assertions.assertNotNull(child);
+    Assertions.assertEquals(1, lifecycleHandlers.size());
     // Start the lifecycle handler. This will make announcements via the announcer
     lifecycleHandlers.get(0).start();
   }
@@ -187,7 +187,6 @@ public class DiscoverySideEffectsProviderTest
             binder -> {
               binder.bind(DruidNodeAnnouncer.class).toInstance(discoverableOnlyAnnouncer);
               binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(druidNode);
-              binder.bind(ServiceAnnouncer.class).toInstance(legacyAnnouncer);
               binder.bind(Lifecycle.class).toInstance(lifecycle);
             }
          )

@@ -31,8 +31,8 @@ import org.apache.druid.data.input.AvroStreamInputFormatTest;
 import org.apache.druid.data.input.SomeAvroDatum;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -73,7 +73,7 @@ public class InlineSchemaAvroBytesDecoderTest
         AvroBytesDecoder.class
     );
 
-    Assert.assertEquals(actual.getSchema().get("name"), "SomeData");
+    Assertions.assertEquals(actual.getSchema().get("name"), "SomeData");
   }
 
   @Test
@@ -88,7 +88,7 @@ public class InlineSchemaAvroBytesDecoderTest
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
     GenericRecord actual = new InlineSchemaAvroBytesDecoder(schema).parse(ByteBuffer.wrap(out.toByteArray()));
-    Assert.assertEquals(someAvroDatum.get("id"), actual.get("id"));
+    Assertions.assertEquals(someAvroDatum.get("id"), actual.get("id"));
   }
 
   @Test
@@ -107,13 +107,13 @@ public class InlineSchemaAvroBytesDecoderTest
     DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    ParseException parseException = Assert.assertThrows(
+    ParseException parseException = Assertions.assertThrows(
         ParseException.class,
         () -> new InlineSchemaAvroBytesDecoder(schema).parse(ByteBuffer.wrap(out.toByteArray()))
     );
 
-    Assert.assertTrue(parseException.getMessage().contains("Failed to read Avro message"));
-    Assert.assertTrue(parseException.getCause() instanceof IOException);
+    Assertions.assertTrue(parseException.getMessage().contains("Failed to read Avro message"));
+    Assertions.assertTrue(parseException.getCause() instanceof IOException);
   }
 
   @Test
@@ -129,11 +129,11 @@ public class InlineSchemaAvroBytesDecoderTest
     DatumWriter<GenericRecord> writer = new SpecificDatumWriter<>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    ParseException parseException = Assert.assertThrows(
+    ParseException parseException = Assertions.assertThrows(
         ParseException.class,
         () -> new InlineSchemaAvroBytesDecoder(schema).parse(ByteBuffer.wrap(out.toByteArray()))
     );
-    Assert.assertTrue(parseException.getMessage().contains("Failed to read Avro message"));
-    Assert.assertTrue(parseException.getCause() instanceof AvroRuntimeException);
+    Assertions.assertTrue(parseException.getMessage().contains("Failed to read Avro message"));
+    Assertions.assertTrue(parseException.getCause() instanceof AvroRuntimeException);
   }
 }

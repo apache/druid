@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -94,8 +95,8 @@ public class CalciteMSQTestsHelper
     @LazySingleton
     public SegmentCacheManager provideSegmentCacheManager(ObjectMapper testMapper, TempDirProducer tempDirProducer)
     {
-      return new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
-          .manufacturate(tempDirProducer.newTempFolder("test"), true);
+      return SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, testMapper)
+          .manufacturate(tempDirProducer.newTempFolder("test"), null, true, false);
     }
 
     @Provides
@@ -121,7 +122,10 @@ public class CalciteMSQTestsHelper
         TestSegmentManager testSegmentManager
     )
     {
-      return new MSQTestDelegateDataSegmentPusher(new LocalDataSegmentPusher(config), testSegmentManager);
+      return new MSQTestDelegateDataSegmentPusher(
+          new LocalDataSegmentPusher(config, new DeepStorageSegmentConfig()),
+          testSegmentManager
+      );
     }
 
     @Provides

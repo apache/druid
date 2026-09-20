@@ -94,6 +94,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -269,7 +270,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals
+        intervals,
+        SegmentDetail.none()
     );
   }
 
@@ -435,7 +437,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         // ParallelIndexSupervisorTask because it doesn't support APIs for live ingestion reports.
         log.warn("Chat handler is already registered. Skipping chat handler registration.");
       } else {
-        toolbox.getChatHandlerProvider().register(getId(), this, false);
+        toolbox.getChatHandlerProvider().register(getId(), this);
       }
 
       this.authorizerMapper = toolbox.getAuthorizerMapper();

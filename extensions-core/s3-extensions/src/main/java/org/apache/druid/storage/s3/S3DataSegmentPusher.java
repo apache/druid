@@ -24,8 +24,10 @@ import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -33,23 +35,34 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class S3DataSegmentPusher implements DataSegmentPusher
 {
   private static final EmittingLogger log = new EmittingLogger(S3DataSegmentPusher.class);
 
+  /**
+   * Originally S3 always wrote segments zipped, so that is what {@code druid.storage.zip} falls back to.
+   */
+  private static final boolean DEFAULT_ZIP = true;
+
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3DataSegmentPusherConfig config;
+  private final boolean zip;
 
   @Inject
   public S3DataSegmentPusher(
       ServerSideEncryptingAmazonS3 s3Client,
-      S3DataSegmentPusherConfig config
+      S3DataSegmentPusherConfig config,
+      DeepStorageSegmentConfig deepStorageConfig
   )
   {
     this.s3Client = s3Client;
     this.config = config;
+    this.zip = deepStorageConfig.isZip(DEFAULT_ZIP);
   }
 
   @Override
@@ -62,7 +75,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   @Override
   public DataSegment pushToPath(File indexFilesDir, DataSegment inSegment, String storageDirSuffix) throws IOException
   {
-    if (config.isZip()) {
+    if (zip) {
       final String s3Path = S3Utils.constructSegmentPath(config.getBaseKey(), storageDirSuffix);
       log.debug("Copying segment[%s] to S3 at location[%s]", inSegment.getId(), s3Path);
       return pushZip(indexFilesDir, inSegment, s3Path);
@@ -75,27 +88,29 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 
   private DataSegment pushZip(File indexFilesDir, DataSegment baseSegment, String s3Path) throws IOException
   {
-    final File zipOutFile = File.createTempFile("druid", "index.zip");
-    final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
-
-    final DataSegment outSegment = baseSegment.withSize(indexSize)
-                                              .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-                                              .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
-
+    final File zipOutFile = Files.createTempFile("druid", "index.zip").toFile();
     try {
-      return S3Utils.retryS3Operation(
-          () -> {
-            S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), s3Path, zipOutFile);
+      final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
-            return outSegment;
-          }
-      );
-    }
-    catch (S3Exception e) {
-      throw handlePushServiceException(e, indexSize);
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+      final DataSegment outSegment = baseSegment.withSize(indexSize)
+                                                .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
+                                                .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+
+      try {
+        return S3Utils.retryS3Operation(
+            () -> {
+              S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), s3Path, zipOutFile);
+
+              return outSegment;
+            }
+        );
+      }
+      catch (S3Exception e) {
+        throw handlePushServiceException(e, indexSize);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
     finally {
       log.debug("Deleting temporary cached index.zip");
@@ -110,15 +125,18 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       throw new IOE("Cannot list directory [%s]", indexFilesDir);
     }
 
+    final Set<String> pushedKeys = new HashSet<>();
+
     long size = 0;
     for (final File file : files) {
       if (file.isFile()) {
         size += file.length();
+        final String key = s3Path + file.getName();
 
         try {
           S3Utils.retryS3Operation(
               () -> {
-                S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), s3Path + file.getName(), file);
+                S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), key, file);
                 return null;
               }
           );
@@ -129,15 +147,57 @@ public class S3DataSegmentPusher implements DataSegmentPusher
         catch (Exception e) {
           throw new RuntimeException(e);
         }
+
+        pushedKeys.add(key);
       } else {
         // Segment directories are expected to be flat.
         throw new IOE("Unexpected subdirectory [%s]", file.getName());
       }
     }
 
+    deleteStaleObjects(s3Path, pushedKeys);
+
+    final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
+    // V10 unzipped is rangeable: a single druid.segment with a range-readable header. V9 unzipped is a directory of
+    // separate smoosh files the range-read path can't consume.
+    final boolean rangeable = binaryVersion == IndexIO.V10_VERSION;
     return baseSegment.withSize(size)
-                      .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-                      .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+                      .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path, rangeable))
+                      .withBinaryVersion(binaryVersion);
+  }
+
+  /**
+   * Removes everything under {@code s3Path} that this push did not write.
+   * <p>
+   * A zipped push replaces the previous segment outright, because one {@code index.zip} object overwrites another, and
+   * {@link #push} with {@code useUniquePath = false} is expected to replace a previous push the same way. Uploading
+   * file by file only overwrites the names the new segment happens to share, so without this a re-push could leave
+   * behind objects of whatever was there before: a stale {@code index.zip} from a zipped push, or smoosh chunks from a
+   * larger prior v9 segment.
+   * <p>
+   * Note that this makes an unzipped push require permission to delete objects under the segment path, which a zipped
+   * push does not.
+   */
+  private void deleteStaleObjects(final String s3Path, final Set<String> pushedKeys) throws IOException
+  {
+    try {
+      S3Utils.deleteObjectsInPath(
+          s3Client,
+          config.getMaxListingLength(),
+          config.getBucket(),
+          s3Path,
+          object -> !pushedKeys.contains(object.key())
+      );
+    }
+    catch (Exception e) {
+      throw new IOE(
+          e,
+          "Could not remove objects left under [s3://%s/%s] by a previous push, which would be loaded as part of this"
+          + " segment",
+          config.getBucket(),
+          s3Path
+      );
+    }
   }
 
   @Override
@@ -162,6 +222,26 @@ public class S3DataSegmentPusher implements DataSegmentPusher
         key,
         "S3Schema",
         "s3n"
+    );
+  }
+
+  /**
+   * Variant that stamps {@link S3LoadSpec#RANGEABLE} so {@link S3LoadSpec#openRangeReader()} can decide range-read
+   * eligibility. Used by the unzipped push path where the binary version is known at write time.
+   */
+  private Map<String, Object> makeLoadSpec(String bucket, String key, boolean rangeable)
+  {
+    return ImmutableMap.of(
+        "type",
+        "s3_zip",
+        "bucket",
+        bucket,
+        "key",
+        key,
+        "S3Schema",
+        "s3n",
+        S3LoadSpec.RANGEABLE,
+        rangeable
     );
   }
 

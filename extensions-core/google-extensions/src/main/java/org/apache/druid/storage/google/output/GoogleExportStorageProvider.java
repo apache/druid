@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.google.GoogleCloudStorageInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.error.DruidException;
@@ -36,7 +37,6 @@ import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageDruidModule;
 
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.net.URI;
 import java.util.List;

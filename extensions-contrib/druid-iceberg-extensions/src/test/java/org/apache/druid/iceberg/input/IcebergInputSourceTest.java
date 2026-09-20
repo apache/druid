@@ -58,12 +58,11 @@ import org.apache.iceberg.io.DataWriter;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,8 +76,8 @@ import java.util.stream.Stream;
 
 public class IcebergInputSourceTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private IcebergCatalog testCatalog;
   private TableIdentifier tableIdentifier;
@@ -93,7 +92,7 @@ public class IcebergInputSourceTest
   private static final String NAMESPACE = "default";
   private static final String TABLENAME = "foosTable";
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     warehouseDir = FileUtils.createTempDir();
@@ -122,8 +121,8 @@ public class IcebergInputSourceTest
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList());
 
-    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
-    Assert.assertEquals(1, localInputSourceList.size());
+    Assertions.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assertions.assertEquals(1, localInputSourceList.size());
     CloseableIterable<Record> datafileReader = Parquet.read(Files.localInput(localInputSourceList.get(0)))
                                                       .project(tableSchema)
                                                       .createReaderFunc(fileSchema -> GenericParquetReaders.buildReader(
@@ -134,8 +133,8 @@ public class IcebergInputSourceTest
 
 
     for (Record record : datafileReader) {
-      Assert.assertEquals(tableData.get("id"), record.get(0));
-      Assert.assertEquals(tableData.get("name"), record.get(1));
+      Assertions.assertEquals(tableData.get("id"), record.get(0));
+      Assertions.assertEquals(tableData.get("name"), record.get(1));
     }
   }
 
@@ -152,7 +151,7 @@ public class IcebergInputSourceTest
         null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
-    Assert.assertEquals(0, splits.count());
+    Assertions.assertEquals(0, splits.count());
   }
 
   @Test
@@ -174,8 +173,8 @@ public class IcebergInputSourceTest
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList());
 
-    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
-    Assert.assertEquals(1, localInputSourceList.size());
+    Assertions.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assertions.assertEquals(1, localInputSourceList.size());
     CloseableIterable<Record> datafileReader = Parquet.read(Files.localInput(localInputSourceList.get(0)))
                                                       .project(tableSchema)
                                                       .createReaderFunc(fileSchema -> GenericParquetReaders.buildReader(
@@ -186,8 +185,8 @@ public class IcebergInputSourceTest
 
 
     for (Record record : datafileReader) {
-      Assert.assertEquals(tableData.get("id"), record.get(0));
-      Assert.assertEquals(tableData.get("name"), record.get(1));
+      Assertions.assertEquals(tableData.get("id"), record.get(0));
+      Assertions.assertEquals(tableData.get("name"), record.get(1));
     }
   }
 
@@ -204,7 +203,7 @@ public class IcebergInputSourceTest
         null
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
-    Assert.assertEquals(1, splits.count());
+    Assertions.assertEquals(1, splits.count());
   }
 
   @Test
@@ -231,8 +230,8 @@ public class IcebergInputSourceTest
                                             .flatMap(List::stream)
                                             .collect(Collectors.toList());
 
-    Assert.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
-    Assert.assertEquals(1, localInputSourceList.size());
+    Assertions.assertEquals(1, inputSource.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null)));
+    Assertions.assertEquals(1, localInputSourceList.size());
   }
 
   @Test
@@ -249,7 +248,7 @@ public class IcebergInputSourceTest
         ResidualFilterMode.IGNORE
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
-    Assert.assertEquals(1, splits.count());
+    Assertions.assertEquals(1, splits.count());
   }
 
   @Test
@@ -265,13 +264,13 @@ public class IcebergInputSourceTest
         null,
         ResidualFilterMode.FAIL
     );
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
     );
-    Assert.assertTrue(
-        "Expect residual error to be thrown",
-        exception.getMessage().contains("residual")
+    Assertions.assertTrue(
+        exception.getMessage().contains("residual"),
+        "Expect residual error to be thrown"
     );
   }
 
@@ -294,7 +293,7 @@ public class IcebergInputSourceTest
         ResidualFilterMode.FAIL
     );
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
-    Assert.assertEquals(1, splits.count());
+    Assertions.assertEquals(1, splits.count());
   }
 
   @Test
@@ -316,13 +315,13 @@ public class IcebergInputSourceTest
         null,
         ResidualFilterMode.FAIL
     );
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
     );
-    Assert.assertTrue(
-        "Expect residual error to be thrown",
-        exception.getMessage().contains("residual")
+    Assertions.assertTrue(
+        exception.getMessage().contains("residual"),
+        "Expect residual error to be thrown"
     );
   }
   /**
@@ -902,7 +901,7 @@ public class IcebergInputSourceTest
     Assert.assertFalse("Dave (file2, pos 1) should be deleted", ids.contains("4"));
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     dropTableFromCatalog(tableIdentifier);

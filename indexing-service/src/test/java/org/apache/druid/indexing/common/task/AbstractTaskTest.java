@@ -32,11 +32,11 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -54,15 +54,27 @@ import static org.mockito.Mockito.when;
 
 public class AbstractTaskTest
 {
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
   private ObjectMapper objectMapper;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Before
+  @BeforeEach
   public void setup()
   {
     objectMapper = new TestUtils().getTestObjectMapper();
+  }
+
+  private File createTempReportFile() throws Exception
+  {
+    final File reportsFile = temporaryFolder.newFile("report.json");
+    FileUtils.write(reportsFile, "", StandardCharsets.UTF_8);
+    return reportsFile;
+  }
+
+  private File createTempDir() throws Exception
+  {
+    return temporaryFolder.newFolder("task");
   }
 
   @Test
@@ -83,7 +95,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = temporaryFolder.newFolder();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -91,7 +103,11 @@ public class AbstractTaskTest
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
-    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
+    when(toolbox.getTaskReportFileWriter()).thenReturn(
+        new SingleFileTaskReportFileWriter(
+            createTempReportFile()
+        )
+    );
 
 
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
@@ -132,7 +148,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(false);
-    File folder = temporaryFolder.newFolder();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -177,7 +193,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = temporaryFolder.newFolder();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -185,7 +201,11 @@ public class AbstractTaskTest
     TaskActionClient taskActionClient = mock(TaskActionClient.class);
     when(taskActionClient.submit(any())).thenReturn(TaskConfig.class);
     when(toolbox.getTaskActionClient()).thenReturn(taskActionClient);
-    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
+    when(toolbox.getTaskReportFileWriter()).thenReturn(
+        new SingleFileTaskReportFileWriter(
+            createTempReportFile()
+        )
+    );
 
     TaskStatus taskStatus = TaskStatus.failure("myId", "failed");
     AbstractTask task = new NoopTask("myID", null, null, 1, 0, null)
@@ -206,7 +226,11 @@ public class AbstractTaskTest
   {
     TaskToolbox toolbox = mock(TaskToolbox.class);
     when(toolbox.getAttemptId()).thenReturn("1");
-    when(toolbox.getTaskReportFileWriter()).thenReturn(new SingleFileTaskReportFileWriter(temporaryFolder.newFile()));
+    when(toolbox.getTaskReportFileWriter()).thenReturn(
+        new SingleFileTaskReportFileWriter(
+            createTempReportFile()
+        )
+    );
 
     DruidNode node = new DruidNode("foo", "foo", false, 1, 2, true, true);
     when(toolbox.getTaskExecutorNode()).thenReturn(node);
@@ -216,7 +240,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = temporaryFolder.newFolder();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -253,7 +277,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = temporaryFolder.newFolder();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -280,28 +304,28 @@ public class AbstractTaskTest
   public void testBatchIOConfigAppend()
   {
     AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("APPEND");
-    Assert.assertEquals(AbstractTask.IngestionMode.APPEND, ingestionMode);
+    Assertions.assertEquals(AbstractTask.IngestionMode.APPEND, ingestionMode);
   }
 
   @Test
   public void testBatchIOConfigReplace()
   {
     AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("REPLACE");
-    Assert.assertEquals(AbstractTask.IngestionMode.REPLACE, ingestionMode);
+    Assertions.assertEquals(AbstractTask.IngestionMode.REPLACE, ingestionMode);
   }
 
   @Test
   public void testBatchIOConfigOverwrite()
   {
     AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("REPLACE_LEGACY");
-    Assert.assertEquals(AbstractTask.IngestionMode.REPLACE_LEGACY, ingestionMode);
+    Assertions.assertEquals(AbstractTask.IngestionMode.REPLACE_LEGACY, ingestionMode);
   }
 
   @Test
   public void testBatchIOConfigNone()
   {
     AbstractTask.IngestionMode ingestionMode = AbstractTask.IngestionMode.fromString("NONE");
-    Assert.assertEquals(AbstractTask.IngestionMode.NONE, ingestionMode);
+    Assertions.assertEquals(AbstractTask.IngestionMode.NONE, ingestionMode);
   }
 
   @Test
@@ -309,10 +333,10 @@ public class AbstractTaskTest
   {
     final AbstractTask task = NoopTask.create();
     final ServiceMetricEvent.Builder builder = task.getMetricBuilder();
-    Assert.assertEquals(task.getId(), builder.getDimension(DruidMetrics.TASK_ID));
-    Assert.assertEquals(task.getGroupId(), builder.getDimension(DruidMetrics.GROUP_ID));
-    Assert.assertEquals(task.getDataSource(), builder.getDimension(DruidMetrics.DATASOURCE));
-    Assert.assertEquals(task.getType(), builder.getDimension(DruidMetrics.TASK_TYPE));
+    Assertions.assertEquals(task.getId(), builder.getDimension(DruidMetrics.TASK_ID));
+    Assertions.assertEquals(task.getGroupId(), builder.getDimension(DruidMetrics.GROUP_ID));
+    Assertions.assertEquals(task.getDataSource(), builder.getDimension(DruidMetrics.DATASOURCE));
+    Assertions.assertEquals(task.getType(), builder.getDimension(DruidMetrics.TASK_TYPE));
   }
 
   @Test
@@ -322,6 +346,6 @@ public class AbstractTaskTest
     final ServiceMetricEvent.Builder builder1 = task.getMetricBuilder();
     final ServiceMetricEvent.Builder builder2 = task.getMetricBuilder();
 
-    Assert.assertNotSame(builder1, builder2);
+    Assertions.assertNotSame(builder1, builder2);
   }
 }

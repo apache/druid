@@ -24,10 +24,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.format.ISODateTimeFormat;
@@ -35,7 +37,12 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Used for writing segment files to Azure based deep storage
@@ -43,20 +50,29 @@ import java.util.Map;
 public class AzureDataSegmentPusher implements DataSegmentPusher
 {
   private static final Logger log = new Logger(AzureDataSegmentPusher.class);
+
+  /**
+   * Originally Azure always wrote segments zipped, so that is what {@code druid.storage.zip} falls back to.
+   */
+  private static final boolean DEFAULT_ZIP = true;
+
   private final AzureStorage azureStorage;
   private final AzureAccountConfig accountConfig;
   private final AzureDataSegmentConfig segmentConfig;
+  private final boolean zip;
 
   @Inject
   public AzureDataSegmentPusher(
       @Global AzureStorage azureStorage,
       AzureAccountConfig accountConfig,
-      AzureDataSegmentConfig segmentConfig
+      AzureDataSegmentConfig segmentConfig,
+      DeepStorageSegmentConfig deepStorageConfig
   )
   {
     this.azureStorage = azureStorage;
     this.accountConfig = accountConfig;
     this.segmentConfig = segmentConfig;
+    this.zip = deepStorageConfig.isZip(DEFAULT_ZIP);
   }
 
   @Override
@@ -86,8 +102,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
       throws IOException
   {
     log.info("Uploading [%s] to Azure.", indexFilesDir);
-    final String azurePathSuffix = getAzurePath(segment, useUniquePath);
-    return pushToPath(indexFilesDir, segment, azurePathSuffix);
+    return pushToPath(indexFilesDir, segment, getStorageDir(segment, useUniquePath));
   }
 
   @Override
@@ -95,22 +110,39 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   {
     String prefix = segmentConfig.getPrefix();
     boolean prefixIsNullOrEmpty = org.apache.commons.lang3.StringUtils.isEmpty(prefix);
-    final String azurePath = JOINER.join(
+    final String azureBasePath = JOINER.join(
         prefixIsNullOrEmpty ? null : StringUtils.maybeRemoveTrailingSlash(prefix),
         storageDirSuffix
     );
 
     final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
-    File zipOutFile = null;
 
     try {
-      final File outFile = zipOutFile = File.createTempFile("index", ".zip");
-      final long size = CompressionUtils.zip(indexFilesDir, zipOutFile);
-
-      return uploadDataSegment(segment, binaryVersion, size, outFile, azurePath);
+      if (zip) {
+        return pushZip(indexFilesDir, segment, binaryVersion, azureBasePath);
+      } else {
+        return pushNoZip(indexFilesDir, segment, binaryVersion, azureBasePath);
+      }
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private DataSegment pushZip(
+      File indexFilesDir,
+      DataSegment segment,
+      int binaryVersion,
+      String azureBasePath
+  ) throws IOException
+  {
+    File zipOutFile = null;
+
+    try {
+      final File outFile = zipOutFile = Files.createTempFile("index", ".zip").toFile();
+      final long size = CompressionUtils.zip(indexFilesDir, zipOutFile);
+
+      return uploadDataSegment(segment, binaryVersion, size, outFile, getZipBlobPath(azureBasePath));
     }
     finally {
       if (zipOutFile != null) {
@@ -120,19 +152,98 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     }
   }
 
+  /**
+   * Uploads the segment files as they are, one blob per file, under {@code azureBasePath}. The resulting loadSpec
+   * blobPath is the directory itself, with a trailing slash to tell {@link AzureDataSegmentPuller} and
+   * {@link AzureDataSegmentKiller} that it names a directory of files rather than a single blob.
+   */
+  private DataSegment pushNoZip(
+      File indexFilesDir,
+      DataSegment segment,
+      int binaryVersion,
+      String azureBasePath
+  ) throws IOException
+  {
+    final File[] files = indexFilesDir.listFiles();
+    if (files == null) {
+      throw new IOE("Cannot list directory [%s]", indexFilesDir);
+    }
+
+    final String azureDirPath = azureBasePath + "/";
+    final Set<String> pushedBlobs = new HashSet<>();
+
+    long size = 0;
+    for (final File file : files) {
+      if (file.isFile()) {
+        size += file.length();
+        final String blobPath = azureDirPath + file.getName();
+        azureStorage.uploadBlockBlob(file, segmentConfig.getContainer(), blobPath, accountConfig.getMaxTries());
+        pushedBlobs.add(blobPath);
+      } else {
+        // Segment directories are expected to be flat.
+        throw new IOE("Unexpected subdirectory [%s]", file.getName());
+      }
+    }
+
+    deleteStaleBlobs(azureDirPath, pushedBlobs);
+
+    return segment.withSize(size)
+                  .withLoadSpec(makeLoadSpec(azureDirPath))
+                  .withBinaryVersion(binaryVersion);
+  }
+
+  /**
+   * Removes everything under {@code azureDirPath} that this push did not write.
+   * <p>
+   * A zipped push replaces the previous segment outright, because one {@code index.zip} blob overwrites another, and
+   * {@link #push} with {@code useUniquePath = false} is expected to replace a previous push the same way. Uploading
+   * file by file only overwrites the names the new segment happens to share, so without this a re-push could leave
+   * behind blobs of whatever was there before: a stale {@code index.zip} from a zipped push, or smoosh chunks from a
+   * larger prior v9 segment.
+   * <p>
+   * Note that this makes an unzipped push require permission to delete blobs under the segment path, which a zipped
+   * push does not.
+   */
+  private void deleteStaleBlobs(final String azureDirPath, final Set<String> pushedBlobs) throws IOException
+  {
+    final List<String> staleBlobs = azureStorage
+        .listBlobs(segmentConfig.getContainer(), azureDirPath, null, accountConfig.getMaxTries())
+        .stream()
+        .filter(blobPath -> !pushedBlobs.contains(blobPath))
+        .collect(Collectors.toList());
+
+    if (staleBlobs.isEmpty()) {
+      return;
+    }
+
+    log.info("Removing blobs %s left under [%s] by a previous push", staleBlobs, azureDirPath);
+    if (!azureStorage.batchDeleteFiles(segmentConfig.getContainer(), staleBlobs, accountConfig.getMaxTries())) {
+      throw new IOE(
+          "Could not remove blobs %s left under [%s] by a previous push, which would be loaded as part of this segment",
+          staleBlobs,
+          azureDirPath
+      );
+    }
+  }
+
   @Override
   public Map<String, Object> makeLoadSpec(URI uri)
   {
     return makeLoadSpec(uri.toString());
   }
 
+  /**
+   * Path of the {@code index.zip} blob for a segment, relative to {@link AzureDataSegmentConfig#getPrefix()}.
+   */
   @VisibleForTesting
   String getAzurePath(final DataSegment segment, final boolean useUniquePath)
   {
-    final String storageDir = this.getStorageDir(segment, useUniquePath);
+    return getZipBlobPath(this.getStorageDir(segment, useUniquePath));
+  }
 
-    return StringUtils.format("%s/%s", storageDir, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME);
-
+  private static String getZipBlobPath(final String azureBasePath)
+  {
+    return StringUtils.format("%s/%s", azureBasePath, AzureStorageDruidModule.INDEX_ZIP_FILE_NAME);
   }
 
   @VisibleForTesting

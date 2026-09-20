@@ -32,7 +32,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Rule;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,7 +41,7 @@ import java.util.Map;
 
 public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCacheTestBase
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   public final ObjectMapper mapper = TestHelper.makeJsonMapper();

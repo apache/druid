@@ -30,10 +30,11 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class TypeCastSelectorsTest extends InitializedNullHandlingTest
@@ -58,11 +59,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "x", ColumnType.LONG);
 
-    Assert.assertEquals(12L, selector.getLong());
-    Assert.assertEquals(12d, selector.getDouble(), 0);
-    Assert.assertEquals(12f, selector.getFloat(), 0);
-    Assert.assertFalse(selector.isNull());
-    Assert.assertEquals(12L, selector.getObject());
+    Assertions.assertEquals(12L, selector.getLong());
+    Assertions.assertEquals(12d, selector.getDouble(), 0);
+    Assertions.assertEquals(12f, selector.getFloat(), 0);
+    Assertions.assertFalse(selector.isNull());
+    Assertions.assertEquals(12L, selector.getObject());
   }
 
   @Test
@@ -71,11 +72,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "x", ColumnType.DOUBLE);
 
-    Assert.assertEquals(12L, selector.getLong());
-    Assert.assertEquals(12.3d, selector.getDouble(), 0);
-    Assert.assertEquals(12.3f, selector.getFloat(), 0);
-    Assert.assertFalse(selector.isNull());
-    Assert.assertEquals(12.3d, selector.getObject());
+    Assertions.assertEquals(12L, selector.getLong());
+    Assertions.assertEquals(12.3d, selector.getDouble(), 0);
+    Assertions.assertEquals(12.3f, selector.getFloat(), 0);
+    Assertions.assertFalse(selector.isNull());
+    Assertions.assertEquals(12.3d, selector.getObject());
   }
 
   @Test
@@ -84,11 +85,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "x", ColumnType.FLOAT);
 
-    Assert.assertEquals(12L, selector.getLong());
-    Assert.assertEquals(12.3d, selector.getDouble(), 0.001);
-    Assert.assertEquals(12.3f, selector.getFloat(), 0);
-    Assert.assertFalse(selector.isNull());
-    Assert.assertEquals(12.3d, selector.getObject());
+    Assertions.assertEquals(12L, selector.getLong());
+    Assertions.assertEquals(12.3d, selector.getDouble(), 0.001);
+    Assertions.assertEquals(12.3f, selector.getFloat(), 0);
+    Assertions.assertFalse(selector.isNull());
+    Assertions.assertEquals(12.3d, selector.getObject());
   }
 
   @Test
@@ -97,11 +98,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "x", ColumnType.LONG_ARRAY);
 
-    Assert.assertThrows(DruidException.class, selector::getLong);
-    Assert.assertThrows(DruidException.class, selector::getDouble);
-    Assert.assertThrows(DruidException.class, selector::getFloat);
-    Assert.assertThrows(DruidException.class, selector::isNull);
-    Assert.assertArrayEquals(new Object[]{12L}, (Object[]) selector.getObject());
+    Assertions.assertThrows(DruidException.class, selector::getLong);
+    Assertions.assertThrows(DruidException.class, selector::getDouble);
+    Assertions.assertThrows(DruidException.class, selector::getFloat);
+    Assertions.assertThrows(DruidException.class, selector::isNull);
+    Assertions.assertArrayEquals(new Object[]{12L}, (Object[]) selector.getObject());
   }
 
   @Test
@@ -110,11 +111,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "x", ColumnType.STRING_ARRAY);
 
-    Assert.assertThrows(DruidException.class, selector::getLong);
-    Assert.assertThrows(DruidException.class, selector::getDouble);
-    Assert.assertThrows(DruidException.class, selector::getFloat);
-    Assert.assertThrows(DruidException.class, selector::isNull);
-    Assert.assertArrayEquals(new Object[]{"12.3"}, (Object[]) selector.getObject());
+    Assertions.assertThrows(DruidException.class, selector::getLong);
+    Assertions.assertThrows(DruidException.class, selector::getDouble);
+    Assertions.assertThrows(DruidException.class, selector::getFloat);
+    Assertions.assertThrows(DruidException.class, selector::isNull);
+    Assertions.assertArrayEquals(new Object[]{"12.3"}, (Object[]) selector.getObject());
   }
 
   @Test
@@ -123,11 +124,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "y", ColumnType.LONG);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -136,11 +137,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "y", ColumnType.DOUBLE);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -149,11 +150,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "y", ColumnType.FLOAT);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -162,11 +163,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "y", ColumnType.LONG_ARRAY);
 
-    Assert.assertThrows(DruidException.class, selector::getLong);
-    Assert.assertThrows(DruidException.class, selector::getDouble);
-    Assert.assertThrows(DruidException.class, selector::getFloat);
-    Assert.assertThrows(DruidException.class, selector::isNull);
-    Assert.assertArrayEquals(new Object[]{null}, (Object[]) selector.getObject());
+    Assertions.assertThrows(DruidException.class, selector::getLong);
+    Assertions.assertThrows(DruidException.class, selector::getDouble);
+    Assertions.assertThrows(DruidException.class, selector::getFloat);
+    Assertions.assertThrows(DruidException.class, selector::isNull);
+    Assertions.assertArrayEquals(new Object[]{null}, (Object[]) selector.getObject());
   }
 
   @Test
@@ -175,11 +176,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "y", ColumnType.STRING_ARRAY);
 
-    Assert.assertThrows(DruidException.class, selector::getLong);
-    Assert.assertThrows(DruidException.class, selector::getDouble);
-    Assert.assertThrows(DruidException.class, selector::getFloat);
-    Assert.assertThrows(DruidException.class, selector::isNull);
-    Assert.assertArrayEquals(new Object[]{"abc"}, (Object[]) selector.getObject());
+    Assertions.assertThrows(DruidException.class, selector::getLong);
+    Assertions.assertThrows(DruidException.class, selector::getDouble);
+    Assertions.assertThrows(DruidException.class, selector::getFloat);
+    Assertions.assertThrows(DruidException.class, selector::isNull);
+    Assertions.assertArrayEquals(new Object[]{"abc"}, (Object[]) selector.getObject());
   }
 
   @Test
@@ -188,11 +189,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "z", ColumnType.LONG);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -201,11 +202,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "z", ColumnType.DOUBLE);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -214,11 +215,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "z", ColumnType.FLOAT);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -227,11 +228,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "z", ColumnType.LONG_ARRAY);
 
-    Assert.assertThrows(DruidException.class, selector::getLong);
-    Assert.assertThrows(DruidException.class, selector::getDouble);
-    Assert.assertThrows(DruidException.class, selector::getFloat);
-    Assert.assertThrows(DruidException.class, selector::isNull);
-    Assert.assertNull(selector.getObject());
+    Assertions.assertThrows(DruidException.class, selector::getLong);
+    Assertions.assertThrows(DruidException.class, selector::getDouble);
+    Assertions.assertThrows(DruidException.class, selector::getFloat);
+    Assertions.assertThrows(DruidException.class, selector::isNull);
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -240,11 +241,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "z", ColumnType.STRING_ARRAY);
 
-    Assert.assertThrows(DruidException.class, selector::getLong);
-    Assert.assertThrows(DruidException.class, selector::getDouble);
-    Assert.assertThrows(DruidException.class, selector::getFloat);
-    Assert.assertThrows(DruidException.class, selector::isNull);
-    Assert.assertNull(selector.getObject());
+    Assertions.assertThrows(DruidException.class, selector::getLong);
+    Assertions.assertThrows(DruidException.class, selector::getDouble);
+    Assertions.assertThrows(DruidException.class, selector::getFloat);
+    Assertions.assertThrows(DruidException.class, selector::isNull);
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -253,11 +254,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "da", ColumnType.LONG);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -266,11 +267,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "da", ColumnType.DOUBLE);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -279,11 +280,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "da", ColumnType.FLOAT);
 
-    Assert.assertEquals(0L, selector.getLong());
-    Assert.assertEquals(0d, selector.getDouble(), 0);
-    Assert.assertEquals(0f, selector.getFloat(), 0);
-    Assert.assertTrue(selector.isNull());
-    Assert.assertNull(selector.getObject());
+    Assertions.assertEquals(0L, selector.getLong());
+    Assertions.assertEquals(0d, selector.getDouble(), 0);
+    Assertions.assertEquals(0f, selector.getFloat(), 0);
+    Assertions.assertTrue(selector.isNull());
+    Assertions.assertNull(selector.getObject());
   }
 
   @Test
@@ -292,11 +293,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "da", ColumnType.LONG_ARRAY);
 
-    Assert.assertThrows(DruidException.class, selector::getLong);
-    Assert.assertThrows(DruidException.class, selector::getDouble);
-    Assert.assertThrows(DruidException.class, selector::getFloat);
-    Assert.assertThrows(DruidException.class, selector::isNull);
-    Assert.assertArrayEquals(new Object[]{1L, 2L}, (Object[]) selector.getObject());
+    Assertions.assertThrows(DruidException.class, selector::getLong);
+    Assertions.assertThrows(DruidException.class, selector::getDouble);
+    Assertions.assertThrows(DruidException.class, selector::getFloat);
+    Assertions.assertThrows(DruidException.class, selector::isNull);
+    Assertions.assertArrayEquals(new Object[]{1L, 2L}, (Object[]) selector.getObject());
   }
 
   @Test
@@ -305,11 +306,11 @@ public class TypeCastSelectorsTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> selector =
         TypeCastSelectors.makeColumnValueSelector(testColumnSelectorFactory, "da", ColumnType.STRING_ARRAY);
 
-    Assert.assertThrows(DruidException.class, selector::getLong);
-    Assert.assertThrows(DruidException.class, selector::getDouble);
-    Assert.assertThrows(DruidException.class, selector::getFloat);
-    Assert.assertThrows(DruidException.class, selector::isNull);
-    Assert.assertArrayEquals(new Object[]{"1.2", "2.3"}, (Object[]) selector.getObject());
+    Assertions.assertThrows(DruidException.class, selector::getLong);
+    Assertions.assertThrows(DruidException.class, selector::getDouble);
+    Assertions.assertThrows(DruidException.class, selector::getFloat);
+    Assertions.assertThrows(DruidException.class, selector::isNull);
+    Assertions.assertArrayEquals(new Object[]{"1.2", "2.3"}, (Object[]) selector.getObject());
   }
 
   /**

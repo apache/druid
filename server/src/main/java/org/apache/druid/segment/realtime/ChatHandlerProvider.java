@@ -20,42 +20,70 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.base.Optional;
+import com.google.inject.Inject;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.logger.Logger;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
+ * Provides a way for the outside world to talk to objects in the indexing service. Handlers are held in an
+ * in-memory registry on this host and reached through {@link ChatHandlerResource} via the task's known
+ * {@link org.apache.druid.indexer.TaskLocation}.
  */
-public interface ChatHandlerProvider
+public class ChatHandlerProvider
 {
-  /**
-   * Registers a chat handler which provides an API for others to talk to objects in the indexing service. Depending
-   * on the implementation, this method may also announce this node so that it can be discovered by other services.
-   *
-   * @param key     a unique name identifying this service
-   * @param handler instance which implements the API to be exposed
-   */
-  void register(String key, ChatHandler handler);
+  private static final Logger log = new Logger(ChatHandlerProvider.class);
+
+  private final ConcurrentMap<String, ChatHandler> handlers;
+
+  @Inject
+  public ChatHandlerProvider()
+  {
+    this.handlers = new ConcurrentHashMap<>();
+  }
 
   /**
-   * Registers a chat handler which provides an API for others to talk to objects in the indexing service. Setting
-   * announce to false instructs the implementation to only register the handler to expose the API and skip any
-   * discovery announcements that might have been broadcast.
+   * Registers a chat handler which provides an API for others to talk to objects in the indexing service.
    *
-   * @param key      a unique name identifying this service
-   * @param handler  instance which implements the API to be exposed
-   * @param announce for implementations that have a service discovery mechanism, whether this node should be announced
+   * @param service a unique name identifying this service
+   * @param handler instance which implements the API to be exposed
    */
-  void register(String key, ChatHandler handler, boolean announce);
+  public void register(final String service, ChatHandler handler)
+  {
+    log.debug("Registering Eventhandler[%s]", service);
+
+    if (handlers.putIfAbsent(service, handler) != null) {
+      throw new ISE("handler already registered for service[%s]", service);
+    }
+  }
 
   /**
    * Unregisters a chat handler.
    *
-   * @param key the name of the service
+   * @param service the name of the service
    */
-  void unregister(String key);
+  public void unregister(final String service)
+  {
+    log.debug("Unregistering chat handler[%s]", service);
+
+    final ChatHandler handler = handlers.get(service);
+    if (handler == null) {
+      log.warn("handler[%s] not currently registered, ignoring.", service);
+      return;
+    }
+
+    handlers.remove(service, handler);
+  }
 
   /**
    * Retrieves a chat handler.
    *
    * @param key the name of the service
    */
-  Optional<ChatHandler> get(String key);
+  public Optional<ChatHandler> get(final String key)
+  {
+    return Optional.fromNullable(handlers.get(key));
+  }
 }

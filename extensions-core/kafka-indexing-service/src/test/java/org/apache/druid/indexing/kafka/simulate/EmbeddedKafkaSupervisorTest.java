@@ -125,8 +125,19 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, taskStatuses.size());
     Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
 
+    // Wait until all produced records have been ingested before verifying the row count,
+    // otherwise the query below can race ingestion and observe fewer than the expected rows
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/events/processed")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(expectedSegments)
+    );
+
     // Verify the count of rows ingested into the datasource so far
-    Assertions.assertEquals("10", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(
+        String.valueOf(expectedSegments),
+        cluster.runSql("SELECT COUNT(*) FROM %s", dataSource)
+    );
 
     // Suspend the supervisor and verify the state
     cluster.callApi().postSupervisor(kafkaSupervisorSpec.createSuspendedSpec());

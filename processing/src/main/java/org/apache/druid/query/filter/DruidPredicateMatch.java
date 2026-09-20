@@ -20,7 +20,10 @@
 package org.apache.druid.query.filter;
 
 /**
- * Three-value logic result for matching values with predicates produced by {@link DruidPredicateFactory}
+ * Three-value logic result for matching values with predicates produced by {@link DruidPredicateFactory}.
+ * <p/>
+ * Also serves as a general 3VL atom for filter-tree composition where a sub-expression can be provably true,
+ * provably false, or undecidable.
  *
  * @see DruidObjectPredicate
  * @see DruidLongPredicate

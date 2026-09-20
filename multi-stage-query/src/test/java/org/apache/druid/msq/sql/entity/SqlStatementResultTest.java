@@ -28,8 +28,8 @@ import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.QueryNotSupportedFault;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.resources.SqlStatementResourceTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SqlStatementResultTest
 {
@@ -70,8 +70,8 @@ public class SqlStatementResultTest
   public void sanityTest() throws JsonProcessingException
   {
 
-    Assert.assertEquals(JSON_STRING, MAPPER.writeValueAsString(SQL_STATEMENT_RESULT));
-    Assert.assertEquals(
+    Assertions.assertEquals(JSON_STRING, MAPPER.writeValueAsString(SQL_STATEMENT_RESULT));
+    Assertions.assertEquals(
         "SqlStatementResult{"
         + "queryId='q1',"
         + " state=RUNNING,"

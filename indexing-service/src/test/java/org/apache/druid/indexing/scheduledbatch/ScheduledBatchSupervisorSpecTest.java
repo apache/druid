@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -33,18 +32,17 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.query.http.ClientSqlQuery;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Collections;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ScheduledBatchSupervisorSpecTest
 {
@@ -53,7 +51,7 @@ public class ScheduledBatchSupervisorSpecTest
   private ScheduledBatchTaskManager scheduler;
   private ClientSqlQuery query;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     brokerClient = Mockito.mock(BrokerClient.class);
@@ -206,23 +204,25 @@ public class ScheduledBatchSupervisorSpecTest
                ))
            ));
 
-    MatcherAssert.assertThat(
-        assertThrows(
-            DruidException.class,
-            () -> new ScheduledBatchSupervisorSpec(
-              query,
-              new UnixCronSchedulerConfig("* * * * *"),
-              true,
-              null,
-              null,
-              OBJECT_MAPPER,
-              scheduler,
-              brokerClient
-            )
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "SELECT queries are not supported by the [scheduled_batch] supervisor. Only INSERT or REPLACE ingest queries are allowed."
+    final DruidException exception = assertThrows(
+        DruidException.class,
+        () -> new ScheduledBatchSupervisorSpec(
+          query,
+          new UnixCronSchedulerConfig("* * * * *"),
+          true,
+          null,
+          null,
+          OBJECT_MAPPER,
+          scheduler,
+          brokerClient
         )
+    );
+    assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    assertEquals("invalidInput", exception.getErrorCode());
+    assertEquals(
+        "SELECT queries are not supported by the [scheduled_batch] supervisor. Only INSERT or REPLACE ingest queries are allowed.",
+        exception.getMessage()
     );
   }
 
@@ -239,7 +239,7 @@ public class ScheduledBatchSupervisorSpecTest
         scheduler,
         brokerClient
     );
-    Assert.assertTrue(supervisorSpec.getInputSourceResources().isEmpty());
+    Assertions.assertTrue(supervisorSpec.getInputSourceResources().isEmpty());
   }
 
   private void testSerde(final ScheduledBatchSupervisorSpec spec)

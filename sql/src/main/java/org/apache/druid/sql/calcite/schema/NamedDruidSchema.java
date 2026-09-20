@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 
 /**
@@ -31,7 +31,6 @@ public class NamedDruidSchema implements NamedSchema
   private final DruidSchema druidSchema;
   private final String druidSchemaName;
 
-  @Inject
   public NamedDruidSchema(DruidSchema druidSchema, @DruidSchemaName String druidSchemaName)
   {
     this.druidSchema = druidSchema;
@@ -45,9 +44,9 @@ public class NamedDruidSchema implements NamedSchema
   }
 
   @Override
-  public String getSchemaResourceType(String resourceName)
+  public Resource getSchemaResource(String resourceName)
   {
-    return ResourceType.DATASOURCE;
+    return new Resource(resourceName, ResourceType.DATASOURCE);
   }
 
   @Override

@@ -23,12 +23,14 @@ import com.netflix.spectator.api.histogram.PercentileBuckets;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandlingTest
 {
@@ -38,14 +40,14 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
   private SpectatorHistogramAggregateHelper helper;
   private ByteBuffer buffer;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     helper = new SpectatorHistogramAggregateHelper();
     buffer = ByteBuffer.allocate(1024);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     helper.close();
@@ -57,8 +59,8 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     helper.init(buffer, POSITION);
     SpectatorHistogram result = helper.get(buffer, POSITION);
 
-    Assert.assertNotNull(result);
-    Assert.assertTrue(result.isEmpty());
+    Assertions.assertNotNull(result);
+    Assertions.assertTrue(result.isEmpty());
   }
 
   @Test
@@ -73,8 +75,8 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     helper.merge(histogram, other);
 
     SpectatorHistogram result = helper.get(buffer, POSITION);
-    Assert.assertNotNull(result);
-    Assert.assertEquals(other, result);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(other, result);
   }
 
   @Test
@@ -92,8 +94,8 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     expected.insert(100L);
 
     SpectatorHistogram result = helper.get(buffer, POSITION);
-    Assert.assertNotNull(result);
-    Assert.assertEquals(expected, result);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -112,7 +114,7 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     expected.add(PercentileBuckets.indexOf(100), 8L);
     expected.add(PercentileBuckets.indexOf(200), 2L);
 
-    Assert.assertEquals(expected, histogram);
+    Assertions.assertEquals(expected, histogram);
   }
 
   @Test
@@ -129,7 +131,7 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     expected.insert(Long.valueOf(200));
     expected.insert(Float.valueOf(300.0f));
 
-    Assert.assertEquals(expected, histogram);
+    Assertions.assertEquals(expected, histogram);
   }
 
   @Test
@@ -137,7 +139,7 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
   {
     SpectatorHistogram histogram = new SpectatorHistogram();
 
-    Assert.assertThrows(IAE.class, () -> helper.merge(histogram, "invalid"));
+    Assertions.assertThrows(IAE.class, () -> helper.merge(histogram, "invalid"));
   }
 
   @Test
@@ -154,7 +156,7 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     expected.insert(100L);
     expected.insert(200L);
 
-    Assert.assertEquals(expected, histogram);
+    Assertions.assertEquals(expected, histogram);
   }
 
   @Test
@@ -171,7 +173,7 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     SpectatorHistogram result1 = helper.get(buffer, POSITION);
     SpectatorHistogram result2 = helper.get(buffer, POSITION);
 
-    Assert.assertSame(result1, result2);
+    Assertions.assertSame(result1, result2);
   }
 
   @Test
@@ -187,10 +189,10 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     hist2.add(PercentileBuckets.indexOf(200), 2L);
 
     Int2ObjectMap<SpectatorHistogram> map = helper.get(buffer);
-    Assert.assertNotNull(map);
-    Assert.assertEquals(2, map.size());
-    Assert.assertSame(hist1, map.get(POSITION));
-    Assert.assertSame(hist2, map.get(POSITION_2));
+    Assertions.assertNotNull(map);
+    Assertions.assertEquals(2, map.size());
+    Assertions.assertSame(hist1, map.get(POSITION));
+    Assertions.assertSame(hist2, map.get(POSITION_2));
   }
 
   @Test
@@ -214,8 +216,8 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     SpectatorHistogram result1 = helper.get(buffer, POSITION);
     SpectatorHistogram result2 = helper.get(buffer, POSITION_2);
 
-    Assert.assertEquals(other1, result1);
-    Assert.assertEquals(other2, result2);
+    Assertions.assertEquals(other1, result1);
+    Assertions.assertEquals(other2, result2);
   }
 
   @Test
@@ -236,7 +238,7 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     helper.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
 
     SpectatorHistogram result = helper.get(newBuffer, newPosition);
-    Assert.assertEquals(other, result);
+    Assertions.assertEquals(other, result);
   }
 
   @Test
@@ -257,7 +259,7 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     helper.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
 
     // Old position should no longer have the histogram
-    Assert.assertNull(helper.get(oldBuffer, oldPosition));
+    Assertions.assertNull(helper.get(oldBuffer, oldPosition));
   }
 
   @Test
@@ -270,21 +272,25 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     helper.close();
 
     // After close, the cache should be cleared
-    Assert.assertNull(helper.get(buffer, POSITION));
+    Assertions.assertNull(helper.get(buffer, POSITION));
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testGetFloatThrowsUnsupportedOperationException()
   {
-    helper.init(buffer, POSITION);
-    helper.getFloat(buffer, POSITION);
+    assertThrows(UnsupportedOperationException.class, () -> {
+      helper.init(buffer, POSITION);
+      helper.getFloat(buffer, POSITION);
+    });
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testGetLongThrowsUnsupportedOperationException()
   {
-    helper.init(buffer, POSITION);
-    helper.getLong(buffer, POSITION);
+    assertThrows(UnsupportedOperationException.class, () -> {
+      helper.init(buffer, POSITION);
+      helper.getLong(buffer, POSITION);
+    });
   }
 
   @Test
@@ -313,14 +319,14 @@ public class SpectatorHistogramAggregateHelperTest extends InitializedNullHandli
     expected.add(PercentileBuckets.indexOf(300), 3L);
 
     SpectatorHistogram result = helper.get(buffer, POSITION);
-    Assert.assertEquals(expected, result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
   public void testGetNonExistentBuffer()
   {
     ByteBuffer otherBuffer = ByteBuffer.allocate(1024);
-    Assert.assertNull(helper.get(otherBuffer, POSITION));
-    Assert.assertNull(helper.get(otherBuffer));
+    Assertions.assertNull(helper.get(otherBuffer, POSITION));
+    Assertions.assertNull(helper.get(otherBuffer));
   }
 }

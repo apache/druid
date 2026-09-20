@@ -27,9 +27,11 @@ import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestSegmentUtils;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
+import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.TombstoneSegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -58,6 +60,12 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   private final List<DataSegment> observedSegments;
   private final Set<SegmentId> observedSegmentsRemovedFromCache;
   private final AtomicInteger observedShutdownBootstrapCount;
+
+  /**
+   * Loads still allowed to succeed before {@link #load} starts failing, see {@link #failLoadsAfter}. Unlimited
+   * unless a test says otherwise.
+   */
+  private final AtomicInteger remainingSuccessfulLoads = new AtomicInteger(Integer.MAX_VALUE);
 
   public TestSegmentCacheManager()
   {
@@ -102,17 +110,32 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public void bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public DataSegment bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     observedBootstrapSegments.add(segment);
     getSegmentInternal(segment);
+    return segment;
+  }
+
+  /**
+   * Makes {@link #load} succeed {@code numSuccessfulLoads} more times and fail every load after that. Lets a test
+   * establish a serving replica and then fail a reload of it, which is what distinguishes failure cleanup that is
+   * safe from cleanup that would tear down a live replica.
+   */
+  public void failLoadsAfter(int numSuccessfulLoads)
+  {
+    remainingSuccessfulLoads.set(numSuccessfulLoads);
   }
 
   @Override
-  public void load(final DataSegment segment)
+  public DataSegment load(final DataSegment segment) throws SegmentLoadingException
   {
+    if (remainingSuccessfulLoads.getAndUpdate(remaining -> remaining > 0 ? remaining - 1 : remaining) <= 0) {
+      throw new SegmentLoadingException("Test-induced load failure for segment[%s]", segment.getId());
+    }
     observedSegments.add(segment);
     getSegmentInternal(segment);
+    return segment;
   }
 
   private ReferenceCountedSegmentProvider getSegmentInternal(final DataSegment segment)
@@ -141,7 +164,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+  public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
   {
     if (observedSegmentsRemovedFromCache.contains(segmentId)) {
       return Optional.empty();
@@ -154,7 +177,7 @@ public class TestSegmentCacheManager extends NoopSegmentCacheManager
   }
 
   @Override
-  public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+  public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
   {
     if (observedSegmentsRemovedFromCache.contains(dataSegment.getId())) {
       return AcquireSegmentAction.missingSegment();

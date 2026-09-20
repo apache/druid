@@ -28,24 +28,26 @@ import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 public class QueryableIndexCursorFactoryTest
 {
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("constructorFeeder")
   public static class DimensionDictionarySelectorTest extends InitializedNullHandlingTest
   {
-    private final boolean vectorize;
+    @Parameter(0)
+    public boolean vectorize;
 
     private DimensionDictionarySelector qualitySelector;
     private DimensionDictionarySelector placementishSelector;
@@ -53,18 +55,12 @@ public class QueryableIndexCursorFactoryTest
 
     private Closer closer = Closer.create();
 
-    @Parameterized.Parameters(name = "vectorize = {0}")
-    public static Collection<?> constructorFeeder()
+    public static Stream<Object[]> constructorFeeder()
     {
-      return Arrays.asList(new Object[]{false}, new Object[]{true});
+      return Stream.of(new Object[]{false}, new Object[]{true});
     }
 
-    public DimensionDictionarySelectorTest(boolean vectorize)
-    {
-      this.vectorize = vectorize;
-    }
-
-    @Before
+    @BeforeEach
     public void setUp()
     {
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
@@ -94,7 +90,7 @@ public class QueryableIndexCursorFactoryTest
       }
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws IOException
     {
       closer.close();
@@ -103,89 +99,89 @@ public class QueryableIndexCursorFactoryTest
     @Test
     public void test_getCardinality_quality()
     {
-      Assert.assertEquals(9, qualitySelector.getValueCardinality());
+      Assertions.assertEquals(9, qualitySelector.getValueCardinality());
     }
 
     @Test
     public void test_getCardinality_placementish()
     {
-      Assert.assertEquals(9, placementishSelector.getValueCardinality());
+      Assertions.assertEquals(9, placementishSelector.getValueCardinality());
     }
 
     @Test
     public void test_getCardinality_partialNullColumn()
     {
-      Assert.assertEquals(2, partialNullSelector.getValueCardinality());
+      Assertions.assertEquals(2, partialNullSelector.getValueCardinality());
     }
 
     @Test
     public void test_lookupName_quality()
     {
-      Assert.assertEquals("automotive", qualitySelector.lookupName(0));
-      Assert.assertEquals("business", qualitySelector.lookupName(1));
-      Assert.assertEquals("entertainment", qualitySelector.lookupName(2));
-      Assert.assertEquals("health", qualitySelector.lookupName(3));
-      Assert.assertEquals("mezzanine", qualitySelector.lookupName(4));
-      Assert.assertEquals("news", qualitySelector.lookupName(5));
-      Assert.assertEquals("premium", qualitySelector.lookupName(6));
-      Assert.assertEquals("technology", qualitySelector.lookupName(7));
-      Assert.assertEquals("travel", qualitySelector.lookupName(8));
+      Assertions.assertEquals("automotive", qualitySelector.lookupName(0));
+      Assertions.assertEquals("business", qualitySelector.lookupName(1));
+      Assertions.assertEquals("entertainment", qualitySelector.lookupName(2));
+      Assertions.assertEquals("health", qualitySelector.lookupName(3));
+      Assertions.assertEquals("mezzanine", qualitySelector.lookupName(4));
+      Assertions.assertEquals("news", qualitySelector.lookupName(5));
+      Assertions.assertEquals("premium", qualitySelector.lookupName(6));
+      Assertions.assertEquals("technology", qualitySelector.lookupName(7));
+      Assertions.assertEquals("travel", qualitySelector.lookupName(8));
     }
 
     @Test
     public void test_lookupName_placementish()
     {
-      Assert.assertEquals("a", placementishSelector.lookupName(0));
-      Assert.assertEquals("b", placementishSelector.lookupName(1));
-      Assert.assertEquals("e", placementishSelector.lookupName(2));
-      Assert.assertEquals("h", placementishSelector.lookupName(3));
-      Assert.assertEquals("m", placementishSelector.lookupName(4));
-      Assert.assertEquals("n", placementishSelector.lookupName(5));
-      Assert.assertEquals("p", placementishSelector.lookupName(6));
-      Assert.assertEquals("preferred", placementishSelector.lookupName(7));
-      Assert.assertEquals("t", placementishSelector.lookupName(8));
+      Assertions.assertEquals("a", placementishSelector.lookupName(0));
+      Assertions.assertEquals("b", placementishSelector.lookupName(1));
+      Assertions.assertEquals("e", placementishSelector.lookupName(2));
+      Assertions.assertEquals("h", placementishSelector.lookupName(3));
+      Assertions.assertEquals("m", placementishSelector.lookupName(4));
+      Assertions.assertEquals("n", placementishSelector.lookupName(5));
+      Assertions.assertEquals("p", placementishSelector.lookupName(6));
+      Assertions.assertEquals("preferred", placementishSelector.lookupName(7));
+      Assertions.assertEquals("t", placementishSelector.lookupName(8));
     }
 
     @Test
     public void test_lookupName_partialNull()
     {
-      Assert.assertNull(partialNullSelector.lookupName(0));
-      Assert.assertEquals("value", partialNullSelector.lookupName(1));
+      Assertions.assertNull(partialNullSelector.lookupName(0));
+      Assertions.assertEquals("value", partialNullSelector.lookupName(1));
     }
 
     @Test
     public void test_lookupNameUtf8_quality()
     {
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("automotive")), qualitySelector.lookupNameUtf8(0));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("business")), qualitySelector.lookupNameUtf8(1));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("entertainment")), qualitySelector.lookupNameUtf8(2));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("health")), qualitySelector.lookupNameUtf8(3));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("mezzanine")), qualitySelector.lookupNameUtf8(4));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("news")), qualitySelector.lookupNameUtf8(5));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("premium")), qualitySelector.lookupNameUtf8(6));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("technology")), qualitySelector.lookupNameUtf8(7));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("travel")), qualitySelector.lookupNameUtf8(8));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("automotive")), qualitySelector.lookupNameUtf8(0));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("business")), qualitySelector.lookupNameUtf8(1));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("entertainment")), qualitySelector.lookupNameUtf8(2));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("health")), qualitySelector.lookupNameUtf8(3));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("mezzanine")), qualitySelector.lookupNameUtf8(4));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("news")), qualitySelector.lookupNameUtf8(5));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("premium")), qualitySelector.lookupNameUtf8(6));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("technology")), qualitySelector.lookupNameUtf8(7));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("travel")), qualitySelector.lookupNameUtf8(8));
     }
 
     @Test
     public void test_lookupNameUtf8_placementish()
     {
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("a")), placementishSelector.lookupNameUtf8(0));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("b")), placementishSelector.lookupNameUtf8(1));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("e")), placementishSelector.lookupNameUtf8(2));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("h")), placementishSelector.lookupNameUtf8(3));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("m")), placementishSelector.lookupNameUtf8(4));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("n")), placementishSelector.lookupNameUtf8(5));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("p")), placementishSelector.lookupNameUtf8(6));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("preferred")), placementishSelector.lookupNameUtf8(7));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("t")), placementishSelector.lookupNameUtf8(8));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("a")), placementishSelector.lookupNameUtf8(0));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("b")), placementishSelector.lookupNameUtf8(1));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("e")), placementishSelector.lookupNameUtf8(2));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("h")), placementishSelector.lookupNameUtf8(3));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("m")), placementishSelector.lookupNameUtf8(4));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("n")), placementishSelector.lookupNameUtf8(5));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("p")), placementishSelector.lookupNameUtf8(6));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("preferred")), placementishSelector.lookupNameUtf8(7));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("t")), placementishSelector.lookupNameUtf8(8));
     }
 
     @Test
     public void test_lookupNameUtf8_partialNull()
     {
-      Assert.assertNull(partialNullSelector.lookupNameUtf8(0));
-      Assert.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("value")), partialNullSelector.lookupNameUtf8(1));
+      Assertions.assertNull(partialNullSelector.lookupNameUtf8(0));
+      Assertions.assertEquals(ByteBuffer.wrap(StringUtils.toUtf8("value")), partialNullSelector.lookupNameUtf8(1));
     }
 
     @Test
@@ -193,25 +189,25 @@ public class QueryableIndexCursorFactoryTest
     {
       // Different buffer on different calls; enables callers to safely modify position, limit as promised in
       // the javadocs.
-      Assert.assertNotSame(qualitySelector.lookupNameUtf8(0), qualitySelector.lookupNameUtf8(0));
+      Assertions.assertNotSame(qualitySelector.lookupNameUtf8(0), qualitySelector.lookupNameUtf8(0));
     }
 
     @Test
     public void test_supportsLookupNameUtf8_quality()
     {
-      Assert.assertTrue(partialNullSelector.supportsLookupNameUtf8());
+      Assertions.assertTrue(partialNullSelector.supportsLookupNameUtf8());
     }
 
     @Test
     public void test_supportsLookupNameUtf8_placementish()
     {
-      Assert.assertTrue(partialNullSelector.supportsLookupNameUtf8());
+      Assertions.assertTrue(partialNullSelector.supportsLookupNameUtf8());
     }
 
     @Test
     public void test_supportsLookupNameUtf8_partialNull()
     {
-      Assert.assertTrue(partialNullSelector.supportsLookupNameUtf8());
+      Assertions.assertTrue(partialNullSelector.supportsLookupNameUtf8());
     }
   }
 
@@ -221,7 +217,7 @@ public class QueryableIndexCursorFactoryTest
     private ColumnSelectorFactory columnSelectorFactory;
     private final Closer closer = Closer.create();
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
       final QueryableIndex index = TestIndex.getMMappedTestIndex();
@@ -231,7 +227,7 @@ public class QueryableIndexCursorFactoryTest
       columnSelectorFactory = cursor.getColumnSelectorFactory();
     }
 
-    @After
+    @AfterEach
     public void testDown() throws IOException
     {
       closer.close();
@@ -245,7 +241,7 @@ public class QueryableIndexCursorFactoryTest
 
       final DimensionSelector dimensionSelector =
           columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("quality_uniques"));
-      Assert.assertNull(dimensionSelector.getObject());
+      Assertions.assertNull(dimensionSelector.getObject());
     }
 
     @Test
@@ -256,7 +252,7 @@ public class QueryableIndexCursorFactoryTest
 
       final DimensionSelector dimensionSelector =
           columnSelectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("index"));
-      Assert.assertEquals("100.0", dimensionSelector.getObject());
+      Assertions.assertEquals("100.0", dimensionSelector.getObject());
     }
 
     @Test

@@ -31,7 +31,6 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.WorkerClient;
@@ -39,7 +38,6 @@ import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerStats;
 import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.error.MSQFault;
-import org.apache.druid.utils.CloseableUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,8 +54,6 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DartWorkerManager implements WorkerManager
 {
-  private static final Logger log = new Logger(DartWorkerManager.class);
-
   private final List<String> workerIds;
   private final List<String> workerDescs;
   private final DartWorkerClient workerClient;
@@ -72,6 +68,14 @@ public class DartWorkerManager implements WorkerManager
     STOPPED
   }
 
+  /**
+   * Creates a new worker manager.
+   *
+   * @param workerIds    Fixed list of IDs of the workers to manage.
+   * @param workerDescs  Descriptions of the workers, same length as {@code workerIds}
+   * @param workerClient Client to use to contact workers. Not owned by this class. It should be closed externally
+   *                     after you are done using this class.
+   */
   public DartWorkerManager(
       final List<String> workerIds,
       final List<String> workerDescs,
@@ -210,7 +214,6 @@ public class DartWorkerManager implements WorkerManager
         }
       }
 
-      CloseableUtils.closeAndSuppressExceptions(workerClient, e -> log.warn(e, "Failed to close workerClient"));
       stopFuture.set(null);
     }
   }

@@ -43,10 +43,10 @@ import org.apache.druid.java.util.emitter.service.ServiceEventBuilder;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,7 +67,7 @@ public class SimpleProvisioningStrategyTest
   private AtomicReference<WorkerBehaviorConfig> workerConfig;
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     autoScaler = EasyMock.createMock(AutoScaler.class);
@@ -104,7 +104,7 @@ public class SimpleProvisioningStrategyTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     executorService.shutdownNow();
@@ -138,9 +138,9 @@ public class SimpleProvisioningStrategyTest
     Provisioner provisioner = strategy.makeProvisioner(runner);
     boolean provisionedSomething = provisioner.doProvision();
 
-    Assert.assertTrue(provisionedSomething);
-    Assert.assertTrue(provisioner.getStats().toList().size() == 1);
-    Assert.assertTrue(
+    Assertions.assertTrue(provisionedSomething);
+    Assertions.assertTrue(provisioner.getStats().toList().size() == 1);
+    Assertions.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
     );
 
@@ -176,21 +176,21 @@ public class SimpleProvisioningStrategyTest
     Provisioner provisioner = strategy.makeProvisioner(runner);
     boolean provisionedSomething = provisioner.doProvision();
 
-    Assert.assertTrue(provisionedSomething);
-    Assert.assertTrue(provisioner.getStats().toList().size() == 1);
+    Assertions.assertTrue(provisionedSomething);
+    Assertions.assertTrue(provisioner.getStats().toList().size() == 1);
     DateTime createdTime = provisioner.getStats().toList().get(0).getTimestamp();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
     );
 
     provisionedSomething = provisioner.doProvision();
 
-    Assert.assertFalse(provisionedSomething);
-    Assert.assertTrue(
+    Assertions.assertFalse(provisionedSomething);
+    Assertions.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
     );
     DateTime anotherCreatedTime = provisioner.getStats().toList().get(0).getTimestamp();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         createdTime.equals(anotherCreatedTime)
     );
 
@@ -234,10 +234,10 @@ public class SimpleProvisioningStrategyTest
     Provisioner provisioner = strategy.makeProvisioner(runner);
     boolean provisionedSomething = provisioner.doProvision();
 
-    Assert.assertTrue(provisionedSomething);
-    Assert.assertTrue(provisioner.getStats().toList().size() == 1);
+    Assertions.assertTrue(provisionedSomething);
+    Assertions.assertTrue(provisioner.getStats().toList().size() == 1);
     DateTime createdTime = provisioner.getStats().toList().get(0).getTimestamp();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
     );
 
@@ -245,12 +245,12 @@ public class SimpleProvisioningStrategyTest
 
     provisionedSomething = provisioner.doProvision();
 
-    Assert.assertFalse(provisionedSomething);
-    Assert.assertTrue(
+    Assertions.assertFalse(provisionedSomething);
+    Assertions.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.PROVISION
     );
     DateTime anotherCreatedTime = provisioner.getStats().toList().get(0).getTimestamp();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         createdTime.equals(anotherCreatedTime)
     );
 
@@ -290,9 +290,9 @@ public class SimpleProvisioningStrategyTest
     Provisioner provisioner = strategy.makeProvisioner(runner);
     boolean terminatedSomething = provisioner.doTerminate();
 
-    Assert.assertTrue(terminatedSomething);
-    Assert.assertTrue(provisioner.getStats().toList().size() == 1);
-    Assert.assertTrue(
+    Assertions.assertTrue(terminatedSomething);
+    Assertions.assertTrue(provisioner.getStats().toList().size() == 1);
+    Assertions.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.TERMINATE
     );
 
@@ -331,17 +331,17 @@ public class SimpleProvisioningStrategyTest
     Provisioner provisioner = strategy.makeProvisioner(runner);
     boolean terminatedSomething = provisioner.doTerminate();
 
-    Assert.assertTrue(terminatedSomething);
-    Assert.assertTrue(provisioner.getStats().toList().size() == 1);
-    Assert.assertTrue(
+    Assertions.assertTrue(terminatedSomething);
+    Assertions.assertTrue(provisioner.getStats().toList().size() == 1);
+    Assertions.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.TERMINATE
     );
 
     terminatedSomething = provisioner.doTerminate();
 
-    Assert.assertFalse(terminatedSomething);
-    Assert.assertTrue(provisioner.getStats().toList().size() == 1);
-    Assert.assertTrue(
+    Assertions.assertFalse(terminatedSomething);
+    Assertions.assertTrue(provisioner.getStats().toList().size() == 1);
+    Assertions.assertTrue(
         provisioner.getStats().toList().get(0).getEvent() == ScalingStats.EVENT.TERMINATE
     );
 
@@ -380,7 +380,7 @@ public class SimpleProvisioningStrategyTest
     Provisioner provisioner = strategy.makeProvisioner(runner);
     boolean terminatedSomething = provisioner.doTerminate();
 
-    Assert.assertFalse(terminatedSomething);
+    Assertions.assertFalse(terminatedSomething);
     EasyMock.verify(autoScaler);
 
     EasyMock.reset(autoScaler);
@@ -392,7 +392,7 @@ public class SimpleProvisioningStrategyTest
 
     boolean provisionedSomething = provisioner.doProvision();
 
-    Assert.assertFalse(provisionedSomething);
+    Assertions.assertFalse(provisionedSomething);
     EasyMock.verify(autoScaler);
     EasyMock.verify(runner);
   }
@@ -423,7 +423,7 @@ public class SimpleProvisioningStrategyTest
 
     Provisioner provisioner = strategy.makeProvisioner(runner);
     boolean terminatedSomething = provisioner.doTerminate();
-    Assert.assertFalse(terminatedSomething);
+    Assertions.assertFalse(terminatedSomething);
     EasyMock.verify(autoScaler);
 
     // Don't provision anything
@@ -434,7 +434,7 @@ public class SimpleProvisioningStrategyTest
             .andReturn(Collections.singletonList("ip"));
     EasyMock.replay(autoScaler);
     boolean provisionedSomething = provisioner.doProvision();
-    Assert.assertFalse(provisionedSomething);
+    Assertions.assertFalse(provisionedSomething);
     EasyMock.verify(autoScaler);
 
     EasyMock.reset(autoScaler);
@@ -452,7 +452,7 @@ public class SimpleProvisioningStrategyTest
     );
     EasyMock.replay(autoScaler);
     provisionedSomething = provisioner.doProvision();
-    Assert.assertTrue(provisionedSomething);
+    Assertions.assertTrue(provisionedSomething);
     EasyMock.verify(autoScaler);
     EasyMock.verify(runner);
   }
@@ -482,8 +482,8 @@ public class SimpleProvisioningStrategyTest
 
     boolean provisionedSomething = provisioner.doProvision();
 
-    Assert.assertFalse(terminatedSomething);
-    Assert.assertFalse(provisionedSomething);
+    Assertions.assertFalse(terminatedSomething);
+    Assertions.assertFalse(provisionedSomething);
 
     EasyMock.verify(autoScaler);
     EasyMock.verify(runner);

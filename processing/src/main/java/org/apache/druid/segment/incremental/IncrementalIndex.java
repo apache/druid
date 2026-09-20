@@ -363,7 +363,8 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
         this.queryGranularity,
         this.rollup,
         getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList()),
-        Collections.emptyList()
+        Collections.emptyList(),
+        null
     );
   }
 
@@ -673,12 +674,12 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     return bytesInMemory;
   }
 
-  private long getMinTimeMillis()
+  protected long getMinTimeMillis()
   {
     return getFacts().getMinTimeMillis();
   }
 
-  private long getMaxTimeMillis()
+  protected long getMaxTimeMillis()
   {
     return getFacts().getMaxTimeMillis();
   }

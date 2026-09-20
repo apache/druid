@@ -23,14 +23,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.internal.AssumptionViolatedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.opentest4j.TestAbortedException;
 
 import java.util.List;
 import java.util.Random;
@@ -43,7 +43,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class PrioritizedExecutorServiceTest
 {
   private PrioritizedExecutorService exec;
@@ -52,7 +53,6 @@ public class PrioritizedExecutorServiceTest
   private final boolean useFifo;
   private final DruidProcessingConfig config;
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(new Object[]{true}, new Object[]{false});
@@ -77,7 +77,7 @@ public class PrioritizedExecutorServiceTest
     };
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     exec = PrioritizedExecutorService.create(
@@ -108,7 +108,7 @@ public class PrioritizedExecutorServiceTest
     finishLatch = new CountDownLatch(3);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     exec.shutdownNow();
@@ -177,10 +177,10 @@ public class PrioritizedExecutorServiceTest
     latch.countDown();
     finishLatch.await();
 
-    Assert.assertTrue(order.size() == 3);
+    Assertions.assertTrue(order.size() == 3);
 
     List<Integer> expected = ImmutableList.of(2, 0, -1);
-    Assert.assertEquals(expected, ImmutableList.copyOf(order));
+    Assertions.assertEquals(expected, ImmutableList.copyOf(order));
   }
 
   @Test
@@ -188,10 +188,10 @@ public class PrioritizedExecutorServiceTest
   {
     final CountDownLatch latch = new CountDownLatch(1);
 
-    Assert.assertThrows(
-        "Class does not implemented PrioritizedRunnable",
+    Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> exec.execute(latch::countDown)
+        () -> exec.execute(latch::countDown),
+        "Class does not implemented PrioritizedRunnable"
     );
   }
 
@@ -268,7 +268,7 @@ public class PrioritizedExecutorServiceTest
           futures.add(exec.submit(getCheckingRunnable(i, hasRun)));
           break;
         default:
-          Assert.fail("Bad random result");
+          Assertions.fail("Bad random result");
       }
     }
     latch.countDown();
@@ -327,7 +327,7 @@ public class PrioritizedExecutorServiceTest
         future.get();
       }
       catch (ExecutionException e) {
-        if (!(e.getCause() instanceof AssumptionViolatedException)) {
+        if (!(e.getCause() instanceof TestAbortedException)) {
           throw e;
         }
       }
@@ -394,9 +394,9 @@ public class PrioritizedExecutorServiceTest
           throw new RuntimeException(e);
         }
         if (useFifo) {
-          Assert.assertEquals(myOrder, hasRun.getAndIncrement());
+          Assertions.assertEquals(myOrder, hasRun.getAndIncrement());
         } else {
-          Assume.assumeTrue(Integer.compare(myOrder, hasRun.getAndIncrement()) == 0);
+          Assumptions.assumeTrue(Integer.compare(myOrder, hasRun.getAndIncrement()) == 0);
         }
       }
     };

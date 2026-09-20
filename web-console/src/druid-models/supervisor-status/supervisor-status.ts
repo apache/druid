@@ -43,6 +43,18 @@ export interface SupervisorStatus {
     state: string;
     detailedState: string;
     recentErrors: SupervisorError[];
+
+    // autocompact
+    scheduleStatus: string;
+    bytesAwaitingCompaction: number;
+    bytesCompacted: number;
+    bytesSkipped: number;
+    segmentCountAwaitingCompaction: number;
+    segmentCountCompacted: number;
+    segmentCountSkipped: number;
+    intervalCountAwaitingCompaction: number;
+    intervalCountCompacted: number;
+    intervalCountSkipped: number;
   };
 }
 

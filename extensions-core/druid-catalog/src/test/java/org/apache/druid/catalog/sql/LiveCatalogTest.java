@@ -27,24 +27,24 @@ import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.catalog.sync.LocalMetadataCatalog;
-import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Arrays;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test for the datasource resolution aspects of the live catalog resolver.
@@ -52,23 +52,23 @@ import static org.junit.Assert.fail;
  */
 public class LiveCatalogTest
 {
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final JUnit5TestDerbyConnector DERBY_CONNECTOR_RULE = new JUnit5TestDerbyConnector();
 
   private CatalogTests.DbFixture dbFixture;
   private CatalogStorage storage;
   private CatalogResolver resolver;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
-    dbFixture = new CatalogTests.DbFixture(derbyConnectorRule);
+    dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTOR_RULE);
     storage = dbFixture.storage;
     MetadataCatalog catalog = new LocalMetadataCatalog(storage, storage.schemaRegistry());
     resolver = new LiveCatalogResolver(catalog);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     CatalogTests.tearDown(dbFixture);

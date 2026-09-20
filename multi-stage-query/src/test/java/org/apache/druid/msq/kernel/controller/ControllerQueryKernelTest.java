@@ -27,8 +27,8 @@ import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.worker.WorkerStagePhase;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -66,43 +66,43 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0), newStageNumbers);
-    Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
 
     // Mark 0 as done. Next up will be 1.
     transitionNewToResultsComplete(controllerQueryKernelTester, 0);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(1), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(1), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
 
     // Mark 1 as done and fetch the new kernels. Next up will be 2.
     transitionNewToResultsComplete(controllerQueryKernelTester, 1);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(2), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(2), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
 
     // Mark 2 as done and fetch the new kernels. Next up will be 3.
     transitionNewToResultsComplete(controllerQueryKernelTester, 2);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0), effectivelyFinishedStageNumbers);
 
     // Mark 3 as done and fetch the new kernels. Next up will be 4.
     transitionNewToResultsComplete(controllerQueryKernelTester, 3);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(4), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(4), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0, 1), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0, 1), effectivelyFinishedStageNumbers);
 
     // Mark 4 as done and fetch new kernels. Next up will be 5.
     transitionNewToResultsComplete(controllerQueryKernelTester, 4);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(5), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(5), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0, 1, 2), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0, 1, 2), effectivelyFinishedStageNumbers);
 
     // Mark 0, 1, 2 finished together.
     effectivelyFinishedStageNumbers.forEach(controllerQueryKernelTester::finishStage);
@@ -110,16 +110,16 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     // Mark 5 as done and fetch new kernels. Next up will be 6, and 3 will be ready to finish.
     transitionNewToResultsComplete(controllerQueryKernelTester, 5);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(6), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(6), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3), effectivelyFinishedStageNumbers);
 
     // Mark 6 as done. No more kernels left, but we can clean up 4, 5, 6 along with 3.
     transitionNewToResultsComplete(controllerQueryKernelTester, 6);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3, 4, 5, 6), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3, 4, 5, 6), effectivelyFinishedStageNumbers);
     effectivelyFinishedStageNumbers.forEach(controllerQueryKernelTester::finishStage);
   }
 
@@ -158,7 +158,7 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     controllerQueryKernelTester.queryDefinition(queryDef);
     controllerQueryKernelTester.init();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             ControllerQueryKernelUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 0),
             ControllerQueryKernelUtilsTest.makeStageGroup(queryDef.getQueryId(), OutputChannelMode.LOCAL_STORAGE, 1),
@@ -175,45 +175,45 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0, 1), newStageNumbers);
-    Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0, 1), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
 
 
     transitionNewToResultsComplete(controllerQueryKernelTester, 1);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
 
 
     // Mark 0 as done and fetch the new kernels. 2 should be unblocked along with 4.
     transitionNewToResultsComplete(controllerQueryKernelTester, 0);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(2, 4), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(2, 4), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
 
 
     // Mark 2 as done and fetch the new kernels. 4 is still ready, 0 can now be cleaned, and 3 can be launched
     transitionNewToResultsComplete(controllerQueryKernelTester, 2);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3, 4), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3, 4), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0), effectivelyFinishedStageNumbers);
 
     // Mark 4 as done and fetch the new kernels. 3 is still ready, and 2 becomes cleanable
     transitionNewToResultsComplete(controllerQueryKernelTester, 4);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0, 2), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0, 2), effectivelyFinishedStageNumbers);
 
     // Mark 3 as post-reading and fetch new kernels. This makes 1 cleanable, and 5 ready to run
     transitionNewToDoneReadingInput(controllerQueryKernelTester, 3);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(5), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(5), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0, 1, 2), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0, 1, 2), effectivelyFinishedStageNumbers);
 
     // Mark 0, 1, 2 finished together
     effectivelyFinishedStageNumbers.forEach(controllerQueryKernelTester::finishStage);
@@ -222,23 +222,23 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     // However, this does clear up 3 to become cleanable
     transitionNewToDoneReadingInput(controllerQueryKernelTester, 5);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3), effectivelyFinishedStageNumbers);
 
     // Mark 5 as done. This makes 6 ready to go
     transitionDoneReadingInputToResultsComplete(controllerQueryKernelTester, 5);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(6), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(6), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3), effectivelyFinishedStageNumbers);
 
     // Mark 6 as done. No more kernels left, but we can clean up 4 and 5 along with 2
     transitionNewToResultsComplete(controllerQueryKernelTester, 6);
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), newStageNumbers);
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3, 4, 5, 6), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3, 4, 5, 6), effectivelyFinishedStageNumbers);
     effectivelyFinishedStageNumbers.forEach(controllerQueryKernelTester::finishStage);
   }
 
@@ -267,8 +267,8 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(0), newStageNumbers);
-    Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(0);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.addPartialKeyStatsInformation(0, 0);
@@ -284,8 +284,8 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(1), newStageNumbers);
-    Assert.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(1), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(1);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(1, 0);
     controllerQueryKernelTester.addPartialKeyStatsInformation(1, 0);
@@ -310,8 +310,8 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(2), newStageNumbers);
-    Assert.assertEquals(ImmutableSet.of(0), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(2), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(0), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(2);
     controllerQueryKernelTester.assertStagePhase(2, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(2, 0);
@@ -322,8 +322,8 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     newStageNumbers = controllerQueryKernelTester.createAndGetNewStageNumbers();
     effectivelyFinishedStageNumbers = controllerQueryKernelTester.getEffectivelyFinishedStageNumbers();
-    Assert.assertEquals(ImmutableSet.of(3), newStageNumbers);
-    Assert.assertEquals(ImmutableSet.of(1), effectivelyFinishedStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(3), newStageNumbers);
+    Assertions.assertEquals(ImmutableSet.of(1), effectivelyFinishedStageNumbers);
     controllerQueryKernelTester.startStage(3);
     controllerQueryKernelTester.assertStagePhase(3, ControllerStagePhase.READING_INPUT);
     controllerQueryKernelTester.startWorkOrder(3);
@@ -415,16 +415,16 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
+        ISE.class,
+        () -> controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0),
         StringUtils.format(
             "Worker[%d] for stage[%d] expected to be in state[%s]. Found state[%s]",
             1,
             0,
             WorkerStagePhase.PRESHUFFLE_WAITING_FOR_RESULT_PARTITION_BOUNDARIES,
             WorkerStagePhase.NEW
-        ),
-        ISE.class,
-        () -> controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0)
+        )
     );
 
   }
@@ -455,60 +455,66 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     controllerQueryKernelTester.failStage(0);
 
-    Assert.assertTrue(controllerQueryKernelTester.isDone());
-    Assert.assertFalse(controllerQueryKernelTester.isSuccess());
+    Assertions.assertTrue(controllerQueryKernelTester.isDone());
+    Assertions.assertFalse(controllerQueryKernelTester.isSuccess());
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.FAILED);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.RESULTS_READY);
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testCycleInvalidQueryThrowsException()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel();
+    Assertions.assertThrows(IllegalStateException.class, () -> {
+      ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel();
 
-    // 0 - 1
-    // \  /
-    //   2
-    controllerQueryKernelTester.queryDefinition(
-        new MockQueryDefinitionBuilder(3)
-            .addEdge(0, 1)
-            .addEdge(1, 2)
-            .addEdge(2, 0)
-            .getQueryDefinitionBuilder()
-            .build()
-    );
+      // 0 - 1
+      // \  /
+      //   2
+      controllerQueryKernelTester.queryDefinition(
+          new MockQueryDefinitionBuilder(3)
+              .addEdge(0, 1)
+              .addEdge(1, 2)
+              .addEdge(2, 0)
+              .getQueryDefinitionBuilder()
+              .build()
+      );
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testSelfLoopInvalidQueryThrowsException()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel();
+    Assertions.assertThrows(IllegalStateException.class, () -> {
+      ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel();
 
-    // 0 _
-    // |__|
-    controllerQueryKernelTester.queryDefinition(
-        new MockQueryDefinitionBuilder(1)
-            .addEdge(0, 0)
-            .getQueryDefinitionBuilder()
-            .build()
-    );
+      // 0 _
+      // |__|
+      controllerQueryKernelTester.queryDefinition(
+          new MockQueryDefinitionBuilder(1)
+              .addEdge(0, 0)
+              .getQueryDefinitionBuilder()
+              .build()
+      );
+    });
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testLoopInvalidQueryThrowsException()
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel();
+    Assertions.assertThrows(IllegalStateException.class, () -> {
+      ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel();
 
-    // 0 - 1
-    // |   |
-    //  ---
-    controllerQueryKernelTester.queryDefinition(
-        new MockQueryDefinitionBuilder(2)
-            .addEdge(0, 1)
-            .addEdge(1, 0)
-            .getQueryDefinitionBuilder()
-            .build()
-    );
+      // 0 - 1
+      // |   |
+      //  ---
+      controllerQueryKernelTester.queryDefinition(
+          new MockQueryDefinitionBuilder(2)
+              .addEdge(0, 1)
+              .addEdge(1, 0)
+              .getQueryDefinitionBuilder()
+              .build()
+      );
+    });
   }
 
   @Test
@@ -533,8 +539,8 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     controllerQueryKernelTester.init();
 
-    Assert.assertFalse(controllerQueryKernelTester.isDone());
-    Assert.assertFalse(controllerQueryKernelTester.isSuccess());
+    Assertions.assertFalse(controllerQueryKernelTester.isDone());
+    Assertions.assertFalse(controllerQueryKernelTester.isSuccess());
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.FINISHED);
     controllerQueryKernelTester.assertStagePhase(1, ControllerStagePhase.RESULTS_READY);
@@ -569,7 +575,7 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
     );
     tester.init();
 
-    Assert.assertEquals(ImmutableSet.of(0), tester.createAndGetNewStageNumbers());
+    Assertions.assertEquals(ImmutableSet.of(0), tester.createAndGetNewStageNumbers());
 
     tester.startStage(0);
     tester.sendWorkOrdersForWorkers(0, 0, 1);
@@ -582,7 +588,7 @@ public class ControllerQueryKernelTest extends BaseControllerQueryKernelTest
 
     // Stage 0 should reach POST_READING; stage 1 should be ready to run
     tester.assertStagePhase(0, ControllerStagePhase.POST_READING);
-    Assert.assertEquals(ImmutableSet.of(1), tester.createAndGetNewStageNumbers());
+    Assertions.assertEquals(ImmutableSet.of(1), tester.createAndGetNewStageNumbers());
   }
 
   private static void transitionNewToResultsComplete(ControllerQueryKernelTester queryKernelTester, int stageNumber)

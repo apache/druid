@@ -879,8 +879,10 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           private boolean[] nullVector = null;
           private int id = ReadableVectorInspector.NULL_ID;
 
-          @Nullable
           private PeekableIntIterator nullIterator = nullBitmap.peekableIterator();
+          /**
+           * One past the highest row id of the previous batch, or -1 before the first batch.
+           */
           private int offsetMark = -1;
 
           @Override
@@ -912,16 +914,14 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               longsColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
             } else {
               final int[] offsets = offset.getOffsets();
-              if (offsets[offsets.length - 1] < offsetMark) {
+              if (offsets[0] < offsetMark) {
                 nullIterator = nullBitmap.peekableIterator();
               }
-              offsetMark = offsets[offsets.length - 1];
+              offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
               longsColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
             }
 
-            if (nullIterator != null) {
-              nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
-            }
+            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
 
             id = offset.getId();
           }
@@ -934,8 +934,10 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
           private boolean[] nullVector = null;
           private int id = ReadableVectorInspector.NULL_ID;
 
-          @Nullable
-          private PeekableIntIterator nullIterator = nullBitmap != null ? nullBitmap.peekableIterator() : null;
+          private PeekableIntIterator nullIterator = nullBitmap.peekableIterator();
+          /**
+           * One past the highest row id of the previous batch, or -1 before the first batch.
+           */
           private int offsetMark = -1;
 
           @Override
@@ -967,16 +969,14 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               doublesColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
             } else {
               final int[] offsets = offset.getOffsets();
-              if (offsets[offsets.length - 1] < offsetMark) {
+              if (offsets[0] < offsetMark) {
                 nullIterator = nullBitmap.peekableIterator();
               }
-              offsetMark = offsets[offsets.length - 1];
+              offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
               doublesColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
             }
 
-            if (nullIterator != null) {
-              nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
-            }
+            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
 
             id = offset.getId();
           }
@@ -993,8 +993,10 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
         private boolean[] nullVector = null;
         private int id = ReadableVectorInspector.NULL_ID;
 
-        @Nullable
-        private PeekableIntIterator nullIterator = nullBitmap != null ? nullBitmap.peekableIterator() : null;
+        private PeekableIntIterator nullIterator = nullBitmap.peekableIterator();
+        /**
+         * One past the highest row id of the previous batch, or -1 before the first batch.
+         */
         private int offsetMark = -1;
 
         @Override
@@ -1026,10 +1028,10 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
             column.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
           } else {
             final int[] offsets = offset.getOffsets();
-            if (offsets[offsets.length - 1] < offsetMark) {
+            if (offsets[0] < offsetMark) {
               nullIterator = nullBitmap.peekableIterator();
             }
-            offsetMark = offsets[offsets.length - 1];
+            offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
             column.get(idVector, offsets, offset.getCurrentVectorSize());
           }
           for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
@@ -1044,9 +1046,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
             }
           }
 
-          if (nullIterator != null) {
-            nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
-          }
+          nullVector = VectorSelectorUtils.populateNullVector(nullVector, offset, nullIterator);
 
           id = offset.getId();
         }

@@ -20,8 +20,8 @@
 package org.apache.druid.query.aggregation.variance;
 
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
@@ -35,13 +35,13 @@ public class VarianceSerdeTest
     Random r = ThreadLocalRandom.current();
     VarianceAggregatorCollector holder = new VarianceAggregatorCollector();
     ObjectStrategy strategy = new VarianceSerde().getObjectStrategy();
-    Assert.assertFalse(strategy.readRetainsBufferReference());
-    Assert.assertEquals(VarianceAggregatorCollector.class, strategy.getClazz());
+    Assertions.assertFalse(strategy.readRetainsBufferReference());
+    Assertions.assertEquals(VarianceAggregatorCollector.class, strategy.getClazz());
 
     for (int i = 0; i < 100; i++) {
       byte[] array = strategy.toBytes(holder);
-      Assert.assertArrayEquals(array, holder.toByteArray());
-      Assert.assertEquals(holder, strategy.fromByteBuffer(ByteBuffer.wrap(array), array.length));
+      Assertions.assertArrayEquals(array, holder.toByteArray());
+      Assertions.assertEquals(holder, strategy.fromByteBuffer(ByteBuffer.wrap(array), array.length));
       holder.add(r.nextFloat());
     }
   }

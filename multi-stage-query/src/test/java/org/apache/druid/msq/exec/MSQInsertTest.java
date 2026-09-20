@@ -26,6 +26,8 @@ import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.catalog.MapMetadataCatalog;
+import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
+import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
@@ -36,6 +38,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -67,6 +70,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.AggregateProjectionMetadata;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -76,10 +80,9 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -230,6 +233,62 @@ public class MSQInsertTest extends MSQTestBase
                             )
                         )
                     )
+                    .buildSpec()
+    );
+    metadataCatalog.addSpec(
+        TableId.datasource("fooClustered"),
+        TableBuilder.datasource("fooClustered", Granularities.DAY.toString())
+                    // declared order is the physical segment order: the clustering column leads
+                    .column("channel", Columns.SQL_VARCHAR)
+                    .timeColumn()
+                    .column("page", Columns.SQL_VARCHAR)
+                    .column("user", Columns.SQL_VARCHAR)
+                    .column("added", Columns.SQL_BIGINT)
+                    .column("deleted", Columns.SQL_BIGINT)
+                    .column("delta", Columns.SQL_BIGINT)
+                    .sealed(true)
+                    .baseTable(
+                        new ClusteredValueGroupsBaseTableMetadata(
+                            ImmutableList.of("channel"),
+                            null,
+                            // customize the segment-creation schema of a declared column: 'user' is stored as an
+                            // auto column cast to its declared VARCHAR type (the logical schema is unchanged)
+                            ImmutableList.of(new AutoTypeColumnSchema("user", ColumnType.STRING, null))
+                        )
+                    )
+                    .property(
+                        DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                        ImmutableList.of(
+                            new DatasourceProjectionMetadata(
+                                AggregateProjectionSpec.builder("channel_added_hourly")
+                                                       .virtualColumns(
+                                                           Granularities.toVirtualColumn(
+                                                               Granularities.HOUR,
+                                                               Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                                           )
+                                                       )
+                                                       .groupingColumns(
+                                                           new LongDimensionSchema(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
+                                                           new StringDimensionSchema("channel")
+                                                       )
+                                                       .aggregators(
+                                                           new LongSumAggregatorFactory("sum_added", "added")
+                                                       )
+                                                       .build()
+                            )
+                        )
+                    )
+                    .buildSpec()
+    );
+    metadataCatalog.addSpec(
+        TableId.datasource("fooClusteredUnsealed"),
+        // Not sealed: the table declares the layout it cares about (clustering column, time position, delta) and lets
+        // a query bring whatever else it produces.
+        TableBuilder.datasource("fooClusteredUnsealed", Granularities.DAY.toString())
+                    .column("channel", Columns.SQL_VARCHAR)
+                    .timeColumn()
+                    .column("delta", Columns.SQL_BIGINT)
+                    .baseTable(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("channel"), null, null))
                     .buildSpec()
     );
     return new LiveCatalogResolver(metadataCatalog);
@@ -698,15 +757,252 @@ public class MSQInsertTest extends MSQTestBase
                              + "  )\n"
                              + ") PARTITIONED by day")
                      .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                                 "projection[channel_delta_daily] contains aggregator[sum_delta] that is missing required field[delta] in base table")
-                             )
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(
+                             "projection[channel_delta_daily] contains aggregator[sum_delta] that is missing required field[delta] in base table"
                          )
                      )
                      .verifyExecutionError();
 
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnExternalDataSourceWithCatalogClusteredBaseTable(
+      String contextName,
+      Map<String, Object> context
+  ) throws IOException
+  {
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    // The physical spec uses the declared catalog columns verbatim: the declared order is the segment order, with
+    // the clustering prefix leading and __time an explicit positional column.
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("channel", ColumnType.STRING)
+                                            .add("__time", ColumnType.LONG)
+                                            .add("page", ColumnType.STRING)
+                                            .add("user", ColumnType.STRING)
+                                            .add("added", ColumnType.LONG)
+                                            .add("deleted", ColumnType.LONG)
+                                            .add("delta", ColumnType.LONG)
+                                            .build();
+
+    // The catalog also declares a projection: aggregate projections are segment-wide views that coexist with the
+    // per-group clustered layout.
+    AggregateProjectionMetadata expectedProjection = new AggregateProjectionMetadata(
+        AggregateProjectionSchema.schemaBuilder("channel_added_hourly")
+                                 .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+                                 .virtualColumns(
+                                       Granularities.toVirtualColumn(
+                                           Granularities.HOUR,
+                                           Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+                                       )
+                                   )
+                                 .groupAndOrder(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "channel")
+                                 .aggregators(new LongSumAggregatorFactory("sum_added", "added"))
+                                 .build(),
+        16
+    );
+
+    testIngestQuery().setSql(" insert into fooClustered SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to minute) AS __time,\n"
+                             + "  channel,\n"
+                             + "  page,\n"
+                             + "  user,\n"
+                             + "  added,\n"
+                             + "  deleted,\n"
+                             + "  delta\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by day ")
+                     .setExpectedDataSource("fooClustered")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
+                         "fooClustered",
+                         Intervals.of("2016-06-27/P1D"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedProjections(List.of(expectedProjection))
+                     .setExpectedClusterGroups(
+                         new ClusterGroupTuples(
+                             RowSignature.builder().add("channel", ColumnType.STRING).build(),
+                             ImmutableList.of(
+                                 ImmutableList.of("#ceb.wikipedia"),
+                                 ImmutableList.of("#de.wikipedia"),
+                                 ImmutableList.of("#en.wikipedia"),
+                                 ImmutableList.of("#es.wikipedia"),
+                                 ImmutableList.of("#id.wikipedia"),
+                                 ImmutableList.of("#pl.wikipedia"),
+                                 ImmutableList.of("#pt.wikipedia"),
+                                 ImmutableList.of("#ru.wikipedia"),
+                                 ImmutableList.of("#sh.wikipedia"),
+                                 ImmutableList.of("#sv.wikipedia"),
+                                 ImmutableList.of("#zh.wikipedia")
+                             )
+                         )
+                     )
+                     // Rows are read back in segment order: cluster groups in clustering-value order, each group
+                     // internally ordered by the derived column order (channel, __time, page, ...).
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{"#ceb.wikipedia", 1466985660000L, "Neqerssuaq", "Lsjbot", 4150L, 0L, 4150L},
+                             new Object[]{"#de.wikipedia", 1466992920000L, "Benutzer Diskussion:Squasher/Archiv/2016", "TaxonBot", 2560L, 0L, 2560L},
+                             new Object[]{"#de.wikipedia", 1466992980000L, "Benutzer Diskussion:HerrSonderbar", "GiftBot", 364L, 0L, 364L},
+                             new Object[]{"#en.wikipedia", 1466985600000L, "Bailando 2015", "181.230.118.178", 2L, 0L, 2L},
+                             new Object[]{"#en.wikipedia", 1466985600000L, "Richie Rich's Christmas Wish", "JasonAQuest", 0L, 2L, -2L},
+                             new Object[]{"#en.wikipedia", 1466985660000L, "Panama Canal", "Mariordo", 496L, 0L, 496L},
+                             new Object[]{"#en.wikipedia", 1466992980000L, "File:Paint.net 4.0.6 screenshot.png", "Calvin Hogg", 0L, 463L, -463L},
+                             new Object[]{"#es.wikipedia", 1466985660000L, "Sumo (banda)", "181.110.165.189", 0L, 173L, -173L},
+                             new Object[]{"#es.wikipedia", 1466989320000L, "Clasificación para la Eurocopa Sub-21 de 2017", "Guly600", 4L, 0L, 4L},
+                             new Object[]{"#id.wikipedia", 1466989320000L, "Ibnu Sina", "Ftihikam", 106L, 0L, 106L},
+                             new Object[]{"#pl.wikipedia", 1466985600000L, "Kategoria:Dyskusje nad usunięciem artykułu zakończone bez konsensusu − lipiec 2016", "Beau.bot", 270L, 0L, 270L},
+                             new Object[]{"#pt.wikipedia", 1466992920000L, "Dobromir Zhechev", "Ceresta", 1926L, 0L, 1926L},
+                             new Object[]{"#ru.wikipedia", 1466985720000L, "Википедия:Опросы/Унификация шаблонов «Не переведено»", "Wanderer777", 196L, 0L, 196L},
+                             new Object[]{"#sh.wikipedia", 1466985660000L, "El Terco, Bachíniva", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{"#sh.wikipedia", 1466985720000L, "Hermanos Díaz, Ascensión", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{"#sh.wikipedia", 1466989320000L, "El Sicomoro, Ascensión", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{"#sh.wikipedia", 1466992920000L, "Trinidad Jiménez G., Benemérito de las Américas", "Kolega2357", 0L, 1L, -1L},
+                             new Object[]{"#sv.wikipedia", 1466985600000L, "Salo Toraut", "Lsjbot", 31L, 0L, 31L},
+                             new Object[]{"#zh.wikipedia", 1466989320000L, "中共十八大以来的反腐败工作", "2001:DA8:207:E132:94DC:BA03:DFDF:8F9F", 18L, 0L, 18L},
+                             new Object[]{"#zh.wikipedia", 1466992920000L, "Wikipedia:頁面存廢討論/記錄/2016/06/27", "Tigerzeng", 1986L, 0L, 1986L}
+                         )
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(20),
+                         1, 0
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnExternalDataSourceWithUnsealedCatalogClusteredBaseTable(
+      String contextName,
+      Map<String, Object> context
+  ) throws IOException
+  {
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    // The table declares only channel, __time and delta. The other four columns the query produces are appended after
+    // them in query output order, so the declared layout (clustering prefix, time position) is unchanged and nothing
+    // the query selected is dropped.
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("channel", ColumnType.STRING)
+                                            .add("__time", ColumnType.LONG)
+                                            .add("delta", ColumnType.LONG)
+                                            .add("page", ColumnType.STRING)
+                                            .add("user", ColumnType.STRING)
+                                            .add("added", ColumnType.LONG)
+                                            .add("deleted", ColumnType.LONG)
+                                            .build();
+
+    testIngestQuery().setSql(" insert into fooClusteredUnsealed SELECT\n"
+                             + "  floor(TIME_PARSE(\"timestamp\") to minute) AS __time,\n"
+                             + "  channel,\n"
+                             + "  page,\n"
+                             + "  user,\n"
+                             + "  added,\n"
+                             + "  deleted,\n"
+                             + "  delta\n"
+                             + "FROM TABLE(\n"
+                             + "  EXTERN(\n"
+                             + "    '{ \"files\": [" + toReadFileNameAsJson + "],\"type\":\"local\"}',\n"
+                             + "    '{\"type\": \"json\"}',\n"
+                             + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"channel\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}, {\"name\": \"added\", \"type\": \"long\"}, {\"name\": \"deleted\", \"type\": \"long\"}, {\"name\": \"delta\", \"type\": \"long\"}]'\n"
+                             + "  )\n"
+                             + ") PARTITIONED by day ")
+                     .setExpectedDataSource("fooClusteredUnsealed")
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
+                         "fooClusteredUnsealed",
+                         Intervals.of("2016-06-27/P1D"),
+                         "test",
+                         0
+                     )))
+                     // The appended columns are not clustered on; clustering is what the table declared.
+                     .setExpectedClusterGroups(
+                         new ClusterGroupTuples(
+                             RowSignature.builder().add("channel", ColumnType.STRING).build(),
+                             ImmutableList.of(
+                                 ImmutableList.of("#ceb.wikipedia"),
+                                 ImmutableList.of("#de.wikipedia"),
+                                 ImmutableList.of("#en.wikipedia"),
+                                 ImmutableList.of("#es.wikipedia"),
+                                 ImmutableList.of("#id.wikipedia"),
+                                 ImmutableList.of("#pl.wikipedia"),
+                                 ImmutableList.of("#pt.wikipedia"),
+                                 ImmutableList.of("#ru.wikipedia"),
+                                 ImmutableList.of("#sh.wikipedia"),
+                                 ImmutableList.of("#sv.wikipedia"),
+                                 ImmutableList.of("#zh.wikipedia")
+                             )
+                         )
+                     )
+                     // Rows are read back in segment order, which now sorts by delta ahead of the appended columns.
+                     .setExpectedResultRows(
+                         ImmutableList.of(
+                             new Object[]{"#ceb.wikipedia", 1466985660000L, 4150L, "Neqerssuaq", "Lsjbot", 4150L, 0L},
+                             new Object[]{"#de.wikipedia", 1466992920000L, 2560L, "Benutzer Diskussion:Squasher/Archiv/2016", "TaxonBot", 2560L, 0L},
+                             new Object[]{"#de.wikipedia", 1466992980000L, 364L, "Benutzer Diskussion:HerrSonderbar", "GiftBot", 364L, 0L},
+                             new Object[]{"#en.wikipedia", 1466985600000L, -2L, "Richie Rich's Christmas Wish", "JasonAQuest", 0L, 2L},
+                             new Object[]{"#en.wikipedia", 1466985600000L, 2L, "Bailando 2015", "181.230.118.178", 2L, 0L},
+                             new Object[]{"#en.wikipedia", 1466985660000L, 496L, "Panama Canal", "Mariordo", 496L, 0L},
+                             new Object[]{"#en.wikipedia", 1466992980000L, -463L, "File:Paint.net 4.0.6 screenshot.png", "Calvin Hogg", 0L, 463L},
+                             new Object[]{"#es.wikipedia", 1466985660000L, -173L, "Sumo (banda)", "181.110.165.189", 0L, 173L},
+                             new Object[]{"#es.wikipedia", 1466989320000L, 4L, "Clasificación para la Eurocopa Sub-21 de 2017", "Guly600", 4L, 0L},
+                             new Object[]{"#id.wikipedia", 1466989320000L, 106L, "Ibnu Sina", "Ftihikam", 106L, 0L},
+                             new Object[]{"#pl.wikipedia", 1466985600000L, 270L, "Kategoria:Dyskusje nad usunięciem artykułu zakończone bez konsensusu − lipiec 2016", "Beau.bot", 270L, 0L},
+                             new Object[]{"#pt.wikipedia", 1466992920000L, 1926L, "Dobromir Zhechev", "Ceresta", 1926L, 0L},
+                             new Object[]{"#ru.wikipedia", 1466985720000L, 196L, "Википедия:Опросы/Унификация шаблонов «Не переведено»", "Wanderer777", 196L, 0L},
+                             new Object[]{"#sh.wikipedia", 1466985660000L, -1L, "El Terco, Bachíniva", "Kolega2357", 0L, 1L},
+                             new Object[]{"#sh.wikipedia", 1466985720000L, -1L, "Hermanos Díaz, Ascensión", "Kolega2357", 0L, 1L},
+                             new Object[]{"#sh.wikipedia", 1466989320000L, -1L, "El Sicomoro, Ascensión", "Kolega2357", 0L, 1L},
+                             new Object[]{"#sh.wikipedia", 1466992920000L, -1L, "Trinidad Jiménez G., Benemérito de las Américas", "Kolega2357", 0L, 1L},
+                             new Object[]{"#sv.wikipedia", 1466985600000L, 31L, "Salo Toraut", "Lsjbot", 31L, 0L},
+                             new Object[]{"#zh.wikipedia", 1466989320000L, 18L, "中共十八大以来的反腐败工作", "2001:DA8:207:E132:94DC:BA03:DFDF:8F9F", 18L, 0L},
+                             new Object[]{"#zh.wikipedia", 1466992920000L, 1986L, "Wikipedia:頁面存廢討論/記錄/2016/06/27", "Tigerzeng", 1986L, 0L}
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testInsertOnUnsealedCatalogClusteredBaseTableUnstorableColumn(
+      String contextName,
+      Map<String, Object> context
+  )
+  {
+    // A base table stores columns as dimensions, so an undeclared sketch column has nowhere to go: it could only be
+    // stored as a metric, and a base table declares its own metrics.
+    testIngestQuery().setSql(
+                         "insert into fooClusteredUnsealed "
+                         + "select __time, dim1 as channel, cnt as delta, unique_dim1 as unique_users "
+                         + "from foo partitioned by day"
+                     )
+                     .setQueryContext(context)
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(
+                             "Column [unique_users] has type [COMPLEX<hyperUnique>], which cannot be stored in a"
+                             + " base table that does not declare it. Declare the column in the table, or cast it"
+                             + " to a type that can be stored as a dimension"
+                         )
+                     )
+                     .verifyExecutionError();
   }
 
   @MethodSource("data")
@@ -1247,12 +1543,11 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
                      .setQueryContext(localContext)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(
+                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
                          )
-                     ))
+                     )
                      .verifyExecutionError();
   }
 
@@ -1263,12 +1558,11 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "SET groupByEnableMultiValueUnnesting = false; INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
                      .setQueryContext(context)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(
+                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
                          )
-                     ))
+                     )
                      .verifyExecutionError();
   }
 
@@ -1744,11 +2038,9 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedDataSource("foo")
                      .setQueryContext(context)
                      .setExpectedMSQFault(new RowTooLargeFault(500))
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Row too large to add to frame"))
-                     ))
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains("Row too large to add to frame")
+                     )
                      .verifyExecutionError();
   }
 

@@ -63,7 +63,7 @@ public class ByteEntity implements InputEntity
   }
 
   @Override
-  public InputStream open()
+  public InputStream openRaw()
   {
     return new ByteBufferInputStream(buffer.duplicate());
   }

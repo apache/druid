@@ -21,8 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.tuple;
 
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUpdatableSketch;
 import org.apache.datasketches.tuple.arrayofdoubles.ArrayOfDoublesUpdatableSketchBuilder;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -33,7 +33,7 @@ public class ArrayOfDoublesSketchObjectStrategyTest
   public void testSafeRead()
   {
     ArrayOfDoublesSketchObjectStrategy objectStrategy = new ArrayOfDoublesSketchObjectStrategy();
-    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
+    Assertions.assertTrue(objectStrategy.readRetainsBufferReference());
     ArrayOfDoublesUpdatableSketch sketch = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(1024)
                                                                                      .setNumberOfValues(4)
                                                                                      .build();
@@ -54,7 +54,7 @@ public class ArrayOfDoublesSketchObjectStrategyTest
       }
 
       final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
-      Assert.assertThrows(
+      Assertions.assertThrows(
           IndexOutOfBoundsException.class,
           () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).compact().toByteArray()
       );
@@ -63,7 +63,7 @@ public class ArrayOfDoublesSketchObjectStrategyTest
     // non sketch that is too short to contain header should fail with regular java buffer exception
     final byte[] garbage = new byte[]{0x01, 0x02};
     final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IndexOutOfBoundsException.class,
         () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).compact().toByteArray()
     );

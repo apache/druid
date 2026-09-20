@@ -20,9 +20,11 @@
 package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -60,7 +62,39 @@ public class KafkaResourceTest
     final String topicName = "test-topic";
     resource.createTopicWithPartitions(topicName, 3);
     assertEquals(Set.of(topicName), resource.listTopics());
+
+    // Verify that every partition can accept records immediately after creating a topic.
+    resource.produceRecordsWithoutTransaction(
+        List.of(
+            new ProducerRecord<>(topicName, 0, null, new byte[]{1}),
+            new ProducerRecord<>(topicName, 1, null, new byte[]{1}),
+            new ProducerRecord<>(topicName, 2, null, new byte[]{1})
+        )
+    );
+    assertEquals(
+        Map.of("0", 1L, "1", 1L, "2", 1L),
+        resource.getPartitionOffsets(topicName)
+    );
     resource.deleteTopic(topicName);
+
+    final String expandedTopicName = "test-expanded-topic";
+    resource.createTopicWithPartitions(expandedTopicName, 2);
+    resource.increasePartitionsInTopic(expandedTopicName, 4);
+
+    // Verify that every partition can accept records immediately after increasing the partition count.
+    resource.produceRecordsWithoutTransaction(
+        List.of(
+            new ProducerRecord<>(expandedTopicName, 0, null, new byte[]{1}),
+            new ProducerRecord<>(expandedTopicName, 1, null, new byte[]{1}),
+            new ProducerRecord<>(expandedTopicName, 2, null, new byte[]{1}),
+            new ProducerRecord<>(expandedTopicName, 3, null, new byte[]{1})
+        )
+    );
+    assertEquals(
+        Map.of("0", 1L, "1", 1L, "2", 1L, "3", 1L),
+        resource.getPartitionOffsets(expandedTopicName)
+    );
+    resource.deleteTopic(expandedTopicName);
 
     resource.stop();
     assertFalse(resource.isRunning());

@@ -35,6 +35,7 @@ import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
@@ -46,6 +47,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -58,6 +60,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -90,21 +93,27 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       Map<String, Object> consumerProperties,
       ObjectMapper sortingMapper,
       KafkaConfigOverrides configOverrides,
-      boolean multiTopic
+      boolean multiTopic,
+      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic);
+    this(
+        getKafkaConsumer(sortingMapper, consumerProperties, configOverrides),
+        multiTopic,
+        metricBuilderSupplier
+    );
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(
       KafkaConsumer<byte[], byte[]> consumer,
-      boolean multiTopic
+      boolean multiTopic,
+      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
-    this.monitor = new KafkaConsumerMonitor(consumer);
+    this.monitor = new KafkaConsumerMonitor(consumer, metricBuilderSupplier);
   }
 
   @Override

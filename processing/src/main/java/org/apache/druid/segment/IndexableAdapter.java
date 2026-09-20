@@ -28,6 +28,7 @@ import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.nested.FieldTypeInfo;
 import org.apache.druid.segment.nested.SortedValueDictionary;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -65,6 +66,15 @@ public interface IndexableAdapter
   TransformableRowIterator getRows();
 
   IndexableAdapter getProjectionAdapter(String projection);
+
+  /**
+   * Returns an {@link IndexableAdapter} scoped to a single cluster group's data, for adapters whose underlying
+   * index is a clustered base table. Implementations that don't support clustered base tables should throw a
+   * {@link org.apache.druid.error.DruidException}.
+   *
+   * @param spec the per-tuple cluster group from the adapter's {@link Metadata#getClusteredBaseTable()} schema
+   */
+  IndexableAdapter getClusterGroupAdapter(TableClusterGroupSpec spec);
 
   BitmapValues getBitmapValues(String dimension, int dictId);
 

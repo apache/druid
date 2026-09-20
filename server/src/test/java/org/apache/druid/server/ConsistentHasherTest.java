@@ -24,8 +24,8 @@ import com.google.common.hash.Hashing;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.router.ConsistentHasher;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,7 +64,7 @@ public class ConsistentHasherTest
     for (int i = 0; i < 2; i++) {
       for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
         String targetServer = hasher.findKey(StringUtils.toUtf8(entry.getKey()));
-        Assert.assertEquals(entry.getValue(), targetServer);
+        Assertions.assertEquals(entry.getValue(), targetServer);
       }
     }
   }
@@ -106,7 +106,7 @@ public class ConsistentHasherTest
 
     // ~1/6 of the entries should change, check that less than 1/5 of the entries hash differently
     double diffRatio = ((double) diff) / NUM_ITERATIONS;
-    Assert.assertTrue(diffRatio < 0.20);
+    Assertions.assertTrue(diffRatio < 0.20);
   }
 
   @Test
@@ -146,7 +146,7 @@ public class ConsistentHasherTest
 
     // ~1/5 of the entries should change, check that less than 1/4 of the entries hash differently
     double diffRatio = ((double) diff) / NUM_ITERATIONS;
-    Assert.assertTrue(diffRatio < 0.25);
+    Assertions.assertTrue(diffRatio < 0.25);
   }
 
   @Test
@@ -258,6 +258,6 @@ public class ConsistentHasherTest
     log.info(StringUtils.format("%s Total: %s, Same: %s, Diff: %s", testName, NUM_ITERATIONS, same, diff));
     log.info("Expected diff ratio: %s, Actual diff ratio: %s", expectedDiffRatio, actualDiffRatio);
 
-    Assert.assertTrue(actualDiffRatio <= expectedDiffRatio);
+    Assertions.assertTrue(actualDiffRatio <= expectedDiffRatio);
   }
 }

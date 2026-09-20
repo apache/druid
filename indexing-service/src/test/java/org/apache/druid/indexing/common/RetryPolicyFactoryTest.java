@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common;
 
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class RetryPolicyFactoryTest
 {
@@ -35,7 +35,7 @@ public class RetryPolicyFactoryTest
         .setMaxRetryCount(1);
     RetryPolicyFactory retryPolicyFactory = new RetryPolicyFactory(config);
     RetryPolicy retryPolicy = retryPolicyFactory.makeRetryPolicy();
-    Assert.assertEquals(new Duration("PT1S"), retryPolicy.getAndIncrementRetryDelay());
-    Assert.assertTrue(retryPolicy.hasExceededRetryThreshold());
+    Assertions.assertEquals(new Duration("PT1S"), retryPolicy.getAndIncrementRetryDelay());
+    Assertions.assertTrue(retryPolicy.hasExceededRetryThreshold());
   }
 }

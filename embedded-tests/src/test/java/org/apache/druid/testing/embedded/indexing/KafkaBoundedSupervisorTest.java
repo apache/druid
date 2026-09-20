@@ -23,11 +23,13 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -39,12 +41,26 @@ import java.util.Map;
  */
 public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 {
+  // Allow two minutes for bounded-supervisor cold start, ingestion, and segment publication on CI.
+  // This is a maximum wait, not a fixed delay; successful waits return as soon as the metric is emitted.
+  private static final long BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS = 120_000L;
+
   private final KafkaResource kafkaServer = new KafkaResource();
 
   @Override
   protected StreamIngestResource<?> getStreamIngestResource()
   {
     return kafkaServer;
+  }
+
+  @Override
+  protected KafkaSupervisorSpecBuilder createKafkaSupervisor(KafkaResource kafkaServer)
+  {
+    // Use a moderate segment size to avoid the shared fixture's one-row segment rollover overhead while
+    // retaining normal segment publication behavior. These tests assert offsets, row counts, and supervisor
+    // state, not segment count, so 100 does not change their semantics.
+    return super.createKafkaSupervisor(kafkaServer)
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(100));
   }
 
   @Override
@@ -87,8 +103,9 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     cluster.callApi().postSupervisor(supervisor);
 
-    // Wait for records to be ingested
-    waitUntilPublishedRecordsAreIngested(totalRecords);
+    // Bounded supervisor cold start (post supervisor -> schedule task -> consume -> publish) can exceed
+    // the cluster default wait on CI; give it a generous ceiling.
+    waitUntilPublishedRecordsAreIngested(totalRecords, BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS);
 
     // Wait for supervisor to transition to COMPLETED state
     waitForSupervisorToComplete(supervisor.getId());
@@ -156,6 +173,21 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     Assertions.assertEquals("UNHEALTHY_SUPERVISOR", status.getState());
   }
 
+  /**
+   * Task duration for bounded supervisors in this test. The shared fixture uses a 500ms
+   * taskDuration so that unbounded tasks publish quickly, but a bounded task publishes on
+   * its own when it reaches its end offset. With the short duration, a bounded task that
+   * has not consumed its whole range within one supervisor cycle is rolled over at its
+   * current offset, and each successor task is rolled over again before the Kafka consumer
+   * finishes starting, so the supervisor never reaches the end offset.
+   * <p>
+   * 10 seconds is an order of magnitude above the time a bounded task in this class needs
+   * to start and consume its range. It is deliberately not longer: a task that pauses for a
+   * checkpoint and is not resumed by the supervisor only recovers at the next rollover, so
+   * the duration also caps how long such a stall can hold a test.
+   */
+  private static final Period BOUNDED_TASK_DURATION = Period.seconds(10);
+
   private KafkaSupervisorSpec createBoundedKafkaSupervisor(
       KafkaResource kafkaServer,
       String topic,
@@ -165,6 +197,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     return createKafkaSupervisor(kafkaServer)
         .withIoConfig(io -> io
             .withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null))
+            .withTaskDuration(BOUNDED_TASK_DURATION)
             .withBoundedStreamConfig(boundedConfig)
         )
         .build(dataSource, topic);
@@ -202,7 +235,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     cluster.callApi().postSupervisor(supervisor1);
 
     // Wait for records to be ingested (approximately 200 records total from both partitions)
-    waitUntilPublishedRecordsAreIngested(200);
+    waitUntilPublishedRecordsAreIngested(200, BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS);
 
     // Wait for supervisor to transition to COMPLETED state
     waitForSupervisorToComplete(supervisor1.getId());
@@ -264,7 +297,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     final KafkaSupervisorSpec supervisor1 = createBoundedKafkaSupervisor(kafkaServer, topic, boundedConfig1);
 
     cluster.callApi().postSupervisor(supervisor1);
-    waitUntilPublishedRecordsAreIngested(250);
+    waitUntilPublishedRecordsAreIngested(250, BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS);
     waitForSupervisorToComplete(supervisor1.getId());
 
     final SupervisorStatus status1 = cluster.callApi().getSupervisorStatus(supervisor1.getId());

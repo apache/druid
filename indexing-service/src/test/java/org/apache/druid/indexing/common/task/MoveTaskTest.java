@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.task;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class MoveTaskTest
 {
@@ -38,6 +38,6 @@ public class MoveTaskTest
         null
     );
 
-    Assert.assertTrue(task.getInputSourceResources().isEmpty());
+    Assertions.assertTrue(task.getInputSourceResources().isEmpty());
   }
 }

@@ -27,6 +27,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.config.ConfigManager;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -51,9 +54,6 @@ import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -161,14 +161,20 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         settableFuture
     );
 
+    expectCleanupOfCompletedJobs();
     replayAll();
 
-    runner.start();
+    try {
+      runner.start();
 
-    verifyAll();
+      verifyAll();
 
-    Assertions.assertNotNull(runner.tasks);
-    Assertions.assertEquals(1, runner.tasks.size());
+      Assertions.assertNotNull(runner.tasks);
+      Assertions.assertEquals(1, runner.tasks.size());
+    }
+    finally {
+      runner.stop();
+    }
   }
 
   @Test
@@ -247,14 +253,20 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
         settableFuture
     );
 
+    expectCleanupOfCompletedJobs();
     replayAll();
 
-    runner.start();
+    try {
+      runner.start();
 
-    verifyAll();
+      verifyAll();
 
-    Assertions.assertNotNull(runner.tasks);
-    Assertions.assertEquals(1, runner.tasks.size());
+      Assertions.assertNotNull(runner.tasks);
+      Assertions.assertEquals(1, runner.tasks.size());
+    }
+    finally {
+      runner.stop();
+    }
   }
 
   @Test
@@ -286,14 +298,32 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskAdapter.toTask(job)).andThrow(new IOException());
 
+    expectCleanupOfCompletedJobs();
     replayAll();
 
-    runner.start();
+    try {
+      runner.start();
 
-    verifyAll();
+      verifyAll();
 
-    Assertions.assertNotNull(runner.tasks);
-    Assertions.assertEquals(0, runner.tasks.size());
+      Assertions.assertNotNull(runner.tasks);
+      Assertions.assertEquals(0, runner.tasks.size());
+    }
+    finally {
+      runner.stop();
+    }
+  }
+
+  /**
+   * {@link KubernetesTaskRunner#start()} schedules the cleanup of completed peon jobs on a background executor with
+   * an initial delay of 1 ms. Whether the first cleanup runs before {@link #verifyAll()} depends on thread scheduling,
+   * so the call must be allowed any number of times to keep the tests deterministic.
+   */
+  private void expectCleanupOfCompletedJobs()
+  {
+    EasyMock.expect(peonClient.deleteCompletedPeonJobsOlderThan(EasyMock.anyLong(), EasyMock.eq(TimeUnit.MILLISECONDS)))
+            .andReturn(0)
+            .anyTimes();
   }
 
   @Test

@@ -62,6 +62,12 @@ public class AWSClientUtil
       "Throttling"
   );
 
+  private static final String UNABLE_TO_LOAD_CREDENTIALS_FROM_PROVIDER_CHAIN =
+      "Unable to load credentials from any of the providers in the chain";
+  private static final String FAILED_TO_LOAD_CREDENTIALS_FROM_IMDS = "Failed to load credentials from IMDS";
+  private static final String CANNOT_REFRESH_AWS_CREDENTIALS = "cannot refresh AWS credentials";
+  private static final String CANNOT_FETCH_CREDENTIALS_FROM_CONTAINER = "Cannot fetch credentials from container";
+
   /**
    * Checks whether an exception can be retried or not for AWS SDK v2.
    */
@@ -101,11 +107,15 @@ public class AWSClientUtil
 
     // Check for SdkClientException specific messages
     if (exception instanceof SdkClientException) {
-      String message = exception.getMessage();
+      final String message = exception.getMessage();
       if (message != null) {
         if (message.contains("Unable to execute HTTP request") ||
             message.contains("Data read has a different length than the expected") ||
-            message.contains("Unable to find a region")) {
+            message.contains("Unable to find a region") ||
+            message.contains(UNABLE_TO_LOAD_CREDENTIALS_FROM_PROVIDER_CHAIN) ||
+            message.contains(FAILED_TO_LOAD_CREDENTIALS_FROM_IMDS) ||
+            message.contains(CANNOT_REFRESH_AWS_CREDENTIALS) ||
+            message.contains(CANNOT_FETCH_CREDENTIALS_FROM_CONTAINER)) {
           return true;
         }
       }

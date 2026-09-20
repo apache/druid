@@ -187,7 +187,7 @@ public class CliBroker extends ServerRunnable
 
           bindAnnouncer(
               binder,
-              DiscoverySideEffectsProvider.withLegacyAnnouncer()
+              DiscoverySideEffectsProvider.create()
           );
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);

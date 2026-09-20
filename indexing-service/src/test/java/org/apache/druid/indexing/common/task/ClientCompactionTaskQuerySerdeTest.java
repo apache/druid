@@ -35,7 +35,10 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -60,7 +63,6 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
@@ -68,8 +70,8 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -121,7 +123,7 @@ public class ClientCompactionTaskQuerySerdeTest
     final CompactionTask task = (CompactionTask) MAPPER.readValue(json, Task.class);
 
     // Verify that CompactionTask has added new parameters into the context because transformSpec was null.
-    Assert.assertNotEquals(query.getContext(), task.getContext());
+    Assertions.assertNotEquals(query.getContext(), task.getContext());
     query.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
     assertQueryToTask(query, task);
   }
@@ -136,7 +138,7 @@ public class ClientCompactionTaskQuerySerdeTest
     final byte[] json = MAPPER.writeValueAsBytes(task);
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
 
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -150,10 +152,46 @@ public class ClientCompactionTaskQuerySerdeTest
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
 
     // Verify that CompactionTask has added new parameters into the context
-    Assert.assertNotEquals(expected, actual);
+    Assertions.assertNotEquals(expected, actual);
 
     expected.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testClientCompactionTaskQueryBaseTableSerde() throws IOException
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec baseTable =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build();
+    final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
+        "id",
+        "datasource",
+        new ClientCompactionIOConfig(
+            new ClientCompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"),
+            true
+        ),
+        null,
+        null,
+        null,
+        null,
+        null,
+        baseTable,
+        null,
+        ImmutableMap.of(),
+        new ClientCompactionRunnerInfo(CompactionEngine.MSQ)
+    );
+
+    final byte[] json = MAPPER.writeValueAsBytes(query);
+    final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
+
+    Assertions.assertEquals(baseTable, actual.getBaseTable());
+    Assertions.assertEquals(query, actual);
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
@@ -174,10 +212,10 @@ public class ClientCompactionTaskQuerySerdeTest
             ImmutableList.of(
                 binder -> {
                   binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-                  binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
+                  binder.bind(ChatHandlerProvider.class).toInstance(new ChatHandlerProvider());
                   binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
-                  binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
+                  binder.bind(SegmentCacheManagerFactory.class).toInstance(SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
                   binder.bind(OverlordClient.class).toInstance(new NoopOverlordClient());
                 }
@@ -191,104 +229,104 @@ public class ClientCompactionTaskQuerySerdeTest
 
   private void assertQueryToTask(ClientCompactionTaskQuery query, CompactionTask task)
   {
-    Assert.assertEquals(query.getId(), task.getId());
-    Assert.assertEquals(query.getDataSource(), task.getDataSource());
-    Assert.assertTrue(query.getIoConfig().getInputSpec() instanceof ClientCompactionIntervalSpec);
-    Assert.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
-    Assert.assertEquals(
+    Assertions.assertEquals(query.getId(), task.getId());
+    Assertions.assertEquals(query.getDataSource(), task.getDataSource());
+    Assertions.assertTrue(query.getIoConfig().getInputSpec() instanceof ClientCompactionIntervalSpec);
+    Assertions.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
+    Assertions.assertEquals(
         query.getIoConfig().getInputSpec().getInterval(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getInterval()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ((ClientCompactionIntervalSpec) query.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxRowsInMemory().intValue(),
         task.getTuningConfig().getMaxRowsInMemory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxBytesInMemory().longValue(),
         task.getTuningConfig().getMaxBytesInMemory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getSplitHintSpec(),
         task.getTuningConfig().getSplitHintSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getPartitionsSpec(),
         task.getTuningConfig().getPartitionsSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getIndexSpec(),
         task.getTuningConfig().getIndexSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getIndexSpecForIntermediatePersists(),
         task.getTuningConfig().getIndexSpecForIntermediatePersists()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getPushTimeout().longValue(),
         task.getTuningConfig().getPushTimeout()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getSegmentWriteOutMediumFactory(),
         task.getTuningConfig().getSegmentWriteOutMediumFactory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxNumConcurrentSubTasks().intValue(),
         task.getTuningConfig().getMaxNumConcurrentSubTasks()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxRetry().intValue(),
         task.getTuningConfig().getMaxRetry()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getTaskStatusCheckPeriodMs().longValue(),
         task.getTuningConfig().getTaskStatusCheckPeriodMs()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getChatHandlerTimeout(),
         task.getTuningConfig().getChatHandlerTimeout()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxNumSegmentsToMerge().intValue(),
         task.getTuningConfig().getMaxNumSegmentsToMerge()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getTotalNumMergeTasks().intValue(),
         task.getTuningConfig().getTotalNumMergeTasks()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec(),
         task.getGranularitySpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().getQueryGranularity(),
         task.getGranularitySpec().getQueryGranularity()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().getSegmentGranularity(),
         task.getGranularitySpec().getSegmentGranularity()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().isRollup(),
         task.getGranularitySpec().isRollup()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getIoConfig().isDropExisting(),
         task.getIoConfig().isDropExisting()
     );
-    Assert.assertEquals(query.getContext(), task.getContext());
-    Assert.assertEquals(
+    Assertions.assertEquals(query.getContext(), task.getContext());
+    Assertions.assertEquals(
         query.getDimensionsSpec().getDimensions(),
         task.getDimensionsSpec().getDimensions()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTransformSpec(),
         task.getTransformSpec()
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         query.getMetricsSpec(),
         task.getMetricsSpec()
     );
@@ -331,6 +369,7 @@ public class ClientCompactionTaskQuerySerdeTest
         METRICS_SPEC,
         transformSpec,
         null,
+        null,
         context,
         new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
     );
@@ -340,7 +379,7 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
         "datasource",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER)
+        SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, MAPPER)
     )
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(

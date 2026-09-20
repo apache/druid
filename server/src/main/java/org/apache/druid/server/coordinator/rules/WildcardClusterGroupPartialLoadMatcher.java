@@ -126,12 +126,10 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
   }
 
   @Override
+  @Nullable
   protected List<Integer> resolveClusterGroupIndices(DataSegment segment)
   {
     final ClusterGroupTuples clusterGroups = segment.getClusterGroups();
-    if (clusterGroups == null) {
-      return Collections.emptyList();
-    }
     final RowSignature clusteringColumns = clusterGroups.clusteringColumns();
     final VirtualColumns segmentVcs = clusterGroups.virtualColumns();
     final List<List<Object>> tuples = clusterGroups.tuples();
@@ -141,6 +139,21 @@ public class WildcardClusterGroupPartialLoadMatcher extends ClusterGroupPartialL
     // tuples. A null entry in the resolved list marks the pattern as non-matching for this segment.
     final List<Map<String, String>> resolvedPatterns = resolveAll(compiledPatterns, clusteringColumns, segmentVcs);
     final List<Map<String, String>> resolvedExcludes = resolveAll(compiledExcludePatterns, clusteringColumns, segmentVcs);
+
+    // Compatibility check: at least one pattern must be fully resolvable against this segment's clustering scheme
+    // for the matcher to have any meaningful opinion about the segment. If none of the patterns resolve, the
+    // matcher's columns/VCs don't intersect what the segment clusters on at all, so the matcher is opaque to this
+    // segment and the base class will fall back to the rule's cannot-match handling.
+    boolean anyPatternResolved = false;
+    for (Map<String, String> resolved : resolvedPatterns) {
+      if (resolved != null) {
+        anyPatternResolved = true;
+        break;
+      }
+    }
+    if (!anyPatternResolved) {
+      return null;
+    }
 
     final TreeSet<Integer> matched = new TreeSet<>();
     for (int i = 0; i < tuples.size(); i++) {

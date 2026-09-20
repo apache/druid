@@ -38,8 +38,14 @@ public class FileEntity implements InputEntity
   }
 
   @Override
-  public CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer)
+  public CleanableFile fetch(File temporaryDirectory, byte[] fetchBuffer) throws IOException
   {
+    if (CompressionUtils.Format.fromFileName(file.getName()) != null) {
+      // The file appears to be compressed. Decompress it into temporaryDirectory.
+      return InputEntity.super.fetch(temporaryDirectory, fetchBuffer);
+    }
+
+    // The file is not compressed, so there is no need to copy it.
     return new CleanableFile()
     {
       @Override
@@ -71,5 +77,11 @@ public class FileEntity implements InputEntity
   public InputStream open() throws IOException
   {
     return CompressionUtils.decompress(new FileInputStream(file), file.getName());
+  }
+
+  @Override
+  public InputStream openRaw() throws IOException
+  {
+    return new FileInputStream(file);
   }
 }

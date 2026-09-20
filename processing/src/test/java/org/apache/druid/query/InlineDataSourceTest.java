@@ -31,10 +31,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -42,9 +40,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class InlineDataSourceTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final AtomicLong iterationCounter = new AtomicLong();
 
   // raw arrays, e.g. double[]{1.0, 2.0} on round trip get deserialized into List<Double>, so just model that
@@ -98,35 +93,35 @@ public class InlineDataSourceTest
   @Test
   public void test_getTableNames()
   {
-    Assert.assertEquals(Collections.emptySet(), listDataSource.getTableNames());
-    Assert.assertEquals(Collections.emptySet(), iterableDataSource.getTableNames());
+    Assertions.assertEquals(Collections.emptySet(), listDataSource.getTableNames());
+    Assertions.assertEquals(Collections.emptySet(), iterableDataSource.getTableNames());
   }
 
   @Test
   public void test_getColumnNames()
   {
-    Assert.assertEquals(expectedColumnNames, listDataSource.getColumnNames());
-    Assert.assertEquals(expectedColumnNames, iterableDataSource.getColumnNames());
+    Assertions.assertEquals(expectedColumnNames, listDataSource.getColumnNames());
+    Assertions.assertEquals(expectedColumnNames, iterableDataSource.getColumnNames());
   }
 
   @Test
   public void test_getColumnTypes()
   {
-    Assert.assertEquals(expectedColumnTypes, listDataSource.getColumnTypes());
-    Assert.assertEquals(expectedColumnTypes, iterableDataSource.getColumnTypes());
+    Assertions.assertEquals(expectedColumnTypes, listDataSource.getColumnTypes());
+    Assertions.assertEquals(expectedColumnTypes, iterableDataSource.getColumnTypes());
   }
 
   @Test
   public void test_getChildren()
   {
-    Assert.assertEquals(Collections.emptyList(), listDataSource.getChildren());
-    Assert.assertEquals(Collections.emptyList(), iterableDataSource.getChildren());
+    Assertions.assertEquals(Collections.emptyList(), listDataSource.getChildren());
+    Assertions.assertEquals(Collections.emptyList(), iterableDataSource.getChildren());
   }
 
   @Test
   public void test_getRowSignature()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .add(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG)
                     .add("str", ColumnType.STRING)
@@ -141,20 +136,20 @@ public class InlineDataSourceTest
   @Test
   public void test_isCacheable()
   {
-    Assert.assertFalse(listDataSource.isCacheable(true));
-    Assert.assertFalse(listDataSource.isCacheable(false));
+    Assertions.assertFalse(listDataSource.isCacheable(true));
+    Assertions.assertFalse(listDataSource.isCacheable(false));
   }
 
   @Test
   public void test_isGlobal()
   {
-    Assert.assertTrue(listDataSource.isGlobal());
+    Assertions.assertTrue(listDataSource.isGlobal());
   }
 
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(listDataSource.isProcessable());
+    Assertions.assertTrue(listDataSource.isProcessable());
   }
 
   @Test
@@ -163,43 +158,43 @@ public class InlineDataSourceTest
     final RowAdapter<Object[]> adapter = listDataSource.rowAdapter();
     final Object[] row = rows.get(1);
 
-    Assert.assertEquals(DateTimes.of("2000").getMillis(), adapter.timestampFunction().applyAsLong(row));
-    Assert.assertEquals("bar", adapter.columnFunction("str").apply(row));
-    Assert.assertEquals(1d, adapter.columnFunction("double").apply(row));
-    Assert.assertEquals(ImmutableMap.of("n", "1"), adapter.columnFunction("complex").apply(row));
-    Assert.assertEquals(ImmutableList.of(2.0, 4.0), adapter.columnFunction("double_array").apply(row));
+    Assertions.assertEquals(DateTimes.of("2000").getMillis(), adapter.timestampFunction().applyAsLong(row));
+    Assertions.assertEquals("bar", adapter.columnFunction("str").apply(row));
+    Assertions.assertEquals(1d, adapter.columnFunction("double").apply(row));
+    Assertions.assertEquals(ImmutableMap.of("n", "1"), adapter.columnFunction("complex").apply(row));
+    Assertions.assertEquals(ImmutableList.of(2.0, 4.0), adapter.columnFunction("double_array").apply(row));
   }
 
   @Test
   public void test_getRows_list()
   {
-    Assert.assertSame(this.rows, listDataSource.getRowsAsList());
+    Assertions.assertSame(this.rows, listDataSource.getRowsAsList());
   }
 
   @Test
   public void test_getRows_iterable()
   {
     final Iterable<Object[]> iterable = iterableDataSource.getRows();
-    Assert.assertNotSame(this.rows, iterable);
+    Assertions.assertNotSame(this.rows, iterable);
 
     // No iteration yet.
-    Assert.assertEquals(0, iterationCounter.get());
+    Assertions.assertEquals(0, iterationCounter.get());
 
     assertRowsEqual(this.rows, ImmutableList.copyOf(iterable));
 
     // OK, now we've iterated.
-    Assert.assertEquals(1, iterationCounter.get());
+    Assertions.assertEquals(1, iterationCounter.get());
 
     // Read again, we should iterate again.
     //noinspection MismatchedQueryAndUpdateOfCollection
     final List<Object[]> ignored = Lists.newArrayList(iterable);
-    Assert.assertEquals(2, iterationCounter.get());
+    Assertions.assertEquals(2, iterationCounter.get());
   }
 
   @Test
   public void test_getRowsAsList_list()
   {
-    Assert.assertSame(this.rows, listDataSource.getRowsAsList());
+    Assertions.assertSame(this.rows, listDataSource.getRowsAsList());
   }
 
   @Test
@@ -207,29 +202,30 @@ public class InlineDataSourceTest
   {
     final List<Object[]> list = iterableDataSource.getRowsAsList();
 
-    Assert.assertEquals(1, iterationCounter.get());
+    Assertions.assertEquals(1, iterationCounter.get());
     assertRowsEqual(this.rows, list);
 
     // Read again, we should *not* iterate again (in contrast to "test_getRows_iterable").
     //noinspection MismatchedQueryAndUpdateOfCollection
     final List<Object[]> ignored = Lists.newArrayList(list);
-    Assert.assertEquals(1, iterationCounter.get());
+    Assertions.assertEquals(1, iterationCounter.get());
   }
 
   @Test
   public void test_withChildren_empty()
   {
-    Assert.assertSame(listDataSource, listDataSource.withChildren(Collections.emptyList()));
+    Assertions.assertSame(listDataSource, listDataSource.withChildren(Collections.emptyList()));
   }
 
   @Test
   public void test_withChildren_nonEmpty()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot accept children");
-
-    // Workaround so "withChildren" isn't flagged as unused in the DataSource interface.
-    ((DataSource) listDataSource).withChildren(ImmutableList.of(new TableDataSource("foo")));
+    Throwable t = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        // Workaround so "withChildren" isn't flagged as unused in the DataSource interface.
+        () -> ((DataSource) listDataSource).withChildren(ImmutableList.of(new TableDataSource("foo")))
+    );
+    Assertions.assertEquals("Cannot accept children", t.getMessage());
   }
 
   @Test
@@ -246,7 +242,7 @@ public class InlineDataSourceTest
   {
     // Verify that toString does not iterate the rows.
     final String ignored = iterableDataSource.toString();
-    Assert.assertEquals(0, iterationCounter.get());
+    Assertions.assertEquals(0, iterationCounter.get());
   }
 
   @Test
@@ -258,9 +254,9 @@ public class InlineDataSourceTest
         DataSource.class
     );
 
-    Assert.assertEquals(listDataSource.getColumnNames(), deserialized.getColumnNames());
-    Assert.assertEquals(listDataSource.getColumnTypes(), deserialized.getColumnTypes());
-    Assert.assertEquals(listDataSource.getRowSignature(), deserialized.getRowSignature());
+    Assertions.assertEquals(listDataSource.getColumnNames(), deserialized.getColumnNames());
+    Assertions.assertEquals(listDataSource.getColumnTypes(), deserialized.getColumnTypes());
+    Assertions.assertEquals(listDataSource.getRowSignature(), deserialized.getRowSignature());
     assertRowsEqual(listDataSource.getRows(), deserialized.getRows());
   }
 
@@ -274,13 +270,13 @@ public class InlineDataSourceTest
     );
 
     // Lazy iterables turn into Lists upon serialization.
-    Assert.assertEquals(listDataSource.getColumnNames(), deserialized.getColumnNames());
-    Assert.assertEquals(listDataSource.getColumnTypes(), deserialized.getColumnTypes());
-    Assert.assertEquals(listDataSource.getRowSignature(), deserialized.getRowSignature());
+    Assertions.assertEquals(listDataSource.getColumnNames(), deserialized.getColumnNames());
+    Assertions.assertEquals(listDataSource.getColumnTypes(), deserialized.getColumnTypes());
+    Assertions.assertEquals(listDataSource.getRowSignature(), deserialized.getRowSignature());
     assertRowsEqual(listDataSource.getRows(), deserialized.getRows());
 
     // Should have iterated once.
-    Assert.assertEquals(1, iterationCounter.get());
+    Assertions.assertEquals(1, iterationCounter.get());
   }
 
   @Test
@@ -301,10 +297,10 @@ public class InlineDataSourceTest
         DataSource.class
     );
 
-    Assert.assertEquals(untypedDataSource.getColumnNames(), deserialized.getColumnNames());
-    Assert.assertEquals(untypedDataSource.getColumnTypes(), deserialized.getColumnTypes());
-    Assert.assertEquals(untypedDataSource.getRowSignature(), deserialized.getRowSignature());
-    Assert.assertNull(deserialized.getColumnTypes());
+    Assertions.assertEquals(untypedDataSource.getColumnNames(), deserialized.getColumnNames());
+    Assertions.assertEquals(untypedDataSource.getColumnTypes(), deserialized.getColumnTypes());
+    Assertions.assertEquals(untypedDataSource.getRowSignature(), deserialized.getRowSignature());
+    Assertions.assertNull(deserialized.getColumnTypes());
     assertRowsEqual(listDataSource.getRows(), deserialized.getRows());
   }
 
@@ -320,18 +316,18 @@ public class InlineDataSourceTest
       final List<Object[]> actualRowsList = (List<Object[]>) actualRows;
 
       final int sz = expectedRowsList.size();
-      Assert.assertEquals("number of rows", sz, actualRowsList.size());
+      Assertions.assertEquals(sz, actualRowsList.size(), "number of rows");
 
       // Super slow for LinkedLists, but we don't expect those to be used here.
       // (They're generally forbidden in Druid except for special cases.)
       for (int i = 0; i < sz; i++) {
-        Assert.assertArrayEquals("row #" + i, expectedRowsList.get(i), actualRowsList.get(i));
+        Assertions.assertArrayEquals(expectedRowsList.get(i), actualRowsList.get(i), "row #" + i);
       }
     } else {
       // If they're not both Lists, we don't want to iterate them during equality checks, so do a non-deep check.
       // This might still return true if whatever class they are has another way of checking equality. But, usually we
       // expect this to return false.
-      Assert.assertEquals("rows", expectedRows, actualRows);
+      Assertions.assertEquals(expectedRows, actualRows, "rows");
     }
   }
 

@@ -31,8 +31,8 @@ import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorU
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -79,11 +79,11 @@ public class MetadataStoreCredentialsValidatorTest
 
     MetadataStoreCredentialsValidator validator = new MetadataStoreCredentialsValidator(Providers.of(cacheManager));
 
-    IAE exception = Assert.assertThrows(
+    IAE exception = Assertions.assertThrows(
         IAE.class,
         () -> validator.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray())
     );
-    Assert.assertEquals("No userMap is available for authenticator with prefix: [notbasic]", exception.getMessage());
+    Assertions.assertEquals("No userMap is available for authenticator with prefix: [notbasic]", exception.getMessage());
 
     EasyMock.verify(cacheManager);
   }
@@ -97,7 +97,7 @@ public class MetadataStoreCredentialsValidatorTest
     String password = "helloworld";
 
     AuthenticationResult result = VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   @Test
@@ -109,7 +109,7 @@ public class MetadataStoreCredentialsValidatorTest
     String password = "helloworld";
 
     AuthenticationResult result = VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   @Test
@@ -122,11 +122,11 @@ public class MetadataStoreCredentialsValidatorTest
 
     AuthenticationResult result = VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray());
 
-    Assert.assertNotNull(result);
-    Assert.assertEquals(username, result.getIdentity());
-    Assert.assertEquals(authenticatorName, result.getAuthenticatedBy());
-    Assert.assertEquals(authorizerName, result.getAuthorizerName());
-    Assert.assertNull(result.getContext());
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(username, result.getIdentity());
+    Assertions.assertEquals(authenticatorName, result.getAuthenticatedBy());
+    Assertions.assertEquals(authorizerName, result.getAuthorizerName());
+    Assertions.assertNull(result.getContext());
   }
 
   @Test
@@ -137,10 +137,10 @@ public class MetadataStoreCredentialsValidatorTest
     String username = "userA";
     String password = "badpassword";
 
-    Exception exception = Assert.assertThrows(
+    Exception exception = Assertions.assertThrows(
         BasicSecurityAuthenticationException.class,
         () -> VALIDATOR.validateCredentials(authenticatorName, authorizerName, username, password.toCharArray())
     );
-    Assert.assertEquals(Access.DEFAULT_ERROR_MESSAGE, exception.getMessage());
+    Assertions.assertEquals(Access.DEFAULT_ERROR_MESSAGE, exception.getMessage());
   }
 }

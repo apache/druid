@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -54,7 +55,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @Nullable Integer maxSavedParseExceptions,
       @Nullable Integer numPersistThreads,
       @Nullable Integer maxColumnsToMerge,
-      @Nullable Boolean releaseLocksOnHandoff
+      @Nullable Boolean releaseLocksOnHandoff,
+      @Nullable StreamingPartitionsSpec streamingPartitionsSpec
   )
   {
     super(
@@ -80,7 +82,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        streamingPartitionsSpec
     );
   }
 
@@ -106,7 +109,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
-      @JsonProperty("releaseLocksOnHandoff") @Nullable Boolean releaseLocksOnHandoff
+      @JsonProperty("releaseLocksOnHandoff") @Nullable Boolean releaseLocksOnHandoff,
+      @JsonProperty("streamingPartitionsSpec") @Nullable StreamingPartitionsSpec streamingPartitionsSpec
   )
   {
     this(
@@ -131,7 +135,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        streamingPartitionsSpec
     );
   }
 
@@ -160,7 +165,8 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
         getMaxSavedParseExceptions(),
         getNumPersistThreads(),
         getMaxColumnsToMerge(),
-        isReleaseLocksOnHandoff()
+        isReleaseLocksOnHandoff(),
+        getStreamingPartitionsSpec()
     );
   }
 
@@ -188,6 +194,7 @@ public class KafkaIndexTaskTuningConfig extends SeekableStreamIndexTaskTuningCon
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", numPersistThreads=" + getNumPersistThreads() +
            ", getMaxColumnsToMerge=" + getMaxColumnsToMerge() +
+           ", streamingPartitionsSpec=" + getStreamingPartitionsSpec() +
         '}';
   }
 

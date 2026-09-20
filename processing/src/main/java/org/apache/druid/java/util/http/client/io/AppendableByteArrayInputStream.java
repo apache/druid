@@ -59,7 +59,7 @@ public class AppendableByteArrayInputStream extends InputStream
   {
     synchronized (singleByteReaderDoer) {
       done = true;
-      singleByteReaderDoer.notify();
+      singleByteReaderDoer.notifyAll();
     }
   }
 
@@ -68,7 +68,7 @@ public class AppendableByteArrayInputStream extends InputStream
     synchronized (singleByteReaderDoer) {
       done = true;
       throwable = t;
-      singleByteReaderDoer.notify();
+      singleByteReaderDoer.notifyAll();
     }
   }
 
@@ -78,7 +78,9 @@ public class AppendableByteArrayInputStream extends InputStream
     if (scanThroughBytesAndDoSomething(1, singleByteReaderDoer) == 0) {
       return -1;
     }
-    return singleByteReaderDoer.getRetVal();
+    // Mask to 0..255 per the InputStream.read() contract; without this a byte with the high bit set is
+    // returned as a negative int and callers mistake it for EOF.
+    return singleByteReaderDoer.getRetVal() & 0xff;
   }
 
   @Override
@@ -133,6 +135,12 @@ public class AppendableByteArrayInputStream extends InputStream
       if (currIndex >= curr.length) {
         synchronized (singleByteReaderDoer) {
           if (bytes.isEmpty()) {
+            // Throwable takes precedence over EOS: if exceptionCaught was called with no buffered
+            // bytes (possible when the handler never enqueued any data, e.g. an error response with
+            // no body in Netty 4), surface the exception rather than silently returning EOS.
+            if (throwable != null) {
+              throw new IOException(throwable);
+            }
             if (done) {
               break;
             }

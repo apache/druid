@@ -20,6 +20,8 @@
 package org.apache.druid.server.http;
 
 import com.google.common.util.concurrent.Futures;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
@@ -32,10 +34,8 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 
 import java.util.List;
@@ -53,7 +53,7 @@ public class CoordinatorDynamicConfigSyncerTest
   private CoordinatorConfigManager coordinatorConfigManager;
   private DruidNodeDiscovery druidNodeDiscovery;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     serviceClient = mock(ServiceClient.class);

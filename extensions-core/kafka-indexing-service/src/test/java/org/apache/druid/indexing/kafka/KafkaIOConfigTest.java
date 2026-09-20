@@ -26,11 +26,9 @@ import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.indexing.IOConfig;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.Collections;
 
@@ -43,9 +41,6 @@ public class KafkaIOConfigTest
     mapper = new DefaultObjectMapper();
     mapper.registerModules(new KafkaIndexTaskModule().getJacksonModules());
   }
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testSerdeWithDefaults() throws Exception
@@ -68,18 +63,18 @@ public class KafkaIOConfigTest
         ), IOConfig.class
     );
 
-    Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
+    Assertions.assertEquals("my-sequence-name", config.getBaseSequenceName());
+    Assertions.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
                         config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
-    Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
+    Assertions.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
                                         200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
-    Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
-    Assert.assertTrue(config.isUseTransaction());
-    Assert.assertNull("minimumMessageTime", config.getMinimumMessageTime());
-    Assert.assertNull("maximumMessageTime", config.getMaximumMessageTime());
-    Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
+    Assertions.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assertions.assertTrue(config.isUseTransaction());
+    Assertions.assertNull(config.getMinimumMessageTime(), "minimumMessageTime");
+    Assertions.assertNull(config.getMaximumMessageTime(), "maximumMessageTime");
+    Assertions.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
   }
 
   @Test
@@ -103,18 +98,18 @@ public class KafkaIOConfigTest
         ), IOConfig.class
     );
 
-    Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
+    Assertions.assertEquals("my-sequence-name", config.getBaseSequenceName());
+    Assertions.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
                         config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
-    Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
+    Assertions.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
                                         200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
-    Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
-    Assert.assertTrue(config.isUseTransaction());
-    Assert.assertNull("minimumMessageTime", config.getMinimumMessageTime());
-    Assert.assertNull("maximumMessageTime", config.getMaximumMessageTime());
-    Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
+    Assertions.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assertions.assertTrue(config.isUseTransaction());
+    Assertions.assertNull(config.getMinimumMessageTime(), "minimumMessageTime");
+    Assertions.assertNull(config.getMaximumMessageTime(), "maximumMessageTime");
+    Assertions.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
   }
 
   @Test
@@ -141,18 +136,18 @@ public class KafkaIOConfigTest
         ), IOConfig.class
     );
 
-    Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
-    Assert.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
+    Assertions.assertEquals("my-sequence-name", config.getBaseSequenceName());
+    Assertions.assertEquals("mytopic", config.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 1L, new KafkaTopicPartition(false, null, 1), 10L),
                         config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
-    Assert.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
+    Assertions.assertEquals("mytopic", config.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals(ImmutableMap.of(new KafkaTopicPartition(false, null, 0), 15L, new KafkaTopicPartition(false, null, 1),
                                         200L), config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
-    Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
-    Assert.assertFalse(config.isUseTransaction());
-    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime());
-    Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime());
-    Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
+    Assertions.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assertions.assertFalse(config.isUseTransaction());
+    Assertions.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime());
+    Assertions.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime());
+    Assertions.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
   }
 
   @Test
@@ -169,10 +164,11 @@ public class KafkaIOConfigTest
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("baseSequenceName"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    assertJsonMappingException(
+        NullPointerException.class,
+        "baseSequenceName",
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
   }
 
   @Test
@@ -189,10 +185,11 @@ public class KafkaIOConfigTest
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("startPartitions"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    assertJsonMappingException(
+        NullPointerException.class,
+        "startPartitions",
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
   }
 
   @Test
@@ -209,10 +206,11 @@ public class KafkaIOConfigTest
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("endSequenceNumbers"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    assertJsonMappingException(
+        NullPointerException.class,
+        "endSequenceNumbers",
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
   }
 
   @Test
@@ -229,10 +227,11 @@ public class KafkaIOConfigTest
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("consumerProperties"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    assertJsonMappingException(
+        NullPointerException.class,
+        "consumerProperties",
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
   }
 
   @Test
@@ -250,10 +249,11 @@ public class KafkaIOConfigTest
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-    exception.expectMessage(CoreMatchers.containsString("start topic/stream and end topic/stream must match"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    assertJsonMappingException(
+        IllegalArgumentException.class,
+        "start topic/stream and end topic/stream must match",
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
   }
 
   @Test
@@ -271,10 +271,11 @@ public class KafkaIOConfigTest
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-    exception.expectMessage(CoreMatchers.containsString("start partition set and end partition set must match"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    assertJsonMappingException(
+        IllegalArgumentException.class,
+        "start partition set and end partition set must match",
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
   }
 
   @Test
@@ -292,9 +293,21 @@ public class KafkaIOConfigTest
                      + "  \"maximumMessageTime\": \"2016-05-31T14:00Z\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-    exception.expectMessage(CoreMatchers.containsString("end offset must be >= start offset"));
-    mapper.readValue(jsonStr, IOConfig.class);
+    assertJsonMappingException(
+        IllegalArgumentException.class,
+        "end offset must be >= start offset",
+        () -> mapper.readValue(jsonStr, IOConfig.class)
+    );
+  }
+
+  private static void assertJsonMappingException(
+      Class<? extends Throwable> causeType,
+      String expectedMessage,
+      Executable executable
+  )
+  {
+    final JsonMappingException exception = Assertions.assertThrows(JsonMappingException.class, executable);
+    Assertions.assertInstanceOf(causeType, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains(expectedMessage));
   }
 }

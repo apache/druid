@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class ChannelCounters implements QueryCounter
 {
-  private static final int NO_PARTITION = 0;
+  public static final int NO_PARTITION = 0;
 
   @GuardedBy("this")
   private final LongList rows = new LongArrayList();
@@ -162,7 +162,16 @@ public class ChannelCounters implements QueryCounter
     }
   }
 
-  private void add(
+  /**
+   * Most-generic "add" method.
+   *
+   * @param partitionNumber add counters to this partition
+   * @param nRows           add this number of rows
+   * @param nBytes          add this number of bytes
+   * @param nFrames         add this number of frames
+   * @param nFiles          add this number of files
+   */
+  public void add(
       final int partitionNumber,
       final long nRows,
       final long nBytes,

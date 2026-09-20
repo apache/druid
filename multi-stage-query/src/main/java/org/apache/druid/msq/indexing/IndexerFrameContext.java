@@ -39,6 +39,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.SegmentManager;
 
 import javax.annotation.Nullable;
@@ -51,6 +52,7 @@ public class IndexerFrameContext implements FrameContext
   private final FrameWriterSpec frameWriterSpec;
   private final IndexIO indexIO;
   private final SegmentManager segmentManager;
+  private final VirtualStorageManager virtualStorageManager;
   @Nullable
   private final CoordinatorClient coordinatorClient;
 
@@ -75,6 +77,7 @@ public class IndexerFrameContext implements FrameContext
       FrameWriterSpec frameWriterSpec,
       IndexIO indexIO,
       SegmentManager segmentManager,
+      VirtualStorageManager virtualStorageManager,
       @Nullable CoordinatorClient coordinatorClient,
       @Nullable ProcessingBuffersSet processingBuffersSet,
       IndexerDataServerQueryHandlerFactory dataServerQueryHandlerFactory,
@@ -87,6 +90,7 @@ public class IndexerFrameContext implements FrameContext
     this.frameWriterSpec = frameWriterSpec;
     this.indexIO = indexIO;
     this.segmentManager = segmentManager;
+    this.virtualStorageManager = virtualStorageManager;
     this.coordinatorClient = coordinatorClient;
     this.processingBuffersSet = processingBuffersSet;
     this.memoryParameters = memoryParameters;
@@ -116,6 +120,12 @@ public class IndexerFrameContext implements FrameContext
   public SegmentManager segmentManager()
   {
     return segmentManager;
+  }
+
+  @Override
+  public VirtualStorageManager virtualStorageManager()
+  {
+    return virtualStorageManager;
   }
 
   @Override

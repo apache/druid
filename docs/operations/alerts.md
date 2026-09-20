@@ -25,7 +25,7 @@ title: "Alerts"
 
 Druid generates alerts on getting into unexpected situations.
 
-Alerts are emitted as JSON objects to a runtime log file or over HTTP (to a service such as Apache Kafka). Alert emission is disabled by default.
+Alerts are emitted as JSON objects to a runtime log file or over HTTP (to a service such as Apache Kafka&circledR;). Alert emission is disabled by default.
 
 All Druid alerts share a common set of fields:
 
