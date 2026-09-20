@@ -62,7 +62,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -76,9 +75,6 @@ import java.util.stream.Stream;
 
 public class IcebergInputSourceTest
 {
-  @TempDir
-  public File temporaryFolder;
-
   private IcebergCatalog testCatalog;
   private TableIdentifier tableIdentifier;
   private File warehouseDir;
@@ -383,17 +379,17 @@ public class IcebergInputSourceTest
     );
 
     List<InputRow> result = new ArrayList<>();
-    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder()).read(null)) {
+    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, FileUtils.createTempDir()).read(null)) {
       it.forEachRemaining(result::add);
     }
 
-    Assert.assertEquals("Position delete should remove exactly one row", 2, result.size());
+    Assertions.assertEquals(2, result.size(), "Position delete should remove exactly one row");
     List<String> ids = result.stream()
                              .map(r -> r.getDimension("id").get(0))
                              .collect(Collectors.toList());
-    Assert.assertTrue("Row 'Alice' should survive", ids.contains("1"));
-    Assert.assertFalse("Row 'Foo' (id=123988) should be deleted", ids.contains("123988"));
-    Assert.assertTrue("Row 'Charlie' should survive", ids.contains("3"));
+    Assertions.assertTrue(ids.contains("1"), "Row 'Alice' should survive");
+    Assertions.assertFalse(ids.contains("123988"), "Row 'Foo' (id=123988) should be deleted");
+    Assertions.assertTrue(ids.contains("3"), "Row 'Charlie' should survive");
   }
 
   /**
@@ -459,17 +455,17 @@ public class IcebergInputSourceTest
     );
 
     List<InputRow> result = new ArrayList<>();
-    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder()).read(null)) {
+    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, FileUtils.createTempDir()).read(null)) {
       it.forEachRemaining(result::add);
     }
 
-    Assert.assertEquals("Equality delete should remove exactly one row", 2, result.size());
+    Assertions.assertEquals(2, result.size(), "Equality delete should remove exactly one row");
     List<String> ids = result.stream()
                              .map(r -> r.getDimension("id").get(0))
                              .collect(Collectors.toList());
-    Assert.assertFalse("Row with id='123988' should be equality-deleted", ids.contains("123988"));
-    Assert.assertTrue("Other rows should survive", ids.contains("1"));
-    Assert.assertTrue("Other rows should survive", ids.contains("3"));
+    Assertions.assertFalse(ids.contains("123988"), "Row with id='123988' should be equality-deleted");
+    Assertions.assertTrue(ids.contains("1"), "Other rows should survive");
+    Assertions.assertTrue(ids.contains("3"), "Other rows should survive");
   }
 
   /**
@@ -508,12 +504,9 @@ public class IcebergInputSourceTest
     Stream<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null));
     List<InputSource> splitSources = splits.map(inputSource::withSplit).collect(Collectors.toList());
 
-    Assert.assertEquals(1, splitSources.size());
+    Assertions.assertEquals(1, splitSources.size());
     // V1 path returns a LocalInputSource (not IcebergFileTaskInputSource)
-    Assert.assertFalse(
-        "V2 table without delete files should use V1 (path-based) path",
-        splitSources.get(0) instanceof IcebergFileTaskInputSource
-    );
+    Assertions.assertFalse(splitSources.get(0) instanceof IcebergFileTaskInputSource, "V2 table without delete files should use V1 (path-based) path");
   }
 
   /**
@@ -566,27 +559,21 @@ public class IcebergInputSourceTest
     // Trigger planning
     List<InputSplit<List<String>>> splits = inputSource.createSplits(null, new MaxSizeSplitHintSpec(null, null))
                                                        .collect(Collectors.toList());
-    Assert.assertEquals(1, splits.size());
+    Assertions.assertEquals(1, splits.size());
 
     // Verify the split carries the v2 marker
     List<String> splitParts = splits.get(0).get();
-    Assert.assertEquals("First element must be v2 marker", "v2", splitParts.get(0));
+    Assertions.assertEquals("v2", splitParts.get(0), "First element must be v2 marker");
     // parts[5] must be the table schema JSON
-    Assert.assertNotNull("Split must carry table schema JSON at index 5", splitParts.get(5));
-    Assert.assertTrue(
-        "Schema JSON must look like an Iceberg schema object",
-        splitParts.get(5).contains("\"type\"") || splitParts.get(5).contains("fields")
-    );
+    Assertions.assertNotNull(splitParts.get(5), "Split must carry table schema JSON at index 5");
+    Assertions.assertTrue(splitParts.get(5).contains("\"type\"") || splitParts.get(5).contains("fields"), "Schema JSON must look like an Iceberg schema object");
     // The POS: entry must appear at index 6 or later
     boolean hasPosEntry = splitParts.stream().anyMatch(p -> p.startsWith("POS:"));
-    Assert.assertTrue("V2 split with position delete must contain a POS: entry", hasPosEntry);
+    Assertions.assertTrue(hasPosEntry, "V2 split with position delete must contain a POS: entry");
 
     // withSplit must return IcebergFileTaskInputSource
     InputSource splitSource = inputSource.withSplit(splits.get(0));
-    Assert.assertTrue(
-        "withSplit on a v2 split must return IcebergFileTaskInputSource",
-        splitSource instanceof IcebergFileTaskInputSource
-    );
+    Assertions.assertTrue(splitSource instanceof IcebergFileTaskInputSource, "withSplit on a v2 split must return IcebergFileTaskInputSource");
 
     // A V1 split (no marker) should return a non-IcebergFileTaskInputSource
     InputSplit<List<String>> v1Split = new InputSplit<>(ImmutableList.of(dataFilePath));
@@ -603,13 +590,13 @@ public class IcebergInputSourceTest
     // Force V1 path by loading without delete files (not possible with current table,
     // so just verify the encoding roundtrip):
     IcebergFileTaskInputSource decodedSource = (IcebergFileTaskInputSource) splitSource;
-    Assert.assertEquals(dataFilePath, decodedSource.getDataFilePath());
-    Assert.assertEquals("PARQUET", decodedSource.getFileFormat());
-    Assert.assertNotNull("Decoded source must carry table schema JSON", decodedSource.getTableSchemaJson());
-    Assert.assertEquals(1, decodedSource.getDeleteFiles().size());
-    Assert.assertTrue(decodedSource.getDeleteFiles().get(0).isPositionDelete());
-    Assert.assertEquals(NAMESPACE, decodedSource.getTableNamespace());
-    Assert.assertEquals(v2TableName, decodedSource.getTableName());
+    Assertions.assertEquals(dataFilePath, decodedSource.getDataFilePath());
+    Assertions.assertEquals("PARQUET", decodedSource.getFileFormat());
+    Assertions.assertNotNull(decodedSource.getTableSchemaJson(), "Decoded source must carry table schema JSON");
+    Assertions.assertEquals(1, decodedSource.getDeleteFiles().size());
+    Assertions.assertTrue(decodedSource.getDeleteFiles().get(0).isPositionDelete());
+    Assertions.assertEquals(NAMESPACE, decodedSource.getTableNamespace());
+    Assertions.assertEquals(v2TableName, decodedSource.getTableName());
   }
 
   /**
@@ -674,17 +661,17 @@ public class IcebergInputSourceTest
     );
 
     List<InputRow> result = new ArrayList<>();
-    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder()).read(null)) {
+    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, FileUtils.createTempDir()).read(null)) {
       it.forEachRemaining(result::add);
     }
 
-    Assert.assertEquals("Both delete files must be applied; 3 rows should survive", 3, result.size());
+    Assertions.assertEquals(3, result.size(), "Both delete files must be applied; 3 rows should survive");
     List<String> ids = result.stream().map(r -> r.getDimension("id").get(0)).collect(Collectors.toList());
-    Assert.assertTrue(ids.contains("1"));
-    Assert.assertFalse("Bob (pos 1) should be deleted by first delete file", ids.contains("2"));
-    Assert.assertTrue(ids.contains("3"));
-    Assert.assertFalse("Dave (pos 3) should be deleted by second delete file", ids.contains("4"));
-    Assert.assertTrue(ids.contains("5"));
+    Assertions.assertTrue(ids.contains("1"));
+    Assertions.assertFalse(ids.contains("2"), "Bob (pos 1) should be deleted by first delete file");
+    Assertions.assertTrue(ids.contains("3"));
+    Assertions.assertFalse(ids.contains("4"), "Dave (pos 3) should be deleted by second delete file");
+    Assertions.assertTrue(ids.contains("5"));
   }
 
   /**
@@ -741,11 +728,11 @@ public class IcebergInputSourceTest
     );
 
     List<InputRow> result = new ArrayList<>();
-    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder()).read(null)) {
+    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, FileUtils.createTempDir()).read(null)) {
       it.forEachRemaining(result::add);
     }
 
-    Assert.assertEquals("All rows deleted — reader must return zero rows", 0, result.size());
+    Assertions.assertEquals(0, result.size(), "All rows deleted — reader must return zero rows");
   }
 
   /**
@@ -815,12 +802,12 @@ public class IcebergInputSourceTest
     );
 
     List<InputRow> result = new ArrayList<>();
-    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder()).read(null)) {
+    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, FileUtils.createTempDir()).read(null)) {
       it.forEachRemaining(result::add);
     }
 
-    Assert.assertEquals("Position and equality delete must both be applied; only Alice survives", 1, result.size());
-    Assert.assertEquals("1", result.get(0).getDimension("id").get(0));
+    Assertions.assertEquals(1, result.size(), "Position and equality delete must both be applied; only Alice survives");
+    Assertions.assertEquals("1", result.get(0).getDimension("id").get(0));
   }
 
   /**
@@ -889,16 +876,16 @@ public class IcebergInputSourceTest
     );
 
     List<InputRow> result = new ArrayList<>();
-    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, temporaryFolder.newFolder()).read(null)) {
+    try (CloseableIterator<InputRow> it = inputSource.reader(inputRowSchema, null, FileUtils.createTempDir()).read(null)) {
       it.forEachRemaining(result::add);
     }
 
-    Assert.assertEquals("One row deleted per data file; 2 should survive", 2, result.size());
+    Assertions.assertEquals(2, result.size(), "One row deleted per data file; 2 should survive");
     List<String> ids = result.stream().map(r -> r.getDimension("id").get(0)).collect(Collectors.toList());
-    Assert.assertFalse("Alice (file1, pos 0) should be deleted", ids.contains("1"));
-    Assert.assertTrue("Bob should survive", ids.contains("2"));
-    Assert.assertTrue("Charlie should survive", ids.contains("3"));
-    Assert.assertFalse("Dave (file2, pos 1) should be deleted", ids.contains("4"));
+    Assertions.assertFalse(ids.contains("1"), "Alice (file1, pos 0) should be deleted");
+    Assertions.assertTrue(ids.contains("2"), "Bob should survive");
+    Assertions.assertTrue(ids.contains("3"), "Charlie should survive");
+    Assertions.assertFalse(ids.contains("4"), "Dave (file2, pos 1) should be deleted");
   }
 
   @AfterEach
