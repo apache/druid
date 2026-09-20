@@ -305,10 +305,11 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         /**
          * Classifies the body prefix in {@code buffer} (see {@link #bodyPrefixByte}) and fails the query if it is not
          * JSON (or Smile, when the request was sent as Smile per {@link #isSmile}). HTML always fails; any other
-         * non-JSON/non-Smile body fails only when the status is 429/503, since Druid itself never sends such a body
-         * with those statuses but proxies routinely do (an HTML error page from nginx or a load balancer, a
-         * plain-text "upstream connect error" from Envoy). A structured body in the request's own format, whatever
-         * the status, is left alone so that the normal parse path can surface the server's own structured error.
+         * non-JSON/non-Smile body fails only when the status is one of the proxy error statuses in
+         * {@link #isProxyErrorStatus}, since Druid itself never sends such a body with those statuses but proxies
+         * routinely do (an HTML error page from nginx or a load balancer, a plain-text "upstream connect error" or
+         * "upstream request timeout" from Envoy). A structured body in the request's own format, whatever the
+         * status, is left alone so that the normal parse path can surface the server's own structured error.
          *
          * @param contentType Content-Type header of the initial response, possibly null; a text/html value fails the
          *                    query regardless of the body prefix
@@ -328,17 +329,31 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                                      ? prefix != null && prefix != SmileConstants.HEADER_BYTE_1
                                      : prefix != null && prefix != '{' && prefix != '[';
           final int statusCode = responseStatusCode;
-          if (isHtml || (isNonJson && (statusCode == 429 || statusCode == 503))) {
+          if (isHtml || (isNonJson && isProxyErrorStatus(statusCode))) {
             throwForNonJsonBody(statusCode, contentType, buffer, chunkNum, isHtml);
           }
+        }
+
+        /**
+         * Whether {@code statusCode} is one an intermediary produces on the broker-to-data-server hop with a body of
+         * its own rather than Druid's: 429 and 503 when the upstream is rejecting or unreachable, 504 when it is
+         * reachable but did not answer in time. A 504 is not a capacity signal, so {@link #throwForNonJsonBody}
+         * reports it as a {@link QueryTimeoutException} while 429/503 stay {@link QueryCapacityExceededException}.
+         */
+        private boolean isProxyErrorStatus(int statusCode)
+        {
+          return statusCode == 429 || statusCode == 503 || statusCode == 504;
         }
 
         /**
          * Fails the query because the response body is not JSON, typically an error page produced by a load balancer
          * or reverse proxy sitting in front of the data server. A 429/503 status is reported as
          * {@link QueryCapacityExceededException} since that is what such intermediaries return when the server is
-         * over capacity; any other status is reported as a {@link QueryInterruptedException}. Either way, the caller
-         * gets a message that says what actually came back instead of a {@code JsonParseException} on {@code '<'}.
+         * over capacity; a 504 is reported as a {@link QueryTimeoutException}, since a gateway timeout says the
+         * upstream was reachable but did not answer in time, which is the same condition the client-side
+         * {@link #checkQueryTimeout} reports and not a capacity rejection; any other status is reported as a
+         * {@link QueryInterruptedException}. Either way, the caller gets a message that says what actually came back
+         * instead of a {@code JsonParseException} on {@code '<'}.
          * <p>
          * The exception message never includes the body itself. The broker-to-data-server response is not a trusted
          * boundary (it can be an error page from any proxy sitting in between), and this message is logged by
@@ -365,6 +380,19 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               contentType,
               buffer.readableBytes()
           );
+          if (statusCode == 504) {
+            throw new QueryTimeoutException(
+                StringUtils.format(
+                    "Query[%s] url[%s] timed out upstream with status[%s]%s %s",
+                    query.getId(),
+                    url,
+                    statusCode,
+                    where,
+                    bodyInfo
+                ),
+                host
+            );
+          }
           if (statusCode == 429 || statusCode == 503) {
             throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
                 StringUtils.format(
@@ -400,7 +428,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           checkQueryTimeout();
           // Netty 4: the initial HttpResponse carries no body, so the status and Content-Type are recorded
           // here and the body itself is inspected on the first HttpContent chunk. The goal is to detect a
-          // non-JSON body (a 429/503 error page from a proxy, say) before it reaches the JSON parser, where it
+          // non-JSON body (a 429/503/504 error page from a proxy, say) before it reaches the JSON parser, where it
           // would surface only as a JsonParseException on 0x3c ('<'). The shortcut is taken only when the body
           // is confirmed non-JSON: a 429/503 carrying Druid's own JSON error body (a genuine
           // QueryCapacityExceededException or SERVICE_UNAVAILABLE from a data server) falls through to the
@@ -560,17 +588,31 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         }
 
         /**
-         * Classifies a 429/503 whose body never resolved the prefix check, that is, a body that was empty or all
-         * whitespace. Netty skips {@link #handleChunk} for an empty {@code LastHttpContent} and whitespace-only chunks
-         * leave {@link #bodyPrefixResolved} unset, so end of response is the last chance to report such a reply as
-         * {@link QueryCapacityExceededException}; otherwise the empty stream completes normally and
+         * Classifies a proxy error status (see {@link #isProxyErrorStatus}) whose body never resolved the prefix
+         * check, that is, a body that was empty or all whitespace. Netty skips {@link #handleChunk} for an empty
+         * {@code LastHttpContent} and whitespace-only chunks leave {@link #bodyPrefixResolved} unset, so end of
+         * response is the last chance to report such a reply as {@link QueryCapacityExceededException} (429/503) or
+         * {@link QueryTimeoutException} (504); otherwise the empty stream completes normally and
          * {@link JsonParserIterator} reports it as a generic EOF. A successful empty response is left alone.
          */
-        private void failIfUnresolvedCapacityBody()
+        private void failIfUnresolvedProxyErrorBody()
         {
           final int statusCode = responseStatusCode;
-          if (bodyPrefixResolved.get() || (statusCode != 429 && statusCode != 503)) {
+          if (bodyPrefixResolved.get() || !isProxyErrorStatus(statusCode)) {
             return;
+          }
+          if (statusCode == 504) {
+            throw new QueryTimeoutException(
+                StringUtils.format(
+                    "Query[%s] url[%s] timed out upstream with status[%s] and no JSON body contentType[%s] bodyLength[%d]",
+                    query.getId(),
+                    url,
+                    statusCode,
+                    responseContentType,
+                    totalByteCount.get()
+                ),
+                host
+            );
           }
           throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
               StringUtils.format(
@@ -589,7 +631,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           // Runs before the stream is completed so the failure reaches the caller the same way a chunk-detected
           // non-JSON body does: synchronously here, or via exceptionCaught in NettyHttpClient.
-          failIfUnresolvedCapacityBody();
+          failIfUnresolvedProxyErrorBody();
           long stopTimeNs = System.nanoTime();
           long nodeTimeNs = stopTimeNs - requestStartTimeNs;
           final long nodeTimeMs = TimeUnit.NANOSECONDS.toMillis(nodeTimeNs);

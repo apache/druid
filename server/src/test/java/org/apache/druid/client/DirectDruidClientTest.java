@@ -559,6 +559,83 @@ public class DirectDruidClientTest
   }
 
   @Test
+  public void testPlainText504IsQueryTimeout()
+  {
+    // Envoy's default answer for an upstream that is reachable but too slow is a plain-text 504, not a 503. That is
+    // a timeout, not a capacity rejection, so it must surface as QueryTimeoutException: reporting it as
+    // capacity-exceeded would tell an operator to add data-server capacity for what is a latency problem, and
+    // leaving it unclassified sends the plain-text body to the JSON parser to die as a JsonParseException on 'u'.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.GATEWAY_TIMEOUT, "text/plain", "upstream request timeout")
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryTimeoutException e = Assertions.assertThrows(
+        QueryTimeoutException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[504]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("contentType[text/plain]"), e.getMessage());
+    Assertions.assertFalse(e.getMessage().contains("upstream request timeout"), e.getMessage());
+  }
+
+  @Test
+  public void testHtml504IsQueryTimeout()
+  {
+    // An HTML 504 from nginx takes the same route. HTML fails the body check on any status, so this pins which
+    // exception the HTML path produces for 504 rather than whether it fails at all.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.GATEWAY_TIMEOUT, "text/html", "<html><body>504 Gateway Time-out</body></html>")
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryTimeoutException e = Assertions.assertThrows(
+        QueryTimeoutException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[504]"), e.getMessage());
+  }
+
+  @Test
+  public void testEmptyBody504IsQueryTimeout()
+  {
+    // The end-of-response path classifies 504 too: a gateway that times out with no body at all would otherwise
+    // complete an empty stream and reach the caller as a generic EOF.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.GATEWAY_TIMEOUT, null)
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryTimeoutException e = Assertions.assertThrows(
+        QueryTimeoutException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[504]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("bodyLength[0]"), e.getMessage());
+  }
+
+  @Test
+  public void testJson504IsNotShortCircuited()
+  {
+    // Same rule as 429/503: a 504 carrying a structured error body in the request's own format is left to the
+    // normal JSON error path so the server's own message survives.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(
+            HttpResponseStatus.GATEWAY_TIMEOUT,
+            "application/json",
+            "{\"error\":\"Unknown exception\",\"errorMessage\":\"backend says no\",\"errorClass\":\"x\",\"host\":\"h\"}"
+        )
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryException e = Assertions.assertThrows(
+        QueryException.class,
+        () -> client.run(queryPlus, responseContext).toList()
+    );
+    Assertions.assertEquals("backend says no", e.getMessage());
+  }
+
+  @Test
   public void testNonJsonBodyMessageContainsNoRawBodyBytes()
   {
     // The exception message must never echo the upstream body itself: the broker-to-data-server response is not a
