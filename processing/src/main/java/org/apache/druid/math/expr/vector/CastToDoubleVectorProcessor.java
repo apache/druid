@@ -24,6 +24,8 @@ import org.apache.druid.math.expr.ExpressionType;
 
 public final class CastToDoubleVectorProcessor extends CastToTypeVectorProcessor<double[]>
 {
+  // Processor-owned scratch space reused for each long-to-double conversion. Results are valid until the next
+  // evaluation of this processor, consistent with the lifetime of output arrays from other vector processors.
   private final double[] output;
 
   public CastToDoubleVectorProcessor(ExprVectorProcessor<?> delegate)
