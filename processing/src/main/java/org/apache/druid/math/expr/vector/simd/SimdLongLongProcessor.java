@@ -64,14 +64,21 @@ abstract class SimdLongLongProcessor implements ExprVectorProcessor<long[]>
   {
     final ExprEvalVector<long[]> lhs = left.evalVector(bindings);
     final ExprEvalVector<long[]> rhs = right.evalVector(bindings);
+    final boolean[] leftNulls = lhs.getNullVector();
+    final boolean[] rightNulls = rhs.getNullVector();
     processVector(
         lhs.values(),
         rhs.values(),
-        lhs.getNullVector(),
-        rhs.getNullVector(),
+        leftNulls,
+        rightNulls,
         bindings.getCurrentVectorSize()
     );
-    return new ExprEvalLongVector(outValues, outNulls);
+    return new ExprEvalLongVector(
+        outValues,
+        leftNulls == null && rightNulls == null
+        ? null
+        : SimdProcessorUtils.nullVectorOrNull(outNulls, bindings.getCurrentVectorSize())
+    );
   }
 
   protected abstract void processVector(

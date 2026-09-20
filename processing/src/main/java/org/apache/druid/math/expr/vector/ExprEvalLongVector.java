@@ -23,8 +23,6 @@ import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-
 public final class ExprEvalLongVector extends BaseExprEvalVector<long[]>
 {
   public ExprEvalLongVector(long[] values, @Nullable boolean[] nulls)
@@ -47,7 +45,11 @@ public final class ExprEvalLongVector extends BaseExprEvalVector<long[]>
   @Override
   public double[] getDoubleVector()
   {
-    return Arrays.stream(values).asDoubleStream().toArray();
+    final double[] doubles = new double[values.length];
+    for (int i = 0; i < values.length; i++) {
+      doubles[i] = values[i];
+    }
+    return doubles;
   }
 
   @Override

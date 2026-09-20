@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoubleLongFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleBivariateDoublesFunction;
@@ -84,6 +85,22 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           right.asVectorProcessor(inspector),
           simdOp,
           longsFunction
+      );
+    }
+    if (isNonNullLiteral(left)) {
+      return new LongBivariateLongsConstantProcessor(
+          right.asVectorProcessor(inspector),
+          longsFunction,
+          literalAsLong(inspector, left),
+          true
+      );
+    }
+    if (isNonNullLiteral(right)) {
+      return new LongBivariateLongsConstantProcessor(
+          left.asVectorProcessor(inspector),
+          longsFunction,
+          literalAsLong(inspector, right),
+          false
       );
     }
     return new LongBivariateLongsFunctionVectorProcessor(
@@ -152,10 +169,41 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           doublesFunction
       );
     }
+    if (isNonNullLiteral(left)) {
+      return new DoubleBivariateDoublesConstantProcessor(
+          right.asVectorProcessor(inspector),
+          doublesFunction,
+          literalAsDouble(inspector, left),
+          true
+      );
+    }
+    if (isNonNullLiteral(right)) {
+      return new DoubleBivariateDoublesConstantProcessor(
+          left.asVectorProcessor(inspector),
+          doublesFunction,
+          literalAsDouble(inspector, right),
+          false
+      );
+    }
     return new DoubleBivariateDoublesFunctionVectorProcessor(
         left.asVectorProcessor(inspector),
         right.asVectorProcessor(inspector),
         doublesFunction
     );
+  }
+
+  private static boolean isNonNullLiteral(Expr expr)
+  {
+    return expr.isLiteral() && expr.getLiteralValue() != null;
+  }
+
+  private static long literalAsLong(Expr.VectorInputBindingInspector inspector, Expr expr)
+  {
+    return ExprEval.ofType(expr.getOutputType(inspector), expr.getLiteralValue()).asLong();
+  }
+
+  private static double literalAsDouble(Expr.VectorInputBindingInspector inspector, Expr expr)
+  {
+    return ExprEval.ofType(expr.getOutputType(inspector), expr.getLiteralValue()).asDouble();
   }
 }
