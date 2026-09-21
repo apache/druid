@@ -233,7 +233,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
 
   @JsonProperty
   @Nullable
-  public KafkaHeaderBasedFilterConfig getheaderBasedFilterConfig()
+  public KafkaHeaderBasedFilterConfig getHeaderBasedFilterConfig()
   {
     return headerBasedFilterConfig;
   }
@@ -252,7 +252,7 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
            ", minimumMessageTime=" + getMinimumMessageTime() +
            ", maximumMessageTime=" + getMaximumMessageTime() +
            ", configOverrides=" + getConfigOverrides() +
-           ", headerBasedFilterConfig=" + getheaderBasedFilterConfig() +
+           ", headerBasedFilterConfig=" + getHeaderBasedFilterConfig() +
            ", multiTopic=" + multiTopic +
            '}';
   }

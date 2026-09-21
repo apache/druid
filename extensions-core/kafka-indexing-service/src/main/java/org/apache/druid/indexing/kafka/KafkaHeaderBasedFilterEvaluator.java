@@ -57,6 +57,14 @@ public class KafkaHeaderBasedFilterEvaluator
   private final Cache<ByteBuffer, String> stringDecodingCache;
 
   /**
+   * Reused across decode calls to avoid allocating a new {@link CharsetDecoder} per record / cache-miss on the
+   * hot polling path. A {@code KafkaRecordSupplier} (and therefore this evaluator) is only ever accessed from its
+   * single polling thread, and the one-arg {@link CharsetDecoder#decode(ByteBuffer)} resets the decoder before
+   * every call, so reuse is safe. The decoder is stateful and must not be shared across threads.
+   */
+  private final CharsetDecoder decoder;
+
+  /**
    * Creates a new KafkaHeaderBasedFilterEvaluator with the given configuration.
    *
    * @param headerBasedFilterConfig the configuration containing filter, encoding, and cache settings
@@ -65,6 +73,9 @@ public class KafkaHeaderBasedFilterEvaluator
   public KafkaHeaderBasedFilterEvaluator(KafkaHeaderBasedFilterConfig headerBasedFilterConfig)
   {
     this.encoding = Charset.forName(headerBasedFilterConfig.getEncoding());
+    this.decoder = encoding.newDecoder()
+        .onMalformedInput(CodingErrorAction.REPORT)
+        .onUnmappableCharacter(CodingErrorAction.REPORT);
     this.stringDecodingCache = Caffeine.newBuilder()
         .maximumSize(headerBasedFilterConfig.getStringDecodingCacheSize())
         .build();
@@ -165,13 +176,11 @@ public class KafkaHeaderBasedFilterEvaluator
 
   /**
    * Decodes bytes with the configured charset, reporting (rather than silently replacing with U+FFFD) malformed
-   * or unmappable input, so that invalid bytes surface as a failure instead of a bogus match value.
+   * or unmappable input, so that invalid bytes surface as a failure instead of a bogus match value. Uses the
+   * reused {@link #decoder} field; the one-arg {@link CharsetDecoder#decode(ByteBuffer)} resets it before use.
    */
   private String decodeStrict(byte[] headerBytes)
   {
-    final CharsetDecoder decoder = encoding.newDecoder()
-        .onMalformedInput(CodingErrorAction.REPORT)
-        .onUnmappableCharacter(CodingErrorAction.REPORT);
     try {
       return decoder.decode(ByteBuffer.wrap(headerBytes)).toString();
     }

@@ -109,7 +109,7 @@ public class KafkaIOConfigBuilder extends SupervisorIOConfigBuilder<KafkaIOConfi
     this.pollTimeout = io.getPollTimeout();
     this.configOverrides = io.getConfigOverrides();
     this.emitTimeLagMetrics = io.isEmitTimeLagMetrics();
-    this.headerBasedFilterConfig = io.getheaderBasedFilterConfig();
+    this.headerBasedFilterConfig = io.getHeaderBasedFilterConfig();
     return this;
   }
 

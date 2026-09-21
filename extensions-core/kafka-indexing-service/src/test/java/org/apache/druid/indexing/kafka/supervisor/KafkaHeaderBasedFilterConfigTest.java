@@ -162,6 +162,29 @@ public class KafkaHeaderBasedFilterConfigTest
   }
 
   @Test
+  public void testNegativeCacheSizeRejected()
+  {
+    InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
+    DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> new KafkaHeaderBasedFilterConfig(dimFilter, null, -1)
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("stringDecodingCacheSize"),
+        "Should mention stringDecodingCacheSize"
+    );
+  }
+
+  @Test
+  public void testZeroCacheSizeAllowed()
+  {
+    // Zero is a valid Caffeine maximumSize (caching disabled); it must not be rejected as if negative.
+    InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
+    KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, null, 0);
+    Assertions.assertEquals(0, filter.getStringDecodingCacheSize());
+  }
+
+  @Test
   public void testSerialization() throws Exception
   {
     InDimFilter dimFilter = new InDimFilter("environment", Collections.singletonList("production"), null);
@@ -206,7 +229,7 @@ public class KafkaHeaderBasedFilterConfigTest
     KafkaHeaderBasedFilterConfig filter = new KafkaHeaderBasedFilterConfig(dimFilter, "UTF-8", null);
 
     String toString = filter.toString();
-    Assertions.assertTrue(toString.contains("KafkaheaderBasedFilterConfig"));
+    Assertions.assertTrue(toString.contains("KafkaHeaderBasedFilterConfig"));
     Assertions.assertTrue(toString.contains("filter="));
     Assertions.assertTrue(toString.contains("encoding='UTF-8'"));
     Assertions.assertTrue(toString.contains("stringDecodingCacheSize=10000"));

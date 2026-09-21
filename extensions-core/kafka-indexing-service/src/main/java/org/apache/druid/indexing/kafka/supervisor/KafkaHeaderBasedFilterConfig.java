@@ -57,6 +57,17 @@ public class KafkaHeaderBasedFilterConfig
     this.encoding = encoding != null ? encoding : StandardCharsets.UTF_8.name();
     this.stringDecodingCacheSize = stringDecodingCacheSize != null ? stringDecodingCacheSize : 10_000;
 
+    // Validate cache size. A negative value would otherwise fail late and opaquely with an
+    // IllegalArgumentException from Caffeine.maximumSize() every time a record supplier is constructed
+    // (supervisor start and every task launch). Reject it here so submission fails fast with a clear error.
+    // Zero is permitted (it disables caching, so every lookup decodes fresh).
+    if (this.stringDecodingCacheSize < 0) {
+      throw InvalidInput.exception(
+          "stringDecodingCacheSize [%d] must be greater than or equal to 0.",
+          this.stringDecodingCacheSize
+      );
+    }
+
     // Validate encoding
     try {
       Charset.forName(this.encoding);
@@ -137,7 +148,7 @@ public class KafkaHeaderBasedFilterConfig
   @Override
   public String toString()
   {
-    return "KafkaheaderBasedFilterConfig{" +
+    return "KafkaHeaderBasedFilterConfig{" +
            "filter=" + filter +
            ", encoding='" + encoding + '\'' +
            ", stringDecodingCacheSize=" + stringDecodingCacheSize +

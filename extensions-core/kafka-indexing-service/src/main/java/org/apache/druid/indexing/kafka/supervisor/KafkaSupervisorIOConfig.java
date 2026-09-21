@@ -236,7 +236,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 
   @JsonProperty
   @Nullable
-  public KafkaHeaderBasedFilterConfig getheaderBasedFilterConfig()
+  public KafkaHeaderBasedFilterConfig getHeaderBasedFilterConfig()
   {
     return headerBasedFilterConfig;
   }
