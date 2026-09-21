@@ -72,6 +72,7 @@ abstract class SimdDoubleDoubleProcessor implements ExprVectorProcessor<double[]
         rightNulls,
         bindings.getCurrentVectorSize()
     );
+
     return new ExprEvalDoubleVector(
         outValues,
         leftNulls == null && rightNulls == null

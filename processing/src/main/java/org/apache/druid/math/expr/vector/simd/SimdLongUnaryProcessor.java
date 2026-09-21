@@ -62,6 +62,7 @@ abstract class SimdLongUnaryProcessor implements ExprVectorProcessor<long[]>
     final ExprEvalVector<long[]> lhs = input.evalVector(bindings);
     final boolean[] inputNulls = lhs.getNullVector();
     processVector(lhs.values(), inputNulls, bindings.getCurrentVectorSize());
+
     return new ExprEvalLongVector(
         outValues,
         inputNulls == null

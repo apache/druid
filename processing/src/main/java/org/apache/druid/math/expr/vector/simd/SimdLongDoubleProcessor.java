@@ -75,6 +75,7 @@ abstract class SimdLongDoubleProcessor implements ExprVectorProcessor<double[]>
         rightNulls,
         bindings.getCurrentVectorSize()
     );
+
     return new ExprEvalDoubleVector(
         outValues,
         leftNulls == null && rightNulls == null
