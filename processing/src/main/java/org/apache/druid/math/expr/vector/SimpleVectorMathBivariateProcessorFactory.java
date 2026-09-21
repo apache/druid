@@ -87,20 +87,20 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           longsFunction
       );
     }
-    if (isNonNullLiteral(left)) {
+    if (simdOp != null && isNonNullLiteral(left)) {
       return new LongBivariateLongsConstantProcessor(
           right.asVectorProcessor(inspector),
-          longsFunction,
           literalAsLong(inspector, left),
-          true
+          true,
+          simdOp
       );
     }
-    if (isNonNullLiteral(right)) {
+    if (simdOp != null && isNonNullLiteral(right)) {
       return new LongBivariateLongsConstantProcessor(
           left.asVectorProcessor(inspector),
-          longsFunction,
           literalAsLong(inspector, right),
-          false
+          false,
+          simdOp
       );
     }
     return new LongBivariateLongsFunctionVectorProcessor(
@@ -169,20 +169,20 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           doublesFunction
       );
     }
-    if (isNonNullLiteral(left)) {
+    if (simdOp != null && isNonNullLiteral(left)) {
       return new DoubleBivariateDoublesConstantProcessor(
           right.asVectorProcessor(inspector),
-          doublesFunction,
           literalAsDouble(inspector, left),
-          true
+          true,
+          simdOp
       );
     }
-    if (isNonNullLiteral(right)) {
+    if (simdOp != null && isNonNullLiteral(right)) {
       return new DoubleBivariateDoublesConstantProcessor(
           left.asVectorProcessor(inspector),
-          doublesFunction,
           literalAsDouble(inspector, right),
-          false
+          false,
+          simdOp
       );
     }
     return new DoubleBivariateDoublesFunctionVectorProcessor(

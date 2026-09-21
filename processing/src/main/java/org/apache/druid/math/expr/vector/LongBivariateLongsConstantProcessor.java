@@ -19,29 +19,72 @@
 
 package org.apache.druid.math.expr.vector;
 
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.math.expr.vector.functional.LongBivariateLongsFunction;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedBinaryOp;
+
+import javax.annotation.Nullable;
 
 /**
  * Long arithmetic processor with one operand bound to a constant.
  */
-public final class LongBivariateLongsConstantProcessor extends LongUnivariateFunctionVectorProcessor<long[]>
+public final class LongBivariateLongsConstantProcessor implements ExprVectorProcessor<long[]>
 {
-  private final LongBivariateLongsFunction function;
+  private final ExprVectorProcessor<long[]> inputProcessor;
   private final long constant;
   private final boolean constantIsLeftOperand;
+  private final SimdSupportedBinaryOp operation;
+  private final boolean[] outNulls;
+  private final long[] outValues;
 
   public LongBivariateLongsConstantProcessor(
       ExprVectorProcessor<?> input,
-      LongBivariateLongsFunction function,
       long constant,
-      boolean constantIsLeftOperand
+      boolean constantIsLeftOperand,
+      SimdSupportedBinaryOp operation
   )
   {
-    super(CastToTypeVectorProcessor.cast(input, ExpressionType.LONG));
-    this.function = function;
+    this.inputProcessor = CastToTypeVectorProcessor.cast(input, ExpressionType.LONG);
     this.constant = constant;
     this.constantIsLeftOperand = constantIsLeftOperand;
+    this.operation = operation;
+    this.outNulls = new boolean[input.maxVectorSize()];
+    this.outValues = new long[input.maxVectorSize()];
+  }
+
+  @Override
+  public ExprEvalVector<long[]> evalVector(Expr.VectorInputBinding bindings)
+  {
+    final ExprEvalVector<long[]> inputEval = inputProcessor.evalVector(bindings);
+    final long[] input = inputEval.values();
+    final boolean[] inputNulls = inputEval.getNullVector();
+    final int currentSize = bindings.getCurrentVectorSize();
+    final boolean anyNulls;
+
+    // Select the operation and operand order once per vector. Keeping both decisions outside the hot loops lets
+    // HotSpot compile direct arithmetic instead of a megamorphic LongBivariateLongsFunction call for every row.
+    switch (operation) {
+      case ADD:
+        anyNulls = processAdd(input, inputNulls, currentSize);
+        break;
+      case SUB:
+        anyNulls = constantIsLeftOperand
+                   ? processSubtractFromConstant(input, inputNulls, currentSize)
+                   : processSubtractConstant(input, inputNulls, currentSize);
+        break;
+      case MUL:
+        anyNulls = processMultiply(input, inputNulls, currentSize);
+        break;
+      case DIV:
+        anyNulls = constantIsLeftOperand
+                   ? processDivideConstantByInput(input, inputNulls, currentSize)
+                   : processDivideInputByConstant(input, inputNulls, currentSize);
+        break;
+      default:
+        throw new IllegalStateException("Unsupported constant arithmetic operation " + operation);
+    }
+
+    return new ExprEvalLongVector(outValues, anyNulls ? outNulls : null);
   }
 
   @Override
@@ -51,11 +94,140 @@ public final class LongBivariateLongsConstantProcessor extends LongUnivariateFun
   }
 
   @Override
-  void processIndex(long[] input, int i)
+  public int maxVectorSize()
   {
-    // Preserve operand order for non-commutative operations such as subtraction, division, modulo, and power.
-    outValues[i] = constantIsLeftOperand
-                   ? function.process(constant, input[i])
-                   : function.process(input[i], constant);
+    return outValues.length;
+  }
+
+  private boolean processAdd(long[] input, @Nullable boolean[] inputNulls, int currentSize)
+  {
+    if (inputNulls == null) {
+      for (int i = 0; i < currentSize; i++) {
+        outValues[i] = input[i] + constant;
+      }
+      return false;
+    }
+    boolean anyNulls = false;
+    for (int i = 0; i < currentSize; i++) {
+      final boolean isNull = inputNulls[i];
+      outNulls[i] = isNull;
+      if (isNull) {
+        anyNulls = true;
+        outValues[i] = 0L;
+      } else {
+        outValues[i] = input[i] + constant;
+      }
+    }
+    return anyNulls;
+  }
+
+  private boolean processSubtractFromConstant(long[] input, @Nullable boolean[] inputNulls, int currentSize)
+  {
+    if (inputNulls == null) {
+      for (int i = 0; i < currentSize; i++) {
+        outValues[i] = constant - input[i];
+      }
+      return false;
+    }
+    boolean anyNulls = false;
+    for (int i = 0; i < currentSize; i++) {
+      final boolean isNull = inputNulls[i];
+      outNulls[i] = isNull;
+      if (isNull) {
+        anyNulls = true;
+        outValues[i] = 0L;
+      } else {
+        outValues[i] = constant - input[i];
+      }
+    }
+    return anyNulls;
+  }
+
+  private boolean processSubtractConstant(long[] input, @Nullable boolean[] inputNulls, int currentSize)
+  {
+    if (inputNulls == null) {
+      for (int i = 0; i < currentSize; i++) {
+        outValues[i] = input[i] - constant;
+      }
+      return false;
+    }
+    boolean anyNulls = false;
+    for (int i = 0; i < currentSize; i++) {
+      final boolean isNull = inputNulls[i];
+      outNulls[i] = isNull;
+      if (isNull) {
+        anyNulls = true;
+        outValues[i] = 0L;
+      } else {
+        outValues[i] = input[i] - constant;
+      }
+    }
+    return anyNulls;
+  }
+
+  private boolean processMultiply(long[] input, @Nullable boolean[] inputNulls, int currentSize)
+  {
+    if (inputNulls == null) {
+      for (int i = 0; i < currentSize; i++) {
+        outValues[i] = input[i] * constant;
+      }
+      return false;
+    }
+    boolean anyNulls = false;
+    for (int i = 0; i < currentSize; i++) {
+      final boolean isNull = inputNulls[i];
+      outNulls[i] = isNull;
+      if (isNull) {
+        anyNulls = true;
+        outValues[i] = 0L;
+      } else {
+        outValues[i] = input[i] * constant;
+      }
+    }
+    return anyNulls;
+  }
+
+  private boolean processDivideConstantByInput(long[] input, @Nullable boolean[] inputNulls, int currentSize)
+  {
+    if (inputNulls == null) {
+      for (int i = 0; i < currentSize; i++) {
+        outValues[i] = constant / input[i];
+      }
+      return false;
+    }
+    boolean anyNulls = false;
+    for (int i = 0; i < currentSize; i++) {
+      final boolean isNull = inputNulls[i];
+      outNulls[i] = isNull;
+      if (isNull) {
+        anyNulls = true;
+        outValues[i] = 0L;
+      } else {
+        outValues[i] = constant / input[i];
+      }
+    }
+    return anyNulls;
+  }
+
+  private boolean processDivideInputByConstant(long[] input, @Nullable boolean[] inputNulls, int currentSize)
+  {
+    if (inputNulls == null) {
+      for (int i = 0; i < currentSize; i++) {
+        outValues[i] = input[i] / constant;
+      }
+      return false;
+    }
+    boolean anyNulls = false;
+    for (int i = 0; i < currentSize; i++) {
+      final boolean isNull = inputNulls[i];
+      outNulls[i] = isNull;
+      if (isNull) {
+        anyNulls = true;
+        outValues[i] = 0L;
+      } else {
+        outValues[i] = input[i] / constant;
+      }
+    }
+    return anyNulls;
   }
 }

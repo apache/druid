@@ -118,10 +118,63 @@ public class VectorProcessorOptimizationTest
     Assertions.assertInstanceOf(LongBivariateLongsConstantProcessor.class, processor("x + 7", bindings));
     Assertions.assertInstanceOf(LongBivariateLongsConstantProcessor.class, processor("7 - x", bindings));
     Assertions.assertInstanceOf(DoubleBivariateDoublesConstantProcessor.class, processor("d * 2.5", bindings));
+    Assertions.assertInstanceOf(LongBivariateLongsFunctionVectorProcessor.class, processor("x % 7", bindings));
+  }
+
+  @Test
+  public void testLongConstantArithmeticPreservesOperandOrderAndNulls()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(VECTOR_SIZE)
+        .addLong("x", new long[]{8, 0, 6, 4}, new boolean[]{false, true, false, false});
+
+    assertLongResult(bindings, "x + 2", new long[]{10, 0, 8, 6});
+    assertLongResult(bindings, "20 - x", new long[]{12, 0, 14, 16});
+    assertLongResult(bindings, "x - 2", new long[]{6, 0, 4, 2});
+    assertLongResult(bindings, "x * 2", new long[]{16, 0, 12, 8});
+    assertLongResult(bindings, "24 / x", new long[]{3, 0, 4, 6});
+    assertLongResult(bindings, "x / 2", new long[]{4, 0, 3, 2});
+  }
+
+  @Test
+  public void testDoubleConstantArithmeticPreservesOperandOrderAndNulls()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(VECTOR_SIZE)
+        .addDouble("x", new double[]{8, 0, 6, 4}, new boolean[]{false, true, false, false});
+
+    assertDoubleResult(bindings, "x + 2.5", new double[]{10.5, 0, 8.5, 6.5});
+    assertDoubleResult(bindings, "20.5 - x", new double[]{12.5, 0, 14.5, 16.5});
+    assertDoubleResult(bindings, "x - 2.5", new double[]{5.5, 0, 3.5, 1.5});
+    assertDoubleResult(bindings, "x * 2.5", new double[]{20, 0, 15, 10});
+    assertDoubleResult(bindings, "24.0 / x", new double[]{3, 0, 4, 6});
+    assertDoubleResult(bindings, "x / 2.0", new double[]{4, 0, 3, 2});
   }
 
   private static <T> ExprVectorProcessor<T> processor(String expression, Expr.VectorInputBinding bindings)
   {
     return Parser.parse(expression, ExprMacroTable.nil()).asVectorProcessor(bindings);
+  }
+
+  private static void assertLongResult(
+      Expr.VectorInputBinding bindings,
+      String expression,
+      long[] expectedValues
+  )
+  {
+    final ExprVectorProcessor<long[]> processor = processor(expression, bindings);
+    final ExprEvalVector<long[]> result = processor.evalVector(bindings);
+    Assertions.assertArrayEquals(expectedValues, result.values());
+    Assertions.assertArrayEquals(new boolean[]{false, true, false, false}, result.getNullVector());
+  }
+
+  private static void assertDoubleResult(
+      Expr.VectorInputBinding bindings,
+      String expression,
+      double[] expectedValues
+  )
+  {
+    final ExprVectorProcessor<double[]> processor = processor(expression, bindings);
+    final ExprEvalVector<double[]> result = processor.evalVector(bindings);
+    Assertions.assertArrayEquals(expectedValues, result.values());
+    Assertions.assertArrayEquals(new boolean[]{false, true, false, false}, result.getNullVector());
   }
 }
