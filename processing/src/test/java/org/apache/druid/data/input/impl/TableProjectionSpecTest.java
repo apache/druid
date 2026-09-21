@@ -126,6 +126,24 @@ class TableProjectionSpecTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testWithQueryGranularityOriginPeriodIsRejected()
+  {
+    // An origin shifts the bucket boundaries, which the projection machinery does not treat as a standard time
+    // grouping (AggregateProjectionSpec requires a null origin to recognize a time column), so it is rejected here
+    // for the same reason as a non-UTC time zone.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> pagesSpec().withQueryGranularity(
+            new PeriodGranularity(new Period("P1D"), DateTimes.of("2020-01-02T03:00:00Z"), null)
+        )
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("only period granularities in the UTC time zone without an origin"),
+        e.getMessage()
+    );
+  }
+
+  @Test
   void testNonUtcGranularityCarrierRejectedAtConstruction()
   {
     final DruidException e = Assertions.assertThrows(
@@ -141,6 +159,26 @@ class TableProjectionSpecTest extends InitializedNullHandlingTest
             .build()
     );
     Assertions.assertTrue(e.getMessage().contains("only period granularities in the UTC time zone"), e.getMessage());
+  }
+
+  @Test
+  void testGranularityCarrierReadingOtherColumnRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> TableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                new ExpressionVirtualColumn(
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+                    "timestamp_floor(\"page\", 'P1D')",
+                    ColumnType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            ))
+            .columns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("must be computed from [__time] alone"), e.getMessage());
   }
 
   @Test

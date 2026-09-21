@@ -929,7 +929,7 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         )
     );
     assertTrue(
-        e.getMessage().contains("only period granularities in the UTC time zone are supported"),
+        e.getMessage().contains("only period granularities in the UTC time zone without an origin are supported"),
         e.getMessage()
     );
     assertTrue(WRITER.calls.isEmpty());

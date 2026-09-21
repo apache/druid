@@ -208,10 +208,7 @@ public class ProjectionSpecTranslator
             )
         );
       }
-      final Granularity granularity =
-          Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME).equals(column.virtualColumn.requiredColumns())
-          ? Granularities.fromVirtualColumn(column.virtualColumn)
-          : null;
+      final Granularity granularity = Granularities.fromTimeVirtualColumn(column.virtualColumn);
       if (granularity == null) {
         throw invalid(
             BASE_PROJECTION_NAME,

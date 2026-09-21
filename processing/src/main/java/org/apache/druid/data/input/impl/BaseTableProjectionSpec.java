@@ -24,16 +24,15 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
-import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -77,10 +76,7 @@ public interface BaseTableProjectionSpec
   {
     final VirtualColumn granularityVirtualColumn =
         getVirtualColumns().getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    if (granularityVirtualColumn == null) {
-      return Granularities.NONE;
-    }
-    final Granularity granularity = Granularities.fromVirtualColumn(granularityVirtualColumn);
+    final Granularity granularity = Granularities.fromTimeVirtualColumn(granularityVirtualColumn);
     return granularity == null ? Granularities.NONE : granularity;
   }
 
@@ -112,15 +108,14 @@ public interface BaseTableProjectionSpec
 
   /**
    * Validates that {@code queryGranularity} can be used by a base-table spec: only period granularities in the UTC
-   * time zone are currently allowed.
+   * time zone without an origin are currently allowed.
    */
   static void validateQueryGranularity(Granularity queryGranularity, String typeName)
   {
-    if (!(queryGranularity instanceof PeriodGranularity periodGranularity)
-        || !DateTimeZone.UTC.equals(periodGranularity.getTimeZone())) {
+    if (!Granularities.isStandardUtcPeriod(queryGranularity)) {
       throw InvalidInput.exception(
           "Query granularity[%s] is not supported for [%s] base tables; only period granularities in the UTC time"
-          + " zone are supported",
+          + " zone without an origin are supported",
           queryGranularity,
           typeName
       );
@@ -132,15 +127,21 @@ public interface BaseTableProjectionSpec
    * a translated DDL body): it must decode to a granularity {@link #validateQueryGranularity} accepts, so a
    * spec cannot be constructed claiming a granularity that reads back as something else.
    */
-  static void validateGranularity(VirtualColumn granularityCarrier, String typeName)
+  static void validateGranularity(VirtualColumn granularityColumn, String typeName)
   {
-    final Granularity granularity = Granularities.fromVirtualColumn(granularityCarrier);
+    if (!Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME).equals(granularityColumn.requiredColumns())) {
+      throw InvalidInput.exception(
+          "virtual column [%s] must be computed from [%s] alone, but reads %s",
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+          ColumnHolder.TIME_COLUMN_NAME,
+          granularityColumn.requiredColumns()
+      );
+    }
+    final Granularity granularity = Granularities.fromTimeVirtualColumn(granularityColumn);
     if (granularity == null || Granularities.NONE.equals(granularity) || Granularities.ALL.equals(granularity)) {
       throw InvalidInput.exception(
-          "virtual column [%s] does not encode a query granularity; declare it as a timestamp_floor of [%s], or"
-          + " omit it",
-          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
-          ColumnHolder.TIME_COLUMN_NAME
+          "virtual column [%s] does not encode a query granularity",
+          Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
       );
     }
     validateQueryGranularity(granularity, typeName);

@@ -116,6 +116,24 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
   }
 
   @Test
+  void testWithQueryGranularityOriginPeriodIsRejected()
+  {
+    // An origin shifts the bucket boundaries, which the projection machinery does not treat as a standard time
+    // grouping (AggregateProjectionSpec requires a null origin to recognize a time column), so it is rejected here
+    // for the same reason as a non-UTC time zone.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> tenantSpec().withQueryGranularity(
+            new PeriodGranularity(new Period("P1D"), DateTimes.of("2020-01-02T03:00:00Z"), null)
+        )
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("only period granularities in the UTC time zone without an origin"),
+        e.getMessage()
+    );
+  }
+
+  @Test
   void testNonUtcGranularityCarrierRejectedAtConstruction()
   {
     final DruidException e = Assertions.assertThrows(
@@ -153,6 +171,27 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
             .build()
     );
     Assertions.assertTrue(e.getMessage().contains("does not encode a query granularity"), e.getMessage());
+  }
+
+  @Test
+  void testGranularityCarrierReadingOtherColumnRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                new ExpressionVirtualColumn(
+                    Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
+                    "timestamp_floor(\"tenant\", 'P1D')",
+                    ColumnType.LONG,
+                    TestExprMacroTable.INSTANCE
+                )
+            ))
+            .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+            .clusteringColumns("tenant")
+            .build()
+    );
+    Assertions.assertTrue(e.getMessage().contains("must be computed from [__time] alone"), e.getMessage());
   }
 
   @Test
