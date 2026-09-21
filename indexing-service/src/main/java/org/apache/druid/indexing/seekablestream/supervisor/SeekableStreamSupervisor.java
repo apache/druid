@@ -4493,7 +4493,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // offsets are already at the bounded end, producing an endless churn of tasks that complete instantly.
       // This mirrors the completion guard on the task-group recreation path in this method.
       if (ioConfig.isBounded() && hasTaskGroupReachedBoundedEnd(groupId)) {
-        log.debug(
+        log.info(
             "Bounded taskGroup[%d] has reached end offsets, skipping replica top-up",
             groupId
         );
