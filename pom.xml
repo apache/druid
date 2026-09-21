@@ -85,7 +85,7 @@
         <avatica.version>1.28.0</avatica.version>
         <avro.version>1.12.2</avro.version>
         <parquet.version>1.18.1</parquet.version>
-        <bytebuddy.version>1.18.13</bytebuddy.version>
+        <bytebuddy.version>1.18.14</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -125,7 +125,7 @@
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
-        <aws.sdk.v2.version>2.54.17</aws.sdk.v2.version>
+        <aws.sdk.v2.version>2.54.19</aws.sdk.v2.version>
         <caffeine.version>3.2.4</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
@@ -518,7 +518,7 @@
             <dependency>
                 <groupId>com.github.fppt</groupId>
                 <artifactId>jedis-mock</artifactId>
-                <version>1.1.18</version>
+                <version>1.1.19</version>
             </dependency>
             <dependency>
               <groupId>io.kubernetes</groupId>
@@ -1006,7 +1006,7 @@
             <dependency>
                 <groupId>at.yawk.lz4</groupId>
                 <artifactId>lz4-java</artifactId>
-                <version>1.11.2</version>
+                <version>1.11.3</version>
             </dependency>
             <dependency>
                 <groupId>org.xerial.snappy</groupId>

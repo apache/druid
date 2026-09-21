@@ -27,6 +27,7 @@ import com.google.common.base.Strings;
 import org.apache.druid.catalog.model.ModelProperties.PropertyDefn;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 
@@ -104,11 +105,15 @@ public class ColumnSpec
       throw new IAE("Column name is required");
     }
     if (Columns.isTimeColumn(name)) {
-      if (dataType != null && !Columns.LONG.equalsIgnoreCase(dataType)) {
+      // Any spelling that resolves to a LONG is fine: the time column is written as TIMESTAMP in SQL and as LONG
+      // natively, and both mean the same stored type.
+      if (dataType != null && !ColumnType.LONG.equals(Columns.druidTypeFromString(dataType))) {
         throw new IAE(
-            "[%s] column must have type [%s] or no type. Found [%s]",
+            "[%s] column must have a type that resolves to [%s], such as [%s] or [%s], or no type. Found [%s]",
             name,
             Columns.LONG,
+            Columns.SQL_TIMESTAMP,
+            Columns.SQL_BIGINT,
             dataType
         );
       }

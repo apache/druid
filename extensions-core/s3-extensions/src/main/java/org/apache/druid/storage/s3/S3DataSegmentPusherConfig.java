@@ -39,9 +39,6 @@ public class S3DataSegmentPusherConfig
   @Min(1)
   private int maxListingLength = 1024;
 
-  @JsonProperty
-  private boolean zip = true;
-
   public void setBucket(String bucket)
   {
     this.bucket = bucket;
@@ -80,10 +77,5 @@ public class S3DataSegmentPusherConfig
   public int getMaxListingLength()
   {
     return maxListingLength;
-  }
-
-  public boolean isZip()
-  {
-    return zip;
   }
 }
