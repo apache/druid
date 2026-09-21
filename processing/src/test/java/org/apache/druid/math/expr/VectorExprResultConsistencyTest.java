@@ -35,12 +35,18 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.CastToDoubleVectorProcessor;
 import org.apache.druid.math.expr.vector.CastToLongVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleBivariateDoubleLongFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.DoubleBivariateDoublesConstantProcessor;
 import org.apache.druid.math.expr.vector.DoubleBivariateDoublesFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleBivariateLongDoubleFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleUnivariateDoubleFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleUnivariateLongFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.LongBivariateLongsConstantProcessor;
 import org.apache.druid.math.expr.vector.LongBivariateLongsFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateDoubleFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
@@ -290,20 +296,57 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testOrdinaryProcessorElidesEmptyNullVector()
+  public void testOrdinaryProcessorFamiliesElideEmptyNullVector()
   {
     final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
-        .addLong("x", new long[]{1, 2, 3, 4}, new boolean[4]);
-    // Modulo has no SIMD specialization, so this exercises the ordinary bivariate processor even when this test is
-    // inherited by VectorExprResultConsistencyVectorApiTest. The non-null, all-false array models a nullable input
-    // batch that happens to contain no null rows.
-    final ExprVectorProcessor<long[]> processor = Parser.parse("x % 2", ExprMacroTable.nil())
-                                                        .asVectorProcessor(bindings);
+        .addLong("l1", new long[]{1, 2, 3, 4}, new boolean[4])
+        .addLong("l2", new long[]{2, 3, 4, 5}, new boolean[4])
+        .addDouble("d1", new double[]{1, 2, 3, 4}, new boolean[4])
+        .addDouble("d2", new double[]{2, 3, 4, 5}, new boolean[4]);
 
-    final ExprEvalVector<long[]> result = processor.evalVector(bindings);
-
-    Assertions.assertArrayEquals(new long[]{1, 0, 1, 0}, result.values());
-    Assertions.assertNull(result.getNullVector());
+    // These operations do not have SIMD specializations, so they exercise the ordinary processor families even when
+    // inherited by VectorExprResultConsistencyVectorApiTest. The non-null, all-false arrays model nullable inputs for
+    // a batch that happens to contain no null rows.
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "l1 % l2",
+        LongBivariateLongsFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "d1 % d2",
+        DoubleBivariateDoublesFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "l1 % d1",
+        DoubleBivariateLongDoubleFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "d1 % l1",
+        DoubleBivariateDoubleLongFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "bitwiseComplement(l1)",
+        LongUnivariateLongFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "bitwiseComplement(d1)",
+        LongUnivariateDoubleFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "cos(l1)",
+        DoubleUnivariateLongFunctionVectorProcessor.class
+    );
+    assertProcessorElidesEmptyNullVector(
+        bindings,
+        "cos(d1)",
+        DoubleUnivariateDoubleFunctionVectorProcessor.class
+    );
   }
 
   @Test
@@ -357,6 +400,18 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
         LongBivariateLongsFunctionVectorProcessor.class,
         Parser.parse("x % 7", ExprMacroTable.nil()).asVectorProcessor(bindings)
     );
+  }
+
+  private static void assertProcessorElidesEmptyNullVector(
+      Expr.VectorInputBinding bindings,
+      String expression,
+      Class<? extends ExprVectorProcessor<?>> processorClass
+  )
+  {
+    final ExprVectorProcessor<?> processor = Parser.parse(expression, ExprMacroTable.nil())
+                                                   .asVectorProcessor(bindings);
+    Assertions.assertInstanceOf(processorClass, processor);
+    Assertions.assertNull(processor.evalVector(bindings).getNullVector());
   }
 
   @Test
