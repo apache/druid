@@ -1006,4 +1006,24 @@
     <packageUrl regex="true">^pkg:maven/org\.apache\.parquet/parquet-.*@.*$</packageUrl>
     <cve>CVE-2026-73334</cve>
   </suppress>
+
+  <suppress>
+    <!-- CVE-2026-79993: deleteContainer opcode processed without ACL verification — unauthenticated
+         attacker with TCP access to port 2181 can delete empty persistent znodes. Server-side only.
+         CVE-2026-59739: SetWatches reconnect replay skips ACL checks on the server, leaking
+         restricted znode path names to watchers on reconnect. Server-side only.
+         CVE-2026-59969: Quorum TLS hostname verification bypassed in FIPS mode
+         (requires sslQuorum=true + zookeeper.fips-mode=true). Affects server-to-server
+         quorum communication only.
+         All three are fixed in ZooKeeper 3.8.7. Druid uses ZooKeeper as a CLIENT only
+         (service discovery, leader election coordination) and does not run a ZooKeeper
+         server or quorum. None of these code paths execute in the ZooKeeper client library. -->
+    <notes><![CDATA[
+      file name: zookeeper-3.8.6.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.zookeeper/zookeeper@.*$</packageUrl>
+    <cve>CVE-2026-79993</cve>
+    <cve>CVE-2026-59739</cve>
+    <cve>CVE-2026-59969</cve>
+  </suppress>
 </suppressions>
