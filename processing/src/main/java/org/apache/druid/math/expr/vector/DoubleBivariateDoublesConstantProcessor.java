@@ -53,6 +53,7 @@ public final class DoubleBivariateDoublesConstantProcessor extends DoubleUnivari
   @Override
   void processIndex(double[] input, int i)
   {
+    // Preserve operand order for non-commutative operations such as subtraction, division, modulo, and power.
     outValues[i] = constantIsLeftOperand
                    ? function.process(constant, input[i])
                    : function.process(input[i], constant);
