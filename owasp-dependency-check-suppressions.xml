@@ -1019,9 +1019,9 @@
          (service discovery, leader election coordination) and does not run a ZooKeeper
          server or quorum. None of these code paths execute in the ZooKeeper client library. -->
     <notes><![CDATA[
-      file name: zookeeper-3.8.6.jar
+      file name: zookeeper-3.8.6.jar zookeeper-jute-3.8.6.jar
     ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.apache\.zookeeper/zookeeper@.*$</packageUrl>
+    <packageUrl regex="true">^pkg:maven/org\.apache\.zookeeper/zookeeper(-jute)?@.*$</packageUrl>
     <cve>CVE-2026-79993</cve>
     <cve>CVE-2026-59739</cve>
     <cve>CVE-2026-59969</cve>
