@@ -81,6 +81,7 @@ import {
   getDruidErrorMessage,
   groupByAsMap,
   hasOverlayOpen,
+  isNumberLike,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -172,16 +173,16 @@ const PERCENT_BRACES = [formatPercent(1)];
 
 interface DatasourceQueryResultRow {
   readonly datasource: string;
-  readonly num_segments: number;
-  readonly num_zero_replica_segments: number;
-  readonly num_segments_to_load: number;
-  readonly num_segments_to_drop: number;
-  readonly minute_aligned_segments: number;
-  readonly hour_aligned_segments: number;
-  readonly day_aligned_segments: number;
-  readonly month_aligned_segments: number;
-  readonly year_aligned_segments: number;
-  readonly all_granularity_segments: number;
+  readonly num_segments: NumberLike;
+  readonly num_zero_replica_segments: NumberLike;
+  readonly num_segments_to_load: NumberLike;
+  readonly num_segments_to_drop: NumberLike;
+  readonly minute_aligned_segments: NumberLike;
+  readonly hour_aligned_segments: NumberLike;
+  readonly day_aligned_segments: NumberLike;
+  readonly month_aligned_segments: NumberLike;
+  readonly year_aligned_segments: NumberLike;
+  readonly all_granularity_segments: NumberLike;
   readonly total_data_size: NumberLike;
   readonly replicated_size: NumberLike;
   readonly min_segment_rows: NumberLike;
@@ -1285,29 +1286,31 @@ GROUP BY 1, 2`;
                   {pluralIfNeeded(num_segments, 'segment')}
                 </a>
               );
-              if (typeof num_segments_to_load !== 'number' || typeof num_segments !== 'number') {
+              if (!isNumberLike(num_segments) || !isNumberLike(num_segments_to_load)) {
                 return '-';
               }
 
+              const numSegments = Number(num_segments);
+              const numSegmentsToLoad = Number(num_segments_to_load);
               const percentZeroReplica = (
-                Math.floor((Number(num_zero_replica_segments) / num_segments) * 1000) / 10
+                Math.floor((Number(num_zero_replica_segments) / numSegments) * 1000) / 10
               ).toFixed(1);
 
-              if (num_segments === 0) {
+              if (numSegments === 0) {
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.EMPTY_COLOR }}>&#x25cf;&nbsp;</span>
                     Empty
                   </span>
                 );
-              } else if (num_segments_to_load === 0) {
+              } else if (numSegmentsToLoad === 0) {
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
                       &#x25cf;&nbsp;
                     </span>
                     {assemble(
-                      num_segments !== num_zero_replica_segments
+                      numSegments !== Number(num_zero_replica_segments)
                         ? `Fully ${descriptor}`
                         : undefined,
                       hasZeroReplicationRule ? `${percentZeroReplica}% deep storage only` : '',
@@ -1316,9 +1319,9 @@ GROUP BY 1, 2`;
                   </span>
                 );
               } else {
-                const numAvailableSegments = num_segments - num_segments_to_load;
+                const numAvailableSegments = numSegments - numSegmentsToLoad;
                 const percentAvailable = (
-                  Math.floor((numAvailableSegments / num_segments) * 1000) / 10
+                  Math.floor((numAvailableSegments / numSegments) * 1000) / 10
                 ).toFixed(1);
                 return (
                   <span>

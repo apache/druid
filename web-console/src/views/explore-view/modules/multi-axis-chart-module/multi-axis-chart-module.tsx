@@ -115,7 +115,10 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           throw new Error(`Must have a column of type TIMESTAMP for the multi-axis chart to work`);
         }
 
-        return bigIntsToNumbers((await runSqlQuery(query, signal)).toObjectArray());
+        return bigIntsToNumbers(
+          (await runSqlQuery(query, signal)).toObjectArray(),
+          measures.map(measure => measure.name),
+        );
       },
     });
 

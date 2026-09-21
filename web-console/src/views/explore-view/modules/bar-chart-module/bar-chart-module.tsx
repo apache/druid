@@ -151,7 +151,8 @@ ModuleRepository.registerModule<BarChartParameterValues>({
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
       processQuery: async (query, signal) => {
-        return bigIntsToNumbers((await runSqlQuery(query, signal)).toObjectArray());
+        // Only 'met' is coerced, 'dim' is a dimension value that must keep its exact value
+        return bigIntsToNumbers((await runSqlQuery(query, signal)).toObjectArray(), ['met']);
       },
     });
 

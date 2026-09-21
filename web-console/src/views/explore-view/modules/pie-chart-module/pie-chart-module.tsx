@@ -131,7 +131,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       query: dataQueries,
       processQuery: async ({ mainQuery, limit, splitExpression, othersPartialQuery }, signal) => {
         const result = await runSqlQuery({ query: mainQuery }, signal);
-        const data = bigIntsToNumbers(result.toObjectArray());
+        const data = bigIntsToNumbers(result.toObjectArray(), ['value']);
 
         if (splitExpression && othersPartialQuery) {
           const pieValues = result.getColumnByIndex(0)!;
