@@ -222,6 +222,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final long[] firstLongs = toLong.evalVector(bindings).values();
     final long[] secondLongs = toLong.evalVector(bindings).values();
 
+    // Result correctness is covered by testCast. Identity verifies the allocation optimization: each processor must
+    // reuse its output buffer across batches instead of allocating a new primitive array for every evaluation.
     Assertions.assertSame(firstDoubles, secondDoubles);
     Assertions.assertSame(firstLongs, secondLongs);
   }
@@ -265,6 +267,9 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   {
     final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
         .addLong("x", new long[]{1, 2, 3, 4}, new boolean[4]);
+    // Modulo has no SIMD specialization, so this exercises the ordinary bivariate processor even when this test is
+    // inherited by VectorExprResultConsistencyVectorApiTest. The non-null, all-false array models a nullable input
+    // batch that happens to contain no null rows.
     final ExprVectorProcessor<long[]> processor = Parser.parse("x % 2", ExprMacroTable.nil())
                                                         .asVectorProcessor(bindings);
 
@@ -279,6 +284,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   {
     final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
         .addLong("x", new long[]{1, 0, 3, 4}, new boolean[]{false, true, false, false});
+    // An empty null vector may be elided, but a vector containing an actual null must still be returned.
     final ExprVectorProcessor<long[]> processor = Parser.parse("x % 2", ExprMacroTable.nil())
                                                         .asVectorProcessor(bindings);
 
@@ -294,6 +300,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
         .addLong("x", new long[]{1, 2, 3, 4}, new boolean[4])
         .addDouble("d", new double[]{1, 2, 3, 4}, new boolean[4]);
 
+    // This base test also runs in VectorExprResultConsistencyVectorApiTest, where SIMD takes precedence over the
+    // scalar bound-constant processors. Assert the scalar selection only when the Vector API is disabled.
     if (!ExpressionProcessing.useVectorApi()) {
       Assertions.assertInstanceOf(
           LongBivariateLongsConstantProcessor.class,
@@ -308,6 +316,8 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
           Parser.parse("d * 2.5", ExprMacroTable.nil()).asVectorProcessor(bindings)
       );
     }
+    // Unsupported operations must continue to use the generic processor rather than enter the specialized
+    // bound-constant switch.
     Assertions.assertInstanceOf(
         LongBivariateLongsFunctionVectorProcessor.class,
         Parser.parse("x % 7", ExprMacroTable.nil()).asVectorProcessor(bindings)

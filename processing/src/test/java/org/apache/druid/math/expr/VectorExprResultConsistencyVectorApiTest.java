@@ -49,6 +49,8 @@ public class VectorExprResultConsistencyVectorApiTest extends VectorExprResultCo
   {
     final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
         .addLong("x", new long[]{1, 2, 3, 4}, new boolean[4]);
+    // Addition and multiplication have SIMD implementations. Supplying a non-null, all-false null vector verifies
+    // that the SIMD processor recognizes a batch without null rows and exposes a null null-vector to its consumer.
     final ExprVectorProcessor<long[]> processor = Parser.parse("(x + x) * x", ExprMacroTable.nil())
                                                         .asVectorProcessor(bindings);
 
