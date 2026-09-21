@@ -67,6 +67,7 @@ CentralizedDatasourceSchema
 Ceph
 circledR
 CloudWatch
+ClusterRole
 ColumnDescriptor
 Corretto
 CLI
@@ -104,6 +105,7 @@ DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
+EKS
 EMR
 EMRFS
 ETL
@@ -179,6 +181,7 @@ Joda
 JsonProperty
 Jupyter
 JupyterLab
+KIP-392
 KMS
 Kerberized
 Kerberos
@@ -205,6 +208,7 @@ Marquez
 MiddleManager
 MiddleManagers
 Montréal
+MSK
 MSQ
 Murmur3
 MVCC
@@ -422,6 +426,7 @@ kbps
 kerberos
 keystore
 keytool
+kubelet
 keytab
 kubeconfig
 kubernetes
