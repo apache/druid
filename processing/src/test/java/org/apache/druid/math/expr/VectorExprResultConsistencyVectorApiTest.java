@@ -19,8 +19,12 @@
 
 package org.apache.druid.math.expr;
 
+import org.apache.druid.math.expr.vector.ExprEvalVector;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Re-runs every {@link VectorExprResultConsistencyTest} case with the SIMD ({@code jdk.incubator.vector}) expression
@@ -38,5 +42,19 @@ public class VectorExprResultConsistencyVectorApiTest extends VectorExprResultCo
   public void resetExpressionProcessing()
   {
     ExpressionProcessing.initializeForTests();
+  }
+
+  @Test
+  public void testSimdProcessorElidesEmptyNullVector()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("x", new long[]{1, 2, 3, 4}, new boolean[4]);
+    final ExprVectorProcessor<long[]> processor = Parser.parse("(x + x) * x", ExprMacroTable.nil())
+                                                        .asVectorProcessor(bindings);
+
+    final ExprEvalVector<long[]> result = processor.evalVector(bindings);
+
+    Assertions.assertArrayEquals(new long[]{2, 8, 18, 32}, result.values());
+    Assertions.assertNull(result.getNullVector());
   }
 }

@@ -33,8 +33,14 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.vector.CastToDoubleVectorProcessor;
+import org.apache.druid.math.expr.vector.CastToLongVectorProcessor;
+import org.apache.druid.math.expr.vector.DoubleBivariateDoublesConstantProcessor;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.LongBivariateLongsConstantProcessor;
+import org.apache.druid.math.expr.vector.LongBivariateLongsFunctionVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -199,6 +205,28 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testNumericCastBuffersAreReused()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("l", new long[]{1, 2, 3, 4}, new boolean[4])
+        .addDouble("d", new double[]{1.2, 2.3, 3.4, 4.5}, new boolean[4]);
+    final CastToDoubleVectorProcessor toDouble = new CastToDoubleVectorProcessor(
+        VectorProcessors.identifier(bindings, "l")
+    );
+    final CastToLongVectorProcessor toLong = new CastToLongVectorProcessor(
+        VectorProcessors.identifier(bindings, "d")
+    );
+
+    final double[] firstDoubles = toDouble.evalVector(bindings).values();
+    final double[] secondDoubles = toDouble.evalVector(bindings).values();
+    final long[] firstLongs = toLong.evalVector(bindings).values();
+    final long[] secondLongs = toLong.evalVector(bindings).values();
+
+    Assertions.assertSame(firstDoubles, secondDoubles);
+    Assertions.assertSame(firstLongs, secondLongs);
+  }
+
+  @Test
   public void testCastArraysRoundTrip()
   {
     testExpression("cast(cast(s1, 'ARRAY<STRING>'), 'STRING')", types);
@@ -230,6 +258,60 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final List<String> args = List.of("+", "-", "*", "/", "^", "%");
 
     testFunctions(types, templates, args);
+  }
+
+  @Test
+  public void testOrdinaryProcessorElidesEmptyNullVector()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("x", new long[]{1, 2, 3, 4}, new boolean[4]);
+    final ExprVectorProcessor<long[]> processor = Parser.parse("x % 2", ExprMacroTable.nil())
+                                                        .asVectorProcessor(bindings);
+
+    final ExprEvalVector<long[]> result = processor.evalVector(bindings);
+
+    Assertions.assertArrayEquals(new long[]{1, 0, 1, 0}, result.values());
+    Assertions.assertNull(result.getNullVector());
+  }
+
+  @Test
+  public void testOrdinaryProcessorPreservesActualNulls()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("x", new long[]{1, 0, 3, 4}, new boolean[]{false, true, false, false});
+    final ExprVectorProcessor<long[]> processor = Parser.parse("x % 2", ExprMacroTable.nil())
+                                                        .asVectorProcessor(bindings);
+
+    final ExprEvalVector<long[]> result = processor.evalVector(bindings);
+
+    Assertions.assertArrayEquals(new boolean[]{false, true, false, false}, result.getNullVector());
+  }
+
+  @Test
+  public void testConstantArithmeticProcessorSelection()
+  {
+    final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
+        .addLong("x", new long[]{1, 2, 3, 4}, new boolean[4])
+        .addDouble("d", new double[]{1, 2, 3, 4}, new boolean[4]);
+
+    if (!ExpressionProcessing.useVectorApi()) {
+      Assertions.assertInstanceOf(
+          LongBivariateLongsConstantProcessor.class,
+          Parser.parse("x + 7", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+      Assertions.assertInstanceOf(
+          LongBivariateLongsConstantProcessor.class,
+          Parser.parse("7 - x", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+      Assertions.assertInstanceOf(
+          DoubleBivariateDoublesConstantProcessor.class,
+          Parser.parse("d * 2.5", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+    }
+    Assertions.assertInstanceOf(
+        LongBivariateLongsFunctionVectorProcessor.class,
+        Parser.parse("x % 7", ExprMacroTable.nil()).asVectorProcessor(bindings)
+    );
   }
 
   @Test
