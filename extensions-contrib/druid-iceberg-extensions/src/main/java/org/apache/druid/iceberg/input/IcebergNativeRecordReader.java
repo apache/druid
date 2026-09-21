@@ -41,10 +41,10 @@ import org.apache.iceberg.io.CloseableIterable;
 import org.apache.iceberg.io.DeleteSchemaUtil;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.parquet.Parquet;
-import org.apache.iceberg.types.Types;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -375,8 +375,8 @@ public class IcebergNativeRecordReader implements InputSourceReader
                                                     .build()) {
       for (Record eqRecord : records) {
         Map<String, Object> key = new HashMap<>();
-        for (Types.NestedField field : eqSchema.columns()) {
-          key.put(field.name(), eqRecord.getField(field.name()));
+        for (String fieldName : fieldNames) {
+          key.put(fieldName, getNestedFieldValue(eqRecord, fieldName));
         }
         keys.add(key);
       }
@@ -390,6 +390,32 @@ public class IcebergNativeRecordReader implements InputSourceReader
   }
 
   // ---- helper ----
+
+  /**
+   * Resolves the value of a (possibly dotted, e.g. {@code "payload.id"}) field name against a
+   * {@link Record}, walking nested struct fields one level at a time. {@link Record#getField}
+   * only resolves names in its own immediate schema, so dotted names produced by
+   * {@link Schema#findColumnName} must be walked manually.
+   *
+   * <p>Fixed-width binary values are normalized to {@link ByteBuffer} so that equality-delete
+   * keys compare by content rather than array identity.
+   */
+  private static Object getNestedFieldValue(Record baseRecord, String dottedFieldName)
+  {
+    String[] parts = dottedFieldName.split("\\.");
+    Object current = baseRecord;
+    for (int i = 0; i < parts.length - 1; i++) {
+      if (current == null) {
+        return null;
+      }
+      current = ((Record) current).getField(parts[i]);
+    }
+    if (current == null) {
+      return null;
+    }
+    Object value = ((Record) current).getField(parts[parts.length - 1]);
+    return value instanceof byte[] ? ByteBuffer.wrap((byte[]) value) : value;
+  }
 
   /**
    * Holds the equality field names and a set of key maps read from one equality-delete file.
@@ -409,7 +435,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
     {
       Map<String, Object> key = new HashMap<>();
       for (String fieldName : fieldNames) {
-        key.put(fieldName, dataRecord.getField(fieldName));
+        key.put(fieldName, getNestedFieldValue(dataRecord, fieldName));
       }
       return keys.contains(key);
     }

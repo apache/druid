@@ -36,6 +36,7 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.CloseableIterators;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DeleteFile;
 import org.apache.iceberg.FileContent;
@@ -291,7 +292,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     } else {
       // V1 path: extract file paths and delegate to the warehouse input source.
       List<String> paths = tasks.stream()
-                                .map(t -> t.file().path().toString())
+                                .map(t -> t.file().location())
                                 .collect(Collectors.toList());
       delegateInputSource = paths.isEmpty() ? new EmptyInputSource() : warehouseSource.create(paths);
     }
@@ -322,7 +323,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   {
     List<String> parts = new ArrayList<>();
     parts.add(V2_MARKER);
-    parts.add(task.file().path().toString());
+    parts.add(task.file().location());
     parts.add(task.file().format().name());
     parts.add(String.valueOf(task.file().fileSizeInBytes()));
     parts.add(String.valueOf(task.file().recordCount()));
@@ -332,7 +333,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       if (deleteFile.content() == FileContent.POSITION_DELETES) {
         parts.add("POS:" + deleteFile.fileSizeInBytes()
                   + ":" + deleteFile.recordCount()
-                  + ":" + deleteFile.path());
+                  + ":" + deleteFile.location());
       } else {
         // EQUALITY_DELETES
         String fieldIds = deleteFile.equalityFieldIds() == null
@@ -343,7 +344,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
         parts.add("EQ:" + fieldIds
                   + ":" + deleteFile.fileSizeInBytes()
                   + ":" + deleteFile.recordCount()
-                  + ":" + deleteFile.path());
+                  + ":" + deleteFile.location());
       }
     }
     return new InputSplit<>(parts);
@@ -359,46 +360,54 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     // parts[5] = tableSchemaJson, parts[6+] = delete file tokens
     String dataFilePath = parts.get(1);
     String fileFormat = parts.get(2);
-    long dataFileSize = Long.parseLong(parts.get(3));
-    long dataFileCount = Long.parseLong(parts.get(4));
+    long dataFileSize;
+    long dataFileCount;
     String schemaJson = parts.get(5);
 
     List<IcebergFileTaskInputSource.DeleteFileInfo> deleteFiles = new ArrayList<>();
-    for (int i = 6; i < parts.size(); i++) {
-      String token = parts.get(i);
-      if (token.startsWith("POS:")) {
-        // "POS:<size>:<count>:<path>"  — split on at most 4 colons (path is last)
-        String[] toks = token.split(":", 4);
-        long size = Long.parseLong(toks[1]);
-        long count = Long.parseLong(toks[2]);
-        String path = toks[3];
-        deleteFiles.add(
-            new IcebergFileTaskInputSource.DeleteFileInfo(
-                path,
-                "POSITION_DELETES",
-                null,
-                size,
-                count));
-      } else if (token.startsWith("EQ:")) {
-        // "EQ:<fieldIds>:<size>:<count>:<path>"
-        String[] toks = token.split(":", 5);
-        String fieldIdsStr = toks[1];
-        long size = Long.parseLong(toks[2]);
-        long count = Long.parseLong(toks[3]);
-        String path = toks[4];
-        List<Integer> fieldIds = fieldIdsStr.isEmpty()
-                                 ? Collections.emptyList()
-                                 : Arrays.stream(fieldIdsStr.split(","))
-                                         .map(Integer::parseInt)
-                                         .collect(Collectors.toList());
-        deleteFiles.add(
-            new IcebergFileTaskInputSource.DeleteFileInfo(
-            path,
-            "EQUALITY_DELETES",
-            fieldIds,
-            size,
-            count));
+    try {
+      dataFileSize = Long.parseLong(parts.get(3));
+      dataFileCount = Long.parseLong(parts.get(4));
+
+      for (int i = 6; i < parts.size(); i++) {
+        String token = parts.get(i);
+        if (token.startsWith("POS:")) {
+          // "POS:<size>:<count>:<path>"  — split on at most 4 colons (path is last)
+          String[] toks = token.split(":", 4);
+          long size = Long.parseLong(toks[1]);
+          long count = Long.parseLong(toks[2]);
+          String path = toks[3];
+          deleteFiles.add(
+              new IcebergFileTaskInputSource.DeleteFileInfo(
+                  path,
+                  "POSITION_DELETES",
+                  null,
+                  size,
+                  count));
+        } else if (token.startsWith("EQ:")) {
+          // "EQ:<fieldIds>:<size>:<count>:<path>"
+          String[] toks = token.split(":", 5);
+          String fieldIdsStr = toks[1];
+          long size = Long.parseLong(toks[2]);
+          long count = Long.parseLong(toks[3]);
+          String path = toks[4];
+          List<Integer> fieldIds = fieldIdsStr.isEmpty()
+                                   ? Collections.emptyList()
+                                   : Arrays.stream(fieldIdsStr.split(","))
+                                           .map(Integer::parseInt)
+                                           .collect(Collectors.toList());
+          deleteFiles.add(
+              new IcebergFileTaskInputSource.DeleteFileInfo(
+              path,
+              "EQUALITY_DELETES",
+              fieldIds,
+              size,
+              count));
+        }
       }
+    }
+    catch (NumberFormatException e) {
+      throw new RE(e, "Failed to decode V2 split with parts [%s]", parts);
     }
 
     return new IcebergFileTaskInputSource(
@@ -422,7 +431,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
                                                                       .map(IcebergFileTaskInputSource.DeleteFileInfo::fromDeleteFile)
                                                                       .collect(Collectors.toList());
     return new IcebergNativeRecordReader(
-        task.file().path().toString(),
+        task.file().location(),
         task.file().format().name(),
         task.file().fileSizeInBytes(),
         task.file().recordCount(),

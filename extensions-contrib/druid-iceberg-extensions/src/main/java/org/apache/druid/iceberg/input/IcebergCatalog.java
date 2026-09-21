@@ -233,7 +233,7 @@ public abstract class IcebergCatalog
   {
     return extractFileScanTasks(tableNamespace, tableName, icebergFilter, snapshotTime, residualFilterMode)
         .stream()
-        .map(t -> t.file().path().toString())
+        .map(t -> t.file().location())
         .collect(Collectors.toList());
   }
 }

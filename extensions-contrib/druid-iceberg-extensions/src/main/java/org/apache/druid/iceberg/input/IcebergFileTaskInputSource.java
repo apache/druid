@@ -241,7 +241,7 @@ public class IcebergFileTaskInputSource implements InputSource
         fieldIds = deleteFile.equalityFieldIds();
       }
       return new DeleteFileInfo(
-          deleteFile.path().toString(),
+          deleteFile.location(),
           deleteFile.content().name(),
           fieldIds,
           deleteFile.fileSizeInBytes(),

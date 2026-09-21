@@ -575,20 +575,8 @@ public class IcebergInputSourceTest
     InputSource splitSource = inputSource.withSplit(splits.get(0));
     Assertions.assertTrue(splitSource instanceof IcebergFileTaskInputSource, "withSplit on a v2 split must return IcebergFileTaskInputSource");
 
-    // A V1 split (no marker) should return a non-IcebergFileTaskInputSource
-    InputSplit<List<String>> v1Split = new InputSplit<>(ImmutableList.of(dataFilePath));
-    // Reinitialise so delegateInputSource is available
-    IcebergInputSource v1Source = new IcebergInputSource(
-        v2TableName,
-        NAMESPACE,
-        null,
-        testCatalog,
-        new LocalInputSourceFactory(),
-        null,
-        null
-    );
-    // Force V1 path by loading without delete files (not possible with current table,
-    // so just verify the encoding roundtrip):
+    // A V1 split (no marker) should return a non-IcebergFileTaskInputSource.
+    // Not possible to force with the current table, so just verify the encoding roundtrip:
     IcebergFileTaskInputSource decodedSource = (IcebergFileTaskInputSource) splitSource;
     Assertions.assertEquals(dataFilePath, decodedSource.getDataFilePath());
     Assertions.assertEquals("PARQUET", decodedSource.getFileFormat());
@@ -1039,7 +1027,7 @@ public class IcebergInputSourceTest
     try {
       PositionDelete<GenericRecord> posDelete = PositionDelete.create();
       for (long pos : positions) {
-        posDelete.set(dataFilePath, pos, null);
+        posDelete.set(dataFilePath, pos);
         writer.write(posDelete);
       }
     }
