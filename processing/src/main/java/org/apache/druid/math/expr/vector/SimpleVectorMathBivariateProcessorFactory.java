@@ -87,7 +87,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           longsFunction
       );
     }
-    if (simdOp != null && isNonNullLiteral(left)) {
+    if (simdOp != null && isNonNullNumericLiteral(inspector, left)) {
       return new LongBivariateLongsConstantProcessor(
           right.asVectorProcessor(inspector),
           literalAsLong(inspector, left),
@@ -95,7 +95,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           simdOp
       );
     }
-    if (simdOp != null && isNonNullLiteral(right)) {
+    if (simdOp != null && isNonNullNumericLiteral(inspector, right)) {
       return new LongBivariateLongsConstantProcessor(
           left.asVectorProcessor(inspector),
           literalAsLong(inspector, right),
@@ -169,7 +169,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           doublesFunction
       );
     }
-    if (simdOp != null && isNonNullLiteral(left)) {
+    if (simdOp != null && isNonNullNumericLiteral(inspector, left)) {
       return new DoubleBivariateDoublesConstantProcessor(
           right.asVectorProcessor(inspector),
           literalAsDouble(inspector, left),
@@ -177,7 +177,7 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
           simdOp
       );
     }
-    if (simdOp != null && isNonNullLiteral(right)) {
+    if (simdOp != null && isNonNullNumericLiteral(inspector, right)) {
       return new DoubleBivariateDoublesConstantProcessor(
           left.asVectorProcessor(inspector),
           literalAsDouble(inspector, right),
@@ -192,18 +192,25 @@ public class SimpleVectorMathBivariateProcessorFactory extends VectorMathBivaria
     );
   }
 
-  private static boolean isNonNullLiteral(Expr expr)
+  private static boolean isNonNullNumericLiteral(Expr.VectorInputBindingInspector inspector, Expr expr)
   {
-    return expr.isLiteral() && expr.getLiteralValue() != null;
+    return expr.isLiteral()
+           && expr.getLiteralValue() != null
+           && !literalEval(inspector, expr).isNumericNull();
   }
 
   private static long literalAsLong(Expr.VectorInputBindingInspector inspector, Expr expr)
   {
-    return ExprEval.ofType(expr.getOutputType(inspector), expr.getLiteralValue()).asLong();
+    return literalEval(inspector, expr).asLong();
   }
 
   private static double literalAsDouble(Expr.VectorInputBindingInspector inspector, Expr expr)
   {
-    return ExprEval.ofType(expr.getOutputType(inspector), expr.getLiteralValue()).asDouble();
+    return literalEval(inspector, expr).asDouble();
+  }
+
+  private static ExprEval<?> literalEval(Expr.VectorInputBindingInspector inspector, Expr expr)
+  {
+    return ExprEval.ofType(expr.getOutputType(inspector), expr.getLiteralValue());
   }
 }

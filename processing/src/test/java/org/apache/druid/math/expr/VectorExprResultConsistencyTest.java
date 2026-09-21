@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.CastToDoubleVectorProcessor;
 import org.apache.druid.math.expr.vector.CastToLongVectorProcessor;
 import org.apache.druid.math.expr.vector.DoubleBivariateDoublesConstantProcessor;
+import org.apache.druid.math.expr.vector.DoubleBivariateDoublesFunctionVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.LongBivariateLongsConstantProcessor;
@@ -263,6 +264,32 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testBinaryMathOperatorsWithInvalidNumericStringLiteral()
+  {
+    // Invalid numeric strings must retain numeric-null semantics when they appear on either side of an operation.
+    for (String expression : List.of(
+        "d1 + 'invalid'",
+        "'invalid' + d1",
+        "d1 - 'invalid'",
+        "'invalid' - d1",
+        "d1 * 'invalid'",
+        "'invalid' * d1",
+        "d1 / 'invalid'",
+        "'invalid' / d1",
+        "l1 + 'invalid'",
+        "'invalid' + l1",
+        "l1 - 'invalid'",
+        "'invalid' - l1",
+        "l1 * 'invalid'",
+        "'invalid' * l1",
+        "l1 / 'invalid'",
+        "'invalid' / l1"
+    )) {
+      testExpression(expression, types);
+    }
+  }
+
+  @Test
   public void testOrdinaryProcessorElidesEmptyNullVector()
   {
     final SettableVectorInputBinding bindings = new SettableVectorInputBinding(4)
@@ -314,6 +341,14 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       Assertions.assertInstanceOf(
           DoubleBivariateDoublesConstantProcessor.class,
           Parser.parse("d * 2.5", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+      Assertions.assertInstanceOf(
+          DoubleBivariateDoublesConstantProcessor.class,
+          Parser.parse("d + '2.5'", ExprMacroTable.nil()).asVectorProcessor(bindings)
+      );
+      Assertions.assertInstanceOf(
+          DoubleBivariateDoublesFunctionVectorProcessor.class,
+          Parser.parse("d + 'invalid'", ExprMacroTable.nil()).asVectorProcessor(bindings)
       );
     }
     // Unsupported operations must continue to use the generic processor rather than enter the specialized
