@@ -197,9 +197,10 @@ public class ScanTransformer implements BaseTransformer
     final long offset = query.getScanRowsOffset();
     final long limit = query.getScanRowsLimit();
     long skipped = 0;
+    long emitted = 0;
 
     final List<InputRow> result = new ArrayList<>();
-    while (!cursor.isDone() && result.size() < limit) {
+    while (!cursor.isDone() && emitted < limit) {
       if (skipped < offset) {
         skipped++;
         cursor.advance();
@@ -210,6 +211,7 @@ public class ScanTransformer implements BaseTransformer
         event.put(columns.get(i), selectors[i].getObject());
       }
       result.add(new MapBasedInputRow(inputRow.getTimestampFromEpoch(), dimensionColumns, event));
+      emitted++;
       cursor.advance();
     }
 
