@@ -619,8 +619,8 @@ public class HyperLogLogCollectorTest
     // Direct form: bucket 5 with positionOf1 = 16 (> RANGE) goes straight to the overflow register.
     HyperLogLogCollector direct = HyperLogLogCollector.makeLatestCollector();
     direct.add((short) 5, (byte) 16);
-    Assert.assertEquals(1L, direct.estimateCardinalityRound());
-    Assert.assertEquals(1.0d, direct.estimateCardinality(), 0.05d);
+    Assertions.assertEquals(1L, direct.estimateCardinalityRound());
+    Assertions.assertEquals(1.0d, direct.estimateCardinality(), 0.05d);
 
     // Same situation reached through the byte[] hashing path used during ingestion: leading bytes 0x00 0x80
     // give positionOf1 = 16, and the trailing bytes select the bucket.
@@ -629,7 +629,7 @@ public class HyperLogLogCollectorTest
     hashedValue[15] = 0x05;
     HyperLogLogCollector hashed = HyperLogLogCollector.makeLatestCollector();
     hashed.add(hashedValue);
-    Assert.assertEquals(1L, hashed.estimateCardinalityRound());
+    Assertions.assertEquals(1L, hashed.estimateCardinalityRound());
   }
 
   @Test
@@ -646,7 +646,7 @@ public class HyperLogLogCollectorTest
     source.add((short) 4, (byte) 16);  // overflow on the same bucket -> overflow register
 
     HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
-    Assert.assertEquals(1L, sparse.estimateCardinalityRound());
+    Assertions.assertEquals(1L, sparse.estimateCardinalityRound());
   }
 
   @Test
@@ -661,7 +661,7 @@ public class HyperLogLogCollectorTest
     source.add((short) 20, (byte) 5);  // an unrelated populated register in a different byte
 
     HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
-    Assert.assertEquals(2L, sparse.estimateCardinalityRound());
+    Assertions.assertEquals(2L, sparse.estimateCardinalityRound());
   }
 
   @Test
@@ -675,7 +675,7 @@ public class HyperLogLogCollectorTest
     source.add((short) 5, (byte) 16);  // overflow on the same odd bucket
 
     HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
-    Assert.assertEquals(1L, sparse.estimateCardinalityRound());
+    Assertions.assertEquals(1L, sparse.estimateCardinalityRound());
   }
 
   @Test
@@ -690,7 +690,7 @@ public class HyperLogLogCollectorTest
     source.add((short) 5, (byte) 16);  // overflow on the odd bucket
 
     HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
-    Assert.assertEquals(2L, sparse.estimateCardinalityRound());
+    Assertions.assertEquals(2L, sparse.estimateCardinalityRound());
   }
 
   @Test
@@ -702,12 +702,12 @@ public class HyperLogLogCollectorTest
     HyperLogLogCollector even = HyperLogLogCollector.makeLatestCollector();
     even.add((short) 4, (byte) 3);
     even.add((short) 4, (byte) 16);
-    Assert.assertEquals(1L, even.estimateCardinalityRound());
+    Assertions.assertEquals(1L, even.estimateCardinalityRound());
 
     HyperLogLogCollector odd = HyperLogLogCollector.makeLatestCollector();
     odd.add((short) 5, (byte) 3);
     odd.add((short) 5, (byte) 16);
-    Assert.assertEquals(1L, odd.estimateCardinalityRound());
+    Assertions.assertEquals(1L, odd.estimateCardinalityRound());
   }
 
   @Test
