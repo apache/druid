@@ -59,10 +59,10 @@ public abstract class DoubleUnivariateFunctionVectorProcessor<TInput> implements
     if (hasNulls) {
       for (int i = 0; i < currentSize; i++) {
         outNulls[i] = inputNulls[i];
-        anyNulls |= outNulls[i];
         if (!outNulls[i]) {
           processIndex(input, i);
         } else {
+          anyNulls = true;
           outValues[i] = 0.0;
         }
       }

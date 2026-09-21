@@ -59,10 +59,10 @@ public abstract class LongUnivariateFunctionVectorProcessor<TInput> implements E
     if (hasNulls) {
       for (int i = 0; i < currentSize; i++) {
         outNulls[i] = inputNulls[i];
-        anyNulls |= outNulls[i];
         if (!outNulls[i]) {
           processIndex(input, i);
         } else {
+          anyNulls = true;
           outValues[i] = 0L;
         }
       }

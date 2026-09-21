@@ -68,10 +68,10 @@ public abstract class DoubleBivariateFunctionVectorProcessor<TLeftInput, TRightI
     if (hasNulls) {
       for (int i = 0; i < currentSize; i++) {
         outNulls[i] = (hasLeftNulls && leftNulls[i]) || (hasRightNulls && rightNulls[i]);
-        anyNulls |= outNulls[i];
         if (!outNulls[i]) {
           processIndex(leftInput, rightInput, i);
         } else {
+          anyNulls = true;
           outValues[i] = 0.0;
         }
       }
