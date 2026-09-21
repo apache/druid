@@ -54,8 +54,8 @@ public class ExpressionVectorProcessorBenchmark
   @Param({"128", "512", "1024", "2048"})
   private int vectorSize;
 
-  @Param({"false", "true"})
-  private boolean nullable;
+  @Param({"ABSENT", "ALL_FALSE", "SPARSE"})
+  private NullVectorShape nullVectorShape;
 
   @Param({"false", "true"})
   private boolean useVectorApi;
@@ -89,10 +89,11 @@ public class ExpressionVectorProcessorBenchmark
       l2[i] = i * 3L + 1L;
       l3[i] = i % 17L + 1L;
       d1[i] = i * 0.25 + 1.0;
-      nulls[i] = nullable && i % 16 == 0;
+      nulls[i] = nullVectorShape == NullVectorShape.SPARSE && i % 16 == 0;
     }
 
-    final boolean[] inputNulls = nullable ? nulls : null;
+    // ALL_FALSE deliberately supplies an allocated null vector to exercise processors that can elide it.
+    final boolean[] inputNulls = nullVectorShape == NullVectorShape.ABSENT ? null : nulls;
     bindings = new SettableVectorInputBinding(vectorSize)
         .addLong("l1", l1, inputNulls)
         .addLong("l2", l2, inputNulls)
@@ -114,5 +115,12 @@ public class ExpressionVectorProcessorBenchmark
     final ExprEvalVector<?> result = processor.evalVector(bindings);
     blackhole.consume(result.values());
     blackhole.consume(result.getNullVector());
+  }
+
+  public enum NullVectorShape
+  {
+    ABSENT,
+    ALL_FALSE,
+    SPARSE
   }
 }
