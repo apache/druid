@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -311,6 +312,31 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     Assertions.assertEquals("a", firstResult.get(0).getRaw("tag"));
     Assertions.assertEquals(1, secondResult.size());
     Assertions.assertEquals("x", secondResult.get(0).getRaw("tag"));
+  }
+
+  @Test
+  public void testScanQueryColumnsProjectionIsRejected()
+  {
+    // ScanQuery.columns is the native scan-query projection: when non-empty, ScanQueryEngine emits
+    // exactly those columns and nothing else. Honoring that here would mean dropping any raw field
+    // ingestion still needs (e.g. metric inputs for aggregators), so ScanTransformSpec rejects a
+    // non-empty projection outright rather than silently diverging from scan-query semantics.
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                   .dataSource(UnnestDataSource.create(
+                                       new TableDataSource("__input__"),
+                                       new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                                       null
+                                   ))
+                                   .eternityInterval()
+                                   .columns(List.of("tag"))
+                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                   .build();
+
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> new ScanTransformSpec(query));
+    Assertions.assertTrue(
+        e.getMessage().contains("does not support a non-empty 'columns' projection"),
+        "unexpected message: " + e.getMessage()
+    );
   }
 
   @Test

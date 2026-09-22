@@ -22,6 +22,7 @@ package org.apache.druid.segment.transform;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.scan.ScanQuery;
@@ -60,6 +61,22 @@ public class ScanTransformSpec implements BaseTransformSpec
   @JsonCreator
   public ScanTransformSpec(@JsonProperty("query") final ScanQuery query)
   {
+    if (query.getColumns() != null && !query.getColumns().isEmpty()) {
+      // A non-empty "columns" is a hard result projection in native scan queries (ScanQueryEngine
+      // emits exactly those columns, nothing else). Honoring that here would mean dropping any raw
+      // field the ingestion's dimensionsSpec/metricsSpec still needs (e.g. metric inputs), which is
+      // exactly the class of bug fixed for dimension exclusions elsewhere in ScanTransformer. Reject
+      // it for now rather than silently diverging from scan-query semantics or guessing which fields
+      // to keep regardless of the projection.
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build(
+                              "ScanTransformSpec does not support a non-empty 'columns' projection[%s] on "
+                              + "the embedded query; omit 'columns' (or leave it empty) so every required "
+                              + "field is retained for ingestion.",
+                              query.getColumns()
+                          );
+    }
     this.query = query;
   }
 

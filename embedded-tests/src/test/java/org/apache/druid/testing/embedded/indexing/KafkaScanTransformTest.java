@@ -22,6 +22,7 @@ package org.apache.druid.testing.embedded.indexing;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
@@ -641,5 +642,25 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         "each record's row count should be min(array length, limit=3); u0 (empty array) contributes "
         + "no rows at all, independent of limit"
     );
+  }
+
+  @Test
+  public void test_scanQueryColumnsProjectionIsRejected()
+  {
+    // ScanQuery.columns is a hard scan-query projection: honoring it here could drop raw fields
+    // ingestion still needs downstream (e.g. metric inputs for aggregators). ScanTransformSpec
+    // rejects a non-empty projection at construction time, before any supervisor is ever submitted.
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                   .dataSource(UnnestDataSource.create(
+                                       new TableDataSource("__input__"),
+                                       new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+                                       null
+                                   ))
+                                   .eternityInterval()
+                                   .columns(List.of("tag"))
+                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                   .build();
+
+    Assertions.assertThrows(DruidException.class, () -> new ScanTransformSpec(query));
   }
 }
