@@ -19,6 +19,7 @@
 import type { Duration } from 'chronoshift';
 import { sum } from 'd3-array';
 
+import type { NumberLike } from '../../utils';
 import { formatBytes, formatInteger } from '../../utils';
 
 export type IntervalStat = 'segments' | 'size' | 'rows';
@@ -42,16 +43,16 @@ export function getIntervalStatTitle(intervalStat: IntervalStat): string {
 }
 
 export function aggregateSegmentStats(
-  xs: readonly Record<IntervalStat, number>[],
+  xs: readonly Record<IntervalStat, NumberLike>[],
 ): Record<IntervalStat, number> {
   return {
-    segments: sum(xs, s => s.segments),
-    size: sum(xs, s => s.size),
-    rows: sum(xs, s => s.rows),
+    segments: sum(xs, s => Number(s.segments)),
+    size: sum(xs, s => Number(s.size)),
+    rows: sum(xs, s => Number(s.rows)),
   };
 }
 
-export function formatIntervalStat(stat: IntervalStat, n: number) {
+export function formatIntervalStat(stat: IntervalStat, n: NumberLike) {
   switch (stat) {
     case 'segments':
     case 'rows':
@@ -65,7 +66,7 @@ export function formatIntervalStat(stat: IntervalStat, n: number) {
   }
 }
 
-export interface IntervalRow extends Record<IntervalStat, number> {
+export interface IntervalRow extends Record<IntervalStat, NumberLike> {
   start: Date;
   end: Date;
   datasource: string;
@@ -73,7 +74,11 @@ export interface IntervalRow extends Record<IntervalStat, number> {
   originalTimeSpan: Duration;
 }
 
+// Unlike IntervalRow, the stats here have been through aggregateSegmentStats so they are plain numbers
 export interface TrimmedIntervalRow extends IntervalRow {
+  segments: number;
+  size: number;
+  rows: number;
   shownDays: number;
   normalized: Record<IntervalStat, number>;
 }
