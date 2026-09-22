@@ -19,6 +19,8 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.datasketches.common.Family;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.theta.SetOperation;
@@ -26,18 +28,38 @@ import org.apache.datasketches.theta.Union;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.IdentityHashMap;
 
 /**
  * A helper class used by {@link SketchBufferAggregator} and {@link SketchVectorAggregator}
  * for aggregation operations on byte buffers. Getting the object from value selectors is outside this class.
+ *
+ * <p>Thread-safety: the caches are keyed by {@link ByteBuffer} <em>identity</em>, using
+ * {@link IdentityHashMap}. A {@link java.util.concurrent.ConcurrentHashMap} is unsuitable here
+ * because it keys by {@link ByteBuffer#equals(Object)}/{@link ByteBuffer#hashCode()}, which are
+ * derived from the buffer's <em>remaining contents</em>. The union updates performed by this
+ * helper mutate those contents in place (through the {@link WritableMemory} wrapping the same
+ * buffer), so the hash of an already-inserted key changes as the aggregation progresses: lookups
+ * then miss, {@link #get} degrades to returning {@link SketchHolder#EMPTY}, and distinct buffers
+ * holding equal contents alias onto each other. Identity keying keeps the key stable because it
+ * depends only on the object reference.
+ *
+ * <p>Since {@link IdentityHashMap} is not thread-safe, all access is guarded by {@link #lock}.
+ * The critical sections are plain map operations on the query-processing path, so a single
+ * monitor does not become a bottleneck.
  */
 final class SketchBufferAggregatorHelper
 {
   private final int size;
   private final int maxIntermediateSize;
-  private final ConcurrentHashMap<ByteBuffer, ConcurrentHashMap<Integer, Union>> unions = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<ByteBuffer, WritableMemory> memCache = new ConcurrentHashMap<>();
+  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
+  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
+
+  /**
+   * Guards {@link #unions} and {@link #memCache}, which are {@link IdentityHashMap}s and must not
+   * be mutated or read concurrently.
+   */
+  private final Object lock = new Object();
 
   public SketchBufferAggregatorHelper(final int size, final int maxIntermediateSize)
   {
@@ -60,8 +82,11 @@ final class SketchBufferAggregatorHelper
    */
   public Object get(ByteBuffer buf, int position)
   {
-    ConcurrentHashMap<Integer, Union> unionMap = unions.get(buf);
-    Union union = unionMap != null ? unionMap.get(position) : null;
+    final Union union;
+    synchronized (lock) {
+      final Int2ObjectMap<Union> unionMap = unions.get(buf);
+      union = unionMap != null ? unionMap.get(position) : null;
+    }
     if (union == null) {
       return SketchHolder.EMPTY;
     }
@@ -79,13 +104,15 @@ final class SketchBufferAggregatorHelper
    */
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
-    createNewUnion(newBuffer, newPosition, true);
-    ConcurrentHashMap<Integer, Union> unionMap = unions.get(oldBuffer);
-    if (unionMap != null) {
-      unionMap.remove(oldPosition);
-      if (unionMap.isEmpty()) {
-        unions.remove(oldBuffer);
-        memCache.remove(oldBuffer);
+    synchronized (lock) {
+      createNewUnionLocked(newBuffer, newPosition, true);
+      final Int2ObjectMap<Union> unionMap = unions.get(oldBuffer);
+      if (unionMap != null) {
+        unionMap.remove(oldPosition);
+        if (unionMap.isEmpty()) {
+          unions.remove(oldBuffer);
+          memCache.remove(oldBuffer);
+        }
       }
     }
   }
@@ -97,33 +124,60 @@ final class SketchBufferAggregatorHelper
    */
   public Union getOrCreateUnion(ByteBuffer buf, int position)
   {
-    ConcurrentHashMap<Integer, Union> unionMap = unions.get(buf);
-    Union union = unionMap != null ? unionMap.get(position) : null;
-    if (union != null) {
-      return union;
+    synchronized (lock) {
+      final Int2ObjectMap<Union> unionMap = unions.get(buf);
+      final Union union = unionMap != null ? unionMap.get(position) : null;
+      if (union != null) {
+        return union;
+      }
+      return createNewUnionLocked(buf, position, true);
     }
-    return createNewUnion(buf, position, true);
   }
 
   private Union createNewUnion(ByteBuffer buf, int position, boolean isWrapped)
   {
-    WritableMemory mem = getMemory(buf).writableRegion(position, maxIntermediateSize);
-    Union union = isWrapped
-                  ? (Union) SetOperation.wrap(mem)
-                  : (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION, mem);
-    ConcurrentHashMap<Integer, Union> unionMap = unions.computeIfAbsent(buf, k -> new ConcurrentHashMap<>());
+    synchronized (lock) {
+      return createNewUnionLocked(buf, position, isWrapped);
+    }
+  }
+
+  /**
+   * Creates and caches a {@link Union} at the given buffer location. Callers must hold {@link #lock}.
+   */
+  private Union createNewUnionLocked(ByteBuffer buf, int position, boolean isWrapped)
+  {
+    final WritableMemory mem = getMemoryLocked(buf).writableRegion(position, maxIntermediateSize);
+    final Union union = isWrapped
+                        ? (Union) SetOperation.wrap(mem)
+                        : (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION, mem);
+    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    if (unionMap == null) {
+      unionMap = new Int2ObjectOpenHashMap<>();
+      unions.put(buf, unionMap);
+    }
     unionMap.put(position, union);
     return union;
   }
 
   public void clear()
   {
-    unions.clear();
-    memCache.clear();
+    synchronized (lock) {
+      unions.clear();
+      memCache.clear();
+    }
   }
 
-  private WritableMemory getMemory(ByteBuffer buffer)
+  /**
+   * Returns the memory wrapping the given buffer, creating and caching it on first use.
+   * Callers must hold {@link #lock}.
+   */
+  private WritableMemory getMemoryLocked(ByteBuffer buffer)
   {
-    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN));
+    WritableMemory mem = memCache.get(buffer);
+    if (mem == null) {
+      mem = WritableMemory.writableWrap(buffer, ByteOrder.LITTLE_ENDIAN);
+      memCache.put(buffer, mem);
+    }
+    return mem;
   }
 }
