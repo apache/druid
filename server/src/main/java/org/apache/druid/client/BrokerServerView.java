@@ -52,11 +52,14 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -93,13 +96,20 @@ public class BrokerServerView implements TimelineServerView
   /**
    * Map of segment IDs to their pending delayed cleanup futures. When the last server for a
    * segment is removed and a delay is configured, the segment is removed from the timeline
-   * immediately (to prevent queries from seeing an empty selector), but the selector is kept
+   * immediately (to prevent queries from seeing an empty selector) while the selector is kept
    * in the selectors map. A delayed cleanup of the selector is scheduled. If a new server
    * announces the same segment before the delay expires, the scheduled cleanup is cancelled
    * and the segment is re-added to the timeline. This prevents the segment load/drop race
    * described in <a href="https://github.com/apache/druid/issues/18738">#18738</a>.
+   * <p>
+   * The future stored here is an {@link EntryFuture} whose delegate is published by
+   * {@link EntryFuture#setDelayedRemovalFuture(ScheduledFuture)} <em>after</em> the entry is
+   * registered in this map, never before. That ordering lets the scheduled task (which cannot
+   * be constructed before it is scheduled) reference its own entry directly and distinguish
+   * "I am still the current entry" from "a newer entry replaced me" without relying on
+   * self-referential lambda capture, which Java's definite-assignment rules reject.
    */
-  private final ConcurrentHashMap<SegmentId, ScheduledFuture<?>> pendingSegmentRemovals = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<SegmentId, EntryFuture> pendingSegmentRemovals = new ConcurrentHashMap<>();
 
   @Inject
   public BrokerServerView(
@@ -231,7 +241,7 @@ public class BrokerServerView implements TimelineServerView
   public void stop()
   {
     log.info("BrokerServerView stopping. Cancelling [%d] pending segment removals.", pendingSegmentRemovals.size());
-    for (ScheduledFuture<?> future : pendingSegmentRemovals.values()) {
+    for (EntryFuture future : pendingSegmentRemovals.values()) {
       future.cancel(false);
     }
     pendingSegmentRemovals.clear();
@@ -315,7 +325,7 @@ public class BrokerServerView implements TimelineServerView
         // Cancel any pending delayed removal for this segment. If the last server was removed
         // and a delayed removal was scheduled, a new server announcing the segment means the
         // segment should stay in the timeline.
-        final ScheduledFuture<?> pendingRemoval = pendingSegmentRemovals.remove(segmentId);
+        final EntryFuture pendingRemoval = pendingSegmentRemovals.remove(segmentId);
         if (pendingRemoval != null) {
           pendingRemoval.cancel(false);
           log.debug("Cancelled pending removal for segment[%s] because a new server[%s] is announcing it.", segmentId, server.getName());
@@ -412,64 +422,48 @@ public class BrokerServerView implements TimelineServerView
       if (selector.isEmpty()) {
         final long delayMillis = segmentWatcherConfig.getSegmentDropDelayMillis();
         if (delayMillis > 0) {
-          // Remove the segment from the timeline immediately to prevent queries from seeing
-          // an empty ServerSelector during the delay window, which would cause partial results.
-          // The selector is kept in the selectors map so that a new server announcing the
-          // segment during the delay can re-add it to the timeline.
-          // We only remove from the timeline, not from the selectors map, and we do not fire
-          // the segmentRemoved callback since the segment may come back before the delay expires.
+          // Remove the segment from the timeline immediately so that queries never observe an
+          // empty ServerSelector on the timeline (an empty selector makes groupSegmentsByServer
+          // skip the holder while computeUncoveredIntervals still counts it as covered, which
+          // yields a silent partial result). The selector is kept in the selectors map so that
+          // a new server announcing the segment during the delay can re-add it to the timeline.
+          // segmentRemoved is not fired until the selector is actually cleaned up, because the
+          // segment may come back before the delay expires.
           // See https://github.com/apache/druid/issues/18738
-          final VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
-          if (timeline != null) {
-            timeline.remove(
-                segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)
-            );
-          }
+          removeFromTimelineQuietly(segment, selector);
 
-          // Schedule a delayed cleanup of the selector from the selectors map. If a new
-          // server announces the segment before the delay expires, the removal is cancelled
-          // and the segment is re-added to the timeline, preventing the segment load/drop
-          // race condition.
-          final ScheduledFuture<?> pendingRemoval = delayedRemovalExecutor.schedule(
-              () -> {
-                synchronized (lock) {
-                  // Re-check under lock that this future is still the current pending
-                  // removal. The remove(key, value) call atomically verifies the future
-                  // is current, and the lock ensures no new server can add the segment
-                  // between the check and the selector cleanup.
-                  if (pendingSegmentRemovals.remove(segmentId, pendingRemoval)) {
-                    // Double-check the selector is still empty and unchanged
-                    final ServerSelector currentSelector = selectors.get(segmentId);
-                    if (currentSelector == selector && currentSelector.isEmpty()) {
-                      selectors.remove(segmentId);
-                      log.debug("Cleaned up selector for segment[%s] after delay.", segmentId);
-                    }
-                  }
-                }
-              },
-              delayMillis,
-              TimeUnit.MILLISECONDS
+          // Schedule the delayed cleanup of the selector from the selectors map. If a new server
+          // announces the segment before the delay expires, the entry is cancelled and the
+          // segment is re-added to the timeline.
+          //
+          // The callback closes over `entry`, which is created before scheduling and therefore
+          // definitely assigned. Passing a *different* object to the scheduled task would half-fix
+          // this: the entry identity is what lets the callback tell "I am still the current entry"
+          // from "a newer entry replaced me", which a self-comparison of the future cannot do.
+          final long scheduledAtNanos = System.nanoTime();
+          final EntryFuture entry = new EntryFuture();
+          entry.setDelayedRemovalFuture(
+              delayedRemovalExecutor.schedule(
+                  () -> runDelayedRemoval(segment, selector, entry, scheduledAtNanos),
+                  delayMillis,
+                  TimeUnit.MILLISECONDS
+              )
           );
 
-          // Publish the pending removal future. Handle the race where the timer fires
-          // before the put completes by checking isDone() after the put.
-          final ScheduledFuture<?> previous = pendingSegmentRemovals.put(segmentId, pendingRemoval);
+          // Register the entry as the current pending removal. The timer may already have fired
+          // (delayMillis can be shorter than this thread's scheduling latency); that is safe
+          // because the callback re-validates the entry under `lock` and bails out if it is not
+          // yet present, in which case the inline cleanup below performs the removal instead.
+          final EntryFuture previous = pendingSegmentRemovals.put(segmentId, entry);
           if (previous != null) {
             previous.cancel(false);
             log.warn("Replaced existing pending removal for segment[%s].", segmentId);
           }
 
-          // If the timer fired before the put completed, the callback returned without
-          // doing anything. Run the removal logic inline to clean up.
-          if (pendingRemoval.isDone()) {
-            synchronized (lock) {
-              if (pendingSegmentRemovals.remove(segmentId, pendingRemoval)) {
-                final ServerSelector currentSelector = selectors.get(segmentId);
-                if (currentSelector == selector && currentSelector.isEmpty()) {
-                  selectors.remove(segmentId);
-                }
-              }
-            }
+          // Close the window where the timer fired before the put completed: the callback did
+          // nothing in that case, so clean up inline under the same lock that the callback uses.
+          if (entry.isDone()) {
+            cleanupSelectorIfCurrent(segmentId, selector, entry);
           }
 
           log.debug(
@@ -481,6 +475,148 @@ public class BrokerServerView implements TimelineServerView
           removeSegmentFromTimeline(segment, selector);
         }
       }
+    }
+  }
+
+  /**
+   * Removes a segment's timeline entry without firing {@code segmentRemoved} and without
+   * dropping the selector from {@link #selectors}. Used by the delayed-drop path, where the
+   * segment may be re-announced before the delay expires.
+   */
+  private void removeFromTimelineQuietly(final DataSegment segment, final ServerSelector selector)
+  {
+    final VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+    if (timeline != null) {
+      timeline.remove(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
+    }
+  }
+
+  /**
+   * Body of the scheduled delayed-removal task. Runs on {@link #delayedRemovalExecutor}.
+   *
+   * @param scheduledAtNanos {@link System#nanoTime()} sampled when the task was scheduled; see
+   *                         the ordering note in {@link #cleanupSelectorIfCurrent}.
+   */
+  private void runDelayedRemoval(
+      final DataSegment segment,
+      final ServerSelector selector,
+      final EntryFuture entry,
+      final long scheduledAtNanos
+  )
+  {
+    cleanupSelectorIfCurrent(segment.getId(), selector, entry);
+    // The delayed drop is now complete: the segment has no servers and is no longer on the
+    // timeline, so release the metadata caches the same way immediate drops do. Without this,
+    // pure drops leave stale segment metadata behind, since segmentRemoved is documented as
+    // the authority for removal from the timeline.
+    runTimelineCallbacks(callback -> callback.segmentRemoved(segment));
+    log.debug(
+        "Finished delayed cleanup of segment[%s] (scheduled at %d).",
+        segment.getId(),
+        scheduledAtNanos
+    );
+  }
+
+  /**
+   * Removes the selector from {@link #selectors} if, and only if, the given entry is still the
+   * current pending removal for the segment, the selector is still the same empty instance, and
+   * no server has re-announced the segment in the meantime. All three checks happen under
+   * {@link #lock} so that a concurrent re-add cannot interleave between them.
+   *
+   * <p>Note on ordering: {@code lock} is also held by the scheduler thread while it publishes
+   * this entry into {@link #pendingSegmentRemovals}. If the timer fires immediately, the callback
+   * can therefore block here until that publication completes, after which the entry is present
+   * and this method removes the selector. If it instead observes the entry as absent, the
+   * scheduler thread will run this same cleanup inline once it sees {@code entry.isDone()}. Either
+   * way exactly one of the two paths removes the selector.
+   *
+   * @return true if this call actually removed the selector
+   */
+  private boolean cleanupSelectorIfCurrent(
+      final SegmentId segmentId,
+      final ServerSelector selector,
+      final EntryFuture entry
+  )
+  {
+    synchronized (lock) {
+      if (!pendingSegmentRemovals.remove(segmentId, entry)) {
+        // A newer entry replaced us, or a re-announce already cancelled us.
+        return false;
+      }
+      final ServerSelector currentSelector = selectors.get(segmentId);
+      if (currentSelector != selector || !currentSelector.isEmpty()) {
+        log.debug("Segment[%s] was re-announced during the drop delay. Keeping the selector.", segmentId);
+        return false;
+      }
+      selectors.remove(segmentId);
+      log.debug("Cleaned up selector for segment[%s] after delay.", segmentId);
+      return true;
+    }
+  }
+
+  /**
+   * Handle for a scheduled delayed removal. The delegate future is assigned only after the
+   * entry has been registered in {@link #pendingSegmentRemovals}, so the scheduled callback can
+   * hold a reference to its own entry while the entry is still being constructed.
+   *
+   * <p>Also implements {@link ScheduledFuture} so it can be used directly as if it were the
+   * underlying future; only {@link #cancel()} and {@link #isDone()} are ever called on it.
+   */
+  static final class EntryFuture implements ScheduledFuture<Object>
+  {
+    private volatile ScheduledFuture<?> delegate;
+
+    void setDelayedRemovalFuture(final ScheduledFuture<?> future)
+    {
+      this.delegate = future;
+    }
+
+    @Override
+    public boolean isDone()
+    {
+      final ScheduledFuture<?> future = delegate;
+      return future == null || future.isDone();
+    }
+
+    @Override
+    public boolean isCancelled()
+    {
+      final ScheduledFuture<?> future = delegate;
+      return future != null && future.isCancelled();
+    }
+
+    @Override
+    public boolean cancel(final boolean mayInterruptIfRunning)
+    {
+      final ScheduledFuture<?> future = delegate;
+      return future == null || future.cancel(mayInterruptIfRunning);
+    }
+
+    @Override
+    public long getDelay(final TimeUnit unit)
+    {
+      final ScheduledFuture<?> future = delegate;
+      return future == null ? 0L : future.getDelay(unit);
+    }
+
+    @Override
+    public int compareTo(final Delayed other)
+    {
+      final ScheduledFuture<?> future = delegate;
+      return future == null ? 0 : future.compareTo(other);
+    }
+
+    @Override
+    public Object get() throws InterruptedException, ExecutionException
+    {
+      throw new UnsupportedOperationException("EntryFuture is never used as a task result.");
+    }
+
+    @Override
+    public Object get(final long timeout, final TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException
+    {
+      throw new UnsupportedOperationException("EntryFuture is never used as a task result.");
     }
   }
 
