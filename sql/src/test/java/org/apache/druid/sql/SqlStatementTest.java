@@ -618,10 +618,7 @@ public class SqlStatementTest
     };
 
     try {
-      stmt.plan();
-      fail("Expected planning to time out");
-    }
-    catch (QueryTimeoutException e) {
+      QueryTimeoutException e = Assertions.assertThrows(QueryTimeoutException.class, stmt::plan);
       Assertions.assertTrue(
           e.getMessage().contains("exceeded the configured maximum planning time"),
           "Unexpected message: " + e.getMessage()
@@ -664,10 +661,7 @@ public class SqlStatementTest
     };
 
     try {
-      stmt.plan();
-      fail("Expected planning to time out during planner construction");
-    }
-    catch (QueryTimeoutException e) {
+      QueryTimeoutException e = Assertions.assertThrows(QueryTimeoutException.class, stmt::plan);
       Assertions.assertTrue(
           e.getMessage().contains("exceeded the configured maximum planning time"),
           "Unexpected message: " + e.getMessage()
