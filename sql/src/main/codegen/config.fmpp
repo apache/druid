@@ -84,6 +84,7 @@ data: {
       "PROPERTIES"
       "PROJECTION"
       "SEALED"
+      "LONG"
     ]
 
     nonReservedKeywordsToAdd: [
@@ -94,6 +95,7 @@ data: {
       "PROPERTIES"
       "PROJECTION"
       "SEALED"
+      "LONG"
     ]
 
     # List of methods for parsing custom SQL statements.

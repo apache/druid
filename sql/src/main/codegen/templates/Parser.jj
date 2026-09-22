@@ -6319,7 +6319,7 @@ SqlTypeNameSpec SqlTypeName1(Span s) :
             s.add(this); sqlTypeName = unsigned ? SqlTypeName.USMALLINT : SqlTypeName.SMALLINT;
         }
     |
-        <BIGINT> ( <UNSIGNED> { unsigned = true; })? {
+        ( <BIGINT> | <LONG> ) ( <UNSIGNED> { unsigned = true; })? {
             if (unsigned && !this.conformance.supportsUnsignedTypes()) {
                 throw SqlUtil.newContextException(getPos(), RESOURCE.unsignedDisabled());
             }
