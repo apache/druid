@@ -120,6 +120,7 @@ Float.POSITIVE_INFINITY
 Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
+GKE
 GPG
 GoogleCloudStorageInputSource
 GSSAPI

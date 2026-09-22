@@ -80,9 +80,7 @@ When connecting to Kafka, Druid replaces the environment variables with their co
 
 ## Kubernetes node label dynamic config provider
 
-The [`druid-kubernetes-extensions`](../development/extensions-core/kubernetes.md) extension provides a dynamic config provider (`K8sNodeLabelDynamicConfigProvider`) that reads configuration values from the labels of the Kubernetes node that the Druid process runs on.
-
-Use it for configuration that depends on where a process happens to be scheduled rather than on the spec. An ingestion task is a short-lived pod that can land on any node, so a value such as the availability zone of the node cannot be written into a supervisor spec; it has to be read where the task ends up.
+The [`druid-kubernetes-extensions`](../development/extensions-core/kubernetes.md) extension provides a dynamic config provider (`K8sNodeLabelDynamicConfigProvider`) that reads configuration values from the labels of the Kubernetes node that the Druid process runs on. Use it for values that depend on Kubernetes runtime information, for example where a process was scheduled, which cannot be written into a spec ahead of time.
 
 The Kubernetes node label dynamic config provider uses the following syntax:
 
@@ -96,11 +94,13 @@ druid.dynamic.config.provider={"type": "k8sNodeLabel","labels":{"property1": "ex
 |`labels`|Map|configuration keys to resolve, each mapped to the name of the node label that holds its value|Yes|
 |`nodeNameVariable`|String|environment variable that holds the name of the node the process runs on|No (default: `HOST_NODE_NAME`)|
 
+You can use it anywhere Druid accepts a dynamic config provider, for example Kafka [`consumerProperties`](../ingestion/kafka-ingestion.md), Iceberg [`catalogProperties`](../development/extensions-contrib/iceberg.md), and Schema Registry [`config` and `headers`](../ingestion/data-formats.md).
+
 ### Prerequisites
 
-Include `druid-kubernetes-extensions` in the [extensions load list](../configuration/extensions.md#loading-extensions) of every service that resolves the configuration. For a supervisor spec, that is the Overlord and the Peon services.
+Include `druid-kubernetes-extensions` in the [extensions load list](../configuration/extensions.md#loading-extensions) of every service that resolves the spec. For a supervisor spec, that is the Overlord and the Peon services.
 
-Each pod must be able to name the node it runs on. The downward API supplies the node name, which you expose as the environment variable named by `nodeNameVariable`:
+Each pod must know the node it runs on. Expose the node name from the downward API as the environment variable named by `nodeNameVariable`, or set `nodeNameVariable` to a variable your pod template already provides:
 
 ```yaml
 env:
@@ -110,7 +110,7 @@ env:
         fieldPath: spec.nodeName
 ```
 
-The pod also needs permission to read that node. Nodes are cluster-scoped, so this requires a ClusterRole granting `get` on `nodes`, bound to the service account the Druid pods use:
+Nodes are cluster-scoped, so the service account the Druid pods run as needs a ClusterRole granting `get` on `nodes`:
 
 ```yaml
 kind: ClusterRole
@@ -131,46 +131,41 @@ metadata:
   name: druid-node-reader
 subjects:
 - kind: ServiceAccount
-  name: default
-  namespace: druid
+  name: default        # the service account your Druid pods use
+  namespace: druid     # their namespace
 roleRef:
   kind: ClusterRole
   name: druid-node-reader
   apiGroup: rbac.authorization.k8s.io
 ```
 
-The provider reads the node through the in-cluster API server, using the service account credentials that the kubelet projects into the pod.
-
 ### Behavior
 
-When using the Kubernetes node label config provider, consider the following:
+- If the node name variable is unset, the API server cannot be reached or refuses the request, or the node does not carry the label, Druid logs a warning and omits the key. The consumer then applies its own default. A label with an empty value counts as missing. As with other dynamic config providers, a resolved value takes precedence over the same key specified directly.
+- Druid reads the node once per process and keeps its labels until the process restarts. A failed lookup is not kept, so it is retried the next time the configuration is resolved.
 
-- Lookups fail open. If the environment variable is not set, if the pod has no service account credentials, if the API server refuses or does not answer within five seconds, or if the node does not carry the label, Druid logs a warning and omits the key from the resolved configuration, as if the key had not been listed under `labels`. The consumer then applies its own default for that key. Outside Kubernetes this means every key is omitted.
-- Druid reads the node once per process and keeps its labels until the process restarts, so a node relabeled afterwards is not picked up. That suits an ingestion task, which is shorter lived than the labels it reads. A lookup that failed is not kept, so a transient error is retried the next time the configuration is resolved.
-- A label with an empty value counts as unset. Kubernetes allows a label to mark a node without carrying a value, and there is nothing to configure a property with.
+### Examples
 
-### Example: rack-aware Kafka consumers
+Kafka consumers fetch from the nearest replica when `client.rack` matches a broker's `broker.rack` ([KIP-392](https://cwiki.apache.org/confluence/display/KAFKA/KIP-392%3A+Allow+consumers+to+fetch+from+closest+replica)). On EKS, `topology.k8s.aws/zone-id` holds the zone ID that MSK uses for `broker.rack`; on GKE, `topology.kubernetes.io/zone` holds the zone name that Google Cloud Managed Service for Apache Kafka uses:
 
-Kafka's [KIP-392](https://cwiki.apache.org/confluence/display/KAFKA/KIP-392%3A+Allow+consumers+to+fetch+from+closest+replica) lets a consumer fetch from the closest replica instead of the partition leader. A consumer opts in by setting `client.rack` to a value that matches the `broker.rack` of the brokers it should prefer. For ingestion tasks, this avoids paying for cross-zone traffic on every fetch.
-
-The rack of a task is the zone of whichever node it was scheduled onto, which the node already carries as a label. Which label depends on the cloud provider, because the managed Kafka services identify zones differently:
-
-```
-...
-   "consumerProperties": {
-        "bootstrap.servers": "localhost:9092",
-        "druid.dynamic.config.provider": {
-          "type": "k8sNodeLabel",
-          "labels": {
-            "client.rack": "topology.k8s.aws/zone-id"
-          }
-        }
-      },
-...
+```json
+"consumerProperties": {
+  "bootstrap.servers": "localhost:9092",
+  "druid.dynamic.config.provider": {
+    "type": "k8sNodeLabel",
+    "labels": { "client.rack": "topology.k8s.aws/zone-id" }
+  }
+}
 ```
 
-On Amazon EKS, use `topology.k8s.aws/zone-id`. It holds the availability zone ID, such as `usw2-az1`, which is what Amazon MSK reports as `broker.rack`. The zone ID is stable across accounts, whereas the zone name is not: `us-west-2a` refers to a different physical zone in different accounts.
+An Iceberg REST catalog can read from S3 in the task's own region by taking `client.region` from the node's region label:
 
-On Google Kubernetes Engine, use `topology.kubernetes.io/zone` instead. It holds the zone name, such as `us-central1-a`, which is what Google Cloud Managed Service for Apache Kafka reports as `broker.rack`.
-
-If the label is missing, `client.rack` stays unset and the consumer fetches from the leader, exactly as it would without this provider.
+```json
+"catalogProperties": {
+  "uri": "https://iceberg-rest.example.com",
+  "druid.dynamic.config.provider": {
+    "type": "k8sNodeLabel",
+    "labels": { "client.region": "topology.kubernetes.io/region" }
+  }
+}
+```
