@@ -45,6 +45,7 @@ druid.dynamic.config.provider={"type": "environment","variables":{"secret1": "SE
 
 When using the environment variable config provider, consider the following:
 - If you manually specify a configuration key-value pair and use the dynamic config provider for the same key, Druid uses the value from the dynamic config provider.
+- If an environment variable is not set, Druid omits its key from the resolved configuration, as if the key had not been listed under `variables`.
 - For use in a supervisor spec, environment variables must be available to the system user that runs the Overlord service and that runs the Peon service.
 
 The following example shows how to configure environment variables to store the SSL key and truststore passwords for Kafka.

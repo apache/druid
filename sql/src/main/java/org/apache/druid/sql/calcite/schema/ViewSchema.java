@@ -72,7 +72,7 @@ public class ViewSchema extends AbstractSchema
           authorizerMapper,
           authenticationResult,
           viewsMap.keySet(),
-          _ -> ResourceType.VIEW
+          ResourceType.VIEW
       );
     } else {
       visibleViews = viewsMap.keySet();

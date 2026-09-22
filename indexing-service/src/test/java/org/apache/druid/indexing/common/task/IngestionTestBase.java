@@ -72,6 +72,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -300,7 +301,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
         .taskActionClient(createActionClient(task))
-        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), new DeepStorageSegmentConfig()))
         .dataSegmentKiller(dataSegmentKiller)
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .jsonMapper(objectMapper)
@@ -482,7 +483,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .config(config)
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
             .taskActionClient(taskActionClient)
-            .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+            .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), new DeepStorageSegmentConfig()))
             .dataSegmentKiller(dataSegmentKiller)
             .joinableFactory(NoopJoinableFactory.INSTANCE)
             .jsonMapper(objectMapper)

@@ -19,6 +19,9 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -79,6 +82,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -95,6 +99,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 class SegmentLocalCacheManagerPartialAcquireTest
@@ -302,6 +307,59 @@ class SegmentLocalCacheManagerPartialAcquireTest
     if (manager != null) {
       manager.drop(partialSegment);
       manager.shutdown();
+    }
+  }
+
+  @Test
+  void testCancellingFullAcquireMidDownloadDoesNotEvictContainersUnderIt() throws Exception
+  {
+    // Ephemeral weak entries, as an MSQ/Dart worker runs: releasing the last hold on a bundle drops it from the cache
+    // then and there, which is what turns an abandoned acquire into an unmount of the bundles it was downloading.
+    manager.getLocations().get(0).setAreWeakEntriesEphemeral(true);
+
+    jsonMapper.registerSubtypes(new NamedType(GatedLocalLoadSpec.class, GatedLocalLoadSpec.TYPE));
+    final DataSegment gatedSegment = DataSegment.builder(SEGMENT_ID)
+                                                .shardSpec(NoneShardSpec.instance())
+                                                .loadSpec(Map.of(
+                                                    "type", GatedLocalLoadSpec.TYPE,
+                                                    "path", DEEP_STORAGE_DIR.getAbsolutePath()
+                                                ))
+                                                .size(0)
+                                                .build();
+
+    // Warm the metadata entry first, and keep it held for the rest of the test. Mounting metadata range-reads the
+    // header through the same reader the download uses, so warming it means the gate below can only be reached from
+    // inside ensureAllDownloaded. A partial acquire downloads nothing else, so no container is resident yet.
+    try (AcquireSegmentAction warm = manager.acquireSegment(gatedSegment, AcquireMode.PARTIAL)) {
+      warm.getSegmentFuture().get();
+
+      final DownloadGate gate = new DownloadGate();
+      DOWNLOAD_GATE.set(gate);
+      try {
+        final AcquireSegmentAction full = manager.acquireSegment(gatedSegment, AcquireMode.FULL);
+        // Held across the close() below: getSegmentFuture() refuses to hand out the future once the action is closed,
+        // and the load task keeps running either way - closing an action cancels the caller's interest, not the task.
+        final ListenableFuture<AcquireSegmentResult> future = full.getSegmentFuture();
+
+        Assertions.assertTrue(
+            gate.entered.await(60, TimeUnit.SECONDS),
+            "the full download should have reached a container fetch"
+        );
+
+        // Abandon the acquire while a fetch is parked mid-write. This closes the action's HoldHolder on THIS thread,
+        // which is what used to unmount the bundles - and evict the containers - out from under the running download.
+        full.close();
+        gate.release.countDown();
+
+        // The download must still finish against containers that are all still there. Before the download owned its
+        // own bundle references, this failed: either an NPE from a fetch whose container file had been deleted, or
+        // ensureAllDownloaded's post-condition once the eviction cleared residency behind it.
+        final AcquireSegmentResult result = future.get(60, TimeUnit.SECONDS);
+        Assertions.assertNotNull(result);
+      }
+      finally {
+        DOWNLOAD_GATE.set(null);
+      }
     }
   }
 
@@ -1170,6 +1228,84 @@ class SegmentLocalCacheManagerPartialAcquireTest
       for (int i = 0; i < numContainers; i++) {
         seed.initializeContainer(i);
       }
+    }
+  }
+
+  /**
+   * Parks the first range read that reaches it until the test lets it go, so a download can be caught mid-write.
+   * Consulted by every reader {@link GatedLocalLoadSpec} hands out, since the reader doing the download is the one the
+   * file mapper was created with, not the one the acquire being tested opened.
+   */
+  private static final AtomicReference<DownloadGate> DOWNLOAD_GATE = new AtomicReference<>();
+
+  private static final class DownloadGate
+  {
+    private final CountDownLatch entered = new CountDownLatch(1);
+    private final CountDownLatch release = new CountDownLatch(1);
+
+    private void arrive() throws IOException
+    {
+      entered.countDown();
+      try {
+        if (!release.await(60, TimeUnit.SECONDS)) {
+          throw new IOException("Timed out waiting for the test to release the download gate");
+        }
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new IOException(e);
+      }
+    }
+  }
+
+  /**
+   * A {@link LoadSpec} that loads exactly like {@link LocalLoadSpec} but hands out range readers that consult
+   * {@link #DOWNLOAD_GATE} first. Registered as a Jackson subtype by the test that needs it.
+   */
+  public static class GatedLocalLoadSpec implements LoadSpec
+  {
+    static final String TYPE = "gated-local";
+
+    private final LocalLoadSpec delegate;
+    private final String path;
+
+    @JsonCreator
+    public GatedLocalLoadSpec(
+        @JacksonInject LocalDataSegmentPuller puller,
+        @JsonProperty(value = "path", required = true) String path
+    )
+    {
+      this.delegate = new LocalLoadSpec(puller, path);
+      this.path = path;
+    }
+
+    @JsonProperty
+    public String getPath()
+    {
+      return path;
+    }
+
+    @Override
+    public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException
+    {
+      return delegate.loadSegment(destDir);
+    }
+
+    @Nullable
+    @Override
+    public SegmentRangeReader openRangeReader() throws IOException
+    {
+      final SegmentRangeReader reader = delegate.openRangeReader();
+      if (reader == null) {
+        return null;
+      }
+      return (filename, offset, length) -> {
+        final DownloadGate gate = DOWNLOAD_GATE.get();
+        if (gate != null) {
+          gate.arrive();
+        }
+        return reader.readRange(filename, offset, length);
+      };
     }
   }
 }

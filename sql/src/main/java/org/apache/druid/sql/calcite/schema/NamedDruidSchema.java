@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.schema;
 
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 
 /**
@@ -43,9 +44,9 @@ public class NamedDruidSchema implements NamedSchema
   }
 
   @Override
-  public String getSchemaResourceType(String resourceName)
+  public Resource getSchemaResource(String resourceName)
   {
-    return ResourceType.DATASOURCE;
+    return new Resource(resourceName, ResourceType.DATASOURCE);
   }
 
   @Override

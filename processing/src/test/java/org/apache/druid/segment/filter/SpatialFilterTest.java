@@ -300,10 +300,8 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
 
   private static QueryableIndex makeQueryableIndex(IndexSpec indexSpec) throws IOException
   {
-    IncrementalIndex theIndex = makeIncrementalIndex();
-    File tmpFile = File.createTempFile("billy", "yay");
-    tmpFile.delete();
-    FileUtils.mkdirp(tmpFile);
+    final IncrementalIndex theIndex = makeIncrementalIndex();
+    final File tmpFile = FileUtils.createTempDir("spatial-filter");
     tmpFile.deleteOnExit();
 
     INDEX_MERGER.persist(theIndex, tmpFile, indexSpec, null);
@@ -513,8 +511,8 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
       }
 
 
-      File tmpFile = File.createTempFile("yay", "who");
-      tmpFile.delete();
+      final File tmpFile = FileUtils.createTempDir("spatial-filter-merge");
+      tmpFile.deleteOnExit();
 
       File firstFile = new File(tmpFile, "first");
       File secondFile = new File(tmpFile, "second");

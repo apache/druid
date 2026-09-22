@@ -372,7 +372,7 @@ public class OrFilter implements BooleanFilter
     }
   }
 
-  private static VectorValueMatcher convertIndexToVectorValueMatcher(
+  static VectorValueMatcher convertIndexToVectorValueMatcher(
       final ReadableVectorOffset vectorOffset,
       final ImmutableBitmap bitmap
   )
@@ -386,7 +386,10 @@ public class OrFilter implements BooleanFilter
     {
       final VectorMatch match = VectorMatch.wrap(new int[vectorOffset.getMaxVectorSize()]);
       int iterOffset = -1;
-      int previousStartOffset = -1;
+      /**
+       * One past the highest row id of the previous batch.
+       */
+      int previousEndOffset = 0;
       PeekableIntIterator iterator = initialIterator;
 
       @Override
@@ -396,12 +399,12 @@ public class OrFilter implements BooleanFilter
 
         if (vectorOffset.isContiguous()) {
           final int startOffset = vectorOffset.getStartOffset();
-          // check if the cursor was reset, and reset iterator if so
-          if (startOffset <= previousStartOffset) {
+          // check if the cursor moved backwards, and reset iterator if so
+          if (startOffset < previousEndOffset) {
             iterOffset = -1;
             iterator = bitmap.peekableIterator();
           }
-          previousStartOffset = startOffset;
+          previousEndOffset = startOffset + getCurrentVectorSize();
           int numRows = 0;
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int maskNum = mask.getSelection()[i];
@@ -418,11 +421,14 @@ public class OrFilter implements BooleanFilter
           return match;
         } else {
           final int[] currentOffsets = vectorOffset.getOffsets();
-          if (getCurrentVectorSize() > 0 && currentOffsets[0] <= previousStartOffset) {
-            iterOffset = -1;
-            iterator = bitmap.peekableIterator();
+          if (getCurrentVectorSize() > 0) {
+            // check if the cursor moved backwards, and reset iterator if so
+            if (currentOffsets[0] < previousEndOffset) {
+              iterOffset = -1;
+              iterator = bitmap.peekableIterator();
+            }
+            previousEndOffset = currentOffsets[getCurrentVectorSize() - 1] + 1;
           }
-          previousStartOffset = currentOffsets[0];
           int numRows = 0;
           for (int i = 0; i < mask.getSelectionSize(); i++) {
             final int maskNum = mask.getSelection()[i];

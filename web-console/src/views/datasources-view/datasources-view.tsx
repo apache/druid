@@ -81,6 +81,7 @@ import {
   getDruidErrorMessage,
   groupByAsMap,
   hasOverlayOpen,
+  isNumberLike,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -161,26 +162,27 @@ const formatAvgRowSize = formatInteger;
 const formatReplicatedSize = formatBytes;
 const formatLeftToBeCompacted = formatBytes;
 
-function progress(done: number, awaiting: number): number {
-  const d = done + awaiting;
-  if (!d) return 0;
-  return done / d;
+function progress(done: NumberLike, awaiting: NumberLike): number {
+  const doneNumber = Number(done);
+  const total = doneNumber + Number(awaiting);
+  if (!total) return 0;
+  return doneNumber / total;
 }
 
 const PERCENT_BRACES = [formatPercent(1)];
 
 interface DatasourceQueryResultRow {
   readonly datasource: string;
-  readonly num_segments: number;
-  readonly num_zero_replica_segments: number;
-  readonly num_segments_to_load: number;
-  readonly num_segments_to_drop: number;
-  readonly minute_aligned_segments: number;
-  readonly hour_aligned_segments: number;
-  readonly day_aligned_segments: number;
-  readonly month_aligned_segments: number;
-  readonly year_aligned_segments: number;
-  readonly all_granularity_segments: number;
+  readonly num_segments: NumberLike;
+  readonly num_zero_replica_segments: NumberLike;
+  readonly num_segments_to_load: NumberLike;
+  readonly num_segments_to_drop: NumberLike;
+  readonly minute_aligned_segments: NumberLike;
+  readonly hour_aligned_segments: NumberLike;
+  readonly day_aligned_segments: NumberLike;
+  readonly month_aligned_segments: NumberLike;
+  readonly year_aligned_segments: NumberLike;
+  readonly all_granularity_segments: NumberLike;
   readonly total_data_size: NumberLike;
   readonly replicated_size: NumberLike;
   readonly min_segment_rows: NumberLike;
@@ -1247,11 +1249,22 @@ GROUP BY 1, 2`;
             show: visibleColumns.shown('Availability'),
             filterable: false,
             width: 220,
-            accessor: 'num_segments',
+            id: 'num_segments',
+            accessor: ({ num_segments, num_segments_to_load }) => {
+              const total = Number(num_segments);
+              if (!total) return 0;
+              return (total - Number(num_segments_to_load)) / total;
+            },
             className: 'padded',
-            Cell: ({ value: num_segments, original }) => {
-              const { datasource, unused, num_segments_to_load, num_zero_replica_segments, rules } =
-                original as Datasource;
+            Cell: ({ original }) => {
+              const {
+                datasource,
+                unused,
+                num_segments,
+                num_segments_to_load,
+                num_zero_replica_segments,
+                rules,
+              } = original as Datasource;
               if (unused) {
                 return (
                   <span>
@@ -1273,27 +1286,31 @@ GROUP BY 1, 2`;
                   {pluralIfNeeded(num_segments, 'segment')}
                 </a>
               );
+              if (!isNumberLike(num_segments) || !isNumberLike(num_segments_to_load)) {
+                return '-';
+              }
+
+              const numSegments = Number(num_segments);
+              const numSegmentsToLoad = Number(num_segments_to_load);
               const percentZeroReplica = (
-                Math.floor((num_zero_replica_segments / num_segments) * 1000) / 10
+                Math.floor((Number(num_zero_replica_segments) / numSegments) * 1000) / 10
               ).toFixed(1);
 
-              if (typeof num_segments_to_load !== 'number' || typeof num_segments !== 'number') {
-                return '-';
-              } else if (num_segments === 0) {
+              if (numSegments === 0) {
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.EMPTY_COLOR }}>&#x25cf;&nbsp;</span>
                     Empty
                   </span>
                 );
-              } else if (num_segments_to_load === 0) {
+              } else if (numSegmentsToLoad === 0) {
                 return (
                   <span>
                     <span style={{ color: DatasourcesView.FULLY_AVAILABLE_COLOR }}>
                       &#x25cf;&nbsp;
                     </span>
                     {assemble(
-                      num_segments !== num_zero_replica_segments
+                      numSegments !== Number(num_zero_replica_segments)
                         ? `Fully ${descriptor}`
                         : undefined,
                       hasZeroReplicationRule ? `${percentZeroReplica}% deep storage only` : '',
@@ -1302,9 +1319,9 @@ GROUP BY 1, 2`;
                   </span>
                 );
               } else {
-                const numAvailableSegments = num_segments - num_segments_to_load;
+                const numAvailableSegments = numSegments - numSegmentsToLoad;
                 const percentAvailable = (
-                  Math.floor((numAvailableSegments / num_segments) * 1000) / 10
+                  Math.floor((numAvailableSegments / numSegments) * 1000) / 10
                 ).toFixed(1);
                 return (
                   <span>
@@ -1318,11 +1335,6 @@ GROUP BY 1, 2`;
                   </span>
                 );
               }
-            },
-            sortMethod: (d1, d2) => {
-              const percentAvailable1 = d1.num_available / d1.num_total;
-              const percentAvailable2 = d2.num_available / d2.num_total;
-              return percentAvailable1 - percentAvailable2 || d1.num_total - d2.num_total;
             },
           },
           {
@@ -1569,9 +1581,8 @@ GROUP BY 1, 2`;
             width: 200,
             accessor: ({ compaction }) => {
               const status = compaction?.status;
-              return status?.bytesCompacted
-                ? status.bytesCompacted / (status.bytesAwaitingCompaction + status.bytesCompacted)
-                : 0;
+              if (!status) return 0;
+              return progress(status.bytesCompacted, status.bytesAwaitingCompaction);
             },
             filterable: false,
             className: 'padded',

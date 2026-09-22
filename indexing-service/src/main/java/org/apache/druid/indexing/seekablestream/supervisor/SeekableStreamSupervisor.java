@@ -1657,7 +1657,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       boolean includeOffsets
   )
   {
-    int numPartitions = partitionGroups.values().stream().mapToInt(Set::size).sum();
+    final int numPartitions = getKnownPartitionCount();
 
     final SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> payload = createReportPayload(
         numPartitions,
@@ -3195,6 +3195,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  /**
+   * The number of partitions as last fetched from the underlying stream.
+   * This method differs from {@link #getPartitionCount()} as it does not
+   * refetch the current partition count from the stream, thus avoiding the
+   * need for locks or a network call.
+   */
+  public int getKnownPartitionCount()
+  {
+    return partitionIds.size();
+  }
+
+  /**
+   * Fetches the current partition count from the underlying stream using the
+   * {@link #recordSupplier}.
+   */
   public int getPartitionCount()
   {
     recordSupplierLock.lock();

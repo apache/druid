@@ -22,6 +22,7 @@ package org.apache.druid.server.system.handler;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import io.netty.channel.ChannelException;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
@@ -70,7 +71,6 @@ import org.apache.druid.server.system.SystemTableNotLeaderException;
 import org.apache.druid.server.system.table.SystemTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableRoutingMode;
 import org.apache.druid.utils.CloseableUtils;
-import org.jboss.netty.channel.ChannelException;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;

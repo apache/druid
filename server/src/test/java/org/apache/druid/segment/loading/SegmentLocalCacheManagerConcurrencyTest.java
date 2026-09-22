@@ -434,15 +434,15 @@ class SegmentLocalCacheManagerConcurrencyTest
           Assertions.assertTrue(t instanceof TimeoutException || t instanceof ExecutionException, t.toString());
         }
         Thread.sleep(20);
-        Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
-        Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
+        awaitNoHolds(location);
+        awaitNoHolds(location2);
 
         currentBatch.clear();
       }
     }
 
-    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
-    Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
+    awaitNoHolds(location);
+    awaitNoHolds(location2);
     Assertions.assertTrue(4 >= location.getWeakEntryCount());
     Assertions.assertTrue(4 >= location2.getWeakEntryCount());
     // 5 because __drop path
@@ -500,8 +500,8 @@ class SegmentLocalCacheManagerConcurrencyTest
           }
           Thread.sleep(5);
         }
-        Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
-        Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
+        awaitNoHolds(location);
+        awaitNoHolds(location2);
         currentBatch.clear();
       }
     }
@@ -569,8 +569,8 @@ class SegmentLocalCacheManagerConcurrencyTest
           }
         }
 
-        Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
-        Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
+        awaitNoHolds(location);
+        awaitNoHolds(location2);
         totalSuccess += success;
         totalEmpty += empty;
         totalRows += rows;
@@ -590,6 +590,85 @@ class SegmentLocalCacheManagerConcurrencyTest
     Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
 
     assertNoLooseEnds();
+  }
+
+  @Test
+  public void testAcquireSegmentOnDemandRandomSegmentWithInterrupt() throws IOException, InterruptedException
+  {
+    final int segmentCount = 8;
+    final int iterations = 2000;
+    final int concurrentReads = 10;
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
+
+    final Interval interval = Intervals.of("2019-01-01/P1D");
+
+    makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
+
+    final List<DataSegment> currentBatch = new ArrayList<>();
+    for (int i = 0; i < iterations; i++) {
+      currentBatch.add(segmentsToWeakLoad.get(ThreadLocalRandom.current().nextInt(segmentCount)));
+      // process batches of 10 requests at a time
+      if (currentBatch.size() == concurrentReads) {
+        final List<InterruptedLoad> weakLoads = currentBatch
+            .stream()
+            .map(segment -> new InterruptedLoad(virtualStorageManager, segment))
+            .collect(Collectors.toList());
+        final List<Future<Integer>> futures = new ArrayList<>();
+        for (InterruptedLoad weakLoad : weakLoads) {
+          futures.add(executorService.submit(weakLoad));
+        }
+        for (Future<Integer> future : futures) {
+          try {
+            future.get(20L, TimeUnit.MILLISECONDS);
+          }
+          catch (Throwable t) {
+          }
+        }
+        while (true) {
+          boolean allDone = true;
+          for (Future<?> f : futures) {
+            allDone = allDone && f.isDone();
+          }
+          if (allDone) {
+            break;
+          }
+          Thread.sleep(5);
+        }
+        awaitNoHolds(location);
+        awaitNoHolds(location2);
+        currentBatch.clear();
+      }
+    }
+
+    Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
+    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
+
+    // now ensure that we can successfully do stuff after all those interrupts
+    int totalSuccess = 0;
+    int totalFailures = 0;
+    for (int i = 0; i < iterations; i++) {
+      int segment = ThreadLocalRandom.current().nextInt(segmentCount);
+      currentBatch.add(segmentsToWeakLoad.get(segment));
+      // process batches of 10 requests at a time
+      if (currentBatch.size() == concurrentReads) {
+
+        BatchResult result = testWeakBatch(i, currentBatch, false);
+        totalSuccess += result.success;
+        totalFailures += result.exceptions.size();
+        currentBatch.clear();
+      }
+    }
+    Assertions.assertEquals(iterations, totalSuccess);
+    Assertions.assertEquals(0, totalFailures);
+    awaitNoHolds(location);
+    awaitNoHolds(location2);
+    Assertions.assertTrue(4 >= location.getWeakEntryCount());
+    Assertions.assertTrue(4 >= location2.getWeakEntryCount());
+    // 5 because __drop path
+    Assertions.assertTrue(5 >= location.getPath().listFiles().length);
+    Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
   }
 
   private void testWeakLoad(
@@ -735,89 +814,10 @@ class SegmentLocalCacheManagerConcurrencyTest
     return new BatchResult(exceptions, success, rows);
   }
 
-  @Test
-  public void testAcquireSegmentOnDemandRandomSegmentWithInterrupt() throws IOException, InterruptedException
-  {
-    final int segmentCount = 8;
-    final int iterations = 2000;
-    final int concurrentReads = 10;
-    final File localStorageFolder = new File(tempDir, "local_storage_folder");
-
-    final Interval interval = Intervals.of("2019-01-01/P1D");
-
-    makeSegmentsToLoad(segmentCount, localStorageFolder, interval, segmentsToWeakLoad);
-
-    final List<DataSegment> currentBatch = new ArrayList<>();
-    for (int i = 0; i < iterations; i++) {
-      currentBatch.add(segmentsToWeakLoad.get(ThreadLocalRandom.current().nextInt(segmentCount)));
-      // process batches of 10 requests at a time
-      if (currentBatch.size() == concurrentReads) {
-        final List<InterruptedLoad> weakLoads = currentBatch
-            .stream()
-            .map(segment -> new InterruptedLoad(virtualStorageManager, segment))
-            .collect(Collectors.toList());
-        final List<Future<Integer>> futures = new ArrayList<>();
-        for (InterruptedLoad weakLoad : weakLoads) {
-          futures.add(executorService.submit(weakLoad));
-        }
-        for (Future<Integer> future : futures) {
-          try {
-            future.get(20L, TimeUnit.MILLISECONDS);
-          }
-          catch (Throwable t) {
-          }
-        }
-        while (true) {
-          boolean allDone = true;
-          for (Future<?> f : futures) {
-            allDone = allDone && f.isDone();
-          }
-          if (allDone) {
-            break;
-          }
-          Thread.sleep(5);
-        }
-        Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
-        Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
-        currentBatch.clear();
-      }
-    }
-
-    Assertions.assertTrue(location.getWeakStats().getHitCount() >= 0);
-    Assertions.assertTrue(location.getWeakStats().getHitBytes() >= 0);
-    Assertions.assertTrue(location2.getWeakStats().getHitCount() >= 0);
-    Assertions.assertTrue(location2.getWeakStats().getHitBytes() >= 0);
-
-    // now ensure that we can successfully do stuff after all those interrupts
-    int totalSuccess = 0;
-    int totalFailures = 0;
-    for (int i = 0; i < iterations; i++) {
-      int segment = ThreadLocalRandom.current().nextInt(segmentCount);
-      currentBatch.add(segmentsToWeakLoad.get(segment));
-      // process batches of 10 requests at a time
-      if (currentBatch.size() == concurrentReads) {
-
-        BatchResult result = testWeakBatch(i, currentBatch, false);
-        totalSuccess += result.success;
-        totalFailures += result.exceptions.size();
-        currentBatch.clear();
-      }
-    }
-    Assertions.assertEquals(iterations, totalSuccess);
-    Assertions.assertEquals(0, totalFailures);
-    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
-    Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
-    Assertions.assertTrue(4 >= location.getWeakEntryCount());
-    Assertions.assertTrue(4 >= location2.getWeakEntryCount());
-    // 5 because __drop path
-    Assertions.assertTrue(5 >= location.getPath().listFiles().length);
-    Assertions.assertTrue(5 >= location2.getPath().listFiles().length);
-  }
-
   private void assertNoLooseEnds()
   {
-    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
-    Assertions.assertEquals(0, location2.getWeakStats().getHoldCount());
+    awaitNoHolds(location);
+    awaitNoHolds(location2);
     Assertions.assertTrue(4 >= location.getWeakEntryCount());
     Assertions.assertTrue(4 >= location2.getWeakEntryCount());
     // 5 because __drop path
@@ -920,6 +920,27 @@ class SegmentLocalCacheManagerConcurrencyTest
                       .binaryVersion(9)
                       .size(size)
                       .build();
+  }
+
+  /**
+   * Waits for every hold on a location to be released, then asserts there are none.
+   * <p>
+   * A mount holds its own entry until it has finished establishing state, and abandoning the acquire that triggered
+   * it does not stop that mount, so a hold can briefly outlive the caller that asked for it. Anything that leaks a
+   * hold still fails here, it just takes the timeout to say so.
+   */
+  private static void awaitNoHolds(StorageLocation location)
+  {
+    for (int i = 0; i < 300 && location.getWeakStats().getHoldCount() > 0; i++) {
+      try {
+        Thread.sleep(10);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+    }
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
   }
 
   private static class BatchResult

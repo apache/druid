@@ -24,6 +24,7 @@ import com.google.inject.Binder;
 import com.google.inject.Binding;
 import com.google.inject.Inject;
 import com.google.inject.Module;
+import io.netty.handler.codec.http.HttpHeaders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Global;
@@ -37,10 +38,8 @@ import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.io.ClientConnector;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
 
 import javax.net.ssl.SSLContext;
-
 import java.lang.annotation.Annotation;
 
 /**

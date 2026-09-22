@@ -188,11 +188,11 @@ exports[`DatasourcesView matches snapshot 1`] = `
           {
             "Cell": [Function],
             "Header": "Availability",
-            "accessor": "num_segments",
+            "accessor": [Function],
             "className": "padded",
             "filterable": false,
+            "id": "num_segments",
             "show": true,
-            "sortMethod": [Function],
             "width": 220,
           },
           {

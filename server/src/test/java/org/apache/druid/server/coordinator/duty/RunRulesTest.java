@@ -492,7 +492,7 @@ public class RunRulesTest
         )
     );
 
-    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.replay(mockPeon);
 
@@ -715,7 +715,7 @@ public class RunRulesTest
 
     LoadQueuePeon anotherMockPeon = EasyMock.createMock(LoadQueuePeon.class);
     EasyMock.expect(anotherMockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(anotherMockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(anotherMockPeon.getSegmentsInQueue()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.expect(anotherMockPeon.getSegmentsToLoad()).andReturn(Collections.emptySet()).anyTimes();
 
     EasyMock.replay(anotherMockPeon);
@@ -1126,7 +1126,7 @@ public class RunRulesTest
     final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
     Assertions.assertEquals(
         dataSegment.getSize() * numReplicants,
-        stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
+        stats.get(Stats.Tier.REQUIRED_STORAGE, tierRowKey)
     );
 
     // Verify that primary assignment failed
@@ -1181,7 +1181,7 @@ public class RunRulesTest
     final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
     Assertions.assertEquals(
         dataSegment.getSize() * numReplicants,
-        stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
+        stats.get(Stats.Tier.REQUIRED_STORAGE, tierRowKey)
     );
     Assertions.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
     Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
@@ -1227,7 +1227,7 @@ public class RunRulesTest
   {
     EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Collections.emptySet()).anyTimes();
     EasyMock.expect(mockPeon.getSegmentsMarkedToDrop()).andReturn(Collections.emptySet()).anyTimes();
-    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptySet()).anyTimes();
+    EasyMock.expect(mockPeon.getSegmentsInQueue()).andReturn(Collections.emptyList()).anyTimes();
     EasyMock.replay(mockPeon);
   }
 

@@ -1317,6 +1317,62 @@ class PartialSegmentFileMapperV10Test
     return new File(baseDir, IndexIO.V10_FILE_NAME);
   }
 
+  @Test
+  void testEvictContainerDefersWhileAFetchIsWritingIntoIt() throws Exception
+  {
+    final File segmentFile = buildTestSegment(20, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("evict-defer");
+    final CountDownLatch fetching = new CountDownLatch(1);
+    final CountDownLatch release = new CountDownLatch(1);
+    final AtomicBoolean armed = new AtomicBoolean(false);
+    final AtomicBoolean gated = new AtomicBoolean(false);
+    final SegmentRangeReader delegate = new CountingRangeReader(segmentFile.getParentFile());
+    // park the first read once armed, so a fetch is provably mid-flight when the eviction arrives. Armed only after
+    // the mapper exists, since create() does its own header read on this thread.
+    final SegmentRangeReader gatedReader = (filename, offset, length) -> {
+      if (armed.get() && gated.compareAndSet(false, true)) {
+        fetching.countDown();
+        try {
+          Assertions.assertTrue(release.await(30, TimeUnit.SECONDS));
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IOException(e);
+        }
+      }
+      return delegate.readRange(filename, offset, length);
+    };
+
+    final ExecutorService exec = Execs.multiThreaded(1, "evict-defer-test-%d");
+    try (PartialSegmentFileMapperV10 mapper = createMapper(gatedReader, cacheDir)) {
+      final String fileName = mapper.getSegmentFileMetadata().getFiles().keySet().iterator().next();
+      final int containerIndex = mapper.getSegmentFileMetadata().getFiles().get(fileName).getContainer();
+      armed.set(true);
+
+      final Future<?> fetch = exec.submit(() -> {
+        mapper.fetchFiles(List.of(fileName));
+        return null;
+      });
+      Assertions.assertTrue(fetching.await(30, TimeUnit.SECONDS), "fetch must reach the gated read");
+
+      // Evicting now would delete the file the fetch is streaming into. It must defer instead of tearing it down.
+      mapper.evictContainer(containerIndex);
+
+      release.countDown();
+      fetch.get(30, TimeUnit.SECONDS);
+
+      // The fetch completed, and the deferred eviction then ran: the file is no longer resident.
+      Assertions.assertFalse(
+          mapper.getDownloadedFiles().contains(fileName),
+          "the deferred eviction should have run once the fetch finished"
+      );
+    }
+    finally {
+      release.countDown();
+      exec.shutdownNow();
+    }
+  }
+
   private static PartialSegmentFileMapperV10 createMapper(
       SegmentRangeReader rangeReader,
       File localCacheDir
