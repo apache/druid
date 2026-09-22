@@ -298,11 +298,13 @@ public class EmbeddedClusterApis implements EmbeddedResource
         .stream()
         .map(segment -> StringUtils.format("'%s'", StringUtils.escapeSql(segment.getId().toString())))
         .collect(Collectors.joining(", "));
+    final String segmentIdFilter = expectedSegmentIds.isEmpty()
+                                   ? ""
+                                   : " AND segment_id IN (" + expectedSegmentIds + ")";
     final String sql = "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'"
-                       + " AND is_overshadowed = 0 AND is_available = 1"
-                       + (expectedSegmentIds.isEmpty() ? "" : " AND segment_id IN (" + expectedSegmentIds + ")");
+                       + " AND is_overshadowed = 0 AND is_available = 1%s";
     try {
-      waitForResult(() -> runSql(sql, StringUtils.escapeSql(dataSource)), expectedCount::equals)
+      waitForResult(() -> runSql(sql, StringUtils.escapeSql(dataSource), segmentIdFilter), expectedCount::equals)
           .withTimeoutMillis(60_000)
           .go();
     }
