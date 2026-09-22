@@ -4488,19 +4488,20 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         continue;
       }
 
-      // In bounded mode, do not top up replicas for a task group that has already reached its end offsets.
-      // Otherwise, as completed replicas exit, this loop keeps recreating replacement replicas whose start
-      // offsets are already at the bounded end, producing an endless churn of tasks that complete instantly.
-      // This mirrors the completion guard on the task-group recreation path in this method.
-      if (ioConfig.isBounded() && hasTaskGroupReachedBoundedEnd(groupId)) {
-        log.info(
-            "Bounded taskGroup[%d] has reached end offsets, skipping replica top-up",
-            groupId
-        );
-        continue;
-      }
-
       if (ioConfig.getReplicas() > taskGroup.tasks.size()) {
+        // In bounded mode, do not top up replicas for a task group that has already reached its end offsets.
+        // Otherwise, as completed replicas exit, this loop keeps recreating replacement replicas whose start
+        // offsets are already at the bounded end, producing an endless churn of tasks that complete instantly.
+        // This mirrors the completion guard on the task-group recreation path in this method. The bounded-end
+        // check (a metadata-store lookup) is intentionally kept inside this branch so it only runs when a top-up
+        // would otherwise happen, not for every active group on every run.
+        if (ioConfig.isBounded() && hasTaskGroupReachedBoundedEnd(groupId)) {
+          log.info(
+              "Bounded taskGroup[%d] has reached end offsets, skipping replica top-up",
+              groupId
+          );
+          continue;
+        }
         log.info(
             "Number of tasks[%d] does not match configured numReplicas[%d] in taskGroup[%d], creating more tasks.",
             taskGroup.tasks.size(), ioConfig.getReplicas(), groupId
