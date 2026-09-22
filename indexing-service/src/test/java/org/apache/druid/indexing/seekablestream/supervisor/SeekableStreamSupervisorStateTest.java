@@ -2962,18 +2962,22 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   /**
-   * In bounded mode, a task group that has already reached its end offsets must not have replacement replicas
-   * created for it. Without the guard in {@code createNewTasks()}'s replica top-up loop, {@code replicas > tasks}
-   * would submit a replacement replica whose start offset is already at the bounded end, so it completes instantly
-   * and re-triggers the top-up, churning tasks endlessly. This test flows through {@code runInternal()} and asserts
-   * that no top-up task is submitted; it fails if the guard is removed.
+   * In bounded mode, a task group whose committed offsets have reached the configured end must not have replacement
+   * replicas created for it. Without the guard in {@code createNewTasks()}'s replica top-up loop, {@code replicas >
+   * tasks} would submit a replacement replica whose start offset is already at the bounded end, so it completes
+   * instantly and re-triggers the top-up, churning tasks endlessly.
+   *
+   * <p>This uses a non-empty configured range ({@code [0, 100)}) and a metadata store reporting committed offsets that
+   * have reached the end plus a matching bounded config, so it exercises the metadata-based completion path of
+   * {@link SeekableStreamSupervisor#hasTaskGroupReachedBoundedEnd} (not just the empty-range short-circuit). It flows
+   * through {@code runInternal()} and asserts no top-up task is submitted; it fails if the guard is removed.
    */
   @Test
   public void testCreateNewTasks_boundedGroupReachedEnd_doesNotTopUpReplicas()
   {
-    // replicas = 2, taskCount = 1, bounded with an empty range (start == end) so the group has reached its end.
+    // replicas = 2, taskCount = 1, non-empty bounded range [0, 100).
     final BoundedStreamConfig boundedConfig = new BoundedStreamConfig(
-        ImmutableMap.of("0", "100"),
+        ImmutableMap.of("0", "0"),
         ImmutableMap.of("0", "100")
     );
     final SeekableStreamSupervisorIOConfig ioConfig =
@@ -2991,12 +2995,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             .withBoundedStreamConfig(boundedConfig)
             .build();
 
-    // A single already-running task for group 0, so the group is discovered with one task, i.e. fewer than the
-    // configured replica count (2). That would normally trigger a replica top-up.
-    // minMsgTime/maxMsgTime must match the injected task group's (null) so isTaskCurrent() keeps the task.
+    // A single already-running task for group 0 whose committed offset ("100") has reached the configured end, so the
+    // group has one task, i.e. fewer than the configured replica count (2). That would normally trigger a top-up.
+    // minMsgTime/maxMsgTime and start sequences must match the injected task group so isTaskCurrent() keeps the task.
     final SeekableStreamIndexTaskIOConfig taskIoConfig = createTaskIoConfigExt(
         0,
-        Map.of("0", "0"),
+        Map.of("0", "100"),
         Map.of("0", "100"),
         "test",
         null,
@@ -3016,15 +3020,25 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
 
+    // Metadata store reports committed offsets that have reached the end, with a bounded config matching the
+    // supervisor's, so hasTaskGroupReachedBoundedEnd() returns true through its metadata-offset path.
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID))
+            .andReturn(new TestSeekableStreamDataSourceMetadata(
+                new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of("0", "100")),
+                boundedConfig
+            ))
+            .anyTimes();
+
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of("0")).anyTimes();
     EasyMock.expect(taskStorage.getStatus("task1")).andReturn(Optional.of(TaskStatus.running("task1"))).anyTimes();
     EasyMock.expect(taskStorage.getTask("task1")).andReturn(Optional.of(task1)).anyTimes();
     EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
             .andReturn(Map.of(task1.getId(), task1))
             .anyTimes();
-    // Task checkpoints match the injected group's starting sequences so the task is not killed as inconsistent.
+    // Task checkpoints match the reached-end committed offsets so the task is not killed as inconsistent.
     final TreeMap<Integer, Map<String, String>> task1Checkpoints = new TreeMap<>();
-    task1Checkpoints.put(0, ImmutableMap.of("0", "0"));
+    task1Checkpoints.put(0, ImmutableMap.of("0", "100"));
     EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
             .andReturn(Futures.immediateFuture(task1Checkpoints))
             .anyTimes();
@@ -3035,7 +3049,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
             .anyTimes();
     EasyMock.expect(indexTaskClient.getCurrentOffsetsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
-            .andReturn(Futures.immediateFuture(ImmutableMap.of("0", "5")))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of("0", "100")))
             .anyTimes();
     EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
 
@@ -3052,7 +3066,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // than the configured replica count.
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         0,
-        ImmutableMap.of("0", "0"),
+        ImmutableMap.of("0", "100"),
         null,
         null,
         Set.of("task1"),
@@ -3853,6 +3867,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     )
     {
       super(partitions);
+    }
+
+    public TestSeekableStreamDataSourceMetadata(
+            SeekableStreamSequenceNumbers<String, String> partitions,
+            BoundedStreamConfig boundedStreamConfig
+    )
+    {
+      super(partitions, boundedStreamConfig);
     }
 
     @Override
