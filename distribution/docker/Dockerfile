@@ -51,6 +51,7 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked VERSION=$(mvn -B -q org.a
 
 FROM alpine:3 as bash-static
 ARG TARGETARCH
+RUN apk add --no-cache curl
 #
 # Download bash-static binary to execute scripts that require bash.
 # Although bash-static supports multiple platforms, but there's no need for us to support all those platform, amd64 and arm64 are enough.
@@ -64,7 +65,12 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
       echo "Unsupported architecture ($TARGETARCH)" && exit 1; \
     fi; \
     echo "Downloading bash-static from ${BASH_URL}" \
-    && wget ${BASH_URL} -O /bin/bash
+    && curl --fail --location \
+      --retry 3 \
+      --retry-delay 5 \
+      --retry-all-errors \
+      --output /bin/bash \
+      "${BASH_URL}"
 
 FROM busybox:1.35.0-glibc as busybox
 
