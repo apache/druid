@@ -6319,7 +6319,7 @@ SqlTypeNameSpec SqlTypeName1(Span s) :
             s.add(this); sqlTypeName = unsigned ? SqlTypeName.USMALLINT : SqlTypeName.SMALLINT;
         }
     |
-        ( <BIGINT> | <LONG> ) ( <UNSIGNED> { unsigned = true; })? {
+        <BIGINT> ( <UNSIGNED> { unsigned = true; })? {
             if (unsigned && !this.conformance.supportsUnsignedTypes()) {
                 throw SqlUtil.newContextException(getPos(), RESOURCE.unsignedDisabled());
             }
@@ -6708,6 +6708,18 @@ SqlNode BuiltinFunctionCall() :
         <LPAREN> AddExpression(args, ExprContext.ACCEPT_SUB_QUERY)
         <AS>
         (
+            // LONG is the name Druid's native engine uses for its 64-bit integer type, so
+            // CAST(x AS LONG) is accepted as an alias for CAST(x AS BIGINT). This is scoped to
+            // CAST rather than added to DataType() itself, so a column or table named LONG
+            // (a DDL type name, an EXTEND column type, etc.) is unaffected.
+            LOOKAHEAD(2)
+            <LONG> {
+                dt = new SqlDataTypeSpec(
+                    new SqlBasicTypeNameSpec(SqlTypeName.BIGINT, getPos()),
+                    getPos());
+                args.add(dt);
+            }
+        |
             dt = DataType() { args.add(dt); }
         |
             LOOKAHEAD(2)
