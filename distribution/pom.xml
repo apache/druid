@@ -152,6 +152,11 @@
                                         <argument>${project.parent.basedir}/licenses/APACHE2</argument>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
+                                        <!-- Contrib extensions are not bundled in the Apache release binary; skip
+                                             their licenses.yaml entries so LICENSE.BINARY does not overclaim what
+                                             ships. check-licenses.py enforces that every contrib entry uses this
+                                             module prefix. -->
+                                        <argument>--exclude-module-prefix=extensions-contrib/</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -167,6 +172,10 @@
                                         <argument>${project.parent.basedir}/NOTICE</argument>
                                         <argument>${project.parent.basedir}/licenses.yaml</argument>
                                         <argument>${project.parent.basedir}/NOTICE.BINARY</argument>
+                                        <!-- Contrib extensions are not bundled in the Apache release binary; skip
+                                             their licenses.yaml entries so NOTICE.BINARY does not overclaim what
+                                             ships. See the matching generate-binary-license execution above. -->
+                                        <argument>--exclude-module-prefix=extensions-contrib/</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
