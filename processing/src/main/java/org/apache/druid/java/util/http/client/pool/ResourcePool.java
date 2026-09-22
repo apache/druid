@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalNotification;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -36,6 +37,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -62,8 +64,17 @@ public class ResourcePool<K, V> implements Closeable
   public ResourcePool(final ResourceFactory<K, V> factory, final ResourcePoolConfig config,
                       final boolean eagerInitialization)
   {
-    this.pool = CacheBuilder.newBuilder().build(
-        new CacheLoader<>()
+    this.pool = CacheBuilder.newBuilder()
+                            .expireAfterAccess(config.getUnusedConnectionTimeoutMillis(), TimeUnit.MILLISECONDS)
+                            .removalListener(
+                                (RemovalNotification<K, ResourceHolderPerKey<K, V>> notification) -> {
+                                  if (notification.wasEvicted()) {
+                                    notification.getValue().close();
+                                  }
+                                }
+                            )
+                            .build(
+                              new CacheLoader<>()
         {
           @Override
           public ResourceHolderPerKey<K, V> load(K input)
