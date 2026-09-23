@@ -656,8 +656,9 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   }
 
   /**
-   * Counter accounting happens at delivery via {@link LoadableSegment#countDelivered}: addLoad (when bytes were
-   * loaded) + one addFile with the segment's row count.
+   * Counter accounting happens automatically inside a successful {@link AcquireSegmentAction#release()} (via the
+   * on-release hook the loadable segment installs): addLoad (when bytes were loaded) + one addFile with the segment's
+   * row count. The releasing consumer has no counting obligation.
    */
   @Test
   public void test_countDelivered_accounting() throws Exception
@@ -676,7 +677,6 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
     final AcquireSegmentAction action = loadableSegment.acquire(AcquireMode.PARTIAL);
     action.await();
     final AcquireSegmentResult result = action.release();
-    loadableSegment.countDelivered(result);
 
     final ChannelCounters.Snapshot snapshot = counters.snapshot();
     Assertions.assertNotNull(snapshot.getFiles());

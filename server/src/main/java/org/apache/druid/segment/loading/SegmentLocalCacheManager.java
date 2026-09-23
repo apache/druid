@@ -514,6 +514,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               }
 
               return submitAcquireTask(
+                  dataSegment.getId(),
                   hold,
                   (taskHolds, waitNanos) -> loadCompleteEntry(hold.getEntry(), location, taskHolds, waitNanos)
               );
@@ -625,19 +626,22 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         // bundle it mounts. All of them fold into the delivered segment's close. The task owns every hold until the
         // fold (or the failure unwind), so a caller closing the action while the task runs cannot release them
         // mid-mount or mid-download: the entry stays pinned for the task's whole duration.
-        return submitAcquireTask(reserved.hold, (taskHolds, waitNanos) -> {
+        return submitAcquireTask(dataSegment.getId(), reserved.hold, (taskHolds, waitNanos) -> {
           final long taskStartNanos = System.nanoTime();
           final boolean wasMounted = reserved.metadata.isMounted();
           // mount() is idempotent (and cheap if already mounted)
           try {
             reserved.metadata.mount(reserved.location);
           }
-          catch (IOException | RuntimeException e) {
-            throw DruidException.defensive(
-                e,
-                "Failed to mount partial metadata for segment[%s]",
-                dataSegment.getId()
-            );
+          catch (IOException e) {
+            // wrap for the mount-specific message; other failure types are classified by submitAcquireTask
+            throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                                .build(
+                                    e,
+                                    "Failed to mount partial metadata for segment[%s]",
+                                    dataSegment.getId()
+                                );
           }
           // Pin the metadata across the rest of the task
           final Closeable taskMetadataRef;
@@ -1353,6 +1357,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return AcquireSegmentAction.completed(AcquireSegmentResult.of(complete.acquireReference(hold)));
       }
       return submitAcquireTask(
+          complete.getSegmentId(),
           hold,
           (taskHolds, waitNanos) -> loadCompleteEntry(complete, location, taskHolds, waitNanos)
       );
@@ -1946,8 +1951,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    *   <li>submitting the task fails synchronously: the hold is closed here and the failure propagates to the
    *   {@link #acquireSegment} caller</li>
    * </ul>
+   * Task failures are classified here, where the segment is known: a {@link DruidException} thrown by the task is
+   * delivered as-is, anything else is delivered as an operator-facing runtime failure naming the segment. Consumers
+   * of {@link AcquireSegmentAction#release()} therefore always see a properly categorized {@link DruidException}
+   * rather than {@code AsyncResource.get()}'s generic wrapper around a checked exception.
    */
-  private AcquireSegmentAction submitAcquireTask(final Closeable preplacedHold, final AcquireTaskBody taskBody)
+  private AcquireSegmentAction submitAcquireTask(
+      final SegmentId segmentId,
+      final Closeable preplacedHold,
+      final AcquireTaskBody taskBody
+  )
   {
     final AcquireSegmentAction action = new AcquireSegmentAction();
     final AtomicBoolean holdClaimed = new AtomicBoolean(false);
@@ -1975,8 +1988,14 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         }
         catch (Throwable t) {
           CloseableUtils.closeAndSuppressExceptions(taskHolds, t::addSuppressed);
+          final DruidException failure =
+              t instanceof DruidException druidException
+              ? druidException
+              : DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build(t, "Failed to load segment[%s] on demand", segmentId);
           // silently absorbed if the action was closed first
-          action.setException(t);
+          action.setException(failure);
         }
         return null;
       });

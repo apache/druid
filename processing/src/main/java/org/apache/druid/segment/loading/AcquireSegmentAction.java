@@ -19,11 +19,15 @@
 
 package org.apache.druid.segment.loading;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.common.asyncresource.SettableAsyncResource;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.Segment;
 
 import javax.annotation.Nullable;
+import java.util.function.Consumer;
 
 /**
  * Handle for acquiring a reference to a {@link Segment} which might need to be loaded on demand in the form of an
@@ -46,6 +50,15 @@ import javax.annotation.Nullable;
  */
 public class AcquireSegmentAction extends SettableAsyncResource<AcquireSegmentResult>
 {
+  private static final Logger LOG = new Logger(AcquireSegmentAction.class);
+
+  /**
+   * Hook installed via {@link #setOnRelease}, run by {@link #release()} after ownership transfers.
+   */
+  @Nullable
+  @GuardedBy("this")
+  private Consumer<AcquireSegmentResult> onRelease;
+
   /**
    * Handle representing a segment that is known to be missing: immediately ready with
    * {@link AcquireSegmentResult#empty()}.
@@ -98,9 +111,42 @@ public class AcquireSegmentAction extends SettableAsyncResource<AcquireSegmentRe
     return super.set(result, result);
   }
 
-  @Override // Overridden to change access from protected to public
-  public synchronized AcquireSegmentResult release()
+  /**
+   * Installs a hook that {@link #release()} runs with the released result, after ownership has transferred to the
+   * releasing caller. Since release can only succeed once, the hook runs at most once; it never runs when the load
+   * fails or the handle is closed without release. Exceptions it throws are logged and suppressed, so a broken hook
+   * cannot poison the delivery or leak the result.
+   * <p>
+   * Producers use this for exactly-once delivery accounting (e.g. counter updates) without placing an obligation on
+   * consumers; install it before handing the action to the consumer.
+   */
+  public synchronized void setOnRelease(Consumer<AcquireSegmentResult> hook)
   {
-    return super.release();
+    if (onRelease != null) {
+      throw DruidException.defensive("onRelease hook already set, cannot call setOnRelease()");
+    }
+    onRelease = hook;
+  }
+
+  @Override // Overridden to change access from protected to public
+  public AcquireSegmentResult release()
+  {
+    final AcquireSegmentResult result = super.release();
+    // Run the hook outside the monitor, mirroring how the base class fires ready callbacks.
+    final Consumer<AcquireSegmentResult> hook;
+    synchronized (this) {
+      hook = onRelease;
+      // Clear to allow GC.
+      onRelease = null;
+    }
+    if (hook != null) {
+      try {
+        hook.accept(result);
+      }
+      catch (Throwable t) {
+        LOG.warn(t, "onRelease hook failed; ignoring");
+      }
+    }
+    return result;
   }
 }

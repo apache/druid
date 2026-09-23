@@ -154,11 +154,17 @@ public class AdaptedLoadableSegment implements LoadableSegment
 
     // The supplier starts the underlying work (e.g. VSF file fetches); fromResource folds the resource's lifecycle
     // into the delivered segment's close (and cancels it if the action is closed before readiness).
-    return AcquireSegmentHandles.fromResource(asyncSegmentSupplier.get());
+    final AcquireSegmentAction action = AcquireSegmentHandles.fromResource(asyncSegmentSupplier.get());
+    action.setOnRelease(this::countDelivered);
+    return action;
   }
 
-  @Override
-  public void countDelivered(AcquireSegmentResult result)
+  /**
+   * Counter accounting for a delivered acquire, installed on the returned action via
+   * {@link AcquireSegmentAction#setOnRelease} so it runs exactly once, inside a successful
+   * {@link AcquireSegmentAction#release()}.
+   */
+  private void countDelivered(AcquireSegmentResult result)
   {
     if (inputCounters == null) {
       return;

@@ -168,7 +168,9 @@ public class RegularLoadableSegment implements LoadableSegment
 
     if (cachedDataSegment != null) {
       // if we have a DataSegment object we can go through the SegmentManager directly
-      return segmentManager.acquireSegment(cachedDataSegment, acquireMode);
+      final AcquireSegmentAction action = segmentManager.acquireSegment(cachedDataSegment, acquireMode);
+      action.setOnRelease(this::countDelivered);
+      return action;
     } else {
       // We can't acquire from the SegmentManager yet because we don't have the DataSegment object; it needs to be
       // fetched from the Coordinator first. Two-stage acquisition chain consisting of: an outer handle whose canceler
@@ -187,6 +189,7 @@ public class RegularLoadableSegment implements LoadableSegment
           closeInner.run();
         }
       });
+      outer.setOnRelease(this::countDelivered);
       Futures.addCallback(
           dsFuture,
           new FutureCallback<>()
@@ -243,8 +246,12 @@ public class RegularLoadableSegment implements LoadableSegment
     }
   }
 
-  @Override
-  public void countDelivered(AcquireSegmentResult result)
+  /**
+   * Counter accounting for a delivered acquire, installed on the returned action via
+   * {@link AcquireSegmentAction#setOnRelease} so it runs exactly once, inside a successful
+   * {@link AcquireSegmentAction#release()}.
+   */
+  private void countDelivered(AcquireSegmentResult result)
   {
     if (inputCounters == null) {
       return;

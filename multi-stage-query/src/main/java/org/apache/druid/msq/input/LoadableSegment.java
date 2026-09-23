@@ -86,8 +86,9 @@ public interface LoadableSegment
    * result; close-after-release is a no-op, and closing before the action becomes ready fires any pending ready
    * callbacks (release/get then throw {@link org.apache.druid.common.asyncresource.AsyncResourceCanceledException}).
    * <p>
-   * The consumer that successfully releases the result must call {@link #countDelivered} exactly once, at the moment
-   * ownership transfers.
+   * Delivery accounting is automatic: implementations install an {@link AcquireSegmentAction#setOnRelease} hook on
+   * the returned action, so a successful release updates their counters exactly once with no obligation on the
+   * consumer.
    * <p>
    * The {@code acquireMode} selects how the segment is loaded; see {@link AcquireMode}. With {@link AcquireMode#PARTIAL}
    * the returned {@link Segment} is mounted but, for a partial-download (virtual storage) segment, may not be fully
@@ -98,19 +99,6 @@ public interface LoadableSegment
    * @throws DruidException if the segment has already been acquired
    */
   AcquireSegmentAction acquire(AcquireMode acquireMode);
-
-  /**
-   * Called by the consumer that successfully {@link AcquireSegmentAction#release()}s the result of {@link #acquire},
-   * exactly once, at the moment ownership transfers. Implementations update their {@code ChannelCounters} here. Not
-   * called when the load fails or is canceled. {@link #acquireIfCached} counts inline and does not use this hook.
-   * <p>
-   * Counting happens post-release (rather than in a producer-registered ready callback) because a consumer polling
-   * {@code isReady()} could release before producer callbacks fire, at which point a peeking {@code get()} would throw;
-   * post-release counting is exactly-once by construction.
-   */
-  default void countDelivered(AcquireSegmentResult result)
-  {
-  }
 
   /**
    * Returns a future for the {@link DataSegment} object. For {@link RegularLoadableSegment}, the future is created

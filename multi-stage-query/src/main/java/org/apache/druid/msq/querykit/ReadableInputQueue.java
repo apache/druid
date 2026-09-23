@@ -350,9 +350,9 @@ public class ReadableInputQueue implements Closeable
       // the released action is a no-op, so closing the action alone would leak the segment and its folded holds).
       AcquireSegmentResult releasedResult = null;
       try {
-        // Ownership transfer; the delivered segment's close releases everything the acquire placed.
+        // Ownership transfer; the delivered segment's close releases everything the acquire placed, and release()
+        // runs the producer's delivery-accounting hook.
         releasedResult = acquireSegmentAction.release();
-        loadableSegment.countDelivered(releasedResult);
         final SegmentReferenceHolder referenceHolder = new SegmentReferenceHolder(
             new SegmentReference(loadableSegment.descriptor(), releasedResult.getSegment()),
             loadableSegment.description()

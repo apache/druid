@@ -164,6 +164,73 @@ public class AcquireSegmentActionTest
   }
 
   @Test
+  public void testOnReleaseHookRunsExactlyOnceInsideSuccessfulRelease()
+  {
+    final CloseCountingSegment segment = new CloseCountingSegment();
+    final AcquireSegmentAction action = AcquireSegmentAction.completed(
+        AcquireSegmentResult.of(Optional.of(segment))
+    );
+    final AtomicInteger hookCalls = new AtomicInteger();
+    action.setOnRelease(result -> {
+      hookCalls.incrementAndGet();
+      Assertions.assertSame(segment, result.getSegment().orElseThrow());
+    });
+    Assertions.assertEquals(0, hookCalls.get(), "hook must not run before release");
+    final AcquireSegmentResult released = action.release();
+    Assertions.assertEquals(1, hookCalls.get());
+    released.close();
+    action.close();
+  }
+
+  @Test
+  public void testOnReleaseHookExceptionIsSuppressed()
+  {
+    final CloseCountingSegment segment = new CloseCountingSegment();
+    final AcquireSegmentAction action = AcquireSegmentAction.completed(
+        AcquireSegmentResult.of(Optional.of(segment))
+    );
+    action.setOnRelease(result -> {
+      throw new IllegalStateException("hook blew up");
+    });
+    // a broken hook must not poison the delivery: the caller still receives (and owns) the result
+    final AcquireSegmentResult released = action.release();
+    Assertions.assertSame(segment, released.getSegment().orElseThrow());
+    released.close();
+    Assertions.assertEquals(1, segment.closeCount.get());
+    action.close();
+  }
+
+  @Test
+  public void testOnReleaseHookDoesNotRunWhenReleaseFails()
+  {
+    final AtomicInteger hookCalls = new AtomicInteger();
+
+    // failed load: release() throws the producer exception, hook must not run
+    final AcquireSegmentAction failed = new AcquireSegmentAction();
+    failed.setOnRelease(result -> hookCalls.incrementAndGet());
+    failed.setException(new IllegalStateException("boom"));
+    Assertions.assertThrows(IllegalStateException.class, failed::release);
+    Assertions.assertEquals(0, hookCalls.get(), "failed loads must not run the hook");
+    failed.close();
+
+    // canceled: close-before-ready, release() reports cancellation, hook must not run
+    final AcquireSegmentAction canceled = new AcquireSegmentAction();
+    canceled.setOnRelease(result -> hookCalls.incrementAndGet());
+    canceled.close();
+    Assertions.assertThrows(AsyncResourceCanceledException.class, canceled::release);
+    Assertions.assertEquals(0, hookCalls.get(), "canceled loads must not run the hook");
+  }
+
+  @Test
+  public void testSetOnReleaseTwiceThrows()
+  {
+    final AcquireSegmentAction action = AcquireSegmentAction.missingSegment();
+    action.setOnRelease(result -> {});
+    Assertions.assertThrows(DruidException.class, () -> action.setOnRelease(result -> {}));
+    action.close();
+  }
+
+  @Test
   public void testCloseBeforeReadyFiresCallbacksAndReleaseReportsCancellation()
   {
     final AtomicInteger callbackFired = new AtomicInteger();

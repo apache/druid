@@ -332,10 +332,7 @@ public class ServerManager implements QuerySegmentWalker
     long bytesLoaded = 0;
     boolean timedOut = false;
     boolean interrupted = false;
-    boolean firstFailureFromAcquire = false;
     for (int i = 0; i < actions.size(); i++) {
-      // distinguish acquire-phase failures from map-phase failures for the classification below
-      boolean acquirePhase = true;
       try {
         final DataSegmentAndDescriptor segmentAndDescriptor = segmentsToMap.get(i);
         final AcquireSegmentAction action = actions.get(i);
@@ -349,7 +346,6 @@ public class ServerManager implements QuerySegmentWalker
         maxSegmentWaitTime = Math.max(maxSegmentWaitTime, result.getWaitTimeNanos());
         bytesLoaded += result.getLoadSizeBytes();
         final Optional<Segment> segment = result.getSegment();
-        acquirePhase = false;
         try {
           final Optional<Segment> mappedSegment = segmentMapFunction.apply(segment).map(safetyNet::register);
           segmentReferences.add(new SegmentReference(segmentAndDescriptor.getDescriptor(), mappedSegment));
@@ -373,7 +369,6 @@ public class ServerManager implements QuerySegmentWalker
         }
         if (failure == null) {
           failure = t;
-          firstFailureFromAcquire = acquirePhase;
         } else {
           // no need to get carried away, if a bunch fail this ceases to be useful
           if (failure.getSuppressed().length <= 10) {
@@ -384,12 +379,7 @@ public class ServerManager implements QuerySegmentWalker
     }
     if (failure != null) {
       final DruidException toThrow;
-      // Pass a DruidException through as-is, with one exception: an UNCATEGORIZED DruidException from the acquire
-      // phase is AsyncResource.get()'s conversion of a checked producer exception (e.g. SegmentLoadingException from
-      // an on-demand load); treat that like any other opaque failure and reclassify it to OPERATOR/RUNTIME_FAILURE
-      // with the query-facing context.
-      if (failure instanceof DruidException de
-          && (de.getCategory() != DruidException.Category.UNCATEGORIZED || !firstFailureFromAcquire)) {
+      if (failure instanceof DruidException de) {
         toThrow = de;
       } else if (timedOut) {
         toThrow = DruidException.forPersona(DruidException.Persona.USER)

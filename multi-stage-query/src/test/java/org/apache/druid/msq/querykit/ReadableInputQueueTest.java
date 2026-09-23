@@ -91,7 +91,7 @@ class ReadableInputQueueTest
   {
     private final AcquireSegmentAction action;
     private final Optional<Segment> cached;
-    private final boolean throwOnCountDelivered;
+    private final boolean throwOnDescriptor;
     final AtomicInteger countDeliveredCalls = new AtomicInteger();
 
     TestLoadableSegment(AcquireSegmentAction action)
@@ -104,16 +104,21 @@ class ReadableInputQueueTest
       this(action, cached, false);
     }
 
-    TestLoadableSegment(AcquireSegmentAction action, Optional<Segment> cached, boolean throwOnCountDelivered)
+    TestLoadableSegment(AcquireSegmentAction action, Optional<Segment> cached, boolean throwOnDescriptor)
     {
       this.action = action;
       this.cached = cached;
-      this.throwOnCountDelivered = throwOnCountDelivered;
+      this.throwOnDescriptor = throwOnDescriptor;
     }
 
     @Override
     public SegmentDescriptor descriptor()
     {
+      // Simulates a post-release failure in the queue's delivery path: onSegmentReady calls descriptor() after
+      // release() has already transferred ownership of the result.
+      if (throwOnDescriptor) {
+        throw new IllegalStateException("descriptor blew up");
+      }
       return DESCRIPTOR;
     }
 
@@ -133,16 +138,9 @@ class ReadableInputQueueTest
     @Override
     public AcquireSegmentAction acquire(AcquireMode acquireMode)
     {
+      // install delivery accounting the same way real implementations do: a successful release counts exactly once
+      action.setOnRelease(result -> countDeliveredCalls.incrementAndGet());
       return action;
-    }
-
-    @Override
-    public void countDelivered(AcquireSegmentResult result)
-    {
-      countDeliveredCalls.incrementAndGet();
-      if (throwOnCountDelivered) {
-        throw new IllegalStateException("countDelivered blew up");
-      }
     }
 
     @Override
@@ -234,8 +232,8 @@ class ReadableInputQueueTest
   @Test
   void testPostReleaseFailureClosesResultInsteadOfLeaking() throws Exception
   {
-    // release() succeeds, then a later step (countDelivered) throws: the released result must be closed, not leaked
-    // (closing the RELEASED action is a no-op, so the segment + its folded holds would otherwise leak forever).
+    // release() succeeds, then a later delivery step (descriptor()) throws: the released result must be closed, not
+    // leaked (closing the RELEASED action is a no-op, so the segment + its folded holds would otherwise leak forever).
     final CountingSegment segment = new CountingSegment();
     final AcquireSegmentAction completed =
         AcquireSegmentAction.completed(AcquireSegmentResult.of(Optional.of(segment)));
@@ -250,8 +248,10 @@ class ReadableInputQueueTest
         ExecutionException.class,
         () -> future.get(10, TimeUnit.SECONDS)
     );
-    Assertions.assertTrue(e.getCause().getMessage().contains("countDelivered blew up"), e.getCause().getMessage());
+    Assertions.assertTrue(e.getCause().getMessage().contains("descriptor blew up"), e.getCause().getMessage());
     Assertions.assertEquals(1, segment.closes.get(), "post-release failure must close the delivered segment");
+    // release succeeded, so the delivery was counted even though the downstream handoff then failed
+    Assertions.assertEquals(1, loadable.countDeliveredCalls.get());
 
     // nothing left to close on queue teardown
     queue.close();
