@@ -161,11 +161,14 @@ Kafka consumers fetch from the nearest replica when `client.rack` matches a brok
 An Iceberg REST catalog can read from S3 in the task's own region by taking `client.region` from the node's region label:
 
 ```json
-"catalogProperties": {
-  "uri": "https://iceberg-rest.example.com",
-  "druid.dynamic.config.provider": {
-    "type": "k8sNodeLabel",
-    "labels": { "client.region": "topology.kubernetes.io/region" }
+"icebergCatalog": {
+  "type": "rest",
+  "catalogUri": "https://iceberg-rest.example.com",
+  "catalogProperties": {
+    "druid.dynamic.config.provider": {
+      "type": "k8sNodeLabel",
+      "labels": { "client.region": "topology.kubernetes.io/region" }
+    }
   }
 }
 ```
