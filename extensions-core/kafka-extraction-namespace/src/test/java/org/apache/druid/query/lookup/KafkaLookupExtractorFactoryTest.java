@@ -296,7 +296,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartWaitsForInitialEndOffsets() throws Exception
   {
-    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
     final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
     final CountDownLatch firstPollComplete = new CountDownLatch(1);
     final CountDownLatch allowCatchUp = new CountDownLatch(1);
@@ -366,7 +366,7 @@ public class KafkaLookupExtractorFactoryTest
     final CountDownLatch pollStarted = new CountDownLatch(1);
     final CountDownLatch allowPollToFinish = new CountDownLatch(1);
     final CountDownLatch consumerClosed = new CountDownLatch(1);
-    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST)
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest")
     {
       @Override
       public synchronized void close()
