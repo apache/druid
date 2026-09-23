@@ -127,8 +127,10 @@ public class DruidCoordinator
   private final ServiceEmitter emitter;
   private final OverlordClient overlordClient;
   private final ScheduledExecutorFactory executorFactory;
+
   @GuardedBy("lock")
   private final List<DutiesRunnable> dutiesRunnables = new ArrayList<>();
+
   private final LoadQueueTaskMaster taskMaster;
   private final SegmentLoadQueueManager loadQueueManager;
   private final CoordinatorCustomDutyGroups customDutyGroups;
@@ -353,6 +355,8 @@ public class DruidCoordinator
 
   public List<DutyGroupStatus> getStatusOfDuties()
   {
+    // Only the copy needs the coordinator lock. Each getStatus() call synchronizes on its own duty group,
+    // so keep that work outside the lock to avoid delaying leadership changes or duty runs.
     final List<DutiesRunnable> runnables;
     synchronized (lock) {
       runnables = new ArrayList<>(dutiesRunnables);
