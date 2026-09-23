@@ -2962,15 +2962,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   /**
-   * In bounded mode, a task group whose committed offsets have reached the configured end must not have replacement
-   * replicas created for it. Without the guard in {@code createNewTasks()}'s replica top-up loop, {@code replicas >
-   * tasks} would submit a replacement replica whose start offset is already at the bounded end, so it completes
-   * instantly and re-triggers the top-up, churning tasks endlessly.
-   *
-   * <p>This uses a non-empty configured range ({@code [0, 100)}) and a metadata store reporting committed offsets that
-   * have reached the end plus a matching bounded config, so it exercises the metadata-based completion path of
-   * {@link SeekableStreamSupervisor#hasTaskGroupReachedBoundedEnd} (not just the empty-range short-circuit). It flows
-   * through {@code runInternal()} and asserts no top-up task is submitted; it fails if the guard is removed.
+   * A bounded task group that has reached its configured end offsets is not topped up with replacement replicas,
+   * exercising the metadata-based completion path (non-empty range with committed offsets at the end).
    */
   @Test
   public void testCreateNewTasks_boundedGroupReachedEnd_doesNotTopUpReplicas()
