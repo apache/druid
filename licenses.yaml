@@ -7352,7 +7352,7 @@ name: Apache Arrow
 license_category: binary
 module: extensions-contrib/druid-iceberg-extensions
 license_name: Apache License version 2.0
-version: 15.0.2
+version: 19.0.0
 libraries:
   - org.apache.arrow: arrow-format
   - org.apache.arrow: arrow-memory-core
@@ -7361,25 +7361,25 @@ libraries:
 notices:
   - arrow-format: |
       Arrow Format
-      Copyright 2024 The Apache Software Foundation
+      Copyright 2026 The Apache Software Foundation
 
       This product includes software developed at
       The Apache Software Foundation (http://www.apache.org/).
   - arrow-memory-core: |
       Arrow Memory - Core
-      Copyright 2024 The Apache Software Foundation
+      Copyright 2026 The Apache Software Foundation
 
       This product includes software developed at
       The Apache Software Foundation (http://www.apache.org/).
   - arrow-memory-unsafe: |
       Arrow Memory - Unsafe
-      Copyright 2024 The Apache Software Foundation
+      Copyright 2026 The Apache Software Foundation
 
       This product includes software developed at
       The Apache Software Foundation (http://www.apache.org/).
   - arrow-vector: |
       Arrow Vectors
-      Copyright 2024 The Apache Software Foundation
+      Copyright 2026 The Apache Software Foundation
 
       This product includes software developed at
       The Apache Software Foundation (http://www.apache.org/).
@@ -7390,7 +7390,7 @@ name: FlatBuffers Java API
 license_category: binary
 module: extensions-contrib/druid-iceberg-extensions
 license_name: Apache License version 2.0
-version: 23.5.26
+version: 25.2.10
 libraries:
   - com.google.flatbuffers: flatbuffers-java
 
