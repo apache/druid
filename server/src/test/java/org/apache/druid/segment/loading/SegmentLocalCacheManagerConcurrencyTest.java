@@ -679,7 +679,7 @@ class SegmentLocalCacheManagerConcurrencyTest
       boolean sleepy,
       boolean expectHits,
       boolean expectNoFailures
-  ) throws InterruptedException
+  )
   {
     int totalSuccess = 0;
     int totalFailures = 0;

@@ -69,14 +69,15 @@ public class RegularLoadableSegment implements LoadableSegment
   private final DataSegment cachedDataSegment;
 
   /**
-   * DataSegment fetched from the Coordinator by the deferred acquire chain. Written before the inner (stage 2)
-   * acquire starts, so it is always visible to {@link #countDelivered} for a delivered deferred acquire.
+   * DataSegment fetched from the Coordinator, written before the inner (stage 2) acquire starts, so it is always
+   * visible to {@link #countDelivered} for a delivered deferred acquire.
    */
   @Nullable
   private volatile DataSegment fetchedDataSegment;
 
   /**
-   * Memoized supplier for the DataSegment future.
+   * Memoized supplier for the DataSegment future. If an {@link #acquire(AcquireMode)} is canceled then this future
+   * may also be canceled.
    */
   private final Supplier<ListenableFuture<DataSegment>> dataSegmentFutureSupplier;
 
@@ -166,13 +167,13 @@ public class RegularLoadableSegment implements LoadableSegment
     acquired = true;
 
     if (cachedDataSegment != null) {
-      // The SegmentManager handle is already the right shape; counter updates happen at delivery via countDelivered.
+      // if we have a DataSegment object we can go through the SegmentManager directly
       return segmentManager.acquireSegment(cachedDataSegment, acquireMode);
     } else {
       // We can't acquire from the SegmentManager yet because we don't have the DataSegment object; it needs to be
-      // fetched from the Coordinator first. Hand-rolled two-stage chain: an outer handle whose canceler tears down
-      // whichever stage is active, a DataSegment-future callback that starts the inner (cache manager) acquire under
-      // a state guard, and a ready-callback that transfers the inner result to the outer handle.
+      // fetched from the Coordinator first. Two-stage acquisition chain consisting of: an outer handle whose canceler
+      // tears down whichever stage is active, a DataSegment-future callback that starts the inner (cache manager)
+      // acquire under a state guard, and a ready-callback that transfers the inner result to the outer handle.
       final DeferredAcquireState state = new DeferredAcquireState();
       final ListenableFuture<DataSegment> dsFuture = dataSegmentFutureSupplier.get();
       final AcquireSegmentAction outer = new AcquireSegmentAction(() -> {
@@ -181,8 +182,6 @@ public class RegularLoadableSegment implements LoadableSegment
           state.closed = true;
           closeInner = state.closeInnerOnce;
         }
-        // Cancelling the memoized DataSegment future poisons later dataSegmentFuture() calls, which is safe today:
-        // acquire() is once-only and there are no other production consumers of dataSegmentFuture() after acquire.
         dsFuture.cancel(true);
         if (closeInner != null) {
           closeInner.run();
@@ -205,19 +204,15 @@ public class RegularLoadableSegment implements LoadableSegment
                     return;
                   }
                 }
-                // Acquire OUTSIDE the state lock: acquireSegment can do real work (storage-location reservation,
-                // eviction, info-file writes), and the outer canceler takes the state lock — which a closer (e.g.
-                // ReadableInputQueue.close) may drive — so holding it here would stall cancellation behind
-                // deep-storage-side work. acquireSegment can also throw synchronously (e.g. CAPACITY_EXCEEDED, or a
-                // rejected load-pool submit); a throw escaping this callback would be swallowed by the direct
-                // executor, leaving outer never delivered and its consumer hung — route it to outer.setException.
+                // Acquire OUTSIDE the state lock because acquireSegment can do real work (storage-location reservation,
+                // eviction, etc.), and the outer canceler takes the state lock so holding it would stall cancellation.
                 inner = segmentManager.acquireSegment(dataSegment, acquireMode);
               }
               catch (Throwable t) {
                 outer.setException(t);
                 return;
               }
-              closeInnerOnce = AcquireSegmentHandles.closeOnce(inner::close);
+              closeInnerOnce = AcquireSegmentHandles.closeOnce(inner);
               final boolean closedWhileAcquiring;
               synchronized (state) {
                 closedWhileAcquiring = state.closed;
@@ -231,7 +226,7 @@ public class RegularLoadableSegment implements LoadableSegment
                 closeInnerOnce.run();
                 return;
               }
-              // outside the state lock: ready callbacks can fire immediately on the registering thread
+              // outside the state lock, ready callbacks can fire immediately on the registering thread
               AcquireSegmentHandles.transferOnReady(inner, outer, closeInnerOnce);
             }
 
@@ -259,20 +254,6 @@ public class RegularLoadableSegment implements LoadableSegment
     final DataSegment sizeSource = cachedDataSegment != null ? cachedDataSegment : fetchedDataSegment;
     // Parity with the old countedLoad: addFile fires even for an empty delivery, with rowCount 0.
     inputCounters.addFile(rowCount, sizeSource == null ? 0 : sizeSource.getSize());
-  }
-
-  /**
-   * Stage guard for the deferred acquire chain: serializes "outer closed" against "stage 2 started" so the inner
-   * handle is either never created, or is closed exactly once (by the canceler or by the transfer's failure path,
-   * whichever comes first — both go through {@link #closeInnerOnce}).
-   */
-  private static final class DeferredAcquireState
-  {
-    @GuardedBy("this")
-    boolean closed;
-    @GuardedBy("this")
-    @Nullable
-    Runnable closeInnerOnce;
   }
 
   /**
@@ -328,5 +309,18 @@ public class RegularLoadableSegment implements LoadableSegment
     return DruidException.forPersona(DruidException.Persona.OPERATOR)
                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
                          .build("Segment[%s] not found on this server. Please retry your query.", segmentId);
+  }
+
+  /**
+   * Stage guard for 2 phase acquire: serializes "outer closed" against "stage 2 started" so the inner handle is either
+   * never created, or closed exactly once (by the canceler or by the transfer's failure path, whichever comes first).
+   */
+  private static final class DeferredAcquireState
+  {
+    @GuardedBy("this")
+    boolean closed;
+    @GuardedBy("this")
+    @Nullable
+    Runnable closeInnerOnce;
   }
 }

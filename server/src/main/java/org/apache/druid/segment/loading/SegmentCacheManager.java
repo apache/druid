@@ -122,8 +122,8 @@ public interface SegmentCacheManager
 
   /**
    * Returns an {@link AcquireSegmentAction} for a given {@link DataSegment}: an async handle delivering an
-   * {@link AcquireSegmentResult} whose pre-acquired {@link Segment} reference is served from the cache if already
-   * present, or fetched from deep storage and mapped if not (the load, if any, starts immediately). The delivered
+   * {@link AcquireSegmentResult} whose acquired {@link Segment} reference is served from the cache if already present,
+   * or fetched from deep storage and mapped if not (the load, if any, starts immediately). The delivered
    * {@link Segment} is an open reference: cache implementations must not allow the segment to be dropped until it
    * has been closed, and its close releases everything associated with the acquisition (the reference plus any
    * eviction-protective cache holds). Callers own the action: release the result and close the segment when done, or

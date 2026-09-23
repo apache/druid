@@ -83,9 +83,6 @@ public class ReadableInputQueue implements Closeable
 
   /**
    * Segments currently being loaded: the acquire handle mapped to the future its delivery (or failure) completes.
-   * Map membership under the queue monitor is the single terminal-ownership protocol: exactly one of
-   * {@link #onSegmentReady} and {@link #close()} removes an entry and is thereafter the only party that touches
-   * that handle terminally.
    */
   @GuardedBy("this")
   private final LinkedHashMap<AcquireSegmentAction, SettableFuture<ReadableInput>> loadingSegments =
@@ -104,9 +101,8 @@ public class ReadableInputQueue implements Closeable
   private final Set<ListenableFuture<ReadableInput>> pendingNextInputs = Sets.newIdentityHashSet();
 
   /**
-   * Futures whose delivery is mid-flight: removed from {@link #loadingSegments} by {@link #onSegmentReady} but not
-   * yet completed. {@link #close()} fails these too; {@link SettableFuture}'s first-write-wins semantics arbitrate
-   * the race (the losing write is a harmless no-op).
+   * Futures whose delivery is mid-flight and have been removed from {@link #loadingSegments} by {@link #onSegmentReady}
+   * but not yet completed ({@link #close()} fails these too).
    */
   @GuardedBy("this")
   private final Set<SettableFuture<ReadableInput>> inFlightDeliveries = Sets.newIdentityHashSet();
@@ -328,11 +324,11 @@ public class ReadableInputQueue implements Closeable
   }
 
   /**
-   * Delivery path for {@link #loadNextSegment}: transfers ownership of the acquired segment out of the handle and
+   * Delivery path for {@link #loadNextSegment} which transfers ownership of the acquired segment out of the handle and
    * into a {@link SegmentReferenceHolder}, then completes the future handed to the frame processor. The future is
    * completed OUTSIDE the queue monitor so downstream listeners never run while holding the queue lock; deliveries
-   * racing {@link #close()} are arbitrated by a closed re-check plus {@link SettableFuture}'s first-write-wins
-   * semantics (close() also fails in-flight futures; the losing write is a harmless no-op).
+   * racing {@link #close()} are arbitrated by a closed re-check plus {@link SettableFuture}'s behavior where the first
+   * write wins (close() also fails in-flight futures but the losing write is a harmless no-op).
    */
   private void onSegmentReady(LoadableSegment loadableSegment, AcquireSegmentAction acquireSegmentAction)
   {
@@ -343,15 +339,15 @@ public class ReadableInputQueue implements Closeable
     synchronized (this) {
       future = loadingSegments.remove(acquireSegmentAction);
       if (future == null) {
-        // close() already processed this handle: it closed the handle (and any delivered result) and failed the
-        // future; nothing left to do.
+        // close() already processed this handle, closing it (and any delivered result) and failed the future; nothing
+        // left to do.
         return;
       }
       // visible to close() as a mid-delivery future it must also fail
       inFlightDeliveries.add(future);
-      // Tracks the released result until ownership transfers to a SegmentReferenceHolder in loadedSegments. If a step
+      // tracks the released result until ownership transfers to a SegmentReferenceHolder in loadedSegments. If a step
       // after release() throws while this is still non-null, we own the orphaned result and must close it (close on
-      // the RELEASED action is a no-op, so closing the action alone would leak the segment and its folded holds).
+      // the released action is a no-op, so closing the action alone would leak the segment and its folded holds).
       AcquireSegmentResult releasedResult = null;
       try {
         // Ownership transfer; the delivered segment's close releases everything the acquire placed.
@@ -386,11 +382,13 @@ public class ReadableInputQueue implements Closeable
       }
     }
 
-    // Re-check for close under the monitor immediately before completing: if the queue closed after the ownership
-    // work above, close() has drained (or is draining) the holder we just handed to loadedSegments, so fail the
-    // future rather than delivering a dead holder. A success that lands in the last instructions before close()
-    // drains can still hand the consumer a drained holder — SegmentReferenceHolder.getSegmentReferenceOnce() is the
-    // designed exactly-once arbiter backstopping that pre-existing window.
+    // Re-check for close (under the monitor) just before completing the future: if the queue closed after the
+    // delivery work above, close() has drained (or is draining) the holder we just added to loadedSegments, so fail
+    // the future rather than hand the consumer a dead holder. The re-check only narrows that race as close() can still
+    // land between reading the flag here and the set() below, leaving the consumer with a holder that close() is
+    // also draining. That leftover race is handled by SegmentReferenceHolder.getSegmentReferenceOnce(), whichever of
+    // the consumer or close() reaches it first takes the reference and owns closing it, the other gets null, and the
+    // segment is never closed twice or leaked.
     final boolean queueClosed;
     synchronized (this) {
       queueClosed = closed;
@@ -429,7 +427,7 @@ public class ReadableInputQueue implements Closeable
   {
     final List<AcquireSegmentAction> handlesToClose;
     final List<SegmentReferenceHolder> holdersToDrain;
-    final List<SettableFuture<ReadableInput>> futuresToFail = new ArrayList<>();
+    final List<SettableFuture<ReadableInput>> futuresToFail;
 
     // Snapshot and clear everything under the monitor, but do the actual closing OUTSIDE it: closing a handle can
     // synchronously run its canceler (a deferred acquire's canceler takes its own stage lock and may complete the
@@ -443,11 +441,10 @@ public class ReadableInputQueue implements Closeable
       loadableSegments.clear();
 
       handlesToClose = new ArrayList<>(loadingSegments.keySet());
-      futuresToFail.addAll(loadingSegments.values());
+      futuresToFail = new ArrayList<>(loadingSegments.values());
       loadingSegments.clear();
 
-      // Also fail deliveries that are mid-completion (removed from loadingSegments but not yet completed);
-      // SettableFuture's first-write-wins semantics make whichever write loses a harmless no-op.
+      // Also fail deliveries that are mid-completion (removed from loadingSegments but not yet completed)
       futuresToFail.addAll(inFlightDeliveries);
 
       holdersToDrain = new ArrayList<>(loadedSegments);
@@ -460,12 +457,11 @@ public class ReadableInputQueue implements Closeable
     }
 
     // Cancel all pending segment loads: closing a NEW handle runs its canceler (aborting the load); closing a
-    // READY-but-unclaimed handle (its ready callback hasn't reached the queue monitor yet) closes the delivered
+    // ready but unclaimed handle (its ready callback hasn't reached the queue monitor yet) closes the delivered
     // result.
     for (final AcquireSegmentAction acquireSegmentAction : handlesToClose) {
       CloseableUtils.closeAndSuppressExceptions(
           acquireSegmentAction,
-
           // AcquireSegmentAction currently doesn't have a meaningful toString method, so if this message
           // ever actually gets logged, it won't mention the specific segment that had a problem. Perhaps
           // one day this will change.
@@ -485,10 +481,9 @@ public class ReadableInputQueue implements Closeable
       }
     }
 
-    // Explicitly fail the futures of the loads we just cancelled. This is load-bearing — closing a handle fires its
-    // pending ready callback, but that callback finds its entry already claimed from loadingSegments above and
-    // returns without completing the future, so without this the frame processors awaiting these futures would hang
-    // forever.
+    // Explicitly fail the futures of the loads we just canceled. Closing a handle fires its pending ready callback,
+    // but that callback finds its entry already claimed from loadingSegments above and returns without completing the
+    // future, so without this the frame processors awaiting these futures would hang forever.
     for (final SettableFuture<ReadableInput> future : futuresToFail) {
       future.setException(DruidException.defensive("Input queue closed while segment load was in flight"));
     }

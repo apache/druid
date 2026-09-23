@@ -81,15 +81,14 @@ public interface LoadableSegment
    * {@link AcquireSegmentAction} is an async handle: register it with cleanup machinery right away (safe at any
    * lifecycle point), wait for readiness via {@link AcquireSegmentAction#addReadyCallback} or
    * {@link AcquireSegmentAction#await}, then {@link AcquireSegmentAction#release()} to take ownership of the
-   * {@link org.apache.druid.segment.loading.AcquireSegmentResult} — closing the delivered {@link Segment} releases
-   * everything associated with the acquisition. Closing the action without releasing cancels an in-flight load or
-   * discards a delivered result; close-after-release is a no-op, and closing before the action becomes ready fires
-   * any pending ready callbacks (release/get then throw
-   * {@link org.apache.druid.common.asyncresource.AsyncResourceCanceledException}).
-   *
+   * {@link AcquireSegmentResult}. Closing the delivered {@link Segment} of the result releases everything associated
+   * with the acquisition. Closing the action without releasing cancels an in-flight load or discards a delivered
+   * result; close-after-release is a no-op, and closing before the action becomes ready fires any pending ready
+   * callbacks (release/get then throw {@link org.apache.druid.common.asyncresource.AsyncResourceCanceledException}).
+   * <p>
    * The consumer that successfully releases the result must call {@link #countDelivered} exactly once, at the moment
    * ownership transfers.
-   *
+   * <p>
    * The {@code acquireMode} selects how the segment is loaded; see {@link AcquireMode}. With {@link AcquireMode#PARTIAL}
    * the returned {@link Segment} is mounted but, for a partial-download (virtual storage) segment, may not be fully
    * downloaded yet: its data is fetched on demand at cursor-build time. Callers must therefore access it through the
@@ -103,11 +102,11 @@ public interface LoadableSegment
   /**
    * Called by the consumer that successfully {@link AcquireSegmentAction#release()}s the result of {@link #acquire},
    * exactly once, at the moment ownership transfers. Implementations update their {@code ChannelCounters} here. Not
-   * called when the load fails or is cancelled. {@link #acquireIfCached} counts inline and does not use this hook.
+   * called when the load fails or is canceled. {@link #acquireIfCached} counts inline and does not use this hook.
    * <p>
-   * Counting happens post-release (rather than in a producer-registered ready callback) because the blessed
-   * {@code isReady()}-polling consumer idiom can release before producer callbacks fire, at which point a peeking
-   * {@code get()} would throw; post-release counting is exactly-once by construction.
+   * Counting happens post-release (rather than in a producer-registered ready callback) because a consumer polling
+   * {@code isReady()} could release before producer callbacks fire, at which point a peeking {@code get()} would throw;
+   * post-release counting is exactly-once by construction.
    */
   default void countDelivered(AcquireSegmentResult result)
   {

@@ -35,8 +35,7 @@ import java.util.function.Supplier;
 
 /**
  * Shared machinery for bridging {@link AsyncResource}-producing segment sources into the releasable
- * {@link AcquireSegmentAction} consumer handle. Used by {@link AdaptedLoadableSegment} (combinator-produced
- * resources) and {@link RegularLoadableSegment} (the deferred two-stage Coordinator-fetch chain).
+ * {@link AcquireSegmentAction} consumer handle.
  */
 final class AcquireSegmentHandles
 {
@@ -49,7 +48,7 @@ final class AcquireSegmentHandles
 
   /**
    * Wraps {@code target} with a CAS guard so it is closed at most once. {@link AcquireSegmentAction#close()} is not
-   * idempotent, and a bridge's error path can race its canceler — every dual-owner close goes through one of these.
+   * idempotent, and a producer's error path can race its canceler.
    */
   static Runnable closeOnce(Closeable target)
   {
@@ -68,7 +67,7 @@ final class AcquireSegmentHandles
    * Bridges a NON-releasable {@code inner} resource (e.g. one produced by {@code AsyncResources.collect/transform/
    * recover} combinators) into a releasable {@link AcquireSegmentAction}. The lifecycle of {@code inner} is folded
    * into the delivered result: when the delivered result carries a segment, that segment's close also closes
-   * {@code inner} (releasing whatever the combinator chain owns, e.g. cached source files — which therefore strictly
+   * {@code inner} (releasing whatever the combinator chain owns, e.g. cached source files, which therefore strictly
    * outlive the segment); when it is empty, {@code inner} is closed at delivery. Closing the returned action before
    * readiness closes {@code inner} (cancelling in-flight work).
    * <p>
@@ -85,8 +84,7 @@ final class AcquireSegmentHandles
 
   /**
    * Wires a releasable {@code inner} handle into {@code outer}: on readiness, ownership of the result transfers
-   * inner → outer. Used for the second stage of {@link RegularLoadableSegment}'s deferred chain, where the inner
-   * handle comes from the cache manager and its result is already self-contained (holds folded into the segment).
+   * inner to outer.
    *
    * @param inner          the source handle
    * @param outer          the handle handed to the consumer
@@ -98,13 +96,10 @@ final class AcquireSegmentHandles
   }
 
   /**
-   * Shared delivery skeleton for the two bridges: on {@code inner}'s readiness, obtain the result and deliver it to
-   * {@code outer}; on failure report to {@code outer} (silently absorbed if outer was closed first) and release
-   * {@code inner} exactly once; if delivery loses the race with {@code outer}'s close, close the orphaned result.
-   * <p>
-   * The callback body handles every throwable internally (the orphan close is suppressed-and-logged), so the
-   * registration catch below only ever sees {@code addReadyCallback} itself rejecting a concurrently-closed
-   * {@code inner} — never errors escaping an immediately-fired callback.
+   * Shared delivery skeleton for {@link #fromResource} and {@link #transferOnReady}. On {@code inner}'s readiness,
+   * obtain the result and deliver it to {@code outer}; on failure report to {@code outer} (silently absorbed if outer
+   * was closed first) and release {@code inner} exactly once; if delivery loses the race with {@code outer}'s close,
+   * close the orphaned result.
    */
   private static void deliverOnReady(
       AsyncResource<AcquireSegmentResult> inner,
@@ -120,8 +115,6 @@ final class AcquireSegmentHandles
           delivered = obtainResult.get();
         }
         catch (Throwable t) {
-          // a real load failure, or AsyncResourceCanceledException when the canceler closed inner and its close
-          // fired this callback (in which case outer, itself mid-close, absorbs the setException silently)
           outer.setException(t);
           closeInnerOnce.run();
           return;
@@ -142,9 +135,7 @@ final class AcquireSegmentHandles
 
   /**
    * Rebuilds {@code result} so the contained segment's close also runs {@code closeInnerOnce}; an empty result
-   * closes {@code inner} immediately (nothing can carry the close). The segment must be a
-   * {@link ReferenceCountedSegmentProvider.LeafReference} — an MSQ-internal contract of all
-   * {@link AdaptedLoadableSegment} suppliers.
+   * closes {@code inner} immediately. The segment must be a {@link ReferenceCountedSegmentProvider.LeafReference}.
    */
   private static AcquireSegmentResult foldInnerClose(AcquireSegmentResult result, Runnable closeInnerOnce)
   {

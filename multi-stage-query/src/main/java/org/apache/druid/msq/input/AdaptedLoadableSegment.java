@@ -46,11 +46,42 @@ import java.util.function.Supplier;
  */
 public class AdaptedLoadableSegment implements LoadableSegment
 {
+  /**
+   * Creates an AdaptedLoadableSegment wrapper around a Segment object which is not a regular Druid segment,
+   * has no associated {@link DataSegment}, and whose lifecycle is not managed by the LoadableSegment instance.
+   *
+   * @param segment       the segment to wrap
+   * @param descriptor    descriptor containing the interval to use for filtering
+   * @param description   user-oriented description for error messages
+   * @param inputCounters counters for tracking input
+   */
+  public static AdaptedLoadableSegment fromUnmanagedSegment(
+      final Segment segment,
+      final SegmentDescriptor descriptor,
+      @Nullable final String description,
+      @Nullable final ChannelCounters inputCounters
+  )
+  {
+    // Pre-create the acquire result since the segment is already available. The segment's lifecycle is unmanaged so
+    // close is a no-op on the wrapped segment.
+    final AcquireSegmentResult acquireSegmentResult =
+        AcquireSegmentResult.of(ReferenceCountedSegmentProvider.unmanaged(segment));
+
+    final AsyncResource<AcquireSegmentResult> resource = AsyncResources.unmanaged(acquireSegmentResult);
+    return new AdaptedLoadableSegment(
+        () -> resource,
+        descriptor,
+        description,
+        inputCounters
+    );
+  }
+
   private final AtomicBoolean acquired = new AtomicBoolean(false);
   private final Supplier<AsyncResource<AcquireSegmentResult>> asyncSegmentSupplier;
   private final SegmentDescriptor descriptor;
   @Nullable
   private final String description;
+
   @Nullable
   private final ChannelCounters inputCounters;
 
@@ -59,7 +90,7 @@ public class AdaptedLoadableSegment implements LoadableSegment
    * {@link AsyncResource} is folded into the {@link AcquireSegmentAction} returned from {@link #acquire}: closing
    * the delivered segment (or the un-released action) closes the resource, releasing whatever it owns.
    *
-   * @param asyncSegmentSupplier the supplier to wrap. The supplied resource's result must carry its segment as a
+   * @param asyncSegmentSupplier the supplier to wrap. The supplied resource's result must contain a segment that is a
    *                             {@link ReferenceCountedSegmentProvider.LeafReference} so the resource's close can be
    *                             folded into the segment's close.
    * @param descriptor           descriptor containing the interval to use for filtering
@@ -77,36 +108,6 @@ public class AdaptedLoadableSegment implements LoadableSegment
     this.descriptor = descriptor;
     this.description = description;
     this.inputCounters = inputCounters;
-  }
-
-  /**
-   * Creates an AdaptedLoadableSegment wrapper around a Segment object which is not a regular Druid segment,
-   * has no associated {@link DataSegment}, and whose lifecycle is not managed by the LoadableSegment instance.
-   *
-   * @param segment       the segment to wrap
-   * @param descriptor    descriptor containing the interval to use for filtering
-   * @param description   user-oriented description for error messages
-   * @param inputCounters counters for tracking input
-   */
-  public static AdaptedLoadableSegment fromUnmanagedSegment(
-      final Segment segment,
-      final SegmentDescriptor descriptor,
-      @Nullable final String description,
-      @Nullable final ChannelCounters inputCounters
-  )
-  {
-    // Pre-create the acquire result since the segment is already available. The segment's lifecycle is unmanaged:
-    // the delivered UnmanagedReference's close is a no-op on the wrapped segment.
-    final AcquireSegmentResult acquireSegmentResult =
-        AcquireSegmentResult.of(ReferenceCountedSegmentProvider.unmanaged(segment));
-
-    final AsyncResource<AcquireSegmentResult> resource = AsyncResources.unmanaged(acquireSegmentResult);
-    return new AdaptedLoadableSegment(
-        () -> resource,
-        descriptor,
-        description,
-        inputCounters
-    );
   }
 
   @Override
@@ -165,7 +166,7 @@ public class AdaptedLoadableSegment implements LoadableSegment
     inputCounters.addLoad(result);
     final int rowCount = result.getSegment().map(LoadableSegmentUtils::getSegmentRowCount).orElse(0);
     // Use byteCount = 0 for adapted segments; we can't really tell what it is from the AcquireSegmentResult
-    // (the "load size" may not be the entire size if the segment was fully or partially cached). Implementations
+    // (the "load size" may not be the entire size if the segment was fully or partially cached). Implementations will
     // call ChannelCounters#incrementBytes if they have something useful to put there.
     inputCounters.addFile(rowCount, 0);
   }

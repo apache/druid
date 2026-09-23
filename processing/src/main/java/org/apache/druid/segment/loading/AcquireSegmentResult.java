@@ -27,18 +27,18 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * The deliverable of {@link AcquireSegmentAction}: a pre-acquired {@link Segment} reference, along with measurements
- * about segment loading if it was required.
+ * The deliverable of {@link AcquireSegmentAction} consisting of an acquired {@link Segment} reference, along with
+ * measurements about segment loading if it was required.
  * <p>
  * The segment, when present, is a single already-acquired reference whose {@link Segment#close()} releases everything
- * associated with the acquisition: the reference itself plus any eviction-protective cache holds the loader folded
- * into it. An empty segment means the segment could not be acquired (no longer in the cache, and could not be or was
- * not fetched from deep storage) — a first-class outcome, not an error.
+ * associated with the acquisition (the reference itself plus any eviction-protective cache holds the loader folded
+ * into it). An empty segment means the segment could not be acquired (no longer in the cache, and could not be or was
+ * not fetched from deep storage) which is an expected possible outcome, not an error.
  * <p>
  * Whoever owns this result must {@link #close()} it (closing the contained segment, if any). Close is idempotent:
  * a result may be closed by {@link AcquireSegmentAction#close()} (when the action was never released), by the
- * producer (when delivery lost a race with close/cancel), or by the consumer that
- * {@link AcquireSegmentAction#release()}d it — exactly one of these wins.
+ * producer (when delivery lost a race with close/cancel), or by the consumer that called
+ * {@link AcquireSegmentAction#release()}.
  */
 public class AcquireSegmentResult implements Closeable
 {
@@ -79,9 +79,8 @@ public class AcquireSegmentResult implements Closeable
   }
 
   /**
-   * The acquired segment reference, or empty if the segment is not available. Unlike the reference providers this
-   * type once wrapped, this is a single pre-acquired reference: callers must not attempt to mint additional
-   * references from it, and must arrange for it to be closed exactly once (directly, or via {@link #close()}).
+   * The acquired segment reference, or empty if the segment is not available. Callers must arrange for it to be closed
+   * exactly once (directly, or via {@link #close()}).
    */
   public Optional<Segment> getSegment()
   {

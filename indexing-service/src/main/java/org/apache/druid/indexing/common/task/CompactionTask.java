@@ -933,11 +933,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       final AcquireSegmentAction acquireAction =
           closer.register(segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL));
       acquireAction.await();
-      // take ownership of the result (the registered action close becomes a no-op) and register it so closing the
-      // holder releases the segment reference and any cache holds folded into it
       final AcquireSegmentResult result = closer.register(acquireAction.release());
-      // an empty delivery is a first-class outcome (segment no longer in the cache or deep storage), so surface it
-      // with the segment id rather than a bare NoSuchElementException
       final Segment segment = result.getSegment().orElseThrow(
           () -> DruidException.forPersona(DruidException.Persona.OPERATOR)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
@@ -964,8 +960,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     catch (Exception e) {
       // await() clears the interrupt flag when it throws InterruptedException; restore it so the task's unwind and
-      // any downstream blocking work still observe the interrupt (matches ServerManager and the prior
-      // FutureUtils.getUnchecked behavior this replaced).
+      // any downstream blocking work still observe the interrupt
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }

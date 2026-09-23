@@ -334,15 +334,14 @@ public class ServerManager implements QuerySegmentWalker
     boolean interrupted = false;
     boolean firstFailureFromAcquire = false;
     for (int i = 0; i < actions.size(); i++) {
-      // distinguishes acquire-phase failures (await/release, where AsyncResource.get() launders checked producer
-      // exceptions into UNCATEGORIZED DruidExceptions) from map-phase failures for the classification below
+      // distinguish acquire-phase failures from map-phase failures for the classification below
       boolean acquirePhase = true;
       try {
         final DataSegmentAndDescriptor segmentAndDescriptor = segmentsToMap.get(i);
         final AcquireSegmentAction action = actions.get(i);
         action.await(timeoutAt - System.currentTimeMillis());
         // Take ownership of the result. After release, the safetyNet-registered action close is a no-op; the
-        // delivered segment (registered below, or folded into the returned SegmentReference) carries all cleanup.
+        // delivered segment (registered below, or folded into the returned SegmentReference) does all cleanup.
         final AcquireSegmentResult result = action.release();
         totalSegmentsLoadTime += result.getLoadTimeNanos();
         totalSegmentsLoadWaitTime += result.getWaitTimeNanos();
@@ -385,12 +384,10 @@ public class ServerManager implements QuerySegmentWalker
     }
     if (failure != null) {
       final DruidException toThrow;
-      // Pass a genuine DruidException through as-is — including UNCATEGORIZED ones from the map phase (e.g. segment
-      // map functions or legacy compat layers), which old code surfaced verbatim. The one exception: an UNCATEGORIZED
-      // DruidException from the ACQUIRE phase is AsyncResource.get()'s laundering of a checked producer exception
-      // (e.g. SegmentLoadingException from an on-demand load); treat that like any other opaque failure and
-      // reclassify it to OPERATOR/RUNTIME_FAILURE with the query-facing context, matching the behavior before
-      // segment acquisition moved onto AsyncResource.
+      // Pass a DruidException through as-is, with one exception: an UNCATEGORIZED DruidException from the acquire
+      // phase is AsyncResource.get()'s conversion of a checked producer exception (e.g. SegmentLoadingException from
+      // an on-demand load); treat that like any other opaque failure and reclassify it to OPERATOR/RUNTIME_FAILURE
+      // with the query-facing context.
       if (failure instanceof DruidException de
           && (de.getCategory() != DruidException.Category.UNCATEGORIZED || !firstFailureFromAcquire)) {
         toThrow = de;

@@ -26,15 +26,15 @@ import org.apache.druid.segment.Segment;
 import javax.annotation.Nullable;
 
 /**
- * Handle for acquiring a reference to a {@link Segment} which might need to be loaded on demand: an
- * {@link AsyncResource} delivering an {@link AcquireSegmentResult} whose pre-acquired segment reference carries
- * every hold and reference associated with the acquisition inside its own {@link Segment#close()}.
+ * Handle for acquiring a reference to a {@link Segment} which might need to be loaded on demand in the form of an
+ * {@link AsyncResource} delivering an {@link AcquireSegmentResult} whose acquired segment reference carries every hold
+ * and reference associated with the acquisition inside its own {@link Segment#close()}.
  * <p>
  * The load (if one is needed) starts when the handle is created; there is no separate initiation step.
  *
  * <h3>Consumer protocol</h3>
- * Register the handle with cleanup machinery (e.g. a {@code Closer}) immediately — this is safe at any lifecycle
- * point. Wait for {@link #isReady()} via {@link #addReadyCallback} or {@link #await}, then call {@link #release()}
+ * Register the handle with cleanup machinery (e.g. a {@code Closer}) immediately (this is safe at any lifecycle
+ * point). Wait for {@link #isReady()} via {@link #addReadyCallback} or {@link #await}, then call {@link #release()}
  * to take ownership of the {@link AcquireSegmentResult} (or surface the producer's exception). After release, the
  * caller owns closing the result (or the segment inside it); {@link #close()} on this handle becomes a no-op.
  * <p>
