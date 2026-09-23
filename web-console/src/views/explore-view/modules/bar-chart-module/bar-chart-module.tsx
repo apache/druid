@@ -25,7 +25,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
-import { formatEmpty } from '../../../../utils';
+import { bigIntsToNumbers, formatEmpty } from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
 import { ModuleRepository } from '../../module-repository/module-repository';
@@ -151,7 +151,8 @@ ModuleRepository.registerModule<BarChartParameterValues>({
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
       processQuery: async (query, signal) => {
-        return (await runSqlQuery(query, signal)).toObjectArray();
+        // Only 'met' is coerced, 'dim' is a dimension value that must keep its exact value
+        return bigIntsToNumbers((await runSqlQuery(query, signal)).toObjectArray(), ['met']);
       },
     });
 
