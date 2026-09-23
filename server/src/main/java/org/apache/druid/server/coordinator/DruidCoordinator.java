@@ -353,9 +353,11 @@ public class DruidCoordinator
 
   public List<DutyGroupStatus> getStatusOfDuties()
   {
+    final List<DutiesRunnable> runnables;
     synchronized (lock) {
-      return dutiesRunnables.stream().map(r -> r.dutyGroup.getStatus()).collect(Collectors.toList());
+      runnables = new ArrayList<>(dutiesRunnables);
     }
+    return runnables.stream().map(r -> r.dutyGroup.getStatus()).collect(Collectors.toList());
   }
 
   @LifecycleStart
