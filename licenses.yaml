@@ -2921,7 +2921,7 @@ libraries:
 
 ---
 name: Kafka-schema-registry-client
-version: 6.2.15
+version: 8.3.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
