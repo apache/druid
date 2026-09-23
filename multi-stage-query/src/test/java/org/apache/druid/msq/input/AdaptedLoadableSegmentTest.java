@@ -22,6 +22,7 @@ package org.apache.druid.msq.input;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.common.asyncresource.SettableAsyncResource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -191,6 +193,28 @@ class AdaptedLoadableSegmentTest
     final Segment delivered = result.getSegment().orElseThrow();
     delivered.close();
     Assertions.assertEquals(0, segment.closes.get(), "unmanaged segment must not be closed by the wrapper");
+    action.close();
+  }
+
+  @Test
+  void testReadyInnerWithNonLeafSegmentFailsActionInsteadOfHanging()
+  {
+    // The supplied resource is already READY, so the bridge's delivery callback fires inline during registration,
+    // and the fold's LeafReference contract check throws on this plain segment. The defensive failure must surface
+    // through the returned action (release throws) rather than hanging the consumer with a never-ready handle, and
+    // the inner resource must be closed rather than leaked.
+    final TestSegment plainSegment = new TestSegment();
+    final SettableAsyncResource<AcquireSegmentResult> inner = new SettableAsyncResource<>();
+    final AcquireSegmentResult nonLeafResult = new AcquireSegmentResult(Optional.of(plainSegment), 0L, 0L, 0L);
+    inner.set(nonLeafResult, nonLeafResult);
+
+    final AdaptedLoadableSegment adapted = new AdaptedLoadableSegment(() -> inner, DESCRIPTOR, "test", null);
+    final AcquireSegmentAction action = adapted.acquire(AcquireMode.FULL);
+
+    Assertions.assertTrue(action.isReady(), "the fold failure must complete the action, not leave it pending");
+    final DruidException e = Assertions.assertThrows(DruidException.class, action::release);
+    Assertions.assertTrue(e.getMessage().contains("LeafReference"), e.getMessage());
+    Assertions.assertEquals(1, plainSegment.closes.get(), "the inner resource must be closed, not leaked");
     action.close();
   }
 

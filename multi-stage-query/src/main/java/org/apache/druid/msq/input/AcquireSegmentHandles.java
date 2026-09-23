@@ -100,6 +100,10 @@ final class AcquireSegmentHandles
    * obtain the result and deliver it to {@code outer}; on failure report to {@code outer} (silently absorbed if outer
    * was closed first) and release {@code inner} exactly once; if delivery loses the race with {@code outer}'s close,
    * close the orphaned result.
+   * <p>
+   * The callback may fire inline on this thread when {@code inner} is already ready; its body routes every failure
+   * (including throws from {@code obtainResult}) through {@code outer.setException} itself, so the registration catch
+   * below normally only sees {@code addReadyCallback} rejecting a concurrently-closed {@code inner}.
    */
   private static void deliverOnReady(
       AsyncResource<AcquireSegmentResult> inner,
@@ -129,7 +133,12 @@ final class AcquireSegmentHandles
       });
     }
     catch (DruidException e) {
-      // inner was concurrently closed by the canceler before the callback could be registered; nothing to do
+      // inner was closed by the canceler before the callback could be registered; outer is mid-close, so the
+      // setException below is expected to be silently absorbed and closeInnerOnce has already run (making both no-ops),
+      // but calling it anyway makes this catch safe even if something unexpected ever escapes and outer fails rather
+      // than sitting NEW forever (hanging its consumer), and inner is closed rather than leaked.
+      outer.setException(e);
+      closeInnerOnce.run();
     }
   }
 
