@@ -100,6 +100,22 @@
             <version>${aws.sdk.v2.version}</version>
             <scope>runtime</scope>
         </dependency>
+        <!--
+          Promoted to the shared classpath (rather than left as an extension-only dependency) so that only
+          one copy of the AWS SDK S3 client classes is ever loaded by the JVM. software.amazon.awssdk:s3
+          registers static IdentityProperty constants (e.g. in S3ExpressPlugin) into a shared, SDK-wide
+          registry. When druid-s3-extensions and druid-iceberg-extensions are loaded together, each bundles
+          its own copy of this jar and each gets its own extension classloader, so the registry ends up with
+          two IdentityProperty instances that have the same name/namespace but different object identity,
+          and throws IllegalArgumentException: "No duplicate IdentityProperty names allowed". See
+          https://github.com/apache/druid/issues/19636.
+        -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
