@@ -320,6 +320,10 @@
     <cve>CVE-2026-42579</cve> <!-- We don't use netty-codec-dns; Druid uses JDK DNS resolution -->
     <cve>CVE-2026-75596</cve> <!-- Fragmented ClientHello DoS in SniHandler/SslClientHelloHandler; Netty 3.x has no SNI handler, only in 4.x -->
     <cve>CVE-2026-75595</cve> <!-- SNI routing bypass via fragmented ClientHello; Netty 3.x has no SslClientHelloHandler, only in 4.x -->
+    <cve>CVE-2026-73508</cve> <!-- DNS record decoder memory leak; only in netty-codec-dns which is a 4.x-only artifact -->
+    <cve>CVE-2026-73507</cve> <!-- XmlFrameDecoder CPU exhaustion; only in netty-codec-xml which is a 4.x-only artifact -->
+    <cve>CVE-2026-59902</cve> <!-- SctpMessageCompletionHandler memory exhaustion; only in netty-transport-sctp 4.x; Druid uses NIO transport -->
+    <cve>CVE-2026-59903</cve> <!-- CorsHandler Vary header overwrite; only in 4.x; Druid's HTTP server is Jetty, not Netty -->
   </suppress>
 
 
