@@ -26,7 +26,10 @@ import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JsonProvider;
+import net.thisptr.jackson.jq.BuiltinFunctionLoader;
 import net.thisptr.jackson.jq.JsonQuery;
+import net.thisptr.jackson.jq.Scope;
+import net.thisptr.jackson.jq.Versions;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
 import org.apache.druid.java.util.common.parsers.JSONFlattenerMaker;
 import org.apache.druid.java.util.common.parsers.NotImplementedMappingProvider;
@@ -34,6 +37,7 @@ import org.apache.druid.java.util.common.parsers.ObjectFlatteners;
 
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -47,12 +51,20 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
 {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final ProtobufJsonProvider JSON_PROVIDER = new ProtobufJsonProvider();
+  private static final Scope JSON_QUERY_SCOPE = createJsonQueryScope();
 
   private static final Configuration CONFIG = Configuration.builder()
                                                            .jsonProvider(JSON_PROVIDER)
                                                            .mappingProvider(new NotImplementedMappingProvider())
                                                            .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                                                            .build();
+
+  private static Scope createJsonQueryScope()
+  {
+    final Scope scope = Scope.newEmptyScope();
+    BuiltinFunctionLoader.getInstance().loadFunctions(Versions.JQ_1_6, scope);
+    return scope;
+  }
 
   private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
 
@@ -105,15 +117,17 @@ public class ProtobufFlattenerMaker implements ObjectFlatteners.FlattenerMaker<M
   {
     final JsonQuery jsonQuery;
     try {
-      jsonQuery = JsonQuery.compile(expr);
+      jsonQuery = JsonQuery.compile(expr, Versions.JQ_1_6);
     }
     catch (JsonQueryException e) {
       throw new RuntimeException(e);
     }
     return map -> {
       try {
+        final List<JsonNode> output = new ArrayList<>();
+        jsonQuery.apply(JSON_QUERY_SCOPE, (JsonNode) OBJECT_MAPPER.valueToTree(map), output::add);
         return JSONFlattenerMaker.convertJsonNode(
-            jsonQuery.apply((JsonNode) OBJECT_MAPPER.valueToTree(map)).get(0),
+            output.get(0),
             enc
         );
       }

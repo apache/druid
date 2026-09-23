@@ -35,11 +35,12 @@ import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheMa
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
+import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.TopicPartition;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -62,7 +63,7 @@ public class KafkaLookupExtractorFactoryTest
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final NamespaceExtractionCacheManager cacheManager = MockNamespaceExtractionCacheManager.createMockNamespaceExtractionCacheManager();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper.setInjectableValues(new InjectableValues()
@@ -88,7 +89,7 @@ public class KafkaLookupExtractorFactoryTest
       final KafkaLookupExtractorFactory factory
   ) throws InterruptedException
   {
-    Assert.assertTrue(factory.awaitExecutorTermination(10, TimeUnit.SECONDS));
+    Assertions.assertTrue(factory.awaitExecutorTermination(10, TimeUnit.SECONDS));
     EasyMock.verify(cacheManager);
   }
 
@@ -101,12 +102,12 @@ public class KafkaLookupExtractorFactoryTest
         KafkaLookupExtractorFactory.class
     );
     result.awaitInitialization();
-    Assert.assertEquals(expected.getKafkaTopic(), result.getKafkaTopic());
-    Assert.assertEquals(expected.getKafkaProperties(), result.getKafkaProperties());
-    Assert.assertEquals(cacheManager, result.getCacheManager());
-    Assert.assertEquals(0, expected.getCompletedEventCount());
-    Assert.assertEquals(0, result.getCompletedEventCount());
-    Assert.assertTrue(result.isInitialized());
+    Assertions.assertEquals(expected.getKafkaTopic(), result.getKafkaTopic());
+    Assertions.assertEquals(expected.getKafkaProperties(), result.getKafkaProperties());
+    Assertions.assertEquals(cacheManager, result.getCacheManager());
+    Assertions.assertEquals(0, expected.getCompletedEventCount());
+    Assertions.assertEquals(0, result.getCompletedEventCount());
+    Assertions.assertTrue(result.isInitialized());
   }
 
   @Test
@@ -126,11 +127,11 @@ public class KafkaLookupExtractorFactoryTest
     final Set<List<Byte>> byteArrays = Sets.newHashSetWithExpectedSize(n);
     for (int i = 0; i < n; ++i) {
       final List<Byte> myKey = Bytes.asList(extractor.getCacheKey());
-      Assert.assertFalse(byteArrays.contains(myKey));
+      Assertions.assertFalse(byteArrays.contains(myKey));
       byteArrays.add(myKey);
       events.incrementAndGet();
     }
-    Assert.assertEquals(n, byteArrays.size());
+    Assertions.assertEquals(n, byteArrays.size());
   }
 
   @Test
@@ -149,11 +150,11 @@ public class KafkaLookupExtractorFactoryTest
     for (int i = 0; i < n; ++i) {
       final LookupExtractor extractor = factory.get();
       final List<Byte> myKey = Bytes.asList(extractor.getCacheKey());
-      Assert.assertFalse(byteArrays.contains(myKey));
+      Assertions.assertFalse(byteArrays.contains(myKey));
       byteArrays.add(myKey);
       events.incrementAndGet();
     }
-    Assert.assertEquals(n, byteArrays.size());
+    Assertions.assertEquals(n, byteArrays.size());
   }
 
   @Test
@@ -171,7 +172,7 @@ public class KafkaLookupExtractorFactoryTest
 
     final byte[] baseKey = extractor.getCacheKey();
     for (int i = 0; i < n; ++i) {
-      Assert.assertArrayEquals(baseKey, factory.get().getCacheKey());
+      Assertions.assertArrayEquals(baseKey, factory.get().getCacheKey());
     }
   }
 
@@ -192,7 +193,7 @@ public class KafkaLookupExtractorFactoryTest
     );
     factory2.getMapRef().set(ImmutableMap.of());
 
-    Assert.assertFalse(Arrays.equals(factory1.get().getCacheKey(), factory2.get().getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(factory1.get().getCacheKey(), factory2.get().getCacheKey()));
   }
 
   @Test
@@ -204,36 +205,36 @@ public class KafkaLookupExtractorFactoryTest
         DEFAULT_PROPERTIES
     );
 
-    Assert.assertTrue(factory.replaces(null));
+    Assertions.assertTrue(factory.replaces(null));
 
-    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(), false)));
-    Assert.assertFalse(factory.replaces(factory));
-    Assert.assertFalse(factory.replaces(new KafkaLookupExtractorFactory(
+    Assertions.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(), false)));
+    Assertions.assertFalse(factory.replaces(factory));
+    Assertions.assertFalse(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
         DEFAULT_PROPERTIES
     )));
 
     //noinspection StringConcatenationMissingWhitespace
-    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
+    Assertions.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC + "b",
         DEFAULT_PROPERTIES
     )));
 
-    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
+    Assertions.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
         ImmutableMap.of("some.property", "some.other.value")
     )));
 
-    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
+    Assertions.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
         ImmutableMap.of("some.other.property", "some.value")
     )));
 
-    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
+    Assertions.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
         DEFAULT_PROPERTIES,
@@ -241,7 +242,7 @@ public class KafkaLookupExtractorFactoryTest
         false
     )));
 
-    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
+    Assertions.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
         DEFAULT_PROPERTIES,
@@ -258,13 +259,13 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     );
-    Assert.assertTrue(factory.close());
+    Assertions.assertTrue(factory.close());
   }
 
   @Test
   public void testStartStop() throws InterruptedException
   {
-    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
     kafkaConsumer.updateBeginningOffsets(ImmutableMap.of(topicPartition, 0L));
     kafkaConsumer.updateEndOffsets(ImmutableMap.of(topicPartition, 0L));
@@ -286,16 +287,16 @@ public class KafkaLookupExtractorFactoryTest
       }
     };
 
-    Assert.assertTrue(factory.start());
-    Assert.assertTrue(factory.close());
-    Assert.assertTrue(factory.getFuture().isDone());
+    Assertions.assertTrue(factory.start());
+    Assertions.assertTrue(factory.close());
+    Assertions.assertTrue(factory.getFuture().isDone());
     verifyCacheManagerAfterExecutorTerminates(factory);
   }
 
   @Test
   public void testStartWaitsForInitialEndOffsets() throws Exception
   {
-    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
     final CountDownLatch firstPollComplete = new CountDownLatch(1);
     final CountDownLatch allowCatchUp = new CountDownLatch(1);
@@ -339,16 +340,16 @@ public class KafkaLookupExtractorFactoryTest
     final Future<Boolean> startFuture = startExecutor.submit(factory::start);
 
     try {
-      Assert.assertTrue(firstPollComplete.await(10, TimeUnit.SECONDS));
-      Assert.assertThrows(
-          "start returned before the consumer reached its initial end offsets",
+      Assertions.assertTrue(firstPollComplete.await(10, TimeUnit.SECONDS));
+      Assertions.assertThrows(
           TimeoutException.class,
-          () -> startFuture.get(100, TimeUnit.MILLISECONDS)
+          () -> startFuture.get(100, TimeUnit.MILLISECONDS),
+          "start returned before the consumer reached its initial end offsets"
       );
       allowCatchUp.countDown();
-      Assert.assertTrue(startFuture.get(10, TimeUnit.SECONDS));
-      Assert.assertEquals("value-0", factory.get().apply("key-0"));
-      Assert.assertEquals("value-1", factory.get().apply("key-1"));
+      Assertions.assertTrue(startFuture.get(10, TimeUnit.SECONDS));
+      Assertions.assertEquals("value-0", factory.get().apply("key-0"));
+      Assertions.assertEquals("value-1", factory.get().apply("key-1"));
     }
     finally {
       allowCatchUp.countDown();
@@ -365,7 +366,7 @@ public class KafkaLookupExtractorFactoryTest
     final CountDownLatch pollStarted = new CountDownLatch(1);
     final CountDownLatch allowPollToFinish = new CountDownLatch(1);
     final CountDownLatch consumerClosed = new CountDownLatch(1);
-    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest")
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST)
     {
       @Override
       public synchronized void close()
@@ -398,16 +399,16 @@ public class KafkaLookupExtractorFactoryTest
     final Future<Boolean> startFuture = startExecutor.submit(factory::start);
 
     try {
-      Assert.assertTrue(pollStarted.await(10, TimeUnit.SECONDS));
-      Assert.assertFalse(startFuture.get(500, TimeUnit.MILLISECONDS));
-      Assert.assertEquals(1L, consumerClosed.getCount());
-      Assert.assertFalse(factory.awaitExecutorTermination(100, TimeUnit.MILLISECONDS));
+      Assertions.assertTrue(pollStarted.await(10, TimeUnit.SECONDS));
+      Assertions.assertFalse(startFuture.get(500, TimeUnit.MILLISECONDS));
+      Assertions.assertEquals(1L, consumerClosed.getCount());
+      Assertions.assertFalse(factory.awaitExecutorTermination(100, TimeUnit.MILLISECONDS));
 
       allowPollToFinish.countDown();
-      Assert.assertTrue(consumerClosed.await(10, TimeUnit.SECONDS));
-      Assert.assertTrue(factory.awaitExecutorTermination(10, TimeUnit.SECONDS));
-      Assert.assertTrue(factory.getFuture().isDone());
-      Assert.assertTrue(factory.getFuture().isCancelled());
+      Assertions.assertTrue(consumerClosed.await(10, TimeUnit.SECONDS));
+      Assertions.assertTrue(factory.awaitExecutorTermination(10, TimeUnit.SECONDS));
+      Assertions.assertTrue(factory.getFuture().isDone());
+      Assertions.assertTrue(factory.getFuture().isCancelled());
     }
     finally {
       allowPollToFinish.countDown();
@@ -419,7 +420,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartStopStart() throws InterruptedException
   {
-    Consumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
+    Consumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     EasyMock.replay(cacheManager);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
@@ -433,16 +434,16 @@ public class KafkaLookupExtractorFactoryTest
         return kafkaConsumer;
       }
     };
-    Assert.assertTrue(factory.start());
-    Assert.assertTrue(factory.close());
-    Assert.assertFalse(factory.start());
+    Assertions.assertTrue(factory.start());
+    Assertions.assertTrue(factory.close());
+    Assertions.assertFalse(factory.start());
     verifyCacheManagerAfterExecutorTerminates(factory);
   }
 
   @Test
   public void testStartStartStopStop() throws InterruptedException
   {
-    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
     final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
     kafkaConsumer.updateBeginningOffsets(ImmutableMap.of(topicPartition, 0L));
     kafkaConsumer.updateEndOffsets(ImmutableMap.of(topicPartition, 0L));
@@ -462,10 +463,10 @@ public class KafkaLookupExtractorFactoryTest
         return kafkaConsumer;
       }
     };
-    Assert.assertTrue(factory.start());
-    Assert.assertTrue(factory.start());
-    Assert.assertTrue(factory.close());
-    Assert.assertTrue(factory.close());
+    Assertions.assertTrue(factory.start());
+    Assertions.assertTrue(factory.start());
+    Assertions.assertTrue(factory.close());
+    Assertions.assertTrue(factory.close());
     verifyCacheManagerAfterExecutorTerminates(factory);
   }
 
@@ -477,12 +478,12 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of()
     );
-    Assert.assertThrows(
-        "bootstrap.servers required property",
+    Assertions.assertThrows(
         NullPointerException.class,
-        () -> factory.start()
+        () -> factory.start(),
+        "bootstrap.servers required property"
     );
-    Assert.assertTrue(factory.close());
+    Assertions.assertTrue(factory.close());
   }
 
   @Test
@@ -493,12 +494,12 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("group.id", "make me fail")
     );
-    Assert.assertThrows(
-        "Cannot set kafka property [group.id]. Property is randomly generated for you. Found",
+    Assertions.assertThrows(
         IAE.class,
-        () -> factory.start()
+        () -> factory.start(),
+        "Cannot set kafka property [group.id]. Property is randomly generated for you. Found"
     );
-    Assert.assertTrue(factory.close());
+    Assertions.assertTrue(factory.close());
   }
 
   @Test
@@ -509,12 +510,12 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("auto.offset.reset", "make me fail")
     );
-    Assert.assertThrows(
-        "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found ",
+    Assertions.assertThrows(
         IAE.class,
-        () -> factory.start()
+        () -> factory.start(),
+        "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found "
     );
-    Assert.assertTrue(factory.close());
+    Assertions.assertTrue(factory.close());
   }
 
   @Test
@@ -525,22 +526,22 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         ImmutableMap.of("enable.auto.commit", "true")
     );
-    Assert.assertThrows(
-        "Cannot set kafka property [enable.auto.commit]. Property will be forced to [false]. Found [true]",
+    Assertions.assertThrows(
         IAE.class,
-        () -> factory.start()
+        () -> factory.start(),
+        "Cannot set kafka property [enable.auto.commit]. Property will be forced to [false]. Found [true]"
     );
-    Assert.assertTrue(factory.close());
+    Assertions.assertTrue(factory.close());
   }
 
   @Test
   public void testFailsGetNotStarted()
   {
-    Assert.assertThrows("Not started", NullPointerException.class, () -> new KafkaLookupExtractorFactory(
+    Assertions.assertThrows(NullPointerException.class, () -> new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
         DEFAULT_PROPERTIES
-    ).get());
+    ).get(), "Not started");
   }
 
   @Test
@@ -562,9 +563,9 @@ public class KafkaLookupExtractorFactoryTest
         mapper.writeValueAsString(factory),
         KafkaLookupExtractorFactory.class
     );
-    Assert.assertEquals(kafkaTopic, otherFactory.getKafkaTopic());
-    Assert.assertEquals(kafkaProperties, otherFactory.getKafkaProperties());
-    Assert.assertEquals(connectTimeout, otherFactory.getConnectTimeout());
-    Assert.assertEquals(injective, otherFactory.isInjective());
+    Assertions.assertEquals(kafkaTopic, otherFactory.getKafkaTopic());
+    Assertions.assertEquals(kafkaProperties, otherFactory.getKafkaProperties());
+    Assertions.assertEquals(connectTimeout, otherFactory.getConnectTimeout());
+    Assertions.assertEquals(injective, otherFactory.isInjective());
   }
 }

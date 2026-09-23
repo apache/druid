@@ -61,9 +61,9 @@ import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -83,7 +83,7 @@ public class CompactionStatusTest
   private IndexingStateCache indexingStateCache;
   private IndexingStateFingerprintMapper fingerprintMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     indexingStateStorage = new HeapMemoryIndexingStateStorage();
@@ -107,7 +107,7 @@ public class CompactionStatusTest
   {
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(null);
-    Assert.assertNull(
+    Assertions.assertNull(
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
   }
@@ -118,7 +118,7 @@ public class CompactionStatusTest
     final PartitionsSpec partitionsSpec = new DynamicPartitionsSpec(null, null);
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(createCompactionConfig(partitionsSpec));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new DynamicPartitionsSpec(null, Long.MAX_VALUE),
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
@@ -130,7 +130,7 @@ public class CompactionStatusTest
     final PartitionsSpec partitionsSpec = new DynamicPartitionsSpec(null, 1000L);
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(createCompactionConfig(partitionsSpec));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         partitionsSpec,
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
@@ -142,7 +142,7 @@ public class CompactionStatusTest
     final PartitionsSpec partitionsSpec = new DynamicPartitionsSpec(100, 1000L);
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(createCompactionConfig(partitionsSpec));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         partitionsSpec,
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
@@ -179,7 +179,7 @@ public class CompactionStatusTest
                                                   )
                                               )
                                               .build();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new DynamicPartitionsSpec(100, 1000L),
         CompactionStatus.findPartitionsSpecFromConfig(
             ClientCompactionTaskQueryTuningConfig.from(config)
@@ -194,7 +194,7 @@ public class CompactionStatusTest
         new HashedPartitionsSpec(null, 100, Collections.singletonList("dim"));
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(createCompactionConfig(partitionsSpec));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         partitionsSpec,
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
@@ -207,7 +207,7 @@ public class CompactionStatusTest
         new DimensionRangePartitionsSpec(null, 10000, Collections.singletonList("dim"), false);
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(createCompactionConfig(partitionsSpec));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         partitionsSpec,
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
@@ -220,7 +220,7 @@ public class CompactionStatusTest
         new DimensionRangePartitionsSpec(10000, null, Collections.singletonList("dim"), false);
     final ClientCompactionTaskQueryTuningConfig tuningConfig
         = ClientCompactionTaskQueryTuningConfig.from(createCompactionConfig(partitionsSpec));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new DimensionRangePartitionsSpec(null, 15000, Collections.singletonList("dim"), false),
         CompactionStatus.findPartitionsSpecFromConfig(tuningConfig)
     );
@@ -361,7 +361,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assertions.assertTrue(status.isComplete());
   }
 
   @Test
@@ -408,7 +408,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assertions.assertTrue(status.isComplete());
   }
 
   @Test
@@ -448,7 +448,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assertions.assertTrue(status.isComplete());
   }
 
   @Test
@@ -500,7 +500,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertFalse(status.isComplete());
+    Assertions.assertFalse(status.isComplete());
   }
 
   @Test
@@ -527,7 +527,7 @@ public class CompactionStatusTest
     CompactionStatus status = CompactionStatus.compute(
         List.of(segment), compactionConfig, fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assertions.assertTrue(status.isComplete());
   }
 
   @Test
@@ -560,8 +560,8 @@ public class CompactionStatusTest
     CompactionStatus status = CompactionStatus.compute(
         List.of(segment), compactionConfig, fingerprintMapper
     );
-    Assert.assertFalse(status.isComplete());
-    Assert.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
   }
 
   @Test
@@ -593,8 +593,8 @@ public class CompactionStatusTest
         DataSegment.builder(WIKI_SEGMENT).indexingStateFingerprint(oldFingerprint).build()
     );
     CompactionStatus status = CompactionStatus.compute(segments, newConfig, fingerprintMapper);
-    Assert.assertFalse(status.isComplete());
-    Assert.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertTrue(status.getReason().startsWith("'transformSpec' mismatch"));
   }
 
   @Test
@@ -650,7 +650,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assertions.assertTrue(status.isComplete());
   }
 
   @Test
@@ -705,7 +705,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertFalse(status.isComplete());
+    Assertions.assertFalse(status.isComplete());
   }
 
   @Test
@@ -796,7 +796,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assertions.assertTrue(status.isComplete());
   }
 
   @Test
@@ -841,7 +841,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assertions.assertTrue(status.isComplete());
   }
 
   @Test
@@ -895,7 +895,7 @@ public class CompactionStatusTest
         compactionConfig,
         fingerprintMapper
     );
-    Assert.assertTrue(status.isComplete());
+    Assertions.assertTrue(status.isComplete());
   }
 
   // ============================
@@ -926,11 +926,11 @@ public class CompactionStatusTest
         fingerprintMapper
     );
 
-    Assert.assertFalse(status.isComplete());
-    Assert.assertTrue(status.isSkipped());
-    Assert.assertTrue(status.getReason().contains("'inputSegmentSize' exceeded"));
-    Assert.assertTrue(status.getReason().contains("200000000"));
-    Assert.assertTrue(status.getReason().contains("150000000"));
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertTrue(status.isSkipped());
+    Assertions.assertTrue(status.getReason().contains("'inputSegmentSize' exceeded"));
+    Assertions.assertTrue(status.getReason().contains("200000000"));
+    Assertions.assertTrue(status.getReason().contains("150000000"));
   }
 
   /**
@@ -949,8 +949,8 @@ public class CompactionStatusTest
         fingerprintMapper
     );
 
-    Assert.assertFalse(status.isComplete());
-    Assert.assertEquals(expectedReason, status.getReason());
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertEquals(expectedReason, status.getReason());
   }
 
   private void verifyCompactionStatusIsPendingBecause(
@@ -969,8 +969,8 @@ public class CompactionStatusTest
         fingerprintMapper
     );
 
-    Assert.assertFalse(status.isComplete());
-    Assert.assertEquals(expectedReason, status.getReason());
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertEquals(expectedReason, status.getReason());
   }
 
   private static DataSourceCompactionConfig createCompactionConfig(

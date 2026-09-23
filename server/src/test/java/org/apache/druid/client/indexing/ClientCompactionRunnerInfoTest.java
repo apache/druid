@@ -46,10 +46,11 @@ import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -70,8 +71,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.NATIVE
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: Invalid partitioning type[HashedPartitionsSpec]. Must be either 'dynamic' or 'range'",
         validationResult.getReason()
     );
@@ -91,8 +92,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.NATIVE
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: 'maxTotalRows' not supported with 'dynamic' partitioning",
         validationResult.getReason()
     );
@@ -112,8 +113,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.NATIVE
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: tuningConfig.partitionsSpec must be specified",
         validationResult.getReason()
     );
@@ -129,7 +130,7 @@ public class ClientCompactionRunnerInfoTest
         null,
         null
     );
-    Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+    Assertions.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                          .isValid());
   }
 
@@ -143,7 +144,7 @@ public class ClientCompactionRunnerInfoTest
         null,
         null
     );
-    Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+    Assertions.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                          .isValid());
   }
 
@@ -161,8 +162,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.NATIVE
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: Non-string partition dimension[partitionDim] of type[LONG] not supported with 'range' partition spec",
         validationResult.getReason()
     );
@@ -178,7 +179,7 @@ public class ClientCompactionRunnerInfoTest
         null,
         null
     );
-    Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
+    Assertions.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                           .isValid());
   }
 
@@ -196,8 +197,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.NATIVE
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: 'granularitySpec.rollup' must be true if and only if 'metricsSpec' is specified",
         validationResult.getReason()
     );
@@ -217,8 +218,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.NATIVE
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: 'granularitySpec.rollup' must be true if and only if 'metricsSpec' is specified",
         validationResult.getReason()
     );
@@ -241,8 +242,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.NATIVE
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: Aggregator[sum_added] not supported in 'metricsSpec'",
         validationResult.getReason()
     );
@@ -262,8 +263,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.NATIVE
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: 'granularitySpec.rollup' must be true if and only if 'metricsSpec' is specified",
         validationResult.getReason()
     );
@@ -273,7 +274,7 @@ public class ClientCompactionRunnerInfoTest
   public void testMSQEngineWithBaseTableIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createBaseTableCompactionConfig(CompactionEngine.MSQ);
-    Assert.assertTrue(
+    Assertions.assertTrue(
         ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE).isValid()
     );
   }
@@ -286,8 +287,8 @@ public class ClientCompactionRunnerInfoTest
         compactionConfig,
         CompactionEngine.MSQ
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "Compaction engine[native] does not support 'baseTable'; use the MSQ compaction engine.",
         validationResult.getReason()
     );
@@ -309,7 +310,7 @@ public class ClientCompactionRunnerInfoTest
         new DimensionRangePartitionsSpec(100, null, ImmutableList.of("tenant"), false),
         baseTable
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE).isValid()
     );
   }
@@ -335,8 +336,8 @@ public class ClientCompactionRunnerInfoTest
     );
     final CompactionConfigValidationResult validationResult =
         ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE);
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: Non-string partition dimension[region_id] of type[LONG] not supported with 'range' partition spec",
         validationResult.getReason()
     );

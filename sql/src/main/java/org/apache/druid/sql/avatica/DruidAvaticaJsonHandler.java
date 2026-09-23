@@ -69,7 +69,7 @@ public class DruidAvaticaJsonHandler extends DruidAvaticaHandler
     String remoteAddr = Request.getRemoteAddr(request);
     DruidMeta.setThreadLocalRemoteAddress(remoteAddr);
 
-    try (Timer.Context ctx = this.requestTimer.start()) {
+    try (Timer.Context ignoredContext = this.requestTimer.start()) {
       if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
         response.getHeaders().put("Content-Type", "application/json;charset=utf-8");
 

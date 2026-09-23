@@ -24,10 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-
-import javax.validation.constraints.NotNull;
 
 /**
  */

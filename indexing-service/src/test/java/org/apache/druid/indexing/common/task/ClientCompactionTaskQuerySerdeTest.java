@@ -70,8 +70,8 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -123,7 +123,7 @@ public class ClientCompactionTaskQuerySerdeTest
     final CompactionTask task = (CompactionTask) MAPPER.readValue(json, Task.class);
 
     // Verify that CompactionTask has added new parameters into the context because transformSpec was null.
-    Assert.assertNotEquals(query.getContext(), task.getContext());
+    Assertions.assertNotEquals(query.getContext(), task.getContext());
     query.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
     assertQueryToTask(query, task);
   }
@@ -138,7 +138,7 @@ public class ClientCompactionTaskQuerySerdeTest
     final byte[] json = MAPPER.writeValueAsBytes(task);
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
 
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -152,10 +152,10 @@ public class ClientCompactionTaskQuerySerdeTest
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
 
     // Verify that CompactionTask has added new parameters into the context
-    Assert.assertNotEquals(expected, actual);
+    Assertions.assertNotEquals(expected, actual);
 
     expected.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -190,8 +190,8 @@ public class ClientCompactionTaskQuerySerdeTest
     final byte[] json = MAPPER.writeValueAsBytes(query);
     final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
 
-    Assert.assertEquals(baseTable, actual.getBaseTable());
-    Assert.assertEquals(query, actual);
+    Assertions.assertEquals(baseTable, actual.getBaseTable());
+    Assertions.assertEquals(query, actual);
   }
 
   private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
@@ -229,104 +229,104 @@ public class ClientCompactionTaskQuerySerdeTest
 
   private void assertQueryToTask(ClientCompactionTaskQuery query, CompactionTask task)
   {
-    Assert.assertEquals(query.getId(), task.getId());
-    Assert.assertEquals(query.getDataSource(), task.getDataSource());
-    Assert.assertTrue(query.getIoConfig().getInputSpec() instanceof ClientCompactionIntervalSpec);
-    Assert.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
-    Assert.assertEquals(
+    Assertions.assertEquals(query.getId(), task.getId());
+    Assertions.assertEquals(query.getDataSource(), task.getDataSource());
+    Assertions.assertTrue(query.getIoConfig().getInputSpec() instanceof ClientCompactionIntervalSpec);
+    Assertions.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
+    Assertions.assertEquals(
         query.getIoConfig().getInputSpec().getInterval(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getInterval()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ((ClientCompactionIntervalSpec) query.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds(),
         ((CompactionIntervalSpec) task.getIoConfig().getInputSpec()).getSha256OfSortedSegmentIds()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxRowsInMemory().intValue(),
         task.getTuningConfig().getMaxRowsInMemory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxBytesInMemory().longValue(),
         task.getTuningConfig().getMaxBytesInMemory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getSplitHintSpec(),
         task.getTuningConfig().getSplitHintSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getPartitionsSpec(),
         task.getTuningConfig().getPartitionsSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getIndexSpec(),
         task.getTuningConfig().getIndexSpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getIndexSpecForIntermediatePersists(),
         task.getTuningConfig().getIndexSpecForIntermediatePersists()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getPushTimeout().longValue(),
         task.getTuningConfig().getPushTimeout()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getSegmentWriteOutMediumFactory(),
         task.getTuningConfig().getSegmentWriteOutMediumFactory()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxNumConcurrentSubTasks().intValue(),
         task.getTuningConfig().getMaxNumConcurrentSubTasks()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxRetry().intValue(),
         task.getTuningConfig().getMaxRetry()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getTaskStatusCheckPeriodMs().longValue(),
         task.getTuningConfig().getTaskStatusCheckPeriodMs()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getChatHandlerTimeout(),
         task.getTuningConfig().getChatHandlerTimeout()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getMaxNumSegmentsToMerge().intValue(),
         task.getTuningConfig().getMaxNumSegmentsToMerge()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTuningConfig().getTotalNumMergeTasks().intValue(),
         task.getTuningConfig().getTotalNumMergeTasks()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec(),
         task.getGranularitySpec()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().getQueryGranularity(),
         task.getGranularitySpec().getQueryGranularity()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().getSegmentGranularity(),
         task.getGranularitySpec().getSegmentGranularity()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getGranularitySpec().isRollup(),
         task.getGranularitySpec().isRollup()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getIoConfig().isDropExisting(),
         task.getIoConfig().isDropExisting()
     );
-    Assert.assertEquals(query.getContext(), task.getContext());
-    Assert.assertEquals(
+    Assertions.assertEquals(query.getContext(), task.getContext());
+    Assertions.assertEquals(
         query.getDimensionsSpec().getDimensions(),
         task.getDimensionsSpec().getDimensions()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         query.getTransformSpec(),
         task.getTransformSpec()
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         query.getMetricsSpec(),
         task.getMetricsSpec()
     );

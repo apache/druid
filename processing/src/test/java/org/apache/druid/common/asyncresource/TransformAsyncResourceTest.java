@@ -153,4 +153,30 @@ public class TransformAsyncResourceTest
     transformed.close();
     Assertions.assertEquals(1, sourceCancel.get());
   }
+
+  @Test
+  public void testCloseBeforeReadyWakesConsumerAndReportsCancellation()
+  {
+    final AtomicInteger functionCalls = new AtomicInteger();
+    final AtomicInteger fired = new AtomicInteger();
+    final SettableAsyncResource<Integer> source = new SettableAsyncResource<>();
+
+    final AsyncResource<String> transformed = AsyncResources.transform(
+        source,
+        i -> {
+          functionCalls.incrementAndGet();
+          return "v" + i;
+        }
+    );
+    transformed.addReadyCallback(fired::incrementAndGet);
+
+    // Closing must reach a consumer waiting on the transformed resource, not just cancel the source. Closing the
+    // source also drives this class's own onSourceReady, which must not fire the consumer's callback a second time.
+    transformed.close();
+
+    Assertions.assertEquals(1, fired.get(), "closing must wake a waiting consumer exactly once");
+    Assertions.assertTrue(transformed.isReady());
+    Assertions.assertThrows(AsyncResourceCanceledException.class, transformed::get);
+    Assertions.assertEquals(0, functionCalls.get(), "the function must not run for a canceled source");
+  }
 }

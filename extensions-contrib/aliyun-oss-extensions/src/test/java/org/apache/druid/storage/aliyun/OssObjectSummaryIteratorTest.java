@@ -26,8 +26,8 @@ import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -206,10 +206,10 @@ public class OssObjectSummaryIteratorTest
         )
     );
 
-    Assert.assertEquals(
-        prefixes.toString(),
+    Assertions.assertEquals(
         expectedObjects.stream().map(OssUtils::summaryToUri).collect(Collectors.toList()),
-        actualObjects.stream().map(OssUtils::summaryToUri).collect(Collectors.toList())
+        actualObjects.stream().map(OssUtils::summaryToUri).collect(Collectors.toList()),
+        prefixes.toString()
     );
   }
 

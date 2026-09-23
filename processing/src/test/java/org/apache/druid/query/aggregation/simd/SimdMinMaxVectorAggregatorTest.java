@@ -29,8 +29,8 @@ import org.apache.druid.query.aggregation.LongMinVectorAggregator;
 import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.FakeVectorValueSelector;
 import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.NullPattern;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -159,7 +159,7 @@ public class SimdMinMaxVectorAggregatorTest extends InitializedNullHandlingTest
         scalar.aggregate(scalarBuf, position, startRow, endRow);
         simd.aggregate(simdBuf, position, startRow, endRow);
       }
-      Assert.assertEquals(msg, scalarBuf.getLong(position), simdBuf.getLong(position));
+      Assertions.assertEquals(scalarBuf.getLong(position), simdBuf.getLong(position), msg);
     } else {
       long expected = identity;
       boolean anyNonNull = false;
@@ -180,8 +180,8 @@ public class SimdMinMaxVectorAggregatorTest extends InitializedNullHandlingTest
         simd.init(simdBuf, position);
         reported = simd.aggregate(simdBuf, position, startRow, endRow, nulls);
       }
-      Assert.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
-      Assert.assertEquals(msg, expected, simdBuf.getLong(position));
+      Assertions.assertEquals(anyNonNull, reported, msg + " (anyNonNull)");
+      Assertions.assertEquals(expected, simdBuf.getLong(position), msg);
     }
   }
 
@@ -225,7 +225,7 @@ public class SimdMinMaxVectorAggregatorTest extends InitializedNullHandlingTest
         simd.aggregate(simdBuf, position, startRow, endRow);
       }
       // min/max produces a value that was present in the input -- exact equality is fine.
-      Assert.assertEquals(msg, scalarBuf.getDouble(position), simdBuf.getDouble(position), 0.0);
+      Assertions.assertEquals(scalarBuf.getDouble(position), simdBuf.getDouble(position), 0.0, msg);
     } else {
       double expected = identity;
       boolean anyNonNull = false;
@@ -246,8 +246,8 @@ public class SimdMinMaxVectorAggregatorTest extends InitializedNullHandlingTest
         simd.init(simdBuf, position);
         reported = simd.aggregate(simdBuf, position, startRow, endRow, nulls);
       }
-      Assert.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
-      Assert.assertEquals(msg, expected, simdBuf.getDouble(position), 0.0);
+      Assertions.assertEquals(anyNonNull, reported, msg + " (anyNonNull)");
+      Assertions.assertEquals(expected, simdBuf.getDouble(position), 0.0, msg);
     }
   }
 
@@ -290,7 +290,7 @@ public class SimdMinMaxVectorAggregatorTest extends InitializedNullHandlingTest
         scalar.aggregate(scalarBuf, position, startRow, endRow);
         simd.aggregate(simdBuf, position, startRow, endRow);
       }
-      Assert.assertEquals(msg, scalarBuf.getFloat(position), simdBuf.getFloat(position), 0.0f);
+      Assertions.assertEquals(scalarBuf.getFloat(position), simdBuf.getFloat(position), 0.0f, msg);
     } else {
       float expected = identity;
       boolean anyNonNull = false;
@@ -311,8 +311,8 @@ public class SimdMinMaxVectorAggregatorTest extends InitializedNullHandlingTest
         simd.init(simdBuf, position);
         reported = simd.aggregate(simdBuf, position, startRow, endRow, nulls);
       }
-      Assert.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
-      Assert.assertEquals(msg, expected, simdBuf.getFloat(position), 0.0f);
+      Assertions.assertEquals(anyNonNull, reported, msg + " (anyNonNull)");
+      Assertions.assertEquals(expected, simdBuf.getFloat(position), 0.0f, msg);
     }
   }
 

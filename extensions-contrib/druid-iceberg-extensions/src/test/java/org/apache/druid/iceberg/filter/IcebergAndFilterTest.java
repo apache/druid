@@ -24,8 +24,8 @@ import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.expressions.Literal;
 import org.apache.iceberg.types.Types;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,14 +61,14 @@ public class IcebergAndFilterTest
         new IcebergEqualsFilter(COLUMN2, "value2")
     ));
     Expression expectedExpression = Expressions.and(equalExpression1, equalExpression2);
-    Assert.assertEquals(expectedExpression.toString(), andFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), andFilter.getFilterExpression().toString());
   }
 
   @Test
   public void testEmptyFilter()
   {
-    Assert.assertThrows(IllegalArgumentException.class, () -> new IcebergAndFilter(null));
-    Assert.assertThrows(IllegalArgumentException.class, () -> new IcebergAndFilter(Collections.emptyList()));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> new IcebergAndFilter(null));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> new IcebergAndFilter(Collections.emptyList()));
   }
 
   @Test
@@ -91,6 +91,6 @@ public class IcebergAndFilterTest
         Expressions.and(equalExpression1, equalExpression2),
         intervalExpression
     );
-    Assert.assertEquals(expectedExpression.toString(), andFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), andFilter.getFilterExpression().toString());
   }
 }

@@ -108,6 +108,7 @@ public class PreparedStatement extends AbstractStatement
         sqlToolbox.engine,
         queryPlus.sql(),
         queryPlus.freshCopy().sqlNode(),
+        queryPlus.authResult(),
         queryPlus.authContextKeys(),
         queryContext,
         hook

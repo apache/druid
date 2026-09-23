@@ -213,6 +213,8 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   }
 }
 
+// Tasks with equal scheduling keys remain distinct futures, so identity equality is intentional.
+// codeql[java/inconsistent-compareto-and-equals]
 class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
     ListenableFuture<V>,
     PrioritizedRunnable,

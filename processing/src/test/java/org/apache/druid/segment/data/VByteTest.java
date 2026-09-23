@@ -20,19 +20,20 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.collect.ImmutableList;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Collection;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class VByteTest
 {
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
     return ImmutableList.of(new Object[]{ByteOrder.LITTLE_ENDIAN}, new Object[]{ByteOrder.BIG_ENDIAN});
@@ -64,12 +65,12 @@ public class VByteTest
 
   private static void roundTrip(ByteBuffer buffer, int position, int value, int expectedSize)
   {
-    Assert.assertEquals(expectedSize, VByte.computeIntSize(value));
+    Assertions.assertEquals(expectedSize, VByte.computeIntSize(value));
     buffer.position(position);
     VByte.writeInt(buffer, value);
-    Assert.assertEquals(expectedSize, buffer.position() - position);
+    Assertions.assertEquals(expectedSize, buffer.position() - position);
     buffer.position(position);
-    Assert.assertEquals(value, VByte.readInt(buffer));
-    Assert.assertEquals(expectedSize, buffer.position() - position);
+    Assertions.assertEquals(value, VByte.readInt(buffer));
+    Assertions.assertEquals(expectedSize, buffer.position() - position);
   }
 }

@@ -26,13 +26,15 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
@@ -40,6 +42,9 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostMetrics;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -49,7 +54,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.DefaultQueryMetrics;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.metrics.SupervisorStatsProvider;
 
@@ -60,6 +64,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -436,18 +441,15 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
 
-    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    Pair<SeekableStreamSupervisor, SeekableStreamSupervisorSpec> supervisor = getSupervisorOfType(
+        id,
+        SeekableStreamSupervisor.class,
+        SeekableStreamSupervisorSpec.class,
+        "resetToLatestAndBackfill"
+    );
 
-    if (supervisor == null) {
-      throw new IAE("Supervisor[%s] does not exist", id);
-    }
-
-    if (!(supervisor.lhs instanceof SeekableStreamSupervisor)) {
-      throw new IAE("Supervisor[%s] is not a streaming supervisor", id);
-    }
-
-    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisor.lhs;
-    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisor.rhs;
+    SeekableStreamSupervisor streamSupervisor = supervisor.lhs;
+    SeekableStreamSupervisorSpec streamSpec = supervisor.rhs;
 
     validateResetAndBackfill(id, streamSupervisor, streamSpec);
 
@@ -645,6 +647,101 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
+   * Simulates the effects of the {@code costBased} auto-scaler by computing the
+   * optimal task count under various values of aggregate lag.
+   *
+   * @return Map containing a single entry with key {@code "data"} and value as
+   * the simulation rows.
+   */
+  public Map<String, Object> simulateAutoscaling(
+      String supervisorId,
+      CostBasedAutoScalerConfig config,
+      int maxProcessingRatePerTask,
+      @Nullable Integer requestedTaskCount
+  )
+  {
+    if (!config.getEnableTaskAutoScaler()) {
+      throw InvalidInput.exception("Cannot simulate autoscaling since 'enableTaskAutoScaler' is false");
+    }
+
+    // Validate that this is a SeekableStreamSupervisor
+    final Pair<SeekableStreamSupervisor, SeekableStreamSupervisorSpec> supervisorPair =
+        getSupervisorOfType(
+            supervisorId,
+            SeekableStreamSupervisor.class,
+            SeekableStreamSupervisorSpec.class,
+            "simulateAutoscaling"
+        );
+
+    // Validate the inputs
+    final long criticalLag = Configs.valueOrDefault(config.getCriticalLagThreshold(), 1_000_000);
+    InvalidInput.conditionalException(
+        criticalLag >= 1000,
+        "Value of critical lag[%d] must be 1000 or more",
+        criticalLag
+    );
+    InvalidInput.conditionalException(
+        maxProcessingRatePerTask >= 100,
+        "Value of maxProcessingRatePerTask[%d] must be 100 events per second or more",
+        maxProcessingRatePerTask
+    );
+    InvalidInput.conditionalException(
+        requestedTaskCount == null
+        || (requestedTaskCount >= config.getTaskCountMin() && requestedTaskCount <= config.getTaskCountMax()),
+        "Value of currentTaskCount[%d] must be within taskCountMin[%d] and taskCountMax[%d]",
+        requestedTaskCount, config.getTaskCountMin(), config.getTaskCountMax()
+    );
+
+    // Simulate from the supervisor's live task count unless the caller pins one.
+    final SeekableStreamSupervisorSpec supervisorSpec = Objects.requireNonNull(supervisorPair.rhs);
+    final int currentTaskCount = supervisorSpec.getIoConfig().getTaskCount();
+    final int simulationTaskCount = Math.max(
+        config.getTaskCountMin(),
+        Math.min(
+            Configs.valueOrDefault(requestedTaskCount, currentTaskCount),
+            config.getTaskCountMax()
+        )
+    );
+
+    // Use the partition count and task duration from the supervisor spec
+    final int partitionCount = Objects.requireNonNull(supervisorPair.lhs).getKnownPartitionCount();
+    if (partitionCount <= 0) {
+      throw InternalServerError.exception(
+          "Cannot simulate autoscaling since partition count for supervisor[%s] is unknown."
+          + " Retry once the supervisor has discovered the current partition count from stream.",
+          supervisorId
+      );
+    }
+    final long taskDurationSeconds = supervisorSpec.getIoConfig().getTaskDuration().getStandardSeconds();
+
+    // Assume that the tasks are fully used since there is some lag
+    final double idleRatio = config.getOptimalTaskIdleRatio();
+
+    // Invoke the cost function for lag in the range [0, 2 * criticalLagThreshold)
+    final Object[] rows = new Object[200];
+    final long lagStepSize = criticalLag / 100;
+    final CostBasedAutoScaler autoscaleSimulator = CostBasedAutoScaler.createSimulator(config, supervisorId);
+    for (int i = 0; i < 200; ++i) {
+      final double observedAggregateLag = (double) lagStepSize * i;
+      final CostMetrics costMetrics = new CostMetrics(
+          observedAggregateLag / partitionCount,
+          observedAggregateLag,
+          simulationTaskCount,
+          partitionCount,
+          idleRatio,
+          taskDurationSeconds,
+          maxProcessingRatePerTask,
+          maxProcessingRatePerTask * 1.0
+      );
+      final int optimalTaskCount = autoscaleSimulator.computeOptimalTaskCountInternal(costMetrics, true);
+      rows[i] = Map.of("lag", observedAggregateLag, "taskCount", optimalTaskCount);
+    }
+
+    // Collect the results and return
+    return Map.of("data", rows);
+  }
+
+  /**
    * Stops a supervisor with a given id and then removes it from the list.
    * <p/>
    * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
@@ -748,9 +845,29 @@ public class SupervisorManager implements SupervisorStatsProvider
 
   private StreamSupervisor requireStreamSupervisor(final String supervisorId, final String operation)
   {
-    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
-    if (supervisor.lhs instanceof StreamSupervisor) {
-      return (StreamSupervisor) supervisor.lhs;
+    return getSupervisorOfType(supervisorId, StreamSupervisor.class, SupervisorSpec.class, operation).lhs;
+  }
+
+  /**
+   * Finds the non-null supervisor for the given ID only and its corresponding
+   * spec only if they are of the specified type.
+   *
+   * @throws DruidException if the supervisor does not exist or is not of the
+   * specified type.
+   */
+  @SuppressWarnings("unchecked")
+  public <S extends Supervisor, T extends SupervisorSpec> Pair<S, T> getSupervisorOfType(
+      String supervisorId,
+      Class<S> supervisorType,
+      Class<T> supervisorSpecType,
+      String operation
+  )
+  {
+    final Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+    if (supervisor == null) {
+      throw NotFound.exception("Supervisor[%s] does not exist", supervisorId);
+    } else if (supervisorType.isInstance(supervisor.lhs) && supervisorSpecType.isInstance(supervisor.rhs)) {
+      return (Pair<S, T>) supervisor;
     } else {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
@@ -778,22 +895,9 @@ public class SupervisorManager implements SupervisorStatsProvider
    */
   private static boolean specHasConcurrentLocks(SeekableStreamSupervisorSpec spec)
   {
-    Map<String, Object> context = spec.getContext();
-    if (context == null) {
-      return Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
-    }
-    Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
-        Tasks.USE_CONCURRENT_LOCKS,
-        context.get(Tasks.USE_CONCURRENT_LOCKS)
+    return TaskLocks.shouldUseConcurrentLocksForAppend(
+        spec.getContext(),
+        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
     );
-    if (useConcurrentLocks != null) {
-      return useConcurrentLocks;
-    }
-    TaskLockType taskLockType = QueryContexts.getAsEnum(
-        Tasks.TASK_LOCK_TYPE,
-        context.get(Tasks.TASK_LOCK_TYPE),
-        TaskLockType.class
-    );
-    return taskLockType == TaskLockType.APPEND;
   }
 }

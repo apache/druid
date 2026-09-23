@@ -24,8 +24,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -76,9 +76,9 @@ public class DataSourcesSnapshotTest
         SNAPSHOT_TIME
     );
 
-    Assert.assertSame(previous.getDataSource(DS2), updated.getDataSource(DS2));
-    Assert.assertNotSame(previous.getDataSource(DS1), updated.getDataSource(DS1));
-    Assert.assertEquals(
+    Assertions.assertSame(previous.getDataSource(DS2), updated.getDataSource(DS2));
+    Assertions.assertNotSame(previous.getDataSource(DS1), updated.getDataSource(DS1));
+    Assertions.assertEquals(
         newDs1.stream().map(s -> s.getId().toString()).collect(Collectors.toSet()),
         idsOf(updated, DS1)
     );
@@ -103,9 +103,9 @@ public class DataSourcesSnapshotTest
     finalState.put(DS2, baseDs2);
     final DataSourcesSnapshot fullRebuild = DataSourcesSnapshot.fromUsedSegments(finalState, SNAPSHOT_TIME);
 
-    Assert.assertEquals(idsOf(fullRebuild, DS1), idsOf(incremental, DS1));
-    Assert.assertEquals(idsOf(fullRebuild, DS2), idsOf(incremental, DS2));
-    Assert.assertEquals(fullRebuild.getOvershadowedSegments(), incremental.getOvershadowedSegments());
+    Assertions.assertEquals(idsOf(fullRebuild, DS1), idsOf(incremental, DS1));
+    Assertions.assertEquals(idsOf(fullRebuild, DS2), idsOf(incremental, DS2));
+    Assertions.assertEquals(fullRebuild.getOvershadowedSegments(), incremental.getOvershadowedSegments());
   }
 
   @Test
@@ -119,7 +119,7 @@ public class DataSourcesSnapshotTest
         SNAPSHOT_TIME
     );
 
-    Assert.assertNull(updated.getDataSource(DS2));
-    Assert.assertNotNull(updated.getDataSource(DS1));
+    Assertions.assertNull(updated.getDataSource(DS2));
+    Assertions.assertNotNull(updated.getDataSource(DS1));
   }
 }

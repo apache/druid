@@ -26,10 +26,10 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.List;
@@ -61,14 +61,14 @@ public class ConsulDruidNodeDiscoveryProviderTest
   private ConsulApiClient mockConsulApiClient;
   private ConsulDruidNodeDiscoveryProvider provider;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mockConsulApiClient = EasyMock.createMock(ConsulApiClient.class);
     provider = new ConsulDruidNodeDiscoveryProvider(mockConsulApiClient, config);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (provider != null) {
@@ -90,7 +90,7 @@ public class ConsulDruidNodeDiscoveryProviderTest
     provider.start();
 
     boolean found = provider.getForNode(node1.getDruidNode(), NodeRole.BROKER).getAsBoolean();
-    Assert.assertTrue(found);
+    Assertions.assertTrue(found);
 
     EasyMock.verify(mockConsulApiClient);
   }
@@ -127,14 +127,14 @@ public class ConsulDruidNodeDiscoveryProviderTest
     provider.start();
 
     DruidNodeDiscovery discovery = provider.getForNodeRole(NodeRole.BROKER);
-    Assert.assertNotNull(discovery);
+    Assertions.assertNotNull(discovery);
 
     // Wait a bit for cache to initialize
     Thread.sleep(500);
 
     Collection<DiscoveryDruidNode> nodes = discovery.getAllNodes();
-    Assert.assertEquals(1, nodes.size());
-    Assert.assertTrue(nodes.contains(node1));
+    Assertions.assertEquals(1, nodes.size());
+    Assertions.assertTrue(nodes.contains(node1));
 
     EasyMock.verify(mockConsulApiClient);
   }
@@ -208,8 +208,8 @@ public class ConsulDruidNodeDiscoveryProviderTest
       }
     });
 
-    Assert.assertTrue("Initialization timed out", initLatch.await(5, TimeUnit.SECONDS));
-    Assert.assertTrue("Node addition not detected", addedLatch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(initLatch.await(5, TimeUnit.SECONDS), "Initialization timed out");
+    Assertions.assertTrue(addedLatch.await(5, TimeUnit.SECONDS), "Node addition not detected");
 
     EasyMock.verify(mockConsulApiClient);
   }

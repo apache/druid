@@ -25,9 +25,9 @@ import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MultivaluedMap;
@@ -46,7 +46,7 @@ public class TaskResourceFilterTest
   private ContainerRequest containerRequest;
   private TaskResourceFilter resourceFilter;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     authorizerMapper = EasyMock.createMock(AuthorizerMapper.class);
@@ -81,8 +81,8 @@ public class TaskResourceFilterTest
     catch (WebApplicationException e) {
       expected = e;
     }
-    Assert.assertNotNull(expected);
-    Assert.assertEquals(expected.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode());
+    Assertions.assertNotNull(expected);
+    Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), expected.getResponse().getStatus());
     EasyMock.verify(containerRequest);
     EasyMock.verify(taskQueryTool);
   }

@@ -28,8 +28,8 @@ import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -40,8 +40,8 @@ public class OssStorageDruidModuleTest
   {
     Injector injector = createInjector();
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
-    Assert.assertTrue(killer.getKillers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
-    Assert.assertSame(
+    Assertions.assertTrue(killer.getKillers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
+    Assertions.assertSame(
         killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
         killer.getKillers().get(OssStorageDruidModule.SCHEME_ZIP).get()
     );
@@ -52,8 +52,8 @@ public class OssStorageDruidModuleTest
   {
     Injector injector = createInjector();
     OmniDataSegmentArchiver archiver = injector.getInstance(OmniDataSegmentArchiver.class);
-    Assert.assertTrue(archiver.getArchivers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
-    Assert.assertSame(
+    Assertions.assertTrue(archiver.getArchivers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
+    Assertions.assertSame(
         archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
         archiver.getArchivers().get(OssStorageDruidModule.SCHEME_ZIP).get()
     );
@@ -64,8 +64,8 @@ public class OssStorageDruidModuleTest
   {
     Injector injector = createInjector();
     OmniDataSegmentMover mover = injector.getInstance(OmniDataSegmentMover.class);
-    Assert.assertTrue(mover.getMovers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
-    Assert.assertSame(
+    Assertions.assertTrue(mover.getMovers().containsKey(OssStorageDruidModule.SCHEME_ZIP));
+    Assertions.assertSame(
         mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP).get(),
         mover.getMovers().get(OssStorageDruidModule.SCHEME_ZIP).get()
     );

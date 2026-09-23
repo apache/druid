@@ -21,8 +21,7 @@ package org.apache.druid.storage.hdfs.tasklog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Indexer hdfs task logs configuration.

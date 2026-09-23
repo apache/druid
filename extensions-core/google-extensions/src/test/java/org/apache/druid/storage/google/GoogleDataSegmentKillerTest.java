@@ -31,9 +31,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -70,7 +70,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   private GoogleAccountConfig accountConfig;
   private GoogleInputDataConfig inputDataConfig;
 
-  @Before
+  @BeforeEach
   public void before()
   {
     accountConfig = createMock(GoogleAccountConfig.class);
@@ -96,9 +96,41 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   }
 
   @Test
+  public void test_kill_unzippedSegment_deletesEveryObjectInTheDirectory() throws SegmentLoadingException, IOException
+  {
+    // pushed with druid.storage.zip=false, so the path is the directory holding the segment files
+    final String unzippedPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/";
+    final DataSegment segment = DataSegment.builder(DATA_SEGMENT)
+                                           .loadSpec(ImmutableMap.of("bucket", BUCKET, "path", unzippedPath))
+                                           .build();
+
+    EasyMock.expect(inputDataConfig.getMaxListingLength()).andReturn(MAX_KEYS).anyTimes();
+    EasyMock.expect(storage.list(EasyMock.eq(BUCKET), EasyMock.eq(unzippedPath), EasyMock.anyObject(), EasyMock.anyObject()))
+            .andReturn(new GoogleStorageObjectPage(
+                ImmutableList.of(
+                    new GoogleStorageObjectMetadata(BUCKET, unzippedPath + "version.bin", 4L, TIME_0),
+                    new GoogleStorageObjectMetadata(BUCKET, unzippedPath + "meta.smoosh", 8L, TIME_0)
+                ),
+                null
+            ));
+    storage.delete(BUCKET, unzippedPath + "version.bin");
+    EasyMock.expectLastCall();
+    storage.delete(BUCKET, unzippedPath + "meta.smoosh");
+    EasyMock.expectLastCall();
+
+    replayAll();
+
+    GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
+
+    killer.kill(segment);
+
+    verifyAll();
+  }
+
+  @Test
   public void killWithErrorTest()
   {
-    Assert.assertThrows(SegmentLoadingException.class, () -> {
+    Assertions.assertThrows(SegmentLoadingException.class, () -> {
       storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
       EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION);
 
@@ -138,7 +170,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
     EasyMock.replay(storage, inputDataConfig, accountConfig);
 
-    Assert.assertThrows(ISE.class, killer::killAll);
+    Assertions.assertThrows(ISE.class, killer::killAll);
 
     EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
@@ -216,7 +248,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
 
-    Assert.assertThrows(IOException.class, killer::killAll);
+    Assertions.assertThrows(IOException.class, killer::killAll);
 
     EasyMock.verify(accountConfig, inputDataConfig, storage);
   }

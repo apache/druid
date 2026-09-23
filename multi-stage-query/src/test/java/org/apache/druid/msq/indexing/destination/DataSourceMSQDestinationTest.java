@@ -34,8 +34,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -132,20 +132,20 @@ public class DataSourceMSQDestinationTest
     );
     final DataSourceMSQDestination roundTrip =
         mapper.readValue(mapper.writeValueAsString(destination), DataSourceMSQDestination.class);
-    Assert.assertEquals(destination, roundTrip);
-    Assert.assertNotNull(roundTrip.getBaseTable());
+    Assertions.assertEquals(destination, roundTrip);
+    Assertions.assertNotNull(roundTrip.getBaseTable());
   }
 
   @Test
   public void testBackwardCompatibility() throws JsonProcessingException
   {
     DataSourceMSQDestination destination = new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null, null);
-    Assert.assertEquals(SegmentGenerationStageSpec.instance(), destination.getTerminalStageSpec());
+    Assertions.assertEquals(SegmentGenerationStageSpec.instance(), destination.getTerminalStageSpec());
 
     DataSourceMSQDestination dataSourceMSQDestination = new DefaultObjectMapper().readValue(
         "{\"type\":\"dataSource\",\"dataSource\":\"datasource1\",\"segmentGranularity\":\"DAY\",\"rowsInTaskReport\":0,\"destinationResource\":{\"empty\":false,\"present\":true}}",
         DataSourceMSQDestination.class
     );
-    Assert.assertEquals(SegmentGenerationStageSpec.instance(), dataSourceMSQDestination.getTerminalStageSpec());
+    Assertions.assertEquals(SegmentGenerationStageSpec.instance(), dataSourceMSQDestination.getTerminalStageSpec());
   }
 }

@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
@@ -63,6 +64,11 @@ public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorSe
     return delegate().submit(task);
   }
 
+  /**
+   * The timeout only starts counting once a processing thread has actually picked the task off the pool's queue,
+   * not when it is submitted. Otherwise a task that sits in the queue behind other segments could exhaust its
+   * per-segment timeout without ever having been given a chance to run.
+   */
   @Override
   public <T, V> ListenableFuture<T> submitRunnerTask(
       PrioritizedQueryRunnerCallable<T, V> task,
@@ -70,15 +76,42 @@ public class ForwardingQueryProcessingPool extends ForwardingListeningExecutorSe
       TimeUnit unit
   )
   {
-    if (timeoutService != null) {
-      return Futures.withTimeout(
-          delegate().submit(task),
-          timeout,
-          unit,
-          timeoutService
-      );
+    if (timeoutService == null) {
+      return submitRunnerTask(task);
     }
-    return submitRunnerTask(task);
+
+    final SettableFuture<Void> started = SettableFuture.create();
+    final ListenableFuture<T> execFuture = submitRunnerTask(
+        new AbstractPrioritizedQueryRunnerCallable<T, V>(task.getPriority(), task.getRunner())
+        {
+          @Override
+          public T call() throws Exception
+          {
+            started.set(null);
+            return task.call();
+          }
+        }
+    );
+    // If the task never gets to run (cancelled or rejected while queued), unblock the transform below so that the
+    // returned future completes with the underlying outcome instead of hanging forever.
+    execFuture.addListener(() -> started.set(null), MoreExecutors.directExecutor());
+
+    final ListenableFuture<T> timedFuture = Futures.transformAsync(
+        started,
+        ignored -> Futures.withTimeout(execFuture, timeout, unit, timeoutService),
+        MoreExecutors.directExecutor()
+    );
+    // Cancelling the returned future while the task is still queued must cancel the queued task as well, which the
+    // transform cannot do on its own since it is waiting on 'started' rather than on the task itself.
+    timedFuture.addListener(
+        () -> {
+          if (timedFuture.isCancelled()) {
+            execFuture.cancel(true);
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
+    return timedFuture;
   }
 
   @Override

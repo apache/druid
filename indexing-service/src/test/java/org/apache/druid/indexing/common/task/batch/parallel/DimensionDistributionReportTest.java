@@ -26,8 +26,8 @@ import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringS
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.joda.time.Interval;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -38,7 +38,7 @@ public class DimensionDistributionReportTest
 
   private DimensionDistributionReport target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     Interval interval = Intervals.ETERNITY;

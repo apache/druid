@@ -27,10 +27,11 @@ import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionS
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.AutoTypeColumnSchema;
-import org.apache.druid.segment.NestedDataColumnSchema;
+import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -209,14 +210,11 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
       // FLOAT ARRAY as DOUBLE ARRAY).
       return DimensionSchema.getDefaultSchemaForBuiltInType(column.name(), druidType);
     }
-    if (ColumnType.NESTED_DATA.equals(druidType)) {
-      return new NestedDataColumnSchema(column.name(), NestedDataColumnSchema.DEFAULT_FORMAT_VERSION);
+    if (druidType.is(ValueType.COMPLEX)) {
+      return DimensionHandlerUtils.getComplexDimensionSchema(column.name(), druidType);
     }
-    // Other complex types cannot be ingested into a clustered base table: there is no dimension handler for them,
-    // and clustered base tables have no aggregators to produce them.
     throw InvalidInput.exception(
-        "column [%s] has unsupported type [%s] for a clustered base table; supported types are primitive, primitive"
-        + " array, and COMPLEX<json> columns",
+        "column [%s] has unsupported type [%s] for a clustered base table",
         column.name(),
         druidType
     );
@@ -260,8 +258,6 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
       // The auto schema stores FLOAT as DOUBLE.
       expectedType = autoColumnType(declaredType);
     }
-    // A NestedDataColumnSchema always reports COMPLEX<json>, so this also restricts json schemas to columns declared
-    // as COMPLEX<json>.
     if (!expectedType.equals(customSchema.getColumnType())) {
       throw InvalidInput.exception(
           "columnSchemas entry [%s] of type [%s] does not match the column's declared type [%s]; column schemas"

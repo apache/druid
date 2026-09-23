@@ -271,12 +271,17 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
     const averageRowSizeByDatasource = groupByAsMap(
       shownIntervalRows.filter(intervalRow => intervalRow.size > 0 && intervalRow.rows > 0),
       intervalRow => intervalRow.datasource,
-      intervalRows => sum(intervalRows, d => d.size) / sum(intervalRows, d => d.rows),
+      intervalRows =>
+        sum(intervalRows, d => Number(d.size)) / sum(intervalRows, d => Number(d.rows)),
     );
 
     const trimDuration = new Duration(trimGranularity);
     const trimmedIntervalRows = shownIntervalRows.map(intervalRow => {
-      const { start, end, segments, size, rows } = intervalRow;
+      const { start, end } = intervalRow;
+      // These come off the JSON parser, so they can be BigInt on large clusters
+      const segments = Number(intervalRow.segments);
+      const size = Number(intervalRow.size);
+      const rows = Number(intervalRow.rows);
       const startTrimmed = trimDuration.floor(start, Timezone.UTC);
       let endTrimmed = trimDuration.ceil(end, Timezone.UTC);
 
@@ -293,6 +298,8 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
         start: startTrimmed,
         end: endTrimmed,
         shownDays,
+        segments,
+        rows,
         size: shownSize,
         normalized: {
           size: shownSize / shownDays,

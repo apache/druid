@@ -23,11 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.jetty.HttpException;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -45,7 +46,7 @@ public class SqlQueryTest
 
     SqlQuery result = SqlQuery.from(request, objectMapper);
 
-    Assert.assertEquals("SELECT 1", result.getQuery());
+    Assertions.assertEquals("SELECT 1", result.getQuery());
   }
 
   @Test
@@ -56,7 +57,7 @@ public class SqlQueryTest
 
     SqlQuery result = SqlQuery.from(request, objectMapper);
 
-    Assert.assertEquals("SELECT 2", result.getQuery());
+    Assertions.assertEquals("SELECT 2", result.getQuery());
   }
 
   @Test
@@ -67,7 +68,7 @@ public class SqlQueryTest
 
     SqlQuery result = SqlQuery.from(request, objectMapper);
 
-    Assert.assertEquals("SELECT 3", result.getQuery());
+    Assertions.assertEquals("SELECT 3", result.getQuery());
   }
 
   @Test
@@ -78,7 +79,7 @@ public class SqlQueryTest
 
     SqlQuery result = SqlQuery.from(request, objectMapper);
 
-    Assert.assertEquals("SELECT 4", result.getQuery());
+    Assertions.assertEquals("SELECT 4", result.getQuery());
   }
 
   @Test
@@ -89,7 +90,7 @@ public class SqlQueryTest
 
     SqlQuery result = SqlQuery.from(request, objectMapper);
 
-    Assert.assertEquals("SELECT 5", result.getQuery());
+    Assertions.assertEquals("SELECT 5", result.getQuery());
   }
 
   @Test
@@ -100,7 +101,7 @@ public class SqlQueryTest
 
     SqlQuery result = SqlQuery.from(request, objectMapper);
 
-    Assert.assertEquals("SELECT 6", result.getQuery());
+    Assertions.assertEquals("SELECT 6", result.getQuery());
   }
 
   @Test
@@ -111,7 +112,7 @@ public class SqlQueryTest
 
     SqlQuery result = SqlQuery.from(request, objectMapper);
 
-    Assert.assertEquals("SELECT 7", result.getQuery());
+    Assertions.assertEquals("SELECT 7", result.getQuery());
   }
 
   @Test
@@ -120,13 +121,13 @@ public class SqlQueryTest
     String content = "SELECT 8";
     HttpServletRequest request = createMockRequest(null, content);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
-    Assert.assertEquals("Missing Content-Type header", exception.getMessage());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertEquals("Missing Content-Type header", exception.getMessage());
   }
 
   @Test
@@ -135,14 +136,14 @@ public class SqlQueryTest
     String xmlQuery = "<query>SELECT 9</query>";
     HttpServletRequest request = createMockRequest("application/xml", xmlQuery);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.UNSUPPORTED_MEDIA_TYPE, exception.getStatusCode());
-    Assert.assertTrue(exception.getMessage().contains("Unsupported Content-Type"));
-    Assert.assertTrue(exception.getMessage().contains("application/xml"));
+    Assertions.assertEquals(Response.Status.UNSUPPORTED_MEDIA_TYPE, exception.getStatusCode());
+    Assertions.assertTrue(exception.getMessage().contains("Unsupported Content-Type"));
+    Assertions.assertTrue(exception.getMessage().contains("application/xml"));
   }
 
   @Test
@@ -151,14 +152,14 @@ public class SqlQueryTest
     String xmlQuery = "<query>SELECT 10</query>";
     HttpServletRequest request = createMockRequest("application/xml; charset=UTF-8", xmlQuery);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.UNSUPPORTED_MEDIA_TYPE, exception.getStatusCode());
-    Assert.assertTrue(exception.getMessage().contains("Unsupported Content-Type"));
-    Assert.assertTrue(exception.getMessage().contains("application/xml"));
+    Assertions.assertEquals(Response.Status.UNSUPPORTED_MEDIA_TYPE, exception.getStatusCode());
+    Assertions.assertTrue(exception.getMessage().contains("Unsupported Content-Type"));
+    Assertions.assertTrue(exception.getMessage().contains("application/xml"));
   }
 
   @Test
@@ -167,13 +168,13 @@ public class SqlQueryTest
     String content = "SELECT 11";
     HttpServletRequest request = createMockRequest("invalid-content-type-format", content);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
-    Assert.assertTrue(exception.getMessage().contains("Invalid Content-Type header"));
+    Assertions.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertTrue(exception.getMessage().contains("Invalid Content-Type header"));
   }
 
   @Test
@@ -182,13 +183,13 @@ public class SqlQueryTest
     String jsonQuery = "{}";
     HttpServletRequest request = createMockRequest("application/json", jsonQuery);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
-    Assert.assertTrue(exception.getMessage()
+    Assertions.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertTrue(exception.getMessage()
                                .contains("Unable to read query from request: Cannot construct instance of "));
   }
 
@@ -198,12 +199,12 @@ public class SqlQueryTest
     String jsonQuery = "{\"query\": null}";
     HttpServletRequest request = createMockRequest("application/json", jsonQuery);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
   }
 
   @Test
@@ -212,13 +213,13 @@ public class SqlQueryTest
     String textQuery = "";
     HttpServletRequest request = createMockRequest("text/plain", textQuery);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
-    Assert.assertEquals("Empty query", exception.getMessage());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertEquals("Empty query", exception.getMessage());
   }
 
   @Test
@@ -227,13 +228,13 @@ public class SqlQueryTest
     String textQuery = "   \n\t  ";
     HttpServletRequest request = createMockRequest("text/plain", textQuery);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
-    Assert.assertEquals("Empty query", exception.getMessage());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertEquals("Empty query", exception.getMessage());
   }
 
   @Test
@@ -242,13 +243,13 @@ public class SqlQueryTest
     String formQuery = "";
     HttpServletRequest request = createMockRequest("application/x-www-form-urlencoded", formQuery);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
-    Assert.assertEquals("Empty query", exception.getMessage());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertEquals("Empty query", exception.getMessage());
   }
 
 
@@ -258,13 +259,13 @@ public class SqlQueryTest
     String malformedJson = "{\"query\":\"SELECT 12\""; // Missing closing brace
     HttpServletRequest request = createMockRequest("application/json", malformedJson);
 
-    HttpException exception = Assert.assertThrows(
+    HttpException exception = Assertions.assertThrows(
         HttpException.class,
         () -> SqlQuery.from(request, objectMapper)
     );
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
-    Assert.assertTrue(exception.getMessage().contains("Malformed SQL query wrapped in JSON: Unexpected end-of-input:"));
+    Assertions.assertEquals(Response.Status.BAD_REQUEST, exception.getStatusCode());
+    Assertions.assertTrue(exception.getMessage().contains("Malformed SQL query wrapped in JSON: Unexpected end-of-input:"));
   }
 
   @Test
@@ -275,16 +276,16 @@ public class SqlQueryTest
 
     HttpServletRequest request1 = createMockRequest("APPLICATION/JSON", jsonQuery);
     SqlQuery result1 = SqlQuery.from(request1, objectMapper);
-    Assert.assertEquals("SELECT 13", result1.getQuery());
+    Assertions.assertEquals("SELECT 13", result1.getQuery());
 
     HttpServletRequest request2 = createMockRequest("Application/Json; Charset=UTF-8", jsonQuery);
     SqlQuery result2 = SqlQuery.from(request2, objectMapper);
-    Assert.assertEquals("SELECT 13", result2.getQuery());
+    Assertions.assertEquals("SELECT 13", result2.getQuery());
 
     String textQuery = "SELECT 14";
     HttpServletRequest request3 = createMockRequest("TEXT/PLAIN", textQuery);
     SqlQuery result3 = SqlQuery.from(request3, objectMapper);
-    Assert.assertEquals("SELECT 14", result3.getQuery());
+    Assertions.assertEquals("SELECT 14", result3.getQuery());
   }
 
   @Test
@@ -295,9 +296,9 @@ public class SqlQueryTest
 
     SqlQuery result = SqlQuery.from(request, objectMapper);
 
-    Assert.assertEquals("SELECT COUNT(*) FROM table WHERE col > 100", result.getQuery());
-    Assert.assertTrue(result.includeHeader());
-    Assert.assertNotNull(result.getContext());
+    Assertions.assertEquals("SELECT COUNT(*) FROM table WHERE col > 100", result.getQuery());
+    Assertions.assertTrue(result.includeHeader());
+    Assertions.assertNotNull(result.getContext());
   }
 
 

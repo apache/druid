@@ -110,6 +110,7 @@ import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -125,6 +126,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -470,9 +472,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
+    return Tasks.DEFAULT_MERGE_TASK_PRIORITY;
   }
 
   @Override
@@ -493,7 +495,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       throws IOException
   {
     return ImmutableList.copyOf(
-        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), intervals))
+        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), intervals, SegmentDetail.none()))
     );
   }
 
@@ -1385,7 +1387,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     {
       return new ArrayList<>(
           actionClient.submit(
-              new RetrieveUsedSegmentsAction(dataSource, ImmutableList.of(interval))
+              new RetrieveUsedSegmentsAction(
+                  dataSource,
+                  ImmutableList.of(interval),
+                  EnumSet.of(SegmentDetail.LOAD_SPEC)
+              )
           )
       );
     }

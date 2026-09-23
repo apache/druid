@@ -26,7 +26,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.IPv4AddressParseOperatorConversion;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +58,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
   @Test
   public void testTooFewArgs()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Collections.emptyList(),
@@ -66,13 +66,13 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_parse] requires 1 argument", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_parse] requires 1 argument", t.getMessage());
   }
 
   @Test
   public void testTooManyArgs()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         ExpressionValidationException.class,
         () -> testExpression(
             Arrays.asList(
@@ -83,7 +83,7 @@ public class IPv4AddressParseExpressionTest extends CalciteTestBase
             IGNORE_EXPECTED_RESULT
         )
     );
-    Assert.assertEquals("Function[ipv4_parse] requires 1 argument", t.getMessage());
+    Assertions.assertEquals("Function[ipv4_parse] requires 1 argument", t.getMessage());
   }
 
   @Test

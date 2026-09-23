@@ -37,6 +37,7 @@
     "ingest/persists/time": [],
     "ingest/rows/output": [],
     "ingest/segments/count": [],
+    "ingest/segments/oversized": [],
     "ingest/rows/published": [],
     "ingest/sink/count": [],
     "ingest/tombstones/count": [],
@@ -248,6 +249,10 @@
     "tier/replication/factor": [],
     "tier/required/capacity": [],
     "tier/total/capacity": [],
+    "tier/storage/required": [],
+    "tier/storage/capacity":  [],
+    "tier/segmentCache/used":  [],
+    "tier/segmentCache/capacity":  [],
     "zk/connected": [],
     "zk/reconnect/time": []
 }

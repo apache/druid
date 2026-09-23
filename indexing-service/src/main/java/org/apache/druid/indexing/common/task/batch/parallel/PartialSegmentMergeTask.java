@@ -286,7 +286,8 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         final List<String> metricNames = Arrays.stream(dataSchema.getAggregators())
                                                .map(AggregatorFactory::getName)
                                                .collect(Collectors.toList());
-        SegmentId segmentId = SegmentId.of(
+        final int numRows;
+        final SegmentId segmentId = SegmentId.of(
             getDataSource(),
             interval,
             Preconditions.checkNotNull(AbstractBatchIndexTask.findVersion(
@@ -295,6 +296,9 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
             ), "version for interval[%s]", interval),
             0
         );
+        try (QueryableIndex index = toolbox.getIndexIO().loadIndex(mergedFileAndDimensionNames.lhs)) {
+          numRows = index.getNumRows();
+        }
 
         final DataSegment segment = segmentPusher.push(
             mergedFileAndDimensionNames.lhs,
@@ -302,6 +306,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
                        .shardSpec(createShardSpec(toolbox, interval, bucketId))
                        .dimensions(mergedFileAndDimensionNames.rhs)
                        .metrics(metricNames)
+                       .totalRows(numRows)
                        .projections(dataSchema.getProjectionNames())
                        .build(),
             false
@@ -324,12 +329,13 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
         }
 
         LOG.info("Built segment [%s] for interval [%s] (from [%d] input segment(s) in [%,d]ms) of "
-            + "size [%d] bytes and pushed ([%,d]ms) to deep storage [%s].",
+            + "size [%d] bytes, [%d] rows and pushed ([%,d]ms) to deep storage [%s].",
             segment.getId(),
             interval,
             segmentFilesToMerge.size(),
             (mergeFinishTime - startTime) / 1000000,
             segment.getSize(),
+            segment.getTotalRows(),
             (pushFinishTime - mergeFinishTime) / 1000000,
             segment.getLoadSpec()
         );

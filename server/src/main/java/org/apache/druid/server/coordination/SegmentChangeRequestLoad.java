@@ -74,7 +74,11 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
     final Map<String, Object> loadSpec = segment.getLoadSpec();
     if (PartialLoadSpec.detectPartialLoadSpec(loadSpec)) {
       // Historical didn't wrap, treat as full-fallback: fingerprint from the loadSpec, loadedBytes = full size.
-      return new SegmentChangeRequestLoad(segment, (String) loadSpec.get("fingerprint"), segment.getSize());
+      return new SegmentChangeRequestLoad(
+          segment,
+          (String) loadSpec.get(PartialLoadSpec.FINGERPRINT_FIELD),
+          segment.getSize()
+      );
     }
     if (PartialLoadSpec.hasPartialTypePrefix(loadSpec)) {
       // Type name claims partial-load but the wire form is malformed, the PartialLoadSpec subtype's @JsonProperty
@@ -85,8 +89,8 @@ public class SegmentChangeRequestLoad implements DataSegmentChangeRequest
           + "announcing as a regular load.",
           segment.getId(),
           loadSpec.get("type"),
-          loadSpec.get("fingerprint"),
-          loadSpec.get("delegate")
+          loadSpec.get(PartialLoadSpec.FINGERPRINT_FIELD),
+          loadSpec.get(PartialLoadSpec.DELEGATE_FIELD)
       );
     }
     return new SegmentChangeRequestLoad(segment);

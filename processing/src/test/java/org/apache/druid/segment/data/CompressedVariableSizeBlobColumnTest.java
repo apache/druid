@@ -25,9 +25,10 @@ import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,19 +41,17 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class CompressedVariableSizeBlobColumnTest
 {
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSomeValues() throws IOException
   {
     // value sizes increase until they span at least 3 pages of compressed buffers
-    final File tmpFile = new File(tempFolder, "dir1");
-    tmpFile.mkdir();
+    final File tmpFile = temporaryFolder.newFolder("dir1");
     final FileSmoosher smoosher = new FileSmoosher(tmpFile);
 
-    final File tmpFile2 = new File(tempFolder, "dir2");
-    tmpFile2.mkdir();
+    final File tmpFile2 = temporaryFolder.newFolder("dir2");
     final SegmentWriteOutMedium writeOutMedium =
         TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
 
@@ -113,12 +112,10 @@ public class CompressedVariableSizeBlobColumnTest
   public void testSomeValuesByteBuffers() throws IOException
   {
     // value sizes increase until they span at least 3 pages of compressed buffers
-    final File tmpFile = new File(tempFolder, "dir1");
-    tmpFile.mkdir();
+    final File tmpFile = temporaryFolder.newFolder("dir1");
     final FileSmoosher smoosher = new FileSmoosher(tmpFile);
 
-    final File tmpFile2 = new File(tempFolder, "dir2");
-    tmpFile2.mkdir();
+    final File tmpFile2 = temporaryFolder.newFolder("dir2");
     final SegmentWriteOutMedium writeOutMedium =
         TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
 
@@ -178,12 +175,10 @@ public class CompressedVariableSizeBlobColumnTest
   @Test
   public void testSomeValuesByteBuffersBigEndian() throws IOException
   {
-    final File tmpFile = new File(tempFolder, "dir1");
-    tmpFile.mkdir();
+    final File tmpFile = temporaryFolder.newFolder("dir1");
     final FileSmoosher smoosher = new FileSmoosher(tmpFile);
 
-    final File tmpFile2 = new File(tempFolder, "dir2");
-    tmpFile2.mkdir();
+    final File tmpFile2 = temporaryFolder.newFolder("dir2");
     final SegmentWriteOutMedium writeOutMedium =
         TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
 
@@ -243,12 +238,10 @@ public class CompressedVariableSizeBlobColumnTest
   public void testLongs() throws IOException
   {
     // value sizes increase until they span at least 3 pages of compressed buffers
-    final File tmpFile = new File(tempFolder, "dir1");
-    tmpFile.mkdir();
+    final File tmpFile = temporaryFolder.newFolder("dir1");
     final FileSmoosher smoosher = new FileSmoosher(tmpFile);
 
-    final File tmpFile2 = new File(tempFolder, "dir2");
-    tmpFile2.mkdir();
+    final File tmpFile2 = temporaryFolder.newFolder("dir2");
     final SegmentWriteOutMedium writeOutMedium =
         TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
 

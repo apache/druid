@@ -21,7 +21,7 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
@@ -44,9 +44,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.RowSignatures;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
@@ -95,18 +93,21 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
   private final AuthorizerMapper authorizerMapper;
   private final HttpClient httpClient;
   private final ObjectMapper jsonMapper;
+  private final AuthenticationResult authenticationResult;
 
   public SystemServerPropertiesTable(
       DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       AuthorizerMapper authorizerMapper,
       HttpClient httpClient,
-      ObjectMapper jsonMapper
+      ObjectMapper jsonMapper,
+      AuthenticationResult authenticationResult
   )
   {
     this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
     this.authorizerMapper = authorizerMapper;
     this.httpClient = httpClient;
     this.jsonMapper = jsonMapper;
+    this.authenticationResult = authenticationResult;
   }
 
   @Override
@@ -128,10 +129,6 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
       @Nullable final int[] projects
   )
   {
-    final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-        root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-        "authenticationResult in dataContext"
-    );
     SystemSchema.checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
     // Extract server/service_name constraints to skip fetching properties from non-matching servers.
@@ -201,10 +198,12 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
           .go(request, new StringFullResponseHandler(StandardCharsets.UTF_8))
           .get();
 
-      if (response.getStatus().getCode() != HttpServletResponse.SC_OK) {
-        final String errorMsg = StringUtils.format("HTTP %d: %s",
-                                                    response.getStatus().getCode(),
-                                                    response.getStatus().getReasonPhrase());
+      if (response.getStatus().code() != HttpServletResponse.SC_OK) {
+        final String errorMsg = StringUtils.format(
+            "HTTP %d: %s",
+            response.getStatus().code(),
+            response.getStatus().reasonPhrase()
+        );
         log.warn("Failed to get properties from node[%s]: error[%s]", url, errorMsg);
         return new PropertiesResult(new HashMap<>(), errorMsg);
       }

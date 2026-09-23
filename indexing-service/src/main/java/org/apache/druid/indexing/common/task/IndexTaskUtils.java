@@ -142,6 +142,19 @@ public class IndexTaskUtils
   }
 
   /**
+   * Counts published segments whose row count exceeds {@code maxRowsPerSegment * oversizedRatio}.
+   * Segments without {@link DataSegment#getTotalRows()} populated are ignored.
+   */
+  public static long getOversizedSegments(Collection<DataSegment> segments, int maxRowsPerSegment, double oversizedRatio)
+  {
+    return segments.stream()
+        .map(DataSegment::getTotalRows)
+        .filter(Objects::nonNull)
+        .filter(rowCount -> rowCount > maxRowsPerSegment * oversizedRatio)
+        .count();
+  }
+
+  /**
    * Adds the upgraded pending segment's {@code interval} and {@code version} to a metric builder so that every
    * segment-upgrade metric can be sliced by the specific segment being re-announced. Mirrors
    * {@code IndexTaskUtils.setSegmentDimensions}, which serves the same purpose for {@code DataSegment}s.

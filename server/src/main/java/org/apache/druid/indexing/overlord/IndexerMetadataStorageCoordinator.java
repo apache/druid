@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -28,13 +29,13 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
@@ -617,6 +618,16 @@ public interface IndexerMetadataStorageCoordinator
    * upto a maximum of {@code limit} entries.
    */
   List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit);
+
+  /**
+   * Extracts eligible unused segments intervals from the metadata store using
+   * {@link org.apache.druid.metadata.SqlSegmentsMetadataQuery#retrieveSomeUnusedSegmentIntervals(DateTime, int, int)}
+   */
+  Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  );
 
   /**
    * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,

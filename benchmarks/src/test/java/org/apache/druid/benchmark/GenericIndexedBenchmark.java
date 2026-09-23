@@ -122,7 +122,7 @@ public class GenericIndexedBenchmark
       genericIndexedWriter.write(element.array());
     }
     smooshDir = FileUtils.createTempDir();
-    file = File.createTempFile("genericIndexedBenchmark", "meta");
+    file = new File(smooshDir, "meta");
 
     try (FileChannel fileChannel =
              FileChannel.open(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE);

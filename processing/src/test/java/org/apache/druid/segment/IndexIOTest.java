@@ -41,10 +41,7 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.Parameter;
-import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
@@ -63,8 +60,6 @@ import java.util.stream.StreamSupport;
 /**
  * This is mostly a test of the validator
  */
-@ParameterizedClass
-@MethodSource("constructionFeeder")
 public class IndexIOTest extends InitializedNullHandlingTest
 {
   private static Interval DEFAULT_INTERVAL = Intervals.of("1970-01-01/2000-01-01");
@@ -236,48 +231,33 @@ public class IndexIOTest extends InitializedNullHandlingTest
     return Lists.transform(mapList, (Function<Map, Map>) input -> Maps.filterValues(input, Objects::nonNull));
   }
 
-  @Parameter(0)
-  public Collection<Map<String, Object>> events1;
-
-  @Parameter(1)
-  public Collection<Map<String, Object>> events2;
-
-  @Parameter(2)
-  public Class<? extends Exception> exception;
-
-
-  final IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex.Builder()
-      .setIndexSchema(
-          new IncrementalIndexSchema.Builder()
-              .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
-              .withMetrics(new CountAggregatorFactory("count"))
-              .withDimensionsSpec(
-                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
-              )
-              .build()
-      )
-      .setMaxRowCount(1000000)
-      .build();
-
-  final IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex.Builder()
-      .setIndexSchema(
-          new IncrementalIndexSchema.Builder()
-              .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
-              .withMetrics(new CountAggregatorFactory("count"))
-              .withDimensionsSpec(
-                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
-              )
-              .build()
-      )
-      .setMaxRowCount(1000000)
-      .build();
-
-  IndexableAdapter adapter1;
-  IndexableAdapter adapter2;
-
-  @BeforeEach
-  public void setUp()
+  private static IncrementalIndex createIncrementalIndex()
   {
+    return new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
+                .withMetrics(new CountAggregatorFactory("count"))
+                .withDimensionsSpec(
+                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")))
+                )
+                .build()
+        )
+        .setMaxRowCount(1000000)
+        .build();
+  }
+
+  @ParameterizedTest
+  @MethodSource("constructionFeeder")
+  public void testRowValidatorEquals(
+      Collection<Map<String, Object>> events1,
+      Collection<Map<String, Object>> events2,
+      Class<? extends Exception> exception
+  ) throws Exception
+  {
+    final IncrementalIndex incrementalIndex1 = createIncrementalIndex();
+    final IncrementalIndex incrementalIndex2 = createIncrementalIndex();
+
     long timestamp = 0L;
     for (Map<String, Object> event : events1) {
       incrementalIndex1.add(new MapBasedInputRow(timestamp++, Lists.newArrayList(event.keySet()), event));
@@ -288,22 +268,18 @@ public class IndexIOTest extends InitializedNullHandlingTest
       incrementalIndex2.add(new MapBasedInputRow(timestamp++, Lists.newArrayList(event.keySet()), event));
     }
 
-    adapter2 = new IncrementalIndexAdapter(
+    final IndexableAdapter adapter2 = new IncrementalIndexAdapter(
         DEFAULT_INTERVAL,
         incrementalIndex2,
         INDEX_SPEC.getBitmapSerdeFactory().getBitmapFactory()
     );
 
-    adapter1 = new IncrementalIndexAdapter(
+    final IndexableAdapter adapter1 = new IncrementalIndexAdapter(
         DEFAULT_INTERVAL,
         incrementalIndex1,
         INDEX_SPEC.getBitmapSerdeFactory().getBitmapFactory()
     );
-  }
 
-  @Test
-  public void testRowValidatorEquals() throws Exception
-  {
     Exception ex = null;
     try {
       TestHelper.getTestIndexIO().validateTwoSegments(adapter1, adapter2);

@@ -25,18 +25,37 @@ import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.ExecutableHttpRequest;
+import software.amazon.awssdk.http.HttpExecuteRequest;
+import software.amazon.awssdk.http.HttpExecuteResponse;
+import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.utils.Md5Utils;
 
 import javax.crypto.AEADBadTagException;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,11 +64,129 @@ import java.util.stream.Collectors;
 public class S3UtilsTest
 {
   @Test
+  public void testConfigureLegacyMd5Disabled()
+  {
+    final S3ClientBuilder s3ClientBuilder = S3Client.builder();
+
+    S3Utils.configureLegacyMd5(new AWSClientConfig(), s3ClientBuilder);
+
+    Assertions.assertFalse(
+        s3ClientBuilder.plugins().stream().anyMatch(LegacyMd5Plugin.class::isInstance)
+    );
+  }
+
+  @Test
+  public void testConfigureLegacyMd5EnabledForSyncAndAsyncClients()
+  {
+    final AWSClientConfig clientConfig = EasyMock.createMock(AWSClientConfig.class);
+    EasyMock.expect(clientConfig.isEnableLegacyMd5()).andReturn(true).once();
+    EasyMock.replay(clientConfig);
+    final S3ClientBuilder s3ClientBuilder = S3Client.builder();
+    final S3AsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.builder();
+
+    S3Utils.configureLegacyMd5(clientConfig, s3ClientBuilder, s3AsyncClientBuilder);
+
+    Assertions.assertEquals(1, s3ClientBuilder.plugins().size());
+    Assertions.assertEquals(1, s3AsyncClientBuilder.plugins().size());
+    Assertions.assertInstanceOf(LegacyMd5Plugin.class, s3ClientBuilder.plugins().get(0));
+    Assertions.assertInstanceOf(LegacyMd5Plugin.class, s3AsyncClientBuilder.plugins().get(0));
+    try (
+        final S3Client s3Client = s3ClientBuilder
+            .credentialsProvider(AnonymousCredentialsProvider.create())
+            .region(Region.US_EAST_1)
+            .build();
+        final S3AsyncClient s3AsyncClient = s3AsyncClientBuilder
+            .credentialsProvider(AnonymousCredentialsProvider.create())
+            .region(Region.US_EAST_1)
+            .build()
+    ) {
+      Assertions.assertSame(
+          RequestChecksumCalculation.WHEN_REQUIRED,
+          s3Client.serviceClientConfiguration().requestChecksumCalculation()
+      );
+      Assertions.assertSame(
+          RequestChecksumCalculation.WHEN_REQUIRED,
+          s3AsyncClient.serviceClientConfiguration().requestChecksumCalculation()
+      );
+    }
+    EasyMock.verify(clientConfig);
+  }
+
+  @Test
+  public void testConfigureLegacyMd5UsesMd5ForRequiredChecksumsOnly() throws IOException
+  {
+    final AWSClientConfig clientConfig = EasyMock.createMock(AWSClientConfig.class);
+    EasyMock.expect(clientConfig.isEnableLegacyMd5()).andReturn(true).once();
+    EasyMock.replay(clientConfig);
+    final List<HttpExecuteRequest> requests = new ArrayList<>();
+    final SdkHttpClient httpClient = new SdkHttpClient()
+    {
+      @Override
+      public ExecutableHttpRequest prepareRequest(final HttpExecuteRequest request)
+      {
+        requests.add(request);
+        return new ExecutableHttpRequest()
+        {
+          @Override
+          public HttpExecuteResponse call()
+          {
+            return HttpExecuteResponse.builder()
+                                      .response(SdkHttpResponse.builder().statusCode(200).build())
+                                      .build();
+          }
+
+          @Override
+          public void abort()
+          {
+            // Nothing to abort in this test client.
+          }
+        };
+      }
+
+      @Override
+      public void close()
+      {
+        // No resources to close in this test client.
+      }
+    };
+    final S3ClientBuilder s3ClientBuilder = S3Client.builder()
+                                                    .credentialsProvider(AnonymousCredentialsProvider.create())
+                                                    .region(Region.US_EAST_1)
+                                                    .endpointOverride(URI.create("http://localhost"))
+                                                    .forcePathStyle(true)
+                                                    .httpClient(httpClient);
+    S3Utils.configureLegacyMd5(clientConfig, s3ClientBuilder);
+
+    try (final S3Client s3Client = s3ClientBuilder.build()) {
+      s3Client.putObject(
+          PutObjectRequest.builder().bucket("bucket").key("key").build(),
+          RequestBody.fromString("payload")
+      );
+      s3Client.deleteObjects(
+          DeleteObjectsRequest.builder()
+                              .bucket("bucket")
+                              .delete(Delete.builder().objects(ObjectIdentifier.builder().key("key").build()).build())
+                              .build()
+      );
+    }
+
+    Assertions.assertEquals(2, requests.size());
+    Assertions.assertTrue(requests.get(0).httpRequest().firstMatchingHeader("Content-MD5").isEmpty());
+    Assertions.assertTrue(requests.get(0).httpRequest().firstMatchingHeader("x-amz-checksum-crc32").isEmpty());
+    final HttpExecuteRequest deleteObjectsRequest = requests.get(1);
+    Assertions.assertEquals(
+        Md5Utils.md5AsBase64(deleteObjectsRequest.contentStreamProvider().orElseThrow().newStream()),
+        deleteObjectsRequest.httpRequest().firstMatchingHeader("Content-MD5").orElseThrow()
+    );
+    EasyMock.verify(clientConfig);
+  }
+
+  @Test
   public void testRetryWithIOExceptions()
   {
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -58,7 +195,7 @@ public class S3UtilsTest
             },
             maxRetries
         ));
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -67,7 +204,7 @@ public class S3UtilsTest
     // Transient TLS "Tag mismatch!" should be retried, not treated as terminal. See issue #19616.
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         SSLException.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -76,14 +213,14 @@ public class S3UtilsTest
             },
             maxRetries
         ));
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
   public void testRetryWith4XXErrors()
   {
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -99,7 +236,7 @@ public class S3UtilsTest
             },
             3
         ));
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
   }
 
   @Test
@@ -121,7 +258,7 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -129,7 +266,7 @@ public class S3UtilsTest
   {
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -146,7 +283,7 @@ public class S3UtilsTest
             maxRetries
         )
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -169,7 +306,7 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -194,7 +331,7 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -216,7 +353,7 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -238,14 +375,14 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
   public void testNoRetryWithS3InternalErrorNon200Status()
   {
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         Exception.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -259,14 +396,14 @@ public class S3UtilsTest
             3
         )
     );
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
   }
 
   @Test
   public void testNoRetryWithS3SlowDownNon200Status()
   {
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         Exception.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -280,14 +417,14 @@ public class S3UtilsTest
             3
         )
     );
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
   }
 
   @Test
   public void testRetryWithS3Status200ButDifferentError()
   {
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         Exception.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -301,7 +438,7 @@ public class S3UtilsTest
             3
         )
     );
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
   }
 
   @Test
@@ -350,12 +487,12 @@ public class S3UtilsTest
     // First request should have both keys
     List<String> firstKeys = capturedRequests.getValues().get(0).delete().objects()
                                  .stream().map(ObjectIdentifier::key).collect(Collectors.toList());
-    Assert.assertEquals(List.of("a", "b"), firstKeys);
+    Assertions.assertEquals(List.of("a", "b"), firstKeys);
 
     // Second request should only have the failed key
     List<String> secondKeys = capturedRequests.getValues().get(1).delete().objects()
                                   .stream().map(ObjectIdentifier::key).collect(Collectors.toList());
-    Assert.assertEquals(List.of("b"), secondKeys);
+    Assertions.assertEquals(List.of("b"), secondKeys);
   }
 
   @Test
@@ -372,12 +509,12 @@ public class S3UtilsTest
     EasyMock.replay(s3Client);
 
     List<ObjectIdentifier> keys = List.of(ObjectIdentifier.builder().key("a").build());
-    S3MultiObjectDeleteException thrown = Assert.assertThrows(
+    S3MultiObjectDeleteException thrown = Assertions.assertThrows(
         S3MultiObjectDeleteException.class,
         () -> S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 2)
     );
-    Assert.assertEquals(1, thrown.getErrors().size());
-    Assert.assertEquals("a", thrown.getErrors().get(0).key());
+    Assertions.assertEquals(1, thrown.getErrors().size());
+    Assertions.assertEquals("a", thrown.getErrors().get(0).key());
     EasyMock.verify(s3Client);
   }
 
@@ -403,12 +540,12 @@ public class S3UtilsTest
         ObjectIdentifier.builder().key("a").build(),
         ObjectIdentifier.builder().key("b").build()
     );
-    S3MultiObjectDeleteException thrown = Assert.assertThrows(
+    S3MultiObjectDeleteException thrown = Assertions.assertThrows(
         S3MultiObjectDeleteException.class,
         () -> S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 1)
     );
-    Assert.assertEquals(1, thrown.getErrors().size());
-    Assert.assertEquals("b", thrown.getErrors().get(0).key());
+    Assertions.assertEquals(1, thrown.getErrors().size());
+    Assertions.assertEquals("b", thrown.getErrors().get(0).key());
     EasyMock.verify(s3Client);
   }
 
@@ -429,7 +566,7 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   private static final ObjectMapper JSON = new ObjectMapper();
@@ -442,31 +579,31 @@ public class S3UtilsTest
   @Test
   public void testUseHttpsNullClientConfigSchemelessEndpointReturnsTrue() throws IOException
   {
-    Assert.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"s3.example.com\"}")));
+    Assertions.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"s3.example.com\"}")));
   }
 
   @Test
   public void testUseHttpsNullClientConfigHttpEndpointReturnsFalse() throws IOException
   {
-    Assert.assertFalse(S3Utils.useHttps(null, endpointWith("{\"url\":\"http://s3.example.com\"}")));
+    Assertions.assertFalse(S3Utils.useHttps(null, endpointWith("{\"url\":\"http://s3.example.com\"}")));
   }
 
   @Test
   public void testUseHttpsNullClientConfigHttpsEndpointReturnsTrue() throws IOException
   {
-    Assert.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"https://s3.example.com\"}")));
+    Assertions.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"https://s3.example.com\"}")));
   }
 
   @Test
   public void testUseHttpsNullClientConfigNullEndpointUrlReturnsTrue() throws IOException
   {
-    Assert.assertTrue(S3Utils.useHttps(null, new AWSEndpointConfig()));
+    Assertions.assertTrue(S3Utils.useHttps(null, new AWSEndpointConfig()));
   }
 
   @Test
   public void testUseHttpsDefaultClientConfigSchemelessEndpointReturnsTrue() throws IOException
   {
     // Sanity check: default AWSClientConfig protocol is "https"; schemeless URL inherits "https".
-    Assert.assertTrue(S3Utils.useHttps(new AWSClientConfig(), endpointWith("{\"url\":\"s3.example.com\"}")));
+    Assertions.assertTrue(S3Utils.useHttps(new AWSClientConfig(), endpointWith("{\"url\":\"s3.example.com\"}")));
   }
 }

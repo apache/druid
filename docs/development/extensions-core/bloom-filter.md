@@ -44,7 +44,7 @@ this implementation uses Murmur3 as the hash algorithm.
 The following Java example shows how to construct a BloomKFilter externally:
 
 ```java
-BloomKFilter bloomFilter = new BloomKFilter(1500);
+BloomKFilter bloomFilter = BloomKFilter.build(1500);
 bloomFilter.addString("value 1");
 bloomFilter.addString("value 2");
 bloomFilter.addString("value 3");

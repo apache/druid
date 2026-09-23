@@ -25,8 +25,8 @@ import org.apache.druid.frame.key.KeyTestUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ByteRowKeySerdeTest extends InitializedNullHandlingTest
 {
@@ -61,24 +61,24 @@ public class ByteRowKeySerdeTest extends InitializedNullHandlingTest
   private void testSerde(byte[] byteRowKey)
   {
     byte[] bytes = serde.serializeToByteArray(byteRowKey);
-    Assert.assertEquals(serde.sizeOf(byteRowKey), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(byteRowKey), bytes.length);
 
     Memory wrappedMemory = Memory.wrap(bytes);
-    Assert.assertEquals(serde.sizeOf(wrappedMemory, 0, 1), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(wrappedMemory, 0, 1), bytes.length);
 
     byte[][] deserialized = serde.deserializeFromMemory(wrappedMemory, 1);
-    Assert.assertArrayEquals(new byte[][]{byteRowKey}, deserialized);
+    Assertions.assertArrayEquals(new byte[][]{byteRowKey}, deserialized);
   }
 
   private void testSerde(byte[][] inputArray)
   {
     byte[] bytes = serde.serializeToByteArray(inputArray);
-    Assert.assertEquals(serde.sizeOf(inputArray), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(inputArray), bytes.length);
 
     Memory wrappedMemory = Memory.wrap(bytes);
-    Assert.assertEquals(serde.sizeOf(wrappedMemory, 0, inputArray.length), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(wrappedMemory, 0, inputArray.length), bytes.length);
 
     byte[][] deserialized = serde.deserializeFromMemory(wrappedMemory, inputArray.length);
-    Assert.assertArrayEquals(inputArray, deserialized);
+    Assertions.assertArrayEquals(inputArray, deserialized);
   }
 }

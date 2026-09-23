@@ -19,11 +19,6 @@ This product bundles Jersey version 1.19.3, copyright Oracle and/or its affiliat
   * com.sun.jersey:jersey-servlet
   * com.sun.jersey:contribs
 
-This product bundles Expression Language 3.0 API version 3.0.0., copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
-  * https://github.com/javaee/el-spec
-  * javax.el:javax.el-api
-
 This product bundles Java Servlet API version 3.1.0, copyright Oracle and/or its affiliates.,
  which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
   * https://github.com/javaee/servlet-spec
@@ -34,11 +29,6 @@ This product bundles JSR311 API version 1.1.1, copyright Oracle and/or its affil
   * https://github.com/javaee/jsr311
   * javax.ws.rs:jsr311-api
 
-This product bundles Expression Language 3.0 version 3.0.0., copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
-  * https://github.com/javaee/el-spec
-  * org.glassfish:jakarta.el
-  
 This product bundles Jersey version 1.9, copyright Oracle and/or its affiliates.,
  which is available under the CDDL 1.1. For details, see licenses/bin/jersey.CDDL11
   * https://jersey.github.io/

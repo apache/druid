@@ -59,7 +59,7 @@ import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -87,7 +87,7 @@ public abstract class SeekableStreamSupervisorTestBase
   protected SeekableStreamIndexTaskClientFactory taskClientFactory;
   protected SeekableStreamSupervisorSpec spec;
 
-  @Before
+  @BeforeEach
   public void before() throws Exception
   {
     taskStorage = EasyMock.mock(TaskStorage.class);
@@ -215,6 +215,8 @@ public abstract class SeekableStreamSupervisorTestBase
     @Override
     protected OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)
     {
+      // Offset ordering intentionally excludes boundary exclusivity, which value equality includes.
+      // codeql[java/inconsistent-compareto-and-equals]
       return new OrderedSequenceNumber<>(seq, isExclusive)
       {
         @Override

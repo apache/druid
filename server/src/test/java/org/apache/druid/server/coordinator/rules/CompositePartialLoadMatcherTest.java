@@ -36,7 +36,6 @@ import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +66,7 @@ class CompositePartialLoadMatcherTest
   @Test
   void testConstructorRejectsNullMatchers()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(DruidException.class, () -> new CompositePartialLoadMatcher(null)),
         DruidExceptionMatcher.invalidInput().expectMessageContains("matchers must not be null or empty")
     );
@@ -76,7 +75,7 @@ class CompositePartialLoadMatcherTest
   @Test
   void testConstructorRejectsEmptyMatchers()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(DruidException.class, () -> new CompositePartialLoadMatcher(List.of())),
         DruidExceptionMatcher.invalidInput().expectMessageContains("matchers must not be null or empty")
     );
@@ -85,7 +84,7 @@ class CompositePartialLoadMatcherTest
   @Test
   void testConstructorRejectsNullMember()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new CompositePartialLoadMatcher(Arrays.asList(exactProjection("p"), null))

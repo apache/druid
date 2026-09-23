@@ -22,8 +22,8 @@ package org.apache.druid.msq.sql;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +35,7 @@ public class MSQModeTest
   {
     Map<String, Object> originalQueryContext = new HashMap<>();
     MSQMode.populateDefaultQueryContext("strict", originalQueryContext);
-    Assert.assertEquals(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0), originalQueryContext);
+    Assertions.assertEquals(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0), originalQueryContext);
   }
 
   @Test
@@ -44,7 +44,7 @@ public class MSQModeTest
     Map<String, Object> originalQueryContext = new HashMap<>();
     originalQueryContext.put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10);
     MSQMode.populateDefaultQueryContext("strict", originalQueryContext);
-    Assert.assertEquals(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10), originalQueryContext);
+    Assertions.assertEquals(ImmutableMap.of(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 10), originalQueryContext);
 
   }
 
@@ -52,8 +52,7 @@ public class MSQModeTest
   public void testPopulateQueryContextWhenInvalidMode()
   {
     Map<String, Object> originalQueryContext = new HashMap<>();
-    Assert.assertThrows(ISE.class, () -> {
-      MSQMode.populateDefaultQueryContext("fake_mode", originalQueryContext);
-    });
+    Assertions.assertThrows(ISE.class, () ->
+      MSQMode.populateDefaultQueryContext("fake_mode", originalQueryContext));
   }
 }

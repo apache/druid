@@ -61,6 +61,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
@@ -70,6 +71,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
@@ -93,8 +95,10 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   private static final int THREADS = 8;
   private static File SEGMENT_ZIP_FILE;
 
-  @TempDir
-  public Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
+  private Path tempDir;
 
   private List<DataSegment> segments;
   private File cacheDir;
@@ -121,6 +125,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   @BeforeEach
   public void setUp() throws Exception
   {
+    tempDir = temporaryFolder.getRoot().toPath();
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(TestLoadSpec.class);
     jsonMapper.registerModule(new SegmentizerModule());

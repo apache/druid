@@ -235,6 +235,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
         sqlToolbox.engine,
         queryPlus.sql(),
         queryPlus.sqlNode(),
+        queryPlus.authResult(),
         queryPlus.authContextKeys(),
         queryContext,
         hook

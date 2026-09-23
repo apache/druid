@@ -35,6 +35,7 @@ import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
+import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Intervals;
@@ -50,8 +51,6 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
-import org.apache.druid.sql.calcite.planner.CatalogResolver;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
@@ -202,9 +201,6 @@ public class SysSegmentsTableBenchmark
         new NoopServiceEmitter()
     );
 
-    final DruidSchema druidSchema =
-        new DruidSchema(new EmptyBrokerSegmentMetadataCache(), null, CatalogResolver.NULL_RESOLVER);
-
     final AuthorizerMapper authorizerMapper = new AuthorizerMapper(null)
     {
       @Override
@@ -214,11 +210,16 @@ public class SysSegmentsTableBenchmark
       }
     };
 
-    segmentsTable = new SystemSchema.SegmentsTable(druidSchema, metadataView, new DefaultObjectMapper(), authorizerMapper);
+    segmentsTable = new SystemSchema.SegmentsTable(
+        new EmptyBrokerSegmentMetadataCache(),
+        metadataView,
+        new DefaultObjectMapper(),
+        authorizerMapper,
+        new AuthenticationResult("benchmark", "benchmark", null, null)
+    );
 
     filtersByQuery = buildFilters();
 
-    final AuthenticationResult authenticationResult = new AuthenticationResult("benchmark", "benchmark", null, null);
     dataContext = new DataContext()
     {
       @Override
@@ -242,7 +243,7 @@ public class SysSegmentsTableBenchmark
       @Override
       public Object get(String name)
       {
-        return PlannerContext.DATA_CTX_AUTHENTICATION_RESULT.equals(name) ? authenticationResult : null;
+        throw NotYetImplemented.ex(null, "Not expected to be called");
       }
     };
   }

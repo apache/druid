@@ -96,6 +96,7 @@ public class IngestionTestSqlEngine implements SqlEngine
       case GROUPBY_IMPLICITLY_SORTS:
       case WINDOW_FUNCTIONS:
       case WINDOW_LEAF_OPERATOR:
+      case CAN_DDL:
         return false;
       case CAN_INSERT:
       case CAN_REPLACE:

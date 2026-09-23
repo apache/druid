@@ -35,7 +35,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -55,12 +54,13 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.Closeable;
 import java.io.File;
@@ -110,16 +110,16 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  @TempDir
-  static File sharedTempDir;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File segmentDir;
   private static ListeningExecutorService realExec;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmpDir = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmpDir)
@@ -566,8 +566,7 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
     final File timeOrderedSegmentDir = buildTimeOrderedProjectionSegment(projectionName);
 
     final CountingRangeReader rangeReader = new CountingRangeReader(timeOrderedSegmentDir);
-    final File cacheDir = new File(perTestTempDir, "time_ordered_proj");
-    FileUtils.mkdirp(cacheDir);
+    final File cacheDir = temporaryFolder.newFolder("time_ordered_proj");
     final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
         rangeReader,
         TestHelper.makeJsonMapper(),
@@ -1067,9 +1066,11 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
     }
   }
 
-  private File buildNestedSegment()
+  private File buildNestedSegment() throws IOException
   {
-    final File tmpDir = new File(perTestTempDir, "build_nested_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    final File tmpDir = temporaryFolder.newFolder(
+        "build_nested_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final List<InputRow> rows = new ArrayList<>();
     for (int i = 1; i <= 4; i++) {
       rows.add(
@@ -1105,7 +1106,7 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
                        .buildMMappedIndexFile();
   }
 
-  private File buildTimeOrderedProjectionSegment(String projectionName)
+  private File buildTimeOrderedProjectionSegment(String projectionName) throws IOException
   {
     final List<AggregateProjectionSpec> projections = Collections.singletonList(
         AggregateProjectionSpec.builder(projectionName)
@@ -1120,7 +1121,9 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
                                )
                                .build()
     );
-    final File tmpDir = new File(perTestTempDir, "build_time_ordered_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    final File tmpDir = temporaryFolder.newFolder(
+        "build_time_ordered_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     return IndexBuilder.create()
                        .useV10()
                        .tmpDir(tmpDir)

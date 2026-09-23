@@ -25,12 +25,8 @@ import com.github.fppt.jedismock.RedisServer;
 import com.github.fppt.jedismock.server.ServiceOptions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.metadata.PasswordProvider;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import redis.clients.jedis.JedisClientConfig;
 import redis.clients.jedis.SslVerifyMode;
 
@@ -38,84 +34,6 @@ import java.io.IOException;
 
 public class RedisCacheConfigTest
 {
-  @FunctionalInterface
-  interface MessageMatcher
-  {
-    boolean match(String input);
-  }
-
-  static class StartWithMatcher implements MessageMatcher
-  {
-    private String expected;
-
-    public StartWithMatcher(String expected)
-    {
-      this.expected = expected;
-    }
-
-    @Override
-    public boolean match(String input)
-    {
-      return input.startsWith(expected);
-    }
-  }
-
-  static class ContainsMatcher implements MessageMatcher
-  {
-    private String expected;
-
-    public ContainsMatcher(String expected)
-    {
-      this.expected = expected;
-    }
-
-    @Override
-    public boolean match(String input)
-    {
-      return input.contains(expected);
-    }
-  }
-
-  static class ExceptionMatcher implements Matcher
-  {
-    private MessageMatcher messageMatcher;
-    private Class<? extends Throwable> exceptionClass;
-
-    public ExceptionMatcher(Class<? extends Throwable> exceptionClass, MessageMatcher exceptionMessageMatcher)
-    {
-      this.exceptionClass = exceptionClass;
-      this.messageMatcher = exceptionMessageMatcher;
-    }
-
-    @Override
-    public boolean matches(Object item)
-    {
-      if (!(item.getClass().equals(exceptionClass))) {
-        return false;
-      }
-
-      return this.messageMatcher.match(((Throwable) item).getMessage());
-    }
-
-    @Override
-    public void describeMismatch(Object item, Description mismatchDescription)
-    {
-    }
-
-    @Override
-    public void _dont_implement_Matcher___instead_extend_BaseMatcher_()
-    {
-    }
-
-    @Override
-    public void describeTo(Description description)
-    {
-    }
-  }
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testClusterPriority() throws IOException
   {
@@ -132,7 +50,7 @@ public class RedisCacheConfigTest
                                                  + "}", RedisCacheConfig.class);
 
     try (Cache cache = RedisCacheFactory.create(fromJson)) {
-      Assert.assertTrue(cache instanceof RedisClusterCache);
+      Assertions.assertTrue(cache instanceof RedisClusterCache);
     }
     finally {
       server.stop();
@@ -152,11 +70,8 @@ public class RedisCacheConfigTest
         RedisCacheConfig.class
     );
 
-    expectedException.expect(new ExceptionMatcher(
-        IAE.class,
-        new StartWithMatcher("Invalid redis cluster")
-    ));
-    RedisCacheFactory.create(fromJson);
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> RedisCacheFactory.create(fromJson));
+    Assertions.assertTrue(exception.getMessage().startsWith("Invalid redis cluster"));
   }
 
   @Test
@@ -172,11 +87,8 @@ public class RedisCacheConfigTest
         RedisCacheConfig.class
     );
 
-    expectedException.expect(new ExceptionMatcher(
-        IAE.class,
-        new StartWithMatcher("Invalid port")
-    ));
-    RedisCacheFactory.create(fromJson);
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> RedisCacheFactory.create(fromJson));
+    Assertions.assertTrue(exception.getMessage().startsWith("Invalid port"));
   }
 
   @Test
@@ -192,11 +104,8 @@ public class RedisCacheConfigTest
         RedisCacheConfig.class
     );
 
-    expectedException.expect(new ExceptionMatcher(
-        IAE.class,
-        new ContainsMatcher("Invalid port")
-    ));
-    RedisCacheFactory.create(fromJson);
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> RedisCacheFactory.create(fromJson));
+    Assertions.assertTrue(exception.getMessage().contains("Invalid port"));
   }
 
   @Test
@@ -212,11 +121,8 @@ public class RedisCacheConfigTest
         RedisCacheConfig.class
     );
 
-    expectedException.expect(new ExceptionMatcher(
-        IAE.class,
-        new ContainsMatcher("Invalid port")
-    ));
-    RedisCacheFactory.create(fromJson);
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> RedisCacheFactory.create(fromJson));
+    Assertions.assertTrue(exception.getMessage().contains("Invalid port"));
   }
 
   @Test
@@ -229,11 +135,8 @@ public class RedisCacheConfigTest
         RedisCacheConfig.class
     );
 
-    expectedException.expect(new ExceptionMatcher(
-        IAE.class,
-        new ContainsMatcher("no redis server")
-    ));
-    RedisCacheFactory.create(fromJson);
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> RedisCacheFactory.create(fromJson));
+    Assertions.assertTrue(exception.getMessage().contains("no redis server"));
   }
 
   @Test
@@ -245,13 +148,13 @@ public class RedisCacheConfigTest
         "{\"host\": \"localhost\", \"port\": 6379}",
         RedisCacheConfig.class
     );
-    Assert.assertFalse(defaultConfig.getEnableTls());
+    Assertions.assertFalse(defaultConfig.getEnableTls());
 
     RedisCacheConfig tlsConfig = mapper.readValue(
         "{\"host\": \"localhost\", \"port\": 6379, \"enableTls\": true}",
         RedisCacheConfig.class
     );
-    Assert.assertTrue(tlsConfig.getEnableTls());
+    Assertions.assertTrue(tlsConfig.getEnableTls());
   }
 
   @Test
@@ -263,13 +166,13 @@ public class RedisCacheConfigTest
         "{\"host\": \"localhost\", \"port\": 6379}",
         RedisCacheConfig.class
     );
-    Assert.assertFalse(defaultConfig.getSkipTlsHostnameVerification());
+    Assertions.assertFalse(defaultConfig.getSkipTlsHostnameVerification());
 
     RedisCacheConfig skipConfig = mapper.readValue(
         "{\"host\": \"localhost\", \"port\": 6379, \"skipTlsHostnameVerification\": true}",
         RedisCacheConfig.class
     );
-    Assert.assertTrue(skipConfig.getSkipTlsHostnameVerification());
+    Assertions.assertTrue(skipConfig.getSkipTlsHostnameVerification());
   }
 
   @Test
@@ -277,10 +180,10 @@ public class RedisCacheConfigTest
   {
     // TLS disabled: not SSL, no SSL options, database argument passed through, null password.
     JedisClientConfig plain = RedisCacheFactory.buildClientConfig(new RedisCacheConfig(), 3);
-    Assert.assertFalse(plain.isSsl());
-    Assert.assertNull(plain.getSslOptions());
-    Assert.assertEquals(3, plain.getDatabase());
-    Assert.assertNull(plain.getPassword());
+    Assertions.assertFalse(plain.isSsl());
+    Assertions.assertNull(plain.getSslOptions());
+    Assertions.assertEquals(3, plain.getDatabase());
+    Assertions.assertNull(plain.getPassword());
 
     // TLS enabled with hostname verification (default) maps to SslVerifyMode.FULL, and a
     // non-null password is forwarded.
@@ -299,9 +202,9 @@ public class RedisCacheConfigTest
       }
     };
     JedisClientConfig verify = RedisCacheFactory.buildClientConfig(verifyConfig, 0);
-    Assert.assertTrue(verify.isSsl());
-    Assert.assertEquals(SslVerifyMode.FULL, verify.getSslOptions().getSslVerifyMode());
-    Assert.assertEquals("secret", verify.getPassword());
+    Assertions.assertTrue(verify.isSsl());
+    Assertions.assertEquals(SslVerifyMode.FULL, verify.getSslOptions().getSslVerifyMode());
+    Assertions.assertEquals("secret", verify.getPassword());
 
     // skipTlsHostnameVerification maps to SslVerifyMode.CA (chain verified, hostname skipped).
     RedisCacheConfig skipConfig = new RedisCacheConfig()
@@ -318,7 +221,7 @@ public class RedisCacheConfigTest
         return true;
       }
     };
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SslVerifyMode.CA,
         RedisCacheFactory.buildClientConfig(skipConfig, 0).getSslOptions().getSslVerifyMode()
     );

@@ -22,9 +22,9 @@ package org.apache.druid.emitter.ambari.metrics;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -32,7 +32,7 @@ public class AmbariMetricsEmitterTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(
@@ -60,15 +60,15 @@ public class AmbariMetricsEmitterTest
         400L
     );
     AmbariMetricsEmitter emitter = new AmbariMetricsEmitter(config, Collections.emptyList());
-    Assert.assertEquals("8080", emitter.getCollectorPort());
-    Assert.assertEquals("http", emitter.getCollectorProtocol());
-    Assert.assertEquals("http://myHost:8080/ws/v1/timeline/metrics", emitter.getCollectorUri("myHost"));
-    Assert.assertEquals("hostname", emitter.getHostname());
-    Assert.assertNull(emitter.getZookeeperQuorum());
-    Assert.assertEquals(Collections.singleton("hostname"), emitter.getConfiguredCollectorHosts());
+    Assertions.assertEquals("8080", emitter.getCollectorPort());
+    Assertions.assertEquals("http", emitter.getCollectorProtocol());
+    Assertions.assertEquals("http://myHost:8080/ws/v1/timeline/metrics", emitter.getCollectorUri("myHost"));
+    Assertions.assertEquals("hostname", emitter.getHostname());
+    Assertions.assertNull(emitter.getZookeeperQuorum());
+    Assertions.assertEquals(Collections.singleton("hostname"), emitter.getConfiguredCollectorHosts());
 
-    Assert.assertFalse(emitter.isHostInMemoryAggregationEnabled());
-    Assert.assertEquals(0, emitter.getHostInMemoryAggregationPort());
-    Assert.assertEquals("", emitter.getHostInMemoryAggregationProtocol());
+    Assertions.assertFalse(emitter.isHostInMemoryAggregationEnabled());
+    Assertions.assertEquals(0, emitter.getHostInMemoryAggregationPort());
+    Assertions.assertEquals("", emitter.getHostInMemoryAggregationProtocol());
   }
 }

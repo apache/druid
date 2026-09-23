@@ -37,10 +37,10 @@ import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -71,7 +71,7 @@ public class PerSegmentTimeoutInjectionTest
       .aggregators(new CountAggregatorFactory("count"))
       .build();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     conglomerate = EasyMock.createMock(QueryRunnerFactoryConglomerate.class);
@@ -83,7 +83,7 @@ public class PerSegmentTimeoutInjectionTest
     toolChest = EasyMock.createNiceMock(QueryToolChest.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(conglomerate);
@@ -95,7 +95,7 @@ public class PerSegmentTimeoutInjectionTest
     QueryLifecycle lifecycle = createLifecycle(perSegmentTimeout(5000));
     lifecycle.initialize(baseQuery);
 
-    Assert.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+    Assertions.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
@@ -107,7 +107,7 @@ public class PerSegmentTimeoutInjectionTest
     QueryLifecycle lifecycle = createLifecycle(perSegmentTimeout(5000));
     lifecycle.initialize(query, Collections.emptySet());
 
-    Assert.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+    Assertions.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
@@ -118,7 +118,7 @@ public class PerSegmentTimeoutInjectionTest
     QueryLifecycle lifecycle = createLifecycle(perSegmentTimeout(5000));
     lifecycle.initialize(query, Set.of(KEY));
 
-    Assert.assertEquals(2000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+    Assertions.assertEquals(2000L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
@@ -128,7 +128,7 @@ public class PerSegmentTimeoutInjectionTest
     QueryLifecycle lifecycle = createLifecycle(Map.of(KEY, 100L), perSegmentTimeout(5000));
     lifecycle.initialize(baseQuery);
 
-    Assert.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
+    Assertions.assertEquals(5000L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
@@ -137,7 +137,7 @@ public class PerSegmentTimeoutInjectionTest
     QueryLifecycle lifecycle = createLifecycle(Map.of(KEY, 100L), BrokerDynamicConfig.builder().build());
     lifecycle.initialize(baseQuery);
 
-    Assert.assertEquals(100L, lifecycle.getQuery().context().getPerSegmentTimeout());
+    Assertions.assertEquals(100L, lifecycle.getQuery().context().getPerSegmentTimeout());
   }
 
   @Test
@@ -151,7 +151,7 @@ public class PerSegmentTimeoutInjectionTest
     QueryLifecycle lifecycle = createLifecycle(dynamicConfig);
     lifecycle.initialize(baseQuery);
 
-    Assert.assertFalse(lifecycle.getQuery().context().usePerSegmentTimeout());
+    Assertions.assertFalse(lifecycle.getQuery().context().usePerSegmentTimeout());
   }
 
   @Test
@@ -160,7 +160,7 @@ public class PerSegmentTimeoutInjectionTest
     QueryLifecycle lifecycle = createLifecycle(null);
     lifecycle.initialize(baseQuery);
 
-    Assert.assertFalse(lifecycle.getQuery().context().usePerSegmentTimeout());
+    Assertions.assertFalse(lifecycle.getQuery().context().usePerSegmentTimeout());
   }
 
   private static BrokerDynamicConfig perSegmentTimeout(long timeoutMs)

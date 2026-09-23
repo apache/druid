@@ -250,7 +250,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   {
     MSQTestTaskDetails old = taskDetailsByQueryId.get(queryId);
     if (old != null) {
-      throw DruidException.defensive("There is an existing queryId {}!", queryId);
+      throw DruidException.defensive("There is an existing queryId [%s]!", queryId);
     }
     taskDetailsByQueryId.put(queryId, msqTestTaskDetails);
   }

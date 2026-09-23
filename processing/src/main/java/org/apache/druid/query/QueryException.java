@@ -21,11 +21,11 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.exception.SanitizableException;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.util.function.Function;
 

@@ -32,8 +32,8 @@ import org.apache.druid.server.security.TLSCertificateChecker;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
@@ -114,7 +114,7 @@ public class JettyServerModuleTest
         certificateChecker
     );
 
-    Assert.assertNotNull(server);
+    Assertions.assertNotNull(server);
   }
 
   @Test
@@ -167,7 +167,7 @@ public class JettyServerModuleTest
         certificateChecker
     );
 
-    Assert.assertNotNull(server);
+    Assertions.assertNotNull(server);
 
     // Verify that custom SSL context factory was used
     Mockito.verify(provider).get();
@@ -231,7 +231,7 @@ public class JettyServerModuleTest
         certificateChecker
     );
 
-    Assert.assertNotNull(server);
+    Assertions.assertNotNull(server);
 
     // Verify that custom SSL context factory was used
     Mockito.verify(provider).get();

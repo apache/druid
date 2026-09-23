@@ -32,9 +32,9 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryLaningStrategy;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.List;
@@ -51,7 +51,7 @@ public class WeightedQueryLaningStrategyTest
 
   private Druids.TimeseriesQueryBuilder queryBuilder;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     queryBuilder = Druids.newTimeseriesQueryBuilder()
@@ -67,9 +67,9 @@ public class WeightedQueryLaningStrategyTest
     WeightedQueryLaningStrategy strategy = newStrategy(null, null, 10, null);
 
     Object2IntMap<String> limits = strategy.getLaneLimits(100);
-    Assert.assertEquals(2, limits.size());
-    Assert.assertEquals(30, limits.getInt("low"));
-    Assert.assertEquals(10, limits.getInt("very-low"));
+    Assertions.assertEquals(2, limits.size());
+    Assertions.assertEquals(30, limits.getInt("low"));
+    Assertions.assertEquals(10, limits.getInt("very-low"));
   }
 
   @Test
@@ -78,7 +78,7 @@ public class WeightedQueryLaningStrategyTest
     WeightedQueryLaningStrategy strategy = newStrategy(null, null, 10000, null);
     TimeseriesQuery query = queryBuilder.build();
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), Set.of());
-    Assert.assertFalse(lane.isPresent());
+    Assertions.assertFalse(lane.isPresent());
   }
 
   @Test
@@ -89,8 +89,8 @@ public class WeightedQueryLaningStrategyTest
     TimeseriesQuery query = queryBuilder.build();
     Set<SegmentServerSelector> segments = makeSegments(5);
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), segments);
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("low", lane.get());
   }
 
   @Test
@@ -108,8 +108,8 @@ public class WeightedQueryLaningStrategyTest
     TimeseriesQuery query = queryBuilder.build();
     Set<SegmentServerSelector> segments = makeSegments(5);
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), segments);
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("low", lane.get());
   }
 
   @Test
@@ -126,8 +126,8 @@ public class WeightedQueryLaningStrategyTest
     TimeseriesQuery query = queryBuilder.build();
     Set<SegmentServerSelector> segments = makeSegments(5);
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), segments);
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("very-low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("very-low", lane.get());
   }
 
   @Test
@@ -138,8 +138,8 @@ public class WeightedQueryLaningStrategyTest
         .context(Map.of(QueryContexts.LANE_KEY, "custom"))
         .build();
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), Set.of());
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("custom", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("custom", lane.get());
   }
 
   @Test
@@ -157,8 +157,8 @@ public class WeightedQueryLaningStrategyTest
     ));
     // Total range = 1 day + 1 day = 2 days > 1 second → cost=1 → "low"
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), segments);
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("low", lane.get());
   }
 
   @Test
@@ -175,14 +175,14 @@ public class WeightedQueryLaningStrategyTest
         ))
         .build();
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), Set.of());
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("low", lane.get());
   }
 
   @Test
   public void testValidation_noThresholds()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> newStrategy(null, null, null, null)
     );
@@ -191,7 +191,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_noLanes()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(
             null,
@@ -206,7 +206,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_nullLanes()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(
             null,
@@ -221,7 +221,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_reservedLaneNameTotal()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(
             null,
@@ -236,7 +236,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_reservedLaneNameDefault()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(
             null,
@@ -251,7 +251,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testLaneConfig_invalidMinCost()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy.LaneConfig(0, 30)
     );
@@ -260,7 +260,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testLaneConfig_invalidMaxPercent()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy.LaneConfig(1, 0)
     );
@@ -281,11 +281,11 @@ public class WeightedQueryLaningStrategyTest
                   + "}";
 
     QueryLaningStrategy deserialized = mapper.readValue(json, QueryLaningStrategy.class);
-    Assert.assertTrue(deserialized instanceof WeightedQueryLaningStrategy);
+    Assertions.assertTrue(deserialized instanceof WeightedQueryLaningStrategy);
 
     Object2IntMap<String> limits = deserialized.getLaneLimits(100);
-    Assert.assertEquals(30, limits.getInt("low"));
-    Assert.assertEquals(10, limits.getInt("very-low"));
+    Assertions.assertEquals(30, limits.getInt("low"));
+    Assertions.assertEquals(10, limits.getInt("very-low"));
   }
 
   private static WeightedQueryLaningStrategy newStrategy(
@@ -307,7 +307,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_segmentCountThresholdZero()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, null, 0, null, TWO_LANES)
     );
@@ -316,7 +316,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_segmentCountThresholdNegative()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, null, -1, null, TWO_LANES)
     );
@@ -325,7 +325,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_durationThresholdZero()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, "PT0S", null, null, TWO_LANES)
     );
@@ -334,7 +334,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_durationThresholdNegative()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, "-PT1S", null, null, TWO_LANES)
     );
@@ -343,7 +343,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_segmentRangeThresholdZero()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, null, null, "PT0S", TWO_LANES)
     );
@@ -352,7 +352,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_segmentRangeThresholdNegative()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, null, null, "-PT1S", TWO_LANES)
     );
@@ -361,7 +361,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_periodThresholdZero()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy("PT0S", null, null, null, TWO_LANES)
     );
@@ -370,7 +370,7 @@ public class WeightedQueryLaningStrategyTest
   @Test
   public void testValidation_periodThresholdNegative()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy("-PT1S", null, null, null, TWO_LANES)
     );
@@ -384,8 +384,8 @@ public class WeightedQueryLaningStrategyTest
         new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES, null, null, 3, null);
     TimeseriesQuery query = queryBuilder.build();
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(query), makeSegments(5));
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("very-low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("very-low", lane.get());
   }
 
   @Test
@@ -394,8 +394,8 @@ public class WeightedQueryLaningStrategyTest
     // Same single segmentCount breach without weights stays "low" (weight defaults to 1).
     WeightedQueryLaningStrategy strategy = new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES);
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(queryBuilder.build()), makeSegments(5));
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("low", lane.get());
   }
 
   @Test
@@ -405,8 +405,8 @@ public class WeightedQueryLaningStrategyTest
     WeightedQueryLaningStrategy strategy =
         new WeightedQueryLaningStrategy(null, "PT1S", 1, null, TWO_LANES, null, 2, 2, null);
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(queryBuilder.build()), makeSegments(5));
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("very-low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("very-low", lane.get());
   }
 
   @Test
@@ -427,8 +427,8 @@ public class WeightedQueryLaningStrategyTest
         null
     );
     Optional<String> lane = strategy.computeLane(QueryPlus.wrap(queryBuilder.build()), makeSegments(5));
-    Assert.assertTrue(lane.isPresent());
-    Assert.assertEquals("very-low", lane.get());
+    Assertions.assertTrue(lane.isPresent());
+    Assertions.assertEquals("very-low", lane.get());
   }
 
   @Test
@@ -445,20 +445,20 @@ public class WeightedQueryLaningStrategyTest
                   + "  }\n"
                   + "}";
     QueryLaningStrategy deserialized = mapper.readValue(json, QueryLaningStrategy.class);
-    Assert.assertTrue(deserialized instanceof WeightedQueryLaningStrategy);
+    Assertions.assertTrue(deserialized instanceof WeightedQueryLaningStrategy);
     // weight 3 applied to the single segmentCount breach -> cost 3 -> "very-low"
     Optional<String> lane = deserialized.computeLane(QueryPlus.wrap(queryBuilder.build()), makeSegments(5));
-    Assert.assertEquals("very-low", lane.orElse(null));
+    Assertions.assertEquals("very-low", lane.orElse(null));
   }
 
   @Test
   public void testValidation_weightBelowOne()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES, null, null, 0, null)
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES, null, null, -1, null)
     );
@@ -468,7 +468,7 @@ public class WeightedQueryLaningStrategyTest
   public void testValidation_weightForUnsetThreshold()
   {
     // periodWeight set but no periodThreshold configured -> reject (weight would be inert).
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new WeightedQueryLaningStrategy(null, null, 1, null, TWO_LANES, 5, null, null, null)
     );

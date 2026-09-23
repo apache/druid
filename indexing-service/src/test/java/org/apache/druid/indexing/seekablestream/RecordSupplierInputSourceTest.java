@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.collect.Maps;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
@@ -43,14 +44,13 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -69,8 +69,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   private static final int NUM_ROWS = 128;
   private static final String TIMESTAMP_STRING = "2019-01-01";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testRead() throws IOException
@@ -96,14 +96,14 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
       for (; read < NUM_ROWS && iterator.hasNext(); read++) {
         final InputRow inputRow = iterator.next();
-        Assert.assertEquals(DateTimes.of(TIMESTAMP_STRING), inputRow.getTimestamp());
-        Assert.assertEquals(NUM_COLS - 1, inputRow.getDimensions().size());
+        Assertions.assertEquals(DateTimes.of(TIMESTAMP_STRING), inputRow.getTimestamp());
+        Assertions.assertEquals(NUM_COLS - 1, inputRow.getDimensions().size());
       }
     }
 
-    Assert.assertTrue(inputStats.getProcessedBytes() > NUM_ROWS * supplier.getMinRowSize());
-    Assert.assertEquals(NUM_ROWS, read);
-    Assert.assertTrue(supplier.isClosed());
+    Assertions.assertTrue(inputStats.getProcessedBytes() > NUM_ROWS * supplier.getMinRowSize());
+    Assertions.assertEquals(NUM_ROWS, read);
+    Assertions.assertTrue(supplier.isClosed());
   }
 
   @Test
@@ -132,9 +132,9 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
         iterator.next();
       }
     }
-    Assert.assertEquals(0, inputStats.getProcessedBytes());
-    Assert.assertEquals(0, read);
-    Assert.assertTrue(supplier.isClosed());
+    Assertions.assertEquals(0, inputStats.getProcessedBytes());
+    Assertions.assertEquals(0, read);
+    Assertions.assertTrue(supplier.isClosed());
   }
 
   @Test
@@ -145,11 +145,11 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
            .thenThrow(new StreamException(new Exception("Something bad happened")));
 
     //noinspection ResultOfObjectAllocationIgnored
-    final SamplerException exception = Assert.assertThrows(
+    final SamplerException exception = Assertions.assertThrows(
         SamplerException.class,
         () -> new RecordSupplierInputSource<>("test-stream", supplier, false, null)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Exception while seeking to the [latest] offset of partitions in topic [test-stream]: Something bad happened",
         exception.getMessage()
     );

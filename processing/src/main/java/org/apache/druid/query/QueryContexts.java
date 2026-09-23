@@ -570,7 +570,7 @@ public class QueryContexts
           key,
           StringUtils.format(
               "referring to one of the values [%s] of enum [%s]",
-              Arrays.stream(clazz.getEnumConstants()).map(E::name).collect(
+              Arrays.stream(clazz.getEnumConstants()).map(Enum::name).collect(
                   Collectors.joining(",")),
               clazz.getSimpleName()
           ),

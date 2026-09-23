@@ -37,11 +37,14 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
+import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.rules.WildcardProjectionPartialLoadMatcher;
 import org.apache.druid.server.metrics.LatchableEmitter;
 import org.apache.druid.server.metrics.StorageMonitor;
@@ -69,6 +72,7 @@ import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.LongPredicate;
 
 /**
  * End-to-end coverage for the partial-load-rule wiring: a segment with a clustered base + aggregate projection
@@ -97,6 +101,10 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
   // Quiescence wait for the storage monitor: a few times its PT1s emission period so a single missed tick
   // doesn't falsely read as "idle" while still bounding how long we wait once activity has actually stopped.
   private static final long MONITOR_QUIESCE_TIMEOUT_MILLIS = 3_000L;
+  // A rule change has to travel through a coordinator run, the load queue, the historical's reload and its
+  // re-announcement before the new footprint is visible in sys.servers, so this is generous relative to the
+  // coordinator's run cadence.
+  private static final long TRANSITION_TIMEOUT_MILLIS = 60_000L;
 
   private final EmbeddedBroker broker = new EmbeddedBroker();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer();
@@ -202,19 +210,7 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
     // Configure the partial-load rule BEFORE ingestion so the initial load applies the rule directly, rather than
     // needing a rule change afterward. The matcher selects only the country_delta projection; base-table bundles
     // (cluster groups) are NOT rule-loaded.
-    cluster.callApi().onLeaderCoordinator(
-        c -> c.updateRulesForDatasource(
-            dataSource,
-            List.of(
-                new ForeverPartialLoadRule(
-                    Map.of("_default_tier", 1),
-                    null,
-                    new WildcardProjectionPartialLoadMatcher(List.of(PROJECTION_NAME), null),
-                    CannotMatchBehavior.FALL_THROUGH
-                )
-            )
-        )
-    );
+    applyRule(partialProjectionRule());
 
     ingestClusteredSegmentWithProjection();
   }
@@ -263,18 +259,10 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
     // sys.servers.curr_size for the historical reflects the partial footprint — strictly less than the segment's full
     // size (which includes the unmatched projection's bytes). Without the fix, forAnnouncement would stamp
     // segment.getSize() and curr_size would equal the full size.
-    final long fullSize = Long.parseLong(
-        cluster.callApi().runSql(
-            "SELECT \"size\" FROM sys.segments WHERE datasource = '" + dataSource + "'"
-        ).trim()
-    );
+    final long fullSize = queryFullSegmentSize();
     Assertions.assertTrue(fullSize > 0, "sys.segments.size must be populated for the ingested segment");
 
-    final long currSize = Long.parseLong(
-        cluster.callApi().runSql(
-            "SELECT curr_size FROM sys.servers WHERE server_type = 'historical'"
-        ).trim()
-    );
+    final long currSize = queryHistoricalCurrSize();
 
     Assertions.assertTrue(
         currSize > 0,
@@ -317,6 +305,134 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
         emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES),
         Matchers.greaterThan(0L)
     );
+  }
+
+  @Test
+  void testRuleTransitionBetweenPartialAndFullLoad()
+  {
+    // Rule churn in both directions against an already-loaded segment.
+    //
+    // Observed through sys.servers.curr_size, which is driven by the loadedBytes the historical announces: the
+    // partial footprint excludes the unmatched projection's bytes, while a full-load announcement carries no profile
+    // at all and falls back to segment.getSize().
+    final long fullSize = queryFullSegmentSize();
+    Assertions.assertTrue(fullSize > 0, "sys.segments.size must be populated for the ingested segment");
+
+    // Precondition from loadDataAndConfigureRule(): the segment is already loaded under the partial rule.
+    MatcherAssert.assertThat(
+        "partial-load rule should already be in effect at the start of this test",
+        queryHistoricalCurrSize(),
+        Matchers.lessThan(fullSize)
+    );
+
+    boolean restored = false;
+    try {
+      final LatchableEmitter coordinatorEmitter = coordinator.latchableEmitter();
+      coordinatorEmitter.flush();
+
+      // Leg 1: partial -> full.
+      applyRule(new ForeverLoadRule(Map.of("_default_tier", 1), null));
+      coordinatorEmitter.waitForEvent(
+          event -> event.hasMetricName("segment/partial/ruleReverted/count")
+                        .hasDimension(DruidMetrics.DATASOURCE, dataSource)
+      );
+      Assertions.assertEquals(
+          fullSize,
+          awaitHistoricalCurrSize(
+              size -> size == fullSize,
+              "full segment size after reverting to a regular load rule"
+          ),
+          "a reverted replica must announce with no partial-load profile, so loadedBytes falls back to segment size"
+      );
+
+      // Leg 2: full -> partial. Already covered by the initial load, but asserting it here proves the transition is
+      // symmetric on an already-loaded segment and restores the state the other tests in this class depend on.
+      applyRule(partialProjectionRule());
+      restored = true;
+      MatcherAssert.assertThat(
+          "re-applying the partial rule must shrink the announced footprint again",
+          awaitHistoricalCurrSize(size -> size < fullSize, "partial footprint after re-applying the partial rule"),
+          Matchers.lessThan(fullSize)
+      );
+    }
+    finally {
+      // Best effort only, and deliberately silent: on the success path leg 2 already restored and verified the rule.
+      // This exists so a failure above can't leave the wrong rule behind for the rest of the class, and it must never
+      // mask the original failure.
+      if (!restored) {
+        try {
+          applyRule(partialProjectionRule());
+        }
+        catch (Exception ignored) {
+          // fall through; the failure that got us here is the one worth reporting
+        }
+      }
+    }
+  }
+
+  /**
+   * The partial-load rule this class runs under: selects only {@link #PROJECTION_NAME}, leaving the base-table
+   * cluster-group bundles and {@link #UNMATCHED_PROJECTION_NAME} off the historical's disk.
+   */
+  private static ForeverPartialLoadRule partialProjectionRule()
+  {
+    return new ForeverPartialLoadRule(
+        Map.of("_default_tier", 1),
+        null,
+        new WildcardProjectionPartialLoadMatcher(List.of(PROJECTION_NAME), null),
+        CannotMatchBehavior.FALL_THROUGH
+    );
+  }
+
+  private void applyRule(Rule rule)
+  {
+    cluster.callApi().onLeaderCoordinator(c -> c.updateRulesForDatasource(dataSource, List.of(rule)));
+  }
+
+  /**
+   * The ingested segment's full on-disk size, i.e. what the historical would report if it held everything.
+   */
+  private long queryFullSegmentSize()
+  {
+    return Long.parseLong(
+        cluster.callApi().runSql(
+            "SELECT \"size\" FROM sys.segments WHERE datasource = '" + dataSource + "'"
+        ).trim()
+    );
+  }
+
+  /**
+   * The footprint the coordinator currently attributes to the historical, i.e. the {@code loadedBytes} carried by the
+   * segment's most recent announcement.
+   */
+  private long queryHistoricalCurrSize()
+  {
+    return Long.parseLong(
+        cluster.callApi().runSql(
+            "SELECT curr_size FROM sys.servers WHERE server_type = 'historical'"
+        ).trim()
+    );
+  }
+
+  /**
+   * Polls {@link #queryHistoricalCurrSize()} until it satisfies {@code matcher}. A rule change has to travel through a
+   * coordinator run, the load queue, the historical's reload and its re-announcement before the inventory catches up,
+   * and none of those emit a single metric that means "the new footprint is now visible in sys.servers".
+   */
+  private long awaitHistoricalCurrSize(LongPredicate matcher, String expectation)
+  {
+    try {
+      return cluster.callApi()
+                    .waitForResult(this::queryHistoricalCurrSize, size -> matcher.test(size))
+                    .withTimeoutMillis(TRANSITION_TIMEOUT_MILLIS)
+                    .go();
+    }
+    catch (Exception e) {
+      throw new AssertionError(
+          StringUtils.format("Timed out waiting for the historical's curr_size to reach [%s]", expectation),
+          e
+      );
+    }
   }
 
   /**

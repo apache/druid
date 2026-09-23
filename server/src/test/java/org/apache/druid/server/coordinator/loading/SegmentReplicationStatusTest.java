@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.List;
@@ -83,9 +83,9 @@ public class SegmentReplicationStatusTest
       final Map<String, Object2LongMap<String>> expectedUnderReplicated =
           status.getTierToDatasourceToUnderReplicated(segments, ignoreMissingServers);
 
-      Assert.assertEquals(expectedUnavailable, snapshot.getDatasourceToUnavailableCount());
-      Assert.assertEquals(expectedDeepStorageOnly, snapshot.getDatasourceToDeepStorageOnlyCount());
-      Assert.assertEquals(expectedUnderReplicated, snapshot.getTierToDatasourceToUnderReplicatedCount());
+      Assertions.assertEquals(expectedUnavailable, snapshot.getDatasourceToUnavailableCount());
+      Assertions.assertEquals(expectedDeepStorageOnly, snapshot.getDatasourceToDeepStorageOnlyCount());
+      Assertions.assertEquals(expectedUnderReplicated, snapshot.getTierToDatasourceToUnderReplicatedCount());
     }
   }
 
@@ -105,14 +105,14 @@ public class SegmentReplicationStatusTest
 
     final SegmentStatsSnapshot ignoreMissing =
         status.computeSegmentStats(singleSegment, true);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         3L,
         ignoreMissing.getTierToDatasourceToUnderReplicatedCount().get(TIER_1).getLong("wiki")
     );
 
     final SegmentStatsSnapshot respectMissing =
         status.computeSegmentStats(singleSegment, false);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         respectMissing.getTierToDatasourceToUnderReplicatedCount().get(TIER_1).getLong("wiki")
     );
@@ -129,7 +129,7 @@ public class SegmentReplicationStatusTest
 
     final SegmentReplicationStatus status = new SegmentReplicationStatus(replicaCountsInTier);
     final SegmentReplicaCount totalBefore = status.getReplicaCountsInCluster(segments.get(0).getId());
-    Assert.assertEquals(1, totalBefore.totalLoaded());
+    Assertions.assertEquals(1, totalBefore.totalLoaded());
 
     // Mutate the caller's inputs after construction, as BalanceSegments does later in the same
     // coordinator cycle: add a brand new segment key and mutate an already-tracked count in place.
@@ -137,8 +137,8 @@ public class SegmentReplicationStatusTest
     tierMap.put(TIER_2, countOf(1, 1, 1));
     replicaCountsInTier.put(segments.get(1).getId(), Map.of(TIER_1, countOf(1, 1, 1)));
 
-    Assert.assertEquals(1, status.getReplicaCountsInCluster(segments.get(0).getId()).totalLoaded());
-    Assert.assertNull(status.getReplicaCountsInCluster(segments.get(1).getId()));
+    Assertions.assertEquals(1, status.getReplicaCountsInCluster(segments.get(0).getId()).totalLoaded());
+    Assertions.assertNull(status.getReplicaCountsInCluster(segments.get(1).getId()));
   }
 
   private static SegmentReplicaCount countOf(int required, int requiredAndLoadable, int loaded)

@@ -27,8 +27,8 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -118,7 +118,7 @@ public class TaskTest
   @Test
   public void testGetInputSourceResources()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         UOE.class,
         TASK::getInputSourceResources
     );
@@ -127,6 +127,6 @@ public class TaskTest
   @Test
   public void testGetLookupLoadingSpec()
   {
-    Assert.assertEquals(LookupLoadingSpec.ALL, TASK.getLookupLoadingSpec());
+    Assertions.assertEquals(LookupLoadingSpec.ALL, TASK.getLookupLoadingSpec());
   }
 }

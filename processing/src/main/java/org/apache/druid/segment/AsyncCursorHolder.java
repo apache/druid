@@ -35,7 +35,10 @@ import javax.annotation.Nullable;
  * <h3>Consumer protocol</h3>
  * Consumers wait for {@link #isReady()} via {@link #addReadyCallback}, and {@link #release()} to transfer ownership of
  * the {@link CursorHolder} (or throw the producer exception). Calling {@link #release()} before {@link #isReady()}
- * returns {@code true}, multiple times, or after this holder has been closed will throw a {@link DruidException}.
+ * returns {@code true}, multiple times, or after this holder has been closed will throw a {@link DruidException}. If
+ * {@link #close()} canceled the load before it completed, {@link #isReady()} becomes true and {@link #release()}
+ * throws {@link org.apache.druid.common.asyncresource.AsyncResourceCanceledException} instead, so a waiting consumer
+ * always finds out.
  * <p>
  * For example (using {@link ReturnOrAwait} to show intended yield-then-resume usage pattern):
  * <pre>{@code

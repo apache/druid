@@ -21,8 +21,8 @@ package org.apache.druid.iceberg.filter;
 
 import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.expressions.Expressions;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -33,7 +33,7 @@ public class IcebergNotFilterTest
   {
     IcebergNotFilter testFilter = new IcebergNotFilter(new IcebergEqualsFilter("column1", "value1"));
     Expression expectedExpression = Expressions.not(Expressions.equal("column1", "value1"));
-    Assert.assertEquals(expectedExpression.toString(), testFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), testFilter.getFilterExpression().toString());
   }
 
   @Test
@@ -76,7 +76,7 @@ public class IcebergNotFilterTest
         Expressions.equal(column2, "value2")
     ));
 
-    Assert.assertEquals(expressionNotAnd.toString(), filterNotAnd.getFilterExpression().toString());
-    Assert.assertEquals(expressionNotOr.toString(), filterNotOr.getFilterExpression().toString());
+    Assertions.assertEquals(expressionNotAnd.toString(), filterNotAnd.getFilterExpression().toString());
+    Assertions.assertEquals(expressionNotOr.toString(), filterNotOr.getFilterExpression().toString());
   }
 }

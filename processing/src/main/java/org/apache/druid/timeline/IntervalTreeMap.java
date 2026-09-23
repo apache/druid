@@ -21,10 +21,10 @@ package org.apache.druid.timeline;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
+import jakarta.validation.constraints.NotNull;
 import org.joda.time.Interval;
 import org.joda.time.base.BaseInterval;
 
-import javax.validation.constraints.NotNull;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.ArrayList;
