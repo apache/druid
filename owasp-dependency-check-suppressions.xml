@@ -318,6 +318,8 @@
     <cve>CVE-2026-50010</cve> <!-- Druid's Netty 3.x HTTP client does not use SslContextBuilder; gRPC/AWS SDK paths use managed SSL contexts -->
     <cve>CVE-2026-42578</cve> <!-- We don't use HttpProxyHandler; Druid uses a custom HTTP CONNECT tunnel via HttpClientCodec -->
     <cve>CVE-2026-42579</cve> <!-- We don't use netty-codec-dns; Druid uses JDK DNS resolution -->
+    <cve>CVE-2026-75596</cve> <!-- Fragmented ClientHello DoS in SniHandler/SslClientHelloHandler; Netty 3.x has no SNI handler, only in 4.x -->
+    <cve>CVE-2026-75595</cve> <!-- SNI routing bypass via fragmented ClientHello; Netty 3.x has no SslClientHelloHandler, only in 4.x -->
   </suppress>
 
 
