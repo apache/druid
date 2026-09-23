@@ -27,7 +27,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.RateLimiter;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -290,7 +289,7 @@ public class ResourcePool<K, V> implements Closeable
   public enum Implementation
   {
     /**
-     * Adaptively follows demand.
+     * Adaptively follows demand and maximizes active pool size.
      */
     ADAPTIVE {
       @Override
@@ -304,7 +303,6 @@ public class ResourcePool<K, V> implements Closeable
         final AdaptiveResourceHolderPerKey<K, V> resources = new AdaptiveResourceHolderPerKey<>(
             config.getMaxPerKey(),
             config.getUnusedConnectionTimeoutMillis(),
-            config.isStrictConnectionValidation(),
             key,
             factory
         );
@@ -614,14 +612,12 @@ public class ResourcePool<K, V> implements Closeable
 
   private static class AdaptiveResourceHolderPerKey<K, V> extends PooledResources<V>
   {
-    private static final int CREATE_ATTEMPTS = 3;
     private static final double BAD_RESOURCE_WARN_PERIOD_SECONDS = 5;
 
     private final int maxSize;
     private final K key;
     private final ResourceFactory<K, V> factory;
     private final long unusedResourceTimeoutMillis;
-    private final boolean strictConnectionValidation;
     private final Semaphore permits;
     private final Deque<ResourceHolder<V>> idleResources = new ConcurrentLinkedDeque<>();
     private final AtomicBoolean closed = new AtomicBoolean(false);
@@ -631,7 +627,6 @@ public class ResourcePool<K, V> implements Closeable
     private AdaptiveResourceHolderPerKey(
         int maxSize,
         long unusedResourceTimeoutMillis,
-        boolean strictConnectionValidation,
         K key,
         ResourceFactory<K, V> factory
     )
@@ -640,7 +635,6 @@ public class ResourcePool<K, V> implements Closeable
       this.key = key;
       this.factory = new CountingResourceFactory<>(factory, counters);
       this.unusedResourceTimeoutMillis = unusedResourceTimeoutMillis;
-      this.strictConnectionValidation = strictConnectionValidation;
       this.permits = new Semaphore(maxSize);
     }
 
@@ -770,38 +764,22 @@ public class ResourcePool<K, V> implements Closeable
       return null;
     }
 
-    /**
-     * Creates a resource, discarding and replacing a broken one up to {@link #CREATE_ATTEMPTS} times. The last
-     * attempt is handed over even when it is broken - unless
-     * {@link ResourcePoolConfig#isStrictConnectionValidation()}, which fails the take instead.
-     */
     private V createResource()
     {
-      for (int attempt = 1; ; attempt++) {
-        final V resource = generate();
-        if (isGood(resource)) {
-          return resource;
-        }
-        if (attempt < CREATE_ATTEMPTS) {
-          closeQuietly(resource);
-          continue;
-        }
-        if (strictConnectionValidation) {
-          closeQuietly(resource);
-          throw new ISE("Could not create a good resource for key[%s] in [%d] attempts", key, CREATE_ATTEMPTS);
-        }
-        if (badResourceWarnings.tryAcquire()) {
-          log.warn(
-              "Handing over resource[%s] at key[%s] that failed its health check in all [%d] attempts, it may be bad."
-              + " Further such warnings about this key are suppressed for [%s] seconds.",
-              resource,
-              key,
-              CREATE_ATTEMPTS,
-              BAD_RESOURCE_WARN_PERIOD_SECONDS
-          );
-        }
+      final V resource = generate();
+      if (isGood(resource)) {
         return resource;
       }
+      if (badResourceWarnings.tryAcquire()) {
+        log.warn(
+            "Handing over resource[%s] at key[%s] that failed its health check right after being created, it may be"
+            + " bad. Further such warnings about this key are suppressed for [%s] seconds.",
+            resource,
+            key,
+            BAD_RESOURCE_WARN_PERIOD_SECONDS
+        );
+      }
+      return resource;
     }
 
     /**

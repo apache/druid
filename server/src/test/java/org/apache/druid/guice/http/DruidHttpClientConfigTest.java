@@ -76,21 +76,6 @@ public class DruidHttpClientConfigTest
     Assertions.assertThrows(RuntimeException.class, () -> configure(properties));
   }
 
-  @Test
-  public void testStrictConnectionValidationIsOffByDefault()
-  {
-    Assertions.assertFalse(configure(new Properties()).isStrictConnectionValidation());
-  }
-
-  @Test
-  public void testStrictConnectionValidationCanBeTurnedOn()
-  {
-    final Properties properties = new Properties();
-    properties.setProperty(PROPERTY_BASE + ".strictConnectionValidation", "true");
-
-    Assertions.assertTrue(configure(properties).isStrictConnectionValidation());
-  }
-
   private static DruidHttpClientConfig configure(Properties properties)
   {
     final JsonConfigurator configurator = new JsonConfigurator(

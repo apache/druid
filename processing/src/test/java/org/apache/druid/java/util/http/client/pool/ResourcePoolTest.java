@@ -22,9 +22,11 @@ package org.apache.druid.java.util.http.client.pool;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -51,6 +53,9 @@ public class ResourcePoolTest
 {
   private static final long NEVER_EXPIRES = TimeUnit.MINUTES.toMillis(5);
   private static final long EXPIRES_QUICKLY = 100;
+
+  @RegisterExtension
+  public final LoggerCaptureExtension logger = new LoggerCaptureExtension(ResourcePool.class);
 
   private TestResourceFactory factory;
 
@@ -334,55 +339,27 @@ public class ResourcePoolTest
   }
 
   /**
-   * A creation that arrives broken is retried, so a caller does not pay for a peer that was briefly unreachable.
+   * A freshly opened resource that fails its health check is handed over rather than replaced: opening another
+   * connection cannot mend a peer that is refusing health checks, so the caller gets its resource and a warning is
+   * logged.
    */
   @Test
-  public void testAdaptiveRetriesUntilACreatedResourceIsGood()
+  public void testAdaptiveHandsOverAFreshResourceThatFailsItsHealthCheck()
   {
     final ResourcePool<String, String> pool = createPool(ResourcePool.Implementation.ADAPTIVE, 2, NEVER_EXPIRES, false);
-    factory.markUnhealthy("billy#0", "billy#1");
-
-    final ResourceContainer<String> fresh = pool.take("billy");
-    Assertions.assertEquals("billy#2", fresh.get());
-    fresh.returnResource();
-
-    Assertions.assertEquals(List.of("billy#0", "billy#1"), factory.closed());
-  }
-
-  /**
-   * With every attempt broken the caller still gets the last one, as it always did, rather than a failing take.
-   */
-  @Test
-  public void testAdaptiveHandsOverAPossiblyBadResourceWhenEveryAttemptFails()
-  {
-    final ResourcePool<String, String> pool = createPool(ResourcePool.Implementation.ADAPTIVE, 2, NEVER_EXPIRES, false);
-    factory.markUnhealthy("billy#0", "billy#1", "billy#2");
+    factory.markUnhealthy("billy#0");
 
     final ResourceContainer<String> lent = pool.take("billy");
-    Assertions.assertEquals("billy#2", lent.get());
-    Assertions.assertEquals(List.of("billy#0", "billy#1"), factory.closed(), "the handed over resource stays open");
+    Assertions.assertEquals("billy#0", lent.get(), "no replacement is opened");
+    Assertions.assertEquals(List.of("billy#0"), factory.opened(), "and none is attempted either");
+    Assertions.assertEquals(List.of(), factory.closed(), "the handed over resource stays open");
+    Assertions.assertTrue(
+        logger.getLogEvents().stream().anyMatch(e -> e.getMessage().getFormattedMessage().contains("billy#0")),
+        "the caller is warned about it"
+    );
 
     lent.returnResource();
-    Assertions.assertTrue(factory.isClosed("billy#2"), "and is discarded once it comes back");
-  }
-
-  /**
-   * Strict validation turns that last possibly bad resource into a failure, and the failed take still repays its
-   * slot - the next take must not have to wait for it.
-   */
-  @Test
-  public void testAdaptiveStrictValidationFailsTheTake()
-  {
-    final ResourcePool<String, String> pool =
-        createPool(ResourcePool.Implementation.ADAPTIVE, 1, NEVER_EXPIRES, false, true);
-    factory.markUnhealthy("billy#0", "billy#1", "billy#2");
-
-    Assertions.assertThrows(ISE.class, () -> pool.take("billy"));
-    Assertions.assertEquals(List.of("billy#0", "billy#1", "billy#2"), factory.closed(), "no attempt is leaked");
-
-    final ResourceContainer<String> fresh = pool.take("billy");
-    Assertions.assertEquals("billy#3", fresh.get());
-    fresh.returnResource();
+    Assertions.assertTrue(factory.isClosed("billy#0"), "and it is discarded once it comes back");
   }
 
   @ParameterizedTest
@@ -540,20 +517,9 @@ public class ResourcePoolTest
       boolean eagerInitialization
   )
   {
-    return createPool(implementation, maxPerKey, unusedResourceTimeoutMillis, eagerInitialization, false);
-  }
-
-  private ResourcePool<String, String> createPool(
-      ResourcePool.Implementation implementation,
-      int maxPerKey,
-      long unusedResourceTimeoutMillis,
-      boolean eagerInitialization,
-      boolean strictConnectionValidation
-  )
-  {
     return new ResourcePool<>(
         factory,
-        new ResourcePoolConfig(maxPerKey, unusedResourceTimeoutMillis, implementation, strictConnectionValidation),
+        new ResourcePoolConfig(maxPerKey, unusedResourceTimeoutMillis, implementation),
         eagerInitialization
     );
   }

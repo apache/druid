@@ -570,8 +570,8 @@ service is restarted.
 |`httpClient/pool/timedOut`|Number of connections discarded for being unused longer than `unusedConnectionTimeout`.|`httpClient`, `server`|Varies|
 |`httpClient/pool/taken`|Number of connections handed to a caller, that is, the number of requests that got a connection.|`httpClient`, `server`|Varies|
 |`httpClient/pool/returned`|Number of connections given back by a caller.|`httpClient`, `server`|Close to `httpClient/pool/taken`|
-|`httpClient/pool/used`|Number of connections in the hands of callers at the time of the emission, that is, the requests in flight to that remote end. A level, not a per period count.|`httpClient`, `server`|<= `druid.<service>.http.numConnections`. Sitting at that ceiling means requests are waiting for a connection.|
-|`httpClient/pool/idle`|Number of connections parked for the next caller at the time of the emission. A level, not a per period count.|`httpClient`, `server`|<= `druid.<service>.http.numConnections`|
+|`httpClient/pool/used`|Number of connections in the hands of callers at the time of the emission, that is, the requests in flight to that remote end. A level, not a per period count.|`httpClient`, `server`|&le; `druid.<service>.http.numConnections`. Sitting at that ceiling means requests are waiting for a connection.|
+|`httpClient/pool/idle`|Number of connections parked for the next caller at the time of the emission. A level, not a per period count.|`httpClient`, `server`|&le; `druid.<service>.http.numConnections`|
 
 ### JVM
 

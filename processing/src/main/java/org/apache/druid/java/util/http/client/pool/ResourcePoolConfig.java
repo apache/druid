@@ -26,7 +26,6 @@ public class ResourcePoolConfig
   private final int maxPerKey;
   private final long unusedConnectionTimeoutMillis;
   private final ResourcePool.Implementation poolImplementation;
-  private final boolean strictConnectionValidation;
 
   public ResourcePoolConfig(
       int maxPerKey,
@@ -42,20 +41,9 @@ public class ResourcePoolConfig
       ResourcePool.Implementation poolImplementation
   )
   {
-    this(maxPerKey, unusedConnectionTimeoutMillis, poolImplementation, false);
-  }
-
-  public ResourcePoolConfig(
-      int maxPerKey,
-      long unusedConnectionTimeoutMillis,
-      ResourcePool.Implementation poolImplementation,
-      boolean strictConnectionValidation
-  )
-  {
     this.maxPerKey = maxPerKey;
     this.unusedConnectionTimeoutMillis = unusedConnectionTimeoutMillis;
     this.poolImplementation = poolImplementation;
-    this.strictConnectionValidation = strictConnectionValidation;
   }
 
   @Deprecated
@@ -88,13 +76,5 @@ public class ResourcePoolConfig
   public ResourcePool.Implementation getPoolImplementation()
   {
     return poolImplementation;
-  }
-
-  /**
-   * Whether a take fails instead of handing over a resource that never passed its health check.
-   */
-  public boolean isStrictConnectionValidation()
-  {
-    return strictConnectionValidation;
   }
 }

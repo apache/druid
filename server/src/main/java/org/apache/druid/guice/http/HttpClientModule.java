@@ -131,7 +131,6 @@ public class HttpClientModule implements Module
           .withNumConnections(config.getNumConnections())
           .withEagerInitialization(config.isEagerInitialization(eagerByDefault))
           .withPoolImplementation(config.getPoolImplementation())
-          .withStrictConnectionValidation(config.isStrictConnectionValidation())
           .withReadTimeout(config.getReadTimeout())
           .withConnectTimeout(config.getConnectTimeout())
           .withByteBufAllocator(resolveAllocator(config.getAllocator()))
