@@ -127,6 +127,7 @@ public class DruidCoordinator
   private final ServiceEmitter emitter;
   private final OverlordClient overlordClient;
   private final ScheduledExecutorFactory executorFactory;
+  @GuardedBy("lock")
   private final List<DutiesRunnable> dutiesRunnables = new ArrayList<>();
   private final LoadQueueTaskMaster taskMaster;
   private final SegmentLoadQueueManager loadQueueManager;
@@ -352,7 +353,9 @@ public class DruidCoordinator
 
   public List<DutyGroupStatus> getStatusOfDuties()
   {
-    return dutiesRunnables.stream().map(r -> r.dutyGroup.getStatus()).collect(Collectors.toList());
+    synchronized (lock) {
+      return dutiesRunnables.stream().map(r -> r.dutyGroup.getStatus()).collect(Collectors.toList());
+    }
   }
 
   @LifecycleStart
