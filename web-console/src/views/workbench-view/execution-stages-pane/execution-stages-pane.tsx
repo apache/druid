@@ -310,11 +310,13 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                       <div
                         key={k}
                         data-tooltip={`${fieldTitle}\nCPU time: ${formatDurationWithMs(
-                          v.cpu / 1e6,
+                          Number(v.cpu) / 1e6,
                         )}`}
                       >
                         <span className="cpu-label">{cpusCounterFieldTitle(k)}</span>
-                        <span className="cpu-counter">{formatDurationWithMs(v.wall / 1e6)}</span>
+                        <span className="cpu-counter">
+                          {formatDurationWithMs(Number(v.wall) / 1e6)}
+                        </span>
                       </div>
                     );
                   })}
@@ -1036,10 +1038,14 @@ ${title} uncompressed size: ${formatBytesCompact(
                   return (
                     <div
                       key={k}
-                      data-tooltip={`${fieldTitle}\nCPU time: ${formatDurationWithMs(v.cpu / 1e6)}`}
+                      data-tooltip={`${fieldTitle}\nCPU time: ${formatDurationWithMs(
+                        Number(v.cpu) / 1e6,
+                      )}`}
                     >
                       <span className="cpu-label">{fieldTitle}</span>
-                      <span className="cpu-counter">{formatDurationWithMs(v.wall / 1e6)}</span>
+                      <span className="cpu-counter">
+                        {formatDurationWithMs(Number(v.wall) / 1e6)}
+                      </span>
                     </div>
                   );
                 })}
