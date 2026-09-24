@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -161,6 +162,33 @@ class ConcatenatingCursorTest
     );
 
     Assertions.assertTrue(c.isDone());
+  }
+
+  @Test
+  void testAllEmptyGroupsStillBuildSelectorsFromUninitializedWrapper()
+  {
+    FakeCursorHolder e1 = new FakeCursorHolder(List.of());
+    FakeCursorHolder e2 = new FakeCursorHolder(List.of());
+
+    ClusteringColumnSelectorFactory wrapper = new ClusteringColumnSelectorFactory(
+        ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
+        CLUSTER_SIGNATURE,
+        new Object[]{"a"}
+    );
+
+    ConcatenatingCursor c = new ConcatenatingCursor(
+        List.of(holderSupplier(e1), holderSupplier(e2)),
+        List.of(new Object[]{"a"}, new Object[]{"b"}),
+        wrapper,
+        Map.of()
+    );
+
+    Assertions.assertTrue(c.isDone());
+    ColumnValueSelector metric = c.getColumnSelectorFactory().makeColumnValueSelector("metric");
+    Assertions.assertNull(metric.getObject());
+    Assertions.assertDoesNotThrow(
+        () -> new EqualityFilter("metric", ColumnType.STRING, "someval", null).makeMatcher(c.getColumnSelectorFactory())
+    );
   }
 
   @Test

@@ -32,6 +32,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.projections.ClusteringVectorColumnSelectorFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -168,6 +169,34 @@ class ConcatenatingVectorCursorTest
 
     Assertions.assertTrue(c.isDone());
     Assertions.assertEquals(0, c.getCurrentVectorSize());
+  }
+
+  @Test
+  void testAllEmptyGroupsStillBuildSelectorsFromUninitializedWrapper()
+  {
+    FakeVectorCursorHolder e1 = new FakeVectorCursorHolder(List.of(), 4);
+    FakeVectorCursorHolder e2 = new FakeVectorCursorHolder(List.of(), 4);
+
+    ClusteringVectorColumnSelectorFactory wrapper = new ClusteringVectorColumnSelectorFactory(
+        Mockito.mock(VectorColumnSelectorFactory.class, invocation -> {
+          throw new IllegalStateException("uninitialized");
+        }),
+        CLUSTER_SIGNATURE,
+        new Object[]{"a"},
+        4
+    );
+
+    ConcatenatingVectorCursor c = new ConcatenatingVectorCursor(
+        List.of(holderSupplier(e1), holderSupplier(e2)),
+        List.of(new Object[]{"a"}, new Object[]{"b"}),
+        wrapper,
+        Map.of()
+    );
+
+    Assertions.assertTrue(c.isDone());
+    final VectorColumnSelectorFactory factory = c.getColumnSelectorFactory();
+    Assertions.assertEquals(0, factory.getReadableVectorInspector().getCurrentVectorSize());
+    Assertions.assertDoesNotThrow(() -> factory.makeObjectSelector("metric").getObjectVector());
   }
 
   @Test
