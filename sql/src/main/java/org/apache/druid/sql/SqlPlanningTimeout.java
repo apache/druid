@@ -28,26 +28,20 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Bounds the wall-clock time spent planning a single SQL query. See
- * {@link org.apache.druid.sql.calcite.planner.PlannerConfig#getMaxPlanningTimeMs()}.
- *
- * <p>When {@link #arm} is called with a positive timeout, a task is scheduled that, on deadline, trips the query's
- * Calcite {@link CancelFlag} (so the planner aborts at its next cancellation checkpoint) and interrupts the planning
- * thread. The caller plans on its own thread and then calls {@link #close()} (ideally in a {@code finally}), which
- * cancels the pending task and, if the watchdog fired, clears the interrupt so it is not leaked to a pooled request
- * thread. Check {@link #isTimedOut()} when planning throws to decide whether to translate the failure into a timeout.
+ * Bounds the wall-clock time spent planning a single SQL query (see
+ * {@link org.apache.druid.sql.calcite.planner.PlannerConfig#getMaxPlanningTimeMs()}). On deadline it trips the query's
+ * Calcite {@link CancelFlag} and interrupts the planning thread; {@link #close()} cancels the watchdog and clears any
+ * leaked interrupt. Check {@link #isTimedOut()} to translate a planning failure into a timeout.
  */
 public class SqlPlanningTimeout implements Closeable
 {
-  // Single daemon thread suffices: each task only flips a flag and interrupts a thread, and is usually cancelled first.
   private static final ScheduledThreadPoolExecutor SCHEDULER = createScheduler();
 
   private static ScheduledThreadPoolExecutor createScheduler()
   {
+    // One daemon thread suffices; remove cancelled tasks (the common case) from the queue so it can't grow under load.
     final ScheduledThreadPoolExecutor scheduler =
         new ScheduledThreadPoolExecutor(1, Execs.makeThreadFactory("sql-planning-timeout-%d"));
-    // Planning usually finishes before the deadline, so most tasks are cancelled. Remove them from the queue on
-    // cancellation instead of letting them linger until their delay elapses, so the queue does not grow under load.
     scheduler.setRemoveOnCancelPolicy(true);
     return scheduler;
   }
@@ -57,11 +51,7 @@ public class SqlPlanningTimeout implements Closeable
 
   private final Object lock = new Object();
   private final ScheduledFuture<?> future;
-
-  // Whether the deadline was reached. Written under lock; read via isTimedOut().
   private volatile boolean timedOut;
-
-  // Whether close() has been called. Once closed, a still-running watchdog task must not interrupt the thread.
   private boolean closed;
 
   private SqlPlanningTimeout()
@@ -93,7 +83,7 @@ public class SqlPlanningTimeout implements Closeable
   {
     synchronized (lock) {
       if (closed) {
-        // Planning already finished; do not interrupt a thread that may have been recycled.
+        // Planning already finished; do not interrupt a possibly-recycled thread.
         return;
       }
       timedOut = true;
@@ -102,9 +92,6 @@ public class SqlPlanningTimeout implements Closeable
     }
   }
 
-  /**
-   * Whether the planning deadline was reached before {@link #close()}.
-   */
   public boolean isTimedOut()
   {
     return timedOut;
@@ -123,8 +110,7 @@ public class SqlPlanningTimeout implements Closeable
       wasTimedOut = timedOut;
     }
     if (wasTimedOut) {
-      // Clear the interrupt the watchdog set on this thread so it is not leaked to a pooled request thread.
-      // Safe because close() runs on the planning thread once planning has finished.
+      // Clear the watchdog's interrupt so it isn't leaked to a pooled request thread (close() runs on that thread).
       Thread.interrupted();
     }
   }

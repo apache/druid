@@ -586,10 +586,8 @@ public class SqlStatementTest
   }
 
   /**
-   * A query whose planning exceeds the configured {@code maxPlanningTimeMs} should fail with a
-   * {@link QueryTimeoutException} rather than occupying the planning thread indefinitely. Planning is simulated as a
-   * CPU-bound loop that honours the Calcite cancel flag (as Calcite's planner does), so we verify the watchdog trips
-   * that flag and the failure is surfaced as a timeout.
+   * Planning that exceeds {@code maxPlanningTimeMs} fails with a {@link QueryTimeoutException}. Planning is simulated
+   * as a CPU-bound loop that honours the cancel flag (as Calcite does), so the watchdog trips it and we time out.
    */
   @Test
   @Timeout(30)
@@ -608,11 +606,10 @@ public class SqlStatementTest
       protected PlannerResult createPlan(DruidPlanner planner)
       {
         final CancelFlag cancelFlag = planner.getPlannerContext().getCancelFlag();
-        // Busy-wait like a CPU-bound Calcite planning phase that periodically checks for cancellation.
         while (!cancelFlag.isCancelRequested() && !Thread.currentThread().isInterrupted()) {
-          // spin until the planning-timeout watchdog aborts us
+          // spin until the watchdog aborts us
         }
-        // Calcite throws when it observes a tripped cancel flag; emulate that here.
+        // Calcite throws when it observes a tripped cancel flag; emulate that.
         throw new RuntimeException("Preparation aborted");
       }
     };
@@ -630,9 +627,8 @@ public class SqlStatementTest
   }
 
   /**
-   * The planning budget covers planner construction too: if {@link DirectStatement#createPlanner()} (schema/planner
-   * setup) alone exhausts {@code maxPlanningTimeMs}, planning must fail with a {@link QueryTimeoutException} before any
-   * further work, rather than getting a fresh budget once the watchdog is armed.
+   * The budget covers planner construction: if {@link DirectStatement#createPlanner()} alone exhausts
+   * {@code maxPlanningTimeMs}, planning fails with a {@link QueryTimeoutException} before any further work.
    */
   @Test
   @Timeout(30)

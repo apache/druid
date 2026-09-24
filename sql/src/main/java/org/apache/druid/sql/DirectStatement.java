@@ -199,14 +199,9 @@ public class DirectStatement extends AbstractStatement implements Cancelable
     }
     long planningStartNanos = System.nanoTime();
     try (DruidPlanner planner = createPlanner()) {
-      // Bound the wall-clock time spent planning this query. A non-positive timeout disables this. The budget is
-      // measured from planningStartNanos (above), so any time already spent constructing the planner counts against
-      // it and a query cannot get a fresh full budget after an expensive planner/schema setup.
+      // Bound planning wall-clock. Budget is measured from planningStartNanos (before createPlanner), so planner
+      // construction counts against it; if already exhausted, fail now rather than arm a no-op (non-positive) watchdog.
       final long maxPlanningTimeMs = planner.getPlannerContext().getPlannerConfig().getMaxPlanningTimeMs();
-      // The budget is measured from planningStartNanos (above), so time already spent constructing the planner
-      // counts against it. Compute the remaining budget once and, if the timeout is enabled but already exhausted,
-      // fail immediately: arming with a non-positive budget would return a disabled (no-op) watchdog, letting a
-      // query that crossed the deadline keep the planning thread busy until it happens to return on its own.
       final long remainingBudgetMs = remainingPlanningBudgetMs(maxPlanningTimeMs, planningStartNanos);
       if (maxPlanningTimeMs > 0 && remainingBudgetMs <= 0) {
         throw planningTimedOut(maxPlanningTimeMs);
@@ -216,8 +211,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
           planner.getPlannerContext().getCancelFlag(),
           Thread.currentThread()
       )) {
-        // Share this query's cancel flag with any nested planners created during view expansion, so that the same
-        // planning timeout governs the whole planning session (see PlannerContext#withInheritedCancelFlag).
+        // Nested planners created during view expansion inherit this flag (PlannerContext#withInheritedCancelFlag).
         return PlannerContext.withInheritedCancelFlag(
             planner.getPlannerContext().getCancelFlag(),
             () -> {
@@ -243,10 +237,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
                 }
                 throw e;
               }
-              // Planning may have finished after the deadline: the watchdog fired but planning was in a
-              // non-cancellable section (or caught the interrupt and returned), or the watchdog callback was
-              // delayed past the deadline under scheduler jitter. Re-check the wall-clock deadline as well as the
-              // flag, and reject a late plan rather than executing it.
+              // Reject a plan that completed past the deadline (non-cancellable section, or watchdog scheduler jitter).
               if (timeout.isTimedOut() || planningDeadlineExceeded(maxPlanningTimeMs, planningStartNanos)) {
                 throw planningTimedOut(maxPlanningTimeMs);
               }
@@ -274,10 +265,8 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   }
 
   /**
-   * Planning budget still available given a total {@code maxPlanningTimeMs} and the time already elapsed since
-   * {@code planningStartNanos}. Returns {@code maxPlanningTimeMs} unchanged when it is non-positive (timeout disabled).
-   * Callers must first reject an already-exhausted budget via {@link #planningDeadlineExceeded}, so when the timeout
-   * is enabled this returns a strictly positive value.
+   * Budget left in the planning timeout, given elapsed time since {@code planningStartNanos}. Returns
+   * {@code maxPlanningTimeMs} unchanged when non-positive (disabled); may be non-positive if already overrun.
    */
   private static long remainingPlanningBudgetMs(long maxPlanningTimeMs, long planningStartNanos)
   {
@@ -289,8 +278,7 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   }
 
   /**
-   * Whether the configured planning deadline has already been exceeded by the wall-clock time elapsed since
-   * {@code planningStartNanos}. Always false when the timeout is disabled ({@code maxPlanningTimeMs <= 0}).
+   * Whether the planning deadline has been exceeded by elapsed wall-clock time. False when disabled.
    */
   private static boolean planningDeadlineExceeded(long maxPlanningTimeMs, long planningStartNanos)
   {

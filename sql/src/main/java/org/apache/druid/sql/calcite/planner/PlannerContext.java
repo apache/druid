@@ -155,18 +155,14 @@ public class PlannerContext
   private final Set<String> lookupsToLoad = new HashSet<>();
 
   /**
-   * Cancel flag inherited by any {@link PlannerContext} created on this thread while it is set. Used so that nested
-   * planners created during view expansion ({@link org.apache.druid.sql.calcite.view.DruidViewMacro}) share the
-   * top-level query's {@link #cancelFlag}, and therefore honor the same planning timeout. Managed by
-   * {@link #withInheritedCancelFlag(CancelFlag)}.
+   * Cancel flag inherited by any {@link PlannerContext} created on this thread while set, so nested view-expansion
+   * planners share the top-level query's {@link #cancelFlag}. Managed by {@link #withInheritedCancelFlag}.
    */
   private static final ThreadLocal<CancelFlag> INHERITED_CANCEL_FLAG = new ThreadLocal<>();
 
   /**
-   * Calcite cancellation flag, wired into the planner via the framework config {@link org.apache.calcite.plan.Context}
-   * in {@link PlannerFactory}. Tripping it aborts planning at Calcite's next cancellation checkpoint; used to enforce
-   * the planning timeout (see {@link PlannerConfig#getMaxPlanningTimeMs()}). Inherited from an enclosing planning
-   * session when one is active on this thread (see {@link #INHERITED_CANCEL_FLAG}).
+   * Calcite cancellation flag, wired into the planner via the framework {@link org.apache.calcite.plan.Context} in
+   * {@link PlannerFactory}; tripping it enforces the planning timeout ({@link PlannerConfig#getMaxPlanningTimeMs()}).
    */
   private final CancelFlag cancelFlag = inheritedOrNewCancelFlag();
 
@@ -299,9 +295,6 @@ public class PlannerContext
     return plannerConfig;
   }
 
-  /**
-   * The Calcite {@link CancelFlag} for this planning session; requesting cancellation aborts in-progress planning.
-   */
   public CancelFlag getCancelFlag()
   {
     return cancelFlag;
@@ -314,10 +307,8 @@ public class PlannerContext
   }
 
   /**
-   * Runs {@code action} with {@code cancelFlag} installed as the flag that any {@link PlannerContext} created on this
-   * thread will inherit. This lets nested planners created during view expansion share the enclosing query's cancel
-   * flag so that a single planning timeout governs the whole planning session. The previous value (if any) is restored
-   * afterwards, so nested sessions compose correctly.
+   * Runs {@code action} with {@code cancelFlag} installed as the flag that {@link PlannerContext}s created on this
+   * thread inherit, so one planning timeout governs nested view-expansion planners. Restores the prior value after.
    */
   public static <T> T withInheritedCancelFlag(final CancelFlag cancelFlag, final Supplier<T> action)
   {

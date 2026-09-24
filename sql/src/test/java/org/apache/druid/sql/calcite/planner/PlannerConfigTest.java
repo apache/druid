@@ -79,8 +79,7 @@ public class PlannerConfigTest
   @Test
   public void testMaxPlanningTimeMsRoundTripsThroughQueryContext()
   {
-    // A non-default maxPlanningTimeMs must be emitted by getNonDefaultAsQueryContext() so the defensive
-    // config <-> context round-trip check inside that method passes.
+    // Non-default maxPlanningTimeMs must round-trip through getNonDefaultAsQueryContext()'s config<->context check.
     PlannerConfig config = PlannerConfig.builder().maxPlanningTimeMs(5000).build();
     Map<String, Object> asContext = config.getNonDefaultAsQueryContext();
     Assertions.assertEquals(5000L, ((Number) asContext.get(PlannerConfig.CTX_KEY_MAX_PLANNING_TIME_MS)).longValue());

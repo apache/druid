@@ -58,9 +58,7 @@ public class SqlPlanningTimeoutTest
   }
 
   /**
-   * Simulate slow planning: the "planning" thread spins until either the Calcite cancel flag trips (mimicking
-   * Calcite's {@code checkCancel()}) or the thread is interrupted. The watchdog should fire, trip the flag, interrupt
-   * the thread, and report a timeout; {@link SqlPlanningTimeout#close()} should then clear the interrupt.
+   * On deadline the watchdog must trip the cancel flag and interrupt the thread, and {@link #close()} must clear it.
    */
   @Test
   @Timeout(30)
@@ -69,7 +67,7 @@ public class SqlPlanningTimeoutTest
     final CancelFlag cancelFlag = newCancelFlag();
     boolean sawInterruptOrCancel;
     try (SqlPlanningTimeout timeout = SqlPlanningTimeout.arm(50, cancelFlag, Thread.currentThread())) {
-      // Busy-wait to mimic CPU-bound Calcite planning that periodically checks the cancel flag.
+      // Mimic CPU-bound planning that periodically checks for cancellation.
       while (!cancelFlag.isCancelRequested() && !Thread.currentThread().isInterrupted()) {
         // spin
       }
@@ -78,13 +76,11 @@ public class SqlPlanningTimeoutTest
       assertTrue(cancelFlag.isCancelRequested());
     }
     assertTrue(sawInterruptOrCancel);
-    // close() must clear the interrupt so it does not leak to a pooled request thread.
     assertFalse(Thread.currentThread().isInterrupted());
   }
 
   /**
-   * When planning finishes before the deadline, the watchdog must not trip the cancel flag or leave the thread
-   * interrupted.
+   * Planning that finishes before the deadline must not trip the flag or leave the thread interrupted.
    */
   @Test
   @Timeout(30)
@@ -92,7 +88,6 @@ public class SqlPlanningTimeoutTest
   {
     final CancelFlag cancelFlag = newCancelFlag();
     try (SqlPlanningTimeout timeout = SqlPlanningTimeout.arm(5000, cancelFlag, Thread.currentThread())) {
-      // "Planning" completes quickly.
       Thread.sleep(10);
       assertFalse(timeout.isTimedOut());
       assertFalse(cancelFlag.isCancelRequested());

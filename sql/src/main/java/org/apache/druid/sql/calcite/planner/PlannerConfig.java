@@ -200,9 +200,6 @@ public class PlannerConfig
     return maxPlanningTimeMs;
   }
 
-  /**
-   * Whether a planning timeout is configured.
-   */
   public boolean isPlanningTimeLimited()
   {
     return maxPlanningTimeMs > PLANNING_TIME_NOT_LIMITED;
