@@ -21,12 +21,12 @@ package org.apache.druid.iceberg.input;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.data.Record;
 import org.apache.iceberg.types.Type;
 import org.apache.iceberg.types.Types;
-import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.time.LocalDate;
@@ -38,7 +38,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Static utility class for converting Iceberg {@link Record} objects to Druid {@link InputRow}.
@@ -53,38 +52,33 @@ public class IcebergRecordConverter
    * Convert an Iceberg {@link Record} to a {@link Map} of field name → Java value.
    * Iceberg primitive types are passed through; temporal and binary types are converted
    * to representations suitable for Druid ingestion.
+   *
+   * @param binaryAsString mirrors {@code ParquetInputFormat}'s {@code binaryAsString} option:
+   *                       when true, binary/fixed values are decoded as UTF-8 strings instead
+   *                       of returned as {@code byte[]}.
    */
-  public static Map<String, Object> convertToMap(Record record, Schema schema)
+  public static Map<String, Object> convertToMap(Record record, Schema schema, boolean binaryAsString)
   {
     Map<String, Object> result = new LinkedHashMap<>();
     for (Types.NestedField field : schema.columns()) {
       String name = field.name();
       Object value = record.getField(name);
-      result.put(name, convertValue(value, field.type()));
+      result.put(name, convertValue(value, field.type(), binaryAsString));
     }
     return result;
   }
 
   /**
-   * Convert a raw-value map plus an {@link InputRowSchema} into a {@link MapBasedInputRow}.
-   * If the dimensions list is empty (auto mode), all columns except the timestamp column are used.
+   * Convert a raw-value map plus an {@link InputRowSchema} into an {@link InputRow}, resolving
+   * dimensions with the same {@link MapInputRowParser#findDimensions} semantics used by the
+   * standard Druid input-format path (schema discovery, include-all, and exclusions all apply).
    */
   public static InputRow toInputRow(Map<String, Object> row, InputRowSchema inputRowSchema)
   {
-    DateTime timestamp = inputRowSchema.getTimestampSpec().extractTimestamp(row);
-
-    List<String> dimensions = inputRowSchema.getDimensionsSpec().getDimensionNames();
-    if (dimensions.isEmpty()) {
-      String tsColumn = inputRowSchema.getTimestampSpec().getTimestampColumn();
-      dimensions = row.keySet().stream()
-                      .filter(key -> !key.equals(tsColumn))
-                      .collect(Collectors.toList());
-    }
-
-    return new MapBasedInputRow(timestamp, dimensions, row);
+    return MapInputRowParser.parse(inputRowSchema, row);
   }
 
-  private static Object convertValue(Object value, Type type)
+  private static Object convertValue(Object value, Type type, boolean binaryAsString)
   {
     if (value == null) {
       return null;
@@ -111,13 +105,17 @@ public class IcebergRecordConverter
       return value;
     }
     if (type instanceof Types.BinaryType || type instanceof Types.FixedType) {
+      byte[] bytes;
       if (value instanceof ByteBuffer) {
         ByteBuffer buf = (ByteBuffer) value;
-        byte[] bytes = new byte[buf.remaining()];
+        bytes = new byte[buf.remaining()];
         buf.duplicate().get(bytes);
-        return bytes;
+      } else if (value instanceof byte[]) {
+        bytes = (byte[]) value;
+      } else {
+        return value;
       }
-      return value;
+      return binaryAsString ? StringUtils.fromUtf8(bytes) : bytes;
     }
     if (type instanceof Types.StructType) {
       if (value instanceof Record) {
@@ -125,7 +123,7 @@ public class IcebergRecordConverter
         Map<String, Object> nestedMap = new LinkedHashMap<>();
         Types.StructType structType = (Types.StructType) type;
         for (Types.NestedField field : structType.fields()) {
-          nestedMap.put(field.name(), convertValue(nested.getField(field.name()), field.type()));
+          nestedMap.put(field.name(), convertValue(nested.getField(field.name()), field.type(), binaryAsString));
         }
         return nestedMap;
       }
@@ -137,7 +135,7 @@ public class IcebergRecordConverter
         Types.ListType listType = (Types.ListType) type;
         List<Object> result = new ArrayList<>(listValue.size());
         for (Object item : listValue) {
-          result.add(convertValue(item, listType.elementType()));
+          result.add(convertValue(item, listType.elementType(), binaryAsString));
         }
         return result;
       }
@@ -150,8 +148,8 @@ public class IcebergRecordConverter
         Map<Object, Object> result = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : mapValue.entrySet()) {
           result.put(
-              convertValue(entry.getKey(), mapType.keyType()),
-              convertValue(entry.getValue(), mapType.valueType())
+              convertValue(entry.getKey(), mapType.keyType(), binaryAsString),
+              convertValue(entry.getValue(), mapType.valueType(), binaryAsString)
           );
         }
         return result;

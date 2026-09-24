@@ -172,15 +172,15 @@ public abstract class IcebergCatalog
       }
       tableScan = tableScan.caseSensitive(isCaseSensitive());
 
-      CloseableIterable<FileScanTask> taskIterable = tableScan.planFiles();
-
       Expression detectedResidual = null;
-      for (FileScanTask task : taskIterable) {
-        tasks.add(task);
-        if (detectedResidual == null) {
-          Expression residual = task.residual();
-          if (residual != null && !residual.equals(Expressions.alwaysTrue())) {
-            detectedResidual = residual;
+      try (CloseableIterable<FileScanTask> taskIterable = tableScan.planFiles()) {
+        for (FileScanTask task : taskIterable) {
+          tasks.add(task);
+          if (detectedResidual == null) {
+            Expression residual = task.residual();
+            if (residual != null && !residual.equals(Expressions.alwaysTrue())) {
+              detectedResidual = residual;
+            }
           }
         }
       }

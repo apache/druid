@@ -19,6 +19,7 @@
 
 package org.apache.druid.iceberg.input;
 
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
@@ -26,10 +27,13 @@ import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.NestedInputFormat;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.iceberg.Schema;
 import org.apache.iceberg.SchemaParser;
 import org.apache.iceberg.catalog.Catalog;
@@ -99,6 +103,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
   @Nullable
   private final InputSourceFactory warehouseSource;
   private final InputRowSchema inputRowSchema;
+  private final boolean binaryAsString;
 
   public IcebergNativeRecordReader(
       String dataFilePath,
@@ -111,7 +116,8 @@ public class IcebergNativeRecordReader implements InputSourceReader
       String tableName,
       @Nullable IcebergCatalog icebergCatalog,
       @Nullable InputSourceFactory warehouseSource,
-      InputRowSchema inputRowSchema
+      InputRowSchema inputRowSchema,
+      @Nullable InputFormat inputFormat
   )
   {
     this.dataFilePath = dataFilePath;
@@ -125,6 +131,50 @@ public class IcebergNativeRecordReader implements InputSourceReader
     this.icebergCatalog = icebergCatalog;
     this.warehouseSource = warehouseSource;
     this.inputRowSchema = inputRowSchema;
+    this.binaryAsString = resolveBinaryAsStringAndValidate(inputFormat);
+  }
+
+  /**
+   * Reads Iceberg delete/data files directly through Iceberg's own Parquet reader rather than
+   * the configured {@code inputFormat}, since delete application needs raw Iceberg-typed values
+   * and per-row positions that a {@code warehouseSource}-based read wouldn't expose. That means
+   * {@code inputFormat} options are only partially honored here:
+   *
+   * <ul>
+   *   <li>A configured {@code flattenSpec} with fields cannot be applied, since this reader has
+   *       no generic flattening layer over Iceberg {@link Record}s — fail fast instead of
+   *       silently producing different dimensions than the V1 (no-delete-files) path would.</li>
+   *   <li>{@code binaryAsString} (Parquet-specific) is cheap to replicate directly in
+   *       {@link IcebergRecordConverter}, so it is detected here and honored.</li>
+   * </ul>
+   */
+  private static boolean resolveBinaryAsStringAndValidate(@Nullable InputFormat inputFormat)
+  {
+    if (inputFormat == null) {
+      return false;
+    }
+    if (inputFormat instanceof NestedInputFormat) {
+      JSONPathSpec flattenSpec = ((NestedInputFormat) inputFormat).getFlattenSpec();
+      if (flattenSpec != null && !flattenSpec.getFields().isEmpty()) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+                            .ofCategory(DruidException.Category.UNSUPPORTED)
+                            .build(
+                                "Iceberg table has V2 delete files, and reading it requires the native "
+                                + "delete-applying reader, which does not support a configured "
+                                + "'flattenSpec' with fields on the inputFormat. Remove flattenSpec.fields "
+                                + "from the inputFormat to ingest this table."
+                            );
+      }
+    }
+    try {
+      return Boolean.TRUE.equals(inputFormat.getClass().getMethod("getBinaryAsString").invoke(inputFormat));
+    }
+    catch (NoSuchMethodException e) {
+      return false;
+    }
+    catch (ReflectiveOperationException e) {
+      throw new RE(e, "Failed to resolve binaryAsString from configured inputFormat [%s]", inputFormat);
+    }
   }
 
   @Override
@@ -249,7 +299,7 @@ public class IcebergNativeRecordReader implements InputSourceReader
           if (eqDeleted) {
             continue;
           }
-          Map<String, Object> rowMap = IcebergRecordConverter.convertToMap(record, tableSchema);
+          Map<String, Object> rowMap = IcebergRecordConverter.convertToMap(record, tableSchema, binaryAsString);
           pending = IcebergRecordConverter.toInputRow(rowMap, inputRowSchema);
           return;
         }

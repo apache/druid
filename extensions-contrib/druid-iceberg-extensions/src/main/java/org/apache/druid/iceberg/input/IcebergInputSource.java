@@ -315,7 +315,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
       if (hasDeleteFiles) {
         // V2 path: create a combined reader across all file-scan tasks.
         final List<IcebergNativeRecordReader> taskReaders = v2Tasks.stream()
-                                                                   .map(task -> taskToNativeReader(task, inputRowSchema))
+                                                                   .map(task -> taskToNativeReader(task, inputRowSchema, inputFormat))
                                                                    .collect(Collectors.toList());
         return new InputSourceReader()
         {
@@ -560,7 +560,11 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     }
 
     /** Build an {@link IcebergNativeRecordReader} from a live {@link FileScanTask}. */
-    private IcebergNativeRecordReader taskToNativeReader(FileScanTask task, InputRowSchema inputRowSchema)
+    private IcebergNativeRecordReader taskToNativeReader(
+        FileScanTask task,
+        InputRowSchema inputRowSchema,
+        @Nullable InputFormat inputFormat
+    )
     {
       List<IcebergFileTaskInputSource.DeleteFileInfo> deleteInfos = task.deletes().stream()
                                                                         .map(IcebergFileTaskInputSource.DeleteFileInfo::fromDeleteFile)
@@ -576,7 +580,8 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
           tableName,
           icebergCatalog,
           warehouseSource,
-          inputRowSchema
+          inputRowSchema,
+          inputFormat
       );
     }
   }

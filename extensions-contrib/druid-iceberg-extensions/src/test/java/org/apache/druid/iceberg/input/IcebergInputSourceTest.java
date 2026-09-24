@@ -22,20 +22,26 @@ package org.apache.druid.iceberg.input;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.ColumnsFilter;
+import org.apache.druid.data.input.InputEntity;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.LocalInputSourceFactory;
+import org.apache.druid.data.input.impl.NestedInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
+import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DeleteFile;
 import org.apache.iceberg.Files;
@@ -65,6 +71,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -908,6 +916,183 @@ public class IcebergInputSourceTest
     Assertions.assertTrue(ids.contains("2"), "Bob should survive");
     Assertions.assertTrue(ids.contains("3"), "Charlie should survive");
     Assertions.assertFalse(ids.contains("4"), "Dave (file2, pos 1) should be deleted");
+  }
+
+  /**
+   * On the V2 (delete-aware) path, a configured {@code flattenSpec} with fields can't be applied
+   * by the native reader, so ingestion must fail fast rather than silently ignore it.
+   */
+  @Test
+  public void testInputSourceV2RejectsFlattenSpecWithFields() throws IOException
+  {
+    tearDown();
+    String v2TableName = "v2FlattenRejectTable";
+    tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), v2TableName);
+
+    Schema v2Schema = new Schema(
+        Types.NestedField.required(1, "id", Types.StringType.get()),
+        Types.NestedField.required(2, "name", Types.StringType.get()),
+        Types.NestedField.optional(3, "__time", Types.LongType.get())
+    );
+
+    List<Map<String, Object>> rows = ImmutableList.of(
+        ImmutableMap.of("id", "1", "name", "Alice", "__time", 0L)
+    );
+
+    Table table = testCatalog.retrieveCatalog().createTable(
+        tableIdentifier,
+        v2Schema,
+        PartitionSpec.unpartitioned(),
+        ImmutableMap.of(TableProperties.FORMAT_VERSION, "2")
+    );
+
+    String dataFilePath = table.location() + "/data/" + UUID.randomUUID() + ".parquet";
+    DataFile dataFile = writeParquetDataFile(table, v2Schema, rows, dataFilePath);
+    table.newAppend().appendFile(dataFile).commit();
+
+    // Any delete file, even one that deletes nothing, is enough to route through the V2 path.
+    String posDeletePath = table.location() + "/delete-files/" + UUID.randomUUID() + ".parquet";
+    DeleteFile posDeleteFile = writePositionDeleteFile(table, dataFilePath, 99L, posDeletePath);
+    table.newRowDelta().addDeletes(posDeleteFile).commit();
+
+    InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec("__time", "millis", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("id", "name"))),
+        ColumnsFilter.all()
+    );
+
+    IcebergInputSource inputSource = new IcebergInputSource(
+        v2TableName,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        null,
+        null,
+        null
+    );
+
+    JSONPathSpec flattenSpec = new JSONPathSpec(
+        true,
+        ImmutableList.of(JSONPathFieldSpec.createRootField("name"))
+    );
+    FakeNestedInputFormat inputFormat = new FakeNestedInputFormat(flattenSpec, false);
+
+    DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> inputSource.reader(inputRowSchema, inputFormat, FileUtils.createTempDir())
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains("flattenSpec"),
+        "Expect flattenSpec error to be thrown"
+    );
+  }
+
+  /**
+   * On the V2 (delete-aware) path, {@code binaryAsString} is cheap to replicate directly and
+   * must be honored so binary columns match what the V1 (input-format-based) path would produce.
+   */
+  @Test
+  public void testInputSourceV2HonorsBinaryAsString() throws IOException
+  {
+    tearDown();
+    String v2TableName = "v2BinaryAsStringTable";
+    tableIdentifier = TableIdentifier.of(Namespace.of(NAMESPACE), v2TableName);
+
+    Schema v2Schema = new Schema(
+        Types.NestedField.required(1, "id", Types.StringType.get()),
+        Types.NestedField.optional(2, "payload", Types.BinaryType.get()),
+        Types.NestedField.optional(3, "__time", Types.LongType.get())
+    );
+
+    byte[] payloadBytes = "hello".getBytes(StandardCharsets.UTF_8);
+    List<Map<String, Object>> rows = ImmutableList.of(
+        ImmutableMap.of("id", "1", "payload", ByteBuffer.wrap(payloadBytes), "__time", 0L)
+    );
+
+    Table table = testCatalog.retrieveCatalog().createTable(
+        tableIdentifier,
+        v2Schema,
+        PartitionSpec.unpartitioned(),
+        ImmutableMap.of(TableProperties.FORMAT_VERSION, "2")
+    );
+
+    String dataFilePath = table.location() + "/data/" + UUID.randomUUID() + ".parquet";
+    DataFile dataFile = writeParquetDataFile(table, v2Schema, rows, dataFilePath);
+    table.newAppend().appendFile(dataFile).commit();
+
+    // Any delete file, even one that deletes nothing, is enough to route through the V2 path.
+    String posDeletePath = table.location() + "/delete-files/" + UUID.randomUUID() + ".parquet";
+    DeleteFile posDeleteFile = writePositionDeleteFile(table, dataFilePath, 99L, posDeletePath);
+    table.newRowDelta().addDeletes(posDeleteFile).commit();
+
+    InputRowSchema inputRowSchema = new InputRowSchema(
+        new TimestampSpec("__time", "millis", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("id", "payload"))),
+        ColumnsFilter.all()
+    );
+
+    IcebergInputSource inputSource = new IcebergInputSource(
+        v2TableName,
+        NAMESPACE,
+        null,
+        testCatalog,
+        new LocalInputSourceFactory(),
+        null,
+        null,
+        null,
+        null
+    );
+
+    FakeNestedInputFormat inputFormat = new FakeNestedInputFormat(null, true);
+
+    List<InputRow> result = new ArrayList<>();
+    try (CloseableIterator<InputRow> it =
+             inputSource.reader(inputRowSchema, inputFormat, FileUtils.createTempDir()).read(null)) {
+      it.forEachRemaining(result::add);
+    }
+
+    Assertions.assertEquals(1, result.size());
+    Object payloadValue = ((MapBasedInputRow) result.get(0)).getEvent().get("payload");
+    Assertions.assertEquals("hello", payloadValue, "binaryAsString=true should decode binary column as UTF-8 string");
+  }
+
+  /**
+   * Minimal {@link NestedInputFormat} test double that also exposes a Parquet-style
+   * {@code getBinaryAsString()} accessor, mirroring {@code ParquetInputFormat}'s shape without
+   * depending on the parquet-extensions module.
+   */
+  private static class FakeNestedInputFormat extends NestedInputFormat
+  {
+    private final boolean binaryAsString;
+
+    FakeNestedInputFormat(JSONPathSpec flattenSpec, boolean binaryAsString)
+    {
+      super(flattenSpec);
+      this.binaryAsString = binaryAsString;
+    }
+
+    public boolean getBinaryAsString()
+    {
+      return binaryAsString;
+    }
+
+    @Override
+    public boolean isSplittable()
+    {
+      return false;
+    }
+
+    @Override
+    public InputEntityReader createReader(
+        InputRowSchema inputRowSchema,
+        InputEntity source,
+        File temporaryDirectory
+    )
+    {
+      throw new UnsupportedOperationException("not used in tests");
+    }
   }
 
   @AfterEach

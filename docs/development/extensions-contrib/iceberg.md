@@ -215,6 +215,11 @@ The Iceberg extension automatically detects delete files during table scan plann
 Iceberg V2 delete file support currently requires **Parquet** format for both data files and delete files. ORC and Avro V2 tables are not yet supported.
 :::
 
+Because the V2 path reads through Iceberg's native reader instead of the configured `inputFormat`, most `inputFormat` options don't apply to a V2 table's delete-aware reads:
+
+- `binaryAsString` (a `parquet` `inputFormat` option) is honored: binary and fixed-width columns are decoded as UTF-8 strings when it's set to `true`, matching the V1 behavior.
+- A `flattenSpec` with one or more `fields` is not supported for V2 tables with delete files, since the native reader has no generic flattening layer over Iceberg records. Ingestion fails with a clear error rather than silently reading different dimensions than the V1 path would. Remove `flattenSpec.fields` from the `inputFormat`, or use `useSchemaDiscovery`/no `flattenSpec` at all, to ingest such a table.
+
 Example ingestion spec for a V2 table (identical to a V1 spec — no extra configuration needed):
 
 ```json
@@ -271,3 +276,4 @@ This section lists the known limitations that apply to the Iceberg extension.
 - It does not handle Iceberg [schema evolution](https://iceberg.apache.org/docs/latest/evolution/) yet. In cases where an existing Iceberg table column is deleted and recreated with the same name, ingesting this table into Druid may bring the data for this column before it was deleted.
 - The Hive catalog has not been tested on Hadoop 2.x.x and is not guaranteed to work with Hadoop 2.
 - Iceberg V2 delete file support (position deletes and equality deletes) is only available for tables in **Parquet** format. ORC and Avro V2 tables are not currently supported.
+- For V2 tables with delete files, a configured `flattenSpec` with fields is rejected at ingestion time, since the native delete-applying reader can't apply it. Only `binaryAsString` is honored from the `inputFormat` in that path.

@@ -146,7 +146,8 @@ public class IcebergFileTaskInputSource implements InputSource
         tableName,
         icebergCatalog,
         warehouseSource,
-        inputRowSchema
+        inputRowSchema,
+        inputFormat
     );
   }
 
