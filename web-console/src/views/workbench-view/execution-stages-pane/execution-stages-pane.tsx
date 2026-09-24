@@ -19,6 +19,7 @@
 import { Button, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
+import { sum } from 'd3-array';
 import React from 'react';
 import type { Column } from 'react-table';
 import ReactTable from 'react-table';
@@ -510,6 +511,8 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             accessor: 'counts',
             className: 'padded wrapped',
             width: 300,
+            sortMethod: (a: Record<string, number>, b: Record<string, number>) =>
+              sum(Object.values(a), Number) - sum(Object.values(b), Number),
             Cell({ value }) {
               const entries = Object.entries(value);
               if (!entries.length) return '-';
