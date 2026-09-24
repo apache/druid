@@ -66,7 +66,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class SegmentLocalCacheManagerAcquireLifecycleTest
 {
-  private static final long SEGMENT_SIZE = 1000L;
+  private static final int SEGMENT_SIZE = 1000;
 
   /**
    * Per-segment-name gate controlling {@link GatedLoadSpec#loadSegment}. Static because Jackson materializes fresh
@@ -239,14 +239,18 @@ class SegmentLocalCacheManagerAcquireLifecycleTest
 
   private DataSegment makeSegment(String name)
   {
-    return DataSegment.builder()
-                      .dataSource("test_ds")
-                      .interval(Intervals.of("2024-01-01/2024-01-02"))
-                      .version("v1")
-                      .loadSpec(ImmutableMap.of("type", "gated", "size", (int) SEGMENT_SIZE, "name", name))
+    return DataSegment.builder(SegmentId.of(
+                          "test_ds",
+                          Intervals.of("2024-01-01/2024-01-02"),
+                          "v1",
+                          new NumberedShardSpec(
+                              Integer.parseInt(name.substring(name.length() - 1)),
+                              0
+                          )
+                      ))
+                      .loadSpec(ImmutableMap.of("type", "gated", "size", SEGMENT_SIZE, "name", name))
                       .dimensions(ImmutableList.of())
                       .metrics(ImmutableList.of())
-                      .shardSpec(new NumberedShardSpec(Integer.parseInt(name.substring(name.length() - 1)), 0))
                       .binaryVersion(9)
                       .size(SEGMENT_SIZE)
                       .build();
