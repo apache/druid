@@ -81,6 +81,11 @@ public class TaskRealtimeMetricsMonitor extends AbstractMonitor
         );
       }
     }
+    // The per-reason emissions above set DruidMetrics.REASON on the shared builder. Clear it so the
+    // dimension does not leak into the non-reason metrics emitted below (e.g. ingest/events/filtered),
+    // nor into later monitor ticks, since the same builder instance is reused across ticks.
+    builder.removeDimension(DruidMetrics.REASON);
+
     final long totalThrownAway = deltaThrownAwayByReason.values().stream().reduce(0L, Long::sum);
     if (totalThrownAway > 0) {
       log.warn(
