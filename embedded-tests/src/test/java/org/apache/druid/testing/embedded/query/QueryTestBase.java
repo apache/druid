@@ -128,7 +128,9 @@ public abstract class QueryTestBase extends EmbeddedClusterTestBase
     final IndexTask task = MoreResources.Task.BASIC_INDEX.get().dataSource(datasourceName).withId(taskId);
     cluster.callApi().onLeaderOverlord(o -> o.runTask(taskId, task));
     cluster.callApi().waitForTaskToSucceed(taskId, overlord);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(datasourceName, coordinator, broker);
+    // Poll the state observed by SQL queries rather than waiting for Broker schema refresh metrics,
+    // which has been observed to time out intermittently in CI.
+    cluster.callApi().waitForAllSegmentsToBeQueryable(datasourceName, coordinator, 100_000L);
     return datasourceName;
   }
 
