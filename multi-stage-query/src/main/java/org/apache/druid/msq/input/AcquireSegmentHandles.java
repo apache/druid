@@ -132,13 +132,17 @@ final class AcquireSegmentHandles
         }
       });
     }
-    catch (DruidException e) {
-      // inner was closed by the canceler before the callback could be registered; outer is mid-close, so the
-      // setException below is expected to be silently absorbed and closeInnerOnce has already run (making both no-ops),
-      // but calling it anyway makes this catch safe even if something unexpected ever escapes and outer fails rather
-      // than sitting NEW forever (hanging its consumer), and inner is closed rather than leaked.
-      outer.setException(e);
+    catch (Throwable t) {
+      // just in case, close and setException to be sure we tidy everything up and leave no chance a consumer is waiting
       closeInnerOnce.run();
+      try {
+        outer.setException(t);
+      }
+      catch (Throwable t2) {
+        // outer already completed, so no consumer is left hanging, log rather than mask the original failure
+        t2.addSuppressed(t);
+        log.warn(t2, "Failed to report acquire delivery failure to its handle");
+      }
     }
   }
 

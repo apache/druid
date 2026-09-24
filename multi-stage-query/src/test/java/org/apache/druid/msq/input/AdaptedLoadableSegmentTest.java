@@ -219,6 +219,49 @@ class AdaptedLoadableSegmentTest
   }
 
   @Test
+  void testBridgeRegistrationFailureFailsActionInsteadOfEscaping()
+  {
+    // A non-DruidException escaping callback registration must still be contained by the bridge: the returned action
+    // fails (rather than sitting NEW forever, hanging its consumer) and the resource is closed (rather than leaked).
+    final AtomicInteger innerCloses = new AtomicInteger();
+    final AsyncResource<AcquireSegmentResult> misbehaving = new AsyncResource<>()
+    {
+      @Override
+      public boolean isReady()
+      {
+        return false;
+      }
+
+      @Override
+      public void addReadyCallback(Runnable callback)
+      {
+        throw new IllegalStateException("registration blew up");
+      }
+
+      @Override
+      public AcquireSegmentResult get()
+      {
+        throw new IllegalStateException("not ready");
+      }
+
+      @Override
+      public void close()
+      {
+        innerCloses.incrementAndGet();
+      }
+    };
+
+    final AdaptedLoadableSegment adapted = new AdaptedLoadableSegment(() -> misbehaving, DESCRIPTOR, "test", null);
+    final AcquireSegmentAction action = adapted.acquire(AcquireMode.FULL);
+
+    Assertions.assertTrue(action.isReady(), "the registration failure must complete the action, not leave it pending");
+    final IllegalStateException e = Assertions.assertThrows(IllegalStateException.class, action::release);
+    Assertions.assertTrue(e.getMessage().contains("registration blew up"), e.getMessage());
+    Assertions.assertEquals(1, innerCloses.get(), "the inner resource must be closed, not leaked");
+    action.close();
+  }
+
+  @Test
   void testAcquireTwiceThrows()
   {
     final AdaptedLoadableSegment adapted =
