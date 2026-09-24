@@ -361,6 +361,30 @@
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
+                            <!--
+                              override the dist profile's same-id executions to drop the extensions-contrib/ exclusion;
+                              combine.self replaces the argument list so contrib entries are included.
+                            -->
+                            <execution>
+                                <id>generate-binary-license</id>
+                                <configuration>
+                                    <arguments combine.self="override">
+                                        <argument>${project.parent.basedir}/licenses/APACHE2</argument>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.parent.basedir}/LICENSE.BINARY</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>generate-binary-notice</id>
+                                <configuration>
+                                    <arguments combine.self="override">
+                                        <argument>${project.parent.basedir}/NOTICE</argument>
+                                        <argument>${project.parent.basedir}/licenses.yaml</argument>
+                                        <argument>${project.parent.basedir}/NOTICE.BINARY</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
                             <execution>
                                 <id>pull-deps-contrib-exts</id>
                                 <phase>package</phase>
