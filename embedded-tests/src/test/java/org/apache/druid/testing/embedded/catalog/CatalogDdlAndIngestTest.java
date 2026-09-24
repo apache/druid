@@ -408,6 +408,55 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
   }
 
   /**
+   * A computed column composed of specialized expressions is lifted with its dependency closure (the inner JSON_MERGE
+   * becomes an intermediary virtual column the outer nested-field virtual column reads by synthetic name), and the
+   * clustered write path evaluates the chain at ingest to materialize the declared column.
+   */
+  @Test
+  public void testCreateClusteredBaseTableWithComposedComputedColumn()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (\n"
+        + "  tenant VARCHAR,\n"
+        + "  __time TIMESTAMP,\n"
+        + "  payload TYPE('COMPLEX<json>'),\n"
+        + "  v BIGINT,\n"
+        + "  PROJECTION __base AS (\n"
+        + "    SELECT tenant, __time, payload, JSON_VALUE(JSON_MERGE(payload, payload), '$.v' RETURNING BIGINT) AS v\n"
+        + "    CLUSTERED BY tenant\n"
+        + "  )\n"
+        + ")\n"
+        + "PARTITIONED BY DAY",
+        tableName
+    );
+
+    // 'v' is computed by the base table, so the INSERT supplies only its input column.
+    ingest(
+        "INSERT INTO \"%s\"\n"
+        + "SELECT TIME_PARSE(t) AS __time, a AS tenant, p AS payload\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"inline\",\"data\":\""
+        + "{\\\"t\\\":\\\"2022-12-26T12:34:56\\\",\\\"a\\\":\\\"bbb\\\",\\\"p\\\":{\\\"v\\\":7}}"
+        + "\\n{\\\"t\\\":\\\"2022-12-26T12:34:56\\\",\\\"a\\\":\\\"aaa\\\",\\\"p\\\":{\\\"v\\\":12}}\"}',\n"
+        + "    '{\"type\":\"json\"}'\n"
+        + "  )\n"
+        + ") EXTEND (t VARCHAR, a VARCHAR, p TYPE('COMPLEX<json>'))\n",
+        tableName
+    );
+
+    // Rows come back in clustering order, with 'v' materialized at ingest by the composed virtual column chain.
+    cluster.callApi().verifySqlQuery(
+        "SELECT tenant, v FROM %s",
+        tableName,
+        "aaa,12\n"
+        + "bbb,7"
+    );
+  }
+
+  /**
    * A {@code __base} projection without {@code CLUSTERED BY} declares the plain-table layout: declared column order is
    * the segment storage and sort order, and {@code TIME_FLOOR(__time, <period>)} declares the table's query
    * granularity. Rows arrive unsorted with unfloored timestamps and come back sorted by the declared order (item

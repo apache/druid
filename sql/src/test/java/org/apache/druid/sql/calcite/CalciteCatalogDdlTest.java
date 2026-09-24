@@ -43,9 +43,11 @@ import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.filter.RangeFilter;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.segment.virtual.NestedMergeVirtualColumn;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -793,6 +795,37 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         ),
         WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
     );
+  }
+
+  /**
+   * A computed column composed of specialized expressions lifts with its dependency closure: the planner composes
+   * specializations by reference (the inner JSON_MERGE becomes its own virtual column that the outer nested-field
+   * virtual column reads by synthetic name), so the intermediary rides into the spec under its synthetic name as an
+   * unstored input of the materialized column, and both keep their planned specialized types.
+   */
+  @Test
+  public void testBaseProjectionComposedExpressionLiftsDependencyClosure()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, payload TYPE('COMPLEX<json>'), v BIGINT, __time TIMESTAMP,"
+        + " PROJECTION __base AS ("
+        + "   SELECT tenant, payload, JSON_VALUE(JSON_MERGE(payload, payload), '$.v' RETURNING BIGINT) AS v, __time"
+        + "   CLUSTERED BY tenant"
+        + " ))"
+    );
+    final ClusteredValueGroupsBaseTableMetadata metadata =
+        (ClusteredValueGroupsBaseTableMetadata)
+            WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY);
+    final VirtualColumns virtualColumns = metadata.getVirtualColumns();
+    assertEquals(2, virtualColumns.getVirtualColumns().length);
+
+    final VirtualColumn materialized = virtualColumns.getVirtualColumn("v");
+    assertTrue(materialized instanceof NestedFieldVirtualColumn, String.valueOf(materialized));
+    assertEquals(1, materialized.requiredColumns().size());
+
+    final VirtualColumn intermediary = virtualColumns.getVirtualColumn(materialized.requiredColumns().get(0));
+    assertTrue(intermediary instanceof NestedMergeVirtualColumn, String.valueOf(intermediary));
+    assertEquals(ImmutableList.of("payload"), intermediary.requiredColumns());
   }
 
   /**

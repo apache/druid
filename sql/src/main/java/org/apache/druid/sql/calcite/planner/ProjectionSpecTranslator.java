@@ -71,8 +71,11 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Turns the SQL body of a projection definition into the {@link AggregateProjectionSpec} the catalog stores.
@@ -173,9 +176,11 @@ public class ProjectionSpecTranslator
     if (clusteredBy == null) {
       metadata = new TableBaseTableMetadata(plainTableVirtualColumns(computed), null);
     } else {
+      // liftComputedColumns already verified that the body plans to a scan.
+      final VirtualColumns planned = druidQuery.getQuery().getVirtualColumns();
       metadata = new ClusteredValueGroupsBaseTableMetadata(
           clusteringColumns(clusteredBy),
-          materializedVirtualColumns(computed),
+          materializedVirtualColumns(computed, planned, columns),
           null
       );
     }
@@ -228,11 +233,22 @@ public class ProjectionSpecTranslator
 
   /**
    * The clustered write path materializes computed columns: each planned virtual column is stored under the name of
-   * the declared column it fills.
+   * the declared column it fills, together with its dependency closure. The planner composes specialized virtual
+   * columns by reference so the intermediaries a materialized column reads are carried into the spec under those
+   * synthetic names, as unstored inputs of the columns they feed. Only the materialized roots are renamed.
    */
-  private static VirtualColumns materializedVirtualColumns(final List<ComputedColumn> computed)
+  private static VirtualColumns materializedVirtualColumns(
+      final List<ComputedColumn> computed,
+      final VirtualColumns planned,
+      final List<ColumnSpec> columns
+  )
   {
+    final Set<String> declared = new HashSet<>();
+    for (ColumnSpec column : columns) {
+      declared.add(column.name());
+    }
     final List<VirtualColumn> materialized = new ArrayList<>(computed.size());
+    final Map<String, VirtualColumn> intermediaries = new LinkedHashMap<>();
     for (ComputedColumn column : computed) {
       if (!column.virtualColumn.supportsOutputNameRewrite()) {
         throw invalid(
@@ -241,8 +257,35 @@ public class ProjectionSpecTranslator
         );
       }
       materialized.add(column.virtualColumn.withOutputName(column.declaredName));
+      collectDependencies(column.virtualColumn, planned, declared, intermediaries);
     }
+    materialized.addAll(intermediaries.values());
     return VirtualColumns.create(materialized);
+  }
+
+  /**
+   * Collects the planned virtual columns that {@code root} (transitively) reads by synthetic name. A required column
+   * that is declared is a stored column reference and needs nothing; one that names a planned virtual column is an
+   * intermediary to carry along; anything else is left for the spec's own validation to report.
+   */
+  private static void collectDependencies(
+      final VirtualColumn root,
+      final VirtualColumns planned,
+      final Set<String> declared,
+      final Map<String, VirtualColumn> intermediaries
+  )
+  {
+    for (String input : root.requiredColumns()) {
+      if (declared.contains(input) || intermediaries.containsKey(input)) {
+        continue;
+      }
+      final VirtualColumn dependency = planned.getVirtualColumn(input);
+      if (dependency == null) {
+        continue;
+      }
+      intermediaries.put(input, dependency);
+      collectDependencies(dependency, planned, declared, intermediaries);
+    }
   }
 
   private static List<String> clusteringColumns(@Nullable final SqlNodeList clusteredBy)
@@ -315,7 +358,7 @@ public class ProjectionSpecTranslator
       );
     }
 
-    final VirtualColumns planned = ((ScanQuery) query).getVirtualColumns();
+    final VirtualColumns planned = query.getVirtualColumns();
     final List<ComputedColumn> computed = new ArrayList<>();
     for (int i = 0; i < columns.size(); i++) {
       final String declared = columns.get(i).name();
