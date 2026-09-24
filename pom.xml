@@ -74,6 +74,7 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>1.1.0</aether.version>
+        <maven.resolver.version>2.0.23</maven.resolver.version>
         <apache.curator.version>5.9.0</apache.curator.version>
         <apache.kafka.version>4.3.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
@@ -1055,6 +1056,31 @@
                 <groupId>org.eclipse.aether</groupId>
                 <artifactId>aether-util</artifactId>
                 <version>${aether.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven.resolver</groupId>
+                <artifactId>maven-resolver-api</artifactId>
+                <version>${maven.resolver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven.resolver</groupId>
+                <artifactId>maven-resolver-util</artifactId>
+                <version>${maven.resolver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven.resolver</groupId>
+                <artifactId>maven-resolver-supplier-mvn3</artifactId>
+                <version>${maven.resolver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven.resolver</groupId>
+                <artifactId>maven-resolver-connector-basic</artifactId>
+                <version>${maven.resolver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven.resolver</groupId>
+                <artifactId>maven-resolver-transport-apache</artifactId>
+                <version>${maven.resolver.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>

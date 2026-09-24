@@ -200,53 +200,39 @@
             <artifactId>guice-servlet</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-connector-basic</artifactId>
-            <version>1.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-transport-http</artifactId>
-            <version>1.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-util</artifactId>
-            <version>1.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-impl</artifactId>
-            <version>1.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-spi</artifactId>
-            <version>1.3.1</version>
-        </dependency>
-        <dependency>
+            <!-- Used directly by PullDependencies (RepositorySystem/RepositorySystemSession). -->
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-api</artifactId>
-            <version>1.3.1</version>
+        </dependency>
+        <dependency>
+            <!-- Used directly by PullDependencies (JavaScopes, DependencyFilterUtils,
+                 AuthenticationBuilder, DefaultProxySelector). -->
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-util</artifactId>
+        </dependency>
+        <dependency>
+            <!-- Replaces the pre-2.0 DefaultServiceLocator/MavenRepositorySystemUtils bootstrap
+                 (formerly provided by org.apache.maven:maven-resolver-provider) used in
+                 PullDependencies to construct a RepositorySystem/RepositorySystemSession.
+                 It transitively brings in maven-resolver-connector-basic, -impl, -spi,
+                 -transport-apache, and -transport-file at a consistent version, so those
+                 don't need to be declared here directly - nothing in this module's source
+                 references them; they're only used via ServiceLoader/SPI at runtime. -->
+            <groupId>org.apache.maven.resolver</groupId>
+            <artifactId>maven-resolver-supplier-mvn3</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-artifact</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-resolver-provider</artifactId>
-            <version>3.6.0</version>
-        </dependency>
-        <dependency>
+            <!-- plexus-utils 4.x (pulled transitively via maven-artifact/maven-model-builder) moved
+                 its XML pull-parser classes (org.codehaus.plexus.util.xml.pull.*) out into this
+                 module; maven-model-builder needs them at runtime to parse POMs. -->
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-xml</artifactId>
             <version>3.1.0</version>
             <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.xml.bind</groupId>
-            <artifactId>jakarta.xml.bind-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>
@@ -283,9 +269,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <!-- Widened from test to compile: maven-resolver-transport-apache needs Apache
+                 HttpClient (not just httpcore, which it already pulls transitively) at runtime
+                 to talk to remote repositories. -->
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
