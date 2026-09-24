@@ -47,6 +47,7 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.RunnerTaskState;
+import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -413,7 +414,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     } else {
       // Notify interested parties
       taskRunnerWorkItem.setResult(taskStatus);
-      TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
+      TaskRunnerUtils.notifyStatusChanged(listeners, taskRunnerWorkItem.task, taskStatus);
 
       // Update success/failure counters, Blacklist node if there are too many failures.
       if (workerHolder != null) {
@@ -1004,7 +1005,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         if (entry.getValue().getState() == HttpRemoteTaskRunnerWorkItem.State.RUNNING) {
           TaskRunnerUtils.notifyLocationChanged(
               ImmutableList.of(listenerPair),
-              entry.getKey(),
+              entry.getValue().getTask(),
               entry.getValue().getLocation()
           );
         }
@@ -1437,16 +1438,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       taskItem = tasks.get(taskId);
       if (taskItem == null) {
         // Try to find information about it in the TaskStorage
-        Optional<TaskStatus> knownStatusInStorage = taskStorage.getStatus(taskId);
+        final TaskInfo taskInfo = taskStorage.getTaskInfo(taskId);
+        final TaskStatus knownStatusInStorage = taskInfo == null ? null : taskInfo.getStatus();
 
-        if (knownStatusInStorage.isPresent()) {
-          switch (knownStatusInStorage.get().getStatusCode()) {
+        if (knownStatusInStorage != null) {
+          switch (knownStatusInStorage.getStatusCode()) {
             case RUNNING:
               taskItem = new HttpRemoteTaskRunnerWorkItem(
                   taskId,
                   worker,
                   TaskLocation.unknown(),
-                  null,
+                  taskInfo.getTask(),
                   announcement.getTaskType(),
                   HttpRemoteTaskRunnerWorkItem.State.RUNNING
               );
@@ -1468,7 +1470,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
             default:
               log.makeAlert(
                   "Found unrecognized state[%s] of task[%s] in taskStorage. Notification[%s] from worker[%s] is ignored.",
-                  knownStatusInStorage.get().getStatusCode(),
+                  knownStatusInStorage.getStatusCode(),
                   taskId,
                   announcement,
                   worker.getHost()
@@ -1516,7 +1518,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
                         announcement.getTaskLocation()
                     );
                     taskItem.setLocation(announcement.getTaskLocation());
-                    TaskRunnerUtils.notifyLocationChanged(listeners, taskId, announcement.getTaskLocation());
+                    TaskRunnerUtils.notifyLocationChanged(listeners, taskItem.getTask(), announcement.getTaskLocation());
                   }
                 } else {
                   log.warn(
@@ -1565,7 +1567,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
                         announcement.getTaskLocation()
                     );
                     taskItem.setLocation(announcement.getTaskLocation());
-                    TaskRunnerUtils.notifyLocationChanged(listeners, taskId, announcement.getTaskLocation());
+                    TaskRunnerUtils.notifyLocationChanged(listeners, taskItem.getTask(), announcement.getTaskLocation());
                   }
 
                   isTaskCompleted = true;
@@ -1790,17 +1792,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
         String taskId,
         Worker worker,
         TaskLocation location,
-        @Nullable Task task,
+        Task task,
         String taskType,
         State state
     )
     {
-      super(taskId, task == null ? null : task.getType(), worker, location, task == null ? null : task.getDataSource());
+      super(taskId, task.getType(), worker, location, task.getDataSource());
       this.state = Preconditions.checkNotNull(state);
-      Preconditions.checkArgument(task == null || taskType == null || taskType.equals(task.getType()));
-
-      // It is possible to have it null when the TaskRunner is just started and discovered this taskId from a worker,
-      // notifications don't contain whole Task instance but just metadata about the task.
+      Preconditions.checkArgument(taskType == null || taskType.equals(task.getType()));
       this.task = task;
     }
 

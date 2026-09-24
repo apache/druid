@@ -21,6 +21,7 @@ package org.apache.druid.indexing.overlord;
 
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.Task;
 
 import java.util.concurrent.Executor;
 
@@ -35,10 +36,10 @@ public interface TaskRunnerListener
    * Called when the location of a task has changed. The task may not actually be done starting up when
    * this notification arrives, so it may not be listening at this location yet.
    */
-  void locationChanged(String taskId, TaskLocation newLocation);
+  void locationChanged(Task task, TaskLocation newLocation);
 
   /**
    * Called when the status of a task has changed.
    */
-  void statusChanged(String taskId, TaskStatus status);
+  void statusChanged(Task task, TaskStatus status);
 }

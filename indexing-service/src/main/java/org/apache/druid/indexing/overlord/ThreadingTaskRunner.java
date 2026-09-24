@@ -46,6 +46,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -72,6 +73,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -225,10 +227,10 @@ public class ThreadingTaskRunner
                                                 .withTmpStorageBytesPerTask(storageSlot.getNumBytes()),
                                 task
                             );
-                            TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                            TaskRunnerUtils.notifyLocationChanged(listeners, task, taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,
-                                task.getId(),
+                                task,
                                 TaskStatus.running(task.getId())
                             );
 
@@ -264,7 +266,7 @@ public class ThreadingTaskRunner
                               Appenderators.clearTaskThreadContextForIndexers();
                             }
 
-                            TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
+                            TaskRunnerUtils.notifyStatusChanged(listeners, task, taskStatus);
                             return taskStatus;
                           }
                           catch (Throwable t) {
@@ -474,6 +476,20 @@ public class ThreadingTaskRunner
   {
     final ThreadingTaskRunnerWorkItem workItem = tasks.get(taskId);
     return workItem == null ? null : workItem.getState();
+  }
+
+  @Override
+  protected void notifyLocationChanged(
+      ThreadingTaskRunnerWorkItem item,
+      TaskRunnerListener listener,
+      Executor executor
+  )
+  {
+    TaskRunnerUtils.notifyLocationChanged(
+        List.of(Pair.of(listener, executor)),
+        item.getTask(),
+        item.getLocation()
+    );
   }
 
   private Collection<TaskRunnerWorkItem> getTasks(RunnerTaskState state)

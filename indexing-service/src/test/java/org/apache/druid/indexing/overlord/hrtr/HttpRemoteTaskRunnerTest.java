@@ -1905,15 +1905,15 @@ public class HttpRemoteTaskRunnerTest
             }
 
             @Override
-            public void locationChanged(String taskId, TaskLocation newLocation)
+            public void locationChanged(Task task, TaskLocation newLocation)
             {
-              listenerNotificationsAccumulator.add(ImmutableList.of(taskId, newLocation));
+              listenerNotificationsAccumulator.add(ImmutableList.of(task.getId(), newLocation));
             }
 
             @Override
-            public void statusChanged(String taskId, TaskStatus status)
+            public void statusChanged(Task task, TaskStatus status)
             {
-              listenerNotificationsAccumulator.add(ImmutableList.of(taskId, status));
+              listenerNotificationsAccumulator.add(ImmutableList.of(task.getId(), status));
             }
           },
           Execs.directExecutor()

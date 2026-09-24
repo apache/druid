@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -236,13 +237,13 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void locationChanged(String taskId, TaskLocation newLocation)
+          public void locationChanged(Task task, TaskLocation newLocation)
           {
             // do nothing
           }
 
           @Override
-          public void statusChanged(String taskId, TaskStatus status)
+          public void statusChanged(Task task, TaskStatus status)
           {
             statusHolder.set(status);
           }
@@ -305,7 +306,7 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void statusChanged(String taskId, TaskStatus status)
+          public void statusChanged(Task task, TaskStatus status)
           {
             if (status.getStatusCode() == TaskState.RUNNING) {
               runLatch.countDown();
