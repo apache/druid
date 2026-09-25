@@ -46,6 +46,7 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -155,7 +156,7 @@ public class DurableStorageCleanerTest
     Mockito.doReturn(ImmutableList.of(TASK_RUNNER_WORK_ITEM)).when(TASK_RUNNER).getRunningTasks();
     Mockito.when(TASK_MASTER.getTaskRunner()).thenReturn(Optional.of(TASK_RUNNER));
 
-    final Set<String> deleted = Sets.newHashSet();
+    final Set<String> deleted = new HashSet<>();
     final List<Integer> batchSizes = new ArrayList<>();
     Mockito.doAnswer(invocation -> {
       final Iterable<String> batch = invocation.getArgument(0);
