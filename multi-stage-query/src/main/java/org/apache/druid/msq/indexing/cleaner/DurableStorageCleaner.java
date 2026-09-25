@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 public class DurableStorageCleaner implements OverlordDuty
 {
   private static final Logger LOG = new Logger(DurableStorageCleaner.class);
-  private static final int DELETE_BATCH_SIZE = 100000;
+  private static final int DELETE_BATCH_SIZE = 10000;
 
   private final DurableStorageCleanerConfig config;
   private final StorageConnector storageConnector;
@@ -119,6 +119,7 @@ public class DurableStorageCleaner implements OverlordDuty
             storageConnector.deleteFiles(filesToRemove);
             removedCount += filesToRemove.size();
             filesToRemove.clear();
+            LOG.info("Removed [%d] files so far which are not associated with any MSQ task.", removedCount);
           }
         }
       }
@@ -127,12 +128,9 @@ public class DurableStorageCleaner implements OverlordDuty
     if (!filesToRemove.isEmpty()) {
       storageConnector.deleteFiles(filesToRemove);
       removedCount += filesToRemove.size();
-    }
-
-    if (removedCount == 0) {
+      LOG.info("Removed [%d] files so far which are not associated with any MSQ task.", removedCount);
+    } else if (removedCount == 0) {
       LOG.info("There are no leftover directories to delete.");
-    } else {
-      LOG.info("Removed [%d] files which are not associated with any MSQ task.", removedCount);
     }
   }
 

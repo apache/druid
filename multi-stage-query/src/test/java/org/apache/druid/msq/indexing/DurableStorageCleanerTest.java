@@ -141,7 +141,7 @@ public class DurableStorageCleanerTest
   public void testRunDeletesInBatchesAndKeepsTheRemainder() throws Exception
   {
     final List<String> strayFiles = new ArrayList<>();
-    for (int i = 0; i < 100_001; i++) {
+    for (int i = 0; i < 10_001; i++) {
       strayFiles.add(STRAY_DIR + i);
     }
 
