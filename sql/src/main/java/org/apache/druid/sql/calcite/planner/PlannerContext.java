@@ -30,6 +30,7 @@ import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -80,6 +81,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * Like {@link PlannerConfig}, but that has static configuration and this class
@@ -150,6 +153,18 @@ public class PlannerContext
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
+
+  /**
+   * Cancel flag inherited by any {@link PlannerContext} created on this thread while set, so nested view-expansion
+   * planners share the top-level query's {@link #cancelFlag}. Managed by {@link #withInheritedCancelFlag}.
+   */
+  private static final ThreadLocal<CancelFlag> INHERITED_CANCEL_FLAG = new ThreadLocal<>();
+
+  /**
+   * Calcite cancellation flag, wired into the planner via the framework {@link org.apache.calcite.plan.Context} in
+   * {@link PlannerFactory}; tripping it enforces the planning timeout ({@link PlannerConfig#getMaxPlanningTimeMs()}).
+   */
+  private final CancelFlag cancelFlag = inheritedOrNewCancelFlag();
 
   private PlannerConfig plannerConfig;
   /**
@@ -278,6 +293,37 @@ public class PlannerContext
   public PlannerConfig getPlannerConfig()
   {
     return plannerConfig;
+  }
+
+  public CancelFlag getCancelFlag()
+  {
+    return cancelFlag;
+  }
+
+  private static CancelFlag inheritedOrNewCancelFlag()
+  {
+    final CancelFlag inherited = INHERITED_CANCEL_FLAG.get();
+    return inherited != null ? inherited : new CancelFlag(new AtomicBoolean(false));
+  }
+
+  /**
+   * Runs {@code action} with {@code cancelFlag} installed as the flag that {@link PlannerContext}s created on this
+   * thread inherit, so one planning timeout governs nested view-expansion planners. Restores the prior value after.
+   */
+  public static <T> T withInheritedCancelFlag(final CancelFlag cancelFlag, final Supplier<T> action)
+  {
+    final CancelFlag previous = INHERITED_CANCEL_FLAG.get();
+    INHERITED_CANCEL_FLAG.set(cancelFlag);
+    try {
+      return action.get();
+    }
+    finally {
+      if (previous != null) {
+        INHERITED_CANCEL_FLAG.set(previous);
+      } else {
+        INHERITED_CANCEL_FLAG.remove();
+      }
+    }
   }
 
   public DateTime getLocalNow()
