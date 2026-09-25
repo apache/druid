@@ -167,6 +167,20 @@ Druid interacts with ZooKeeper through a set of standard path configurations. We
 Although not recommended but both HTTP and HTTPS connectors can be enabled at a time and respective ports are configurable using `druid.plaintextPort`
 and `druid.tlsPort` properties on each service. Please see `Configuration` section of individual services to check the valid and default values for these ports.
 
+#### Advertised plaintext port
+
+By default, a service advertises the same plaintext port it listens on. Set `druid.advertisedPlaintextPort` when other services must reach it on a different port, for example when a sidecar proxy such as Envoy terminates mTLS on one port and forwards traffic to Jetty on `druid.plaintextPort`.
+
+- `druid.plaintextPort` remains the port that Jetty binds to and listens on.
+- `druid.advertisedPlaintextPort` is the port that the service publishes through service discovery and that other services use to reach it over plaintext. This covers internal RPC between services, Router to Broker proxying, dynamic configuration sync, lookup and security cache notifications, catalog sync, `sys.server_properties`, task locations reported by Indexers, and Consul registration.
+- If `druid.advertisedPlaintextPort` is unset or non-positive, it falls back to `druid.plaintextPort`.
+- It only applies when `druid.enablePlaintextPort` is `true`. When `druid.enableTlsPort` is `true`, services still prefer `druid.tlsPort` to reach each other.
+- The `plaintext_port` column of `sys.servers` and the `plaintextPort` field of the `/druid/coordinator/v1/cluster` API continue to report `druid.plaintextPort`.
+
+You can't use a port in `druid.host` for this purpose, because a port in `druid.host` must match `druid.plaintextPort`.
+
+Peons forked by a Middle Manager don't support `druid.advertisedPlaintextPort`. Each Peon listens on its own port from `druid.indexer.runner.startPort`, `druid.indexer.runner.endPort`, or `druid.indexer.runner.ports`, so a single advertised port can't identify an individual Peon. The Middle Manager always starts Peons with `druid.advertisedPlaintextPort` unset, so each Peon advertises its own port. This applies even if the property is inherited from the Middle Manager or set through `druid.indexer.fork.property.druid.advertisedPlaintextPort` or the task context. Setting `druid.advertisedPlaintextPort` on the Middle Manager itself only affects how other services reach the Middle Manager.
+
 #### Jetty server TLS configuration
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).
@@ -717,6 +731,7 @@ These Coordinator static configurations can be defined in the `coordinator/runti
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service.|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8081|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative integer.|8281|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/coordinator`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -966,6 +981,7 @@ These Overlord static configurations can be defined in the `overlord/runtime.pro
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service.|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`.|8090|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8290|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services.|`druid/overlord`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1318,6 +1334,7 @@ These Middle Manager and Peon configurations can be defined in the `middleManage
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. Ignored for Peons forked by a Middle Manager, which always advertise their own port. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/middlemanager`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1445,6 +1462,7 @@ For most types of tasks, `SegmentWriteOutMediumFactory` can be configured per-ta
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8091|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/indexer`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1543,6 +1561,7 @@ These Historical configurations can be defined in the `historical/runtime.proper
 |`druid.host`|The host for the current service. This is used to advertise the current service location as reachable from another service and should generally be specified such that `http://${druid.host}/` could actually talk to this service|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the service's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8083|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8283|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/historical`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -1664,6 +1683,7 @@ These Broker configurations can be defined in the `broker/runtime.properties` fi
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8082|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8282|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/broker`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|
@@ -2330,6 +2350,7 @@ Supported query contexts:
 |`druid.host`|The host for the current process. This is used to advertise the current processes location as reachable from another process and should generally be specified such that `http://${druid.host}/` could actually talk to this process|`InetAddress.getLocalHost().getCanonicalHostName()`|
 |`druid.bindOnHost`|Indicating whether the process's internal jetty server bind on `druid.host`. Default is false, which means binding to all interfaces.|false|
 |`druid.plaintextPort`|This is the port to actually listen on; unless port mapping is used, this will be the same port as is on `druid.host`|8888|
+|`druid.advertisedPlaintextPort`|Plaintext port that other services use to reach this service, if different from `druid.plaintextPort`, for example when a sidecar proxy listens in front of Jetty. Unset or non-positive values fall back to `druid.plaintextPort`. See [Advertised plaintext port](#advertised-plaintext-port).|`druid.plaintextPort`|
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|9088|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/router`|
 |`druid.labels`|Optional JSON object of key-value pairs that define custom labels for the server. These labels are displayed in the web console under the "Services" tab. Example: `druid.labels={"location":"Airtrunk"}` or `druid.labels.location=Airtrunk`|`null`|

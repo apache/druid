@@ -27,6 +27,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
 import java.util.Map;
 
 public class DruidNodeTest
@@ -197,21 +198,33 @@ public class DruidNodeTest
     Assertions.assertEquals(8082, node.getAdvertisedPlaintextPort());
     Assertions.assertEquals("host:8082", node.getHostAndPort());
     Assertions.assertEquals("host:8082", node.getHostAndPortToUse());
+    Assertions.assertEquals(8082, node.getPortToUse());
 
-    // When set, advertisedPlaintextPort overrides in getHostAndPort() but not getPlaintextPort()
+    // When set, peer-facing accessors use advertisedPlaintextPort; getPlaintextPort() stays the bind port
     node = new DruidNode("test", "host", false, 8082, null, 9443, true, false, null, 9443);
     Assertions.assertEquals(8082, node.getPlaintextPort());
     Assertions.assertEquals(9443, node.getAdvertisedPlaintextPort());
     Assertions.assertEquals("host:9443", node.getHostAndPort());
     Assertions.assertEquals("host:9443", node.getHostAndPortToUse());
-    // getPortToUse() still returns the bind port
-    Assertions.assertEquals(8082, node.getPortToUse());
+    Assertions.assertEquals(9443, node.getPortToUse());
+    Assertions.assertEquals(URI.create("http://host:9443"), node.getUriToUse());
+  }
+
+  @Test
+  public void testAdvertisedPlaintextPortNonPositiveFallsBack()
+  {
+    for (Integer advertised : new Integer[]{null, 0, -1}) {
+      DruidNode node = new DruidNode("test", "host", false, 8082, null, null, true, false, null, advertised);
+      Assertions.assertEquals(8082, node.getAdvertisedPlaintextPort());
+      Assertions.assertEquals(8082, node.getPortToUse());
+      Assertions.assertEquals("host:8082", node.getHostAndPortToUse());
+    }
   }
 
   @Test
   public void testAdvertisedPlaintextPortWithTls()
   {
-    // advertisedPlaintextPort with TLS enabled — getHostAndPortToUse() prefers TLS
+    // TLS port still wins for the *ToUse accessors when TLS is enabled
     DruidNode node = new DruidNode("test", "host", false, 8082, null, 8443, true, true, null, 9443);
     Assertions.assertEquals(8082, node.getPlaintextPort());
     Assertions.assertEquals(9443, node.getAdvertisedPlaintextPort());
@@ -219,22 +232,23 @@ public class DruidNodeTest
     Assertions.assertEquals("host:9443", node.getHostAndPort());
     Assertions.assertEquals("host:8443", node.getHostAndTlsPort());
     Assertions.assertEquals("host:8443", node.getHostAndPortToUse());
+    Assertions.assertEquals(8443, node.getPortToUse());
+    Assertions.assertEquals(URI.create("https://host:8443"), node.getUriToUse());
   }
 
   @Test
   public void testAdvertisedPlaintextPortDisabledPlaintext()
   {
-    // When plaintext is disabled, advertisedPlaintextPort is -1 regardless
     DruidNode node = new DruidNode("test", "host", false, null, null, 8443, false, true, null, 9443);
     Assertions.assertEquals(-1, node.getPlaintextPort());
     Assertions.assertEquals(-1, node.getAdvertisedPlaintextPort());
     Assertions.assertNull(node.getHostAndPort());
+    Assertions.assertEquals(8443, node.getPortToUse());
   }
 
   @Test
   public void testAdvertisedPlaintextPortSerde() throws Exception
   {
-    // Serialization roundtrip preserves advertisedPlaintextPort
     DruidNode original = new DruidNode("service", "host", true, 8082, null, 5678, true, true, null, 9443);
     DruidNode actual = mapper.readValue(mapper.writeValueAsString(original), DruidNode.class);
     Assertions.assertEquals(8082, actual.getPlaintextPort());
@@ -246,7 +260,6 @@ public class DruidNodeTest
   @Test
   public void testAdvertisedPlaintextPortBackwardCompatDeserialization() throws Exception
   {
-    // Old JSON without advertisedPlaintextPort — should default to plaintextPort
     String json = "{\n"
                   + "  \"service\":\"service\",\n"
                   + "  \"host\":\"host\",\n"
@@ -263,7 +276,6 @@ public class DruidNodeTest
   @Test
   public void testAdvertisedPlaintextPortDeserialization() throws Exception
   {
-    // JSON with advertisedPlaintextPort set
     String json = "{\n"
                   + "  \"service\":\"service\",\n"
                   + "  \"host\":\"host\",\n"
@@ -277,6 +289,7 @@ public class DruidNodeTest
     Assertions.assertEquals(9443, actual.getAdvertisedPlaintextPort());
     Assertions.assertEquals("host:9443", actual.getHostAndPort());
     Assertions.assertEquals("host:9443", actual.getHostAndPortToUse());
+    Assertions.assertEquals(9443, actual.getPortToUse());
   }
 
   @Test

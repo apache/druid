@@ -286,6 +286,9 @@ public class DruidNode
     return bindOnHost;
   }
 
+  /**
+   * Port Jetty binds to. Peers should use {@link #getAdvertisedPlaintextPort()} or {@link #getPortToUse()}.
+   */
   public int getPlaintextPort()
   {
     return plaintextPort;
@@ -316,6 +319,9 @@ public class DruidNode
     return buildRevision;
   }
 
+  /**
+   * Plaintext port peers use to reach this node; falls back to {@link #getPlaintextPort()} when unset.
+   */
   public int getAdvertisedPlaintextPort()
   {
     return advertisedPlaintextPort;
@@ -359,7 +365,7 @@ public class DruidNode
     if (enableTlsPort) {
       return getTlsPort();
     } else {
-      return getPlaintextPort();
+      return getAdvertisedPlaintextPort();
     }
   }
 

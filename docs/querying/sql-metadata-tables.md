@@ -228,7 +228,7 @@ Servers table lists all discovered servers in the cluster.
 |------|-----|-----|
 |server|VARCHAR|Server name in the form host:port|
 |host|VARCHAR|Hostname of the server|
-|plaintext_port|BIGINT|Unsecured port of the server, or -1 if plaintext traffic is disabled|
+|plaintext_port|BIGINT|Unsecured port the server listens on (`druid.plaintextPort`), or -1 if plaintext traffic is disabled. The port in `server` may differ if [`druid.advertisedPlaintextPort`](../configuration/index.md#advertised-plaintext-port) is set.|
 |tls_port|BIGINT|TLS port of the server, or -1 if TLS is disabled|
 |server_type|VARCHAR|Type of Druid service. Possible values include: COORDINATOR, OVERLORD,  BROKER, ROUTER, HISTORICAL, MIDDLE_MANAGER or PEON.|
 |tier|VARCHAR|Distribution tier see [druid.server.tier](../configuration/index.md#historical-general-configuration). Only valid for HISTORICAL type, for other types it's null|
