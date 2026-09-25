@@ -5552,7 +5552,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.29.7
+version: 7.29.8
 license_file_path: licenses/bin/@babel-generator.MIT
 
 ---
@@ -5602,7 +5602,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.29.7
+version: 7.29.9
 license_file_path: licenses/bin/@babel-parser.MIT
 
 ---
@@ -5612,7 +5612,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.27.0
+version: 7.29.7
 license_file_path: licenses/bin/@babel-runtime.MIT
 
 ---
@@ -5632,7 +5632,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.29.7
+version: 7.29.8
 license_file_path: licenses/bin/@babel-traverse.MIT
 
 ---
@@ -5642,7 +5642,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.29.7
+version: 7.29.8
 license_file_path: licenses/bin/@babel-types.MIT
 
 ---
@@ -5652,7 +5652,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.1.4
+version: 5.1.16
 
 ---
 
@@ -5661,7 +5661,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.16.0
+version: 5.19.1
 
 ---
 
@@ -5670,7 +5670,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 2.3.17
+version: 2.3.33
 
 ---
 
@@ -5679,7 +5679,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.3.17
+version: 5.3.33
 
 ---
 
@@ -5688,7 +5688,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.15.0
+version: 5.23.0
 
 ---
 
@@ -5697,7 +5697,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.3.5
+version: 5.3.21
 
 ---
 
@@ -5796,7 +5796,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Alex Bol
-version: 1.1.3
+version: 1.1.4
 license_file_path: licenses/bin/@flatten-js-interval-tree.MIT
 
 ---
@@ -5806,7 +5806,7 @@ license_category: binary
 module: web-console
 license_name: SIL Open Font License 1.1
 copyright: Google Inc.
-version: 5.1.0
+version: 5.3.0
 license_file_path: licenses/bin/@fontsource-open-sans.OFL
 
 ---
@@ -5816,7 +5816,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Adobe
-version: 3.5.6
+version: 3.12.4
 
 ---
 
@@ -5835,7 +5835,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Justin Ridgewell
-version: 3.1.0
+version: 3.1.2
 license_file_path: licenses/bin/@jridgewell-resolve-uri.MIT
 
 ---
@@ -5845,7 +5845,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Justin Ridgewell
-version: 1.5.5
+version: 1.6.0
 license_file_path: licenses/bin/@jridgewell-sourcemap-codec.MIT
 
 ---
@@ -5875,7 +5875,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: 강동윤
-version: 0.5.13
+version: 0.5.23
 
 ---
 
@@ -5884,7 +5884,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 4.0.0
+version: 4.0.2
 license_file_path: licenses/bin/@types-parse-json.MIT
 
 ---
@@ -5894,7 +5894,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 15.7.11
+version: 15.7.15
 license_file_path: licenses/bin/@types-prop-types.MIT
 
 ---
@@ -5914,7 +5914,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 18.3.11
+version: 18.3.31
 license_file_path: licenses/bin/@types-react.MIT
 
 ---
@@ -5954,7 +5954,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 1.18.0
+version: 1.20.0
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -6053,7 +6053,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jed Watson
-version: 2.3.2
+version: 2.5.1
 license_file_path: licenses/bin/classnames.MIT
 
 ---
@@ -6093,7 +6093,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Thorsten Lorenz
-version: 1.6.0
+version: 1.9.0
 license_file_path: licenses/bin/convert-source-map.MIT
 
 ---
@@ -6133,7 +6133,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Fredrik Nicol
-version: 2.6.17
+version: 2.6.21
 license_file_path: licenses/bin/csstype.MIT
 
 ---
@@ -6141,10 +6141,10 @@ license_file_path: licenses/bin/csstype.MIT
 name: "d3-array"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.12.1
-license_file_path: licenses/bin/d3-array.BSD3
+version: 3.2.4
+license_file_path: licenses/bin/d3-array.ISC
 
 ---
 
@@ -6181,10 +6181,10 @@ license_file_path: licenses/bin/d3-dsv.ISC
 name: "d3-format"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 1.4.1
-license_file_path: licenses/bin/d3-format.BSD3
+version: 3.1.2
+license_file_path: licenses/bin/d3-format.ISC
 
 ---
 
@@ -6251,10 +6251,10 @@ license_file_path: licenses/bin/d3-time-format.ISC
 name: "d3-time"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 1.1.0
-license_file_path: licenses/bin/d3-time.BSD3
+version: 3.1.0
+license_file_path: licenses/bin/d3-time.ISC
 
 ---
 
@@ -6283,7 +6283,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: iamkun
-version: 1.11.15
+version: 1.11.23
 license_file_path: licenses/bin/dayjs.MIT
 
 ---
@@ -6293,7 +6293,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Josh Junon
-version: 4.3.3
+version: 4.4.3
 license_file_path: licenses/bin/debug.MIT
 
 ---
@@ -6390,7 +6390,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: JD Ballard
-version: 1.3.2
+version: 1.3.4
 license_file_path: licenses/bin/error-ex.MIT
 
 ---
@@ -6420,7 +6420,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 1.1.1
+version: 1.1.2
 license_file_path: licenses/bin/es-object-atoms.MIT
 
 ---
@@ -6590,7 +6590,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Michael Ridgway
-version: 3.3.0
+version: 3.3.2
 license_file_path: licenses/bin/hoist-non-react-statics.BSD3
 
 ---
@@ -6620,7 +6620,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Sindre Sorhus
-version: 3.3.0
+version: 3.3.1
 license_file_path: licenses/bin/import-fresh.MIT
 
 ---
@@ -6630,7 +6630,7 @@ license_category: binary
 module: web-console
 license_name: ISC License
 copyright: Mike Bostock
-version: 1.0.1
+version: 2.0.3
 license_file_path: licenses/bin/internmap.ISC
 
 ---
@@ -6650,7 +6650,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 2.15.1
+version: 2.17.0
 license_file_path: licenses/bin/is-core-module.MIT
 
 ---
@@ -6710,7 +6710,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Brian Donovan
-version: 1.1.6
+version: 1.2.4
 license_file_path: licenses/bin/lines-and-columns.MIT
 
 ---
@@ -6829,8 +6829,8 @@ name: "ms"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Zeit, Inc.
-version: 2.1.2
+copyright: Vercel, Inc.
+version: 2.1.3
 license_file_path: licenses/bin/ms.MIT
 
 ---
@@ -7119,7 +7119,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Marina Korzunova
-version: 2.3.3
+version: 2.4.0
 license_file_path: licenses/bin/react-uid.MIT
 
 ---
@@ -7169,7 +7169,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: James Halliday
-version: 1.22.1
+version: 1.22.12
 license_file_path: licenses/bin/resolve.MIT
 
 ---
@@ -7181,16 +7181,6 @@ license_name: BSD-3-Clause License
 copyright: Mike Bostock
 version: 1.3.3
 license_file_path: licenses/bin/rw.BSD3
-
----
-
-name: "safe-buffer"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Feross Aboukhadijeh
-version: 5.1.2
-license_file_path: licenses/bin/safe-buffer.MIT
 
 ---
 
@@ -7259,7 +7249,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Alex Reardon
-version: 1.0.6
+version: 1.3.3
 license_file_path: licenses/bin/tiny-invariant.MIT
 
 ---
@@ -7318,8 +7308,8 @@ name: "use-sync-external-store"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Facebook, Inc. and its affiliates.
-version: 1.2.2
+copyright: Meta Platforms, Inc. and affiliates.
+version: 1.7.0
 license_file_path: licenses/bin/use-sync-external-store.MIT
 
 ---
@@ -7379,7 +7369,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Paul Henschel
-version: 4.5.5
+version: 4.5.7
 license_file_path: licenses/bin/zustand.MIT
 # Web console modules end
 

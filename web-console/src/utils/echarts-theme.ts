@@ -16,26 +16,25 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+// The series color palette of the ECharts 5 'dark' theme. ECharts 6 changed the palette of its 'dark'
+// theme; set this as the `color` option to keep the v5 colors while using the rest of the v6 theme.
+export const ECHARTS_COLORS = [
+  '#4992ff',
+  '#7cffb2',
+  '#fddd60',
+  '#ff6e76',
+  '#58d9f9',
+  '#05c091',
+  '#ff8a45',
+  '#8d48e3',
+  '#dd79ff',
+];
 
-import { TimezoneMenuItems } from './timezone-menu-items';
+// The background color of the ECharts 5 'dark' theme.
+export const ECHARTS_BACKGROUND_COLOR = '#100C2A';
 
-jest.useFakeTimers().setSystemTime(Date.parse('2024-06-08T12:34:56Z'));
-
-describe('TimezoneMenuItems', () => {
-  it('ensure UTC', () => {
-    expect(new Date().getTimezoneOffset()).toBe(0);
-  });
-
-  it('matches snapshot', () => {
-    const comp = shallow(
-      <TimezoneMenuItems
-        sqlTimeZone="Blah"
-        setSqlTimeZone={() => {}}
-        defaultSqlTimeZone="Etc/UTC"
-      />,
-    );
-
-    expect(comp).toMatchSnapshot();
-  });
-});
+// The brush (selection highlight) style of ECharts 5.
+export const ECHARTS_BRUSH_STYLE = {
+  color: 'rgba(210,219,238,0.3)',
+  borderColor: '#D2DBEE',
+};

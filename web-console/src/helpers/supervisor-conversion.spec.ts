@@ -191,21 +191,21 @@ describe('supervisor conversion', () => {
     it('includes non-default sketch arguments', () => {
       const supervisor = wikipediaSupervisor();
       supervisor.spec.dataSchema.metricsSpec = [
-        { name: 'theta_user', type: 'thetaSketch', fieldName: 'user', size: 32768 } as any,
+        { name: 'theta_user', type: 'thetaSketch', fieldName: 'user', size: 32768 },
         {
           name: 'hll_user',
           type: 'HLLSketchBuild',
           fieldName: 'user',
           lgK: 14,
           tgtHllType: 'HLL_8',
-        } as any,
+        },
         {
           name: 'quantiles_added',
           type: 'quantilesDoublesSketch',
           fieldName: 'added',
           k: 256,
-        } as any,
-        { name: 'first_page', type: 'stringFirst', fieldName: 'page', maxStringBytes: 1024 } as any,
+        },
+        { name: 'first_page', type: 'stringFirst', fieldName: 'page', maxStringBytes: 1024 },
       ];
 
       const converted = convertSupervisorToSql(supervisor, {

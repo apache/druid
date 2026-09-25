@@ -25,7 +25,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
-import { bigIntsToNumbers, formatEmpty } from '../../../../utils';
+import {
+  bigIntsToNumbers,
+  ECHARTS_BACKGROUND_COLOR,
+  ECHARTS_COLORS,
+  formatEmpty,
+} from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
 import { ModuleRepository } from '../../module-repository/module-repository';
@@ -160,6 +165,8 @@ ModuleRepository.registerModule<BarChartParameterValues>({
       const myChart = echarts.init(container, 'dark');
 
       myChart.setOption({
+        color: ECHARTS_COLORS,
+        backgroundColor: ECHARTS_BACKGROUND_COLOR,
         tooltip: {},
         dataset: {
           sourceHeader: false,

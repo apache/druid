@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`ExplainDialog matches snapshot on error 1`] = `
 <Blueprint5.Dialog
@@ -102,6 +102,7 @@ exports[`ExplainDialog matches snapshot on some data (many queries) 1`] = `
       fill={false}
       large={false}
       renderActiveTabPanelOnly={true}
+      size="medium"
       vertical={true}
     >
       <Blueprint5.Tab
