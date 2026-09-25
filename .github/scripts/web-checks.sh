@@ -32,9 +32,6 @@ cd ..
 
 # web console
 mvn -B test -pl 'web-console'
-cd web-console
-{ for i in 1 2 3; do npx --yes codecov@3.8.3 --disable=gcov -p .. && break || sleep 15; done }
-cd ..
 
 # web console end-to-end test
 ./.github/scripts/setup_generate_license.sh
