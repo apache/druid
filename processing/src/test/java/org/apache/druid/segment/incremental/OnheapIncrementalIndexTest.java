@@ -32,7 +32,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -49,7 +48,6 @@ import org.apache.druid.segment.TestColumnSelectorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestObjectColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.virtual.ExpressionPlan;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -62,10 +60,6 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 {
@@ -530,7 +524,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testExpressionPlanCacheUsesExpressionIdentity()
+  public void testExpressionSelectorCacheUsesExpressionIdentity()
   {
     final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
     final Expr expression = Parser.parse("value", TestExprMacroTable.INSTANCE);
@@ -539,92 +533,39 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 
     Assertions.assertNotSame(expression, structurallyEqualExpression);
 
-    final ExpressionPlan firstPlan = selectorFactory.getExpressionPlan(expression);
-    final ExpressionPlan sameExpressionPlan = selectorFactory.getExpressionPlan(expression);
-    Assertions.assertNotSame(firstPlan, sameExpressionPlan);
-    Assertions.assertSame(expression, firstPlan.getExpression());
-    Assertions.assertSame(expression, sameExpressionPlan.getExpression());
+    final ColumnValueSelector<ExprEval> firstSelector = selectorFactory.getOrCreateExprEvalSelector(expression);
+    Assertions.assertSame(firstSelector, selectorFactory.getOrCreateExprEvalSelector(expression));
 
-    final ExpressionPlan structurallyEqualPlan = selectorFactory.getExpressionPlan(structurallyEqualExpression);
-    Assertions.assertNotSame(firstPlan, structurallyEqualPlan);
-    Assertions.assertSame(structurallyEqualExpression, structurallyEqualPlan.getExpression());
+    final ColumnValueSelector<ExprEval> structurallyEqualSelector =
+        selectorFactory.getOrCreateExprEvalSelector(structurallyEqualExpression);
+    Assertions.assertNotSame(firstSelector, structurallyEqualSelector);
+    Assertions.assertSame(
+        structurallyEqualSelector,
+        selectorFactory.getOrCreateExprEvalSelector(structurallyEqualExpression)
+    );
 
-    final ExpressionPlan differentPlan = selectorFactory.getExpressionPlan(differentExpression);
-    Assertions.assertNotSame(structurallyEqualPlan, differentPlan);
-    Assertions.assertSame(differentExpression, differentPlan.getExpression());
-
-    Assertions.assertNotSame(firstPlan, selectorFactory.getExpressionPlan(expression));
-    Assertions.assertNotSame(structurallyEqualPlan, selectorFactory.getExpressionPlan(structurallyEqualExpression));
-    Assertions.assertNotSame(differentPlan, selectorFactory.getExpressionPlan(differentExpression));
-
-    final Expr functionExpression = Parser.parse("value + 1", TestExprMacroTable.INSTANCE);
-    final ExpressionPlan functionPlan = selectorFactory.getExpressionPlan(functionExpression);
-    final ExpressionPlan sameFunctionPlan = selectorFactory.getExpressionPlan(functionExpression);
-    Assertions.assertNotSame(functionPlan, sameFunctionPlan);
-    Assertions.assertNotSame(functionPlan.getExpression(), sameFunctionPlan.getExpression());
-
-    final Expr constantExpression = Parser.parse("'constant'", TestExprMacroTable.INSTANCE);
-    final ExpressionPlan firstConstantPlan = selectorFactory.getExpressionPlan(constantExpression);
-    final ExpressionPlan secondConstantPlan = selectorFactory.getExpressionPlan(constantExpression);
-    Assertions.assertNotSame(firstConstantPlan.getExpression(), secondConstantPlan.getExpression());
+    final ColumnValueSelector<ExprEval> differentSelector =
+        selectorFactory.getOrCreateExprEvalSelector(differentExpression);
+    Assertions.assertNotSame(structurallyEqualSelector, differentSelector);
+    Assertions.assertSame(differentSelector, selectorFactory.getOrCreateExprEvalSelector(differentExpression));
   }
 
   @Test
-  public void testExpressionPlanCacheIsSafeForConcurrentReplacement() throws Exception
-  {
-    final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
-    final Expr firstExpression = Parser.parse("value", TestExprMacroTable.INSTANCE);
-    final Expr secondExpression = Parser.parse("other", TestExprMacroTable.INSTANCE);
-    final int threadCount = 8;
-    final int iterationsPerThread = 2_000;
-    final CountDownLatch startLatch = new CountDownLatch(1);
-    final ExecutorService executor = Execs.multiThreaded(threadCount, "expression-plan-cache-test-%d");
-
-    try {
-      final List<Future<?>> futures = new ArrayList<>(threadCount);
-      for (int threadNumber = 0; threadNumber < threadCount; threadNumber++) {
-        final int thread = threadNumber;
-        futures.add(executor.submit(() -> {
-          startLatch.await();
-          for (int iteration = 0; iteration < iterationsPerThread; iteration++) {
-            final Expr expectedExpression = ((thread + iteration) & 1) == 0 ? firstExpression : secondExpression;
-            final ExpressionPlan plan = selectorFactory.getExpressionPlan(expectedExpression);
-            Assertions.assertSame(expectedExpression, plan.getExpression());
-          }
-          return null;
-        }));
-      }
-
-      startLatch.countDown();
-      for (final Future<?> future : futures) {
-        future.get(30, TimeUnit.SECONDS);
-      }
-    }
-    finally {
-      executor.shutdownNow();
-      Assertions.assertTrue(executor.awaitTermination(30, TimeUnit.SECONDS));
-    }
-  }
-
-  @Test
-  public void testExpressionFactorizationDoesNotShareMutableState()
+  public void testExpressionSelectorCacheSharesSelectorButNotAggregatorState()
   {
     final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
     final Expr expression = Parser.parse("value + 1", TestExprMacroTable.INSTANCE);
 
     final ColumnValueSelector<?> firstSelector = ExpressionSelectors.makeExprEvalSelector(selectorFactory, expression);
     final ColumnValueSelector<?> secondSelector = ExpressionSelectors.makeExprEvalSelector(selectorFactory, expression);
-    Assertions.assertNotSame(firstSelector, secondSelector);
+    Assertions.assertSame(firstSelector, secondSelector);
 
     final Expr constantExpression = Parser.parse("'constant'", TestExprMacroTable.INSTANCE);
     final ColumnValueSelector<ExprEval> firstConstantSelector =
         ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
     final ColumnValueSelector<ExprEval> secondConstantSelector =
         ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
-    final ColumnValueSelector<ExprEval> thirdConstantSelector =
-        ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
-    Assertions.assertNotSame(firstConstantSelector.getObject(), secondConstantSelector.getObject());
-    Assertions.assertNotSame(secondConstantSelector.getObject(), thirdConstantSelector.getObject());
+    Assertions.assertSame(firstConstantSelector, secondConstantSelector);
 
     final AggregatorFactory aggregatorFactory = new LongSumAggregatorFactory(
         "sum",

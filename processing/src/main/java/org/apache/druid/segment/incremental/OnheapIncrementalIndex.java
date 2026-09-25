@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -53,20 +54,19 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
-import org.apache.druid.segment.virtual.ExpressionPlan;
-import org.apache.druid.segment.virtual.ExpressionPlanCache;
-import org.apache.druid.segment.virtual.ExpressionPlanner;
+import org.apache.druid.segment.virtual.ExprEvalSelectorCache;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -675,24 +675,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   }
 
   /**
-   * Caches references to selector objects for each column and expression-plan metadata instead of creating them for each
-   * row key in order to save heap space and avoid repeated expression planning.
+   * Caches references to selector objects instead of creating them for each row key in order to save heap space and
+   * avoid repeated expression planning and selector construction.
    */
-  static class CachingColumnSelectorFactory implements ColumnSelectorFactory, ExpressionPlanCache
+  static class CachingColumnSelectorFactory implements ColumnSelectorFactory, ExprEvalSelectorCache
   {
-    private static final ExpressionPlanCacheEntry[] NO_CACHED_EXPRESSION_PLANS = new ExpressionPlanCacheEntry[0];
-
     private final HashMap<String, ColumnValueSelector<?>> columnSelectorMap;
+    private final IdentityHashMap<Expr, ColumnValueSelector<ExprEval>> expressionSelectorMap;
     private final ColumnSelectorFactory delegate;
-    // This copy-on-write array is intentional. The cache has one entry per expression metric, and sequential identity
-    // lookup had lower ingestion overhead than IdentityHashMap lookup in benchmarks with up to 50 expressions. Publishing
-    // the expression-plan pairs in one volatile snapshot also lets readers remain lock-free and prevents torn pair reads.
-    private volatile ExpressionPlanCacheEntry[] cachedExpressionPlans = NO_CACHED_EXPRESSION_PLANS;
 
     public CachingColumnSelectorFactory(ColumnSelectorFactory delegate)
     {
       this.delegate = delegate;
       this.columnSelectorMap = new HashMap<>();
+      this.expressionSelectorMap = new IdentityHashMap<>();
     }
 
     @Override
@@ -718,41 +714,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     }
 
     @Override
-    public ExpressionPlan getExpressionPlan(final Expr expression)
+    public ColumnValueSelector<ExprEval> getOrCreateExprEvalSelector(final Expr expression)
     {
-      for (final ExpressionPlanCacheEntry cachedEntry : cachedExpressionPlans) {
-        if (cachedEntry.expression == expression) {
-          return cachedEntry.plan.withExpression(Expr.singleThreaded(expression, this));
-        }
+      ColumnValueSelector<ExprEval> selector = expressionSelectorMap.get(expression);
+      if (selector == null) {
+        // Do not use computeIfAbsent: building the expression selector can re-enter makeColumnValueSelector on this
+        // factory through expression bindings.
+        selector = ExpressionSelectors.makeExprEvalSelectorUncached(this, expression);
+        expressionSelectorMap.put(expression, selector);
       }
-
-      synchronized (this) {
-        final ExpressionPlanCacheEntry[] currentEntries = cachedExpressionPlans;
-        for (final ExpressionPlanCacheEntry cachedEntry : currentEntries) {
-          if (cachedEntry.expression == expression) {
-            return cachedEntry.plan.withExpression(Expr.singleThreaded(expression, this));
-          }
-        }
-
-        final Expr singleThreadedExpression = Expr.singleThreaded(expression, this);
-        final ExpressionPlan expressionPlan = ExpressionPlanner.plan(this, singleThreadedExpression);
-        final ExpressionPlanCacheEntry[] updatedEntries = Arrays.copyOf(currentEntries, currentEntries.length + 1);
-        updatedEntries[currentEntries.length] = new ExpressionPlanCacheEntry(expression, expressionPlan);
-        cachedExpressionPlans = updatedEntries;
-        return expressionPlan.withExpression(singleThreadedExpression);
-      }
-    }
-
-    private static final class ExpressionPlanCacheEntry
-    {
-      private final Expr expression;
-      private final ExpressionPlan plan;
-
-      private ExpressionPlanCacheEntry(final Expr expression, final ExpressionPlan plan)
-      {
-        this.expression = expression;
-        this.plan = plan;
-      }
+      return selector;
     }
 
     @Nullable

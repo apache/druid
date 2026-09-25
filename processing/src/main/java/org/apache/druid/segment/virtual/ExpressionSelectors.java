@@ -133,6 +133,21 @@ public class ExpressionSelectors
       Expr expression
   )
   {
+    if (columnSelectorFactory instanceof ExprEvalSelectorCache) {
+      return ((ExprEvalSelectorCache) columnSelectorFactory).getOrCreateExprEvalSelector(expression);
+    }
+    return makeExprEvalSelectorUncached(columnSelectorFactory, expression);
+  }
+
+  /**
+   * Makes an uncached expression selector. Used by {@link ExprEvalSelectorCache} implementations to avoid recursively
+   * calling back into the cache.
+   */
+  public static ColumnValueSelector<ExprEval> makeExprEvalSelectorUncached(
+      ColumnSelectorFactory columnSelectorFactory,
+      Expr expression
+  )
+  {
     final ExpressionPlan plan = plan(columnSelectorFactory, expression);
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
@@ -231,9 +246,6 @@ public class ExpressionSelectors
 
   private static ExpressionPlan plan(ColumnSelectorFactory columnSelectorFactory, Expr expression)
   {
-    if (columnSelectorFactory instanceof ExpressionPlanCache) {
-      return ((ExpressionPlanCache) columnSelectorFactory).getExpressionPlan(expression);
-    }
     final Expr singleThreadedExpression = Expr.singleThreaded(expression, columnSelectorFactory);
     return ExpressionPlanner.plan(columnSelectorFactory, singleThreadedExpression);
   }

@@ -20,22 +20,23 @@
 package org.apache.druid.segment.virtual;
 
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.segment.ColumnValueSelector;
 
 /**
- * Supplies expression plans backed by metadata cached for the lifetime of a column selector factory.
+ * Supplies expression selectors cached for the lifetime of an ingestion column selector factory.
  *
- * Cached metadata can only be reused while the column capabilities exposed by the selector factory are stable.
- * Implementations may use expression identity as the cache key, so callers should reuse the same parsed expression when
- * possible. Implementations must return a plan with a caller-owned expression and must not share mutable expression
- * selectors or aggregators through this cache.
+ * Implementations may return one mutable selector shared across callers. Callers must only use returned selectors from
+ * the thread that ingests rows. Query-time column selector factories, which may be used from multiple threads, must not
+ * implement this interface.
  */
-public interface ExpressionPlanCache
+public interface ExprEvalSelectorCache
 {
   /**
-   * Returns the immutable plan for an expression.
+   * Returns a cached or newly created selector for an expression.
    *
-   * @param expression expression to plan
-   * @return cached or newly created plan
+   * @param expression expression to evaluate
+   * @return cached or newly created selector
    */
-  ExpressionPlan getExpressionPlan(Expr expression);
+  ColumnValueSelector<ExprEval> getOrCreateExprEvalSelector(Expr expression);
 }
