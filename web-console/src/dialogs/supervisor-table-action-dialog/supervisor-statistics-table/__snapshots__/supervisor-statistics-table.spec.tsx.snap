@@ -96,6 +96,7 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
             "accessor": "rowStats.totals.buildSegments",
             "className": "padded",
             "id": "total",
+            "sortMethod": [Function],
             "width": 200,
           },
         ]
@@ -279,6 +280,7 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
             "accessor": "rowStats.totals.buildSegments",
             "className": "padded",
             "id": "total",
+            "sortMethod": [Function],
             "width": 200,
           },
         ]
@@ -488,6 +490,7 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
             "accessor": "rowStats.totals.buildSegments",
             "className": "padded",
             "id": "total",
+            "sortMethod": [Function],
             "width": 200,
           },
         ]
@@ -671,6 +674,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
             "accessor": "rowStats.totals.buildSegments",
             "className": "padded",
             "id": "total",
+            "sortMethod": [Function],
             "width": 200,
           },
           {
@@ -679,6 +683,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
             "accessor": "rowStats.movingAverages.buildSegments.1m",
             "className": "padded",
             "id": "1m",
+            "sortMethod": [Function],
             "width": 200,
           },
           {
@@ -687,6 +692,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
             "accessor": "rowStats.movingAverages.buildSegments.5m",
             "className": "padded",
             "id": "5m",
+            "sortMethod": [Function],
             "width": 200,
           },
           {
@@ -695,6 +701,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
             "accessor": "rowStats.movingAverages.buildSegments.15m",
             "className": "padded",
             "id": "15m",
+            "sortMethod": [Function],
             "width": 200,
           },
         ]

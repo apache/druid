@@ -28,13 +28,13 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.List;
 
 /**
- * Embedded parallel index test that reads input data from S3 (MinIO testcontainer) and stores
+ * Embedded parallel index test that reads input data from S3 (an S3-compatible testcontainer) and stores
  * segments in HDFS (in-process MiniDFSCluster).
  *
- * <p>The HDFS resource is registered after the MinIO resource so that the HDFS deep-storage
- * configuration ({@code druid.storage.type=hdfs}) overrides the S3 configuration set by MinIO.
+ * <p>The HDFS resource is registered after the S3 resource so that the HDFS deep-storage
+ * configuration ({@code druid.storage.type=hdfs}) overrides the S3 configuration set by the S3 resource.
  * The S3 input-source connection properties remain active and are used by the indexer to read
- * data from MinIO.
+ * data from S3.
  */
 public class S3ToHdfsParallelIndexTest extends AbstractS3InputSourceParallelIndexTest
 {
@@ -43,7 +43,7 @@ public class S3ToHdfsParallelIndexTest extends AbstractS3InputSourceParallelInde
   @Override
   protected void addResources(EmbeddedDruidCluster cluster)
   {
-    // S3/MinIO resource first: uploads data to MinIO and sets S3 connection properties.
+    // S3 resource first: uploads data to S3 and sets S3 connection properties.
     super.addResources(cluster);
     // HDFS resource second: overrides druid.storage.type to "hdfs" for deep storage.
     cluster.addResource(hdfsResource);
