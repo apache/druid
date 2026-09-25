@@ -45,6 +45,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -133,6 +134,44 @@ public class DurableStorageCleanerTest
 
     Mockito.verify(STORAGE_CONNECTOR).deleteFiles(capturedArguments.capture());
     Assertions.assertEquals(Sets.newHashSet(STRAY_DIR, intermediateFilesPath), capturedArguments.getValue());
+  }
+
+  @Test
+  public void testRunDeletesInBatchesAndKeepsTheRemainder() throws Exception
+  {
+    final List<String> strayFiles = new ArrayList<>();
+    for (int i = 0; i < 100_001; i++) {
+      strayFiles.add(STRAY_DIR + i);
+    }
+
+    final List<String> listing = ImmutableList.<String>builder()
+        .addAll(strayFiles)
+        .add(DurableStorageUtils.getControllerDirectory(TASK_ID))
+        .build();
+
+    Mockito.when(TASK_STORAGE.getCompletedTasksInfo(ArgumentMatchers.any(), ArgumentMatchers.isNull())).thenReturn(List.of());
+    Mockito.when(STORAGE_CONNECTOR.listDir(ArgumentMatchers.anyString())).thenReturn(listing.iterator());
+    Mockito.when(TASK_RUNNER_WORK_ITEM.getTaskId()).thenReturn(TASK_ID);
+    Mockito.doReturn(ImmutableList.of(TASK_RUNNER_WORK_ITEM)).when(TASK_RUNNER).getRunningTasks();
+    Mockito.when(TASK_MASTER.getTaskRunner()).thenReturn(Optional.of(TASK_RUNNER));
+
+    final Set<String> deleted = Sets.newHashSet();
+    final List<Integer> batchSizes = new ArrayList<>();
+    Mockito.doAnswer(invocation -> {
+      final Iterable<String> batch = invocation.getArgument(0);
+      int size = 0;
+      for (String file : batch) {
+        deleted.add(file);
+        size++;
+      }
+      batchSizes.add(size);
+      return null;
+    }).when(STORAGE_CONNECTOR).deleteFiles(ArgumentMatchers.any());
+
+    durableStorageCleaner.run();
+
+    Assertions.assertTrue(batchSizes.size() > 1, "expected more than one batch, got " + batchSizes);
+    Assertions.assertEquals(Sets.newHashSet(strayFiles), deleted);
   }
 
   @Test
