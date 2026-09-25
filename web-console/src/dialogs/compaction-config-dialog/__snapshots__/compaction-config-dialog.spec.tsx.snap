@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic partitionsSpec) 1`] = `
 <Blueprint5.Dialog

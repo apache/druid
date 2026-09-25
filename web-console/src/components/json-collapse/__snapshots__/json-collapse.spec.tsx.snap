@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`JsonCollapse matches snapshot 1`] = `
 <div
@@ -25,6 +25,7 @@ exports[`JsonCollapse matches snapshot 1`] = `
       fill={false}
       large={false}
       readOnly={true}
+      size="medium"
       small={false}
       value="{
   "name": "test"

@@ -18,7 +18,7 @@
  */
 
 const fs = require('fs-extra');
-const replace = require('replace');
+const path = require('path');
 
 if (process.argv.length !== 5) {
   console.log('Usage: mv <src-location> <old-component-name> <new-component-name>');
@@ -56,20 +56,23 @@ try {
   fs.renameSync(newPath + oldName + '.spec.tsx', newPath + newName + '.spec.tsx');
 } catch {}
 
-const replacePath = './src/';
+function replaceInFiles(dir, replacements) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      replaceInFiles(entryPath, replacements);
+    } else if (entry.isFile()) {
+      const text = fs.readFileSync(entryPath, 'utf-8');
+      let newText = text;
+      for (const [from, to] of replacements) {
+        newText = newText.replace(new RegExp(from, 'g'), to);
+      }
+      if (newText !== text) fs.writeFileSync(entryPath, newText);
+    }
+  }
+}
 
-replace({
-  regex: oldName,
-  replacement: newName,
-  paths: [replacePath],
-  recursive: true,
-  silent: true,
-});
-
-replace({
-  regex: camelOldName,
-  replacement: camelNewName,
-  paths: [replacePath],
-  recursive: true,
-  silent: true,
-});
+replaceInFiles('./src/', [
+  [oldName, newName],
+  [camelOldName, camelNewName],
+]);

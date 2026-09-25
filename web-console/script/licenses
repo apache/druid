@@ -18,7 +18,7 @@
  */
 
 const fs = require('fs');
-const checker = require('license-checker');
+const checker = require('license-checker-rseidelsohn');
 
 const LICENSES_FILE = '../licenses.yaml';
 const START_MARKER_LINE = '# Web console modules start';

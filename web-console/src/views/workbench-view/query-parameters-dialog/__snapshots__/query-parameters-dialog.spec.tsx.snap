@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`QueryParametersDialog handles ARRAY type parameters correctly 1`] = `
 <Blueprint5.Dialog
@@ -30,63 +30,33 @@ exports[`QueryParametersDialog handles ARRAY type parameters correctly 1`] = `
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="VARCHAR"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="TIMESTAMP"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="BIGINT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="DOUBLE"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="FLOAT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="ARRAY"
               />
             </Blueprint5.Menu>
@@ -138,63 +108,33 @@ exports[`QueryParametersDialog handles ARRAY type parameters correctly 1`] = `
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="VARCHAR"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="TIMESTAMP"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="BIGINT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="DOUBLE"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="FLOAT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="ARRAY"
               />
             </Blueprint5.Menu>
@@ -246,63 +186,33 @@ exports[`QueryParametersDialog handles ARRAY type parameters correctly 1`] = `
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="VARCHAR"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="TIMESTAMP"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="BIGINT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="DOUBLE"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="FLOAT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="ARRAY"
               />
             </Blueprint5.Menu>
@@ -398,63 +308,33 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="VARCHAR"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="TIMESTAMP"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="BIGINT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="DOUBLE"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="FLOAT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="ARRAY"
               />
             </Blueprint5.Menu>
@@ -506,63 +386,33 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="VARCHAR"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="TIMESTAMP"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="BIGINT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="DOUBLE"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="FLOAT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="ARRAY"
               />
             </Blueprint5.Menu>
@@ -614,63 +464,33 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="VARCHAR"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="TIMESTAMP"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="BIGINT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="DOUBLE"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="FLOAT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="ARRAY"
               />
             </Blueprint5.Menu>
@@ -722,63 +542,33 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="VARCHAR"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="TIMESTAMP"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="BIGINT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="DOUBLE"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="FLOAT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="ARRAY"
               />
             </Blueprint5.Menu>
@@ -830,63 +620,33 @@ exports[`QueryParametersDialog matches snapshot 1`] = `
           content={
             <Blueprint5.Menu>
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="VARCHAR"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="TIMESTAMP"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="BIGINT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="DOUBLE"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="blank"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="FLOAT"
               />
               <Blueprint5.MenuItem
-                active={false}
-                disabled={false}
                 icon="tick"
-                multiline={false}
                 onClick={[Function]}
-                popoverProps={{}}
-                shouldDismissPopover={true}
                 text="ARRAY"
               />
             </Blueprint5.Menu>

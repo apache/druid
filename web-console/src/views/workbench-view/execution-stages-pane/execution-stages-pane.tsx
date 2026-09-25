@@ -408,7 +408,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                 </>
               );
             },
-          } as Column<SimpleWideCounter>,
+          },
           {
             Header: 'Storage utilization',
             id: 'storage',
@@ -474,7 +474,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                 </div>
               );
             },
-          } as Column<SimpleWideCounter>,
+          },
         ])}
       />
     );

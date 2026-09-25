@@ -1092,7 +1092,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               rightIcon={IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
               onClick={() => {
-                this.updateSpec(updateIngestionType(spec, selectedComboType as any));
+                this.updateSpec(updateIngestionType(spec, selectedComboType));
                 this.updateStep('connect');
               }}
             />
