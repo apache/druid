@@ -148,7 +148,10 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    final ExpressionPlan plan = plan(columnSelectorFactory, expression);
+    final ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
     if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
@@ -200,7 +203,10 @@ public class ExpressionSelectors
       @Nullable final ExtractionFn extractionFn
   )
   {
-    final ExpressionPlan plan = plan(columnSelectorFactory, expression);
+    final ExpressionPlan plan = ExpressionPlanner.plan(
+        columnSelectorFactory,
+        Expr.singleThreaded(expression, columnSelectorFactory)
+    );
 
     if (plan.any(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR, ExpressionPlan.Trait.SINGLE_INPUT_MAPPABLE)) {
       final String column = plan.getSingleInputName();
@@ -243,13 +249,6 @@ public class ExpressionSelectors
       }
     }
   }
-
-  private static ExpressionPlan plan(ColumnSelectorFactory columnSelectorFactory, Expr expression)
-  {
-    final Expr singleThreadedExpression = Expr.singleThreaded(expression, columnSelectorFactory);
-    return ExpressionPlanner.plan(columnSelectorFactory, singleThreadedExpression);
-  }
-
 
   /**
    * Returns whether an expression can be applied to unique values of a particular column (like those in a dictionary)

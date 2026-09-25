@@ -640,6 +640,68 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testExpressionIngestionWithChangingArrayBindingsAcrossRollupKeys()
+  {
+    final List<InputRow> rows = List.of(
+        new MapBasedInputRow(
+            0L,
+            Collections.singletonList("key"),
+            ImmutableMap.of("key", "key-0", "Aa", List.of("a1", "a2"), "BB", "b")
+        ),
+        new MapBasedInputRow(
+            0L,
+            Collections.singletonList("key"),
+            ImmutableMap.of("key", "key-1", "Aa", "a", "BB", List.of("b1", "b2"))
+        ),
+        new MapBasedInputRow(
+            0L,
+            Collections.singletonList("key"),
+            ImmutableMap.of("key", "key-2", "Aa", List.of("x"), "BB", "yz")
+        ),
+        new MapBasedInputRow(
+            0L,
+            Collections.singletonList("key"),
+            ImmutableMap.of("key", "key-3", "Aa", "xy", "BB", List.of("z"))
+        )
+    );
+
+    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(
+            new IncrementalIndexSchema.Builder()
+                .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
+                .withMetrics(
+                    new LongSumAggregatorFactory(
+                        "sum",
+                        null,
+                        "strlen(array_to_string(concat(\"Aa\", \"BB\"), ','))",
+                        TestExprMacroTable.INSTANCE
+                    )
+                )
+                .withRollup(true)
+                .build()
+        )
+        .setMaxRowCount(rows.size() + 1)
+        .build();
+
+    try {
+      for (final InputRow row : rows) {
+        index.add(row);
+      }
+
+      long actualSum = 0L;
+      for (final IncrementalIndexRow row : index.getFacts().keySet()) {
+        actualSum += index.getMetricLongValue(row.getRowIndex(), 0);
+      }
+
+      Assertions.assertEquals(rows.size(), index.numRows());
+      Assertions.assertEquals(20L, actualSum);
+    }
+    finally {
+      index.close();
+    }
+  }
+
   private static OnheapIncrementalIndex.CachingColumnSelectorFactory makeCachingColumnSelectorFactory()
   {
     final TestObjectColumnSelector<Long> valueSelector = new TestObjectColumnSelector<Long>()
