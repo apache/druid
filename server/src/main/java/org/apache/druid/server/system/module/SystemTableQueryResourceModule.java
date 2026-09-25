@@ -17,20 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.server.system.module;
 
 import com.google.inject.Binder;
+import org.apache.druid.guice.Jerseys;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.server.QueryResource;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
+import org.apache.druid.server.system.handler.SystemTableQueryResource;
 
-public class QueryablePeonModule implements DruidModule
+/** Registers the restricted native query HTTP resource used by scan-only nodes. */
+public class SystemTableQueryResourceModule implements DruidModule
 {
   @Override
-  public void configure(Binder binder)
+  public void configure(final Binder binder)
   {
-    binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
-    Jerseys.addResource(binder, QueryResource.class);
-    LifecycleModule.register(binder, QueryResource.class);
+    binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(true));
+    binder.bind(SystemTableQueryResource.class).in(LazySingleton.class);
+    binder.bind(QueryCountStatsProvider.class).to(SystemTableQueryResource.class).in(LazySingleton.class);
+    Jerseys.addResource(binder, SystemTableQueryResource.class);
+    LifecycleModule.register(binder, SystemTableQueryResource.class);
   }
 }
