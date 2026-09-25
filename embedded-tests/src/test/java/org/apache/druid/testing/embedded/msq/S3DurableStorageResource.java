@@ -22,18 +22,18 @@ package org.apache.druid.testing.embedded.msq;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedResource;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
 
 import java.io.File;
 
 /**
- * Resource that configures MSQ to use a bucket from {@link MinIOStorageResource} for durable intermediate data storage.
+ * Resource that configures MSQ to use a bucket from {@link S3StorageResource} for durable intermediate data storage.
  */
-public class MinIODurableStorageResource implements EmbeddedResource
+public class S3DurableStorageResource implements EmbeddedResource
 {
-  private final MinIOStorageResource storageResource;
+  private final S3StorageResource storageResource;
 
-  public MinIODurableStorageResource(MinIOStorageResource storageResource)
+  public S3DurableStorageResource(S3StorageResource storageResource)
   {
     this.storageResource = storageResource;
   }
@@ -63,7 +63,7 @@ public class MinIODurableStorageResource implements EmbeddedResource
     // Set tmpStorageBytesPerTask to 3 GB. This controls when stage-internal channels (such as ones used internally
     // by SuperSorter) "spill over" from local disk to durable storage. Cannot set this much lower currently, due to
     // validations in WorkerStorageParameters. Ideally, we'd like to set this low enough such that embedded tests are
-    // actually using minio/S3 for stage-internal storage. At this level, they won't be using it, but at least stages
+    // actually using S3 for stage-internal storage. At this level, they won't be using it, but at least stages
     // will go through the motions of setting up composing channels internally. There is still value in exercising
     // that code path.
     //

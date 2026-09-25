@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.minio;
+package org.apache.druid.testing.embedded.s3;
 
 import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.indexing.common.task.IndexTask;
@@ -62,7 +62,7 @@ import java.util.concurrent.TimeUnit;
  * <p>Each {@link Nested} inner class runs a full embedded cluster with a different
  * storage backend / HTTP client combination:
  * <ul>
- *   <li>MinIO container — CRT (default), Netty NIO, synchronous PutObject</li>
+ *   <li>Local S3-compatible container — CRT (default), Netty NIO, synchronous PutObject</li>
  *   <li>Real AWS S3 (opt-in via {@value BUCKET_PROPERTY}) — same three variants</li>
  * </ul>
  *
@@ -165,22 +165,22 @@ public class S3PerfTest
     }
   }
 
-  abstract static class MinIOPerfBase extends PerfTestBase
+  abstract static class LocalS3PerfBase extends PerfTestBase
   {
     abstract void configureCluster(EmbeddedDruidCluster cluster);
 
     @Override
     public EmbeddedDruidCluster createCluster()
     {
-      final EmbeddedDruidCluster cluster = addServers(newBaseCluster().addResource(new MinIOStorageResource()));
+      final EmbeddedDruidCluster cluster = addServers(newBaseCluster().addResource(new S3StorageResource()));
       configureCluster(cluster);
       return cluster;
     }
   }
 
-  /** MinIO + Amazon CRT async HTTP client (default). */
+  /** Local S3 container + Amazon CRT async HTTP client (default). */
   @Nested
-  static class MinIO_Crt extends MinIOPerfBase
+  static class LocalS3_Crt extends LocalS3PerfBase
   {
     @Override
     void configureCluster(EmbeddedDruidCluster cluster)
@@ -188,9 +188,9 @@ public class S3PerfTest
     }
   }
 
-  /** MinIO + Netty NIO async HTTP client. */
+  /** Local S3 container + Netty NIO async HTTP client. */
   @Nested
-  static class MinIO_Netty extends MinIOPerfBase
+  static class LocalS3_Netty extends LocalS3PerfBase
   {
     @Override
     void configureCluster(EmbeddedDruidCluster cluster)
@@ -199,9 +199,9 @@ public class S3PerfTest
     }
   }
 
-  /** MinIO + synchronous PutObject (transfer manager disabled). */
+  /** Local S3 container + synchronous PutObject (transfer manager disabled). */
   @Nested
-  static class MinIO_Sync extends MinIOPerfBase
+  static class LocalS3_Sync extends LocalS3PerfBase
   {
     @Override
     void configureCluster(EmbeddedDruidCluster cluster)

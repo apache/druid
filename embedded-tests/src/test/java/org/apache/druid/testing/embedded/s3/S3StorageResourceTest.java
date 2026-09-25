@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.minio;
+package org.apache.druid.testing.embedded.s3;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHostname;
@@ -31,13 +31,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 
-public class MinIOStorageResourceTest
+public class S3StorageResourceTest
 {
   @Test
   @Timeout(120)
-  public void testMinIOContainerLifecycle()
+  public void testContainerLifecycle()
   {
-    final MinIOStorageResource resource = new MinIOStorageResource("test-bucket", "test/base");
+    final S3StorageResource resource = new S3StorageResource("test-bucket", "test/base");
     final EmbeddedDruidCluster cluster = Mockito.mock(EmbeddedDruidCluster.class);
     Mockito.when(cluster.getEmbeddedHostname()).thenReturn(EmbeddedHostname.localhost());
     resource.beforeStart(cluster);
@@ -50,16 +50,16 @@ public class MinIOStorageResourceTest
     // Verify container properties
     assertEquals("test-bucket", resource.getBucket());
     assertEquals("test/base", resource.getBaseKey());
-    assertEquals("minioadmin", resource.getAccessKey());
-    assertEquals("minioadmin", resource.getSecretKey());
+    assertEquals("rustfsadmin", resource.getAccessKey());
+    assertEquals("rustfsadmin", resource.getSecretKey());
 
     // Verify all the required properties are set
     verify(cluster).addCommonProperty("druid.storage.type", "s3");
     verify(cluster).addCommonProperty("druid.indexer.logs.type", "s3");
     verify(cluster).addCommonProperty("druid.s3.enablePathStyleAccess", "true");
     verify(cluster).addCommonProperty("druid.s3.protocol", "http");
-    verify(cluster).addCommonProperty("druid.s3.accessKey", "minioadmin");
-    verify(cluster).addCommonProperty("druid.s3.secretKey", "minioadmin");
+    verify(cluster).addCommonProperty("druid.s3.accessKey", "rustfsadmin");
+    verify(cluster).addCommonProperty("druid.s3.secretKey", "rustfsadmin");
     verify(cluster).addCommonProperty("druid.storage.bucket", "test-bucket");
     verify(cluster).addCommonProperty("druid.storage.baseKey", "test/base");
     verify(cluster).addCommonProperty("druid.indexer.logs.s3Bucket", "test-bucket");

@@ -33,8 +33,8 @@ import org.apache.druid.testing.embedded.consul.ConsulClusterResource;
 import org.apache.druid.testing.embedded.consul.ConsulSecurityMode;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.psql.PostgreSQLMetadataResource;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -66,7 +66,7 @@ abstract class BaseConsulDiscoveryDockerTest extends IngestionSmokeTest
   public EmbeddedDruidCluster createCluster()
   {
     final PostgreSQLMetadataResource postgreSQLMetadataResource = new PostgreSQLMetadataResource();
-    final MinIOStorageResource minIOStorageResource = new MinIOStorageResource();
+    final S3StorageResource s3StorageResource = new S3StorageResource();
 
     consulResource = new ConsulClusterResource(getConsulSecurityMode());
 
@@ -81,7 +81,7 @@ abstract class BaseConsulDiscoveryDockerTest extends IngestionSmokeTest
         );
 
     cluster.addResource(postgreSQLMetadataResource)
-           .addResource(minIOStorageResource)
+           .addResource(s3StorageResource)
            .addResource(consulResource)
            .addResource(kafkaServer);
 
@@ -125,12 +125,12 @@ abstract class BaseConsulDiscoveryDockerTest extends IngestionSmokeTest
 
         String consulHost = "localhost";
         String consulPort = Integer.toString(consulResource.getMappedPort());
-        String minioUrl = minIOStorageResource.getEndpointUrl();
+        String s3Url = s3StorageResource.getEndpointUrl();
 
         cluster.addCommonProperty("druid.metadata.storage.connector.connectURI", psqlConnectURI);
         cluster.addCommonProperty("druid.discovery.consul.connection.host", consulHost);
         cluster.addCommonProperty("druid.discovery.consul.connection.port", consulPort);
-        cluster.addCommonProperty("druid.s3.endpoint.url", minioUrl);
+        cluster.addCommonProperty("druid.s3.endpoint.url", s3Url);
 
         ConsulSecurityMode mode = getConsulSecurityMode();
         if (mode == ConsulSecurityMode.TLS || mode == ConsulSecurityMode.MTLS) {
