@@ -35,7 +35,6 @@ import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheMa
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.MockConsumer;
-import org.apache.kafka.clients.consumer.OffsetResetStrategy;
 import org.apache.kafka.common.TopicPartition;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
@@ -265,7 +264,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartStop() throws InterruptedException
   {
-    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
     final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
     kafkaConsumer.updateBeginningOffsets(ImmutableMap.of(topicPartition, 0L));
     kafkaConsumer.updateEndOffsets(ImmutableMap.of(topicPartition, 0L));
@@ -420,7 +419,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartStopStart() throws InterruptedException
   {
-    Consumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    Consumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
     EasyMock.replay(cacheManager);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
@@ -443,7 +442,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStartStartStopStop() throws InterruptedException
   {
-    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>(OffsetResetStrategy.EARLIEST);
+    final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
     final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
     kafkaConsumer.updateBeginningOffsets(ImmutableMap.of(topicPartition, 0L));
     kafkaConsumer.updateEndOffsets(ImmutableMap.of(topicPartition, 0L));
