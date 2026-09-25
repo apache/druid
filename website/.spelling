@@ -2667,6 +2667,7 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+passthrough
 checksum
 
 - ../docs/development/extensions-contrib/druid-opa-authorizer.md
