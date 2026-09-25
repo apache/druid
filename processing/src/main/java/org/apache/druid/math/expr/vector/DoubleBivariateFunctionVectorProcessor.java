@@ -64,29 +64,30 @@ public abstract class DoubleBivariateFunctionVectorProcessor<TLeftInput, TRightI
     final TLeftInput leftInput = lhs.values();
     final TRightInput rightInput = rhs.values();
 
+    boolean anyNulls = false;
     if (hasNulls) {
       for (int i = 0; i < currentSize; i++) {
         outNulls[i] = (hasLeftNulls && leftNulls[i]) || (hasRightNulls && rightNulls[i]);
         if (!outNulls[i]) {
           processIndex(leftInput, rightInput, i);
         } else {
+          anyNulls = true;
           outValues[i] = 0.0;
         }
       }
     } else {
       for (int i = 0; i < currentSize; i++) {
         processIndex(leftInput, rightInput, i);
-        outNulls[i] = false;
       }
     }
-    return asEval();
+    return asEval(anyNulls ? outNulls : null);
   }
 
   abstract void processIndex(TLeftInput leftInput, TRightInput rightInput, int i);
 
-  final ExprEvalVector<double[]> asEval()
+  final ExprEvalVector<double[]> asEval(boolean[] nulls)
   {
-    return new ExprEvalDoubleVector(outValues, outNulls);
+    return new ExprEvalDoubleVector(outValues, nulls);
   }
 
   @Override

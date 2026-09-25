@@ -55,22 +55,23 @@ public abstract class LongUnivariateFunctionVectorProcessor<TInput> implements E
 
     final TInput input = lhs.values();
 
+    boolean anyNulls = false;
     if (hasNulls) {
       for (int i = 0; i < currentSize; i++) {
         outNulls[i] = inputNulls[i];
         if (!outNulls[i]) {
           processIndex(input, i);
         } else {
+          anyNulls = true;
           outValues[i] = 0L;
         }
       }
     } else {
       for (int i = 0; i < currentSize; i++) {
-        outNulls[i] = false;
         processIndex(input, i);
       }
     }
-    return asEval();
+    return asEval(anyNulls ? outNulls : null);
   }
 
   @Override
@@ -81,8 +82,8 @@ public abstract class LongUnivariateFunctionVectorProcessor<TInput> implements E
 
   abstract void processIndex(TInput input, int i);
 
-  final ExprEvalVector<long[]> asEval()
+  final ExprEvalVector<long[]> asEval(boolean[] nulls)
   {
-    return new ExprEvalLongVector(outValues, outNulls);
+    return new ExprEvalLongVector(outValues, nulls);
   }
 }
