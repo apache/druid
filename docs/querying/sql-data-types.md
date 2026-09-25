@@ -60,7 +60,7 @@ The following table describes how Druid maps SQL types onto native types when ru
 |TINYINT|LONG|`0`||
 |SMALLINT|LONG|`0`||
 |INTEGER|LONG|`0`||
-|BIGINT|LONG|`0`|Druid LONG columns (except `__time`) are reported as BIGINT. In a `CAST` expression only, for example `CAST(x AS LONG)`, `LONG` is also accepted as an alias for `BIGINT`, matching the name Druid's native engine uses for this type. This does not apply to other type positions, such as a column type in `CREATE TABLE` or `EXTERN`, where `LONG` continues to be treated as any other identifier.|
+|BIGINT|LONG|`0`|Druid LONG columns (except `__time`) are reported as BIGINT. `LONG` is supported only as a `CAST` alias for `BIGINT`, for example `CAST(x AS LONG)`, matching the name Druid's native engine uses for this type.|
 |TIMESTAMP|LONG|`0`, meaning 1970-01-01 00:00:00 UTC|Druid's `__time` column is reported as TIMESTAMP. Casts between string and timestamp types assume standard SQL formatting, such as `2000-01-02 03:04:05`, not ISO 8601 formatting. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
 |DATE|LONG|`0`, meaning 1970-01-01|Casting TIMESTAMP to DATE rounds down the timestamp to the nearest day. Casts between string and date types assume standard SQL formatting&mdash;for example, `2000-01-02`. For handling other formats, use one of the [time functions](sql-scalar.md#date-and-time-functions).|
 |ARRAY|ARRAY|`NULL`|Druid native array types work as SQL arrays, and multi-value strings can be converted to arrays. See [Arrays](#arrays) for more information.|
