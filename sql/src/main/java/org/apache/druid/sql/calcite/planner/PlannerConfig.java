@@ -83,6 +83,12 @@ public class PlannerConfig
   @JsonProperty
   private boolean enableSysQueriesTable = false;
 
+  @JsonProperty
+  private boolean authorizeTableVisibility = true;
+
+  @JsonProperty
+  private boolean enableCatalogDdl = false;
+
   public int getMaxNumericInFilters()
   {
     return maxNumericInFilters;
@@ -160,6 +166,30 @@ public class PlannerConfig
     return enableSysQueriesTable;
   }
 
+  /**
+   * Returns whether READ access is required for a table to be visible to the validator.
+   *
+   * <p>When this is set, in order to ensure that validation works properly for ingestion, INSERT and REPLACE
+   * require both READ and WRITE access. (If this property is not set, they require only WRITE.)
+   *
+   * <p>Regardless of the value of this property, READ access is required for tables to show up in
+   * the INFORMATION_SCHEMA.
+   */
+  public boolean isAuthorizeTableVisibility()
+  {
+    return authorizeTableVisibility;
+  }
+
+  /**
+   * Whether catalog DDL statements (CREATE TABLE, ALTER TABLE) may be executed. Off by default: the Broker's SQL
+   * endpoint is typically reachable by far more people than the Coordinator's catalog API, so enabling this widens
+   * what an existing datasource WRITE permission allows. Deliberately not overridable from the query context.
+   */
+  public boolean isEnableCatalogDdl()
+  {
+    return enableCatalogDdl;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -189,6 +219,8 @@ public class PlannerConfig
            && forceExpressionVirtualColumns == that.forceExpressionVirtualColumns
            && maxNumericInFilters == that.maxNumericInFilters
            && enableSysQueriesTable == that.enableSysQueriesTable
+           && authorizeTableVisibility == that.authorizeTableVisibility
+           && enableCatalogDdl == that.enableCatalogDdl
            && Objects.equals(sqlTimeZone, that.sqlTimeZone)
            && Objects.equals(nativeQuerySqlPlanningMode, that.nativeQuerySqlPlanningMode);
   }
@@ -210,7 +242,9 @@ public class PlannerConfig
         forceExpressionVirtualColumns,
         maxNumericInFilters,
         nativeQuerySqlPlanningMode,
-        enableSysQueriesTable
+        enableSysQueriesTable,
+        authorizeTableVisibility,
+        enableCatalogDdl
     );
   }
 
@@ -227,6 +261,8 @@ public class PlannerConfig
            ", useNativeQueryExplain=" + useNativeQueryExplain +
            ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
            ", enableSysQueriesTable=" + enableSysQueriesTable +
+           ", authorizeTableVisibility=" + authorizeTableVisibility +
+           ", enableCatalogDdl=" + enableCatalogDdl +
            '}';
   }
 
@@ -262,6 +298,8 @@ public class PlannerConfig
     private int maxNumericInFilters;
     private String nativeQuerySqlPlanningMode;
     private boolean enableSysQueriesTable;
+    private boolean authorizeTableVisibility;
+    private boolean enableCatalogDdl;
 
     public Builder(PlannerConfig base)
     {
@@ -282,6 +320,8 @@ public class PlannerConfig
       maxNumericInFilters = base.getMaxNumericInFilters();
       nativeQuerySqlPlanningMode = base.getNativeQuerySqlPlanningMode();
       enableSysQueriesTable = base.isEnableSysQueriesTable();
+      authorizeTableVisibility = base.isAuthorizeTableVisibility();
+      enableCatalogDdl = base.isEnableCatalogDdl();
     }
 
     public Builder requireTimeCondition(boolean option)
@@ -359,6 +399,18 @@ public class PlannerConfig
     public Builder enableSysQueriesTable(boolean option)
     {
       this.enableSysQueriesTable = option;
+      return this;
+    }
+
+    public Builder authorizeTableVisibility(boolean option)
+    {
+      this.authorizeTableVisibility = option;
+      return this;
+    }
+
+    public Builder enableCatalogDdl(boolean option)
+    {
+      this.enableCatalogDdl = option;
       return this;
     }
 
@@ -459,6 +511,8 @@ public class PlannerConfig
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
       config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
       config.enableSysQueriesTable = enableSysQueriesTable;
+      config.authorizeTableVisibility = authorizeTableVisibility;
+      config.enableCatalogDdl = enableCatalogDdl;
       return config;
     }
   }

@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerToolbox;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.schema.ConstantDruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
@@ -43,8 +44,8 @@ import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -62,11 +63,13 @@ public class ExternalTableScanRuleTest
         CalciteTests.createExprMacroTable(),
         CalciteTests.getJsonMapper(),
         new PlannerConfig(),
-        new DruidSchemaCatalog(
-            EasyMock.createMock(SchemaPlus.class),
-            ImmutableMap.of(
-                "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
-                NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+        new ConstantDruidSchemaCatalogProvider(
+            new DruidSchemaCatalog(
+                EasyMock.createMock(SchemaPlus.class),
+                ImmutableMap.of(
+                    "druid", new NamedDruidSchema(EasyMock.createMock(DruidSchema.class), "druid"),
+                    NamedViewSchema.NAME, new NamedViewSchema(EasyMock.createMock(ViewSchema.class))
+                )
             )
         ),
         CalciteTests.createJoinableFactoryWrapper(),
@@ -83,6 +86,7 @@ public class ExternalTableScanRuleTest
         "SELECT 1", // The actual query isn't important for this test
         DruidSqlParser.parse("SELECT 1", false).getMainStatement(),
         engine,
+        null,
         Collections.emptySet(),
         Collections.emptyMap(),
         null
@@ -93,7 +97,7 @@ public class ExternalTableScanRuleTest
 
     ExternalTableScanRule rule = new ExternalTableScanRule(plannerContext);
     rule.matches(EasyMock.createMock(RelOptRuleCall.class));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot use [EXTERN] with SQL engine [native].",
         plannerContext.getPlanningError()
     );

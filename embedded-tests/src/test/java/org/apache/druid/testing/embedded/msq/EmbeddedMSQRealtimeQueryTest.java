@@ -36,9 +36,6 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -241,16 +238,15 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
                        + "  LIMIT 1\n"
                        + ")";
 
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            RuntimeException.class,
-            () -> msqApis.runDartSql(sql, dataSource, dataSource)
-        ),
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
-                "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
-                + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
-            )
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> msqApis.runDartSql(sql, dataSource, dataSource)
+    );
+    Assertions.assertNotNull(exception.getMessage());
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
+            + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
         )
     );
   }
@@ -289,11 +285,12 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
         StringUtils.format("Task[%s] has unexpected status", taskId)
     );
 
+    Assertions.assertNotNull(currentStatus.getStatus().getErrorMsg());
     Assertions.assertTrue(
-        CoreMatchers.containsString(
+        currentStatus.getStatus().getErrorMsg().contains(
             "Cannot handle stage with multiple sources while querying realtime data. If using broadcast "
             + "joins, try setting[sqlJoinAlgorithm] to[sortMerge] in your query context."
-        ).matches(currentStatus.getStatus().getErrorMsg())
+        )
     );
   }
 

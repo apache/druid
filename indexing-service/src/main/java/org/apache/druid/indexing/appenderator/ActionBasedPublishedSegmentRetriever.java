@@ -29,12 +29,14 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.realtime.appenderator.PublishedSegmentRetriever;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -92,7 +94,15 @@ public class ActionBasedPublishedSegmentRetriever implements PublishedSegmentRet
         Iterables.transform(segmentIds, SegmentId::getInterval)
     );
     final Collection<DataSegment> foundUsedSegments = taskActionClient.submit(
-        new RetrieveUsedSegmentsAction(dataSource, usedSearchIntervals, Segments.INCLUDING_OVERSHADOWED)
+        new RetrieveUsedSegmentsAction(
+            dataSource,
+            usedSearchIntervals,
+            Segments.INCLUDING_OVERSHADOWED,
+            // LOAD_SPEC is required: callers compare the load specs of the returned segments against the ones they
+            // pushed themselves, to decide whether the pushed copies are safe to delete from deep storage. See
+            // BaseAppenderatorDriver#publishInBackground.
+            EnumSet.of(SegmentDetail.LOAD_SPEC)
+        )
     );
     for (DataSegment segment : foundUsedSegments) {
       if (segmentIds.contains(segment.getId())) {

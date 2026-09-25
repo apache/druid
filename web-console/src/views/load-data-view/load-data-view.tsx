@@ -23,6 +23,7 @@ import {
   ButtonGroup,
   Callout,
   Card,
+  Classes,
   Code,
   FormGroup,
   H5,
@@ -149,6 +150,7 @@ import { Api, AppToaster, UrlBaser } from '../../singletons';
 import {
   alphanumericCompare,
   compact,
+  copyAndAlert,
   deepDelete,
   deepGet,
   deepMove,
@@ -273,27 +275,39 @@ function showBlankLine(line: SampleEntry): string {
 function formatSampleEntries(
   sampleEntries: SampleEntry[],
   specialSource: undefined | 'fixedFormat' | 'druid' | 'kafka' | 'kinesis',
-): string[] {
-  if (!sampleEntries.length) return ['No data returned from sampler'];
+): { text: string; tooltip?: string }[] {
+  if (!sampleEntries.length) return [{ text: 'No data returned from sampler' }];
 
+  let showLine: (l: SampleEntry) => string;
   switch (specialSource) {
     case 'fixedFormat':
-      return sampleEntries.map(l => JSONBig.stringify(l.parsed));
+      showLine = l => JSONBig.stringify(l.parsed);
+      break;
 
     case 'druid':
-      return sampleEntries.map(showDruidLine);
+      showLine = showDruidLine;
+      break;
 
     case 'kafka':
-      return sampleEntries.map(showKafkaLine);
+      showLine = showKafkaLine;
+      break;
 
     case 'kinesis':
-      return sampleEntries.map(showKinesisLine);
+      showLine = showKinesisLine;
+      break;
 
     default:
-      return sampleEntries.every(l => !l.parsed)
-        ? sampleEntries.map(showBlankLine)
-        : sampleEntries.map(showRawLine);
+      showLine = sampleEntries.every(l => !l.parsed) ? showBlankLine : showRawLine;
+      break;
   }
+
+  return sampleEntries.map(l => {
+    const fileUri = l.parsed?.['__file_uri'];
+    return {
+      text: showLine(l),
+      tooltip: typeof fileUri === 'string' ? `File URI: ${fileUri}` : undefined,
+    };
+  });
 }
 
 function getTimestampSpec(sampleResponse: SampleResponse | null): TimestampSpec {
@@ -1178,8 +1192,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </p>
         <p>
           Please make sure that the
-          <Code>&quot;{requiredModule}&quot;</Code> extension is included in the{' '}
-          <Code>druid.extensions.loadList</Code>.
+          <Code
+            data-tooltip="(click to copy)"
+            onClick={() => {
+              copyAndAlert(`"${requiredModule}"`, `"${requiredModule}" copied to clipboard`);
+            }}
+          >
+            {requiredModule}
+          </Code>{' '}
+          extension is included in the <Code>druid.extensions.loadList</Code>.
         </p>
         <p>
           For more information please refer to the{' '}
@@ -1309,11 +1330,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       mainFill = (
         <>
           {inputData && (
-            <TextArea
-              className="raw-lines"
-              readOnly
-              value={formatSampleEntries(inputData, specialSource).join('\n')}
-            />
+            <div className={classNames('raw-lines', Classes.INPUT)}>
+              {formatSampleEntries(inputData, specialSource).map(({ text, tooltip }, i) => (
+                <div className="raw-line" key={i} data-tooltip={tooltip}>
+                  {text}
+                </div>
+              ))}
+            </div>
           )}
           {inputQueryState.isLoading() && <Loader />}
           {inputQueryState.error && (

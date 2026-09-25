@@ -35,15 +35,15 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -51,15 +51,23 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "{0}")
+@MethodSource("constructorFeeder")
 public class DDSketchAggregatorTest extends InitializedNullHandlingTest
 {
-  private final AggregationTestHelper helper;
+  private final GroupByQueryConfig config;
+  private AggregationTestHelper helper;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   public DDSketchAggregatorTest(final GroupByQueryConfig config)
+  {
+    this.config = config;
+  }
+
+  @BeforeEach
+  public void initDDSketchAggregatorTest()
   {
     DDSketchModule module = new DDSketchModule();
     DDSketchModule.registerSerde();
@@ -67,11 +75,10 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
         module.getJacksonModules(), config, tempFolder);
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
-    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+    for (GroupByQueryConfig config : GroupByQueryRunnerTestHelper.testConfigs()) {
       constructors.add(new Object[]{config});
     }
     return constructors;
@@ -90,7 +97,7 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
         AggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, other);
+    Assertions.assertEquals(factory, other);
   }
 
   @Test
@@ -129,17 +136,17 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
                     .build()
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
 
     // post agg
     Object quantilesObject = row.get(1); // "quantiles"
-    Assert.assertTrue(quantilesObject instanceof double[]);
+    Assertions.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
 
-    Assert.assertEquals(0.001, quantiles[0], 0.0006); // min value
-    Assert.assertEquals(0.5, quantiles[1], 0.05); // median value
-    Assert.assertEquals(1, quantiles[2], 0.05); // max value
+    Assertions.assertEquals(0.001, quantiles[0], 0.0006); // min value
+    Assertions.assertEquals(0.5, quantiles[1], 0.05); // median value
+    Assertions.assertEquals(1, quantiles[2], 0.05); // max value
   }
 
   @Test
@@ -175,18 +182,18 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
                     .build()
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
 
 
     // post agg
     Object quantilesObject = row.get(1); // "quantiles"
-    Assert.assertTrue(quantilesObject instanceof double[]);
+    Assertions.assertTrue(quantilesObject instanceof double[]);
     double[] quantiles = (double[]) quantilesObject;
     // All these tests test that the quantiles are within 1% of the exact quantile value
-    Assert.assertEquals(0.9838, quantiles[0], 0.9838 * 0.01); // p99
-    Assert.assertEquals(0.9860, quantiles[1], 0.9850 * 0.01); // p99.5
-    Assert.assertEquals(0.9927, quantiles[2], 0.9927 * 0.01); // p999
-    Assert.assertEquals(0.9952, quantiles[3], 0.9952 * 0.01); // max value
+    Assertions.assertEquals(0.9838, quantiles[0], 0.9838 * 0.01); // p99
+    Assertions.assertEquals(0.9860, quantiles[1], 0.9850 * 0.01); // p99.5
+    Assertions.assertEquals(0.9927, quantiles[2], 0.9927 * 0.01); // p999
+    Assertions.assertEquals(0.9952, quantiles[3], 0.9952 * 0.01); // max value
   }
 }

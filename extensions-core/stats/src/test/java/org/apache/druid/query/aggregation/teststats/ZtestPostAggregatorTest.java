@@ -22,9 +22,9 @@ package org.apache.druid.query.aggregation.teststats;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -37,7 +37,7 @@ public class ZtestPostAggregatorTest
   FieldAccessPostAggregator sample2Size;
   ZtestPostAggregator ztestPostAggregator;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     successCount1 = new FieldAccessPostAggregator("sc1", "successCountPopulation1");
@@ -60,23 +60,23 @@ public class ZtestPostAggregatorTest
     Map<String, Object> metricValues = new HashMap<>();
 
     Object result = ztestPostAggregator.compute(metricValues);
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
 
     metricValues.put("successCountPopulation1", 39244);
     result = ztestPostAggregator.compute(metricValues);
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
 
     metricValues.put("sampleSizePopulation1", 394298);
     result = ztestPostAggregator.compute(metricValues);
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
 
     metricValues.put("successCountPopulation2", 8991275);
     result = ztestPostAggregator.compute(metricValues);
     metricValues.put("sampleSizePopulation2", 9385573);
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
 
     double zscore = ((Number) ztestPostAggregator.compute(metricValues)).doubleValue();
-    Assert.assertEquals(-1783.8762354220219, zscore, 0.0001);
+    Assertions.assertEquals(-1783.8762354220219, zscore, 0.0001);
   }
 
 
@@ -90,15 +90,15 @@ public class ZtestPostAggregatorTest
             ZtestPostAggregator.class
         );
 
-    Assert.assertEquals(ztestPostAggregator, postAggregator1);
-    Assert.assertArrayEquals(ztestPostAggregator.getCacheKey(), postAggregator1.getCacheKey());
-    Assert.assertEquals(ztestPostAggregator.getDependentFields(), postAggregator1.getDependentFields());
+    Assertions.assertEquals(ztestPostAggregator, postAggregator1);
+    Assertions.assertArrayEquals(ztestPostAggregator.getCacheKey(), postAggregator1.getCacheKey());
+    Assertions.assertEquals(ztestPostAggregator.getDependentFields(), postAggregator1.getDependentFields());
   }
 
   @Test
   public void testToString()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ZtestPostAggregator{name='zscore', successCount1='FieldAccessPostAggregator{name='sc1', fieldName='successCountPopulation1'}', sample1Size='FieldAccessPostAggregator{name='ss1', fieldName='sampleSizePopulation1'}', successCount2='FieldAccessPostAggregator{name='sc2', fieldName='successCountPopulation2'}', sample2size='FieldAccessPostAggregator{name='ss2', fieldName='sampleSizePopulation2'}}",
         ztestPostAggregator.toString()
     );

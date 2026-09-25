@@ -139,4 +139,15 @@ public interface SupervisorSpec
   {
     // No-op by default
   }
+
+  /**
+   * Returns the action to take when this (running) spec is updated to {@code proposedSpec}.
+   * Invoked on the running spec; default is conservative and always restarts the supervisor and its tasks.
+   *
+   * @param proposedSpec the proposed supervisor spec
+   */
+  default SupervisorSpecUpdateAction getActionOnUpdateTo(SupervisorSpec proposedSpec)
+  {
+    return SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS;
+  }
 }

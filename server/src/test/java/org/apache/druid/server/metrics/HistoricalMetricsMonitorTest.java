@@ -29,8 +29,8 @@ import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -41,7 +41,7 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
   private SegmentLoadDropHandler segmentLoadDropMgr;
   private StubServiceEmitter serviceEmitter;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     druidServerConfig = EasyMock.createStrictMock(DruidServerConfig.class);

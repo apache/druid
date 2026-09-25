@@ -21,15 +21,13 @@ package org.apache.druid.query.aggregation.histogram;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class QuantilesPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws Exception
@@ -43,17 +41,18 @@ public class QuantilesPostAggregatorTest
         QuantilesPostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
-    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
   public void testComparator()
   {
-    expectedException.expect(UnsupportedOperationException.class);
-    QuantilesPostAggregator quantiles = new QuantilesPostAggregator("quantiles", "someAgg", new float[]{0.3f, 0.9f});
-    quantiles.getComparator();
+    assertThrows(UnsupportedOperationException.class, () -> {
+      QuantilesPostAggregator quantiles = new QuantilesPostAggregator("quantiles", "someAgg", new float[]{0.3f, 0.9f});
+      quantiles.getComparator();
+    });
   }
 
   @Test
@@ -62,7 +61,7 @@ public class QuantilesPostAggregatorTest
     QuantilesPostAggregator postAgg =
         new QuantilesPostAggregator("post", "test_field", new float[]{0.2f, 0.7f});
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "QuantilesPostAggregator{name='post', fieldName='test_field', probabilities=[0.2, 0.7]}",
         postAgg.toString()
     );

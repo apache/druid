@@ -49,8 +49,10 @@ import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.filter.OrFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -59,10 +61,18 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 @SuppressWarnings({"unchecked", "rawtypes", "ConstantConditions", "SingleStatementInBlock", "VariableNotUsedInsideIf"})
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class RowsAndColumnsDecoratorTest extends SemanticTestBase
 {
+  public static Stream<Object[]> constructorFeeder()
+  {
+    return SemanticTestBase.parameterFeed();
+  }
+
   public RowsAndColumnsDecoratorTest(
       String name,
       Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn
@@ -333,10 +343,10 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
     }
 
     if (ordering != null) {
-      Assert.assertThrows(msg, ISE.class, () -> decor.toRowsAndColumns().numRows());
+      Assertions.assertThrows(ISE.class, () -> decor.toRowsAndColumns().numRows(), msg);
     } else {
       final RowsAndColumns rac = decor.toRowsAndColumns();
-      Assert.assertEquals(msg, vals.size(), rac.numRows());
+      Assertions.assertEquals(vals.size(), rac.numRows(), msg);
 
       ColumnAccessor[] accessors = new ColumnAccessor[siggy.size()];
       for (int i = 0; i < siggy.size(); ++i) {
@@ -351,7 +361,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
             actuals[j] = StringUtils.fromUtf8(((ByteBuffer) actuals[j]).asReadOnlyBuffer());
           }
         }
-        Assert.assertArrayEquals(StringUtils.format("%s, row[%,d]", msg, i), vals.get(i), actuals);
+        Assertions.assertArrayEquals(vals.get(i), actuals, StringUtils.format("%s, row[%,d]", msg, i));
       }
     }
   }

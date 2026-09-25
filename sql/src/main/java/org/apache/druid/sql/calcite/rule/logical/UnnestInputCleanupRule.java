@@ -83,7 +83,7 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
 
     newProjects.set(inputIndex, null);
 
-    RexNode newUnnestExpr = unnestInput.accept(new ExpressionPullerRexShuttle(newProjects, inputIndex));
+    RexNode newUnnestExpr = unnestInput.accept(new ExpressionPullerRexShuttle(newProjects));
 
     if (newUnnestExpr instanceof RexInputRef) {
       // this won't make it simpler
@@ -142,7 +142,7 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
   {
     private final List<RexNode> projects;
 
-    private ExpressionPullerRexShuttle(List<RexNode> projects, int replaceableIndex)
+    private ExpressionPullerRexShuttle(List<RexNode> projects)
     {
       this.projects = projects;
     }

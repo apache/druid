@@ -30,11 +30,13 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.ExecutionContext;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
 import org.apache.druid.msq.exec.std.StandardStageRunner;
 import org.apache.druid.msq.input.LoadableSegment;
 import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
 import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.msq.querykit.ReadableInputQueue;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -42,6 +44,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -167,6 +170,18 @@ public class GroupByPreShuffleStageProcessor extends BaseLeafStageProcessor
     }
 
     return filteredSlices;
+  }
+
+  @Override
+  protected ReadableInputQueue makeReadableInputQueue(
+      StandardPartitionReader partitionReader,
+      List<PhysicalInputSlice> slices,
+      int loadahead
+  )
+  {
+    // GroupBy reads segments through the async cursor API, so acquire them partially: only the columns the query
+    // touches are downloaded.
+    return new ReadableInputQueue(partitionReader, slices, loadahead, AcquireMode.PARTIAL);
   }
 
   @Override

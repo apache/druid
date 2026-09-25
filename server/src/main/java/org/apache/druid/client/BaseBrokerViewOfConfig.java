@@ -19,11 +19,9 @@
 
 package org.apache.druid.client;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
-
-import javax.validation.constraints.NotNull;
 
 /**
  * Base class for broker's view of dynamic configuration fetched from the Coordinator.
@@ -37,8 +35,10 @@ public abstract class BaseBrokerViewOfConfig<DynamicConfig>
 {
   private static final Logger log = new Logger(BaseBrokerViewOfConfig.class);
 
-  @GuardedBy("this")
-  private DynamicConfig config;
+  // volatile, not synchronized: subclass fields derived from config are read on the per-segment query
+  // hot path. synchronized causes monitor convoy under high concurrency. volatile is sufficient since
+  // config is an immutable reference swap.
+  private volatile DynamicConfig config;
 
   /**
    * Fetch the configuration from the Coordinator via the HTTP client.
@@ -57,7 +57,7 @@ public abstract class BaseBrokerViewOfConfig<DynamicConfig>
   /**
    * Return the current dynamic configuration.
    */
-  public synchronized DynamicConfig getDynamicConfig()
+  public DynamicConfig getDynamicConfig()
   {
     return config;
   }
@@ -68,7 +68,7 @@ public abstract class BaseBrokerViewOfConfig<DynamicConfig>
    *
    * @param updatedConfig the new configuration snapshot
    */
-  public synchronized void setDynamicConfig(@NotNull DynamicConfig updatedConfig)
+  public void setDynamicConfig(@NotNull DynamicConfig updatedConfig)
   {
     config = updatedConfig;
     log.info("Updated [%s] dynamic config to [%s]", getConfigTypeName(), updatedConfig);

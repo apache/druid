@@ -31,7 +31,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
-import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
+import org.apache.druid.indexing.seekablestream.DimensionValueSetPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -212,7 +212,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
             t -> t.withMaxRowsPerSegment(1)
                   .withReleaseLocksOnHandoff(true)
                   // Track both a string dimension and a numeric dimension
-                  .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT, colRegionCode)))
+                  .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_TENANT, colRegionCode)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -321,7 +321,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
         .withTuningConfig(
             t -> t.withMaxRowsPerSegment(1000)
                   .withReleaseLocksOnHandoff(true)
-                  .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(colCode)))
+                  .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(colCode)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -400,7 +400,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
                 .withMaxRowsPerSegment(100_000)
                 // Long enough that time-based persist/push doesn't fire during the test
                 .withIntermediatePersistPeriod(Period.hours(1))
-                .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT)))
+                .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_TENANT)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -514,6 +514,119 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
         allTenants,
         "Union of all segments' partitionDimensionValues should cover all 4 tenants"
     );
+  }
+
+  @Test
+  public void test_maxValuesPerDimensionCap_overCapDimensionOmitted()
+  {
+    final String colRegion = "region";
+    final String topic = dataSource + "_topic";
+    kafkaServer.createTopicWithPartitions(topic, 1);
+
+    // Day1: 3 distinct tenants (over cap=2) → tenant omitted; region single-valued {us-east}.
+    // Day2: 2 distinct tenants (at cap=2)   → tenant stamped;  region single-valued {us-west}.
+    final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
+    records.add(record(topic, "%s,tenant_a,us-east,val_0", DateTimes.of("2025-01-01T01:00:00")));
+    records.add(record(topic, "%s,tenant_b,us-east,val_1", DateTimes.of("2025-01-01T02:00:00")));
+    records.add(record(topic, "%s,tenant_c,us-east,val_2", DateTimes.of("2025-01-01T03:00:00")));
+    records.add(record(topic, "%s,tenant_a,us-west,val_3", DateTimes.of("2025-01-02T01:00:00")));
+    records.add(record(topic, "%s,tenant_b,us-west,val_4", DateTimes.of("2025-01-02T02:00:00")));
+    kafkaServer.produceRecordsToTopic(records);
+
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withContext(Collections.singletonMap(Tasks.USE_CONCURRENT_LOCKS, true))
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec(COL_TIMESTAMP, null, null))
+                .withDimensions(
+                    DimensionsSpec.builder()
+                                  .setDimensions(List.of(
+                                      new StringDimensionSchema(COL_TENANT),
+                                      new StringDimensionSchema(colRegion),
+                                      new StringDimensionSchema(COL_VALUE)
+                                  ))
+                                  .build()
+                )
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+        )
+        .withTuningConfig(
+            t -> t.withMaxRowsPerSegment(1000)
+                  .withReleaseLocksOnHandoff(true)
+                  .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_TENANT, colRegion), 2))
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withInputFormat(new CsvInputFormat(
+                    List.of(COL_TIMESTAMP, COL_TENANT, colRegion, COL_VALUE), null, null, false, 0, false))
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withTaskDuration(Period.millis(500))
+                .withStartDelay(Period.millis(10))
+                .withSupervisorRunPeriod(Period.millis(500))
+                .withCompletionTimeout(Period.seconds(5))
+                .withUseEarliestSequenceNumber(true)
+        )
+        .withId(dataSource + "_supe")
+        .build(dataSource, topic);
+
+    cluster.callApi().postSupervisor(spec);
+    awaitRowsProcessed(5);
+    suspendAndAwaitHandoff(spec, 1);
+
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
+    final Map<String, String> startToSegmentId = getStartToSegmentId(dataSource);
+    Assertions.assertEquals(
+        2,
+        startToSegmentId.size(),
+        "Expected exactly 2 day segments (1:1 start→segment) but got " + startToSegmentId
+    );
+    final String day1 = startToSegmentId.get("2025-01-01T00:00:00.000Z");
+    final String day2 = startToSegmentId.get("2025-01-02T00:00:00.000Z");
+    Assertions.assertNotNull(day1, "Missing Day1 segment id in: " + startToSegmentId);
+    Assertions.assertNotNull(day2, "Missing Day2 segment id in: " + startToSegmentId);
+
+    assertScan("5", Set.of(day1, day2), "SELECT COUNT(*) FROM %s", dataSource);
+
+    assertScan("3", Set.of(day1), "SELECT COUNT(*) FROM %s WHERE %s = 'us-east'", dataSource, colRegion);
+    assertScan("2", Set.of(day2), "SELECT COUNT(*) FROM %s WHERE %s = 'us-west'", dataSource, colRegion);
+
+    assertScan("2", Set.of(day1, day2), "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_a'", dataSource, COL_TENANT);
+    assertScan("1", Set.of(day1), "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_c'", dataSource, COL_TENANT);
+
+    // Key cap consequence: a non-existent tenant value is NOT fully pruned — Day1 is still scanned because its over-cap
+    // tenant filter was omitted. Day2 IS pruned (value not in its stamped {a,b}). Were tenant under-cap, this would
+    // prune to zero segments.
+    assertScan("0", Set.of(day1), "SELECT COUNT(*) FROM %s WHERE %s = 'tenant_zzz'", dataSource, COL_TENANT);
+
+    final List<Map<String, Object>> shardSpecs = getShardSpecs(dataSource);
+    Assertions.assertEquals(2, shardSpecs.size());
+
+    Map<String, List<String>> overCapFilters = null;
+    Map<String, List<String>> underCapFilters = null;
+    for (Map<String, Object> shardSpec : shardSpecs) {
+      @SuppressWarnings("unchecked")
+      final Map<String, List<String>> filters = (Map<String, List<String>>) shardSpec.get("partitionDimensionValues");
+      if (filters.get(COL_TENANT) == null) {
+        overCapFilters = filters;
+      } else {
+        underCapFilters = filters;
+      }
+    }
+
+    Assertions.assertNotNull(overCapFilters, "Expected one segment to omit the over-cap tenant dim: " + shardSpecs);
+    Assertions.assertNotNull(underCapFilters, "Expected one segment to stamp the under-cap tenant dim: " + shardSpecs);
+
+    Assertions.assertNull(overCapFilters.get(COL_TENANT),
+        "Over-cap dim must be absent from filter map: " + overCapFilters);
+    Assertions.assertEquals(List.of("us-east"), overCapFilters.get(colRegion),
+        "Under-cap sibling dim must still be stamped on the over-cap segment: " + overCapFilters);
+
+    Assertions.assertEquals(
+        Set.of(TENANT_A, TENANT_B),
+        Set.copyOf(underCapFilters.get(COL_TENANT)),
+        "Under-cap dim must be stamped with all observed values: " + underCapFilters
+    );
+    Assertions.assertEquals(List.of("us-west"), underCapFilters.get(colRegion),
+        "Under-cap sibling dim must be stamped: " + underCapFilters);
   }
 
   @Test
@@ -935,7 +1048,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
             tuningConfig -> tuningConfig
                 .withMaxRowsPerSegment(1)
                 .withReleaseLocksOnHandoff(true)
-                .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT)))
+                .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_TENANT)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -972,7 +1085,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
         .withTuningConfig(t -> {
           t.withMaxRowsPerSegment(1000).withReleaseLocksOnHandoff(true);
           if (!partitionFilterDims.isEmpty()) {
-            t.withStreamingPartitionsSpec(new StreamingPartitionsSpec(partitionFilterDims));
+            t.withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(partitionFilterDims));
           }
         })
         .withIoConfig(

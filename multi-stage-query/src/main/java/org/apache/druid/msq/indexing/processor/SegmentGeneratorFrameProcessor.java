@@ -218,6 +218,8 @@ public class SegmentGeneratorFrameProcessor implements FrameProcessor<DataSegmen
     }
   }
 
+  // Input rows are never ordered during indexing, and compareTo always rejects attempts to do so.
+  // codeql[java/inconsistent-compareto-and-equals]
   private class MSQInputRow implements InputRow
   {
     private final Object[] backingArray;

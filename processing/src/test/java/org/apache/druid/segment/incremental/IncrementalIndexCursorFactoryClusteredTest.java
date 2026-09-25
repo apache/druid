@@ -30,6 +30,7 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -176,6 +177,127 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
     }
   }
 
+  /**
+   * Build an index clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a group VC) with
+   * a non-clustering materialized {@code region_upper := upper(region)} column. The raw inputs {@code tenant} and
+   * {@code region} are retained as stored columns, so the query-VC -> materialized-column remap is a pure optimization
+   * can be tested. Columns are {@code [tenant_lower (clustering), tenant, region, region_upper, __time]}.
+   */
+  private static OnheapIncrementalIndex virtualClusteringIndex()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .columns(
+            new StringDimensionSchema("tenant_lower"),
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new StringDimensionSchema("region_upper"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant_lower")
+        .build();
+    final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+        .withMinTimestamp(T0)
+        .withTimestampSpec(TIMESTAMP_SPEC)
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(spec.getDimensionsSpec())
+        .withRollup(false)
+        .withClusterSpec(spec)
+        .build();
+    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+        .setIndexSchema(schema)
+        .setMaxRowCount(10_000)
+        .build();
+    index.add(row(T0, "Acme", "us-east-1"));
+    index.add(row(T0 + 1, "Acme", "us-west-2"));
+    index.add(row(T0 + 2, "Globex", "eu-west-1"));
+    return index;
+  }
+
+  @Test
+  void testQueryVirtualColumnEquivalentToClusteringColumnReadsMaterializedColumn()
+  {
+    // Query VC v0 := lower(tenant) is equivalent to the clustering column tenant_lower (also lower(tenant)). The remap
+    // substitutes the materialized tenant_lower clustering constant (instead of recomputing lower(tenant) from the
+    // retained raw column) so makeDimensionSelector("v0") returns the per-group value.
+    try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector v0Sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("v0"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(v0Sel.getRow().size() == 0 ? null : v0Sel.lookupName(v0Sel.getRow().get(0)));
+          cursor.advance();
+        }
+        // acme group (tenant_lower=acme) first, then globex; both materialized from the clustering constant.
+        Assertions.assertEquals(List.of("acme", "acme", "globex"), out);
+      }
+    }
+  }
+
+  @Test
+  void testQueryVirtualColumnEquivalentToNonClusteringMaterializedColumnReadsMaterializedColumn()
+  {
+    // Query VC v1 := upper(region) is equivalent to the non-clustering materialized column region_upper. The remap
+    // makes makeDimensionSelector("v1") read the per-group physical region_upper column.
+    try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector v1Sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("v1"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(v1Sel.getRow().size() == 0 ? null : v1Sel.lookupName(v1Sel.getRow().get(0)));
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("US-EAST-1", "US-WEST-2", "EU-WEST-1"), out);
+      }
+    }
+  }
+
+  @Test
+  void testQueryVirtualColumnWithoutEquivalentStillRecomputes()
+  {
+    // a query VC with NO materialized equivalent (upper(region_upper) -> a different expression) is not remapped and
+    // is recomputed normally from the stored region_upper column.
+    try (OnheapIncrementalIndex index = virtualClusteringIndex()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v2", "lower(region_upper)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector v2Sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("v2"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(v2Sel.getRow().size() == 0 ? null : v2Sel.lookupName(v2Sel.getRow().get(0)));
+          cursor.advance();
+        }
+        // lower(upper(region)) recomputed from the materialized region_upper column.
+        Assertions.assertEquals(List.of("us-east-1", "us-west-2", "eu-west-1"), out);
+      }
+    }
+  }
+
   @Test
   void testRowSignatureExposesClusteringAndNonClusteringColumns()
   {
@@ -221,6 +343,112 @@ class IncrementalIndexCursorFactoryClusteredTest extends InitializedNullHandling
       // never sees a filter on "tenant" (which the group's facts holder doesn't carry).
       final Filter filter = new EqualityFilter("tenant", ColumnType.STRING, "acme", null);
       try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
+        Assertions.assertEquals(
+            List.of(
+                List.of("acme", "us-east-1"),
+                List.of("acme", "us-west-2")
+            ),
+            scanTenantRegion(holder)
+        );
+      }
+    }
+  }
+
+  @Test
+  void testRangeFilterOnClusteringColumnResolvesViaClusteringConstant()
+  {
+    try (OnheapIncrementalIndex index = standardTwoGroup()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      // A RangeFilter on the clustering column is NOT folded by the pruner (only Equality/In/Null fold), so it
+      // survives to the per-group cursor still referencing "tenant". OnHeapClusterGroup doesn't store the clustering
+      // column, so the per-group selector factory must expose it as a per-group constant (mirroring the historical
+      // fabricated-constant path) or the filter matches a missing/all-null column and returns nothing. tenant in
+      // ['a','b'] selects the acme group and excludes globex.
+      final Filter filter = new RangeFilter("tenant", ColumnType.STRING, "a", "b", false, false, null);
+      try (CursorHolder holder = factory.makeCursorHolder(specWith(filter))) {
+        Assertions.assertEquals(
+            List.of(
+                List.of("acme", "us-east-1"),
+                List.of("acme", "us-west-2")
+            ),
+            scanTenantRegion(holder)
+        );
+      }
+    }
+  }
+
+  @Test
+  void testVirtualColumnReadingClusteringColumnResolvesViaClusteringConstant()
+  {
+    try (OnheapIncrementalIndex index = standardTwoGroup()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      // v := concat(tenant, '_x') reads the clustering column `tenant` (not stored per-row in the group). It has no
+      // materialized equivalent so it is retained (recomputed at read). The VC's `tenant` input must resolve to the
+      // group's clustering constant, not a missing column.
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v", "concat(tenant, '_x')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(spec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("v"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(sel.getRow().size() == 0 ? null : sel.lookupName(sel.getRow().get(0)));
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("acme_x", "acme_x", "globex_x"), out);
+      }
+    }
+  }
+
+  @Test
+  void testQueryVirtualColumnShadowingClusteringColumnWinsOverConstant()
+  {
+    try (OnheapIncrementalIndex index = standardTwoGroup()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      // A query VC named "tenant" shadows the clustering column of the same name (computed from region instead), and a
+      // retained VC "label" reads it. The superclass resolves virtual columns before physical columns, so "label" must
+      // see the VC's value (upper(region)), NOT the per-group clustering constant. If the clustering-constant
+      // interception fired first, "label" would silently read "acme"/"globex" instead.
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("tenant", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+              new ExpressionVirtualColumn("label", "concat(tenant, '_x')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(spec)) {
+        final Cursor cursor = holder.asCursor();
+        final DimensionSelector sel =
+            cursor.getColumnSelectorFactory().makeDimensionSelector(DefaultDimensionSpec.of("label"));
+        final List<String> out = new ArrayList<>();
+        while (!cursor.isDone()) {
+          out.add(sel.getRow().size() == 0 ? null : sel.lookupName(sel.getRow().get(0)));
+          cursor.advance();
+        }
+        Assertions.assertEquals(List.of("US-EAST-1_x", "US-WEST-2_x", "EU-WEST-1_x"), out);
+      }
+    }
+  }
+
+  @Test
+  void testFilterOnVirtualColumnReadingClusteringColumnResolvesViaClusteringConstant()
+  {
+    try (OnheapIncrementalIndex index = standardTwoGroup()) {
+      final IncrementalIndexCursorFactory factory = new IncrementalIndexCursorFactory(index);
+      // A filter on a retained VC that reads the clustering column (v := upper(tenant)) must evaluate the VC against
+      // the group's clustering constant, not a missing column. The VC resolves its `tenant` input through its own
+      // selector factory, so the clustering constants must be visible below the virtual-column layer or the filter
+      // silently rejects every realtime row. upper(tenant)='ACME' selects the acme group.
+      final CursorBuildSpec spec = CursorBuildSpec.builder()
+          .setVirtualColumns(VirtualColumns.create(
+              new ExpressionVirtualColumn("v", "upper(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+          ))
+          .setFilter(new EqualityFilter("v", ColumnType.STRING, "ACME", null))
+          .build();
+      try (CursorHolder holder = factory.makeCursorHolder(spec)) {
         Assertions.assertEquals(
             List.of(
                 List.of("acme", "us-east-1"),

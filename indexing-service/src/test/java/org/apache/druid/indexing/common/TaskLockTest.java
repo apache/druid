@@ -26,8 +26,8 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class TaskLockTest
     final String json = objectMapper.writeValueAsString(lock);
     final TaskLock fromJson = objectMapper.readValue(json, TaskLock.class);
 
-    Assert.assertEquals(lock, fromJson);
+    Assertions.assertEquals(lock, fromJson);
   }
 
   @Test
@@ -75,7 +75,7 @@ public class TaskLockTest
                         + "  \"revoked\" : false\n"
                         + "}";
 
-    Assert.assertEquals(expected, objectMapper.readValue(json, TaskLock.class));
+    Assertions.assertEquals(expected, objectMapper.readValue(json, TaskLock.class));
   }
 
   @Test
@@ -93,7 +93,7 @@ public class TaskLockTest
     final String json = objectMapper.writeValueAsString(lock);
     final TaskLock fromJson = objectMapper.readValue(json, TaskLock.class);
 
-    Assert.assertEquals(lock, fromJson);
+    Assertions.assertEquals(lock, fromJson);
   }
 
   @Test
@@ -110,14 +110,14 @@ public class TaskLockTest
     );
     final byte[] json = objectMapper.writeValueAsBytes(oldTaskLock);
     final TaskLock fromJson = objectMapper.readValue(json, TaskLock.class);
-    Assert.assertEquals(LockGranularity.TIME_CHUNK, fromJson.getGranularity());
-    Assert.assertEquals(TaskLockType.EXCLUSIVE, fromJson.getType());
-    Assert.assertEquals("groupId", fromJson.getGroupId());
-    Assert.assertEquals("dataSource", fromJson.getDataSource());
-    Assert.assertEquals(Intervals.of("2019/2020"), fromJson.getInterval());
-    Assert.assertEquals("version", fromJson.getVersion());
-    Assert.assertEquals(10, fromJson.getPriority().intValue());
-    Assert.assertTrue(fromJson.isRevoked());
+    Assertions.assertEquals(LockGranularity.TIME_CHUNK, fromJson.getGranularity());
+    Assertions.assertEquals(TaskLockType.EXCLUSIVE, fromJson.getType());
+    Assertions.assertEquals("groupId", fromJson.getGroupId());
+    Assertions.assertEquals("dataSource", fromJson.getDataSource());
+    Assertions.assertEquals(Intervals.of("2019/2020"), fromJson.getInterval());
+    Assertions.assertEquals("version", fromJson.getVersion());
+    Assertions.assertEquals(10, fromJson.getPriority().intValue());
+    Assertions.assertTrue(fromJson.isRevoked());
   }
 
   private static class OldTaskLock

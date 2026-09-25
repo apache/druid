@@ -31,9 +31,9 @@ import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 import java.util.Set;
@@ -47,7 +47,7 @@ public class PhysicalDataSourceMetadataFactoryTest
 
   private PhysicalDatasourceMetadataFactory datasourceMetadataFactory;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     segmentDataSourceNames = Sets.newConcurrentHashSet();
@@ -102,15 +102,15 @@ public class PhysicalDataSourceMetadataFactoryTest
                     .build();
 
     DatasourceTable.PhysicalDatasourceMetadata fooDs = datasourceMetadataFactory.build("foo", fooSignature);
-    Assert.assertTrue(fooDs.isJoinable());
-    Assert.assertTrue(fooDs.isBroadcast());
-    Assert.assertEquals(fooDs.dataSource().getName(), "foo");
-    Assert.assertEquals(fooDs.getRowSignature(), fooSignature);
+    Assertions.assertTrue(fooDs.isJoinable());
+    Assertions.assertTrue(fooDs.isBroadcast());
+    Assertions.assertEquals(fooDs.dataSource().getName(), "foo");
+    Assertions.assertEquals(fooDs.getRowSignature(), fooSignature);
 
     DatasourceTable.PhysicalDatasourceMetadata barDs = datasourceMetadataFactory.build("bar", barSignature);
-    Assert.assertFalse(barDs.isJoinable());
-    Assert.assertFalse(barDs.isBroadcast());
-    Assert.assertEquals(barDs.dataSource().getName(), "bar");
-    Assert.assertEquals(barDs.getRowSignature(), barSignature);
+    Assertions.assertFalse(barDs.isJoinable());
+    Assertions.assertFalse(barDs.isBroadcast());
+    Assertions.assertEquals(barDs.dataSource().getName(), "bar");
+    Assertions.assertEquals(barDs.getRowSignature(), barSignature);
   }
 }

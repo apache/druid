@@ -26,8 +26,8 @@ import org.apache.druid.delta.common.DeltaLakeDruidModule;
 import org.apache.druid.delta.filter.DeltaAndFilter;
 import org.apache.druid.delta.filter.DeltaLessThanFilter;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DeltaInputSourceSerdeTest
 {
@@ -43,8 +43,8 @@ public class DeltaInputSourceSerdeTest
                            + "    }";
 
     final DeltaInputSource deltaInputSource = OBJECT_MAPPER.readValue(payload, DeltaInputSource.class);
-    Assert.assertEquals("foo/bar", deltaInputSource.getTablePath());
-    Assert.assertNull(deltaInputSource.getFilter());
+    Assertions.assertEquals("foo/bar", deltaInputSource.getTablePath());
+    Assertions.assertNull(deltaInputSource.getFilter());
   }
 
   @Test
@@ -61,8 +61,8 @@ public class DeltaInputSourceSerdeTest
                            + "    }";
 
     final DeltaInputSource deltaInputSource = OBJECT_MAPPER.readValue(payload, DeltaInputSource.class);
-    Assert.assertEquals("foo/bar", deltaInputSource.getTablePath());
-    Assert.assertTrue(deltaInputSource.getFilter() instanceof DeltaLessThanFilter);
+    Assertions.assertEquals("foo/bar", deltaInputSource.getTablePath());
+    Assertions.assertTrue(deltaInputSource.getFilter() instanceof DeltaLessThanFilter);
   }
 
   @Test
@@ -89,8 +89,8 @@ public class DeltaInputSourceSerdeTest
                      + "    }";
 
     final DeltaInputSource deltaInputSource = OBJECT_MAPPER.readValue(payload, DeltaInputSource.class);
-    Assert.assertEquals("s3://foo/bar/baz", deltaInputSource.getTablePath());
-    Assert.assertTrue(deltaInputSource.getFilter() instanceof DeltaAndFilter);
+    Assertions.assertEquals("s3://foo/bar/baz", deltaInputSource.getTablePath());
+    Assertions.assertTrue(deltaInputSource.getFilter() instanceof DeltaAndFilter);
   }
 
   @Test
@@ -105,12 +105,12 @@ public class DeltaInputSourceSerdeTest
                            + "      }\n"
                            + "    }";
 
-    final ValueInstantiationException exception = Assert.assertThrows(
+    final ValueInstantiationException exception = Assertions.assertThrows(
         ValueInstantiationException.class,
         () -> OBJECT_MAPPER.readValue(payload, DeltaInputSource.class)
     );
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         exception.getCause().getMessage().contains(
             "tablePath cannot be null."
         )
@@ -129,12 +129,12 @@ public class DeltaInputSourceSerdeTest
                            + "      }\n"
                            + "    }";
 
-    final ValueInstantiationException exception = Assert.assertThrows(
+    final ValueInstantiationException exception = Assertions.assertThrows(
         ValueInstantiationException.class,
         () -> OBJECT_MAPPER.readValue(payload, DeltaInputSource.class)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "column is a required field for >= filter.",
         exception.getCause().getMessage()
     );
@@ -150,7 +150,7 @@ public class DeltaInputSourceSerdeTest
                            + "    }";
 
     final DeltaInputSource deltaInputSource = OBJECT_MAPPER.readValue(payload, DeltaInputSource.class);
-    Assert.assertEquals("foo/bar", deltaInputSource.getTablePath());
-    Assert.assertEquals((Long) 56L, deltaInputSource.getSnapshotVersion());
+    Assertions.assertEquals("foo/bar", deltaInputSource.getTablePath());
+    Assertions.assertEquals((Long) 56L, deltaInputSource.getSnapshotVersion());
   }
 }

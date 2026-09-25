@@ -43,13 +43,11 @@ import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,17 +55,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-@RunWith(Parameterized.class)
 public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
 {
-  private final GroupByQueryConfig config;
-  private final AggregationTestHelper helper;
-  private final AggregationTestHelper timeSeriesHelper;
+  private GroupByQueryConfig config;
+  private AggregationTestHelper helper;
+  private AggregationTestHelper timeSeriesHelper;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  private File tempFolder;
 
-  public KllFloatsSketchAggregatorTest(final GroupByQueryConfig config, final String vectorize)
+  public void initKllFloatsSketchAggregatorTest(final GroupByQueryConfig config, final String vectorize)
   {
     this.config = config;
     KllSketchModule.registerSerde();
@@ -77,13 +74,12 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
         config,
         tempFolder
     ).withQueryContext(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize));
-    timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
+    timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         module.getJacksonModules(),
         tempFolder
     ).withQueryContext(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, vectorize));
   }
 
-  @Parameterized.Parameters(name = "groupByConfig = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -95,16 +91,18 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     helper.close();
   }
 
   // this is to test Json properties and equals
-  @Test
-  public void serializeDeserializeFactoryWithFieldName() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
+  public void serializeDeserializeFactoryWithFieldName(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initKllFloatsSketchAggregatorTest(config, vectorize);
     ObjectMapper objectMapper = new DefaultObjectMapper();
     new KllSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
     KllFloatsSketchAggregatorFactory factory =
@@ -115,13 +113,15 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
         AggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, other);
+    Assertions.assertEquals(factory, other);
   }
 
   // this is to test Json properties and equals for the combining factory
-  @Test
-  public void serializeDeserializeCombiningFactoryWithFieldName() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
+  public void serializeDeserializeCombiningFactoryWithFieldName(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initKllFloatsSketchAggregatorTest(config, vectorize);
     ObjectMapper objectMapper = new DefaultObjectMapper();
     new KllSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
     KllFloatsSketchAggregatorFactory factory = new KllFloatsSketchMergeAggregatorFactory("name", 200);
@@ -131,12 +131,14 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
         AggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, other);
+    Assertions.assertEquals(factory, other);
   }
 
-  @Test
-  public void ingestingSketches() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
+  public void ingestingSketches(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initKllFloatsSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_data.tsv").getFile()),
         new InputRowSchema(
@@ -176,40 +178,42 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
                     .build()
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
 
     Object nonExistentSketchObject = row.get(1);
-    Assert.assertTrue(nonExistentSketchObject instanceof Long);
+    Assertions.assertTrue(nonExistentSketchObject instanceof Long);
     long nonExistentSketchValue = (long) nonExistentSketchObject;
-    Assert.assertEquals(0, nonExistentSketchValue);
+    Assertions.assertEquals(0, nonExistentSketchValue);
 
     Object sketchObject = row.get(0);
-    Assert.assertTrue(sketchObject instanceof Long);
+    Assertions.assertTrue(sketchObject instanceof Long);
     long sketchValue = (long) sketchObject;
-    Assert.assertEquals(400, sketchValue);
+    Assertions.assertEquals(400, sketchValue);
 
     // post agg
     Object quantilesObject = row.get(2);
-    Assert.assertTrue(quantilesObject instanceof float[]);
+    Assertions.assertTrue(quantilesObject instanceof float[]);
     float[] quantiles = (float[]) quantilesObject;
-    Assert.assertEquals(0, quantiles[0], 0.05); // min value
-    Assert.assertEquals(0.5f, quantiles[1], 0.05); // median value
-    Assert.assertEquals(1f, quantiles[2], 0.05); // max value
+    Assertions.assertEquals(0, quantiles[0], 0.05); // min value
+    Assertions.assertEquals(0.5f, quantiles[1], 0.05); // median value
+    Assertions.assertEquals(1f, quantiles[2], 0.05); // max value
 
     // post agg
     Object histogramObject = row.get(3);
-    Assert.assertTrue(histogramObject instanceof double[]);
+    Assertions.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     for (final double bin : histogram) {
       // 400 items uniformly distributed into 4 bins
-      Assert.assertEquals(100, bin, 100 * 0.2);
+      Assertions.assertEquals(100, bin, 100 * 0.2);
     }
   }
 
-  @Test
-  public void buildingSketchesAtIngestionTime() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
+  public void buildingSketchesAtIngestionTime(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initKllFloatsSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -266,57 +270,59 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
                     .build()
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
 
     Object sketchObject = row.get(0);
-    Assert.assertTrue(sketchObject instanceof Long);
+    Assertions.assertTrue(sketchObject instanceof Long);
     long sketchValue = (long) sketchObject;
-    Assert.assertEquals(400, sketchValue);
+    Assertions.assertEquals(400, sketchValue);
 
     Object sketchObjectWithNulls = row.get(1);
-    Assert.assertTrue(sketchObjectWithNulls instanceof Long);
+    Assertions.assertTrue(sketchObjectWithNulls instanceof Long);
     long sketchValueWithNulls = (long) sketchObjectWithNulls;
-    Assert.assertEquals(355, sketchValueWithNulls);
+    Assertions.assertEquals(355, sketchValueWithNulls);
 
     // post agg
     Object quantilesObject = row.get(3);
-    Assert.assertTrue(quantilesObject instanceof float[]);
+    Assertions.assertTrue(quantilesObject instanceof float[]);
     float[] quantiles = (float[]) quantilesObject;
-    Assert.assertEquals(0, quantiles[0], 0.05); // min value
-    Assert.assertEquals(0.5f, quantiles[1], 0.05); // median value
-    Assert.assertEquals(1f, quantiles[2], 0.05); // max value
+    Assertions.assertEquals(0, quantiles[0], 0.05); // min value
+    Assertions.assertEquals(0.5f, quantiles[1], 0.05); // median value
+    Assertions.assertEquals(1f, quantiles[2], 0.05); // max value
 
     // post agg
     Object histogramObject = row.get(4);
-    Assert.assertTrue(histogramObject instanceof double[]);
+    Assertions.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
-    Assert.assertEquals(4, histogram.length);
+    Assertions.assertEquals(4, histogram.length);
     for (final double bin : histogram) {
-      Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly distributed into 4 bins
+      Assertions.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly distributed into 4 bins
     }
 
     // post agg with nulls
     Object quantilesObjectWithNulls = row.get(5);
-    Assert.assertTrue(quantilesObjectWithNulls instanceof float[]);
+    Assertions.assertTrue(quantilesObjectWithNulls instanceof float[]);
     float[] quantilesWithNulls = (float[]) quantilesObjectWithNulls;
-    Assert.assertEquals(5f, quantilesWithNulls[0], 0.05); // min value
-    Assert.assertEquals(7.5f, quantilesWithNulls[1], 0.07); // median value
-    Assert.assertEquals(10f, quantilesWithNulls[2], 0.05); // max value
+    Assertions.assertEquals(5f, quantilesWithNulls[0], 0.05); // min value
+    Assertions.assertEquals(7.5f, quantilesWithNulls[1], 0.07); // median value
+    Assertions.assertEquals(10f, quantilesWithNulls[2], 0.05); // max value
 
     // post agg with nulls
     Object histogramObjectWithNulls = row.get(6);
-    Assert.assertTrue(histogramObjectWithNulls instanceof double[]);
+    Assertions.assertTrue(histogramObjectWithNulls instanceof double[]);
     double[] histogramWithNulls = (double[]) histogramObjectWithNulls;
-    Assert.assertEquals(4, histogramWithNulls.length);
+    Assertions.assertEquals(4, histogramWithNulls.length);
     for (final double bin : histogramWithNulls) {
-      Assert.assertEquals(100, bin, 50); // distribution is skewed due to nulls
+      Assertions.assertEquals(100, bin, 50); // distribution is skewed due to nulls
     }
   }
 
-  @Test
-  public void buildingSketchesAtQueryTime() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
+  public void buildingSketchesAtQueryTime(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initKllFloatsSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -379,45 +385,45 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
                     .build()
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
 
     Object sketchObject = row.get(0);
-    Assert.assertTrue(sketchObject instanceof Long);
+    Assertions.assertTrue(sketchObject instanceof Long);
     long sketchValue = (long) sketchObject;
-    Assert.assertEquals(400, sketchValue);
+    Assertions.assertEquals(400, sketchValue);
 
     Object sketchObjectWithNulls = row.get(1);
-    Assert.assertTrue(sketchObjectWithNulls instanceof Long);
+    Assertions.assertTrue(sketchObjectWithNulls instanceof Long);
     long sketchValueWithNulls = (long) sketchObjectWithNulls;
-    Assert.assertEquals(355, sketchValueWithNulls);
+    Assertions.assertEquals(355, sketchValueWithNulls);
 
     // post agg
     Object quantileObject = row.get(2);
-    Assert.assertTrue(quantileObject instanceof Float);
-    Assert.assertEquals(0.5f, (float) quantileObject, 0.05); // median value
+    Assertions.assertTrue(quantileObject instanceof Float);
+    Assertions.assertEquals(0.5f, (float) quantileObject, 0.05); // median value
 
     // post agg
     Object quantilesObject = row.get(3);
-    Assert.assertTrue(quantilesObject instanceof float[]);
+    Assertions.assertTrue(quantilesObject instanceof float[]);
     float[] quantiles = (float[]) quantilesObject;
-    Assert.assertEquals(0, quantiles[0], 0.05); // min value
-    Assert.assertEquals(0.5f, quantiles[1], 0.05); // median value
-    Assert.assertEquals(1f, quantiles[2], 0.05); // max value
+    Assertions.assertEquals(0, quantiles[0], 0.05); // min value
+    Assertions.assertEquals(0.5f, quantiles[1], 0.05); // median value
+    Assertions.assertEquals(1f, quantiles[2], 0.05); // max value
 
     // post agg
     Object histogramObject = row.get(4);
-    Assert.assertTrue(histogramObject instanceof double[]);
+    Assertions.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     for (final double bin : histogram) {
-      Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
+      Assertions.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
       // distributed into 4 bins
     }
 
     // post agg with nulls
     Object quantileObjectWithNulls = row.get(5);
-    Assert.assertTrue(quantileObjectWithNulls instanceof Float);
-    Assert.assertEquals(
+    Assertions.assertTrue(quantileObjectWithNulls instanceof Float);
+    Assertions.assertEquals(
         7.5f,
         (float) quantileObjectWithNulls,
         0.1
@@ -425,25 +431,27 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
 
     // post agg with nulls
     Object quantilesObjectWithNulls = row.get(6);
-    Assert.assertTrue(quantilesObjectWithNulls instanceof float[]);
+    Assertions.assertTrue(quantilesObjectWithNulls instanceof float[]);
     float[] quantilesWithNulls = (float[]) quantilesObjectWithNulls;
-    Assert.assertEquals(5f, quantilesWithNulls[0], 0.05); // min value
-    Assert.assertEquals(7.5f, quantilesWithNulls[1], 0.1); // median value
-    Assert.assertEquals(10f, quantilesWithNulls[2], 0.05); // max value
+    Assertions.assertEquals(5f, quantilesWithNulls[0], 0.05); // min value
+    Assertions.assertEquals(7.5f, quantilesWithNulls[1], 0.1); // median value
+    Assertions.assertEquals(10f, quantilesWithNulls[2], 0.05); // max value
 
     // post agg with nulls
     Object histogramObjectWithNulls = row.get(7);
-    Assert.assertTrue(histogramObjectWithNulls instanceof double[]);
+    Assertions.assertTrue(histogramObjectWithNulls instanceof double[]);
     double[] histogramWithNulls = (double[]) histogramObjectWithNulls;
     for (final double bin : histogramWithNulls) {
-      Assert.assertEquals(100, bin, 80); // distribution is skewed due to nulls/0s
+      Assertions.assertEquals(100, bin, 80); // distribution is skewed due to nulls/0s
       // distributed into 4 bins
     }
   }
 
-  @Test
-  public void queryingDataWithFieldNameValueAsFloatInsteadOfSketch() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
+  public void queryingDataWithFieldNameValueAsFloatInsteadOfSketch(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initKllFloatsSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -486,40 +494,42 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
                     .build()
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
 
     Object sketchObject = row.get(0);
-    Assert.assertTrue(sketchObject instanceof Long);
+    Assertions.assertTrue(sketchObject instanceof Long);
     long sketchValue = (long) sketchObject;
-    Assert.assertEquals(400, sketchValue);
+    Assertions.assertEquals(400, sketchValue);
 
     // post agg
     Object quantileObject = row.get(1);
-    Assert.assertTrue(quantileObject instanceof Float);
-    Assert.assertEquals(0.5f, (float) quantileObject, 0.05); // median value
+    Assertions.assertTrue(quantileObject instanceof Float);
+    Assertions.assertEquals(0.5f, (float) quantileObject, 0.05); // median value
 
     // post agg
     Object quantilesObject = row.get(2);
-    Assert.assertTrue(quantilesObject instanceof float[]);
+    Assertions.assertTrue(quantilesObject instanceof float[]);
     float[] quantiles = (float[]) quantilesObject;
-    Assert.assertEquals(0, quantiles[0], 0.05); // min value
-    Assert.assertEquals(0.5f, quantiles[1], 0.05); // median value
-    Assert.assertEquals(1f, quantiles[2], 0.05); // max value
+    Assertions.assertEquals(0, quantiles[0], 0.05); // min value
+    Assertions.assertEquals(0.5f, quantiles[1], 0.05); // median value
+    Assertions.assertEquals(1f, quantiles[2], 0.05); // max value
 
     // post agg
     Object histogramObject = row.get(3);
-    Assert.assertTrue(histogramObject instanceof double[]);
+    Assertions.assertTrue(histogramObject instanceof double[]);
     double[] histogram = (double[]) histogramObject;
     for (final double bin : histogram) {
-      Assert.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
+      Assertions.assertEquals(100, bin, 100 * 0.2); // 400 items uniformly
       // distributed into 4 bins
     }
   }
 
-  @Test
-  public void timeSeriesQueryInputAsFloat() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
+  public void timeSeriesQueryInputAsFloat(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initKllFloatsSketchAggregatorTest(config, vectorize);
     Sequence<Result<TimeseriesResultValue>> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -562,12 +572,14 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
               .build()
     );
     List<Result<TimeseriesResultValue>> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
   }
 
-  @Test
-  public void testSuccessWhenMaxStreamLengthHit() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
+  public void testSuccessWhenMaxStreamLengthHit(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initKllFloatsSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_build_data.tsv").getFile()),
         new InputRowSchema(

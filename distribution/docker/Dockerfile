@@ -17,13 +17,13 @@
 # under the License.
 #
 
-ARG JDK_VERSION=21
+ARG JDK_VERSION=25
 
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
 # Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
 # Once the web-console dependency problem is resolved, we can remove the --platform directive.
-FROM --platform=linux/amd64 maven:3.9 as builder
+FROM --platform=linux/amd64 maven:3.9-eclipse-temurin-25 as builder
 
 # Rebuild from source in this stage
 # This can be unset if the tarball was already built outside of Docker
@@ -51,6 +51,7 @@ RUN --mount=type=cache,target=/root/.m2,sharing=locked VERSION=$(mvn -B -q org.a
 
 FROM alpine:3 as bash-static
 ARG TARGETARCH
+RUN apk add --no-cache curl
 #
 # Download bash-static binary to execute scripts that require bash.
 # Although bash-static supports multiple platforms, but there's no need for us to support all those platform, amd64 and arm64 are enough.
@@ -64,11 +65,16 @@ RUN if [ "$TARGETARCH" = "arm64" ]; then \
       echo "Unsupported architecture ($TARGETARCH)" && exit 1; \
     fi; \
     echo "Downloading bash-static from ${BASH_URL}" \
-    && wget ${BASH_URL} -O /bin/bash
+    && curl --fail --location \
+      --retry 3 \
+      --retry-delay 5 \
+      --retry-all-errors \
+      --output /bin/bash \
+      "${BASH_URL}"
 
 FROM busybox:1.35.0-glibc as busybox
 
-FROM gcr.io/distroless/java$JDK_VERSION-debian12
+FROM gcr.io/distroless/java$JDK_VERSION-debian13
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
 COPY --from=busybox /bin/busybox /busybox/busybox

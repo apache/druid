@@ -29,8 +29,8 @@ import io.delta.kernel.types.ShortType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DeltaLessThanFilterTest
 {
@@ -50,7 +50,7 @@ public class DeltaLessThanFilterTest
 
     Predicate predicate = ltFilter.getFilterPredicate(SCHEMA);
 
-    Assert.assertEquals("<", predicate.getName());
-    Assert.assertEquals(2, predicate.getChildren().size());
+    Assertions.assertEquals("<", predicate.getName());
+    Assertions.assertEquals(2, predicate.getChildren().size());
   }
 }

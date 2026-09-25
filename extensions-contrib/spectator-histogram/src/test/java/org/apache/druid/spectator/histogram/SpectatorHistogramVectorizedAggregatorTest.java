@@ -22,17 +22,17 @@ package org.apache.druid.spectator.histogram;
 import com.netflix.spectator.api.histogram.PercentileBuckets;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.ByteBuffer;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullHandlingTest
 {
   private static final int POSITION = 0;
@@ -44,7 +44,7 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
   private SpectatorHistogramVectorizedAggregator aggregator;
   private ByteBuffer buffer;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     aggregator = new SpectatorHistogramVectorizedAggregator(selector);
@@ -58,7 +58,7 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     Object result = aggregator.get(buffer, POSITION);
 
     // Empty histogram returns null
-    Assert.assertNull(result);
+    Assertions.assertNull(result);
   }
 
   @Test
@@ -82,8 +82,8 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     expected.add(PercentileBuckets.indexOf(200), 2L);
 
     SpectatorHistogram result = (SpectatorHistogram) aggregator.get(buffer, POSITION);
-    Assert.assertNotNull(result);
-    Assert.assertEquals(expected, result);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -99,8 +99,8 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     aggregator.aggregate(buffer, POSITION, 0, 3);
 
     SpectatorHistogram result = (SpectatorHistogram) aggregator.get(buffer, POSITION);
-    Assert.assertNotNull(result);
-    Assert.assertEquals(hist1, result);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(hist1, result);
   }
 
   @Test
@@ -113,7 +113,7 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     aggregator.aggregate(buffer, POSITION, 0, 3);
 
     // Should still be empty/null
-    Assert.assertNull(aggregator.get(buffer, POSITION));
+    Assertions.assertNull(aggregator.get(buffer, POSITION));
   }
 
   @Test
@@ -132,8 +132,8 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     expected.insert(300L);
 
     SpectatorHistogram result = (SpectatorHistogram) aggregator.get(buffer, POSITION);
-    Assert.assertNotNull(result);
-    Assert.assertEquals(expected, result);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -169,8 +169,8 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     SpectatorHistogram result1 = (SpectatorHistogram) aggregator.get(buffer, POSITION);
     SpectatorHistogram result2 = (SpectatorHistogram) aggregator.get(buffer, POSITION_2);
 
-    Assert.assertEquals(expected1, result1);
-    Assert.assertEquals(expected2, result2);
+    Assertions.assertEquals(expected1, result1);
+    Assertions.assertEquals(expected2, result2);
   }
 
   @Test
@@ -195,8 +195,8 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     SpectatorHistogram result1 = (SpectatorHistogram) aggregator.get(buffer, POSITION);
     SpectatorHistogram result2 = (SpectatorHistogram) aggregator.get(buffer, POSITION_2);
 
-    Assert.assertEquals(hist1, result1);
-    Assert.assertEquals(hist2, result2);
+    Assertions.assertEquals(hist1, result1);
+    Assertions.assertEquals(hist2, result2);
   }
 
   @Test
@@ -217,7 +217,7 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     aggregator.aggregate(buffer, 1, positions, null, positionOffset);
 
     SpectatorHistogram result = (SpectatorHistogram) aggregator.get(buffer, actualPosition);
-    Assert.assertEquals(hist1, result);
+    Assertions.assertEquals(hist1, result);
   }
 
   @Test
@@ -240,7 +240,7 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     aggregator.relocate(oldPosition, newPosition, oldBuffer, newBuffer);
 
     SpectatorHistogram result = (SpectatorHistogram) aggregator.get(newBuffer, newPosition);
-    Assert.assertEquals(hist, result);
+    Assertions.assertEquals(hist, result);
   }
 
   @Test
@@ -263,7 +263,7 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     aggregator.aggregate(buffer, POSITION, 1, 2);
 
     SpectatorHistogram result = (SpectatorHistogram) aggregator.get(buffer, POSITION);
-    Assert.assertEquals(hist2, result);
+    Assertions.assertEquals(hist2, result);
   }
 
   @Test
@@ -279,13 +279,13 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     aggregator.aggregate(buffer, POSITION, 0, 1);
 
     // Verify aggregation worked
-    Assert.assertNotNull(aggregator.get(buffer, POSITION));
+    Assertions.assertNotNull(aggregator.get(buffer, POSITION));
 
     // Close should clear the cache
     aggregator.close();
 
     // After close, get should return null
-    Assert.assertNull(aggregator.get(buffer, POSITION));
+    Assertions.assertNull(aggregator.get(buffer, POSITION));
   }
 
   @Test
@@ -314,7 +314,7 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     expected.add(PercentileBuckets.indexOf(200), 2L);
 
     SpectatorHistogram result = (SpectatorHistogram) aggregator.get(buffer, POSITION);
-    Assert.assertEquals(expected, result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -350,8 +350,8 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     SpectatorHistogram result1 = (SpectatorHistogram) aggregator.get(buffer, POSITION);
     SpectatorHistogram result2 = (SpectatorHistogram) aggregator.get(buffer, POSITION_2);
 
-    Assert.assertEquals(expected1, result1);
-    Assert.assertEquals(expected2, result2);
+    Assertions.assertEquals(expected1, result1);
+    Assertions.assertEquals(expected2, result2);
   }
 
   @Test
@@ -373,8 +373,8 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     expected.insert(300);
 
     SpectatorHistogram result = (SpectatorHistogram) aggregator.get(buffer, POSITION);
-    Assert.assertNotNull(result);
-    Assert.assertEquals(expected, result);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -408,9 +408,9 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     SpectatorHistogram result1 = (SpectatorHistogram) aggregator.get(buffer, POSITION);
     SpectatorHistogram result2 = (SpectatorHistogram) aggregator.get(buffer, POSITION_2);
 
-    Assert.assertEquals(expected1, result1);
+    Assertions.assertEquals(expected1, result1);
     // POSITION_2 should be null/empty because vector[rows[1]]=vector[1]=null
-    Assert.assertNull(result2);
+    Assertions.assertNull(result2);
   }
 
   @Test
@@ -446,7 +446,7 @@ public class SpectatorHistogramVectorizedAggregatorTest extends InitializedNullH
     SpectatorHistogram result1 = (SpectatorHistogram) aggregator.get(buffer, POSITION);
     SpectatorHistogram result2 = (SpectatorHistogram) aggregator.get(buffer, POSITION_2);
 
-    Assert.assertEquals(expected1, result1);
-    Assert.assertEquals(expected2, result2);
+    Assertions.assertEquals(expected1, result1);
+    Assertions.assertEquals(expected2, result2);
   }
 }

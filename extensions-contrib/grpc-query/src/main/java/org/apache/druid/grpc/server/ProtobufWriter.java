@@ -20,7 +20,7 @@
 package org.apache.druid.grpc.server;
 
 import com.google.protobuf.Descriptors;
-import com.google.protobuf.GeneratedMessageV3;
+import com.google.protobuf.GeneratedMessage;
 import com.google.protobuf.Message;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.segment.column.RowSignature;
@@ -41,18 +41,18 @@ import java.util.Map;
 public class ProtobufWriter implements ResultFormat.Writer
 {
   private final OutputStream outputStream;
-  private final GeneratedMessageV3 message;
+  private final GeneratedMessage message;
   private Message.Builder rowBuilder;
   private final Map<String, Method> methods = new HashMap<>();
 
 
-  public ProtobufWriter(OutputStream outputStream, Class<GeneratedMessageV3> clazz)
+  public ProtobufWriter(OutputStream outputStream, Class<GeneratedMessage> clazz)
   {
     this.outputStream = outputStream;
     this.message = get(clazz);
   }
 
-  private GeneratedMessageV3 get(Class<GeneratedMessageV3> clazz)
+  private GeneratedMessage get(Class<GeneratedMessage> clazz)
   {
     try {
       final Method method = clazz.getMethod("getDefaultInstance", new Class<?>[0]);

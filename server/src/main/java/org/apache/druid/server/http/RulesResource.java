@@ -27,6 +27,7 @@ import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.http.security.RulesResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
@@ -71,7 +72,7 @@ public class RulesResource
   @ResourceFilters(StateResourceFilter.class)
   public Response getRules()
   {
-    return Response.ok(databaseRuleManager.getAllRules()).build();
+    return Response.ok(databaseRuleManager.getRulesSnapshot().getAllRules()).build();
   }
 
   @GET
@@ -83,11 +84,12 @@ public class RulesResource
       @QueryParam("full") final String full
   )
   {
+    final RetentionRulesSnapshot rulesSnapshot = databaseRuleManager.getRulesSnapshot();
     if (full != null) {
-      return Response.ok(databaseRuleManager.getRulesWithDefault(dataSourceName))
+      return Response.ok(rulesSnapshot.getEffectiveRules(dataSourceName))
                      .build();
     }
-    return Response.ok(databaseRuleManager.getRules(dataSourceName))
+    return Response.ok(rulesSnapshot.getOverrideRules(dataSourceName))
                    .build();
   }
 

@@ -47,8 +47,8 @@ public class NaiveSortOperatorTest
   @Test
   public void testSortAscending()
   {
-    RowsAndColumns rac1 = racForColumn("c", new int[] {5, 3, 1});
-    RowsAndColumns rac2 = racForColumn("c", new int[] {2, 6, 4});
+    RowsAndColumns rac1 = racForArrayColumn("c", new int[] {5, 3, 1});
+    RowsAndColumns rac2 = racForArrayColumn("c", new int[] {2, 6, 4});
 
     NaiveSortOperator op = new NaiveSortOperator(
         InlineScanOperator.make(rac1, rac2),
@@ -66,8 +66,8 @@ public class NaiveSortOperatorTest
   @Test
   public void testSortDescending()
   {
-    RowsAndColumns rac1 = racForColumn("c", new int[] {5, 3, 1});
-    RowsAndColumns rac2 = racForColumn("c", new int[] {2, 6, 4});
+    RowsAndColumns rac1 = racForArrayColumn("c", new int[] {5, 3, 1});
+    RowsAndColumns rac2 = racForArrayColumn("c", new int[] {2, 6, 4});
 
     NaiveSortOperator op = new NaiveSortOperator(
         InlineScanOperator.make(rac1, rac2),
@@ -82,7 +82,7 @@ public class NaiveSortOperatorTest
         .runToCompletion(op);
   }
 
-  private MapOfColumnsRowsAndColumns racForColumn(String k1, Object arr)
+  private MapOfColumnsRowsAndColumns racForArrayColumn(String k1, Object arr)
   {
     if (int.class.equals(arr.getClass().getComponentType())) {
       return racForColumn(k1, new IntArrayColumn((int[]) arr));

@@ -29,16 +29,16 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class NoQueryLaningStrategyTest
 {
   private Druids.TimeseriesQueryBuilder queryBuilder;
   private NoQueryLaningStrategy strategy;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.queryBuilder = Druids.newTimeseriesQueryBuilder()
@@ -54,7 +54,7 @@ public class NoQueryLaningStrategyTest
   public void testDoesntSetLane()
   {
     TimeseriesQuery query = queryBuilder.context(ImmutableMap.of()).build();
-    Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+    Assertions.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
   }
 
   @Test
@@ -64,7 +64,7 @@ public class NoQueryLaningStrategyTest
     TimeseriesQuery query = queryBuilder.context(
         ImmutableMap.of(QueryContexts.PRIORITY_KEY, 100, QueryContexts.LANE_KEY, someLane)
     ).build();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         someLane,
         strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).get()
     );

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.aggregation.simd.SimdLongSumVectorAggregator;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -106,6 +108,9 @@ public class LongSumAggregatorFactory extends SimpleLongAggregatorFactory
       VectorValueSelector selector
   )
   {
+    if (ExpressionProcessing.useVectorApi()) {
+      return new SimdLongSumVectorAggregator(selector);
+    }
     return new LongSumVectorAggregator(selector);
   }
 

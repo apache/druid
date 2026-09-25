@@ -324,6 +324,19 @@ public class MSQCompactionRunner implements CompactionRunner
                                                    .getInputSpec()
                                                    .findInterval(compactionTask.getDataSource());
 
+    if (dataSchema.getBaseTable() != null) {
+      return new DataSourceMSQDestination(
+          dataSchema.getDataSource(),
+          dataSchema.getGranularitySpec().getSegmentGranularity(),
+          null,
+          ImmutableList.of(replaceInterval),
+          null,
+          dataSchema.getBaseTable(),
+          dataSchema.getProjections(),
+          null
+      );
+    }
+
     return new DataSourceMSQDestination(
         dataSchema.getDataSource(),
         dataSchema.getGranularitySpec().getSegmentGranularity(),

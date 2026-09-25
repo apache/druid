@@ -19,10 +19,9 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.common.base.Optional;
 import org.apache.druid.client.DataSourcesSnapshot;
+import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -31,7 +30,6 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -82,9 +80,9 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(final DruidCoordinatorRuntimeParams params)
   {
-    DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
+    final DataSourcesSnapshot dataSourcesSnapshot = params.getDataSourcesSnapshot();
 
-    final Map<String, Set<SegmentId>> datasourceToNonOvershadowedEternityTombstones = 
+    final Map<String, Set<SegmentId>> datasourceToNonOvershadowedEternityTombstones =
         determineNonOvershadowedEternityTombstones(
         dataSourcesSnapshot
     );
@@ -132,41 +130,67 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
   private Map<String, Set<SegmentId>> determineNonOvershadowedEternityTombstones(final DataSourcesSnapshot dataSourcesSnapshot)
   {
     final Map<String, Set<SegmentId>> datasourceToNonOvershadowedEternityTombstones = new HashMap<>();
+    final Map<String, Set<DataSegment>> overshadowedSegmentsByDatasource = new HashMap<>();
 
-    dataSourcesSnapshot.getDataSourcesMap().keySet().forEach((datasource) -> {
+    for (final DataSegment overshadowedSegment : dataSourcesSnapshot.getOvershadowedSegments()) {
+      overshadowedSegmentsByDatasource
+          .computeIfAbsent(overshadowedSegment.getDataSource(), ds -> new HashSet<>())
+          .add(overshadowedSegment);
+    }
+
+    for (final ImmutableDruidDataSource dataSource : dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()) {
+      final String datasourceName = dataSource.getName();
+      // The timeline is guaranteed to be present since it is derived from the same set of
+      // datasources that we are iterating over.
       final SegmentTimeline usedSegmentsTimeline
-          = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasource);
+          = dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource().get(datasourceName);
 
-      final Optional<Set<DataSegment>> usedNonOvershadowedSegments =
-          Optional.fromNullable(usedSegmentsTimeline)
-                  .transform(timeline -> timeline.findNonOvershadowedObjectsInInterval(
-                      Intervals.ETERNITY,
-                      Partitions.ONLY_COMPLETE
-                  ));
-
-      if (usedNonOvershadowedSegments.isPresent()) {
-        usedNonOvershadowedSegments.get().forEach(candidateSegment -> {
-          if (isNewGenerationEternityTombstone(candidateSegment)) {
-            boolean overlaps = dataSourcesSnapshot.getOvershadowedSegments().stream()
-                                                  .filter(overshadowedSegment ->
-                                                              candidateSegment.getDataSource()
-                                                                              .equals(overshadowedSegment.getDataSource()))
-                                                  .anyMatch(
-                                                      overshadowedSegment ->
-                                                          candidateSegment.getInterval()
-                                                                          .overlaps(overshadowedSegment.getInterval())
-                                                  );
-            if (!overlaps) {
-              datasourceToNonOvershadowedEternityTombstones
-                  .computeIfAbsent(datasource, ds -> new HashSet<>())
-                  .add(candidateSegment.getId());
-            }
-          }
-        });
+      for (final DataSegment candidateSegment : dataSource.getSegments()) {
+        if (shouldMarkAsUnused(candidateSegment, overshadowedSegmentsByDatasource, usedSegmentsTimeline)) {
+          datasourceToNonOvershadowedEternityTombstones
+              .computeIfAbsent(datasourceName, ds -> new HashSet<>())
+              .add(candidateSegment.getId());
+        }
       }
-    });
+    }
 
     return datasourceToNonOvershadowedEternityTombstones;
+  }
+
+  /**
+   * A candidate segment should be marked as unused if it is a new-generation eternity tombstone that is neither
+   * overshadowed in the used-segments timeline nor overlapping any overshadowed segment in its datasource.
+   */
+  private boolean shouldMarkAsUnused(
+      final DataSegment candidateSegment,
+      final Map<String, Set<DataSegment>> overshadowedSegmentsByDatasource,
+      final SegmentTimeline usedSegmentsTimeline
+  )
+  {
+    return isNewGenerationEternityTombstone(candidateSegment)
+           && !usedSegmentsTimeline.isOvershadowed(candidateSegment)
+           && !overlapsAnyOvershadowedSegment(
+               candidateSegment,
+               overshadowedSegmentsByDatasource.get(candidateSegment.getDataSource())
+           );
+  }
+
+  private boolean overlapsAnyOvershadowedSegment(
+      final DataSegment candidateSegment,
+      final Set<DataSegment> overshadowedSegments
+  )
+  {
+    if (overshadowedSegments == null) {
+      return false;
+    }
+
+    for (final DataSegment overshadowedSegment : overshadowedSegments) {
+      if (candidateSegment.getInterval().overlaps(overshadowedSegment.getInterval())) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private boolean isNewGenerationEternityTombstone(final DataSegment segment)

@@ -24,7 +24,7 @@ sidebar_label: "Overview and syntax"
   -->
 
 :::info
- Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
 
@@ -470,7 +470,7 @@ SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)
 
 ## Reserved keywords
 
-Druid SQL reserves certain keywords which are used in its query language. Apache Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/reference.html#keywords). In addition to these, the following reserved keywords are unique to Apache Druid:
+Druid SQL reserves certain keywords which are used in its query language. Apache&circledR; Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/reference.html#keywords). In addition to these, the following reserved keywords are unique to Apache Druid:
 
 * **CLUSTERED**
 * **PARTITIONED**

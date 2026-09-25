@@ -254,6 +254,9 @@ public class MSQIndexingModule implements DruidModule
               .to(WindowOperatorQueryKit.class);
     binder.bind(WindowOperatorQueryKit.class).in(LazySingleton.class);
 
+    // Create the binder no matter what, to ensure we can at least get an empty map.
+    MSQBinders.dataSourcePlannerBinder(binder);
+
     MSQBinders.inputSpecSlicerProviderBinder(binder, IndexingService.class)
               .addBinding()
               .to(IndexerTableInputSpecSlicerProvider.class)

@@ -32,9 +32,9 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -104,7 +104,7 @@ public class LookupUtilsTest
                                                       + "}";
   private ObjectMapper mapper;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     final Injector injector = makeInjector();
@@ -126,7 +126,7 @@ public class LookupUtilsTest
     Map<String, LookupExtractorFactoryContainer> actualLookup =
         LookupUtils.tryConvertObjectMapToLookupConfigMap(validLookupGeneric, mapper);
 
-    Assert.assertEquals(mapper.writeValueAsString(validLookupExpected), mapper.writeValueAsString(actualLookup));
+    Assertions.assertEquals(mapper.writeValueAsString(validLookupExpected), mapper.writeValueAsString(actualLookup));
   }
 
   @Test
@@ -141,7 +141,7 @@ public class LookupUtilsTest
     Map<String, LookupExtractorFactoryContainer> actualLookup =
         LookupUtils.tryConvertObjectMapToLookupConfigMap(validLookupGeneric, mapper);
 
-    Assert.assertTrue(actualLookup.isEmpty());
+    Assertions.assertTrue(actualLookup.isEmpty());
   }
 
   @Test
@@ -159,7 +159,7 @@ public class LookupUtilsTest
     Map<String, LookupExtractorFactoryContainer> actualLookup =
         LookupUtils.tryConvertObjectMapToLookupConfigMap(validLookupGeneric, mapper);
 
-    Assert.assertEquals(mapper.writeValueAsString(validLookupExpected), mapper.writeValueAsString(actualLookup));
+    Assertions.assertEquals(mapper.writeValueAsString(validLookupExpected), mapper.writeValueAsString(actualLookup));
   }
 
   private Injector makeInjector()

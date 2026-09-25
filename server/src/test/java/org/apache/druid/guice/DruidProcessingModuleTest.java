@@ -22,13 +22,15 @@ package org.apache.druid.guice;
 import com.google.inject.ProvisionException;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+
 
 public class DruidProcessingModuleTest
 {
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testMemoryCheckThrowsException()
   {
     // JDK 9 and above do not support checking for direct memory size
@@ -37,27 +39,29 @@ public class DruidProcessingModuleTest
       JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
     }
     catch (UnsupportedOperationException e) {
-      Assume.assumeNoException(e);
+      Assumptions.assumeTrue(false, e::getMessage);
     }
 
-    DruidProcessingModule module = new DruidProcessingModule();
-    module.getIntermediateResultsPool(
-        new DruidProcessingConfig()
-        {
-          @Override
-          public String getFormatString()
+    Assertions.assertThrows(ProvisionException.class, () -> {
+      DruidProcessingModule module = new DruidProcessingModule();
+      module.getIntermediateResultsPool(
+          new DruidProcessingConfig()
           {
-            return "test";
-          }
+            @Override
+            public String getFormatString()
+            {
+              return "test";
+            }
 
-          @Override
-          public int intermediateComputeSizeBytes()
-          {
-            return Integer.MAX_VALUE;
-          }
-        },
-        JvmUtils.getRuntimeInfo()
-    );
+            @Override
+            public int intermediateComputeSizeBytes()
+            {
+              return Integer.MAX_VALUE;
+            }
+          },
+          JvmUtils.getRuntimeInfo()
+      );
+    });
   }
 
   @Test
@@ -77,4 +81,3 @@ public class DruidProcessingModuleTest
     module.getIntermediateResultsPool(config, JvmUtils.getRuntimeInfo());
   }
 }
-

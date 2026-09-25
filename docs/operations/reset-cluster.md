@@ -23,7 +23,7 @@ title: "reset-cluster tool"
   -->
 
 
-In older versions of Apache Druid, `reset-cluster` was a tool that could wipe out Apache Druid cluster state stored in
+In older versions of Apache&circledR; Druid, `reset-cluster` was a tool that could wipe out Apache Druid cluster state stored in
 metadata and deep storage, intended primarily for use in dev and test environments. However, this tool was prone to
 becoming out of sync with the codebase since it was not used in practice during dev and testing, and could not cover
 all cleanup cases when extensions were involved. It was removed in Druid 35.0.0.

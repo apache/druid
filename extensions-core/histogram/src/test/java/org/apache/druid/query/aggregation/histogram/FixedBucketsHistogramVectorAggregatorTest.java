@@ -26,9 +26,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -41,7 +41,7 @@ public class FixedBucketsHistogramVectorAggregatorTest
   private static final boolean[] NULL_VECTOR = {false, false, false, false, true, false};
   private VectorColumnSelectorFactory vectorColumnSelectorFactory;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     VectorValueSelector vectorValueSelector_1 = createMock(VectorValueSelector.class);
@@ -72,24 +72,24 @@ public class FixedBucketsHistogramVectorAggregatorTest
   {
     ByteBuffer byteBuffer = ByteBuffer.allocate(FixedBucketsHistogram.getFullStorageSize(2));
     FixedBucketsHistogramAggregatorFactory factory = buildHistogramAggFactory("field_1");
-    Assert.assertTrue(factory.canVectorize(vectorColumnSelectorFactory));
+    Assertions.assertTrue(factory.canVectorize(vectorColumnSelectorFactory));
     VectorAggregator vectorAggregator = factory.factorizeVector(vectorColumnSelectorFactory);
     vectorAggregator.init(byteBuffer, 0);
     vectorAggregator.aggregate(byteBuffer, 0, 0, 6);
     FixedBucketsHistogram h = (FixedBucketsHistogram) vectorAggregator.get(byteBuffer, 0);
 
-    Assert.assertEquals(2, h.getNumBuckets());
-    Assert.assertEquals(10.0, h.getBucketSize(), 0.01);
-    Assert.assertEquals(1, h.getLowerLimit(), 0.01);
-    Assert.assertEquals(21, h.getUpperLimit(), 0.01);
-    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
-    Assert.assertArrayEquals(new long[]{2, 3}, h.getHistogram());
-    Assert.assertEquals(5, h.getCount());
-    Assert.assertEquals(1.0, h.getMin(), 0.01);
-    Assert.assertEquals(16.0, h.getMax(), 0.01);
-    Assert.assertEquals(1, h.getMissingValueCount());
-    Assert.assertEquals(0, h.getLowerOutlierCount());
-    Assert.assertEquals(0, h.getUpperOutlierCount());
+    Assertions.assertEquals(2, h.getNumBuckets());
+    Assertions.assertEquals(10.0, h.getBucketSize(), 0.01);
+    Assertions.assertEquals(1, h.getLowerLimit(), 0.01);
+    Assertions.assertEquals(21, h.getUpperLimit(), 0.01);
+    Assertions.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assertions.assertArrayEquals(new long[]{2, 3}, h.getHistogram());
+    Assertions.assertEquals(5, h.getCount());
+    Assertions.assertEquals(1.0, h.getMin(), 0.01);
+    Assertions.assertEquals(16.0, h.getMax(), 0.01);
+    Assertions.assertEquals(1, h.getMissingValueCount());
+    Assertions.assertEquals(0, h.getLowerOutlierCount());
+    Assertions.assertEquals(0, h.getUpperOutlierCount());
 
     factory = buildHistogramAggFactory("field_2");
     vectorAggregator = factory.factorizeVector(vectorColumnSelectorFactory);
@@ -97,18 +97,18 @@ public class FixedBucketsHistogramVectorAggregatorTest
     vectorAggregator.aggregate(byteBuffer, 0, 0, 6);
     h = (FixedBucketsHistogram) vectorAggregator.get(byteBuffer, 0);
 
-    Assert.assertEquals(2, h.getNumBuckets());
-    Assert.assertEquals(10.0, h.getBucketSize(), 0.01);
-    Assert.assertEquals(1, h.getLowerLimit(), 0.01);
-    Assert.assertEquals(21, h.getUpperLimit(), 0.01);
-    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
-    Assert.assertArrayEquals(new long[]{2, 4}, h.getHistogram());
-    Assert.assertEquals(6, h.getCount());
-    Assert.assertEquals(1.0, h.getMin(), 0.01);
-    Assert.assertEquals(16.0, h.getMax(), 0.01);
-    Assert.assertEquals(0, h.getMissingValueCount());
-    Assert.assertEquals(0, h.getLowerOutlierCount());
-    Assert.assertEquals(0, h.getUpperOutlierCount());
+    Assertions.assertEquals(2, h.getNumBuckets());
+    Assertions.assertEquals(10.0, h.getBucketSize(), 0.01);
+    Assertions.assertEquals(1, h.getLowerLimit(), 0.01);
+    Assertions.assertEquals(21, h.getUpperLimit(), 0.01);
+    Assertions.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h.getOutlierHandlingMode());
+    Assertions.assertArrayEquals(new long[]{2, 4}, h.getHistogram());
+    Assertions.assertEquals(6, h.getCount());
+    Assertions.assertEquals(1.0, h.getMin(), 0.01);
+    Assertions.assertEquals(16.0, h.getMax(), 0.01);
+    Assertions.assertEquals(0, h.getMissingValueCount());
+    Assertions.assertEquals(0, h.getLowerOutlierCount());
+    Assertions.assertEquals(0, h.getUpperOutlierCount());
   }
 
   @Test
@@ -125,33 +125,33 @@ public class FixedBucketsHistogramVectorAggregatorTest
 
     FixedBucketsHistogram h0 = (FixedBucketsHistogram) vectorAggregator.get(byteBuffer, 0);
 
-    Assert.assertEquals(2, h0.getNumBuckets());
-    Assert.assertEquals(10.0, h0.getBucketSize(), 0.01);
-    Assert.assertEquals(1, h0.getLowerLimit(), 0.01);
-    Assert.assertEquals(21, h0.getUpperLimit(), 0.01);
-    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h0.getOutlierHandlingMode());
-    Assert.assertArrayEquals(new long[]{1, 0}, h0.getHistogram());
-    Assert.assertEquals(1, h0.getCount());
-    Assert.assertEquals(1.0, h0.getMin(), 0.01);
-    Assert.assertEquals(1.0, h0.getMax(), 0.01);
-    Assert.assertEquals(0, h0.getMissingValueCount());
-    Assert.assertEquals(0, h0.getLowerOutlierCount());
-    Assert.assertEquals(0, h0.getUpperOutlierCount());
+    Assertions.assertEquals(2, h0.getNumBuckets());
+    Assertions.assertEquals(10.0, h0.getBucketSize(), 0.01);
+    Assertions.assertEquals(1, h0.getLowerLimit(), 0.01);
+    Assertions.assertEquals(21, h0.getUpperLimit(), 0.01);
+    Assertions.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h0.getOutlierHandlingMode());
+    Assertions.assertArrayEquals(new long[]{1, 0}, h0.getHistogram());
+    Assertions.assertEquals(1, h0.getCount());
+    Assertions.assertEquals(1.0, h0.getMin(), 0.01);
+    Assertions.assertEquals(1.0, h0.getMax(), 0.01);
+    Assertions.assertEquals(0, h0.getMissingValueCount());
+    Assertions.assertEquals(0, h0.getLowerOutlierCount());
+    Assertions.assertEquals(0, h0.getUpperOutlierCount());
 
     FixedBucketsHistogram h1 = (FixedBucketsHistogram) vectorAggregator.get(byteBuffer, positions[1]);
 
-    Assert.assertEquals(2, h1.getNumBuckets());
-    Assert.assertEquals(10.0, h1.getBucketSize(), 0.01);
-    Assert.assertEquals(1, h1.getLowerLimit(), 0.01);
-    Assert.assertEquals(21, h1.getUpperLimit(), 0.01);
-    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h1.getOutlierHandlingMode());
-    Assert.assertArrayEquals(new long[]{0, 1}, h1.getHistogram());
-    Assert.assertEquals(1, h1.getCount());
-    Assert.assertEquals(12.0, h1.getMin(), 0.01);
-    Assert.assertEquals(12.0, h1.getMax(), 0.01);
-    Assert.assertEquals(0, h1.getMissingValueCount());
-    Assert.assertEquals(0, h1.getLowerOutlierCount());
-    Assert.assertEquals(0, h1.getUpperOutlierCount());
+    Assertions.assertEquals(2, h1.getNumBuckets());
+    Assertions.assertEquals(10.0, h1.getBucketSize(), 0.01);
+    Assertions.assertEquals(1, h1.getLowerLimit(), 0.01);
+    Assertions.assertEquals(21, h1.getUpperLimit(), 0.01);
+    Assertions.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h1.getOutlierHandlingMode());
+    Assertions.assertArrayEquals(new long[]{0, 1}, h1.getHistogram());
+    Assertions.assertEquals(1, h1.getCount());
+    Assertions.assertEquals(12.0, h1.getMin(), 0.01);
+    Assertions.assertEquals(12.0, h1.getMax(), 0.01);
+    Assertions.assertEquals(0, h1.getMissingValueCount());
+    Assertions.assertEquals(0, h1.getLowerOutlierCount());
+    Assertions.assertEquals(0, h1.getUpperOutlierCount());
 
     // Tests when there is a level of indirection in accessing the vector
     byteBuffer = ByteBuffer.allocate(size * 2);
@@ -161,33 +161,33 @@ public class FixedBucketsHistogramVectorAggregatorTest
 
     FixedBucketsHistogram h2 = (FixedBucketsHistogram) vectorAggregator.get(byteBuffer, 0);
 
-    Assert.assertEquals(2, h2.getNumBuckets());
-    Assert.assertEquals(10.0, h2.getBucketSize(), 0.01);
-    Assert.assertEquals(1, h2.getLowerLimit(), 0.01);
-    Assert.assertEquals(21, h2.getUpperLimit(), 0.01);
-    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h2.getOutlierHandlingMode());
-    Assert.assertArrayEquals(new long[]{1, 0}, h2.getHistogram());
-    Assert.assertEquals(1, h2.getCount());
-    Assert.assertEquals(3.0, h2.getMin(), 0.01);
-    Assert.assertEquals(3.0, h2.getMax(), 0.01);
-    Assert.assertEquals(0, h2.getMissingValueCount());
-    Assert.assertEquals(0, h2.getLowerOutlierCount());
-    Assert.assertEquals(0, h2.getUpperOutlierCount());
+    Assertions.assertEquals(2, h2.getNumBuckets());
+    Assertions.assertEquals(10.0, h2.getBucketSize(), 0.01);
+    Assertions.assertEquals(1, h2.getLowerLimit(), 0.01);
+    Assertions.assertEquals(21, h2.getUpperLimit(), 0.01);
+    Assertions.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h2.getOutlierHandlingMode());
+    Assertions.assertArrayEquals(new long[]{1, 0}, h2.getHistogram());
+    Assertions.assertEquals(1, h2.getCount());
+    Assertions.assertEquals(3.0, h2.getMin(), 0.01);
+    Assertions.assertEquals(3.0, h2.getMax(), 0.01);
+    Assertions.assertEquals(0, h2.getMissingValueCount());
+    Assertions.assertEquals(0, h2.getLowerOutlierCount());
+    Assertions.assertEquals(0, h2.getUpperOutlierCount());
 
     FixedBucketsHistogram h3 = (FixedBucketsHistogram) vectorAggregator.get(byteBuffer, positions[1]);
 
-    Assert.assertEquals(2, h3.getNumBuckets());
-    Assert.assertEquals(10.0, h3.getBucketSize(), 0.01);
-    Assert.assertEquals(1, h3.getLowerLimit(), 0.01);
-    Assert.assertEquals(21, h3.getUpperLimit(), 0.01);
-    Assert.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h3.getOutlierHandlingMode());
-    Assert.assertArrayEquals(new long[]{0, 1}, h3.getHistogram());
-    Assert.assertEquals(1, h3.getCount());
-    Assert.assertEquals(14.0, h3.getMin(), 0.01);
-    Assert.assertEquals(14.0, h3.getMax(), 0.01);
-    Assert.assertEquals(0, h3.getMissingValueCount());
-    Assert.assertEquals(0, h3.getLowerOutlierCount());
-    Assert.assertEquals(0, h3.getUpperOutlierCount());
+    Assertions.assertEquals(2, h3.getNumBuckets());
+    Assertions.assertEquals(10.0, h3.getBucketSize(), 0.01);
+    Assertions.assertEquals(1, h3.getLowerLimit(), 0.01);
+    Assertions.assertEquals(21, h3.getUpperLimit(), 0.01);
+    Assertions.assertEquals(FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW, h3.getOutlierHandlingMode());
+    Assertions.assertArrayEquals(new long[]{0, 1}, h3.getHistogram());
+    Assertions.assertEquals(1, h3.getCount());
+    Assertions.assertEquals(14.0, h3.getMin(), 0.01);
+    Assertions.assertEquals(14.0, h3.getMax(), 0.01);
+    Assertions.assertEquals(0, h3.getMissingValueCount());
+    Assertions.assertEquals(0, h3.getLowerOutlierCount());
+    Assertions.assertEquals(0, h3.getUpperOutlierCount());
 
   }
 

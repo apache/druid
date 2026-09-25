@@ -129,7 +129,6 @@ public abstract class AbstractStatement implements Closeable
   protected void validate(final DruidPlanner planner)
   {
     plannerContext = planner.getPlannerContext();
-    plannerContext.setAuthenticationResult(queryPlus.authResult());
     plannerContext.setParameters(queryPlus.parameters());
     planner.validate();
   }

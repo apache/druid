@@ -37,7 +37,7 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Test the use of catalog specs to drive MSQ ingestion.
@@ -97,6 +97,10 @@ public class CatalogReplaceTest extends CalciteCatalogReplaceTest
 
         if (catalogMetadata.clusterKeys() != null && !catalogMetadata.clusterKeys().isEmpty()) {
           tableBuilder.clusterColumns(catalogMetadata.clusterKeys().toArray(new ClusterKeySpec[0]));
+        }
+
+        if (catalogMetadata.baseTableMetadata() != null) {
+          tableBuilder.baseTable(catalogMetadata.baseTableMetadata());
         }
 
         createTableMetadata(tableBuilder.build());

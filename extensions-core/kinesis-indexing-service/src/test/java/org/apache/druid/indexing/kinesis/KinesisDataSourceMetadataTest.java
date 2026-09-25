@@ -32,8 +32,8 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Set;
@@ -61,116 +61,116 @@ public class KinesisDataSourceMetadataTest
   @Test
   public void testMatches()
   {
-    Assert.assertTrue(START0.matches(START0));
-    Assert.assertTrue(START0.matches(START1));
-    Assert.assertTrue(START0.matches(START2));
-    Assert.assertTrue(START0.matches(START3));
-    Assert.assertTrue(START0.matches(START4));
-    Assert.assertTrue(START0.matches(START5));
+    Assertions.assertTrue(START0.matches(START0));
+    Assertions.assertTrue(START0.matches(START1));
+    Assertions.assertTrue(START0.matches(START2));
+    Assertions.assertTrue(START0.matches(START3));
+    Assertions.assertTrue(START0.matches(START4));
+    Assertions.assertTrue(START0.matches(START5));
 
-    Assert.assertTrue(START1.matches(START0));
-    Assert.assertTrue(START1.matches(START1));
-    Assert.assertFalse(START1.matches(START2));
-    Assert.assertTrue(START1.matches(START3));
-    Assert.assertFalse(START1.matches(START4));
-    Assert.assertFalse(START1.matches(START5));
+    Assertions.assertTrue(START1.matches(START0));
+    Assertions.assertTrue(START1.matches(START1));
+    Assertions.assertFalse(START1.matches(START2));
+    Assertions.assertTrue(START1.matches(START3));
+    Assertions.assertFalse(START1.matches(START4));
+    Assertions.assertFalse(START1.matches(START5));
 
-    Assert.assertTrue(START2.matches(START0));
-    Assert.assertFalse(START2.matches(START1));
-    Assert.assertTrue(START2.matches(START2));
-    Assert.assertTrue(START2.matches(START3));
-    Assert.assertFalse(START2.matches(START4));
-    Assert.assertFalse(START2.matches(START5));
+    Assertions.assertTrue(START2.matches(START0));
+    Assertions.assertFalse(START2.matches(START1));
+    Assertions.assertTrue(START2.matches(START2));
+    Assertions.assertTrue(START2.matches(START3));
+    Assertions.assertFalse(START2.matches(START4));
+    Assertions.assertFalse(START2.matches(START5));
 
-    Assert.assertTrue(START3.matches(START0));
-    Assert.assertTrue(START3.matches(START1));
-    Assert.assertTrue(START3.matches(START2));
-    Assert.assertTrue(START3.matches(START3));
-    Assert.assertFalse(START3.matches(START4));
-    Assert.assertFalse(START3.matches(START5));
+    Assertions.assertTrue(START3.matches(START0));
+    Assertions.assertTrue(START3.matches(START1));
+    Assertions.assertTrue(START3.matches(START2));
+    Assertions.assertTrue(START3.matches(START3));
+    Assertions.assertFalse(START3.matches(START4));
+    Assertions.assertFalse(START3.matches(START5));
 
-    Assert.assertTrue(START4.matches(START0));
-    Assert.assertFalse(START4.matches(START1));
-    Assert.assertFalse(START4.matches(START2));
-    Assert.assertFalse(START4.matches(START3));
-    Assert.assertTrue(START4.matches(START4));
-    Assert.assertFalse(START4.matches(START5));
+    Assertions.assertTrue(START4.matches(START0));
+    Assertions.assertFalse(START4.matches(START1));
+    Assertions.assertFalse(START4.matches(START2));
+    Assertions.assertFalse(START4.matches(START3));
+    Assertions.assertTrue(START4.matches(START4));
+    Assertions.assertFalse(START4.matches(START5));
 
-    Assert.assertTrue(START5.matches(START0));
-    Assert.assertFalse(START5.matches(START1));
-    Assert.assertFalse(START5.matches(START2));
-    Assert.assertFalse(START5.matches(START3));
-    Assert.assertFalse(START5.matches(START4));
-    Assert.assertTrue(START5.matches(START5));
+    Assertions.assertTrue(START5.matches(START0));
+    Assertions.assertFalse(START5.matches(START1));
+    Assertions.assertFalse(START5.matches(START2));
+    Assertions.assertFalse(START5.matches(START3));
+    Assertions.assertFalse(START5.matches(START4));
+    Assertions.assertTrue(START5.matches(START5));
 
-    Assert.assertTrue(END0.matches(END0));
-    Assert.assertTrue(END0.matches(END1));
-    Assert.assertTrue(END0.matches(END2));
+    Assertions.assertTrue(END0.matches(END0));
+    Assertions.assertTrue(END0.matches(END1));
+    Assertions.assertTrue(END0.matches(END2));
 
-    Assert.assertTrue(END1.matches(END0));
-    Assert.assertTrue(END1.matches(END1));
-    Assert.assertTrue(END1.matches(END2));
+    Assertions.assertTrue(END1.matches(END0));
+    Assertions.assertTrue(END1.matches(END1));
+    Assertions.assertTrue(END1.matches(END2));
 
-    Assert.assertTrue(END2.matches(END0));
-    Assert.assertTrue(END2.matches(END1));
-    Assert.assertTrue(END2.matches(END2));
+    Assertions.assertTrue(END2.matches(END0));
+    Assertions.assertTrue(END2.matches(END1));
+    Assertions.assertTrue(END2.matches(END2));
   }
 
   @Test
   public void testIsValidStart()
   {
-    Assert.assertTrue(START0.isValidStart());
-    Assert.assertTrue(START1.isValidStart());
-    Assert.assertTrue(START2.isValidStart());
-    Assert.assertTrue(START3.isValidStart());
-    Assert.assertTrue(START4.isValidStart());
-    Assert.assertTrue(START5.isValidStart());
+    Assertions.assertTrue(START0.isValidStart());
+    Assertions.assertTrue(START1.isValidStart());
+    Assertions.assertTrue(START2.isValidStart());
+    Assertions.assertTrue(START3.isValidStart());
+    Assertions.assertTrue(START4.isValidStart());
+    Assertions.assertTrue(START5.isValidStart());
   }
 
   @Test
   public void testPlus()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of("0", "2L", "1", "3L", "2", "5L")),
         START1.plus(START3)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of("0", "2L", "1", "4L", "2", "5L")),
         START0.plus(START2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of("0", "2L", "1", "4L", "2", "5L")),
         START1.plus(START2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of("0", "2L", "1", "3L", "2", "5L")),
         START2.plus(START1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of("0", "2L", "1", "4L", "2", "5L")),
         START2.plus(START2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         startMetadata(ImmutableMap.of("0", "2L", "1", "4L", "2", "5L"), ImmutableSet.of("1")),
         START2.plus(START4)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         startMetadata(ImmutableMap.of("0", "2L", "1", "4L", "2", "5L"), ImmutableSet.of("0", "1")),
         START2.plus(START5)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         endMetadata(ImmutableMap.of("0", "2L", "2", "5L")),
         END0.plus(END1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         endMetadata(ImmutableMap.of("0", "2L", "1", "4L", "2", "5L")),
         END1.plus(END2)
     );
@@ -179,47 +179,47 @@ public class KinesisDataSourceMetadataTest
   @Test
   public void testMinus()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of("1", "3L")),
         START1.minus(START3)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of()),
         START0.minus(START2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of()),
         START1.minus(START2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of("2", "5L")),
         START2.minus(START1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         simpleStartMetadata(ImmutableMap.of()),
         START2.minus(START2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         startMetadata(ImmutableMap.of(), ImmutableSet.of()),
         START4.minus(START2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         startMetadata(ImmutableMap.of("1", "4L"), ImmutableSet.of("1")),
         START5.minus(START4)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         endMetadata(ImmutableMap.of("1", "4L")),
         END2.minus(END1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         endMetadata(ImmutableMap.of("2", "5L")),
         END1.minus(END2)
     );
@@ -233,12 +233,12 @@ public class KinesisDataSourceMetadataTest
     KinesisDataSourceMetadata kdm1 = startMetadata(ImmutableMap.of(), ImmutableSet.of());
     String kdmStr1 = jsonMapper.writeValueAsString(kdm1);
     DataSourceMetadata dsMeta1 = jsonMapper.readValue(kdmStr1, DataSourceMetadata.class);
-    Assert.assertEquals(kdm1, dsMeta1);
+    Assertions.assertEquals(kdm1, dsMeta1);
 
     KinesisDataSourceMetadata kdm2 = startMetadata(ImmutableMap.of("1", "3"), ImmutableSet.of());
     String kdmStr2 = jsonMapper.writeValueAsString(kdm2);
     DataSourceMetadata dsMeta2 = jsonMapper.readValue(kdmStr2, DataSourceMetadata.class);
-    Assert.assertEquals(kdm2, dsMeta2);
+    Assertions.assertEquals(kdm2, dsMeta2);
   }
 
   @Test
@@ -248,12 +248,12 @@ public class KinesisDataSourceMetadataTest
     KinesisDataSourceMetadata expectedKdm1 = endMetadata(ImmutableMap.of("1", "5"));
     String kdmStr1 = "{\"type\":\"kinesis\",\"partitions\":{\"type\":\"end\",\"stream\":\"foo\",\"topic\":\"foo\",\"partitionSequenceNumberMap\":{\"1\":5},\"partitionOffsetMap\":{\"1\":5},\"exclusivePartitions\":[]}}\n";
     DataSourceMetadata dsMeta1 = jsonMapper.readValue(kdmStr1, DataSourceMetadata.class);
-    Assert.assertEquals(dsMeta1, expectedKdm1);
+    Assertions.assertEquals(dsMeta1, expectedKdm1);
 
     KinesisDataSourceMetadata expectedKdm2 = endMetadata(ImmutableMap.of("1", "10", "2", "19"));
     String kdmStr2 = "{\"type\":\"kinesis\",\"partitions\":{\"type\":\"end\",\"stream\":\"foo\",\"topic\":\"food\",\"partitionSequenceNumberMap\":{\"1\":10, \"2\":19},\"partitionOffsetMap\":{\"1\":10, \"2\":19},\"exclusivePartitions\":[]}}\n";
     DataSourceMetadata dsMeta2 = jsonMapper.readValue(kdmStr2, DataSourceMetadata.class);
-    Assert.assertEquals(dsMeta2, expectedKdm2);
+    Assertions.assertEquals(dsMeta2, expectedKdm2);
   }
 
   private static KinesisDataSourceMetadata simpleStartMetadata(Map<String, String> sequences)

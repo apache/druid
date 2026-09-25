@@ -26,8 +26,8 @@ import org.apache.datasketches.quantiles.DoublesUnion;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -43,7 +43,7 @@ public class DoublesSketchComplexMetricSerdeTest
         new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", "")),
         "foo"
     );
-    Assert.assertEquals(0, sketch.getNumRetained());
+    Assertions.assertEquals(0, sketch.getNumRetained());
   }
 
   @Test
@@ -55,8 +55,8 @@ public class DoublesSketchComplexMetricSerdeTest
         new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", "777")),
         "foo"
     );
-    Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(777d, sketch.getMaxItem(), 0.01d);
+    Assertions.assertEquals(1, sketch.getNumRetained());
+    Assertions.assertEquals(777d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -68,8 +68,8 @@ public class DoublesSketchComplexMetricSerdeTest
         new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", "-133")),
         "foo"
     );
-    Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(-133d, sketch.getMaxItem(), 0.01d);
+    Assertions.assertEquals(1, sketch.getNumRetained());
+    Assertions.assertEquals(-133d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -81,8 +81,8 @@ public class DoublesSketchComplexMetricSerdeTest
         new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", "3.1")),
         "foo"
     );
-    Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(3.1d, sketch.getMaxItem(), 0.01d);
+    Assertions.assertEquals(1, sketch.getNumRetained());
+    Assertions.assertEquals(3.1d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -94,8 +94,8 @@ public class DoublesSketchComplexMetricSerdeTest
         new MapBasedInputRow(0L, ImmutableList.of(), ImmutableMap.of("foo", ".1")),
         "foo"
     );
-    Assert.assertEquals(1, sketch.getNumRetained());
-    Assert.assertEquals(0.1d, sketch.getMaxItem(), 0.01d);
+    Assertions.assertEquals(1, sketch.getNumRetained());
+    Assertions.assertEquals(0.1d, sketch.getMaxItem(), 0.01d);
   }
 
   @Test
@@ -108,7 +108,7 @@ public class DoublesSketchComplexMetricSerdeTest
 
     ByteBuffer buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN);
     ObjectStrategy<DoublesSketch> objectStrategy = serde.getObjectStrategy();
-    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
+    Assertions.assertTrue(objectStrategy.readRetainsBufferReference());
 
     // valid sketch should not explode when copied, which reads the memory
     objectStrategy.fromByteBufferSafe(buf, bytes.length).toByteArray(true);
@@ -121,17 +121,17 @@ public class DoublesSketchComplexMetricSerdeTest
       }
 
       final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
-      Assert.assertThrows(
-          "i " + subset,
+      Assertions.assertThrows(
           IndexOutOfBoundsException.class,
-          () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).toByteArray(true)
+          () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).toByteArray(true),
+          "i " + subset
       );
     }
 
     // non sketch that is too short to contain header should fail with regular java buffer exception
     final byte[] garbage = new byte[]{0x01, 0x02};
     final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IndexOutOfBoundsException.class,
         () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).toByteArray(true)
     );

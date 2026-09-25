@@ -23,8 +23,8 @@ import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class MSQFaultUtilsTest
 {
@@ -33,19 +33,19 @@ public class MSQFaultUtilsTest
   @Test
   public void testGetErrorCodeFromMessage()
   {
-    Assert.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(
+    Assertions.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(
         "Task execution process exited unsuccessfully with code[137]. See middleManager logs for more details..."));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         UnknownFault.CODE,
         MSQFaultUtils.getErrorCodeFromMessage(TaskQueue.FAILED_TO_RUN_TASK_SEE_OVERLORD_MSG)
     );
 
-    Assert.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(""));
-    Assert.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(null));
+    Assertions.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(""));
+    Assertions.assertEquals(UnknownFault.CODE, MSQFaultUtils.getErrorCodeFromMessage(null));
 
-    Assert.assertEquals("ABC", MSQFaultUtils.getErrorCodeFromMessage("ABC: xyz xyz : xyz"));
+    Assertions.assertEquals("ABC", MSQFaultUtils.getErrorCodeFromMessage("ABC: xyz xyz : xyz"));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         WorkerFailedFault.CODE,
         MSQFaultUtils.getErrorCodeFromMessage(MSQFaultUtils.generateMessageWithErrorCode(new WorkerFailedFault(
             "123",

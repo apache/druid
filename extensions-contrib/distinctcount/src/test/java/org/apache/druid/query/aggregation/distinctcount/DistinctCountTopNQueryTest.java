@@ -41,9 +41,9 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -55,7 +55,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
 {
   private CloseableStupidPool<ByteBuffer> pool;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     pool = new CloseableStupidPool<>(
@@ -71,7 +71,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
     );
   }
 
-  @After
+  @AfterEach
   public void teardown()
   {
     pool.close();

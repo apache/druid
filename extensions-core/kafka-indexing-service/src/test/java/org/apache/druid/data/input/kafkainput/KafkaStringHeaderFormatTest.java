@@ -30,8 +30,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -79,12 +79,12 @@ public class KafkaStringHeaderFormatTest
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KAFKAHEADERNOENCODE,
         MAPPER.readValue(MAPPER.writeValueAsString(KAFKAHEADERNOENCODE), KafkaStringHeaderFormat.class)
     );
     final KafkaStringHeaderFormat kafkaAsciiHeader = new KafkaStringHeaderFormat("US-ASCII");
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         KAFKAHEADERNOENCODE,
         kafkaAsciiHeader
     );
@@ -113,7 +113,7 @@ public class KafkaStringHeaderFormatTest
 
     KafkaHeaderFormat headerInput = new KafkaStringHeaderFormat(null);
     KafkaHeaderReader headerParser = headerInput.createReader(inputEntity.getRecord().headers(), headerLabelPrefix);
-    Assert.assertEquals(expectedResults, headerParser.read());
+    Assertions.assertEquals(expectedResults, headerParser.read());
   }
 
   @Test
@@ -165,7 +165,7 @@ public class KafkaStringHeaderFormatTest
     KafkaHeaderFormat headerInput = new KafkaStringHeaderFormat("US-ASCII");
     KafkaHeaderReader headerParser = headerInput.createReader(inputEntity.getRecord().headers(), headerLabelPrefix);
     List<Pair<String, Object>> rows = headerParser.read();
-    Assert.assertEquals(expectedResults, rows);
+    Assertions.assertEquals(expectedResults, rows);
   }
 
   @Test
@@ -217,7 +217,7 @@ public class KafkaStringHeaderFormatTest
     KafkaHeaderFormat headerInput = new KafkaStringHeaderFormat("US-ASCII");
     KafkaHeaderReader headerParser = headerInput.createReader(inputEntity.getRecord().headers(), headerLabelPrefix);
     List<Pair<String, Object>> rows = headerParser.read();
-    Assert.assertEquals(expectedResults, rows);
+    Assertions.assertEquals(expectedResults, rows);
   }
 }
 

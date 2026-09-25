@@ -26,8 +26,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
-import org.apache.druid.testing.embedded.minio.S3TestUtil;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
+import org.apache.druid.testing.embedded.s3.S3TestUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -50,14 +50,14 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
   private static final Logger LOG = new Logger(AbstractS3InputSourceParallelIndexTest.class);
   private static final String INDEX_TASK = "/indexer/wikipedia_cloud_index_task.json";
   private static final String INDEX_QUERIES_RESOURCE = "/indexer/wikipedia_index_queries.json";
-  protected final MinIOStorageResource minIOStorageResource = new MinIOStorageResource();
+  protected final S3StorageResource s3StorageResource = new S3StorageResource();
   private S3TestUtil s3;
 
   @Override
   protected void addResources(EmbeddedDruidCluster cluster)
   {
     cluster.addExtension(S3InputSourceDruidModule.class)
-           .addResource(minIOStorageResource);
+           .addResource(s3StorageResource);
   }
 
   @BeforeAll
@@ -70,7 +70,7 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
     }
     try {
       s3 = new S3TestUtil(
-          minIOStorageResource.getS3Client(),
+          s3StorageResource.getS3Client(),
           getCloudBucket("s3"),
           getCloudPath("s3")
       );
@@ -101,7 +101,7 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
   /**
    * Variant of {@link #doTest} that injects an {@code endpointConfig} into the S3 input source spec.
    * Required when using per-input-source credentials: S3InputSource builds a new S3 client in that
-   * case and must be told the MinIO endpoint explicitly, since it cannot inherit it from Druid's
+   * case and must be told the S3 endpoint explicitly, since it cannot inherit it from Druid's
    * global S3 config.
    */
   protected void doTestWithEndpointConfig(
@@ -116,7 +116,7 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
       final String endpointConfigJson = jsonMapper.writeValueAsString(
           Map.of("url", endpointUrl, "signingRegion", "us-east-1")
       );
-      // Path-style access is required for MinIO running at a local IP address
+      // Path-style access is required for the S3 container running at a local IP address
       final String clientConfigJson = jsonMapper.writeValueAsString(
           Map.of("enablePathStyleAccess", true)
       );
@@ -140,7 +140,7 @@ public abstract class AbstractS3InputSourceParallelIndexTest extends AbstractClo
           );
           spec = StringUtils.replace(spec, "%%INPUT_SOURCE_PROPERTY_KEY%%", inputSource.lhs);
           spec = StringUtils.replace(spec, "%%INPUT_SOURCE_PROPERTY_VALUE%%", inputSourceValue);
-          // Inject endpointConfig and clientConfig so the custom S3 client points at MinIO with path-style access
+          // Inject endpointConfig and clientConfig so the custom S3 client points at the S3 container with path-style access
           spec = StringUtils.replace(
               spec,
               "\"type\": \"s3\",",

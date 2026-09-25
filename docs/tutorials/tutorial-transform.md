@@ -28,7 +28,7 @@ This tutorial demonstrates how to transform input data during ingestion.
 
 ## Prerequisite
 
-Before proceeding, download Apache Druid&circledR; as described in [Quickstart (local)](./index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+Before proceeding, download Apache&circledR; Druid as described in [Quickstart (local)](./index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
 
 You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 

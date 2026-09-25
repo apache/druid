@@ -23,9 +23,9 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ public class LagBasedAutoScalerTest
   private ServiceEmitter mockEmitter;
   private LagBasedAutoScalerConfig config;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mockSpec = Mockito.mock(SupervisorSpec.class);
@@ -90,7 +90,7 @@ public class LagBasedAutoScalerTest
     when(mockIoConfig.getTaskCount()).thenReturn(50);
     when(mockSupervisor.getPartitionCount()).thenReturn(PARTITION_COUNT);
 
-    Assert.assertEquals(54, createAutoScaler().computeDesiredTaskCount(createLagSamples(2_000_001L)));
+    Assertions.assertEquals(54, createAutoScaler().computeDesiredTaskCount(createLagSamples(2_000_001L)));
   }
 
   @Test
@@ -102,7 +102,7 @@ public class LagBasedAutoScalerTest
     when(mockSupervisor.getPartitionCount()).thenReturn(PARTITION_COUNT);
 
     // current (1) + scaleOutStep (4) = 5 — below configured taskCountMin (50); not clamped here.
-    Assert.assertEquals(5, createAutoScaler().computeDesiredTaskCount(createLagSamples(2_000_001L)));
+    Assertions.assertEquals(5, createAutoScaler().computeDesiredTaskCount(createLagSamples(2_000_001L)));
   }
 
   @Test
@@ -116,7 +116,7 @@ public class LagBasedAutoScalerTest
     // current (101) - scaleInStep (1) = 100 — above configured taskCountMax (100) is still not
     // clamped here. (In this particular case the result happens to equal taskCountMax; we just
     // want the scaler's raw computation.)
-    Assert.assertEquals(100, createAutoScaler().computeDesiredTaskCount(createLagSamples(299_999L)));
+    Assertions.assertEquals(100, createAutoScaler().computeDesiredTaskCount(createLagSamples(299_999L)));
   }
 
   private LagBasedAutoScaler createAutoScaler()

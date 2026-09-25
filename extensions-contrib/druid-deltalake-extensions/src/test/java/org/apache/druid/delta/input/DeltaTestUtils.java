@@ -33,9 +33,9 @@ public class DeltaTestUtils
   {
     final Table table = Table.forPath(engine, deltaTablePath);
     final Snapshot snapshot = table.getLatestSnapshot(engine);
-    final StructType readSchema = snapshot.getSchema(engine);
-    final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine)
-                                            .withReadSchema(engine, readSchema);
+    final StructType readSchema = snapshot.getSchema();
+    final ScanBuilder scanBuilder = snapshot.getScanBuilder()
+                                            .withReadSchema(readSchema);
     return scanBuilder.build();
   }
 }

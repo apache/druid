@@ -46,9 +46,9 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -62,7 +62,7 @@ public class TaskLocksTest
   private GlobalTaskLockbox lockbox;
   private Task task;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
@@ -119,7 +119,7 @@ public class TaskLocksTest
     final TaskLock taskLock = lockbox
         .tryLock(task, new TimeChunkLockRequest(lockType, task, interval, null))
         .getTaskLock();
-    Assert.assertNotNull(taskLock);
+    Assertions.assertNotNull(taskLock);
     return taskLock;
   }
 
@@ -148,8 +148,8 @@ public class TaskLocksTest
         )
     );
 
-    Assert.assertEquals(3, locks.size());
-    Assert.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
+    Assertions.assertEquals(3, locks.size());
+    Assertions.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
   }
 
   @Test
@@ -164,13 +164,13 @@ public class TaskLocksTest
         .mapToObj(
             partitionId -> {
               final TaskLock lock = trySegmentLock(task, interval, version, partitionId).getTaskLock();
-              Assert.assertNotNull(lock);
+              Assertions.assertNotNull(lock);
               return lock;
             }
         ).collect(Collectors.toList());
 
-    Assert.assertEquals(5, locks.size());
-    Assert.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
+    Assertions.assertEquals(5, locks.size());
+    Assertions.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
   }
 
   @Test
@@ -188,8 +188,8 @@ public class TaskLocksTest
         )
     );
 
-    Assert.assertEquals(1, locks.size());
-    Assert.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
+    Assertions.assertEquals(1, locks.size());
+    Assertions.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
   }
 
   @Test
@@ -209,8 +209,8 @@ public class TaskLocksTest
         )
     );
 
-    Assert.assertEquals(3, locks.size());
-    Assert.assertFalse(TaskLocks.isLockCoversSegments(task, lockbox, segments));
+    Assertions.assertEquals(3, locks.size());
+    Assertions.assertFalse(TaskLocks.isLockCoversSegments(task, lockbox, segments));
   }
 
   @Test
@@ -230,8 +230,8 @@ public class TaskLocksTest
         )
     );
 
-    Assert.assertEquals(3, locks.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(3, locks.size());
+    Assertions.assertEquals(
         ImmutableList.of(
             newTimeChunkLock(intervals.get(0), locks.get(intervals.get(0)).getVersion()),
             newTimeChunkLock(intervals.get(1), locks.get(intervals.get(1)).getVersion()),
@@ -253,13 +253,13 @@ public class TaskLocksTest
         .mapToObj(
             partitionId -> {
               final TaskLock lock = trySegmentLock(task, interval, version, partitionId).getTaskLock();
-              Assert.assertNotNull(lock);
+              Assertions.assertNotNull(lock);
               return lock;
             }
         ).collect(Collectors.toList());
 
-    Assert.assertEquals(5, locks.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(5, locks.size());
+    Assertions.assertEquals(
         ImmutableList.of(
             newSegmentLock(interval, locks.get(0).getVersion(), 0),
             newSegmentLock(interval, locks.get(0).getVersion(), 1),
@@ -278,10 +278,10 @@ public class TaskLocksTest
     final Interval interval = Intervals.of("2017-01-01/2017-01-02");
 
     final TaskLock lock = tryTimeChunkLock(task, interval, TaskLockType.EXCLUSIVE);
-    Assert.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
+    Assertions.assertTrue(TaskLocks.isLockCoversSegments(task, lockbox, segments));
 
     lockbox.revokeLock(task.getId(), lock);
-    Assert.assertFalse(TaskLocks.isLockCoversSegments(task, lockbox, segments));
+    Assertions.assertFalse(TaskLocks.isLockCoversSegments(task, lockbox, segments));
   }
 
   @Test
@@ -298,10 +298,10 @@ public class TaskLocksTest
 
     final Map<DataSegment, ReplaceTaskLock> observedLocks
         = TaskLocks.findReplaceLocksCoveringSegments(task.getDataSource(), lockbox, segments);
-    Assert.assertEquals(segments.size(), observedLocks.size());
+    Assertions.assertEquals(segments.size(), observedLocks.size());
     for (DataSegment segment : segments) {
       TaskLock lockFromResult = lockResults.get(segment);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           new ReplaceTaskLock(task.getId(), lockFromResult.getInterval(), lockFromResult.getVersion()),
           observedLocks.get(segment)
       );
@@ -311,7 +311,7 @@ public class TaskLocksTest
   @Test
   public void testLockTypeForAppendUsingConcurrentLocks()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.APPEND,
         TaskLocks.determineLockTypeForAppend(
             ImmutableMap.of(Tasks.USE_CONCURRENT_LOCKS, true)
@@ -322,25 +322,25 @@ public class TaskLocksTest
   @Test
   public void testLockTypeForAppendWithLockTypeInContext()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.REPLACE,
         TaskLocks.determineLockTypeForAppend(
             ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "REPLACE")
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.APPEND,
         TaskLocks.determineLockTypeForAppend(
             ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "APPEND")
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.SHARED,
         TaskLocks.determineLockTypeForAppend(
             ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "SHARED")
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.EXCLUSIVE,
         TaskLocks.determineLockTypeForAppend(
             ImmutableMap.of(Tasks.TASK_LOCK_TYPE, "EXCLUSIVE", Tasks.USE_SHARED_LOCK, true)
@@ -351,19 +351,19 @@ public class TaskLocksTest
   @Test
   public void testLockTypeForAppendWithNoLockTypeInContext()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.EXCLUSIVE,
         TaskLocks.determineLockTypeForAppend(
             ImmutableMap.of()
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.EXCLUSIVE,
         TaskLocks.determineLockTypeForAppend(
             ImmutableMap.of(Tasks.USE_SHARED_LOCK, false)
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskLockType.SHARED,
         TaskLocks.determineLockTypeForAppend(
             ImmutableMap.of(Tasks.USE_SHARED_LOCK, true)

@@ -30,9 +30,9 @@ import org.apache.druid.segment.column.LongsColumn;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.VectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -50,7 +50,7 @@ public class NumericNullColumnSelectorTest
       new NoFilterOffsetThatCanBeMangledToTestOverlapping(vectorSize, 0, numRows);
   private ImmutableBitmap[] bitmaps;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     bitmaps = new ImmutableBitmap[numBitmaps];
@@ -171,19 +171,19 @@ public class NumericNullColumnSelectorTest
   {
     boolean encounteredNull = false;
     while (readItAll.withinBounds()) {
-      Assert.assertEquals(bitmap.get(readItAll.getOffset()), selector.isNull());
+      Assertions.assertEquals(bitmap.get(readItAll.getOffset()), selector.isNull());
       encounteredNull |= selector.isNull();
       readItAll.increment();
     }
     readItAll.reset();
-    Assert.assertTrue(encounteredNull);
+    Assertions.assertTrue(encounteredNull);
     encounteredNull = false;
     while (readItAll.withinBounds()) {
-      Assert.assertEquals(bitmap.get(readItAll.getOffset()), selector.isNull());
+      Assertions.assertEquals(bitmap.get(readItAll.getOffset()), selector.isNull());
       encounteredNull |= selector.isNull();
       readItAll.increment();
     }
-    Assert.assertTrue(encounteredNull);
+    Assertions.assertTrue(encounteredNull);
     readItAll.reset();
   }
 
@@ -200,24 +200,24 @@ public class NumericNullColumnSelectorTest
     while (!readAllVectors.isDone()) {
       nullVector = selector.getNullVector();
       for (int i = readAllVectors.getStartOffset(); i < readAllVectors.getCurrentVectorSize(); i++) {
-        Assert.assertEquals(bitmap.get(readAllVectors.getStartOffset() + i), nullVector[i]);
+        Assertions.assertEquals(bitmap.get(readAllVectors.getStartOffset() + i), nullVector[i]);
         encounteredNull |= nullVector[i];
       }
       readAllVectors.advance();
     }
     // reset and read it all again to make sure matches
     readAllVectors.reset();
-    Assert.assertTrue(encounteredNull);
+    Assertions.assertTrue(encounteredNull);
     encounteredNull = false;
     while (!readAllVectors.isDone()) {
       nullVector = selector.getNullVector();
       for (int i = readAllVectors.getStartOffset(); i < readAllVectors.getCurrentVectorSize(); i++) {
-        Assert.assertEquals(bitmap.get(readAllVectors.getStartOffset() + i), nullVector[i]);
+        Assertions.assertEquals(bitmap.get(readAllVectors.getStartOffset() + i), nullVector[i]);
         encounteredNull |= nullVector[i];
       }
       readAllVectors.advance();
     }
-    Assert.assertTrue(encounteredNull);
+    Assertions.assertTrue(encounteredNull);
     readAllVectors.reset();
   }
 
@@ -234,21 +234,21 @@ public class NumericNullColumnSelectorTest
     readAllVectors.mangleOffset(0);
     nullVector = selector.getNullVector();
     for (int i = readAllVectors.getStartOffset(); i < readAllVectors.getCurrentVectorSize(); i++) {
-      Assert.assertEquals(bitmap.get(readAllVectors.getStartOffset() + i), nullVector[i]);
+      Assertions.assertEquals(bitmap.get(readAllVectors.getStartOffset() + i), nullVector[i]);
       encounteredNull |= nullVector[i];
     }
-    Assert.assertTrue(encounteredNull);
+    Assertions.assertTrue(encounteredNull);
     // this can't currently happen, but we want to protect selectors in case offsets ever try to overlap
     readAllVectors.mangleOffset(1);
 
     nullVector = selector.getNullVector();
     for (int i = readAllVectors.getStartOffset(); i < readAllVectors.getCurrentVectorSize(); i++) {
-      Assert.assertEquals(bitmap.get(readAllVectors.getStartOffset() + i), nullVector[i]);
+      Assertions.assertEquals(bitmap.get(readAllVectors.getStartOffset() + i), nullVector[i]);
       encounteredNull |= nullVector[i];
     }
     readAllVectors.reset();
 
-    Assert.assertTrue(encounteredNull);
+    Assertions.assertTrue(encounteredNull);
   }
 
   private static class NoFilterOffsetThatCanBeMangledToTestOverlapping implements VectorOffset

@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -45,34 +45,34 @@ public class ApproximateHistogramFoldingSerdeTest
 
     final MapBasedInputRow row = new MapBasedInputRow(0L, ImmutableList.of(), theMap);
 
-    Assert.assertEquals(
-        "nullValue",
+    Assertions.assertEquals(
         new ApproximateHistogram(0),
-        extractor.extractValue(row, "nullValue")
+        extractor.extractValue(row, "nullValue"),
+        "nullValue"
     );
 
-    Assert.assertEquals(
-        "missingValue",
+    Assertions.assertEquals(
         new ApproximateHistogram(0),
-        extractor.extractValue(row, "missingValue")
+        extractor.extractValue(row, "missingValue"),
+        "missingValue"
     );
 
-    Assert.assertEquals(
-        "listValue",
+    Assertions.assertEquals(
         makeHistogram(1, 2, 3),
-        extractor.extractValue(row, "listValue")
+        extractor.extractValue(row, "listValue"),
+        "listValue"
     );
 
-    Assert.assertEquals(
-        "stringValue",
+    Assertions.assertEquals(
         makeHistogram(1),
-        extractor.extractValue(row, "stringValue")
+        extractor.extractValue(row, "stringValue"),
+        "stringValue"
     );
 
-    Assert.assertEquals(
-        "numberValue",
+    Assertions.assertEquals(
         makeHistogram(1),
-        extractor.extractValue(row, "numberValue")
+        extractor.extractValue(row, "numberValue"),
+        "numberValue"
     );
   }
 
@@ -81,7 +81,7 @@ public class ApproximateHistogramFoldingSerdeTest
   {
     final ApproximateHistogramFoldingSerde serde = new ApproximateHistogramFoldingSerde();
     final ObjectStrategy<ApproximateHistogram> strategy = serde.getObjectStrategy();
-    Assert.assertFalse(strategy.readRetainsBufferReference());
+    Assertions.assertFalse(strategy.readRetainsBufferReference());
   }
 
 

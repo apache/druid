@@ -401,6 +401,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           .stream()
           .map(ResourceAction::getResource)
           .sorted(Comparator.comparing(Resource::getName))
+          .distinct()
           .collect(Collectors.toList());
       resourcesString = plannerContext.getJsonMapper().writeValueAsString(resources);
     }

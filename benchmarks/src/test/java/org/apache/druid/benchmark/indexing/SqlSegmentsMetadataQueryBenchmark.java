@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestDataSource;
@@ -137,7 +138,13 @@ public class SqlSegmentsMetadataQueryBenchmark
 
     return derbyConnector.inReadOnlyTransaction((handle, status) -> {
       final SqlSegmentsMetadataQuery query =
-          SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, TestHelper.JSON_MAPPER);
+          SqlSegmentsMetadataQuery.forHandle(
+              handle,
+              derbyConnector,
+              tablesConfig,
+              new SegmentsMetadataManagerConfig(null, null, null),
+              TestHelper.JSON_MAPPER
+          );
 
       try (CloseableIterator<T> iterator = iterableReader.apply(query)) {
         return ImmutableSet.copyOf(iterator);

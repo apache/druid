@@ -22,9 +22,9 @@ package org.apache.druid.emitter.graphite;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -33,7 +33,7 @@ public class GraphiteEmitterConfigTest
 {
   private ObjectMapper mapper = new DefaultObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(
@@ -62,7 +62,7 @@ public class GraphiteEmitterConfigTest
     GraphiteEmitterConfig graphiteEmitterConfigExpected = mapper.readerFor(GraphiteEmitterConfig.class).readValue(
         graphiteEmitterConfigString
     );
-    Assert.assertEquals(graphiteEmitterConfigExpected, graphiteEmitterConfig);
+    Assertions.assertEquals(graphiteEmitterConfigExpected, graphiteEmitterConfig);
   }
 
   @Test
@@ -77,7 +77,7 @@ public class GraphiteEmitterConfigTest
     String noopGraphiteEventConverterString = mapper.writeValueAsString(sendAllGraphiteEventConverter);
     DruidToGraphiteEventConverter druidToGraphiteEventConverter = mapper.readerFor(DruidToGraphiteEventConverter.class)
                                                                         .readValue(noopGraphiteEventConverterString);
-    Assert.assertEquals(druidToGraphiteEventConverter, sendAllGraphiteEventConverter);
+    Assertions.assertEquals(druidToGraphiteEventConverter, sendAllGraphiteEventConverter);
 
     WhiteListBasedConverter whiteListBasedConverter = new WhiteListBasedConverter(
         "prefix",
@@ -90,12 +90,12 @@ public class GraphiteEmitterConfigTest
     String whiteListBasedConverterString = mapper.writeValueAsString(whiteListBasedConverter);
     druidToGraphiteEventConverter = mapper.readerFor(DruidToGraphiteEventConverter.class)
                                           .readValue(whiteListBasedConverterString);
-    Assert.assertEquals(druidToGraphiteEventConverter, whiteListBasedConverter);
+    Assertions.assertEquals(druidToGraphiteEventConverter, whiteListBasedConverter);
   }
 
   @Test
   public void testJacksonModules()
   {
-    Assert.assertTrue(new GraphiteEmitterModule().getJacksonModules().isEmpty());
+    Assertions.assertTrue(new GraphiteEmitterModule().getJacksonModules().isEmpty());
   }
 }

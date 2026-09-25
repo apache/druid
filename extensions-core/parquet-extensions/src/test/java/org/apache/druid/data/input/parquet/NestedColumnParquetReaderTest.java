@@ -35,8 +35,8 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -87,14 +87,14 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(transformingReader);
-    Assert.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals(1L, rows.get(0).getRaw("t_nestedData_dim3"));
-    Assert.assertEquals("d2v1", rows.get(0).getRaw("t_nestedData_dim2"));
-    Assert.assertEquals(ImmutableList.of("listDim1v1", "listDim1v2"), rows.get(0).getRaw("t_nestedData_listDim"));
-    Assert.assertEquals(ImmutableList.of("listDim1v1", "listDim1v2"), rows.get(0).getDimension("t_nestedData_listDim_string"));
-    Assert.assertEquals("listDim1v1", rows.get(0).getRaw("t_nestedData_listDim_1"));
-    Assert.assertEquals("listDim1v2", rows.get(0).getRaw("t_nestedData_listDim_2"));
-    Assert.assertEquals(2L, rows.get(0).getRaw("t_nestedData_metric2"));
+    Assertions.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals(1L, rows.get(0).getRaw("t_nestedData_dim3"));
+    Assertions.assertEquals("d2v1", rows.get(0).getRaw("t_nestedData_dim2"));
+    Assertions.assertEquals(ImmutableList.of("listDim1v1", "listDim1v2"), rows.get(0).getRaw("t_nestedData_listDim"));
+    Assertions.assertEquals(ImmutableList.of("listDim1v1", "listDim1v2"), rows.get(0).getDimension("t_nestedData_listDim_string"));
+    Assertions.assertEquals("listDim1v1", rows.get(0).getRaw("t_nestedData_listDim_1"));
+    Assertions.assertEquals("listDim1v2", rows.get(0).getRaw("t_nestedData_listDim_2"));
+    Assertions.assertEquals(2L, rows.get(0).getRaw("t_nestedData_metric2"));
   }
 
   @Test
@@ -141,26 +141,26 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
 
     List<InputRow> rows = readAllRows(transformingReader);
 
-    Assert.assertEquals("2022-02-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals(
+    Assertions.assertEquals("2022-02-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals(
         ImmutableList.of(
             ImmutableMap.of("b1", 1L, "b2", 2L), ImmutableMap.of("b1", 1L, "b2", 2L)
         ),
         rows.get(0).getRaw("a2")
     );
     // expression turns List into Object[]
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new Object[]{
             ImmutableMap.of("b1", 1L, "b2", 2L), ImmutableMap.of("b1", 1L, "b2", 2L)
         },
         (Object[]) rows.get(0).getRaw("t_a2")
     );
-    Assert.assertEquals(ImmutableMap.of("c1", 1L, "c2", 2L), rows.get(0).getRaw("t_a1_b1"));
-    Assert.assertEquals(ImmutableMap.of("b1", 1L, "b2", 2L), rows.get(0).getRaw("t_a2_0"));
-    Assert.assertEquals(1L, rows.get(0).getRaw("t_a1_b1_c1"));
-    Assert.assertEquals(1L, rows.get(0).getRaw("t_a2_0_b1"));
-    Assert.assertEquals(1L, rows.get(0).getRaw("t_a2_1_b1"));
-    Assert.assertEquals(1L, rows.get(0).getRaw("tt_a2_0_b1"));
+    Assertions.assertEquals(ImmutableMap.of("c1", 1L, "c2", 2L), rows.get(0).getRaw("t_a1_b1"));
+    Assertions.assertEquals(ImmutableMap.of("b1", 1L, "b2", 2L), rows.get(0).getRaw("t_a2_0"));
+    Assertions.assertEquals(1L, rows.get(0).getRaw("t_a1_b1_c1"));
+    Assertions.assertEquals(1L, rows.get(0).getRaw("t_a2_0_b1"));
+    Assertions.assertEquals(1L, rows.get(0).getRaw("t_a2_1_b1"));
+    Assertions.assertEquals(1L, rows.get(0).getRaw("tt_a2_0_b1"));
   }
 
   @Test
@@ -181,15 +181,15 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(ImmutableList.of("dim1", "metric1"), rows.get(0).getDimensions());
-    Assert.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals(ImmutableList.of("d1v1"), rows.get(0).getDimension("dim1"));
-    Assert.assertEquals("d1v1", rows.get(0).getRaw("dim1"));
-    Assert.assertEquals(ImmutableList.of("1"), rows.get(0).getDimension("metric1"));
-    Assert.assertEquals(1, rows.get(0).getRaw("metric1"));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1"));
+    Assertions.assertEquals(ImmutableList.of("dim1", "metric1"), rows.get(0).getDimensions());
+    Assertions.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals(ImmutableList.of("d1v1"), rows.get(0).getDimension("dim1"));
+    Assertions.assertEquals("d1v1", rows.get(0).getRaw("dim1"));
+    Assertions.assertEquals(ImmutableList.of("1"), rows.get(0).getDimension("metric1"));
+    Assertions.assertEquals(1, rows.get(0).getRaw("metric1"));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1"));
     // can still read even if it doesn't get reported as a dimension
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             "listDim", ImmutableList.of("listDim1v1", "listDim1v2"),
             "dim3", 1,
@@ -218,14 +218,14 @@ public class NestedColumnParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(ImmutableList.of("nestedData", "dim1", "metric1"), rows.get(0).getDimensions());
-    Assert.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals(ImmutableList.of("d1v1"), rows.get(0).getDimension("dim1"));
-    Assert.assertEquals("d1v1", rows.get(0).getRaw("dim1"));
-    Assert.assertEquals(ImmutableList.of("1"), rows.get(0).getDimension("metric1"));
-    Assert.assertEquals(1, rows.get(0).getRaw("metric1"));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1"));
-    Assert.assertEquals(
+    Assertions.assertEquals(ImmutableList.of("nestedData", "dim1", "metric1"), rows.get(0).getDimensions());
+    Assertions.assertEquals(FlattenSpecParquetReaderTest.TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals(ImmutableList.of("d1v1"), rows.get(0).getDimension("dim1"));
+    Assertions.assertEquals("d1v1", rows.get(0).getRaw("dim1"));
+    Assertions.assertEquals(ImmutableList.of("1"), rows.get(0).getDimension("metric1"));
+    Assertions.assertEquals(1, rows.get(0).getRaw("metric1"));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1"));
+    Assertions.assertEquals(
         ImmutableMap.of(
             "listDim", ImmutableList.of("listDim1v1", "listDim1v2"),
             "dim3", 1,

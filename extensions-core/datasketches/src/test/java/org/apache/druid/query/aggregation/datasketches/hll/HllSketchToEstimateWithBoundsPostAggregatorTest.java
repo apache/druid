@@ -24,8 +24,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HllSketchToEstimateWithBoundsPostAggregatorTest
 {
@@ -44,8 +44,8 @@ public class HllSketchToEstimateWithBoundsPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -57,7 +57,7 @@ public class HllSketchToEstimateWithBoundsPostAggregatorTest
         2
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "HllSketchToEstimateWithBoundsPostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, numStdDev=2}",
         postAgg.toString()
     );

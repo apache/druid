@@ -108,6 +108,12 @@ public class ImmutableDruidDataSource
   }
 
   @JsonIgnore
+  public int getNumSegments()
+  {
+    return idToSegments.size();
+  }
+
+  @JsonIgnore
   @Nullable
   public DataSegment getSegment(SegmentId segmentId)
   {

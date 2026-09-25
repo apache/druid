@@ -33,13 +33,15 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 
 /**
@@ -47,13 +49,14 @@ import java.util.function.BooleanSupplier;
  */
 public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
 {
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     setupServerAndCurator();
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testAnnouncementAndDiscovery() throws Exception
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -212,7 +215,7 @@ public class CuratorDruidNodeAnnouncerAndDiscoveryTest extends CuratorTestBase
     return expected.equals(ImmutableSet.copyOf(actual));
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     tearDownServerAndCurator();

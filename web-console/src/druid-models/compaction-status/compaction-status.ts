@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { NumberLike } from '../../utils';
 import { formatBytesCompact, pluralIfNeeded } from '../../utils';
 import type { CompactionConfig } from '../compaction-config/compaction-config';
 import { compactionConfigHasLegacyInputSegmentSizeBytesSet } from '../compaction-config/compaction-config';
@@ -27,15 +28,15 @@ function capitalizeFirst(str: string): string {
 export interface CompactionStatus {
   dataSource: string;
   scheduleStatus: string;
-  bytesAwaitingCompaction: number;
-  bytesCompacted: number;
-  bytesSkipped: number;
-  segmentCountAwaitingCompaction: number;
-  segmentCountCompacted: number;
-  segmentCountSkipped: number;
-  intervalCountAwaitingCompaction: number;
-  intervalCountCompacted: number;
-  intervalCountSkipped: number;
+  bytesAwaitingCompaction: NumberLike;
+  bytesCompacted: NumberLike;
+  bytesSkipped: NumberLike;
+  segmentCountAwaitingCompaction: NumberLike;
+  segmentCountCompacted: NumberLike;
+  segmentCountSkipped: NumberLike;
+  intervalCountAwaitingCompaction: NumberLike;
+  intervalCountCompacted: NumberLike;
+  intervalCountSkipped: NumberLike;
 }
 
 export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolean {
@@ -77,7 +78,7 @@ export function formatCompactionInfo(compaction: CompactionInfo) {
           return 'Fully compacted';
         }
       } else {
-        return capitalizeFirst(status.scheduleStatus);
+        return capitalizeFirst(status.scheduleStatus.replace(/_/g, ' '));
       }
     } else {
       return 'Awaiting first run';

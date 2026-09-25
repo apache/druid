@@ -32,9 +32,9 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Set;
@@ -54,7 +54,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
   private HeapMemoryDatasourceSegmentCache cache;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     cache = new HeapMemoryDatasourceSegmentCache(WIKI);
@@ -63,9 +63,9 @@ public class HeapMemoryDatasourceSegmentCacheTest
   @Test
   public void testEmptyCache()
   {
-    Assert.assertNull(cache.findUsedSegment(SegmentId.dummy(WIKI)));
-    Assert.assertTrue(cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()).isEmpty());
-    Assert.assertTrue(cache.findPendingSegmentsOverlapping(Intervals.ETERNITY).isEmpty());
+    Assertions.assertNull(cache.findUsedSegment(SegmentId.dummy(WIKI)));
+    Assertions.assertTrue(cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()).isEmpty());
+    Assertions.assertTrue(cache.findPendingSegmentsOverlapping(Intervals.ETERNITY).isEmpty());
   }
 
   @Test
@@ -129,19 +129,19 @@ public class HeapMemoryDatasourceSegmentCacheTest
     final SegmentId segmentId = segment.getId();
     final Interval interval = segmentId.getInterval();
 
-    Assert.assertEquals(segment, cache.findUsedSegment(segmentId));
-    Assert.assertEquals(List.of(segmentPlus), cache.findUsedSegments(Set.of(segmentId)));
+    Assertions.assertEquals(segment, cache.findUsedSegment(segmentId));
+    Assertions.assertEquals(List.of(segmentPlus), cache.findUsedSegments(Set.of(segmentId)));
 
-    Assert.assertEquals(Set.of(segmentId), cache.findUsedSegmentIdsOverlapping(interval));
-    Assert.assertEquals(Set.of(segmentId), cache.findUsedSegmentIdsOverlapping(Intervals.ETERNITY));
+    Assertions.assertEquals(Set.of(segmentId), cache.findUsedSegmentIdsOverlapping(interval));
+    Assertions.assertEquals(Set.of(segmentId), cache.findUsedSegmentIdsOverlapping(Intervals.ETERNITY));
 
-    Assert.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of()));
-    Assert.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of(interval)));
-    Assert.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of(Intervals.ETERNITY)));
+    Assertions.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of()));
+    Assertions.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of(interval)));
+    Assertions.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of(Intervals.ETERNITY)));
 
-    Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
-    Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(interval)));
-    Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(Intervals.ETERNITY)));
+    Assertions.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
+    Assertions.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(interval)));
+    Assertions.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(Intervals.ETERNITY)));
   }
 
   @Test
@@ -150,18 +150,18 @@ public class HeapMemoryDatasourceSegmentCacheTest
     final DateTime now = DateTimes.nowUtc();
     final DataSegmentPlus segmentPlus = createUsedSegment().lastUpdatedOn(now).asPlus();
 
-    Assert.assertEquals(1, cache.insertSegments(Set.of(segmentPlus)));
-    Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
+    Assertions.assertEquals(1, cache.insertSegments(Set.of(segmentPlus)));
+    Assertions.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
 
     // Verify that a segment with older updated time does not update cache
     final DataSegmentPlus oldSegmentPlus = updateSegment(segmentPlus, now.minus(1));
-    Assert.assertEquals(0, cache.insertSegments(Set.of(oldSegmentPlus)));
-    Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
+    Assertions.assertEquals(0, cache.insertSegments(Set.of(oldSegmentPlus)));
+    Assertions.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
 
     // Verify that a segment with newer updated time updates the cache
     final DataSegmentPlus newSegmentPlus = updateSegment(segmentPlus, now.plus(1));
-    Assert.assertEquals(1, cache.insertSegments(Set.of(newSegmentPlus)));
-    Assert.assertEquals(Set.of(newSegmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
+    Assertions.assertEquals(1, cache.insertSegments(Set.of(newSegmentPlus)));
+    Assertions.assertEquals(Set.of(newSegmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
   }
 
   @Test
@@ -174,31 +174,31 @@ public class HeapMemoryDatasourceSegmentCacheTest
     cache.insertSegments(Set.of(segmentPlus));
 
     // Verify that the segment is not returned in any of the used segment methods
-    Assert.assertNull(cache.findUsedSegment(segmentId));
-    Assert.assertTrue(cache.findUsedSegments(Set.of(segmentId)).isEmpty());
-    Assert.assertTrue(cache.findUsedSegmentIdsOverlapping(segment.getInterval()).isEmpty());
-    Assert.assertTrue(cache.findUsedSegmentsOverlappingAnyOf(List.of()).isEmpty());
-    Assert.assertTrue(cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()).isEmpty());
+    Assertions.assertNull(cache.findUsedSegment(segmentId));
+    Assertions.assertTrue(cache.findUsedSegments(Set.of(segmentId)).isEmpty());
+    Assertions.assertTrue(cache.findUsedSegmentIdsOverlapping(segment.getInterval()).isEmpty());
+    Assertions.assertTrue(cache.findUsedSegmentsOverlappingAnyOf(List.of()).isEmpty());
+    Assertions.assertTrue(cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()).isEmpty());
 
     final CacheStats cacheStats = cache.markCacheSynced();
-    Assert.assertEquals(0, cacheStats.getNumUsedSegments());
-    Assert.assertEquals(1, cacheStats.getNumUnusedSegments());
+    Assertions.assertEquals(0, cacheStats.getNumUsedSegments());
+    Assertions.assertEquals(1, cacheStats.getNumUnusedSegments());
   }
 
   @Test
   public void testInsertSegments_addsToCache_ifUpdatedTimeIsNull()
   {
     final DataSegmentPlus usedSegmentPlus = createUsedSegment().lastUpdatedOn(null).asPlus();
-    Assert.assertEquals(1, cache.insertSegments(Set.of(usedSegmentPlus)));
-    Assert.assertEquals(Set.of(usedSegmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
+    Assertions.assertEquals(1, cache.insertSegments(Set.of(usedSegmentPlus)));
+    Assertions.assertEquals(Set.of(usedSegmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
   }
 
   @Test
   public void testInsertSegments_doesNotUpdateCache_ifNewUpdatedTimeIsNull()
   {
     final DataSegmentPlus usedSegment = createUsedSegment().lastUpdatedOn(null).asPlus();
-    Assert.assertEquals(1, cache.insertSegments(Set.of(usedSegment)));
-    Assert.assertEquals(0, cache.insertSegments(Set.of(updateSegment(usedSegment, null))));
+    Assertions.assertEquals(1, cache.insertSegments(Set.of(usedSegment)));
+    Assertions.assertEquals(0, cache.insertSegments(Set.of(updateSegment(usedSegment, null))));
   }
 
   @Test
@@ -211,7 +211,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
     cache.insertSegments(Set.of(unusedSegmentPlus));
 
     // TODO: Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
-    Assert.assertNull(cache.findUsedSegment(segmentId));
+    Assertions.assertNull(cache.findUsedSegment(segmentId));
 
     final DataSegmentPlus usedSegmentPlus = new DataSegmentPlus(
         segment,
@@ -226,7 +226,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
     cache.insertSegments(Set.of(usedSegmentPlus));
 
-    Assert.assertEquals(segment, cache.findUsedSegment(segmentId));
+    Assertions.assertEquals(segment, cache.findUsedSegment(segmentId));
   }
 
   @Test
@@ -237,7 +237,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
     final DateTime now = DateTimes.nowUtc();
     SegmentSyncResult result = cache.syncSegmentIds(List.of(usedRecord), now);
-    Assert.assertEquals(Set.of(usedRecord.getSegmentId()), result.getExpiredIds());
+    Assertions.assertEquals(Set.of(usedRecord.getSegmentId()), result.getExpiredIds());
   }
 
   @Test
@@ -248,9 +248,9 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
     final DateTime now = DateTimes.nowUtc();
     SegmentSyncResult result = cache.syncSegmentIds(List.of(unusedRecord), now);
-    Assert.assertEquals(0, result.getUpdated());
-    Assert.assertEquals(0, result.getDeleted());
-    Assert.assertTrue(result.getExpiredIds().isEmpty());
+    Assertions.assertEquals(0, result.getUpdated());
+    Assertions.assertEquals(0, result.getDeleted());
+    Assertions.assertTrue(result.getExpiredIds().isEmpty());
   }
 
   @Test
@@ -263,22 +263,22 @@ public class HeapMemoryDatasourceSegmentCacheTest
         null,
         "allocatorId"
     );
-    Assert.assertTrue(cache.insertPendingSegment(pendingSegment, false));
+    Assertions.assertTrue(cache.insertPendingSegment(pendingSegment, false));
 
-    Assert.assertEquals(List.of(pendingSegment), cache.findPendingSegments("allocatorId"));
-    Assert.assertEquals(
+    Assertions.assertEquals(List.of(pendingSegment), cache.findPendingSegments("allocatorId"));
+    Assertions.assertEquals(
         List.of(pendingSegment.getId()),
         cache.findPendingSegmentIds("sequenceName", "")
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(pendingSegment),
         cache.findPendingSegmentsOverlapping(FIRST_WEEK_OF_JAN.withDurationAfterStart(Duration.standardHours(1)))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(pendingSegment),
         cache.findPendingSegmentsWithExactInterval(FIRST_WEEK_OF_JAN)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(pendingSegment.getId()),
         cache.findPendingSegmentIdsWithExactInterval("sequenceName", FIRST_WEEK_OF_JAN)
     );
@@ -296,8 +296,8 @@ public class HeapMemoryDatasourceSegmentCacheTest
         "allocatorId",
         now
     );
-    Assert.assertTrue(cache.insertPendingSegment(pendingSegment, false));
-    Assert.assertEquals(
+    Assertions.assertTrue(cache.insertPendingSegment(pendingSegment, false));
+    Assertions.assertEquals(
         List.of(pendingSegment),
         cache.findPendingSegments(pendingSegment.getTaskAllocatorId())
     );
@@ -311,8 +311,8 @@ public class HeapMemoryDatasourceSegmentCacheTest
         pendingSegment.getTaskAllocatorId(),
         now.plusDays(1)
     );
-    Assert.assertFalse(cache.insertPendingSegment(updatedPendingSegment, false));
-    Assert.assertEquals(
+    Assertions.assertFalse(cache.insertPendingSegment(updatedPendingSegment, false));
+    Assertions.assertEquals(
         List.of(pendingSegment),
         cache.findPendingSegments(pendingSegment.getTaskAllocatorId())
     );
@@ -343,7 +343,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         "group2"
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         3,
         cache.insertPendingSegments(List.of(segment1, segment2, segment3), false)
     );
@@ -359,9 +359,9 @@ public class HeapMemoryDatasourceSegmentCacheTest
         null,
         null
     );
-    Assert.assertTrue(cache.insertPendingSegment(pendingSegment, true));
-    Assert.assertFalse(cache.insertPendingSegment(pendingSegment, true));
-    Assert.assertEquals(List.of(pendingSegment), cache.findPendingSegmentsOverlapping(Intervals.ETERNITY));
+    Assertions.assertTrue(cache.insertPendingSegment(pendingSegment, true));
+    Assertions.assertFalse(cache.insertPendingSegment(pendingSegment, true));
+    Assertions.assertEquals(List.of(pendingSegment), cache.findPendingSegmentsOverlapping(Intervals.ETERNITY));
   }
 
   @Test
@@ -382,7 +382,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         unpersistedSegmentUpdatedAfterSync
     );
     cache.insertSegments(allSegments);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         allSegments,
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
     );
@@ -393,7 +393,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         List.of(asRecord(persistedSegment)),
         syncTime
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(persistedSegment, unpersistedSegmentUpdatedAfterSync),
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
     );
@@ -420,8 +420,8 @@ public class HeapMemoryDatasourceSegmentCacheTest
     );
 
     CacheStats cacheStats = cache.markCacheSynced();
-    Assert.assertEquals(1, cacheStats.getNumUsedSegments());
-    Assert.assertEquals(2, cacheStats.getNumUnusedSegments());
+    Assertions.assertEquals(1, cacheStats.getNumUsedSegments());
+    Assertions.assertEquals(2, cacheStats.getNumUnusedSegments());
 
     // Remove unpersisted segments and verify that only unpersisted segments
     // last updated before the sync time are removed
@@ -431,8 +431,8 @@ public class HeapMemoryDatasourceSegmentCacheTest
     );
 
     cacheStats = cache.markCacheSynced();
-    Assert.assertEquals(1, cacheStats.getNumUsedSegments());
-    Assert.assertEquals(1, cacheStats.getNumUnusedSegments());
+    Assertions.assertEquals(1, cacheStats.getNumUsedSegments());
+    Assertions.assertEquals(1, cacheStats.getNumUnusedSegments());
   }
 
   @Test
@@ -472,7 +472,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         unpersistedSegmentCreatedAfterSync
     );
     cache.insertPendingSegments(allSegments, false);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.copyOf(allSegments),
         Set.copyOf(cache.findPendingSegments(taskAllocator))
     );
@@ -483,7 +483,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         List.of(persistedSegment),
         syncTime
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(persistedSegment, unpersistedSegmentCreatedAfterSync),
         Set.copyOf(cache.findPendingSegments(taskAllocator))
     );
@@ -499,32 +499,32 @@ public class HeapMemoryDatasourceSegmentCacheTest
     final SegmentId unusedSegmentId = unusedSegmentPlus.getDataSegment().getId();
 
     cache.insertSegments(Set.of(usedSegmentPlus, unusedSegmentPlus));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(usedSegmentPlus),
         cache.findUsedSegments(Set.of(usedSegmentId))
     );
 
     CacheStats cacheStats = cache.markCacheSynced();
-    Assert.assertEquals(1, cacheStats.getNumUsedSegments());
-    Assert.assertEquals(1, cacheStats.getNumUnusedSegments());
-    Assert.assertFalse(cache.isEmpty());
+    Assertions.assertEquals(1, cacheStats.getNumUsedSegments());
+    Assertions.assertEquals(1, cacheStats.getNumUnusedSegments());
+    Assertions.assertFalse(cache.isEmpty());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2,
         cache.deleteSegments(Set.of(usedSegmentId, unusedSegmentId))
     );
 
     cacheStats = cache.markCacheSynced();
-    Assert.assertEquals(0, cacheStats.getNumUsedSegments());
-    Assert.assertEquals(0, cacheStats.getNumUnusedSegments());
-    Assert.assertTrue(cache.isEmpty());
+    Assertions.assertEquals(0, cacheStats.getNumUsedSegments());
+    Assertions.assertEquals(0, cacheStats.getNumUnusedSegments());
+    Assertions.assertTrue(cache.isEmpty());
   }
 
   @Test
   public void testDeleteSegments_forEmptyOrAbsentIdsReturnsZero()
   {
-    Assert.assertEquals(0, cache.deleteSegments(Set.of()));
-    Assert.assertEquals(0, cache.deleteSegments(Set.of(SegmentId.dummy(WIKI))));
+    Assertions.assertEquals(0, cache.deleteSegments(Set.of()));
+    Assertions.assertEquals(0, cache.deleteSegments(Set.of(SegmentId.dummy(WIKI))));
   }
 
   @Test
@@ -558,9 +558,9 @@ public class HeapMemoryDatasourceSegmentCacheTest
     );
 
     // Delete the segments for group1 and verify contents
-    Assert.assertEquals(2, cache.deletePendingSegments("group1"));
-    Assert.assertTrue(cache.findPendingSegments("group1").isEmpty());
-    Assert.assertEquals(List.of(group2PendingSegment1), cache.findPendingSegments("group2"));
+    Assertions.assertEquals(2, cache.deletePendingSegments("group1"));
+    Assertions.assertTrue(cache.findPendingSegments("group1").isEmpty());
+    Assertions.assertEquals(List.of(group2PendingSegment1), cache.findPendingSegments("group2"));
   }
 
   @Test
@@ -590,13 +590,13 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
     cache.insertPendingSegments(List.of(segment1, segment2, segment3), false);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2,
         cache.deletePendingSegments(
             Set.of(segment1.getId().toString(), segment2.getId().toString())
         )
     );
-    Assert.assertEquals(List.of(segment3), cache.findPendingSegments("group1"));
+    Assertions.assertEquals(List.of(segment3), cache.findPendingSegments("group1"));
   }
 
   @Test
@@ -619,8 +619,8 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
     cache.insertPendingSegments(List.of(segment1, segment2), true);
 
-    Assert.assertEquals(2, cache.deleteAllPendingSegments());
-    Assert.assertTrue(cache.findPendingSegmentsOverlapping(FIRST_WEEK_OF_JAN).isEmpty());
+    Assertions.assertEquals(2, cache.deleteAllPendingSegments());
+    Assertions.assertTrue(cache.findPendingSegmentsOverlapping(FIRST_WEEK_OF_JAN).isEmpty());
   }
 
   @Test
@@ -656,8 +656,8 @@ public class HeapMemoryDatasourceSegmentCacheTest
     cache.insertPendingSegments(List.of(segment1, segment2, segment3), false);
 
 
-    Assert.assertEquals(2, cache.deletePendingSegmentsCreatedIn(firstWeekOfJan));
-    Assert.assertEquals(
+    Assertions.assertEquals(2, cache.deletePendingSegmentsCreatedIn(firstWeekOfJan));
+    Assertions.assertEquals(
         List.of(segment2),
         cache.findPendingSegmentsOverlapping(firstWeekOfJan)
     );
@@ -667,13 +667,13 @@ public class HeapMemoryDatasourceSegmentCacheTest
   public void testMarkSegmentsWithinIntervalAsUnused()
   {
     cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT),
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
     );
 
     // Mark segments as unused by interval
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         cache.markSegmentsWithinIntervalAsUnused(
             FIRST_DAY_OF_JAN.withDurationAfterStart(Duration.standardDays(1)),
@@ -683,7 +683,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
     );
 
     // Mark segment as unused by version
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         cache.markSegmentsWithinIntervalAsUnused(
             Intervals.ETERNITY,
@@ -694,15 +694,15 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
     // Verify that all the segment IDs are still present in cache but 2 have
     // been marked as unused
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(JAN_3_SEGMENT),
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
     );
 
     final CacheStats cacheStats = cache.markCacheSynced();
-    Assert.assertEquals(1, cacheStats.getNumUsedSegments());
-    Assert.assertEquals(2, cacheStats.getNumUnusedSegments());
-    Assert.assertEquals(3, cacheStats.getNumIntervals());
+    Assertions.assertEquals(1, cacheStats.getNumUsedSegments());
+    Assertions.assertEquals(2, cacheStats.getNumUnusedSegments());
+    Assertions.assertEquals(3, cacheStats.getNumIntervals());
   }
 
   @Test
@@ -711,7 +711,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
     cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT));
 
     cache.markSegmentAsUnused(JAN_1_SEGMENT.getDataSegment().getId(), DateTimes.nowUtc());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(JAN_2_SEGMENT, JAN_3_SEGMENT),
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
     );
@@ -726,7 +726,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         Set.of(JAN_1_SEGMENT.getDataSegment().getId(), JAN_2_SEGMENT.getDataSegment().getId()),
         DateTimes.nowUtc()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(JAN_3_SEGMENT),
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
     );
@@ -737,7 +737,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
   {
     cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT));
     cache.markAllSegmentsAsUnused(DateTimes.nowUtc());
-    Assert.assertTrue(
+    Assertions.assertTrue(
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
              .isEmpty()
     );

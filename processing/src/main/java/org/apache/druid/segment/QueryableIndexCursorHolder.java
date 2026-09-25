@@ -24,6 +24,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
@@ -51,9 +52,12 @@ import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.historical.HistoricalCursor;
 import org.apache.druid.segment.vector.BitmapVectorOffset;
+import org.apache.druid.segment.vector.DescendingBitmapVectorOffset;
+import org.apache.druid.segment.vector.DescendingNoFilterVectorOffset;
 import org.apache.druid.segment.vector.FilteredVectorOffset;
 import org.apache.druid.segment.vector.NoFilterVectorOffset;
 import org.apache.druid.segment.vector.QueryableIndexVectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.ReverseVectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorOffset;
@@ -66,6 +70,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class QueryableIndexCursorHolder implements CursorHolder
 {
@@ -84,6 +89,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
   private final QueryContext queryContext;
   private final int vectorSize;
   private final Supplier<CursorResources> resourcesSupplier;
+  private final AtomicBoolean resourcesComputed = new AtomicBoolean(false);
 
   public QueryableIndexCursorHolder(
       QueryableIndex index,
@@ -127,16 +133,20 @@ public class QueryableIndexCursorHolder implements CursorHolder
     this.vectorSize = cursorBuildSpec.getQueryContext().getVectorSize();
     this.metrics = cursorBuildSpec.getQueryMetrics();
     this.resourcesSupplier = Suppliers.memoize(
-        () -> new CursorResources(
-            index,
-            timeBoundaryInspector,
-            virtualColumns,
-            Cursors.getTimeOrdering(ordering),
-            interval,
-            filter,
-            cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
-            metrics
-        )
+        () -> {
+          final CursorResources resources = new CursorResources(
+              index,
+              timeBoundaryInspector,
+              virtualColumns,
+              Cursors.getTimeOrdering(ordering),
+              interval,
+              filter,
+              cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
+              metrics
+          );
+          resourcesComputed.set(true);
+          return resources;
+        }
     );
   }
 
@@ -165,8 +175,9 @@ public class QueryableIndexCursorHolder implements CursorHolder
       }
     }
 
-    // vector cursors can't iterate backwards yet
-    return Cursors.getTimeOrdering(ordering) != Order.DESCENDING;
+    // Descending time order is handled by iterating the underlying offset back-to-front and reversing the decoded
+    // vectors via ReverseVectorColumnSelectorFactory; see asVectorCursor.
+    return true;
   }
 
   @Override
@@ -290,38 +301,65 @@ public class QueryableIndexCursorHolder implements CursorHolder
       endOffset = index.getNumRows();
     }
 
+    // For descending time order, the offset iterates the [startOffset, endOffset) range back-to-front (one batch at a
+    // time, ascending within each batch), and the column selector factory returned to the caller is wrapped in a
+    // ReverseVectorColumnSelectorFactory that flips each batch's decoded values. This keeps the low-level column
+    // readers seeing only ascending offsets.
+    final boolean descending = timeOrder == Order.DESCENDING;
+
     // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter can use
     // an index
-    final VectorOffset baseOffset =
-        filterBundle == null || filterBundle.getIndex() == null
-        ? new NoFilterVectorOffset(vectorSize, startOffset, endOffset)
-        : new BitmapVectorOffset(vectorSize, filterBundle.getIndex().getBitmap(), startOffset, endOffset);
+    final VectorOffset baseOffset;
+    if (filterBundle == null || filterBundle.getIndex() == null) {
+      baseOffset =
+          descending
+          ? new DescendingNoFilterVectorOffset(vectorSize, startOffset, endOffset)
+          : new NoFilterVectorOffset(vectorSize, startOffset, endOffset);
+    } else {
+      final ImmutableBitmap bitmap = filterBundle.getIndex().getBitmap();
+      baseOffset =
+          descending
+          ? new DescendingBitmapVectorOffset(vectorSize, bitmap, startOffset, endOffset)
+          : new BitmapVectorOffset(vectorSize, bitmap, startOffset, endOffset);
+    }
 
-    // baseColumnSelectorFactory using baseOffset is the column selector for filtering.
+    // baseColumnSelectorFactory using baseOffset is the column selector for filtering. Filtering is order-independent,
+    // so it always reads ascending (unreversed) offsets.
     final VectorColumnSelectorFactory baseColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
         columnCache,
         baseOffset
     );
+
+    final VectorOffset cursorOffset;
+    final VectorColumnSelectorFactory cursorColumnSelectorFactory;
 
     // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter needs to use
     // a value matcher
     if (filterBundle != null && filterBundle.getMatcherBundle() != null) {
       final VectorValueMatcher vectorValueMatcher = filterBundle.getMatcherBundle()
                                                                 .vectorMatcher(baseColumnSelectorFactory, baseOffset);
-      final VectorOffset filteredOffset = FilteredVectorOffset.create(
+      cursorOffset = FilteredVectorOffset.create(
           baseOffset,
           vectorValueMatcher
       );
 
-      // Now create the cursor and column selector that will be returned to the caller.
-      final VectorColumnSelectorFactory filteredColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
+      // Now create the column selector that will be returned to the caller.
+      cursorColumnSelectorFactory = makeVectorColumnSelectorFactoryForOffset(
           columnCache,
-          filteredOffset
+          cursorOffset
       );
-      return new QueryableIndexVectorCursor(filteredColumnSelectorFactory, filteredOffset, vectorSize);
     } else {
-      return new QueryableIndexVectorCursor(baseColumnSelectorFactory, baseOffset, vectorSize);
+      cursorOffset = baseOffset;
+      cursorColumnSelectorFactory = baseColumnSelectorFactory;
     }
+
+    return new QueryableIndexVectorCursor(
+        descending
+        ? new ReverseVectorColumnSelectorFactory(cursorColumnSelectorFactory)
+        : cursorColumnSelectorFactory,
+        cursorOffset,
+        vectorSize
+    );
   }
 
   @Override
@@ -333,7 +371,9 @@ public class QueryableIndexCursorHolder implements CursorHolder
   @Override
   public void close()
   {
-    CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
+    if (resourcesComputed.get()) {
+      CloseableUtils.closeAndWrapExceptions(resourcesSupplier.get());
+    }
   }
 
 

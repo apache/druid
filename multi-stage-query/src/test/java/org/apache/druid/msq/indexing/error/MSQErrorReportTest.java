@@ -25,8 +25,8 @@ import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class MSQErrorReportTest
 {
@@ -36,42 +36,42 @@ public class MSQErrorReportTest
   @Test
   public void testErrorReportFault()
   {
-    Assert.assertEquals(UnknownFault.forException(null), MSQErrorReport.getFaultFromException(null));
+    Assertions.assertEquals(UnknownFault.forException(null), MSQErrorReport.getFaultFromException(null));
 
     MSQException msqException = new MSQException(null, UnknownFault.forMessage(ERROR_MESSAGE));
-    Assert.assertEquals(msqException.getFault(), MSQErrorReport.getFaultFromException(msqException));
+    Assertions.assertEquals(msqException.getFault(), MSQErrorReport.getFaultFromException(msqException));
 
     ParseException parseException = new ParseException(null, ERROR_MESSAGE);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new CannotParseExternalDataFault(ERROR_MESSAGE),
         MSQErrorReport.getFaultFromException(parseException)
     );
 
     UnsupportedColumnTypeException columnTypeException = new UnsupportedColumnTypeException(ERROR_MESSAGE, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new ColumnTypeNotSupportedFault(ERROR_MESSAGE, null),
         MSQErrorReport.getFaultFromException(columnTypeException)
     );
 
     TooManyBucketsException tooManyBucketsException = new TooManyBucketsException(10);
-    Assert.assertEquals(new TooManyBucketsFault(10), MSQErrorReport.getFaultFromException(tooManyBucketsException));
+    Assertions.assertEquals(new TooManyBucketsFault(10), MSQErrorReport.getFaultFromException(tooManyBucketsException));
 
     FrameRowTooLargeException tooLargeException = new FrameRowTooLargeException(10);
-    Assert.assertEquals(new RowTooLargeFault(10), MSQErrorReport.getFaultFromException(tooLargeException));
+    Assertions.assertEquals(new RowTooLargeFault(10), MSQErrorReport.getFaultFromException(tooLargeException));
 
     UnexpectedMultiValueDimensionException mvException = new UnexpectedMultiValueDimensionException(ERROR_MESSAGE);
-    Assert.assertEquals(DruidExceptionFault.CODE, MSQErrorReport.getFaultFromException(mvException).getErrorCode());
+    Assertions.assertEquals(DruidExceptionFault.CODE, MSQErrorReport.getFaultFromException(mvException).getErrorCode());
 
     // QueryTimeoutException (legacy QueryException, not a DruidException) becomes an UnknownFault.
     // Only DruidExceptions become nice faults.
     QueryTimeoutException queryException = new QueryTimeoutException(ERROR_MESSAGE);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         UnknownFault.forException(queryException),
         MSQErrorReport.getFaultFromException(queryException)
     );
 
     RuntimeException runtimeException = new RuntimeException(ERROR_MESSAGE);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         UnknownFault.forException(runtimeException),
         MSQErrorReport.getFaultFromException(runtimeException)
     );

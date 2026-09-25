@@ -64,6 +64,7 @@ import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVert
 import org.apache.druid.k8s.overlord.common.httpclient.vertx.DruidKubernetesVertxHttpClientFactory;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskExecutionConfigResource;
 import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerPodTemplateResource;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
 import org.apache.druid.k8s.overlord.taskadapter.DynamicConfigPodTemplateSelector;
 import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
@@ -129,6 +130,7 @@ public class KubernetesOverlordModule implements DruidModule
           .in(LazySingleton.class);
 
     Jerseys.addResource(binder, KubernetesTaskExecutionConfigResource.class);
+    Jerseys.addResource(binder, KubernetesTaskRunnerPodTemplateResource.class);
 
     PolyBind.createChoiceWithDefault(
         binder,

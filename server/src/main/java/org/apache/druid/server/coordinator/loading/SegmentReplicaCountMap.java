@@ -19,14 +19,19 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import com.google.common.collect.Sets;
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.server.coordinator.DruidCluster;
+import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Contains a mapping from tier to {@link SegmentReplicaCount}s.
@@ -49,15 +54,27 @@ public class SegmentReplicaCountMap
     cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
-              // Add segments already loaded on this server
-              for (DataSegment segment : serverHolder.getServedSegments()) {
-                computeIfAbsent(segment.getId(), tier).incrementLoaded();
+              // Add segments already loaded on this server.
+              final Collection<DataSegment> servedSegments = serverHolder.getServedSegments();
+              final Set<SegmentId> partiallyLoadedIds = Sets.newHashSetWithExpectedSize(servedSegments.size());
+              for (DataSegment segment : servedSegments) {
+                final SegmentReplicaCount replicaCount = computeIfAbsent(segment.getId(), tier);
+                if (DataSegmentAndLoadProfile.profileOf(segment) == null) {
+                  replicaCount.incrementLoaded();
+                } else {
+                  partiallyLoadedIds.add(segment.getId());
+                  replicaCount.incrementLoadedWithPartialProfile();
+                }
               }
 
               // Add segments queued for load, drop or move on this server
               serverHolder.getQueuedSegments().forEach(
-                  (segment, state) -> computeIfAbsent(segment.getId(), tier)
-                      .incrementQueued(state)
+                  (segment, state) -> {
+                    if (isPartialLoadRevert(serverHolder, segment, state, partiallyLoadedIds)) {
+                      return;
+                    }
+                    computeIfAbsent(segment.getId(), tier).incrementQueued(state);
+                  }
               );
             }
         )
@@ -78,6 +95,26 @@ public class SegmentReplicaCountMap
             .incrementLoadedOnNonHistoricalServer();
       }
     });
+  }
+
+  /**
+   * Whether a queued operation is the in-place reload that
+   * {@link StrategicSegmentAssigner#revertPartialProfileReplica} queues to release a partial-load rule that no longer
+   * applies. Such a reload refreshes an existing replica rather than adding one, so counting it as {@code loading}
+   * would push {@code projectedReplicas} past the requirement; {@code updateReplicasInTier} would then "correct" the
+   * phantom surplus by canceling the very reload it queued last run, and requeue it in the same run, churning
+   * forever against a backlogged peon.
+   */
+  private static boolean isPartialLoadRevert(
+      ServerHolder serverHolder,
+      DataSegment segment,
+      SegmentAction state,
+      Set<SegmentId> partiallyLoadedIds
+  )
+  {
+    return state == SegmentAction.LOAD
+           && partiallyLoadedIds.contains(segment.getId())
+           && serverHolder.getInFlightProfile(segment) == null;
   }
 
   SegmentReplicaCount get(SegmentId segmentId, String tier)

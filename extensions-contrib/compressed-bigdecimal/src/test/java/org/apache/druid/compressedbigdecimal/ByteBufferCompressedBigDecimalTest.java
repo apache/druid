@@ -19,8 +19,8 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -83,6 +83,6 @@ public class ByteBufferCompressedBigDecimalTest
         SCALE
     );
 
-    Assert.assertEquals(expectedValue, compressedBigDecimal.toString());
+    Assertions.assertEquals(expectedValue, compressedBigDecimal.toString());
   }
 }

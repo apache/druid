@@ -28,8 +28,8 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -68,7 +68,7 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
         "price",
         5
     );
-    Assert.assertEquals(ah.toHistogram(5), approximateHistogramPostAggregator.compute(metricValues));
+    Assertions.assertEquals(ah.toHistogram(5), approximateHistogramPostAggregator.compute(metricValues));
   }
 
   @Test
@@ -91,7 +91,7 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("approxHisto", null)

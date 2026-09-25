@@ -45,9 +45,10 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nonnull;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -210,6 +211,9 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
         case FAILED:
           controllerQueryKernel.failStage(stageId);
           break;
+
+        case RETRYING:
+          throw new IAE("Cannot initialize a stage directly in the retrying phase");
       }
       if (!recursiveCall) {
         setupStages.add(stageNumber);
@@ -462,11 +466,11 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
       );
 
       // does not enable the current stage to enable running from start
-      Assert.assertTrue(createAndGetNewStageNumbers().size() == 0);
+      Assertions.assertTrue(createAndGetNewStageNumbers().size() == 0);
       // only work order of failed worker should be there
-      Assert.assertTrue(workOrderList.size() == 1);
-      Assert.assertTrue(workOrderList.get(0).getWorkerNumber() == workeNumber);
-      Assert.assertTrue(workOrderList.get(0).getStageNumber() == retriedStage);
+      Assertions.assertTrue(workOrderList.size() == 1);
+      Assertions.assertTrue(workOrderList.get(0).getWorkerNumber() == workeNumber);
+      Assertions.assertTrue(workOrderList.get(0).getStageNumber() == retriedStage);
 
     }
 

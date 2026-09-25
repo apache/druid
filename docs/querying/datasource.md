@@ -26,7 +26,7 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-Datasources in Apache Druid are things that you can query. The most common kind of datasource is a table datasource,
+Datasources in Apache&circledR; Druid are things that you can query. The most common kind of datasource is a table datasource,
 and in many contexts the word "datasource" implicitly refers to table datasources. This is especially true
 [during data ingestion](../ingestion/index.md), where ingestion is always creating or writing into a table
 datasource. But at query time, there are many other types of datasources available.
