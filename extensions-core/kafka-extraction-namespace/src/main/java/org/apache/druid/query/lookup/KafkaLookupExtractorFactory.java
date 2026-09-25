@@ -251,6 +251,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
         executorService.shutdown();
         future.cancel(true);
         LOG.error(e, "Failed to start kafka extraction factory");

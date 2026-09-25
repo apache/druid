@@ -127,6 +127,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
               LOG.debug("Scheduled user cache poll is done");
             }
             catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
               LOG.noStackTrace().info(e, "Interrupted while polling Coordinator for cachedUserMaps.");
             }
             catch (Throwable t) {
@@ -197,6 +198,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
       );
     }
     catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
       LOG.noStackTrace().info(e, "Interrupted while fetching user map for authenticator[%s].", prefix);
       return null;
     }
