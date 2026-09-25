@@ -208,7 +208,7 @@ public class ControllerResource
   public Response httpGetLiveReports(@Context final HttpServletRequest req)
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
-    final TaskReport.ReportMap reports = controller.liveReports();
+    final TaskReport.ReportMap reports = controller.getLiveOrFinalReport();
     if (reports == null) {
       return Response.status(Response.Status.NOT_FOUND).build();
     }

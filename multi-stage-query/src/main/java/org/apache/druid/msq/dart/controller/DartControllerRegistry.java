@@ -149,12 +149,13 @@ public class DartControllerRegistry implements ControllerRegistry
   {
     final String dartQueryId = holder.getController().queryId();
 
-    // Remove only if the current mapping for the queryId is this specific controller.
-    final boolean didRemove = controllerMap.remove(dartQueryId, holder);
+    // Removing the active entry and retaining its report must be atomic with completed-report lookups.
+    synchronized (completeReports) {
+      // Remove only if the current mapping for the queryId is this specific controller.
+      final boolean didRemove = controllerMap.remove(dartQueryId, holder);
 
-    // Add completeReport to completeReports, if present, and if we actually did deregister this specific controller.
-    if (didRemove && completeReport != null && config.getMaxRetainedReportCount() > 0) {
-      synchronized (completeReports) {
+      // Add completeReport to completeReports, if present, and if we actually did deregister this specific controller.
+      if (didRemove && completeReport != null && config.getMaxRetainedReportCount() > 0) {
         // Remove reports if size is greater than maxRetainedReportCount - 1.
         int reportsToRemove = completeReports.size() - config.getMaxRetainedReportCount() + 1;
         if (reportsToRemove > 0) {
@@ -178,10 +179,10 @@ public class DartControllerRegistry implements ControllerRegistry
                 DateTimes.nowUtc()
             )
         );
+      } else if (didRemove) {
+        // Report not retained, but controller was removed; clean up the SQL query ID mapping.
+        sqlQueryIdToDartQueryId.remove(holder.getSqlQueryId(), dartQueryId);
       }
-    } else if (didRemove) {
-      // Report not retained, but controller was removed; clean up the SQL query ID mapping.
-      sqlQueryIdToDartQueryId.remove(holder.getSqlQueryId(), dartQueryId);
     }
   }
 
@@ -294,7 +295,7 @@ public class DartControllerRegistry implements ControllerRegistry
   {
     return new QueryInfoAndReport(
         createQueryInfo(controllerHolder),
-        controllerHolder.getController().liveReports(),
+        controllerHolder.getReports(),
         DateTimes.nowUtc()
     );
   }
