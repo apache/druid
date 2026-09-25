@@ -1150,11 +1150,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     for (Future<?> f : pending) {
       if (firstFailure != null) {
         // Cancel remaining futures on any failure so we don't wait for tasks whose result we no longer intend to
-        // commit. cancel(false) — NOT cancel(true) — because a running task is mid-NIO/FileChannel read via
-        // mapper.ensureBundleDownloaded, and Thread.interrupt() on an in-flight NIO op raises
-        // ClosedByInterruptException that closes the mapper's shared underlying FD, breaking still-mounted bundles
-        // for other queries reading the same segment. Not-yet-started tasks are marked CANCELLED; running tasks
-        // continue on their own timeline, observe ruleSelectedBundleNames == {} after clearRule, and release
+        // commit. cancel(false) because interrupting a running download would also fail any concurrent query awaiting
+        // the same download (load futures are deduped). Not-yet-started tasks are marked CANCELLED; running
+        // tasks continue on their own timeline, observe ruleSelectedBundleNames == {} after clearRule, and release
         // their transient bundleAcquirer holds without acquiring rule-holds.
         f.cancel(false);
         // Still drain the future so an ExecutionException from a task that completed-with-failure BEFORE we
@@ -1184,8 +1182,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         firstFailure = e;
-        // Signal cancel WITHOUT interrupt — see cancel(false) comment above; interrupting mid-NIO closes the
-        // shared mapper FD.
+        // Signal cancel WITHOUT interrupt (see the cancel(false) comment above).
         f.cancel(false);
       }
       catch (ExecutionException e) {
@@ -2006,11 +2003,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     action.setCanceler(() -> {
       // cancel(false), NOT cancel(true): a still-queued task is prevented from running (the canceler then wins the
       // claim CAS below and releases the pre-placed hold); a task already running is left to finish rather than
-      // interrupted. Interrupting a running task is unsafe here for the same reason documented on
-      // awaitEagerDownloadsOrClearRule's cancel(false) — an interrupt landing mid-NIO can raise
-      // ClosedByInterruptException on a shared mapper FD, and interrupting a task that is driving a deduped mount
-      // fails every other query awaiting that same mount. A running task that finishes after close loses the
-      // set() race and closes its own orphaned result, releasing the holds then.
+      // interrupted, because interrupting a running mount would also fail any concurrent query awaiting the same
+      // mount (mounts are deduped). A running task that finishes after close loses the set() race and closes its
+      // own orphaned result, releasing the holds then.
       taskFuture.cancel(false);
       if (holdClaimed.compareAndSet(false, true)) {
         CloseableUtils.closeAndSuppressExceptions(
