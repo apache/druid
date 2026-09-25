@@ -30,9 +30,9 @@ import org.apache.calcite.sql.SqlLiteral;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlNodeList;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -275,7 +275,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
    * Translate the reserved {@code __base} projection, which describes the physical layout of the table rather than an
    * additional aggregate, and so becomes the {@code baseTable} property instead of one of the projections.
    */
-  protected static ClusteredValueGroupsBaseTableMetadata translateBaseTable(
+  protected static DatasourceBaseTableMetadata translateBaseTable(
       final SqlStatementHandler.HandlerContext handlerContext,
       final String tableName,
       final List<ColumnSpec> columns,

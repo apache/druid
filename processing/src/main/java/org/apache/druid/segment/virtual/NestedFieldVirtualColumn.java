@@ -234,6 +234,26 @@ public class NestedFieldVirtualColumn implements VirtualColumn
   }
 
   @Override
+  public boolean supportsOutputNameRewrite()
+  {
+    return true;
+  }
+
+  @Override
+  public NestedFieldVirtualColumn withOutputName(String newOutputName)
+  {
+    return new NestedFieldVirtualColumn(
+        getColumnName(),
+        newOutputName,
+        getExpectedType(),
+        getPathParts(),
+        isProcessFromRaw(),
+        null,
+        null
+    );
+  }
+
+  @Override
   public DimensionSelector makeDimensionSelector(
       DimensionSpec dimensionSpec,
       ColumnSelectorFactory selectorFactory,

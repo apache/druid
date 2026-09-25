@@ -35,6 +35,7 @@ import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionS
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TableProjectionSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -925,6 +926,47 @@ class DataSchemaTest extends InitializedNullHandlingTest
     final DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
     Assertions.assertEquals(original, deserialized);
     Assertions.assertEquals(spec, deserialized.getBaseTable());
+  }
+
+  /**
+   * The generic baseTable-mode machinery is covered above with the clustered spec; this covers what is specific to a
+   * plain {@link TableProjectionSpec}: it rides the same {@code baseTable} property (JSON type {@code table}), and it
+   * lowers into the standard ingest inputs — a dimensionsSpec with the explicit {@code __time} position and
+   * {@code forceSegmentSortByTime=false}, no metrics, and a recombined granularity with rollup off and query
+   * granularity read from the spec's carrier virtual column.
+   */
+  @Test
+  void testBaseTableModeWithTableProjectionSpec() throws IOException
+  {
+    final TableProjectionSpec spec = TableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("page"),
+            new LongDimensionSchema("__time"),
+            new LongDimensionSchema("cnt")
+        )
+        .build()
+        .withQueryGranularity(Granularities.HOUR);
+    final DataSchema original = DataSchema.builder()
+                                          .withDataSource("datasource")
+                                          .withTimestamp(TIMESTAMP_SPEC)
+                                          .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
+                                          .withBaseTable(spec)
+                                          .build();
+
+    final String serialized = jsonMapper.writeValueAsString(original);
+    final JsonNode root = jsonMapper.readTree(serialized);
+    Assertions.assertEquals("table", root.get("baseTable").get("type").asText());
+    final DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
+    Assertions.assertEquals(original, deserialized);
+    Assertions.assertEquals(spec, deserialized.getBaseTable());
+
+    Assertions.assertEquals(spec.getDimensionsSpec(), original.getDimensionsSpec());
+    Assertions.assertFalse(original.getDimensionsSpec().isForceSegmentSortByTime());
+    Assertions.assertEquals(0, original.getAggregators().length);
+    final GranularitySpec effectiveGranularity = original.getGranularitySpec();
+    Assertions.assertEquals(Granularities.DAY, effectiveGranularity.getSegmentGranularity());
+    Assertions.assertEquals(Granularities.HOUR, effectiveGranularity.getQueryGranularity());
+    Assertions.assertFalse(effectiveGranularity.isRollup());
   }
 
   @Test

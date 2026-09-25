@@ -31,6 +31,7 @@ import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
+import org.apache.druid.catalog.model.TableBaseTableMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
@@ -38,10 +39,15 @@ import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.filter.RangeFilter;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.segment.virtual.NestedMergeVirtualColumn;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -82,6 +88,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SqlTestFrameworkConfig.ComponentSupplier(CatalogDdlComponentSupplier.class)
 public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
 {
+  static {
+    // Deriving a base-table spec resolves complex columns through the dimension-handler registry, which the SQL test
+    // framework does not populate on its own.
+    BuiltInTypesModule.registerHandlersAndSerde();
+  }
+
   private static final RecordingCatalogTableWriter WRITER = new RecordingCatalogTableWriter();
 
   public static class CatalogDdlComponentSupplier extends StandardComponentSupplier
@@ -761,6 +773,62 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   }
 
   /**
+   * A computed column keeps the virtual column type the planner produced for it: {@code JSON_VALUE} plans to a
+   * nested-field virtual column, not a generic expression, and the stored layout keeps that specialization (renamed to
+   * the declared column) so it matches the virtual columns the planner generates for equivalent query expressions.
+   */
+  @Test
+  public void testBaseProjectionComputedColumnKeepsPlannedVirtualColumnType()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, payload TYPE('COMPLEX<json>'), v BIGINT, __time TIMESTAMP,"
+        + " PROJECTION __base AS ("
+        + "   SELECT tenant, payload, JSON_VALUE(payload, '$.v' RETURNING BIGINT) AS v, __time"
+        + "   CLUSTERED BY tenant"
+        + " ))"
+    );
+    assertEquals(
+        new ClusteredValueGroupsBaseTableMetadata(
+            ImmutableList.of("tenant"),
+            VirtualColumns.create(new NestedFieldVirtualColumn("payload", "$.v", "v", ColumnType.LONG)),
+            null
+        ),
+        WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  /**
+   * A computed column composed of specialized expressions lifts with its dependency closure: the planner composes
+   * specializations by reference (the inner JSON_MERGE becomes its own virtual column that the outer nested-field
+   * virtual column reads by synthetic name), so the intermediary rides into the spec under its synthetic name as an
+   * unstored input of the materialized column, and both keep their planned specialized types.
+   */
+  @Test
+  public void testBaseProjectionComposedExpressionLiftsDependencyClosure()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, payload TYPE('COMPLEX<json>'), v BIGINT, __time TIMESTAMP,"
+        + " PROJECTION __base AS ("
+        + "   SELECT tenant, payload, JSON_VALUE(JSON_MERGE(payload, payload), '$.v' RETURNING BIGINT) AS v, __time"
+        + "   CLUSTERED BY tenant"
+        + " ))"
+    );
+    final ClusteredValueGroupsBaseTableMetadata metadata =
+        (ClusteredValueGroupsBaseTableMetadata)
+            WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY);
+    final VirtualColumns virtualColumns = metadata.getVirtualColumns();
+    assertEquals(2, virtualColumns.getVirtualColumns().length);
+
+    final VirtualColumn materialized = virtualColumns.getVirtualColumn("v");
+    assertTrue(materialized instanceof NestedFieldVirtualColumn, String.valueOf(materialized));
+    assertEquals(1, materialized.requiredColumns().size());
+
+    final VirtualColumn intermediary = virtualColumns.getVirtualColumn(materialized.requiredColumns().get(0));
+    assertTrue(intermediary instanceof NestedMergeVirtualColumn, String.valueOf(intermediary));
+    assertEquals(ImmutableList.of("payload"), intermediary.requiredColumns());
+  }
+
+  /**
    * A base table column is stored under the name it declares, so a body item that renames another column is rejected:
    * only a virtual column materializes a name the body did not select, and a bare reference produces none.
    * <p>
@@ -833,6 +901,118 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
     );
     assertNull(spec.properties().get(DatasourceDefn.SEALED_PROPERTY));
+  }
+
+  /**
+   * A {@code __base} projection without {@code CLUSTERED BY} declares the plain-table layout: declared column order is
+   * the physical storage and sort order, and no clustering structure is built.
+   */
+  @Test
+  public void testCreateTableWithPlainBaseProjection()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+        + " PROJECTION __base AS (SELECT tenant, __time, v))"
+    );
+    final TableSpec spec = WRITER.calls.get(0).spec;
+    assertEquals(
+        new TableBaseTableMetadata(null, null),
+        spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  /**
+   * The one expression a plain base table accepts: {@code TIME_FLOOR(__time, <period>)} selected as {@code __time}
+   * declares the table's query granularity, stored as the spec's canonical granularity-carrier virtual column rather
+   * than as a materialized column.
+   */
+  @Test
+  public void testPlainBaseProjectionEncodesQueryGranularity()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+        + " PROJECTION __base AS (SELECT tenant, TIME_FLOOR(__time, 'PT1H') AS __time, v))"
+    );
+    final TableSpec spec = WRITER.calls.get(0).spec;
+    assertEquals(
+        new TableBaseTableMetadata(
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+            ),
+            null
+        ),
+        spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  /**
+   * {@code __time} is stored in UTC, so a base table's query granularity must be a UTC period: a session time zone
+   * reaching the body's TIME_FLOOR (the same way it reaches an aggregate projection's) makes the granularity
+   * non-UTC, and the statement is rejected rather than storing buckets that do not align with the stored values.
+   */
+  @Test
+  public void testPlainBaseProjectionRejectsNonUtcQueryGranularity()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "SET sqlTimeZone = 'America/Los_Angeles';\n"
+            + "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT tenant, TIME_FLOOR(__time, 'P1D') AS __time))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains("only period granularities in the UTC time zone without an origin are supported"),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
+   * The plain write path stores columns as they arrive, so a plain base table rejects computed columns.
+   */
+  @Test
+  public void testPlainBaseProjectionRejectsComputedColumn()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, bucket BIGINT, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT tenant, ABS(bucket) AS bucket, __time))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains(
+            "its column [bucket] is computed by an expression. Computed columns are not supported; compute the column"
+            + " at ingestion time instead"
+        ),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
+   * A computed {@code __time} is only meaningful as a granularity declaration, so an expression the granularity layer
+   * cannot recover is rejected rather than silently stored as something else.
+   */
+  @Test
+  public void testPlainBaseProjectionRejectsNonGranularityTimeExpression()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT tenant, TIME_SHIFT(__time, 'PT1H', 1) AS __time))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains(
+            "it computes [__time] with an expression that is not a granularity. A base table computes [__time] only"
+            + " as TIME_FLOOR(__time, <period>), which declares the table's query granularity"
+        ),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
   }
 
   /**
