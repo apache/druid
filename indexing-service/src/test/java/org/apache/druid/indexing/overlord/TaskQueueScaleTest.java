@@ -179,11 +179,17 @@ public class TaskQueueScaleTest
       taskQueue.add(testTask);
     }
 
-    // in theory we can get a race here, since we fetch the counts at separate times
     Assertions.assertEquals(numTasks, taskQueue.getTasks().size(), "all tasks should be known");
-    long runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    long pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    long waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+
+    long runningTasks = 0;
+    long pendingTasks = 0;
+    long waitingTasks = 0;
+    final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+    while (System.nanoTime() < deadline && runningTasks + pendingTasks + waitingTasks != numTasks) {
+      runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
+      pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+      waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    }
     Assertions.assertEquals(numTasks, (runningTasks + pendingTasks + waitingTasks), "all tasks should be known");
 
     // Wait for all tasks to finish.
