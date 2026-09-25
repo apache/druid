@@ -864,6 +864,7 @@ You can configure automatic compaction through the following properties:
 
 |Property|Description|Required|
 |--------|-----------|--------|
+|`type`|Where the compaction schema comes from. `inline` declares it in this configuration, using the schema properties below. `catalog` reads it from the datasource's [catalog](../development/extensions-core/catalog.md) table definition on every run, and accepts none of the schema properties; see [Catalog-based compaction](../development/extensions-core/catalog.md#catalog-based-compaction).|no (default = `inline`)|
 |`dataSource`|The datasource name to be compacted.|yes|
 |`taskPriority`|[Priority](../ingestion/tasks.md#lock-priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk.|no (default = 100,000,000,000,000 i.e. 100TB)|

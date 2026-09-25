@@ -450,6 +450,7 @@ public abstract class TaskBuilder<
           granularitySpec,
           null,
           null,
+          null,
           tuningConfig.build(),
           null,
           null,

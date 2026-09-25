@@ -26,18 +26,24 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.catalog.MetadataCatalog;
 import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableId;
+import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
+import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 
@@ -145,12 +151,49 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     return null;
   }
 
+  /**
+   * Partitioning comes from the catalog: {@link DatasourceDefn#CLUSTER_KEYS_PROPERTY} becomes the range partition
+   * dimensions and {@link DatasourceDefn#TARGET_SEGMENT_ROWS_PROPERTY} sizes the segments. A table that declares no
+   * cluster keys falls back to dynamic partitioning.
+   * <p>
+   * A {@link #getBaseTable()} layout does not replace this: its clustering columns group rows <em>within</em> a
+   * segment, while cluster keys range-partition <em>across</em> segments, so a table that declares both gets both.
+   * <p>
+   * This is not optional the way the other schema fields are: the MSQ engine rejects a compaction task with no
+   * partitionsSpec, and a base table layout can only be compacted by MSQ.
+   */
   @JsonIgnore
   @Nullable
   @Override
   public UserCompactionTaskQueryTuningConfig getTuningConfig()
   {
-    return null;
+    final ResolvedTable table = catalog.resolveTable(tableId);
+    if (table == null) {
+      return null;
+    }
+    final Integer targetSegmentRows = table.decodeProperty(DatasourceDefn.TARGET_SEGMENT_ROWS_PROPERTY);
+    final List<ClusterKeySpec> clusterKeys = getClusterKeys(table);
+
+    final PartitionsSpec partitionsSpec;
+    if (CollectionUtils.isNullOrEmpty(clusterKeys)) {
+      partitionsSpec = new DynamicPartitionsSpec(targetSegmentRows, null);
+    } else {
+      // Range partitioning is ascending only, DatasourceDefn.ClusterKeysDefn already rejects a descending cluster key,
+      // so a catalog table cannot declare one.
+      partitionsSpec = new DimensionRangePartitionsSpec(
+          null,
+          targetSegmentRows == null ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT : targetSegmentRows,
+          clusterKeys.stream().map(ClusterKeySpec::expr).collect(Collectors.toList()),
+          false
+      );
+    }
+    return UserCompactionTaskQueryTuningConfig.builder().partitionsSpec(partitionsSpec).build();
+  }
+
+  @Nullable
+  private List<ClusterKeySpec> getClusterKeys(@Nullable ResolvedTable table)
+  {
+    return table == null ? null : table.decodeProperty(DatasourceDefn.CLUSTER_KEYS_PROPERTY);
   }
 
   @JsonIgnore
@@ -170,9 +213,11 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     if (table == null) {
       return null;
     }
-    return CatalogUtils.asDruidGranularity(
-        table.decodeProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY)
-    );
+    final String segmentGranularity = table.decodeProperty(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY);
+    if (segmentGranularity == null) {
+      return null;
+    }
+    return CatalogUtils.asDruidGranularity(segmentGranularity);
   }
 
   @JsonIgnore
@@ -203,12 +248,42 @@ public class CatalogDataSourceCompactionConfig implements DataSourceCompactionCo
     return projections.stream().map(DatasourceProjectionMetadata::getSpec).collect(Collectors.toList());
   }
 
+  /**
+   * Derives the physical base table spec from the catalog table's {@link DatasourceDefn#BASE_TABLE_PROPERTY} layout,
+   * combined with its declared columns via {@link DatasourceBaseTableMetadata#createSpec}, the same way
+   * {@code MSQTaskQueryMaker} does for INSERT and REPLACE so that compaction lays segments out exactly as ingestion
+   * does. A table that declares no layout has no spec, and compaction falls back to the legacy schema fields.
+   */
   @JsonIgnore
   @Nullable
   @Override
   public BaseTableProjectionSpec getBaseTable()
   {
-    return null;
+    final ResolvedTable table = catalog.resolveTable(tableId);
+    if (table == null) {
+      return null;
+    }
+    final DatasourceBaseTableMetadata baseTable = table.decodeProperty(DatasourceDefn.BASE_TABLE_PROPERTY);
+    if (baseTable == null) {
+      return null;
+    }
+    return baseTable.createSpec(table.spec().columns());
+  }
+
+  /**
+   * A catalog table is sealed only when it says so: an absent property means the table accepts columns it does not
+   * declare, which ingestion appends to the base table spec, so compaction must analyze the existing segments to find
+   * and preserve them rather than treating the declaration as complete.
+   */
+  @JsonIgnore
+  @Override
+  public boolean isSealed()
+  {
+    final ResolvedTable table = catalog.resolveTable(tableId);
+    if (table == null) {
+      return true;
+    }
+    return Boolean.TRUE.equals(table.decodeProperty(DatasourceDefn.SEALED_PROPERTY));
   }
 
   @JsonIgnore
