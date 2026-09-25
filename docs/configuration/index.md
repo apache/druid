@@ -181,6 +181,8 @@ You can't use a port in `druid.host` for this purpose, because a port in `druid.
 
 Peons forked by a Middle Manager don't support `druid.advertisedPlaintextPort`. Each Peon listens on its own port from `druid.indexer.runner.startPort`, `druid.indexer.runner.endPort`, or `druid.indexer.runner.ports`, so a single advertised port can't identify an individual Peon. The Middle Manager always starts Peons with `druid.advertisedPlaintextPort` unset, so each Peon advertises its own port. This applies even if the property is inherited from the Middle Manager or set through `druid.indexer.fork.property.druid.advertisedPlaintextPort` or the task context. Setting `druid.advertisedPlaintextPort` on the Middle Manager itself only affects how other services reach the Middle Manager.
 
+Task pods launched by the [Kubernetes task runner](../development/extensions-core/k8s-jobs.md) aren't reached through service discovery. The Overlord reports each task's location from the pod IP and a fixed port, so `druid.advertisedPlaintextPort` has no effect on them. To reach task pods through a sidecar proxy, set [`druid.indexer.runner.advertisedPlaintextPort`](../development/extensions-core/k8s-jobs.md#properties) on the Overlord instead.
+
 #### Jetty server TLS configuration
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).

@@ -80,6 +80,18 @@ public class KubernetesTaskRunnerStaticConfigTest
     Assertions.assertEquals(ImmutableMap.of(), config.getLabels());
     Assertions.assertEquals(ImmutableMap.of(), config.getAnnotations());
     Assertions.assertEquals(Integer.valueOf(Integer.MAX_VALUE), config.getCapacity());
+    Assertions.assertNull(config.getAdvertisedPlaintextPort());
+  }
+
+  @Test
+  public void test_deserializable_withAdvertisedPlaintextPort() throws IOException
+  {
+    KubernetesTaskRunnerStaticConfig config = new DefaultObjectMapper().readValue(
+        "{\"namespace\": \"namespace\", \"advertisedPlaintextPort\": 9443}",
+        KubernetesTaskRunnerStaticConfig.class
+    );
+
+    Assertions.assertEquals(Integer.valueOf(9443), config.getAdvertisedPlaintextPort());
   }
 
   @Test
@@ -102,6 +114,7 @@ public class KubernetesTaskRunnerStaticConfigTest
         .withLabels(ImmutableMap.of("key", "value"))
         .withAnnotations(ImmutableMap.of("key", "value"))
         .withCapacity(1)
+        .withAdvertisedPlaintextPort(9443)
         .build();
 
     Assertions.assertEquals("namespace", config.getNamespace());
@@ -119,5 +132,6 @@ public class KubernetesTaskRunnerStaticConfigTest
     Assertions.assertEquals(ImmutableMap.of("key", "value"), config.getLabels());
     Assertions.assertEquals(ImmutableMap.of("key", "value"), config.getAnnotations());
     Assertions.assertEquals(Integer.valueOf(1), config.getCapacity());
+    Assertions.assertEquals(Integer.valueOf(9443), config.getAdvertisedPlaintextPort());
   }
 }

@@ -24,6 +24,7 @@ import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig
 import org.apache.druid.k8s.overlord.execution.PodTemplateSelectStrategy;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -193,6 +194,13 @@ public class KubernetesTaskRunnerEffectiveConfig implements KubernetesTaskRunner
   public boolean isAllowTaskPodTemplateSelection()
   {
     return staticConfig.isAllowTaskPodTemplateSelection();
+  }
+
+  @Override
+  @Nullable
+  public Integer getAdvertisedPlaintextPort()
+  {
+    return staticConfig.getAdvertisedPlaintextPort();
   }
 
   public PodTemplateSelectStrategy getPodTemplateSelectStrategy()
