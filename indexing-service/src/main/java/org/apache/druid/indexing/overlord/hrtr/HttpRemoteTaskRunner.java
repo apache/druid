@@ -47,7 +47,6 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.WorkerNodeService;
 import org.apache.druid.indexer.RunnerTaskState;
-import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -1438,17 +1437,26 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
       taskItem = tasks.get(taskId);
       if (taskItem == null) {
         // Try to find information about it in the TaskStorage
-        final TaskInfo taskInfo = taskStorage.getTaskInfo(taskId);
-        final TaskStatus knownStatusInStorage = taskInfo == null ? null : taskInfo.getStatus();
+        Optional<TaskStatus> knownStatusInStorage = taskStorage.getStatus(taskId);
 
-        if (knownStatusInStorage != null) {
-          switch (knownStatusInStorage.getStatusCode()) {
+        if (knownStatusInStorage.isPresent()) {
+          switch (knownStatusInStorage.get().getStatusCode()) {
             case RUNNING:
+              final Optional<Task> task = taskStorage.getTask(taskId);
+              if (!task.isPresent()) {
+                log.makeAlert(
+                    "Could not fetch payload of task[%s] with status[%s]."
+                    + " Ignoring notification[%s] from worker[%s].",
+                    taskId, knownStatusInStorage.get(), announcement, worker.getHost()
+                ).emit();
+                break;
+              }
+
               taskItem = new HttpRemoteTaskRunnerWorkItem(
                   taskId,
                   worker,
                   TaskLocation.unknown(),
-                  taskInfo.getTask(),
+                  task.get(),
                   announcement.getTaskType(),
                   HttpRemoteTaskRunnerWorkItem.State.RUNNING
               );
@@ -1470,7 +1478,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
             default:
               log.makeAlert(
                   "Found unrecognized state[%s] of task[%s] in taskStorage. Notification[%s] from worker[%s] is ignored.",
-                  knownStatusInStorage.getStatusCode(),
+                  knownStatusInStorage.get().getStatusCode(),
                   taskId,
                   announcement,
                   worker.getHost()

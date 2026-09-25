@@ -300,7 +300,7 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void locationChanged(String taskId, TaskLocation newLocation)
+          public void locationChanged(Task task, TaskLocation newLocation)
           {
             // do nothing
           }
