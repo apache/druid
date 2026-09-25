@@ -126,6 +126,7 @@ import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
+import org.apache.druid.segment.file.NoopSegmentFileMapper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
@@ -2345,7 +2346,7 @@ public class CompactionTaskTest
                 new ListIndexed<>(segment.getDimensions()),
                 null,
                 columnMap,
-                null
+                NoopSegmentFileMapper.INSTANCE
             )
             {
               @Override

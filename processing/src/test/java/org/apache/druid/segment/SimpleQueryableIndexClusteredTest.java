@@ -28,6 +28,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.file.NoopSegmentFileMapper;
 import org.apache.druid.segment.projections.ClusterGroupSchemaTestHelpers;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
@@ -93,7 +94,7 @@ class SimpleQueryableIndexClusteredTest
         new ListIndexed<>(List.of()),
         new RoaringBitmapFactory(),
         Map.of(),                       // clustered summary has no top-level columns
-        null,                           // no SegmentFileMapper for in-memory test
+        NoopSegmentFileMapper.INSTANCE, // no real SegmentFileMapper for in-memory test
         reconstructed,
         projectionColumns,
         summary,
@@ -152,7 +153,7 @@ class SimpleQueryableIndexClusteredTest
         new ListIndexed<>(List.of()),
         new RoaringBitmapFactory(),
         Map.of(),
-        null,
+        NoopSegmentFileMapper.INSTANCE,
         null,
         null
     )
