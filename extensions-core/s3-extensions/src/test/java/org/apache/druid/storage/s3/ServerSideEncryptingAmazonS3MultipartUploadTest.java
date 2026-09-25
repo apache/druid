@@ -27,10 +27,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
@@ -66,10 +64,7 @@ public class ServerSideEncryptingAmazonS3MultipartUploadTest
   private static final long CONFIGURED_PART_SIZE = 16 * MIB;
 
   @Container
-  private static final MinIOContainer MINIO =
-      new MinIOContainer(
-          DockerImageName.parse("quay.io/minio/minio:latest").asCompatibleSubstituteFor("minio/minio")
-      ).withEnv("MINIO_DOMAIN", "localhost");
+  private static final RustFSContainer S3 = new RustFSContainer();
 
   @TempDir
   public File temporaryFolder;
@@ -89,7 +84,7 @@ public class ServerSideEncryptingAmazonS3MultipartUploadTest
       @Override
       public String getUrl()
       {
-        return MINIO.getS3URL();
+        return S3.getS3URL();
       }
 
       @Override
@@ -99,7 +94,7 @@ public class ServerSideEncryptingAmazonS3MultipartUploadTest
       }
     };
 
-    // MinIO is reached by host:port, so bucket-as-subdomain addressing will not resolve.
+    // The container is reached by host:port, so bucket-as-subdomain addressing will not resolve.
     final AWSClientConfig clientConfig = new AWSClientConfig()
     {
       @Override
@@ -110,7 +105,7 @@ public class ServerSideEncryptingAmazonS3MultipartUploadTest
     };
 
     s3 = ServerSideEncryptingAmazonS3.builder(
-        StaticCredentialsProvider.create(AwsBasicCredentials.create(MINIO.getUserName(), MINIO.getPassword())),
+        StaticCredentialsProvider.create(AwsBasicCredentials.create(S3.getAccessKey(), S3.getSecretKey())),
         new S3StorageConfig(new NoopServerSideEncryption(), transferConfig),
         null,
         endpointConfig,

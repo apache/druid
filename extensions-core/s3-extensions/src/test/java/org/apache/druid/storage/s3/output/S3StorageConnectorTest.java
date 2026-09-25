@@ -27,18 +27,16 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.remote.ChunkingStorageConnectorParameters;
+import org.apache.druid.storage.s3.RustFSContainer;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.testcontainers.containers.MinIOContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -69,7 +67,7 @@ public class S3StorageConnectorTest
   private static final String PREFIX = "P/R/E/F/I/X";
   public static final String TEST_FILE = "test.csv";
   @Container
-  private static final MinIOContainer MINIO = MinioUtil.createContainer();
+  private static final RustFSContainer S3 = new RustFSContainer();
   @TempDir
   public static File temporaryFolder;
   private ServerSideEncryptingAmazonS3 s3Client;
@@ -79,7 +77,7 @@ public class S3StorageConnectorTest
   @BeforeEach
   public void setup() throws IOException
   {
-    s3Client = MinioUtil.createS3Client(MINIO);
+    s3Client = S3ClientUtil.createS3Client(S3);
     try {
       s3Client.getS3Client().headBucket(builder -> builder.bucket(BUCKET));
     }
@@ -141,7 +139,7 @@ public class S3StorageConnectorTest
     );
     StorageConnector unauthorizedStorageConnector = new S3StorageConnector(
         s3OutputConfig,
-        MinioUtil.createUnauthorizedS3Client(MINIO),
+        S3ClientUtil.createUnauthorizedS3Client(S3),
         new S3UploadManager(
             s3OutputConfig,
             new S3ExportConfig("tempDir", new HumanReadableBytes("5MiB"), 1, null),
@@ -339,58 +337,29 @@ public class S3StorageConnectorTest
     Assertions.assertEquals(ImmutableList.of("listFirst"), listDirResult);
   }
 
-  // adapted from apache iceberg tests
-  private static class MinioUtil
+  private static class S3ClientUtil
   {
-    private MinioUtil()
+    private S3ClientUtil()
     {
     }
 
-    public static MinIOContainer createContainer()
+    public static ServerSideEncryptingAmazonS3 createS3Client(RustFSContainer container)
     {
-      return createContainer(null);
+      return createS3Client(container, container.getSecretKey());
     }
 
-    public static MinIOContainer createContainer(AwsCredentials credentials)
+    public static ServerSideEncryptingAmazonS3 createUnauthorizedS3Client(RustFSContainer container)
     {
-      MinIOContainer container = new MinIOContainer(
-          DockerImageName.parse("quay.io/minio/minio:latest").asCompatibleSubstituteFor("minio/minio")
-      );
-
-      // this enables virtual-host-style requests. see
-      // https://github.com/minio/minio/tree/master/docs/config#domain
-      container.withEnv("MINIO_DOMAIN", "localhost");
-
-      if (credentials != null) {
-        container.withUserName(credentials.accessKeyId());
-        container.withPassword(credentials.secretAccessKey());
-      }
-
-      return container;
+      return createS3Client(container, "wrong");
     }
 
-    public static ServerSideEncryptingAmazonS3 createS3Client(MinIOContainer container)
+    private static ServerSideEncryptingAmazonS3 createS3Client(RustFSContainer container, String secretKey)
     {
       final S3Client s3Client = S3Client.builder()
           .endpointOverride(URI.create(container.getS3URL()))
           .region(Region.US_EAST_1)
           .credentialsProvider(StaticCredentialsProvider.create(
-              AwsBasicCredentials.create(container.getUserName(), container.getPassword())))
-          .forcePathStyle(true) // OSX won't resolve subdomains
-          .build();
-
-      return ServerSideEncryptingAmazonS3.builder()
-                                         .setS3ClientSupplier(() -> s3Client)
-                                         .build();
-    }
-
-    public static ServerSideEncryptingAmazonS3 createUnauthorizedS3Client(MinIOContainer container)
-    {
-      final S3Client s3Client = S3Client.builder()
-          .endpointOverride(URI.create(container.getS3URL()))
-          .region(Region.US_EAST_1)
-          .credentialsProvider(StaticCredentialsProvider.create(
-              AwsBasicCredentials.create(container.getUserName(), "wrong")))
+              AwsBasicCredentials.create(container.getAccessKey(), secretKey)))
           .forcePathStyle(true) // OSX won't resolve subdomains
           .build();
 
