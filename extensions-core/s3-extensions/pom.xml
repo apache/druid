@@ -102,10 +102,7 @@
       <artifactId>jakarta.validation-api</artifactId>
       <scope>provided</scope>
     </dependency>
-    <!--
-      Provided by druid-aws-common at runtime (see cloud/aws-common/pom.xml) so that this extension does not
-      bundle its own copy of the AWS SDK S3 client classes. See https://github.com/apache/druid/issues/19636.
-    -->
+    <!-- Keep S3 classes on the shared classpath to avoid loading separate copies in the different extensions. -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>

@@ -316,14 +316,8 @@
       <scope>provided</scope>
     </dependency>
 
-    <!--
-      software/amazon/awssdk/services/s3/model/ObjectCannedACL needed for GlueCatalog initialize.
-      Provided by druid-aws-common at runtime (see cloud/aws-common/pom.xml) rather than bundled by this
-      extension, so that druid-s3-extensions and druid-iceberg-extensions do not each load their own copy of
-      the AWS SDK S3 client classes into separate extension classloaders. Loading two copies causes
-      IllegalArgumentException: "No duplicate IdentityProperty names allowed" when both extensions are
-      loaded together. See https://github.com/apache/druid/issues/19636.
-    -->
+    <!-- software/amazon/awssdk/services/s3/model/ObjectCannedACL needed for GlueCatalog initialize -->
+    <!-- Keep S3 classes on the shared classpath to avoid loading separate copies in the different extensions. -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>s3</artifactId>
