@@ -51,9 +51,9 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.apache.druid.testing.embedded.psql.PostgreSQLMetadataResource;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
 import org.apache.druid.testing.embedded.server.EmbeddedEventCollector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -116,7 +116,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
             )
             .useDefaultTimeoutForLatchableEmitter(20)
             .addResource(new PostgreSQLMetadataResource())
-            .addResource(new MinIOStorageResource())
+            .addResource(new S3StorageResource())
             .addResource(kafkaServer)
             .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
             .addCommonProperty("druid.emitter", "http")
