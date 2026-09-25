@@ -587,6 +587,7 @@ public class LookupCoordinatorManager
                       return new AbstractMap.SimpleImmutableEntry<>(node.getHostAndPort(), doLookupManagementOnNode(node, tierLookups));
                     }
                     catch (InterruptedException ex) {
+                      Thread.currentThread().interrupt();
                       LOG.warn(ex, "lookup management on node [%s:%s:%s] interrupted.", node.getScheme(), node.getHostText(), node.getPort());
                       return null;
                     }

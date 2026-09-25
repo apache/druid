@@ -899,6 +899,9 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             }
           }
           catch (ExecutionException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+              Thread.currentThread().interrupt();
+            }
             log.error(e, "Error cancelling query[%s]", query);
           }
           catch (TimeoutException e) {
