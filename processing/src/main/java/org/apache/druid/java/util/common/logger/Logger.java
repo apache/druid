@@ -295,7 +295,7 @@ public class Logger
 
       fn.accept(message, t);
     } else {
-      if (message.isEmpty()) {
+      if (message == null || message.isEmpty()) {
         fn.accept(t.toString(), null);
       } else {
         fn.accept(StringUtils.nonStrictFormat("%s (%s)", message, t.toString()), null);
