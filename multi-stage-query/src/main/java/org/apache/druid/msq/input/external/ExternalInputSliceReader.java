@@ -200,8 +200,11 @@ public class ExternalInputSliceReader implements InputSliceReader
                         signature
                     );
 
+                    // The ExternalSegment itself owns no resources (the fetched files are owned by the collected
+                    // resources, whose close is folded into the delivered segment by AdaptedLoadableSegment), so it
+                    // is delivered unmanaged.
                     return new AcquireSegmentResult(
-                        ReferenceCountedSegmentProvider.of(segment),
+                        ReferenceCountedSegmentProvider.unmanaged(segment),
                         totalSize,
                         0L,
                         System.nanoTime() - startTime
@@ -217,8 +220,8 @@ public class ExternalInputSliceReader implements InputSliceReader
                     if (VirtualStorageManager.isInsufficientStorage(e)) {
                       log.noStackTrace()
                          .info(e, "Insufficient storage space to prefetch[%s]; streaming instead.", description);
-                      return AcquireSegmentResult.cached(
-                          ReferenceCountedSegmentProvider.of(
+                      return AcquireSegmentResult.of(
+                          ReferenceCountedSegmentProvider.unmanaged(
                               new ExternalSegment(
                                   inputSource,
                                   makeReader(schema, inputSource, inputFormat, channelCounters),
