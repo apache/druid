@@ -21,11 +21,13 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids.SearchQueryBuilder;
 import org.apache.druid.query.Druids.TimeBoundaryQueryBuilder;
 import org.apache.druid.query.Druids.TimeseriesQueryBuilder;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -105,6 +107,34 @@ public class DruidsTest
           .context(ImmutableMap.of("my", "context", BaseQuery.QUERY_ID, "realQueryId"))
           .build();
       Assertions.assertEquals(ImmutableMap.of(BaseQuery.QUERY_ID, "realQueryId", "my", "context"), query.getContext());
+    }
+
+    @Test
+    public void testTypedContextParameterMergesAndOverridesContext()
+    {
+      final TimeseriesQuery query = builder
+          .context(ImmutableMap.of("my", "context"))
+          .context(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
+          .context(QueryContextParameters.USE_RESULT_LEVEL_CACHE, true)
+          .build();
+
+      Assertions.assertEquals(ImmutableMap.of("my", "context", "useResultLevelCache", true), query.getContext());
+    }
+
+    @Test
+    public void testTypedContextParameterValidatesAndAcceptsNull()
+    {
+      Assertions.assertThrows(
+          IAE.class,
+          () -> builder.context(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
+      );
+
+      final TimeseriesQuery query = builder
+          .context(QueryContextParameters.USE_RESULT_LEVEL_CACHE, null)
+          .build();
+
+      Assertions.assertTrue(query.getContext().containsKey(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
+      Assertions.assertNull(query.getContext().get(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
     }
   }
 

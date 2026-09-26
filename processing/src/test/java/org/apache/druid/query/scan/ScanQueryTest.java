@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -35,6 +36,7 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -255,6 +257,25 @@ public class ScanQueryTest extends InitializedNullHandlingTest
             .intervals(intervalSpec)
             .build();
     }
+  }
+
+  @Test
+  public void testMaxRowsQueuedForOrderingMustBeGreaterThanZero()
+  {
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource("source")
+                                  .intervals(intervalSpec)
+                                  .build();
+
+    Assertions.assertThrows(
+        IAE.class,
+        () -> query.withOverriddenContext(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
+    );
+    Assertions.assertEquals(
+        1,
+        ((ScanQuery) query.withOverriddenContext(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 1))
+            .getMaxRowsQueuedForOrdering()
+    );
   }
 
   // Validates that getResultOrdering will work for the broker n-way merge

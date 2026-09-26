@@ -38,6 +38,7 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Queries;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -206,13 +207,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 
   private Integer validateAndGetMaxRowsQueuedForOrdering()
   {
-    final Integer maxRowsQueuedForOrdering =
-        context().getInt(ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING);
-    Preconditions.checkArgument(
-        maxRowsQueuedForOrdering == null || maxRowsQueuedForOrdering > 0,
-        "maxRowsQueuedForOrdering must be greater than 0"
-    );
-    return maxRowsQueuedForOrdering;
+    return context().get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING);
   }
 
   private Integer validateAndGetMaxSegmentPartitionsOrderedInMemory()
