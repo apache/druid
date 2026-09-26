@@ -25,6 +25,7 @@ import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.LeaderOverlordService;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -103,16 +104,16 @@ public class ScheduledBatchTaskManager implements LeaderOverlordService
       }
 
       @Override
-      public void locationChanged(String taskId, TaskLocation newLocation)
+      public void locationChanged(Task task, TaskLocation newLocation)
       {
         // Do nothing
       }
 
       @Override
-      public void statusChanged(final String taskId, final TaskStatus taskStatus)
+      public void statusChanged(final Task task, final TaskStatus taskStatus)
       {
         if (taskStatus.isComplete()) {
-          statusTracker.onTaskCompleted(taskId, taskStatus);
+          statusTracker.onTaskCompleted(task.getId(), taskStatus);
         }
       }
     };

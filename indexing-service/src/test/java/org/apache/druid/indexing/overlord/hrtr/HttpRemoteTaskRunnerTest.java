@@ -451,9 +451,15 @@ public class HttpRemoteTaskRunnerTest
     TaskStorage taskStorageMock = EasyMock.createStrictMock(TaskStorage.class);
     EasyMock.expect(taskStorageMock.getStatus(task1.getId())).andReturn(Optional.absent());
     EasyMock.expect(taskStorageMock.getStatus(task2.getId())).andReturn(Optional.absent()).times(2);
+
     EasyMock.expect(taskStorageMock.getStatus(task3.getId())).andReturn(Optional.of(TaskStatus.running(task3.getId())));
+    EasyMock.expect(taskStorageMock.getTask(task3.getId())).andReturn(Optional.of(task3));
+
     EasyMock.expect(taskStorageMock.getStatus(task4.getId())).andReturn(Optional.of(TaskStatus.running(task4.getId())));
+    EasyMock.expect(taskStorageMock.getTask(task4.getId())).andReturn(Optional.of(task4));
+
     EasyMock.expect(taskStorageMock.getStatus(task5.getId())).andReturn(Optional.of(TaskStatus.success(task5.getId())));
+
     EasyMock.replay(taskStorageMock);
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
@@ -1396,7 +1402,9 @@ public class HttpRemoteTaskRunnerTest
 
     TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
     EasyMock.expect(taskStorage.getStatus(task1.getId())).andReturn(Optional.of(TaskStatus.running(task1.getId())));
+    EasyMock.expect(taskStorage.getTask(task1.getId())).andReturn(Optional.of(task1));
     EasyMock.expect(taskStorage.getStatus(task2.getId())).andReturn(Optional.of(TaskStatus.running(task2.getId())));
+    EasyMock.expect(taskStorage.getTask(task2.getId())).andReturn(Optional.of(task2));
     EasyMock.expect(taskStorage.getStatus(task3.getId())).andReturn(Optional.of(TaskStatus.success(task3.getId())));
     EasyMock.expect(taskStorage.getStatus(task4.getId())).andReturn(Optional.of(TaskStatus.success(task4.getId())));
     EasyMock.expect(taskStorage.getStatus(task5.getId())).andReturn(Optional.absent());
@@ -1905,15 +1913,15 @@ public class HttpRemoteTaskRunnerTest
             }
 
             @Override
-            public void locationChanged(String taskId, TaskLocation newLocation)
+            public void locationChanged(Task task, TaskLocation newLocation)
             {
-              listenerNotificationsAccumulator.add(ImmutableList.of(taskId, newLocation));
+              listenerNotificationsAccumulator.add(ImmutableList.of(task.getId(), newLocation));
             }
 
             @Override
-            public void statusChanged(String taskId, TaskStatus status)
+            public void statusChanged(Task task, TaskStatus status)
             {
-              listenerNotificationsAccumulator.add(ImmutableList.of(taskId, status));
+              listenerNotificationsAccumulator.add(ImmutableList.of(task.getId(), status));
             }
           },
           Execs.directExecutor()

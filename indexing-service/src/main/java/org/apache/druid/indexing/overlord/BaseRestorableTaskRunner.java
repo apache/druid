@@ -152,8 +152,8 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
 
     synchronized (tasks) {
-      for (TaskRunnerWorkItem item : tasks.values()) {
-        TaskRunnerUtils.notifyLocationChanged(ImmutableList.of(listenerPair), item.getTaskId(), item.getLocation());
+      for (WorkItemType item : tasks.values()) {
+        notifyLocationChanged(item, listener, executor);
       }
 
       listeners.add(listenerPair);
@@ -182,6 +182,12 @@ public abstract class BaseRestorableTaskRunner<WorkItemType extends TaskRunnerWo
   @Nullable
   @Override
   public abstract RunnerTaskState getRunnerTaskState(String taskId);
+
+  protected abstract void notifyLocationChanged(
+      WorkItemType item,
+      TaskRunnerListener listener,
+      Executor executor
+  );
 
   @Override
   public Collection<TaskRunnerWorkItem> getKnownTasks()
