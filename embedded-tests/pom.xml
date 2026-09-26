@@ -38,6 +38,17 @@
   </parent>
 
   <dependencies>
+    <!-- Declared first so its classes win on the test classpath over older
+         kafka classes shaded into druid-protobuf-extensions (Confluent
+         transitive). Required for share-group APIs (KIP-932) such as
+         ConfigResource.Type.GROUP. -->
+    <dependency>
+      <groupId>org.apache.kafka</groupId>
+      <artifactId>kafka-clients</artifactId>
+      <version>${apache.kafka.version}</version>
+      <scope>test</scope>
+    </dependency>
+
     <!-- Test dependencies -->
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -540,12 +551,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka-clients</artifactId>
-      <version>${apache.kafka.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>
       <version>${testcontainers.version}</version>
@@ -926,6 +931,23 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>share-group-tests</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>**/*ShareGroup*Test.java</include>
+                <include>**/ShareGroup*IT.java</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>docker-tests</id>
       <build>

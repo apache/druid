@@ -43,8 +43,10 @@ public class KafkaIndexTaskModule implements DruidModule
         new SimpleModule(getClass().getSimpleName())
             .registerSubtypes(
                 new NamedType(KafkaIndexTask.class, "index_kafka"),
+                new NamedType(ShareGroupIndexTask.class, "index_kafka_share_group"),
                 new NamedType(KafkaDataSourceMetadata.class, SCHEME),
                 new NamedType(KafkaIndexTaskIOConfig.class, SCHEME),
+                new NamedType(ShareGroupIndexTaskIOConfig.class, "kafka_share_group"),
                 // "KafkaTuningConfig" is not the ideal name, but is needed for backwards compatibility.
                 // (Older versions of Druid didn't specify a type name and got this one by default.)
                 new NamedType(KafkaIndexTaskTuningConfig.class, "KafkaTuningConfig"),

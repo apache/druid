@@ -26,7 +26,6 @@ import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorIOConfig;
 import org.apache.druid.indexing.kinesis.supervisor.KinesisSupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
@@ -56,9 +55,18 @@ public class KinesisDataFormatsTest extends StreamIndexDataFormatsTestBase
   }
 
   @Override
-  protected SupervisorSpec createSupervisor(String dataSource, String topic, InputFormat inputFormat)
+  protected void runIngestionAndVerify(
+      String dataSource,
+      String topic,
+      InputFormat inputFormat,
+      int expectedCount
+  )
   {
-    return createKinesisSupervisorSpec(dataSource, topic, inputFormat);
+    runSupervisorIngestionAndVerify(
+        createKinesisSupervisorSpec(dataSource, topic, inputFormat),
+        dataSource,
+        expectedCount
+    );
   }
 
   private KinesisSupervisorSpec createKinesisSupervisorSpec(String dataSource, String topic, InputFormat inputFormat)
