@@ -262,12 +262,7 @@ public abstract class BaseDynamicConfigSyncer<DynamicConfig>
       return null;
     }
 
-    return new ServiceLocation(
-        druidNode.getHost(),
-        druidNode.getPlaintextPort(),
-        druidNode.getTlsPort(),
-        ""
-    );
+    return ServiceLocation.fromDruidNode(druidNode);
   }
 
   private void emitStat(CoordinatorStat stat, RowKey rowKey, long value)

@@ -353,6 +353,8 @@ public class ForkingTaskRunner
 
                         command.addSystemProperty("druid.host", childHost);
                         command.addSystemProperty("druid.plaintextPort", childPort);
+                        // Forked peons listen on their own port; never let them advertise an inherited one.
+                        command.addSystemProperty("druid.advertisedPlaintextPort", -1);
                         command.addSystemProperty("druid.tlsPort", tlsChildPort);
 
                         // Let tasks know where they are running on.

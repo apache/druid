@@ -159,6 +159,19 @@ public class SingleTaskBackgroundRunnerTest
   }
 
   @Test
+  public void testTaskLocationUsesAdvertisedPlaintextPort()
+  {
+    final SingleTaskBackgroundRunner advertisedRunner = new SingleTaskBackgroundRunner(
+        EasyMock.createMock(TaskToolboxFactory.class),
+        new TaskConfigBuilder().build(),
+        new NoopServiceEmitter(),
+        new DruidNode("testServer", "testHost", false, 1000, null, null, true, false, null, 2000),
+        new ServerConfig()
+    );
+    Assertions.assertEquals(TaskLocation.create("testHost", 2000, -1), advertisedRunner.getTaskLocation("any"));
+  }
+
+  @Test
   public void testRun() throws ExecutionException, InterruptedException
   {
     NoopTask task = new NoopTask(null, null, null, 500L, 0, null);

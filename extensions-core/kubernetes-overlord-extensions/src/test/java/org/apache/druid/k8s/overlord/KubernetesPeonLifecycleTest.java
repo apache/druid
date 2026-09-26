@@ -31,6 +31,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.JobResponse;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
@@ -952,6 +953,79 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Assertions.assertEquals(8100, location.getPort());
     Assertions.assertEquals(-1, location.getTlsPort());
     Assertions.assertEquals(ID, location.getK8sPodName());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_getTaskLocation_withAdvertisedPlaintextPort_returnsAdvertisedPort()
+      throws NoSuchFieldException, IllegalAccessException
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        k8sTaskId,
+        kubernetesClient,
+        taskLogs,
+        mapper,
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis(),
+        9443
+    );
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
+
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .withNewStatus()
+        .withPodIP("ip")
+        .endStatus()
+        .build();
+
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod));
+
+    replayAll();
+
+    TaskLocation location = peonLifecycle.getTaskLocation();
+
+    Assertions.assertEquals("ip", location.getHost());
+    Assertions.assertEquals(9443, location.getPort());
+    Assertions.assertEquals(-1, location.getTlsPort());
+    Assertions.assertEquals(ID, location.getK8sPodName());
+
+    verifyAll();
+  }
+
+  @Test
+  public void test_getTaskLocation_withNonPositiveAdvertisedPlaintextPort_returnsDefaultPort()
+      throws NoSuchFieldException, IllegalAccessException
+  {
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
+        task,
+        k8sTaskId,
+        kubernetesClient,
+        taskLogs,
+        mapper,
+        stateListener,
+        LOG_SAVE_TIMEOUT.toStandardDuration().getMillis(),
+        -1
+    );
+    setPeonLifecycleState(peonLifecycle, KubernetesPeonLifecycle.State.RUNNING);
+
+    Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .withNewStatus()
+        .withPodIP("ip")
+        .endStatus()
+        .build();
+
+    EasyMock.expect(kubernetesClient.getPeonPod(k8sTaskId.getK8sJobName())).andReturn(Optional.of(pod));
+
+    replayAll();
+
+    Assertions.assertEquals(DruidK8sConstants.PORT, peonLifecycle.getTaskLocation().getPort());
 
     verifyAll();
   }
