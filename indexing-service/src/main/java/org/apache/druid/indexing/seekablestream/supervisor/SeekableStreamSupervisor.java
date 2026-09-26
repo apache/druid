@@ -4465,9 +4465,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     // If any partitions need a reset, issue a single batch reset.
     if (!partitionsToReset.isEmpty()) {
-      log.makeAlert(
-          "Previous sequenceNumbers are no longer available - automatically resetting sequences"
-      ).addData("partitions", partitionsToReset).emit();
       resetInternal(createDataSourceMetaDataForReset(ioConfig.getStream(), partitionsToReset));
 
       // Remove affected groups from newTaskGroups — they were built before the reset
@@ -4476,6 +4473,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       for (PartitionIdType partition : partitionsToReset.keySet()) {
         newTaskGroups.remove(getTaskGroupIdForPartition(partition));
       }
+
+      throw new StreamException(
+          new ISE(
+              "Previous sequenceNumbers %s are no longer available - automatically resetting sequences",
+              partitionsToReset
+          )
+      );
     }
 
     for (Entry<Integer, TaskGroup> entry : newTaskGroups.entrySet()) {
