@@ -220,6 +220,45 @@ public class TaskRealtimeMetricsMonitorTest
     Assertions.assertEquals(Long.valueOf(2), secondCallCounts.get("filtered"));
   }
 
+  @Test
+  public void testNonReasonMetricsDoNotInheritReasonDimension()
+  {
+    // Drive both counters in one monitor tick: a thrown-away-by-reason event (which sets the reason
+    // dimension on the shared builder) and a filtered event (whose ingest/events/filtered metric is
+    // emitted with that same builder). The reason dimension must not leak onto the non-reason metrics.
+    SimpleRowIngestionMeters realMeters = new SimpleRowIngestionMeters();
+    realMeters.incrementThrownAway(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME);
+    realMeters.incrementFiltered();
+
+    TaskRealtimeMetricsMonitor monitor = new TaskRealtimeMetricsMonitor(
+        segmentGenerationMetrics,
+        realMeters,
+        createMetricEventBuilder()
+    );
+
+    monitor.doMonitor(emitter);
+
+    // Regression guard: the per-reason thrownAway event still carries its reason dimension.
+    List<ServiceMetricEvent> thrownAway = emitter.getMetricEvents("ingest/events/thrownAway");
+    Assertions.assertFalse(thrownAway.isEmpty());
+    Assertions.assertEquals(
+        "beforeMinimumMessageTime",
+        thrownAway.get(0).getUserDims().get(DruidMetrics.REASON)
+    );
+
+    // The reason dimension must NOT leak into ingest/events/filtered or the other non-reason metrics.
+    for (String metric : List.of("ingest/events/filtered", "ingest/events/processed", "ingest/events/unparseable")) {
+      List<ServiceMetricEvent> events = emitter.getMetricEvents(metric);
+      Assertions.assertFalse(events.isEmpty(), metric + " should be emitted");
+      for (ServiceMetricEvent event : events) {
+        Assertions.assertFalse(
+            event.getUserDims().containsKey(DruidMetrics.REASON),
+            metric + " must not carry the reason dimension"
+        );
+      }
+    }
+  }
+
   private ServiceMetricEvent.Builder createMetricEventBuilder()
   {
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
