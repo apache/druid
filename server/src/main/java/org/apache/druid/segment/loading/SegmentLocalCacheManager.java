@@ -44,6 +44,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
@@ -86,6 +87,11 @@ import java.util.function.Supplier;
 public class SegmentLocalCacheManager implements SegmentCacheManager
 {
   private static final String DROP_PATH = "__drop";
+  /**
+   * Staging area for {@link #convertCompleteLayoutToPartial}. Swept at startup, so a crash mid-conversion leaves
+   * garbage here rather than a half-converted segment directory.
+   */
+  private static final String CONVERT_PATH = "__convert";
 
   @VisibleForTesting
   static final String DOWNLOAD_START_MARKER_FILE_NAME = "downloadStartMarker";
@@ -211,19 +217,21 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       );
     }
 
-    // clean up any dropping files
+    // clean up any dropping files, and any layout conversion a previous run did not finish
     for (StorageLocation location : locations) {
-      File dropFiles = new File(location.getPath(), DROP_PATH);
-      if (dropFiles.exists()) {
-        final File[] dropping = dropFiles.listFiles();
-        if (dropping != null) {
-          log.debug("cleaning up[%s] segments in[%s]", dropping.length, dropFiles);
-          for (File droppedFile : dropping) {
-            try {
-              FileUtils.deleteDirectory(droppedFile);
-            }
-            catch (Exception e) {
-              log.warn(e, "Unable to remove dropped segment directory[%s]", droppedFile);
+      for (String scratchPath : new String[]{DROP_PATH, CONVERT_PATH}) {
+        File scratchFiles = new File(location.getPath(), scratchPath);
+        if (scratchFiles.exists()) {
+          final File[] leftovers = scratchFiles.listFiles();
+          if (leftovers != null) {
+            log.debug("cleaning up[%s] segments in[%s]", leftovers.length, scratchFiles);
+            for (File leftover : leftovers) {
+              try {
+                FileUtils.deleteDirectory(leftover);
+              }
+              catch (Exception e) {
+                log.warn(e, "Unable to remove leftover segment directory[%s]", leftover);
+              }
             }
           }
         }
@@ -347,6 +355,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       }
 
       if (cacheEntry.checkExists(location.getPath())) {
+        // A complete layout on disk while partial downloads are enabled is a leftover from before they were turned
+        // on. Convert it to a partial layout now rather than leaving it to be evicted the first time a partial-load
+        // rule targets the segment: that eviction discards a warm cache and cannot be undone if the rule's load then
+        // fails. Converting keeps the bytes, and it means a complete entry can no longer exist for a range-readable
+        // segment by the time anything applies a rule.
+        if (convertCompleteLayoutToPartial(segment, location)) {
+          removeInfo = false;
+          cachedSegments.add(segment);
+          // do not fall through to the 'complete' path, this is a partial layout now
+          continue;
+        }
         removeInfo = false;
         // Under virtual storage nothing is reserved here: as with the partial layout above, bootstrap() reserves this
         // segment and mounts it under the resulting hold. The legacy path reserves it statically, up front.
@@ -367,6 +386,101 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       final SegmentId segmentId = segment.getId();
       log.warn("Unable to find cache file for segment[%s]. Deleting lookup entry.", segmentId);
       removeInfoFile(segment);
+    }
+  }
+
+  /**
+   * Rewrite a complete on-disk cache layout for {@code segment} as a partial (bundle) layout, returning whether it
+   * did. Called from {@link #getCachedSegments}, which runs before anything is reserved, mounted, or serving, so
+   * there is no live entry to unmap and no cache key to swap. This method should never be called on a 'live' entry.
+   * <p>
+   * The conversion reads the local complete file as if it were deep storage, via a
+   * {@link DirectoryBackedRangeReader}, and materializes the bundle layout from it. Nothing is fetched remotely.
+   * Deep storage is still probed for range-readability, because a partial entry that cannot range-read deep storage
+   * could never fetch a bundle it is missing later, and {@link #reservePartialForBootstrap} reclaims such a layout
+   * on the next boot anyway.
+   * <p>
+   * Transient disk cost is one segment: the complete file has to stay readable until the bundles are written. If
+   * anything fails, the complete layout is left exactly as it was and the segment loads the old way, so a location
+   * without the headroom degrades instead of breaking. Staging happens under {@link #CONVERT_PATH}, swept at
+   * startup, so a crash leaves garbage rather than a half-converted segment directory. The one lossy window is a
+   * crash between removing the complete layout and moving the converted one into place, which costs a re-download
+   * of that segment.
+   */
+  private boolean convertCompleteLayoutToPartial(final DataSegment segment, final StorageLocation location)
+  {
+    if (!config.isVirtualStorage() || !config.isVirtualStoragePartialDownloadsEnabled()) {
+      return false;
+    }
+    final File completeDir = new File(location.getPath(), segment.getId().toString());
+    if (!new File(completeDir, IndexIO.V10_FILE_NAME).exists()) {
+      // Only a V10 segment file can be re-sliced into bundles.
+      return false;
+    }
+    try {
+      if (tryOpenRangeReader(segment) == null) {
+        return false;
+      }
+    }
+    catch (Exception e) {
+      log.warn(
+          e,
+          "Failed to open a range reader for segment[%s]; leaving its complete cache layout alone",
+          segment.getId()
+      );
+      return false;
+    }
+
+    final File stagingDir = new File(new File(location.getPath(), CONVERT_PATH), segment.getId().toString());
+    boolean completeLayoutRemoved = false;
+    try {
+      if (stagingDir.exists()) {
+        FileUtils.deleteDirectory(stagingDir);
+      }
+      try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
+          new DirectoryBackedRangeReader(completeDir),
+          jsonMapper,
+          stagingDir,
+          IndexIO.V10_FILE_NAME,
+          List.of(),
+          PartialSegmentDownloadListener.NOOP,
+          config.getVirtualStorageCoalesceGapBytes(),
+          config.getVirtualStorageMaxFetchRunBytes()
+      )) {
+        mapper.ensureAllDownloaded();
+      }
+      atomicMoveAndDeleteCacheEntryDirectory(completeDir);
+      completeLayoutRemoved = true;
+      Files.move(stagingDir.toPath(), completeDir.toPath(), StandardCopyOption.ATOMIC_MOVE);
+      log.info(
+          "Converted the complete cache layout of segment[%s] in [%s] to a partial-load layout.",
+          segment.getId(),
+          location.getPath()
+      );
+      return true;
+    }
+    catch (Throwable t) {
+      if (completeLayoutRemoved) {
+        // Past the point of no return: the complete layout is gone and the converted one did not land. Leave the
+        // staging directory for the startup sweep and let the segment be downloaded again.
+        log.makeAlert(t, "Failed to install a converted partial-load layout; segment will be re-downloaded")
+           .addData("segment", segment.getId())
+           .addData("location", location.getPath())
+           .emit();
+        return false;
+      }
+      log.warn(
+          t,
+          "Failed to convert the complete cache layout of segment[%s] to a partial-load layout; leaving it alone",
+          segment.getId()
+      );
+      try {
+        FileUtils.deleteDirectory(stagingDir);
+      }
+      catch (Exception cleanupFailure) {
+        log.warn(cleanupFailure, "Failed to clean up conversion staging directory[%s]", stagingDir);
+      }
+      return false;
     }
   }
 
