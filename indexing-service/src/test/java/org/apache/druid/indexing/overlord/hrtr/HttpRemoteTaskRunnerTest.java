@@ -459,7 +459,6 @@ public class HttpRemoteTaskRunnerTest
     EasyMock.expect(taskStorageMock.getTask(task4.getId())).andReturn(Optional.of(task4));
 
     EasyMock.expect(taskStorageMock.getStatus(task5.getId())).andReturn(Optional.of(TaskStatus.success(task5.getId())));
-    EasyMock.expect(taskStorageMock.getTask(task5.getId())).andReturn(Optional.of(task5));
 
     EasyMock.replay(taskStorageMock);
 
@@ -1403,7 +1402,9 @@ public class HttpRemoteTaskRunnerTest
 
     TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
     EasyMock.expect(taskStorage.getStatus(task1.getId())).andReturn(Optional.of(TaskStatus.running(task1.getId())));
+    EasyMock.expect(taskStorage.getTask(task1.getId())).andReturn(Optional.of(task1));
     EasyMock.expect(taskStorage.getStatus(task2.getId())).andReturn(Optional.of(TaskStatus.running(task2.getId())));
+    EasyMock.expect(taskStorage.getTask(task2.getId())).andReturn(Optional.of(task2));
     EasyMock.expect(taskStorage.getStatus(task3.getId())).andReturn(Optional.of(TaskStatus.success(task3.getId())));
     EasyMock.expect(taskStorage.getStatus(task4.getId())).andReturn(Optional.of(TaskStatus.success(task4.getId())));
     EasyMock.expect(taskStorage.getStatus(task5.getId())).andReturn(Optional.absent());
