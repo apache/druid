@@ -36,12 +36,30 @@ import java.util.Map;
  */
 public class ShareGroupKafkaResource extends KafkaResource
 {
+  private static final long DEFAULT_RECORD_LOCK_DURATION_MS = 30_000L;
+
+  private final long recordLockDurationMs;
+
+  public ShareGroupKafkaResource()
+  {
+    this(DEFAULT_RECORD_LOCK_DURATION_MS);
+  }
+
+  public ShareGroupKafkaResource(long recordLockDurationMs)
+  {
+    if (recordLockDurationMs < 1_000L) {
+      throw new IllegalArgumentException("recordLockDurationMs must be at least 1000");
+    }
+    this.recordLockDurationMs = recordLockDurationMs;
+  }
+
   @Override
   protected KafkaContainer createContainer()
   {
     final KafkaContainer container = super.createContainer();
     container.withEnv("KAFKA_GROUP_SHARE_ENABLE", "true");
-    container.withEnv("KAFKA_GROUP_SHARE_RECORD_LOCK_DURATION_MS", "30000");
+    container.withEnv("KAFKA_GROUP_SHARE_MIN_RECORD_LOCK_DURATION_MS", String.valueOf(recordLockDurationMs));
+    container.withEnv("KAFKA_GROUP_SHARE_RECORD_LOCK_DURATION_MS", String.valueOf(recordLockDurationMs));
     // Single-broker test cluster: override replication for the internal
     // __share_group_state topic so the share coordinator can initialize.
     container.withEnv("KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR", "1");

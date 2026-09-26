@@ -342,6 +342,152 @@ public class ShareGroupIndexTaskRunnerTest
   }
 
   @Test
+  public void testRunLoop_zeroRowsStillAcknowledgesRecord() throws Exception
+  {
+    final StreamAppenderatorDriver driver = mockDriver();
+    final Appenderator appenderator = Mockito.mock(Appenderator.class);
+    final RecordBearingFakeSupplier supplier = new RecordBearingFakeSupplier(task);
+    final StreamChunkReader chunkReader = Mockito.mock(StreamChunkReader.class);
+    Mockito.when(chunkReader.parse(Mockito.any(), Mockito.anyBoolean())).thenReturn(Collections.emptyList());
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
+
+    final TaskStatus status = runner.runLoop(
+        driver,
+        appenderator,
+        supplier,
+        chunkReader,
+        task.getIOConfig(),
+        task.getTuningConfig(),
+        toolbox
+    );
+
+    Assertions.assertTrue(status.isSuccess());
+    Assertions.assertTrue(supplier.acknowledgedAtLeastOnce());
+    Mockito.verify(driver, Mockito.never()).add(
+        Mockito.any(),
+        Mockito.anyString(),
+        Mockito.any(),
+        Mockito.anyBoolean(),
+        Mockito.anyBoolean()
+    );
+  }
+
+  @Test
+  public void testRunLoop_parseFailureDoesNotAcknowledge() throws Exception
+  {
+    final StreamAppenderatorDriver driver = mockDriver();
+    final Appenderator appenderator = Mockito.mock(Appenderator.class);
+    final RecordBearingFakeSupplier supplier = new RecordBearingFakeSupplier(task);
+    final StreamChunkReader chunkReader = Mockito.mock(StreamChunkReader.class);
+    Mockito.when(chunkReader.parse(Mockito.any(), Mockito.anyBoolean()))
+           .thenThrow(new java.io.IOException("parse failure"));
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
+
+    Assertions.assertThrows(
+        java.io.IOException.class,
+        () -> runner.runLoop(
+            driver,
+            appenderator,
+            supplier,
+            chunkReader,
+            task.getIOConfig(),
+            task.getTuningConfig(),
+            toolbox
+        )
+    );
+    Assertions.assertFalse(supplier.acknowledgedAtLeastOnce());
+  }
+
+  @Test
+  public void testRunLoop_publishFailureDoesNotAcknowledge() throws Exception
+  {
+    final StreamAppenderatorDriver driver = mockDriver();
+    Mockito.when(driver.publish(
+        Mockito.any(TransactionalSegmentPublisher.class),
+        Mockito.any(),
+        Mockito.anyList()
+    )).thenReturn(com.google.common.util.concurrent.Futures.immediateFailedFuture(
+        new java.io.IOException("publish failure")
+    ));
+    final Appenderator appenderator = Mockito.mock(Appenderator.class);
+    final RecordBearingFakeSupplier supplier = new RecordBearingFakeSupplier(task);
+    final StreamChunkReader chunkReader = Mockito.mock(StreamChunkReader.class);
+    final InputRow row = Mockito.mock(InputRow.class);
+    Mockito.when(row.getTimestamp()).thenReturn(org.apache.druid.java.util.common.DateTimes.nowUtc());
+    Mockito.when(chunkReader.parse(Mockito.any(), Mockito.anyBoolean()))
+           .thenReturn(Collections.singletonList(row));
+    Mockito.when(driver.add(
+        Mockito.any(),
+        Mockito.anyString(),
+        Mockito.any(),
+        Mockito.anyBoolean(),
+        Mockito.anyBoolean()
+    ))
+           .thenReturn(AppenderatorDriverAddResult.ok(
+               Mockito.mock(SegmentIdWithShardSpec.class),
+               1,
+               1L,
+               false
+           ));
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
+
+    Assertions.assertThrows(
+        java.util.concurrent.ExecutionException.class,
+        () -> runner.runLoop(
+            driver,
+            appenderator,
+            supplier,
+            chunkReader,
+            task.getIOConfig(),
+            task.getTuningConfig(),
+            toolbox
+        )
+    );
+    Assertions.assertFalse(supplier.acknowledgedAtLeastOnce());
+  }
+
+  @Test
+  public void testRunLoop_acknowledgementFlushFailureDoesNotFailPublishedBatch() throws Exception
+  {
+    final StreamAppenderatorDriver driver = mockDriver();
+    final Appenderator appenderator = Mockito.mock(Appenderator.class);
+    final CommitFailingRecordSupplier supplier = new CommitFailingRecordSupplier(task);
+    final StreamChunkReader chunkReader = Mockito.mock(StreamChunkReader.class);
+    final InputRow row = Mockito.mock(InputRow.class);
+    Mockito.when(row.getTimestamp()).thenReturn(org.apache.druid.java.util.common.DateTimes.nowUtc());
+    Mockito.when(chunkReader.parse(Mockito.any(), Mockito.anyBoolean()))
+           .thenReturn(Collections.singletonList(row));
+    Mockito.when(driver.add(
+        Mockito.any(),
+        Mockito.anyString(),
+        Mockito.any(),
+        Mockito.anyBoolean(),
+        Mockito.anyBoolean()
+    ))
+           .thenReturn(AppenderatorDriverAddResult.ok(
+               Mockito.mock(SegmentIdWithShardSpec.class),
+               1,
+               1L,
+               false
+           ));
+    final ShareGroupIndexTaskRunner runner = new ShareGroupIndexTaskRunner(task, toolbox, mapper);
+
+    final TaskStatus status = runner.runLoop(
+        driver,
+        appenderator,
+        supplier,
+        chunkReader,
+        task.getIOConfig(),
+        task.getTuningConfig(),
+        toolbox
+    );
+
+    Assertions.assertTrue(status.isSuccess());
+    Assertions.assertTrue(supplier.acknowledgedAtLeastOnce());
+    Assertions.assertEquals(1, supplier.commitCallCount());
+  }
+
+  @Test
   public void testRunLoop_segmentAllocationFails_throwsAndExits() throws Exception
   {
     final StreamAppenderatorDriver driver = mockDriver();
@@ -372,6 +518,7 @@ public class ShareGroupIndexTaskRunnerTest
     catch (org.apache.druid.java.util.common.ISE expected) {
       Assertions.assertTrue(expected.getMessage().contains("Could not allocate segment"));
     }
+    Assertions.assertFalse(supplier.acknowledgedAtLeastOnce());
   }
 
   @Test
@@ -620,6 +767,31 @@ public class ShareGroupIndexTaskRunnerTest
     )
     {
       acked.set(true);
+    }
+  }
+
+  private static class CommitFailingRecordSupplier extends RecordBearingFakeSupplier
+  {
+    private final AtomicInteger commitCallCount = new AtomicInteger();
+
+    CommitFailingRecordSupplier(ShareGroupIndexTask task)
+    {
+      super(task);
+    }
+
+    int commitCallCount()
+    {
+      return commitCallCount.get();
+    }
+
+    @Override
+    public Map<KafkaTopicPartition, Optional<Exception>> commitSync()
+    {
+      commitCallCount.incrementAndGet();
+      return Map.of(
+          new KafkaTopicPartition(true, "topic", 0),
+          Optional.of(new java.io.IOException("acknowledgement flush failure"))
+      );
     }
   }
 

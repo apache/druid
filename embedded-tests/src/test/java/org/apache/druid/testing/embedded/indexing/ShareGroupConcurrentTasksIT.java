@@ -70,6 +70,7 @@ public class ShareGroupConcurrentTasksIT extends EmbeddedClusterTestBase
     kafkaServer = new ShareGroupKafkaResource();
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.indexer.task.gracefulShutdownTimeout", "PT5S");
     indexer.addProperty("druid.worker.capacity", "4");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
@@ -85,7 +86,7 @@ public class ShareGroupConcurrentTasksIT extends EmbeddedClusterTestBase
   }
 
   @Test
-  public void test_twoConcurrentTasks_sameGroupId_noRowLoss() throws Exception
+  public void test_twoConcurrentTasks_sameGroupId_noDuplicatesNoLoss() throws Exception
   {
     final String topic = dataSource + "_concurrent_topic";
     kafkaServer.createTopicWithPartitions(topic, 4);
@@ -97,13 +98,13 @@ public class ShareGroupConcurrentTasksIT extends EmbeddedClusterTestBase
     final String taskB = submitTaskWithGroup(topic, GROUP_ID);
 
     Thread.sleep(15_000L);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    assertExactRowCounts(TOTAL_RECORDS);
+
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskA));
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskB));
     cluster.callApi().waitForTaskToFinish(taskA, overlord.latchableEmitter());
     cluster.callApi().waitForTaskToFinish(taskB, overlord.latchableEmitter());
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-
-    assertDistinctRowCountAtLeast(TOTAL_RECORDS);
   }
 
   private String submitTaskWithGroup(String topic, String groupId)
@@ -139,6 +140,7 @@ public class ShareGroupConcurrentTasksIT extends EmbeddedClusterTestBase
                                                 new UniformGranularitySpec(
                                                     Granularities.DAY,
                                                     Granularities.NONE,
+                                                    false,
                                                     null
                                                 )
                                             )
@@ -148,6 +150,7 @@ public class ShareGroupConcurrentTasksIT extends EmbeddedClusterTestBase
         null,
         dataSchema,
         new KafkaIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -179,14 +182,23 @@ public class ShareGroupConcurrentTasksIT extends EmbeddedClusterTestBase
     return task.getId();
   }
 
-  private void assertDistinctRowCountAtLeast(long expected)
+  private void assertExactRowCounts(long expected)
   {
     final long deadlineMillis = System.currentTimeMillis() + 30_000L;
-    String last = null;
+    long lastTotal = -1L;
+    long lastDistinct = -1L;
     while (System.currentTimeMillis() < deadlineMillis) {
       try {
-        last = cluster.runSql("SELECT COUNT(DISTINCT %s) FROM %s", COL_ITEM, dataSource);
-        if (last != null && !last.isEmpty() && Long.parseLong(last.trim()) >= expected) {
+        final String[] counts = cluster.runSql(
+            "SELECT SUM(row_count), COUNT(*) FROM ("
+            + "SELECT %s, COUNT(*) AS row_count FROM %s GROUP BY %s)",
+            COL_ITEM,
+            dataSource,
+            COL_ITEM
+        ).split(",");
+        lastTotal = Long.parseLong(counts[0]);
+        lastDistinct = Long.parseLong(counts[1]);
+        if (lastTotal == expected && lastDistinct == expected) {
           return;
         }
       }
@@ -201,7 +213,9 @@ public class ShareGroupConcurrentTasksIT extends EmbeddedClusterTestBase
       }
     }
     Assertions.fail(
-        "Expected at least [" + expected + "] distinct rows after concurrent share-group ingestion, but last result was [" + last + "]"
+        "Expected exactly [" + expected
+        + "] total and distinct rows after concurrent share-group ingestion, but got total["
+        + lastTotal + "] and distinct[" + lastDistinct + "]"
     );
   }
 

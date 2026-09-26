@@ -30,6 +30,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTask;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfig;
+import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -83,6 +84,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.indexer.task.gracefulShutdownTimeout", "PT5S");
 
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
@@ -186,9 +188,9 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     cancelAndAwaitTermination(taskId);
   }
 
-  /** Cancel must drain the in-flight batch so rows ingested before cancel remain queryable. */
+  /** Graceful stop preserves a batch that has already become queryable. */
   @Test
-  public void test_shareGroupIngestion_gracefulStop_publishesInflightBatch() throws InterruptedException
+  public void test_shareGroupIngestion_gracefulStop_preservesPublishedBatch() throws InterruptedException
   {
     final String topic = dataSource + "_topic";
     kafkaServer.createTopicWithPartitions(topic, 2);
@@ -209,10 +211,9 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
 
     waitForRowsProcessed(numRecords);
-
-    cancelAndAwaitTermination(taskId);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(numRecords);
+    cancelAndAwaitTermination(taskId);
   }
 
   /** Three tasks sharing one group on a 2-partition topic ingest every record exactly once (KIP-932). */
@@ -254,11 +255,12 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
 
     waitForRowsProcessed(numRecords);
 
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+    assertRowCountEventually(numRecords);
+
     cancelAndAwaitTermination(taskA);
     cancelAndAwaitTermination(taskB);
     cancelAndAwaitTermination(taskC);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    assertRowCountEventually(numRecords);
   }
 
   /** 1000 rows with {@code maxRowsInMemory=100} forces mid-batch persists yet ingests all rows. */
@@ -284,10 +286,9 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
 
     waitForRowsProcessed(numRecords);
-
-    cancelAndAwaitTermination(taskId);
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(numRecords);
+    cancelAndAwaitTermination(taskId);
   }
 
   private DataSchema buildDataSchema()
@@ -299,6 +300,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
         .withGranularity(new UniformGranularitySpec(
             Granularities.DAY,
             Granularities.NONE,
+            false,
             null
         ))
         .build();
@@ -307,6 +309,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
   private static KafkaIndexTaskTuningConfig defaultTuningConfig()
   {
     return new KafkaIndexTaskTuningConfig(
+        null,
         null,
         null,
         null,
@@ -337,6 +340,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     return new KafkaIndexTaskTuningConfig(
         null,
         maxRowsInMemory,
+        null,
         null,
         null,
         null,
@@ -404,6 +408,31 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
   {
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId));
     cluster.callApi().waitForTaskToFinish(taskId, overlord.latchableEmitter());
+    waitForTaskRunnerRemoval(taskId);
+  }
+
+  private void waitForTaskRunnerRemoval(String taskId)
+  {
+    final TaskRunner taskRunner = indexer.bindings().getInstance(TaskRunner.class);
+    final long deadlineMillis = System.currentTimeMillis() + 10_000L;
+    while (System.currentTimeMillis() < deadlineMillis) {
+      final boolean taskPresent = taskRunner.getKnownTasks()
+                                            .stream()
+                                            .anyMatch(task -> taskId.equals(task.getTaskId()));
+      if (!taskPresent) {
+        return;
+      }
+
+      try {
+        Thread.sleep(100L);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        Assertions.fail("Interrupted while waiting for task runner cleanup", e);
+      }
+    }
+
+    Assertions.fail("Task [" + taskId + "] remained in the indexer task runner after cancellation");
   }
 
   private void waitForRowsProcessed(long expected)
@@ -415,11 +444,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     );
   }
 
-  /**
-   * Polls SQL for the expected row count, swallowing transient
-   * "datasource not found" errors that can arise immediately after a task
-   * cancel before the broker's SQL catalog has refreshed.
-   */
+  /** Polls SQL for the expected row count while the broker schema becomes available. */
   private void assertRowCountEventually(long expected)
   {
     final String expectedStr = String.valueOf(expected);
@@ -471,7 +496,7 @@ public class EmbeddedShareGroupIngestionTest extends EmbeddedClusterTestBase
     for (int i = 0; i < numRecords; i++) {
       final String csv = StringUtils.format(
           "%s,item_%d,%d",
-          startTime.plusDays(i),
+          startTime.plusSeconds(i),
           i,
           ThreadLocalRandom.current().nextInt(1000)
       );

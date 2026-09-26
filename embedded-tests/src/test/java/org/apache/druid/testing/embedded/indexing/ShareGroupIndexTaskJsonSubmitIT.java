@@ -83,6 +83,7 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
     kafkaServer = new ShareGroupKafkaResource();
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.indexer.task.gracefulShutdownTimeout", "PT5S");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
            .useLatchableEmitter()
@@ -210,6 +211,7 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
         null,
         dataSchema,
         new KafkaIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,

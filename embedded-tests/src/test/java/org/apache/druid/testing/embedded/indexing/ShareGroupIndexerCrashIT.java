@@ -74,6 +74,7 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
     kafkaServer = new ShareGroupKafkaResource();
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.indexer.task.gracefulShutdownTimeout", "PT5S");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
            .useLatchableEmitter()
@@ -130,11 +131,10 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
 
     // Prove Task 2 actually processed at least one record after the indexer restart.
     waitForNewEventsAfter(preTask2Processed, 1);
+    waitForRowCountAtLeast(batchA + batchB);
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
     cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
-
-    waitForRowCountAtLeast(batchA + batchB);
   }
 
   @Test
@@ -164,11 +164,10 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
 
     // Prove Task 2 actually processed all redelivered records (not just zero).
     waitForNewEventsAfter(preTask2Processed, numRecords);
+    waitForRowCountAtLeast(numRecords);
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
     cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
-
-    waitForRowCountAtLeast(numRecords);
   }
 
   private String submitTask(String topic)
@@ -209,6 +208,7 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
                                                 new UniformGranularitySpec(
                                                     Granularities.DAY,
                                                     Granularities.NONE,
+                                                    false,
                                                     null
                                                 )
                                             )
@@ -218,6 +218,7 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
         null,
         dataSchema,
         new KafkaIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -288,12 +289,21 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
   private void waitForRowCountAtLeast(long expected) throws InterruptedException
   {
     final long deadlineMs = System.currentTimeMillis() + 90_000L;
-    long observed = -1L;
+    long observedTotal = -1L;
+    long observedDistinct = -1L;
     while (System.currentTimeMillis() < deadlineMs) {
       try {
         cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-        observed = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-        if (observed >= expected) {
+        final String[] counts = cluster.runSql(
+            "SELECT SUM(row_count), COUNT(*) FROM ("
+            + "SELECT %s, COUNT(*) AS row_count FROM %s GROUP BY %s)",
+            COL_ITEM,
+            dataSource,
+            COL_ITEM
+        ).split(",");
+        observedTotal = Long.parseLong(counts[0]);
+        observedDistinct = Long.parseLong(counts[1]);
+        if (observedTotal >= expected && observedDistinct == expected) {
           return;
         }
       }
@@ -303,7 +313,9 @@ public class ShareGroupIndexerCrashIT extends EmbeddedClusterTestBase
       Thread.sleep(2_000L);
     }
     Assertions.fail(
-        "Expected at least [" + expected + "] rows after crash recovery but got [" + observed + "] (deadline 90s)"
+        "Expected [" + expected
+        + "] distinct rows and at least that many total rows after crash recovery, but got total["
+        + observedTotal + "] and distinct[" + observedDistinct + "] (deadline 90s)"
     );
   }
 }

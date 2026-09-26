@@ -38,6 +38,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -52,7 +53,7 @@ public class ShareGroupProbeTest
   @BeforeEach
   public void setUp()
   {
-    kafkaServer = new ShareGroupKafkaResource();
+    kafkaServer = new ShareGroupKafkaResource(5_000L);
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     cluster.addResource(kafkaServer);
     kafkaServer.beforeStart(cluster);
@@ -218,5 +219,162 @@ public class ShareGroupProbeTest
     }
 
     Assertions.assertEquals(10, received.get(), "Expected 10 records via KafkaShareConsumer");
+  }
+
+  @Test
+  public void probe_renewedRecord_reappearsWithoutNewDelivery() throws Exception
+  {
+    final String topic = "probe_renew_" + System.currentTimeMillis();
+    final String groupId = "probe_renew_group_" + System.currentTimeMillis();
+
+    kafkaServer.createTopicWithPartitions(topic, 1);
+    kafkaServer.setShareGroupAutoOffsetReset(groupId, "earliest");
+    kafkaServer.produceRecordsToTopic(List.of(
+        new ProducerRecord<>(topic, 0, null, "renew-value".getBytes(StandardCharsets.UTF_8))
+    ));
+
+    try (KafkaShareConsumer<byte[], byte[]> consumer = new KafkaShareConsumer<>(
+        shareConsumerProperties(groupId),
+        new ByteArrayDeserializer(),
+        new ByteArrayDeserializer()
+    )) {
+      consumer.subscribe(List.of(topic));
+      final ConsumerRecord<byte[], byte[]> initial = pollSingleRecord(consumer, 20_000L);
+      final short initialDeliveryCount = initial.deliveryCount().orElseThrow();
+
+      ConsumerRecord<byte[], byte[]> current = initial;
+      for (int i = 0; i < 3; i++) {
+        consumer.acknowledge(current, AcknowledgeType.RENEW);
+        assertCommitSucceeded(consumer.commitSync());
+
+        current = pollSingleRecord(consumer, 15_000L);
+        Assertions.assertEquals(initial.topic(), current.topic());
+        Assertions.assertEquals(initial.partition(), current.partition());
+        Assertions.assertEquals(initial.offset(), current.offset());
+        Assertions.assertEquals(initialDeliveryCount, current.deliveryCount().orElseThrow());
+      }
+
+      consumer.acknowledge(current, AcknowledgeType.ACCEPT);
+      assertCommitSucceeded(consumer.commitSync());
+    }
+  }
+
+  @Test
+  public void probe_expiredAcquisition_isRedeliveredToAnotherConsumer() throws Exception
+  {
+    final String topic = "probe_expiry_" + System.currentTimeMillis();
+    final String groupId = "probe_expiry_group_" + System.currentTimeMillis();
+
+    kafkaServer.createTopicWithPartitions(topic, 1);
+    kafkaServer.setShareGroupAutoOffsetReset(groupId, "earliest");
+    kafkaServer.produceRecordsToTopic(List.of(
+        new ProducerRecord<>(topic, 0, null, "expiry-value".getBytes(StandardCharsets.UTF_8))
+    ));
+
+    try (
+        KafkaShareConsumer<byte[], byte[]> first = new KafkaShareConsumer<>(
+            shareConsumerProperties(groupId),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        );
+        KafkaShareConsumer<byte[], byte[]> second = new KafkaShareConsumer<>(
+            shareConsumerProperties(groupId),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        )
+    ) {
+      first.subscribe(List.of(topic));
+      second.subscribe(List.of(topic));
+
+      final ConsumerRecord<byte[], byte[]> acquired = pollSingleRecord(first, 20_000L);
+      final int lockDurationMs = first.acquisitionLockTimeoutMs().orElseThrow();
+
+      final ConsumerRecords<byte[], byte[]> beforeExpiry = second.poll(Duration.ofMillis(lockDurationMs / 2L));
+      Assertions.assertTrue(beforeExpiry.isEmpty());
+
+      final ConsumerRecord<byte[], byte[]> redelivered = pollSingleRecord(second, lockDurationMs + 10_000L);
+      Assertions.assertEquals(acquired.topic(), redelivered.topic());
+      Assertions.assertEquals(acquired.partition(), redelivered.partition());
+      Assertions.assertEquals(acquired.offset(), redelivered.offset());
+      Assertions.assertEquals((short) 2, redelivered.deliveryCount().orElseThrow());
+
+      second.acknowledge(redelivered, AcknowledgeType.ACCEPT);
+      assertCommitSucceeded(second.commitSync());
+    }
+  }
+
+  @Test
+  public void probe_releasedRecord_isImmediatelyRedelivered() throws Exception
+  {
+    final String topic = "probe_release_" + System.currentTimeMillis();
+    final String groupId = "probe_release_group_" + System.currentTimeMillis();
+
+    kafkaServer.createTopicWithPartitions(topic, 1);
+    kafkaServer.setShareGroupAutoOffsetReset(groupId, "earliest");
+    kafkaServer.produceRecordsToTopic(List.of(
+        new ProducerRecord<>(topic, 0, null, "release-value".getBytes(StandardCharsets.UTF_8))
+    ));
+
+    try (
+        KafkaShareConsumer<byte[], byte[]> first = new KafkaShareConsumer<>(
+            shareConsumerProperties(groupId),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        );
+        KafkaShareConsumer<byte[], byte[]> second = new KafkaShareConsumer<>(
+            shareConsumerProperties(groupId),
+            new ByteArrayDeserializer(),
+            new ByteArrayDeserializer()
+        )
+    ) {
+      first.subscribe(List.of(topic));
+      second.subscribe(List.of(topic));
+
+      final ConsumerRecord<byte[], byte[]> acquired = pollSingleRecord(first, 20_000L);
+      first.acknowledge(acquired, AcknowledgeType.RELEASE);
+      assertCommitSucceeded(first.commitSync());
+
+      final ConsumerRecord<byte[], byte[]> redelivered = pollSingleRecord(second, 15_000L);
+      Assertions.assertEquals(acquired.topic(), redelivered.topic());
+      Assertions.assertEquals(acquired.partition(), redelivered.partition());
+      Assertions.assertEquals(acquired.offset(), redelivered.offset());
+      Assertions.assertEquals((short) 2, redelivered.deliveryCount().orElseThrow());
+
+      second.acknowledge(redelivered, AcknowledgeType.ACCEPT);
+      assertCommitSucceeded(second.commitSync());
+    }
+  }
+
+  private Properties shareConsumerProperties(String groupId)
+  {
+    final Properties props = new Properties();
+    props.put("bootstrap.servers", kafkaServer.getBootstrapServerUrl());
+    props.put("group.id", groupId);
+    props.put("share.acknowledgement.mode", "explicit");
+    props.put("share.acquire.mode", "record_limit");
+    props.put("max.poll.records", "1");
+    return props;
+  }
+
+  private ConsumerRecord<byte[], byte[]> pollSingleRecord(
+      KafkaShareConsumer<byte[], byte[]> consumer,
+      long timeoutMs
+  )
+  {
+    final long deadlineMs = System.currentTimeMillis() + timeoutMs;
+    while (System.currentTimeMillis() < deadlineMs) {
+      final ConsumerRecords<byte[], byte[]> records = consumer.poll(Duration.ofMillis(250L));
+      if (!records.isEmpty()) {
+        Assertions.assertEquals(1, records.count());
+        return records.iterator().next();
+      }
+    }
+    Assertions.fail("Expected one share-group record within " + timeoutMs + " ms");
+    return null;
+  }
+
+  private void assertCommitSucceeded(Map<?, ? extends Optional<?>> result)
+  {
+    Assertions.assertTrue(result.values().stream().allMatch(Optional::isEmpty), result.toString());
   }
 }

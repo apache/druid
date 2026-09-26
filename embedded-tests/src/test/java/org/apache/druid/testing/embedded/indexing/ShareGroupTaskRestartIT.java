@@ -28,6 +28,7 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskTuningConfig;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTask;
 import org.apache.druid.indexing.kafka.ShareGroupIndexTaskIOConfig;
+import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -72,6 +73,7 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
     kafkaServer = new ShareGroupKafkaResource();
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.indexer.task.gracefulShutdownTimeout", "PT5S");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
            .useLatchableEmitter()
@@ -91,7 +93,7 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
     final String topic = dataSource + "_restart_topic";
     kafkaServer.createTopicWithPartitions(topic, 1);
 
-    // Task 1: ingest 10 records, then stop gracefully so offsets are committed.
+    // Task 1: ingest and acknowledge 10 records before stopping.
     kafkaServer.setShareGroupAutoOffsetReset(GROUP_ID, "earliest");
     final String taskId1 = submitTask(topic);
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
@@ -100,12 +102,9 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchA, 0, "2025-07-01"));
 
     waitForRowsProcessed(batchA);
-
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId1));
-    cluster.callApi().waitForTaskToFinish(taskId1, overlord.latchableEmitter());
-
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(batchA);
+    cancelAndAwaitTermination(taskId1);
 
     // Task 2: same group-id, no offset-reset override — broker delivers only NEW records.
     final String taskId2 = submitTask(topic);
@@ -115,12 +114,9 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchB, batchA, "2025-07-02"));
 
     waitForRowsProcessed(batchA + batchB);
-
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
-    cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
-
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(batchA + batchB);
+    cancelAndAwaitTermination(taskId2);
   }
 
   @Test
@@ -137,12 +133,9 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
     waitForRowsProcessed(totalRecords);
-
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId1));
-    cluster.callApi().waitForTaskToFinish(taskId1, overlord.latchableEmitter());
-
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(totalRecords);
+    cancelAndAwaitTermination(taskId1);
 
     // Immediately restart — produce 5 more records; the restarted task must NOT re-ingest the first 20.
     final String taskId2 = submitTaskWithGroup(topic, GROUP_ID + "-quick");
@@ -151,12 +144,9 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
     kafkaServer.publishRecordsToTopic(topic, csvRecords(5, totalRecords, "2025-08-02"));
 
     waitForRowsProcessed(totalRecords + 5);
-
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId2));
-    cluster.callApi().waitForTaskToFinish(taskId2, overlord.latchableEmitter());
-
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
     assertRowCountEventually(totalRecords + 5);
+    cancelAndAwaitTermination(taskId2);
   }
 
   private String submitTask(String topic)
@@ -197,6 +187,7 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
                                                 new UniformGranularitySpec(
                                                     Granularities.DAY,
                                                     Granularities.NONE,
+                                                    false,
                                                     null
                                                 )
                                             )
@@ -206,6 +197,7 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
         null,
         dataSchema,
         new KafkaIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -244,6 +236,33 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(expected)
     );
+  }
+
+  private void cancelAndAwaitTermination(String taskId)
+  {
+    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId));
+    cluster.callApi().waitForTaskToFinish(taskId, overlord.latchableEmitter());
+
+    final TaskRunner taskRunner = indexer.bindings().getInstance(TaskRunner.class);
+    final long deadlineMillis = System.currentTimeMillis() + 10_000L;
+    while (System.currentTimeMillis() < deadlineMillis) {
+      final boolean taskPresent = taskRunner.getKnownTasks()
+                                            .stream()
+                                            .anyMatch(task -> taskId.equals(task.getTaskId()));
+      if (!taskPresent) {
+        return;
+      }
+
+      try {
+        Thread.sleep(100L);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        Assertions.fail("Interrupted while waiting for task runner cleanup", e);
+      }
+    }
+
+    Assertions.fail("Task [" + taskId + "] remained in the indexer task runner after cancellation");
   }
 
   private void assertRowCountEventually(long expected)

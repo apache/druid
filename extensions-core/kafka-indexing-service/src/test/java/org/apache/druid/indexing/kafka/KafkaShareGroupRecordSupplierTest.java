@@ -418,4 +418,43 @@ public class KafkaShareGroupRecordSupplierTest
 
     verify(mockConsumer).acknowledge(record, org.apache.kafka.clients.consumer.AcknowledgeType.RENEW);
   }
+
+  @Test
+  public void testRenewedAppearanceReplacesAcknowledgementHandle()
+  {
+    final String testTopic = "test-topic";
+    final TopicPartition topicPartition = new TopicPartition(testTopic, 0);
+    final ConsumerRecord<byte[], byte[]> firstAppearance = new ConsumerRecord<>(
+        testTopic,
+        0,
+        200L,
+        "key".getBytes(StandardCharsets.UTF_8),
+        "value".getBytes(StandardCharsets.UTF_8)
+    );
+    final ConsumerRecord<byte[], byte[]> renewedAppearance = new ConsumerRecord<>(
+        testTopic,
+        0,
+        200L,
+        "key".getBytes(StandardCharsets.UTF_8),
+        "value".getBytes(StandardCharsets.UTF_8)
+    );
+    when(mockConsumer.poll(any(Duration.class)))
+        .thenReturn(new ConsumerRecords<>(Map.of(topicPartition, List.of(firstAppearance))))
+        .thenReturn(new ConsumerRecords<>(Map.of(topicPartition, List.of(renewedAppearance))));
+
+    final KafkaTopicPartition partition = new KafkaTopicPartition(true, testTopic, 0);
+    supplier.poll(1000L);
+    supplier.acknowledge(partition, 200L, AcknowledgeType.RENEW);
+    supplier.poll(1000L);
+    supplier.acknowledge(partition, 200L, AcknowledgeType.ACCEPT);
+
+    verify(mockConsumer).acknowledge(
+        firstAppearance,
+        org.apache.kafka.clients.consumer.AcknowledgeType.RENEW
+    );
+    verify(mockConsumer).acknowledge(
+        renewedAppearance,
+        org.apache.kafka.clients.consumer.AcknowledgeType.ACCEPT
+    );
+  }
 }

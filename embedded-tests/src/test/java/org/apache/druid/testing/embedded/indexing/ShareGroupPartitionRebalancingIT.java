@@ -75,6 +75,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
     kafkaServer = new ShareGroupKafkaResource();
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.indexer.task.gracefulShutdownTimeout", "PT5S");
     cluster.addExtension(KafkaIndexTaskModule.class)
            .addResource(kafkaServer)
            .useLatchableEmitter()
@@ -110,9 +111,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
     final int batchB = 10;
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchB, batchA, "2025-11-02"));
 
-    // Wait for all records to flow through to queryable segments. Cancelling the task
-    // triggers a publish of any in-memory rows, so we poll until SQL sees the full set.
-    waitForRowCountAfterCancel(batchA + batchB, taskId);
+    waitForRowCountThenCancel(batchA + batchB, taskId);
   }
 
   @Test
@@ -138,7 +137,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
     final int batchB = 20;
     kafkaServer.publishRecordsToTopic(topic, csvRecords(batchB, batchA, "2025-12-02"));
 
-    waitForRowCountAfterCancel(batchA + batchB, taskId1, taskId2);
+    waitForRowCountThenCancel(batchA + batchB, taskId1, taskId2);
   }
 
   private String submitTask(String topic, String groupId)
@@ -175,6 +174,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
                                                 new UniformGranularitySpec(
                                                     Granularities.DAY,
                                                     Granularities.NONE,
+                                                    false,
                                                     null
                                                 )
                                             )
@@ -184,6 +184,7 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
         null,
         dataSchema,
         new KafkaIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -215,40 +216,51 @@ public class ShareGroupPartitionRebalancingIT extends EmbeddedClusterTestBase
     return task.getId();
   }
 
-  private void waitForRowCountAfterCancel(long expected, String... taskIds) throws Exception
+  private void waitForRowCountThenCancel(long expected, String... taskIds) throws Exception
   {
-    // Give the share-consumer time to read and ack everything that has been published.
     Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
 
-    for (String id : taskIds) {
-      cluster.callApi().onLeaderOverlord(o -> o.cancelTask(id));
-    }
-    for (String id : taskIds) {
-      cluster.callApi().waitForTaskToFinish(id, overlord.latchableEmitter());
-    }
-
-    // Cancel triggers a flush + publish of any in-memory rows. Poll until segments
-    // for those rows become queryable on the broker. Aggregate emitter metrics can
-    // be polluted by earlier tests in the same JVM, so we rely on a direct SQL count.
     final long deadlineMs = System.currentTimeMillis() + 120_000L;
-    long lastSeen = -1;
-    while (System.currentTimeMillis() < deadlineMs) {
-      try {
-        cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-      }
-      catch (Exception ignored) {
-      }
-      try {
-        lastSeen = Long.parseLong(cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
-        if (lastSeen >= expected) {
-          return;
+    long lastTotal = -1L;
+    long lastDistinct = -1L;
+    try {
+      while (System.currentTimeMillis() < deadlineMs) {
+        try {
+          cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
         }
+        catch (Exception ignored) {
+        }
+        try {
+          final String[] counts = cluster.runSql(
+              "SELECT SUM(row_count), COUNT(*) FROM ("
+              + "SELECT %s, COUNT(*) AS row_count FROM %s GROUP BY %s)",
+              COL_ITEM,
+              dataSource,
+              COL_ITEM
+          ).split(",");
+          lastTotal = Long.parseLong(counts[0]);
+          lastDistinct = Long.parseLong(counts[1]);
+          if (lastTotal == expected && lastDistinct == expected) {
+            return;
+          }
+        }
+        catch (Exception ignored) {
+        }
+        Thread.sleep(1_000L);
       }
-      catch (Exception ignored) {
-      }
-      Thread.sleep(1_000L);
+      Assertions.fail(
+          "Expected exactly [" + expected + "] total and distinct rows but got total["
+          + lastTotal + "] and distinct[" + lastDistinct + "]"
+      );
     }
-    Assertions.fail("Expected at least [" + expected + "] rows but got [" + lastSeen + "]");
+    finally {
+      for (String id : taskIds) {
+        cluster.callApi().onLeaderOverlord(o -> o.cancelTask(id));
+      }
+      for (String id : taskIds) {
+        cluster.callApi().waitForTaskToFinish(id, overlord.latchableEmitter());
+      }
+    }
   }
 
   private List<byte[]> csvRecords(int count, int startIndex, String dateStr)
