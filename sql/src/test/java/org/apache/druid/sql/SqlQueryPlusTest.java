@@ -54,7 +54,9 @@ public class SqlQueryPlusTest
         e,
         DruidExceptionMatcher
             .invalidSqlInput()
-            .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] must be in the closed range")
+            .expectMessageContains(
+                "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
+            )
     );
   }
 

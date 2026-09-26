@@ -1544,7 +1544,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     validateInvalidSqlError(
         errorResponse,
-        "Query context parameter [maxRowsQueuedForOrdering] must be in the closed range"
+        "Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [0]"
     );
     Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());

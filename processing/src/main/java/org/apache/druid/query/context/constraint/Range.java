@@ -75,7 +75,7 @@ public final class Range
       {
         if (value.compareTo(lowerBound) < 0 || value.compareTo(upperBound) > 0) {
           throw new IAE(
-              "Query context parameter [%s] must be in the closed range [%s, %s], but was [%s]",
+              "Query context parameter [%s] must be within the range [%s, %s], but was [%s]",
               parameterName,
               lowerBound,
               upperBound,
