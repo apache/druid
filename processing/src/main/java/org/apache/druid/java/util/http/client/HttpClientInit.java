@@ -48,6 +48,11 @@ public class HttpClientInit
 {
   public static HttpClient createClient(HttpClientConfig config, Lifecycle lifecycle)
   {
+    return createNettyClient(config, lifecycle);
+  }
+
+  public static NettyHttpClient createNettyClient(HttpClientConfig config, Lifecycle lifecycle)
+  {
     try {
       return lifecycle.addMaybeStartManagedInstance(
           new NettyHttpClient(
@@ -65,7 +70,8 @@ public class HttpClientInit
                   ),
                   new ResourcePoolConfig(
                       config.getNumConnections(),
-                      config.getUnusedConnectionTimeoutDuration().getMillis()
+                      config.getUnusedConnectionTimeoutDuration().getMillis(),
+                      config.getPoolImplementation()
                   ),
                   config.isEagerInitialization()
               ),
