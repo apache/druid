@@ -195,6 +195,71 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void buildingSketchesAtIngestionTimeWithRollupAcrossPersists() throws Exception
+  {
+    // The data has 9 distinct (timestamp, product) rows after rollup. A maxRowCount of 3 forces several
+    // persisted indexes that share rows, so merging them has to combine sketches with makeAggregateCombiner().
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+            DimensionsSpec.builder()
+                          .setDefaultSchemaDimensions(List.of("product"))
+                          .setDimensionExclusions(List.of("sequenceNumber"))
+                          .build(),
+            ColumnsFilter.all()
+        ),
+        DelimitedInputFormat.forColumns(
+            List.of("timestamp", "sequenceNumber", "product", "value", "valueWithNulls")
+        ),
+        List.of(
+            new MomentSketchAggregatorFactory("sketch", "value", 10, true),
+            new MomentSketchAggregatorFactory("sketchWithNulls", "valueWithNulls", 10, true)
+        ),
+        0,
+        // minTimestamp
+        Granularities.NONE,
+        3,
+        // maxRowCount
+        GroupByQuery.builder()
+                    .setDataSource("test_datasource")
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(Collections.emptyList())
+                    .setAggregatorSpecs(
+                        new MomentSketchMergeAggregatorFactory("sketch", 10, true),
+                        new MomentSketchMergeAggregatorFactory("sketchWithNulls", 10, true)
+                    )
+                    .setPostAggregatorSpecs(
+                        new MomentSketchMinPostAggregator(
+                            "min",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        ),
+                        new MomentSketchMaxPostAggregator(
+                            "max",
+                            new FieldAccessPostAggregator("sketch", "sketch")
+                        )
+                    )
+                    .setInterval(Intervals.of("2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z"))
+                    .build()
+    );
+    List<ResultRow> results = seq.toList();
+    Assertions.assertEquals(1, results.size());
+    ResultRow row = results.get(0);
+
+    MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.get(0); // "sketch"
+    Assertions.assertEquals(400.0, sketchObject.getPowerSums()[0], 1e-10);
+
+    MomentSketchWrapper sketchObjectWithNulls = (MomentSketchWrapper) row.get(1); // "sketchWithNulls"
+    Assertions.assertEquals(377.0, sketchObjectWithNulls.getPowerSums()[0], 1e-10);
+
+    Double minValue = (Double) row.get(2); // "min"
+    Assertions.assertEquals(0.0011, minValue, 0.0001);
+
+    Double maxValue = (Double) row.get(3); // "max"
+    Assertions.assertEquals(0.9969, maxValue, 0.0001);
+  }
+
+  @Test
   public void buildingSketchesAtQueryTime() throws Exception
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
