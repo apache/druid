@@ -251,11 +251,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final RowSignature rowSignature = buildDataSourceRowSignature(dataSource);
       if (rowSignature == null) {
         log.info("datasource [%s] no longer exists, all metadata removed.", dataSource);
-        tables.remove(dataSource);
-        emitMetric(
-            Metric.DATASOURCE_REMOVED,
-            1,
-            ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource));
+        // The last-segment callback may already have removed the table and emitted the metric while this refresh
+        // was in flight. Only emit if this refresh is the one that actually removed the table.
+        if (tables.remove(dataSource) != null) {
+          emitDataSourceRemoved(dataSource);
+        }
         continue;
       }
 
@@ -264,12 +264,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
         // and a new datasource is added
         log.info("datasource [%s] schema has not been initialized yet, "
                  + "check coordinator logs if this message is persistent.", dataSource);
-        // this is a harmless call
-        tables.remove(dataSource);
-        emitMetric(
-            Metric.DATASOURCE_REMOVED,
-            1,
-            ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource));
+        // Usually there is no table to remove here. If there was one, a concurrent last-segment callback may have
+        // removed it and emitted the metric already, so only emit if this refresh actually removed the table.
+        if (tables.remove(dataSource) != null) {
+          emitDataSourceRemoved(dataSource);
+        }
         continue;
       }
 
@@ -305,6 +304,22 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   protected void removeSegmentAction(SegmentId segmentId)
   {
     // noop, no additional action needed when segment is removed.
+  }
+
+  @Override
+  protected void removeDataSourceAction(String dataSource)
+  {
+    // The last-segment callback can remove the table without another schema refresh.
+    emitDataSourceRemoved(dataSource);
+  }
+
+  private void emitDataSourceRemoved(String dataSource)
+  {
+    emitMetric(
+        Metric.DATASOURCE_REMOVED,
+        1,
+        ServiceMetricEvent.builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
   }
 
   private Set<String> queryDataSources()
