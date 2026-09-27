@@ -133,13 +133,14 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> setupRecordSupplier()
   {
+    final KafkaSupervisorIOConfig ioConfig = spec.getSpec().getIOConfig();
     return new KafkaRecordSupplier(
-        spec.getIoConfig().getConsumerProperties(),
+        ioConfig.getConsumerProperties(),
         sortingMapper,
-        spec.getIoConfig().getConfigOverrides(),
-        spec.getIoConfig().isMultiTopic(),
+        ioConfig.getConfigOverrides(),
+        ioConfig.isMultiTopic(),
         null,
-        spec.getIoConfig().getHeaderBasedFilterConfig()
+        ioConfig.getHeaderBasedFilterConfig()
     );
   }
 
