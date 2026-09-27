@@ -132,7 +132,6 @@
     "postcss-loader": "^8.2.1",
     "postcss-preset-env": "^11.5.4",
     "prettier": "^2.5.1",
-    "react-shallow-renderer": "^16.15.0",
     "sass": "^1.99.0",
     "sass-loader": "^17.0.1",
     "snarkdown": "^2.0.0",

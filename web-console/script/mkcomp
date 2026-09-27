@@ -44,7 +44,6 @@ fs.ensureDirSync(path);
 console.log('Making path:', path);
 
 const camelName = name.replace(/(^|-)[a-z]/g, s => s.replace('-', '').toUpperCase());
-const snakeName = camelName[0].toLowerCase() + camelName.slice(1);
 
 function writeFile(path, data) {
   try {
@@ -143,19 +142,14 @@ writeFile(
  * limitations under the License.
  */
 
-import React from 'react';
-
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { ${camelName} } from './${name}';
 
 describe('${camelName}', () => {
   it('matches snapshot', () => {
-    const ${snakeName} = shallow(
-      <${camelName}/>
-    );
-
-    expect(${snakeName}).toMatchSnapshot();
+    const { container } = render(<${camelName} />);
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
 `,

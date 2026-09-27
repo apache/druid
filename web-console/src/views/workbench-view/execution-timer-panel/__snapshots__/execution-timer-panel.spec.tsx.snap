@@ -14,16 +14,7 @@ exports[`AnchoredQueryTimer matches snapshot with execution 1`] = `
     >
       <svg
         data-icon="stopwatch"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M9 2v1.083A6.002 6.002 0 0 1 8 15 6 6 0 0 1 7 3.083V2H6a1 1 0 1 1 0-2h4a1 1 0 0 1 0 2zM8 5a4 4 0 1 0 4 4H8z"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
     <span
       class="bp6-button-text"
@@ -41,16 +32,7 @@ exports[`AnchoredQueryTimer matches snapshot with execution 1`] = `
     >
       <svg
         data-icon="cross"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="m9.41 8 3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 0 0-1.71-.71L8 6.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42L6.59 8 3.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71L8 9.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </div>
@@ -70,16 +52,7 @@ exports[`AnchoredQueryTimer matches snapshot with startTime 1`] = `
     >
       <svg
         data-icon="stopwatch"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M9 2v1.083A6.002 6.002 0 0 1 8 15 6 6 0 0 1 7 3.083V2H6a1 1 0 1 1 0-2h4a1 1 0 0 1 0 2zM8 5a4 4 0 1 0 4 4H8z"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
     <span
       class="bp6-button-text"
@@ -97,16 +70,7 @@ exports[`AnchoredQueryTimer matches snapshot with startTime 1`] = `
     >
       <svg
         data-icon="cross"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="m9.41 8 3.29-3.29c.19-.18.3-.43.3-.71a1.003 1.003 0 0 0-1.71-.71L8 6.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42L6.59 8 3.3 11.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71L8 9.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </div>

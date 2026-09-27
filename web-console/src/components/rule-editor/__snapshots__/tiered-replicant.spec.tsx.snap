@@ -50,16 +50,7 @@ exports[`TieredReplicant matches snapshot when disabled 1`] = `
             >
               <svg
                 data-icon="caret-down"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <path
-                  d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 0 0-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33"
-                  fill-rule="evenodd"
-                />
-              </svg>
+              />
             </span>
           </button>
         </span>
@@ -119,16 +110,7 @@ exports[`TieredReplicant matches snapshot when disabled 1`] = `
         >
           <svg
             data-icon="chevron-up"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="m12.71 9.29-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
       <button
@@ -145,16 +127,7 @@ exports[`TieredReplicant matches snapshot when disabled 1`] = `
         >
           <svg
             data-icon="chevron-down"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
     </div>
@@ -169,16 +142,7 @@ exports[`TieredReplicant matches snapshot when disabled 1`] = `
     >
       <svg
         data-icon="trash"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5m-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </div>
@@ -231,16 +195,7 @@ exports[`TieredReplicant matches snapshot with existing tier 1`] = `
             >
               <svg
                 data-icon="caret-down"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <path
-                  d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 0 0-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33"
-                  fill-rule="evenodd"
-                />
-              </svg>
+              />
             </span>
           </button>
         </span>
@@ -295,16 +250,7 @@ exports[`TieredReplicant matches snapshot with existing tier 1`] = `
         >
           <svg
             data-icon="chevron-up"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="m12.71 9.29-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
       <button
@@ -319,16 +265,7 @@ exports[`TieredReplicant matches snapshot with existing tier 1`] = `
         >
           <svg
             data-icon="chevron-down"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
     </div>
@@ -343,16 +280,7 @@ exports[`TieredReplicant matches snapshot with existing tier 1`] = `
     >
       <svg
         data-icon="trash"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5m-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </div>
@@ -405,16 +333,7 @@ exports[`TieredReplicant matches snapshot with multiple used tiers 1`] = `
             >
               <svg
                 data-icon="caret-down"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <path
-                  d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 0 0-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33"
-                  fill-rule="evenodd"
-                />
-              </svg>
+              />
             </span>
           </button>
         </span>
@@ -469,16 +388,7 @@ exports[`TieredReplicant matches snapshot with multiple used tiers 1`] = `
         >
           <svg
             data-icon="chevron-up"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="m12.71 9.29-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
       <button
@@ -493,16 +403,7 @@ exports[`TieredReplicant matches snapshot with multiple used tiers 1`] = `
         >
           <svg
             data-icon="chevron-down"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
     </div>
@@ -517,16 +418,7 @@ exports[`TieredReplicant matches snapshot with multiple used tiers 1`] = `
     >
       <svg
         data-icon="trash"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5m-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </div>
@@ -579,16 +471,7 @@ exports[`TieredReplicant matches snapshot with non-existing tier 1`] = `
             >
               <svg
                 data-icon="caret-down"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <path
-                  d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 0 0-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33"
-                  fill-rule="evenodd"
-                />
-              </svg>
+              />
             </span>
           </button>
         </span>
@@ -643,16 +526,7 @@ exports[`TieredReplicant matches snapshot with non-existing tier 1`] = `
         >
           <svg
             data-icon="chevron-up"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="m12.71 9.29-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
       <button
@@ -667,16 +541,7 @@ exports[`TieredReplicant matches snapshot with non-existing tier 1`] = `
         >
           <svg
             data-icon="chevron-down"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
     </div>
@@ -691,16 +556,7 @@ exports[`TieredReplicant matches snapshot with non-existing tier 1`] = `
     >
       <svg
         data-icon="trash"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5m-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </div>
@@ -753,16 +609,7 @@ exports[`TieredReplicant matches snapshot without remove button 1`] = `
             >
               <svg
                 data-icon="caret-down"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <path
-                  d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 0 0-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33"
-                  fill-rule="evenodd"
-                />
-              </svg>
+              />
             </span>
           </button>
         </span>
@@ -817,16 +664,7 @@ exports[`TieredReplicant matches snapshot without remove button 1`] = `
         >
           <svg
             data-icon="chevron-up"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="m12.71 9.29-4-4C8.53 5.11 8.28 5 8 5s-.53.11-.71.29l-4 4a1.003 1.003 0 0 0 1.42 1.42L8 7.41l3.29 3.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
       <button
@@ -841,16 +679,7 @@ exports[`TieredReplicant matches snapshot without remove button 1`] = `
         >
           <svg
             data-icon="chevron-down"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M12 5c-.28 0-.53.11-.71.29L8 8.59l-3.29-3.3a1.003 1.003 0 0 0-1.42 1.42l4 4c.18.18.43.29.71.29s.53-.11.71-.29l4-4A1.003 1.003 0 0 0 12 5"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
     </div>

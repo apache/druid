@@ -45,16 +45,7 @@ exports[`ShowValueDialog matches snapshot 1`] = `
             >
               <svg
                 data-icon="small-cross"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <path
-                  d="m9.41 8 2.29-2.29c.19-.18.3-.43.3-.71a1.003 1.003 0 0 0-1.71-.71L8 6.59l-2.29-2.3a1.003 1.003 0 0 0-1.42 1.42L6.59 8 4.3 10.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71L8 9.41l2.29 2.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
-                  fill-rule="evenodd"
-                />
-              </svg>
+              />
             </span>
           </button>
         </div>
@@ -84,16 +75,7 @@ exports[`ShowValueDialog matches snapshot 1`] = `
               >
                 <svg
                   data-icon="duplicate"
-                  height="16"
-                  role="img"
-                  viewBox="0 0 16 16"
-                  width="16"
-                >
-                  <path
-                    d="M15 0H5c-.55 0-1 .45-1 1v2h2V2h8v7h-1v2h2c.55 0 1-.45 1-1V1c0-.55-.45-1-1-1m-4 4H1c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5c0-.55-.45-1-1-1m-1 10H2V6h8z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
+                />
               </span>
               <span
                 class="bp6-button-text"

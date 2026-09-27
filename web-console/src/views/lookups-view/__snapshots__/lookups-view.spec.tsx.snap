@@ -2,243 +2,155 @@
 
 exports[`LookupsView matches snapshot 1`] = `
 <div
-  className="lookups-view app-view"
+  class="lookups-view app-view"
 >
-  <Memo(ViewControlBar)
-    label="Lookups"
+  <div
+    class="view-control-bar"
   >
-    <Memo(RefreshButton)
-      localStorageKey="lookups-refresh-rate"
-      onRefresh={[Function]}
-    />
-    <Blueprint6.Button
-      icon="plus"
-      onClick={[Function]}
-      text="Add lookup"
-    />
-    <Memo(TableColumnSelector)
-      columns={
-        [
-          "Lookup name",
-          "Lookup tier",
-          "Type",
-          "Version",
-          "Poll period",
-          "Summary",
-        ]
-      }
-      onChange={[Function]}
-      tableColumnsHidden={[]}
-    />
-  </Memo(ViewControlBar)>
-  <ReactTable
-    AggregatedComponent={[Function]}
-    ExpanderComponent={[Function]}
-    FilterComponent={[Function]}
-    LoadingComponent={[Function]}
-    NoDataComponent={[Function]}
-    PadRowComponent={[Function]}
-    PaginationComponent={[Function]}
-    PivotValueComponent={[Function]}
-    ResizerComponent={[Function]}
-    TableComponent={[Function]}
-    TbodyComponent={[Function]}
-    TdComponent={[Function]}
-    TfootComponent={[Function]}
-    ThComponent={[Function]}
-    TheadComponent={[Function]}
-    TrComponent={[Function]}
-    TrGroupComponent={[Function]}
-    aggregatedKey="_aggregated"
-    className=""
-    collapseOnDataChange={true}
-    collapseOnPageChange={true}
-    collapseOnSortingChange={true}
-    column={
-      {
-        "Aggregated": undefined,
-        "Cell": undefined,
-        "Expander": undefined,
-        "Filter": undefined,
-        "Footer": undefined,
-        "Header": undefined,
-        "Pivot": undefined,
-        "PivotValue": undefined,
-        "Placeholder": undefined,
-        "aggregate": undefined,
-        "className": "",
-        "filterAll": false,
-        "filterMethod": undefined,
-        "filterable": undefined,
-        "footerClassName": "",
-        "footerStyle": {},
-        "getFooterProps": [Function],
-        "getHeaderProps": [Function],
-        "getProps": [Function],
-        "headerClassName": "",
-        "headerStyle": {},
-        "minResizeWidth": 11,
-        "minWidth": 100,
-        "resizable": undefined,
-        "show": true,
-        "sortMethod": undefined,
-        "sortable": undefined,
-        "style": {},
-      }
-    }
-    columns={
-      [
-        {
-          "Cell": [Function],
-          "Header": "Lookup name",
-          "accessor": "id",
-          "filterable": true,
-          "id": "lookup_name",
-          "show": true,
-          "width": 200,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Lookup tier",
-          "accessor": "tier",
-          "filterable": true,
-          "id": "tier",
-          "show": true,
-          "width": 100,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Type",
-          "accessor": "spec.type",
-          "filterable": true,
-          "id": "type",
-          "show": true,
-          "width": 150,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Version",
-          "accessor": "version",
-          "filterable": true,
-          "id": "version",
-          "show": true,
-          "width": 190,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Poll period",
-          "accessor": [Function],
-          "className": "padded",
-          "id": "poolPeriod",
-          "show": true,
-          "width": 150,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Summary",
-          "accessor": [Function],
-          "id": "summary",
-          "show": true,
-          "width": 600,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Actions",
-          "accessor": "id",
-          "filterable": false,
-          "id": "actions",
-          "sortable": false,
-          "width": 70,
-        },
-      ]
-    }
-    data={[]}
-    defaultExpanded={{}}
-    defaultFilterMethod={[Function]}
-    defaultFiltered={[]}
-    defaultPage={0}
-    defaultPageSize={50}
-    defaultResized={[]}
-    defaultSortDesc={false}
-    defaultSortMethod={[Function]}
-    defaultSorted={
-      [
-        {
-          "desc": false,
-          "id": "lookup_name",
-        },
-      ]
-    }
-    expanderDefaults={
-      {
-        "filterable": false,
-        "resizable": false,
-        "sortable": false,
-        "width": 35,
-      }
-    }
-    filterable={true}
-    filtered={[]}
-    freezeWhenExpanded={false}
-    getLoadingProps={[Function]}
-    getNoDataProps={[Function]}
-    getPaginationProps={[Function]}
-    getProps={[Function]}
-    getResizerProps={[Function]}
-    getTableProps={[Function]}
-    getTbodyProps={[Function]}
-    getTdProps={[Function]}
-    getTfootProps={[Function]}
-    getTfootTdProps={[Function]}
-    getTfootTrProps={[Function]}
-    getTheadFilterProps={[Function]}
-    getTheadFilterThProps={[Function]}
-    getTheadFilterTrProps={[Function]}
-    getTheadGroupProps={[Function]}
-    getTheadGroupThProps={[Function]}
-    getTheadGroupTrProps={[Function]}
-    getTheadProps={[Function]}
-    getTheadThProps={[Function]}
-    getTheadTrProps={[Function]}
-    getTrGroupProps={[Function]}
-    getTrProps={[Function]}
-    groupedByPivotKey="_groupedByPivot"
-    indexKey="_index"
-    loading={true}
-    loadingText="Loading..."
-    multiSort={true}
-    nestingLevelKey="_nestingLevel"
-    nextText="Next"
-    noDataText="No lookups"
-    ofText="of"
-    onFetchData={[Function]}
-    onFilteredChange={[Function]}
-    originalKey="_original"
-    pageJumpText="jump to page"
-    pageSizeOptions={
-      [
-        50,
-        100,
-        200,
-      ]
-    }
-    pageText="Page"
-    pivotDefaults={{}}
-    pivotIDKey="_pivotID"
-    pivotValKey="_pivotVal"
-    previousText="Previous"
-    resizable={true}
-    resolveData={[Function]}
-    rowsSelectorText="rows per page"
-    rowsText="rows"
-    showPageJump={true}
-    showPageSizeOptions={true}
-    showPagination={false}
-    showPaginationBottom={true}
-    showPaginationTop={false}
-    sortable={true}
-    style={{}}
-    subRowsKey="_subRows"
-  />
+    <div
+      class="control-label"
+    >
+      Lookups
+    </div>
+    <div
+      class="bp6-button-group timed-button refresh-button"
+    >
+      <button
+        class="bp6-button"
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-refresh"
+        >
+          <svg
+            data-icon="refresh"
+          />
+        </span>
+        <span
+          class="bp6-button-text"
+        >
+          Refresh
+        </span>
+      </button>
+      <span
+        class="bp6-popover-target"
+      >
+        <button
+          aria-expanded="false"
+          aria-haspopup="menu"
+          class="bp6-button"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="bp6-icon bp6-icon-caret-down"
+          >
+            <svg
+              data-icon="caret-down"
+            />
+          </span>
+        </button>
+      </span>
+    </div>
+    <button
+      class="bp6-button"
+      type="button"
+    >
+      <span
+        aria-hidden="true"
+        class="bp6-icon bp6-icon-plus"
+      >
+        <svg
+          data-icon="plus"
+        />
+      </span>
+      <span
+        class="bp6-button-text"
+      >
+        Add lookup
+      </span>
+    </button>
+    <span
+      class="table-column-selector bp6-popover-target"
+    >
+      <button
+        aria-expanded="false"
+        aria-haspopup="menu"
+        class="bp6-button"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          Columns 
+          <span
+            class="counter"
+          >
+            (6/6)
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-caret-down"
+        >
+          <svg
+            data-icon="caret-down"
+          />
+        </span>
+      </button>
+    </span>
+  </div>
+  <stub-react-table
+    default-page-size="50"
+    filterable="true"
+    loading="true"
+    no-data-text="No lookups"
+    rows="0"
+    show-pagination="false"
+  >
+    <stub-column
+      id="lookup_name"
+      width="200"
+    >
+      Lookup name
+    </stub-column>
+    <stub-column
+      id="tier"
+      width="100"
+    >
+      Lookup tier
+    </stub-column>
+    <stub-column
+      id="type"
+      width="150"
+    >
+      Type
+    </stub-column>
+    <stub-column
+      id="version"
+      width="190"
+    >
+      Version
+    </stub-column>
+    <stub-column
+      id="poolPeriod"
+      width="150"
+    >
+      Poll period
+    </stub-column>
+    <stub-column
+      id="summary"
+      width="600"
+    >
+      Summary
+    </stub-column>
+    <stub-column
+      id="actions"
+      width="70"
+    >
+      Actions
+    </stub-column>
+  </stub-react-table>
 </div>
 `;

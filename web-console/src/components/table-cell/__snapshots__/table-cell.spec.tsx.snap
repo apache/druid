@@ -35,16 +35,7 @@ exports[`TableCell matches snapshot array long 1`] = `
   >
     <svg
       data-icon="more"
-      height="16"
-      role="img"
-      viewBox="0 0 16 16"
-      width="16"
-    >
-      <path
-        d="M2 6a2 2 0 1 1 0 4 2 2 0 0 1 0-4m6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4m6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4"
-        fill-rule="evenodd"
-      />
-    </svg>
+    />
   </span>
 </div>
 `;
@@ -114,16 +105,7 @@ exports[`TableCell matches snapshot truncate 1`] = `
   >
     <svg
       data-icon="more"
-      height="16"
-      role="img"
-      viewBox="0 0 16 16"
-      width="16"
-    >
-      <path
-        d="M2 6a2 2 0 1 1 0 4 2 2 0 0 1 0-4m6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4m6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4"
-        fill-rule="evenodd"
-      />
-    </svg>
+    />
   </span>
 </div>
 `;

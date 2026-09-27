@@ -1,47 +1,31 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`TimedButton matches snapshot 1`] = `
-<Blueprint6.ButtonGroup
-  className="timed-button"
+<div
+  class="bp6-button-group timed-button"
 >
-  <Blueprint6.Button
-    onClick={[Function]}
+  <button
+    class="bp6-button"
+    type="button"
   />
-  <Blueprint6.Popover
-    boundary="clippingParents"
-    captureDismiss={false}
-    content={
-      <Blueprint6.Menu>
-        <Blueprint6.MenuDivider
-          title="Select delay"
-        />
-        <Blueprint6.MenuItem
-          icon="tick-circle"
-          onClick={[Function]}
-          text="timeValue"
-        />
-      </Blueprint6.Menu>
-    }
-    defaultIsOpen={false}
-    disabled={false}
-    fill={false}
-    hasBackdrop={false}
-    hoverCloseDelay={300}
-    hoverOpenDelay={150}
-    inheritDarkTheme={true}
-    interactionKind="click"
-    matchTargetWidth={false}
-    minimal={false}
-    openOnTargetFocus={true}
-    positioningStrategy="absolute"
-    shouldReturnFocusOnClose={false}
-    targetTagName="span"
-    transitionDuration={300}
-    usePortal={true}
+  <span
+    class="bp6-popover-target"
   >
-    <Blueprint6.Button
-      rightIcon="caret-down"
-    />
-  </Blueprint6.Popover>
-</Blueprint6.ButtonGroup>
+    <button
+      aria-expanded="false"
+      aria-haspopup="menu"
+      class="bp6-button"
+      type="button"
+    >
+      <span
+        aria-hidden="true"
+        class="bp6-icon bp6-icon-caret-down"
+      >
+        <svg
+          data-icon="caret-down"
+        />
+      </span>
+    </button>
+  </span>
+</div>
 `;

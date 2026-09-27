@@ -2,26 +2,33 @@
 
 exports[`ExecutionProgressBarPane matches snapshot 1`] = `
 <div
-  className="execution-progress-bar-pane"
+  class="execution-progress-bar-pane"
 >
-  <ForwardRef>
+  <label
+    class="bp6-label"
+  >
     Query complete, waiting for segments to be loaded...
-    <React.Fragment>
-       
-      <span
-        className="cancel"
-        onClick={[Function]}
-      >
-        (skip waiting)
-      </span>
-    </React.Fragment>
-  </ForwardRef>
-  <Blueprint6.ProgressBar
-    className="overall"
-    intent="primary"
-  />
-  <ForwardRef>
+     
+    <span
+      class="cancel"
+    >
+      (skip waiting)
+    </span>
+  </label>
+  <div
+    aria-valuemax="100"
+    aria-valuemin="0"
+    class="bp6-progress-bar bp6-intent-primary overall"
+    role="progressbar"
+  >
+    <div
+      class="bp6-progress-meter"
+    />
+  </div>
+  <label
+    class="bp6-label"
+  >
     Segments loaded successfully in 0:00:05
-  </ForwardRef>
+  </label>
 </div>
 `;

@@ -2,327 +2,235 @@
 
 exports[`TasksView matches snapshot 1`] = `
 <div
-  className="tasks-view app-view"
+  class="tasks-view app-view"
 >
-  <Memo(ViewControlBar)
-    label="Tasks"
+  <div
+    class="view-control-bar"
   >
-    <ForwardRef>
+    <div
+      class="control-label"
+    >
+      Tasks
+    </div>
+    <label
+      class="bp6-label"
+    >
       Group by
-    </ForwardRef>
-    <Blueprint6.ButtonGroup>
-      <Blueprint6.Button
-        active={true}
-        onClick={[Function]}
+    </label>
+    <div
+      class="bp6-button-group"
+    >
+      <button
+        class="bp6-button bp6-active"
+        type="button"
       >
-        None
-      </Blueprint6.Button>
-      <Blueprint6.Button
-        active={false}
-        onClick={[Function]}
+        <span
+          class="bp6-button-text"
+        >
+          None
+        </span>
+      </button>
+      <button
+        class="bp6-button"
+        type="button"
       >
-        Group ID
-      </Blueprint6.Button>
-      <Blueprint6.Button
-        active={false}
-        onClick={[Function]}
+        <span
+          class="bp6-button-text"
+        >
+          Group ID
+        </span>
+      </button>
+      <button
+        class="bp6-button"
+        type="button"
       >
-        Type
-      </Blueprint6.Button>
-      <Blueprint6.Button
-        active={false}
-        onClick={[Function]}
+        <span
+          class="bp6-button-text"
+        >
+          Type
+        </span>
+      </button>
+      <button
+        class="bp6-button"
+        type="button"
       >
-        Datasource
-      </Blueprint6.Button>
-      <Blueprint6.Button
-        active={false}
-        onClick={[Function]}
+        <span
+          class="bp6-button-text"
+        >
+          Datasource
+        </span>
+      </button>
+      <button
+        class="bp6-button"
+        type="button"
       >
-        Status
-      </Blueprint6.Button>
-    </Blueprint6.ButtonGroup>
-    <Memo(RefreshButton)
-      localStorageKey="task-refresh-rate"
-      onRefresh={[Function]}
-    />
-    <Memo(MoreButton)>
-      <Blueprint6.MenuItem
-        icon="application"
-        onClick={[Function]}
-        text="View SQL query for table"
-      />
-      <Blueprint6.MenuItem
-        icon="manually-entered-data"
-        onClick={[Function]}
-        text="Submit JSON task"
-      />
-    </Memo(MoreButton)>
-    <Memo(TableColumnSelector)
-      columns={
-        [
-          "Task ID",
-          "Group ID",
-          "Type",
-          "Datasource",
-          "Status",
-          "Error",
-          "Created time",
-          "Duration",
-          "Location",
-        ]
-      }
-      onChange={[Function]}
-      tableColumnsHidden={
-        [
-          "Error",
-        ]
-      }
-    />
-  </Memo(ViewControlBar)>
-  <ReactTable
-    AggregatedComponent={[Function]}
-    ExpanderComponent={[Function]}
-    FilterComponent={[Function]}
-    LoadingComponent={[Function]}
-    NoDataComponent={[Function]}
-    PadRowComponent={[Function]}
-    PaginationComponent={[Function]}
-    PivotValueComponent={[Function]}
-    ResizerComponent={[Function]}
-    TableComponent={[Function]}
-    TbodyComponent={[Function]}
-    TdComponent={[Function]}
-    TfootComponent={[Function]}
-    ThComponent={[Function]}
-    TheadComponent={[Function]}
-    TrComponent={[Function]}
-    TrGroupComponent={[Function]}
-    aggregatedKey="_aggregated"
-    className=""
-    collapseOnDataChange={true}
-    collapseOnPageChange={true}
-    collapseOnSortingChange={true}
-    column={
-      {
-        "Aggregated": undefined,
-        "Cell": undefined,
-        "Expander": undefined,
-        "Filter": undefined,
-        "Footer": undefined,
-        "Header": undefined,
-        "Pivot": undefined,
-        "PivotValue": undefined,
-        "Placeholder": undefined,
-        "aggregate": undefined,
-        "className": "",
-        "filterAll": false,
-        "filterMethod": undefined,
-        "filterable": undefined,
-        "footerClassName": "",
-        "footerStyle": {},
-        "getFooterProps": [Function],
-        "getHeaderProps": [Function],
-        "getProps": [Function],
-        "headerClassName": "",
-        "headerStyle": {},
-        "minResizeWidth": 11,
-        "minWidth": 100,
-        "resizable": undefined,
-        "show": true,
-        "sortMethod": undefined,
-        "sortable": undefined,
-        "style": {},
-      }
-    }
-    columns={
-      [
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Task ID",
-          "accessor": "task_id",
-          "show": true,
-          "width": 440,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Group ID",
-          "accessor": "group_id",
-          "show": true,
-          "width": 300,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Type",
-          "accessor": "type",
-          "show": true,
-          "width": 140,
-        },
-        {
-          "Cell": [Function],
-          "Header": "Datasource",
-          "accessor": "datasource",
-          "show": true,
-          "width": 200,
-        },
-        {
-          "Cell": [Function],
-          "Filter": [Function],
-          "Header": "Status",
-          "accessor": [Function],
-          "id": "status",
-          "show": true,
-          "sortMethod": [Function],
-          "width": 110,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Error",
-          "accessor": [Function],
-          "id": "error",
-          "show": false,
-          "width": 300,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Created time",
-          "accessor": "created_time",
-          "filterMethod": [Function],
-          "headerClassName": "enable-comparisons",
-          "show": true,
-          "width": 220,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Duration",
-          "accessor": "duration",
-          "className": "padded",
-          "filterable": false,
-          "show": true,
-          "width": 80,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Location",
-          "accessor": "location",
-          "show": true,
-          "width": 200,
-        },
-        {
-          "Aggregated": [Function],
-          "Cell": [Function],
-          "Header": "Actions",
-          "accessor": "task_id",
-          "filterable": false,
-          "id": "actions",
-          "sortable": false,
-          "width": 70,
-        },
-      ]
-    }
-    data={[]}
-    defaultExpanded={{}}
-    defaultFilterMethod={[Function]}
-    defaultFiltered={[]}
-    defaultPage={0}
-    defaultPageSize={25}
-    defaultResized={[]}
-    defaultSortDesc={false}
-    defaultSortMethod={[Function]}
-    defaultSorted={
-      [
-        {
-          "desc": true,
-          "id": "status",
-        },
-      ]
-    }
-    expanderDefaults={
-      {
-        "filterable": false,
-        "resizable": false,
-        "sortable": false,
-        "width": 35,
-      }
-    }
-    filterable={true}
-    filtered={[]}
-    freezeWhenExpanded={false}
-    getLoadingProps={[Function]}
-    getNoDataProps={[Function]}
-    getPaginationProps={[Function]}
-    getProps={[Function]}
-    getResizerProps={[Function]}
-    getTableProps={[Function]}
-    getTbodyProps={[Function]}
-    getTdProps={[Function]}
-    getTfootProps={[Function]}
-    getTfootTdProps={[Function]}
-    getTfootTrProps={[Function]}
-    getTheadFilterProps={[Function]}
-    getTheadFilterThProps={[Function]}
-    getTheadFilterTrProps={[Function]}
-    getTheadGroupProps={[Function]}
-    getTheadGroupThProps={[Function]}
-    getTheadGroupTrProps={[Function]}
-    getTheadProps={[Function]}
-    getTheadThProps={[Function]}
-    getTheadTrProps={[Function]}
-    getTrGroupProps={[Function]}
-    getTrProps={[Function]}
-    groupedByPivotKey="_groupedByPivot"
-    indexKey="_index"
-    loading={true}
-    loadingText="Loading..."
-    multiSort={true}
-    nestingLevelKey="_nestingLevel"
-    nextText="Next"
-    noDataText=""
-    ofText="of"
-    onFetchData={[Function]}
-    onFilteredChange={[Function]}
-    originalKey="_original"
-    pageJumpText="jump to page"
-    pageSizeOptions={
-      [
-        25,
-        50,
-        100,
-      ]
-    }
-    pageText="Page"
-    pivotBy={[]}
-    pivotDefaults={{}}
-    pivotIDKey="_pivotID"
-    pivotValKey="_pivotVal"
-    previousText="Previous"
-    resizable={true}
-    resolveData={[Function]}
-    rowsSelectorText="rows per page"
-    rowsText="rows"
-    showPageJump={true}
-    showPageSizeOptions={true}
-    showPagination={false}
-    showPaginationBottom={true}
-    showPaginationTop={false}
-    sortable={true}
-    style={{}}
-    subRowsKey="_subRows"
-  />
-  <Memo(AlertDialog)
-    confirmButtonText="OK"
-    icon="error"
-    intent="primary"
-    isOpen={false}
-    onConfirm={[Function]}
+        <span
+          class="bp6-button-text"
+        >
+          Status
+        </span>
+      </button>
+    </div>
+    <div
+      class="bp6-button-group timed-button refresh-button"
+    >
+      <button
+        class="bp6-button"
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-refresh"
+        >
+          <svg
+            data-icon="refresh"
+          />
+        </span>
+        <span
+          class="bp6-button-text"
+        >
+          Refresh
+        </span>
+      </button>
+      <span
+        class="bp6-popover-target"
+      >
+        <button
+          aria-expanded="false"
+          aria-haspopup="menu"
+          class="bp6-button"
+          type="button"
+        >
+          <span
+            aria-hidden="true"
+            class="bp6-icon bp6-icon-caret-down"
+          >
+            <svg
+              data-icon="caret-down"
+            />
+          </span>
+        </button>
+      </span>
+    </div>
+    <span
+      class="more-button bp6-popover-target"
+    >
+      <button
+        aria-expanded="false"
+        aria-haspopup="menu"
+        class="bp6-button"
+        title="More actions"
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-more"
+        >
+          <svg
+            data-icon="more"
+          />
+        </span>
+      </button>
+    </span>
+    <span
+      class="table-column-selector bp6-popover-target"
+    >
+      <button
+        aria-expanded="false"
+        aria-haspopup="menu"
+        class="bp6-button"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          Columns 
+          <span
+            class="counter"
+          >
+            (8/9)
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-caret-down"
+        >
+          <svg
+            data-icon="caret-down"
+          />
+        </span>
+      </button>
+    </span>
+  </div>
+  <stub-react-table
+    default-page-size="25"
+    filterable="true"
+    loading="true"
+    no-data-text=""
+    rows="0"
+    show-pagination="false"
   >
-    <p />
-  </Memo(AlertDialog)>
+    <stub-column
+      id="task_id"
+      width="440"
+    >
+      Task ID
+    </stub-column>
+    <stub-column
+      id="group_id"
+      width="300"
+    >
+      Group ID
+    </stub-column>
+    <stub-column
+      id="type"
+      width="140"
+    >
+      Type
+    </stub-column>
+    <stub-column
+      id="datasource"
+      width="200"
+    >
+      Datasource
+    </stub-column>
+    <stub-column
+      id="status"
+      width="110"
+    >
+      Status
+    </stub-column>
+    <stub-column
+      hidden="true"
+      id="error"
+      width="300"
+    >
+      Error
+    </stub-column>
+    <stub-column
+      id="created_time"
+      width="220"
+    >
+      Created time
+    </stub-column>
+    <stub-column
+      id="duration"
+      width="80"
+    >
+      Duration
+    </stub-column>
+    <stub-column
+      id="location"
+      width="200"
+    >
+      Location
+    </stub-column>
+    <stub-column
+      id="actions"
+      width="70"
+    >
+      Actions
+    </stub-column>
+  </stub-react-table>
 </div>
 `;

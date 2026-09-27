@@ -45,16 +45,7 @@ exports[`SnitchDialog matches snapshot 1`] = `
             >
               <svg
                 data-icon="small-cross"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <path
-                  d="m9.41 8 2.29-2.29c.19-.18.3-.43.3-.71a1.003 1.003 0 0 0-1.71-.71L8 6.59l-2.29-2.3a1.003 1.003 0 0 0-1.42 1.42L6.59 8 4.3 10.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71L8 9.41l2.29 2.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
-                  fill-rule="evenodd"
-                />
-              </svg>
+              />
             </span>
           </button>
         </div>
@@ -82,16 +73,7 @@ exports[`SnitchDialog matches snapshot 1`] = `
               >
                 <svg
                   data-icon="arrow-right"
-                  height="16"
-                  role="img"
-                  viewBox="0 0 16 16"
-                  width="16"
-                >
-                  <path
-                    d="m14.7 7.29-5-5a.97.97 0 0 0-.71-.3 1.003 1.003 0 0 0-.71 1.71l3.29 3.29H1.99c-.55 0-1 .45-1 1s.45 1 1 1h9.59l-3.29 3.29a1.003 1.003 0 0 0 1.42 1.42l5-5c.18-.18.29-.43.29-.71s-.12-.52-.3-.7"
-                    fill-rule="evenodd"
-                  />
-                </svg>
+                />
               </span>
             </button>
           </div>
@@ -151,16 +133,7 @@ exports[`SnitchDialog matches snapshot with history 1`] = `
             >
               <svg
                 data-icon="small-cross"
-                height="16"
-                role="img"
-                viewBox="0 0 16 16"
-                width="16"
-              >
-                <path
-                  d="m9.41 8 2.29-2.29c.19-.18.3-.43.3-.71a1.003 1.003 0 0 0-1.71-.71L8 6.59l-2.29-2.3a1.003 1.003 0 0 0-1.42 1.42L6.59 8 4.3 10.29c-.19.18-.3.43-.3.71a1.003 1.003 0 0 0 1.71.71L8 9.41l2.29 2.29c.18.19.43.3.71.3a1.003 1.003 0 0 0 .71-1.71z"
-                  fill-rule="evenodd"
-                />
-              </svg>
+              />
             </span>
           </button>
         </div>
@@ -198,16 +171,7 @@ exports[`SnitchDialog matches snapshot with history 1`] = `
               >
                 <svg
                   data-icon="arrow-right"
-                  height="16"
-                  role="img"
-                  viewBox="0 0 16 16"
-                  width="16"
-                >
-                  <path
-                    d="m14.7 7.29-5-5a.97.97 0 0 0-.71-.3 1.003 1.003 0 0 0-.71 1.71l3.29 3.29H1.99c-.55 0-1 .45-1 1s.45 1 1 1h9.59l-3.29 3.29a1.003 1.003 0 0 0 1.42 1.42l5-5c.18-.18.29-.43.29-.71s-.12-.52-.3-.7"
-                    fill-rule="evenodd"
-                  />
-                </svg>
+                />
               </span>
             </button>
           </div>

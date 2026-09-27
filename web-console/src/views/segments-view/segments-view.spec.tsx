@@ -16,14 +16,21 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
 import { TableFilters } from '../../utils/table-filters';
 import { SegmentsView } from '../segments-view/segments-view';
 
+// Snapshot the table props and columns, not every rendered cell
+jest.mock(
+  'react-table',
+  () => jest.requireActual('../../test-utils/stub-component').reactTableStub,
+);
+
 describe('SegmentsView', () => {
   it('matches snapshot', () => {
-    const segmentsView = shallow(
+    const { container } = render(
       <SegmentsView
         filters={TableFilters.empty()}
         onFiltersChange={() => {}}
@@ -31,6 +38,6 @@ describe('SegmentsView', () => {
         capabilities={Capabilities.FULL}
       />,
     );
-    expect(segmentsView).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

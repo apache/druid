@@ -32,19 +32,7 @@ exports[`MenuBoolean matches snapshot false 1`] = `
       >
         <svg
           data-icon="caret-right"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <title>
-            Open sub menu
-          </title>
-          <path
-            d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 0 0 6 4.5v7a.495.495 0 0 0 .83.37l4-3.5c.1-.09.17-.22.17-.37"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </a>
   </span>
@@ -87,19 +75,7 @@ exports[`MenuBoolean matches snapshot no undefined 1`] = `
       >
         <svg
           data-icon="caret-right"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <title>
-            Open sub menu
-          </title>
-          <path
-            d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 0 0 6 4.5v7a.495.495 0 0 0 .83.37l4-3.5c.1-.09.17-.22.17-.37"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </a>
   </span>
@@ -142,19 +118,7 @@ exports[`MenuBoolean matches snapshot undefined 1`] = `
       >
         <svg
           data-icon="caret-right"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <title>
-            Open sub menu
-          </title>
-          <path
-            d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 0 0 6 4.5v7a.495.495 0 0 0 .83.37l4-3.5c.1-.09.17-.22.17-.37"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </a>
   </span>
