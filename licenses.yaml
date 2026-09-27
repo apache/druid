@@ -6596,16 +6596,6 @@ license_file_path: licenses/bin/header-case.MIT
 
 ---
 
-name: "history"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Michael Jackson
-version: 4.10.1
-license_file_path: licenses/bin/history.MIT
-
----
-
 name: "hjson"
 license_category: binary
 module: web-console
@@ -6683,16 +6673,6 @@ license_name: MIT License
 copyright: Jordan Harband
 version: 2.17.0
 license_file_path: licenses/bin/is-core-module.MIT
-
----
-
-name: "isarray"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Julian Gruber
-version: 0.0.1
-license_file_path: licenses/bin/isarray.MIT
 
 ---
 
@@ -6975,16 +6955,6 @@ license_file_path: licenses/bin/path-parse.MIT
 
 ---
 
-name: "path-to-regexp"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Blake Embrey (hello@blakeembrey.com)
-version: 1.9.0
-license_file_path: licenses/bin/path-to-regexp.MIT
-
----
-
 name: "path-type"
 license_category: binary
 module: web-console
@@ -7105,26 +7075,6 @@ license_file_path: licenses/bin/react-popper.MIT
 
 ---
 
-name: "react-router-dom"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Remix Software
-version: 5.3.4
-license_file_path: licenses/bin/react-router-dom.MIT
-
----
-
-name: "react-router"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Remix Software
-version: 5.3.4
-license_file_path: licenses/bin/react-router.MIT
-
----
-
 name: "react-table"
 license_category: binary
 module: web-console
@@ -7162,16 +7112,6 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 4.0.0
 license_file_path: licenses/bin/resolve-from.MIT
-
----
-
-name: "resolve-pathname"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Michael Jackson
-version: 3.0.0
-license_file_path: licenses/bin/resolve-pathname.MIT
 
 ---
 
@@ -7275,26 +7215,6 @@ license_file_path: licenses/bin/tabbable.MIT
 
 ---
 
-name: "tiny-invariant"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Alex Reardon
-version: 1.3.3
-license_file_path: licenses/bin/tiny-invariant.MIT
-
----
-
-name: "tiny-warning"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Alex Reardon
-version: 1.0.3
-license_file_path: licenses/bin/tiny-warning.MIT
-
----
-
 name: "tslib"
 license_category: binary
 module: web-console
@@ -7332,16 +7252,6 @@ license_name: MIT License
 copyright: Robert Kieffer and other contributors
 version: 14.0.2
 license_file_path: licenses/bin/uuid.MIT
-
----
-
-name: "value-equal"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Michael Jackson
-version: 1.0.1
-license_file_path: licenses/bin/value-equal.MIT
 
 ---
 

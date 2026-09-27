@@ -21,9 +21,6 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { JSX } from 'react';
 import React from 'react';
-import type { RouteComponentProps } from 'react-router';
-import { Redirect } from 'react-router';
-import { HashRouter, Route, Switch } from 'react-router-dom';
 
 import { initAceDsqlMode } from './ace-modes/dsql';
 import { initAceHjsonMode } from './ace-modes/hjson';
@@ -34,6 +31,7 @@ import type { AvailableFunctions } from './helpers';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { AppToaster } from './singletons';
 import { localStorageGetJson, LocalStorageKeys, QueryManager } from './utils';
+import { getHashPath, parseHashRoute, replaceHashPath } from './utils/hash-routing';
 import { TableFilters } from './utils/table-filters';
 import {
   DatasourcesView,
@@ -51,7 +49,19 @@ import {
 
 import './console-application.scss';
 
-type FiltersRouteMatch = RouteComponentProps<{ filters?: string }>;
+interface FiltersRouteProps {
+  filters?: string;
+}
+
+interface WorkbenchRouteProps {
+  tabId?: string;
+}
+
+// Old routes that now live elsewhere
+const REDIRECTS: Record<string, ConsoleViewId> = {
+  ingestion: 'tasks',
+  query: 'workbench',
+};
 
 function goToView(tab: ConsoleViewId, filters?: TableFilters) {
   if (!filters || filters.isEmpty()) {
@@ -64,10 +74,6 @@ function goToView(tab: ConsoleViewId, filters?: TableFilters) {
 
 function viewFilterChange(tab: ConsoleViewId) {
   return (filters: TableFilters) => goToView(tab, filters);
-}
-
-function pathWithFilter(tab: ConsoleViewId) {
-  return `/${tab}/:filters?`;
 }
 
 function switchToWorkbenchTab(tabId: string) {
@@ -85,6 +91,7 @@ export interface ConsoleApplicationState {
   capabilities: Capabilities;
   availableSqlFunctions?: AvailableFunctions;
   capabilitiesLoading: boolean;
+  hashPath: string;
 }
 
 export class ConsoleApplication extends React.PureComponent<
@@ -122,6 +129,7 @@ export class ConsoleApplication extends React.PureComponent<
     this.state = {
       capabilities: Capabilities.FULL,
       capabilitiesLoading: true,
+      hashPath: getHashPath(),
     };
 
     this.capabilitiesQueryManager = new QueryManager({
@@ -159,12 +167,32 @@ export class ConsoleApplication extends React.PureComponent<
   }
 
   componentDidMount(): void {
+    window.addEventListener('hashchange', this.handleHashChange);
+    this.handleHashChange();
     this.capabilitiesQueryManager.runQuery(null);
   }
 
   componentWillUnmount(): void {
+    window.removeEventListener('hashchange', this.handleHashChange);
     this.capabilitiesQueryManager.terminate();
   }
+
+  private readonly handleHashChange = () => {
+    const hashPath = getHashPath();
+
+    // Normalize #/view to #view and follow redirects, the resulting hashchange will render the view
+    if (hashPath.startsWith('/')) {
+      replaceHashPath(hashPath.slice(1));
+      return;
+    }
+    const redirect = REDIRECTS[parseHashRoute(hashPath).view];
+    if (redirect) {
+      replaceHashPath(redirect);
+      return;
+    }
+
+    this.setState({ hashPath });
+  };
 
   private readonly handleUnrestrict = (capabilities: Capabilities) => {
     this.setState({ capabilities });
@@ -277,7 +305,7 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedWorkbenchView = (p: RouteComponentProps<{ tabId?: string }>) => {
+  private readonly wrappedWorkbenchView = ({ tabId }: WorkbenchRouteProps) => {
     const { defaultQueryContext, mandatoryQueryContext, baseQueryContext, serverQueryContext } =
       this.props;
     const { capabilities } = this.state;
@@ -286,7 +314,7 @@ export class ConsoleApplication extends React.PureComponent<
       'workbench',
       <WorkbenchView
         capabilities={capabilities}
-        tabId={p.match.params.tabId}
+        tabId={tabId}
         onTabChange={switchToWorkbenchTab}
         initQueryWithContext={this.queryWithContext}
         defaultQueryContext={defaultQueryContext}
@@ -316,12 +344,12 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedDatasourcesView = (p: FiltersRouteMatch) => {
+  private readonly wrappedDatasourcesView = ({ filters }: FiltersRouteProps) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'datasources',
       <DatasourcesView
-        filters={TableFilters.fromString(p.match.params.filters)}
+        filters={TableFilters.fromString(filters)}
         onFiltersChange={viewFilterChange('datasources')}
         goToQuery={this.goToQuery}
         goToView={goToView}
@@ -330,12 +358,12 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedSegmentsView = (p: FiltersRouteMatch) => {
+  private readonly wrappedSegmentsView = ({ filters }: FiltersRouteProps) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'segments',
       <SegmentsView
-        filters={TableFilters.fromString(p.match.params.filters)}
+        filters={TableFilters.fromString(filters)}
         onFiltersChange={viewFilterChange('segments')}
         goToQuery={this.goToQuery}
         capabilities={capabilities}
@@ -343,12 +371,12 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedSupervisorsView = (p: FiltersRouteMatch) => {
+  private readonly wrappedSupervisorsView = ({ filters }: FiltersRouteProps) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'supervisors',
       <SupervisorsView
-        filters={TableFilters.fromString(p.match.params.filters)}
+        filters={TableFilters.fromString(filters)}
         onFiltersChange={viewFilterChange('supervisors')}
         openSupervisorDialog={this.openSupervisorDialog}
         goToView={goToView}
@@ -359,12 +387,12 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedTasksView = (p: FiltersRouteMatch) => {
+  private readonly wrappedTasksView = ({ filters }: FiltersRouteProps) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'tasks',
       <TasksView
-        filters={TableFilters.fromString(p.match.params.filters)}
+        filters={TableFilters.fromString(filters)}
         onFiltersChange={viewFilterChange('tasks')}
         openTaskDialog={this.openTaskDialog}
         goToView={goToView}
@@ -375,12 +403,12 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedServicesView = (p: FiltersRouteMatch) => {
+  private readonly wrappedServicesView = ({ filters }: FiltersRouteProps) => {
     const { capabilities } = this.state;
     return this.wrapInViewContainer(
       'services',
       <ServicesView
-        filters={TableFilters.fromString(p.match.params.filters)}
+        filters={TableFilters.fromString(filters)}
         onFiltersChange={viewFilterChange('services')}
         goToQuery={this.goToQuery}
         capabilities={capabilities}
@@ -388,18 +416,76 @@ export class ConsoleApplication extends React.PureComponent<
     );
   };
 
-  private readonly wrappedLookupsView = (p: FiltersRouteMatch) => {
+  private readonly wrappedLookupsView = ({ filters }: FiltersRouteProps) => {
     return this.wrapInViewContainer(
       'lookups',
       <LookupsView
-        filters={TableFilters.fromString(p.match.params.filters)}
+        filters={TableFilters.fromString(filters)}
         onFiltersChange={viewFilterChange('lookups')}
       />,
     );
   };
 
+  private readonly wrappedExploreView = () => {
+    const { capabilities } = this.state;
+    return <ExploreView capabilities={capabilities} />;
+  };
+
+  private renderView() {
+    const { capabilities, hashPath } = this.state;
+    const { view, param } = parseHashRoute(hashPath);
+
+    switch (view) {
+      case 'data-loader':
+        if (capabilities.hasCoordinatorAccess()) return <this.wrappedDataLoaderView />;
+        break;
+
+      case 'streaming-data-loader':
+        if (capabilities.hasCoordinatorAccess()) return <this.wrappedStreamingDataLoaderView />;
+        break;
+
+      case 'classic-batch-data-loader':
+        if (capabilities.hasCoordinatorAccess()) return <this.wrappedClassicBatchDataLoaderView />;
+        break;
+
+      case 'sql-data-loader':
+        if (capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQueryTask()) {
+          return <this.wrappedSqlDataLoaderView />;
+        }
+        break;
+
+      case 'supervisors':
+        return <this.wrappedSupervisorsView filters={param} />;
+
+      case 'tasks':
+        return <this.wrappedTasksView filters={param} />;
+
+      case 'datasources':
+        return <this.wrappedDatasourcesView filters={param} />;
+
+      case 'segments':
+        return <this.wrappedSegmentsView filters={param} />;
+
+      case 'services':
+        return <this.wrappedServicesView filters={param} />;
+
+      case 'workbench':
+        return <this.wrappedWorkbenchView tabId={param} />;
+
+      case 'lookups':
+        if (capabilities.hasCoordinatorAccess()) return <this.wrappedLookupsView filters={param} />;
+        break;
+
+      case 'explore':
+        if (capabilities.hasSql()) return <this.wrappedExploreView />;
+        break;
+    }
+
+    return <this.wrappedHomeView />;
+  }
+
   render() {
-    const { capabilities, availableSqlFunctions, capabilitiesLoading } = this.state;
+    const { availableSqlFunctions, capabilitiesLoading } = this.state;
 
     if (capabilitiesLoading) {
       return (
@@ -412,67 +498,7 @@ export class ConsoleApplication extends React.PureComponent<
     return (
       <HotkeysProvider>
         <SqlFunctionsProvider availableSqlFunctions={availableSqlFunctions}>
-          <HashRouter hashType="noslash">
-            <div className="console-application">
-              <Switch>
-                {capabilities.hasCoordinatorAccess() && (
-                  <Route path="/data-loader" component={this.wrappedDataLoaderView} />
-                )}
-                {capabilities.hasCoordinatorAccess() && (
-                  <Route
-                    path="/streaming-data-loader"
-                    component={this.wrappedStreamingDataLoaderView}
-                  />
-                )}
-                {capabilities.hasCoordinatorAccess() && (
-                  <Route
-                    path="/classic-batch-data-loader"
-                    component={this.wrappedClassicBatchDataLoaderView}
-                  />
-                )}
-                {capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQueryTask() && (
-                  <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
-                )}
-
-                <Route
-                  path={pathWithFilter('supervisors')}
-                  component={this.wrappedSupervisorsView}
-                />
-                <Route path={pathWithFilter('tasks')} component={this.wrappedTasksView} />
-                <Route path="/ingestion">
-                  <Redirect to="/tasks" />
-                </Route>
-
-                <Route
-                  path={pathWithFilter('datasources')}
-                  component={this.wrappedDatasourcesView}
-                />
-                <Route path={pathWithFilter('segments')} component={this.wrappedSegmentsView} />
-                <Route path={pathWithFilter('services')} component={this.wrappedServicesView} />
-
-                <Route path="/query">
-                  <Redirect to="/workbench" />
-                </Route>
-                <Route
-                  path={['/workbench/:tabId', '/workbench']}
-                  component={this.wrappedWorkbenchView}
-                />
-
-                {capabilities.hasCoordinatorAccess() && (
-                  <Route path={pathWithFilter('lookups')} component={this.wrappedLookupsView} />
-                )}
-
-                {capabilities.hasSql() && (
-                  <Route
-                    path="/explore"
-                    component={() => <ExploreView capabilities={capabilities} />}
-                  />
-                )}
-
-                <Route component={this.wrappedHomeView} />
-              </Switch>
-            </div>
-          </HashRouter>
+          <div className="console-application">{this.renderView()}</div>
         </SqlFunctionsProvider>
       </HotkeysProvider>
     );
