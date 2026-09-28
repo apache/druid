@@ -358,7 +358,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             icon={IconNames.BUILD}
             text="Initialize lookups"
             onClick={() => void this.initializeLookup()}
-            large
+            size="large"
             intent={Intent.PRIMARY}
           />
         </div>

@@ -308,7 +308,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
             <Button
               className="next"
               text={guessedInputFormatState.isLoading() ? 'Loading...' : 'Use example'}
-              rightIcon={IconNames.ARROW_RIGHT}
+              endIcon={IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
               disabled={!exampleInput || guessedInputFormatState.isLoading()}
               onClick={() => {
@@ -323,7 +323,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
             <Button
               className="next"
               text={guessedInputFormatState.isLoading() ? 'Loading...' : 'Connect data'}
-              rightIcon={IconNames.ARROW_RIGHT}
+              endIcon={IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
               disabled={
                 !AutoForm.isValidModel(inputSource, INPUT_SOURCE_FIELDS) ||

@@ -59,7 +59,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
             lazy
             shouldReturnFocusOnClose={false}
           >
-            <Button rightIcon={IconNames.CALENDAR} />
+            <Button endIcon={IconNames.CALENDAR} />
           </PopoverNext>
         </div>
       }

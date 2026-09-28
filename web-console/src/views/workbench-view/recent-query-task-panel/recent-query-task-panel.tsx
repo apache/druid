@@ -122,7 +122,12 @@ LIMIT 100`,
     <div className="recent-query-task-panel">
       <div className="title">
         Recent query tasks
-        <Button className="close-button" icon={IconNames.CROSS} minimal onClick={onClose} />
+        <Button
+          className="close-button"
+          icon={IconNames.CROSS}
+          variant="minimal"
+          onClick={onClose}
+        />
       </div>
       {queryTaskHistory ? (
         <div className="work-entries">

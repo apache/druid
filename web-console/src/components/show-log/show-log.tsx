@@ -165,14 +165,14 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
             {downloadFilename && (
               <AnchorButton
                 text="Download"
-                minimal
+                variant="minimal"
                 download={downloadFilename}
                 href={UrlBaser.base(endpoint)}
               />
             )}
             <Button
               text="Copy"
-              minimal
+              variant="minimal"
               onClick={() => {
                 copyToClipboard(logState.data || '');
                 AppToaster.show({
@@ -183,7 +183,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
             />
             <Button
               text="View full log"
-              minimal
+              variant="minimal"
               onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
             />
           </ButtonGroup>

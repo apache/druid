@@ -91,9 +91,9 @@ export const SourcePane = React.memo(function SourcePane(props: SourcePaneProps)
       <Button
         icon={IconNames.TH}
         text={formatQuerySource(selectedSource)}
-        rightIcon={IconNames.CARET_DOWN}
+        endIcon={IconNames.CARET_DOWN}
         fill={fill}
-        minimal={minimal}
+        variant={minimal ? 'minimal' : undefined}
         disabled={disabled}
       />
     </PopoverNext>

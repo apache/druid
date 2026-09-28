@@ -281,7 +281,7 @@ export const MeasureMenu = function MeasureMenu(props: MeasureMenuProps) {
               lazy
               shouldReturnFocusOnClose={false}
             >
-              <Button icon={IconNames.TH_DERIVED} minimal disabled={actionDisabled} />
+              <Button icon={IconNames.TH_DERIVED} variant="minimal" disabled={actionDisabled} />
             </PopoverNext>
           )}
           <div className="button-separator" />

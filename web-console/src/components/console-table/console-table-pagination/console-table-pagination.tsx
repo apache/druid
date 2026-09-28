@@ -112,13 +112,13 @@ export const ConsoleTablePagination = React.memo(function ConsoleTablePagination
       <ButtonGroup>
         <Button
           icon={IconNames.CHEVRON_LEFT}
-          minimal
+          variant="minimal"
           disabled={!canPrevious}
           onClick={() => changePage(page - 1)}
         />
         <Button
           icon={IconNames.CHEVRON_RIGHT}
-          minimal
+          variant="minimal"
           disabled={!canNext}
           onClick={() => changePage(page + 1)}
         />
@@ -134,7 +134,7 @@ export const ConsoleTablePagination = React.memo(function ConsoleTablePagination
           lazy
           shouldReturnFocusOnClose={false}
         >
-          <Button minimal text={pageInfo} />
+          <Button variant="minimal" text={pageInfo} />
         </PopoverNext>
       </ButtonGroup>
       {showPageJumpDialog && (

@@ -65,7 +65,7 @@ export const PreviewPane = React.memo(function PreviewPane(props: PreviewPanePro
           lazy
           shouldReturnFocusOnClose={false}
         >
-          <Button icon={IconNames.INFO_SIGN} minimal />
+          <Button icon={IconNames.INFO_SIGN} variant="minimal" />
         </PopoverNext>
       )}
       {previewState.loading && 'Loading...'}

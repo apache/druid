@@ -58,7 +58,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
     buttons.push(
       <Button
         key="timing"
-        minimal
+        variant="minimal"
         text={`Error after ${formatDurationHybrid(queryErrorDuration)}`}
       />,
     );
@@ -91,7 +91,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
     buttons.push(
       <Button
         key="results"
-        minimal
+        variant="minimal"
         text={
           resultCount +
           (warningCount ? ` and ${pluralIfNeeded(warningCount, 'warning')}` : '') +
@@ -148,7 +148,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
         lazy
         shouldReturnFocusOnClose={false}
       >
-        <Button icon={IconNames.DOWNLOAD} data-tooltip="Download" minimal />
+        <Button icon={IconNames.DOWNLOAD} data-tooltip="Download" variant="minimal" />
       </PopoverNext>,
     );
   }
@@ -159,14 +159,14 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
         key="reset"
         icon={IconNames.CROSS}
         data-tooltip="Clear output"
-        minimal
+        variant="minimal"
         onClick={onReset}
       />,
     );
   }
 
   return (
-    <ButtonGroup className="execution-summary-panel" minimal>
+    <ButtonGroup className="execution-summary-panel" variant="minimal">
       {buttons}
       {showDestinationPages && execution && (
         <DestinationPagesDialog

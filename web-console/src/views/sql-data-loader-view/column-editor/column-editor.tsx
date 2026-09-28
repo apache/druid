@@ -252,7 +252,7 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
                   ? 'VARCHAR (multi-value)'
                   : `implicit (${column.sqlType})`)
               }`}
-              rightIcon={IconNames.CARET_DOWN}
+              endIcon={IconNames.CARET_DOWN}
             />
           </PopoverNext>
         );

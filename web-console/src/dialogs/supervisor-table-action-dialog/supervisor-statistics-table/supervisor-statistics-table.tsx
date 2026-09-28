@@ -168,7 +168,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
           <Button
             text="View raw"
             disabled={supervisorStatisticsState.loading}
-            minimal
+            variant="minimal"
             onClick={() => window.open(UrlBaser.base(statsEndpoint), '_blank')}
           />
         </ButtonGroup>

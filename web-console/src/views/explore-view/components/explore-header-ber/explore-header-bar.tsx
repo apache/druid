@@ -65,7 +65,7 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
 
   return (
     <Navbar className="explore-header-bar">
-      <NavbarGroup align={Alignment.LEFT}>
+      <NavbarGroup align={Alignment.START}>
         <PopoverNext
           placement="bottom-end"
           content={
@@ -149,7 +149,7 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
           </div>
         </PopoverNext>
       </NavbarGroup>
-      <NavbarGroup align={Alignment.RIGHT}>
+      <NavbarGroup align={Alignment.END}>
         <PopoverNext
           placement="bottom-end"
           content={
@@ -172,7 +172,7 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
             icon={IconNames.GLOBE_NETWORK}
             text={timezone ? timezone.toString() : 'Etc/UTC'}
             data-tooltip="Change query timezone"
-            minimal
+            variant="minimal"
           />
         </PopoverNext>
         <PopoverNext
@@ -185,7 +185,7 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
             className="header-entry"
             icon={IconNames.MORE}
             data-tooltip="More options"
-            minimal
+            variant="minimal"
           />
         </PopoverNext>
         <PopoverNext
@@ -208,11 +208,16 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
           lazy
           shouldReturnFocusOnClose={false}
         >
-          <Button className="header-entry" icon={IconNames.CONTROL} data-tooltip="Layout" minimal />
+          <Button
+            className="header-entry"
+            icon={IconNames.CONTROL}
+            data-tooltip="Layout"
+            variant="minimal"
+          />
         </PopoverNext>
         <Button
           className="header-entry"
-          minimal
+          variant="minimal"
           icon={IconNames.PANEL}
           data-tooltip="Show/hide side panels"
           onClick={e => onShowHideSidePanel(e.altKey)}

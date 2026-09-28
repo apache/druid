@@ -179,7 +179,12 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       lazy
       shouldReturnFocusOnClose={false}
     >
-      <Button icon={IconNames.WARNING_SIGN} text={label} intent={Intent.WARNING} minimal />
+      <Button
+        icon={IconNames.WARNING_SIGN}
+        text={label}
+        intent={Intent.WARNING}
+        variant="minimal"
+      />
     </PopoverNext>
   );
 });

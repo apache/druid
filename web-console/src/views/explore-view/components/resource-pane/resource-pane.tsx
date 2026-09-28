@@ -113,7 +113,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
         <div className="resource-sub-pane">
           <div className="list-header column-list-header">
             Columns
-            <ButtonGroup className="header-buttons" minimal>
+            <ButtonGroup className="header-buttons" variant="minimal">
               <Button
                 icon={IconNames.PLUS}
                 data-tooltip="Add column"
@@ -242,7 +242,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
         <div className="resource-sub-pane">
           <div className="list-header measure-list-header">
             Measures
-            <ButtonGroup className="header-buttons" minimal>
+            <ButtonGroup className="header-buttons" variant="minimal">
               <Button
                 icon={IconNames.PLUS}
                 data-tooltip="Add measure"

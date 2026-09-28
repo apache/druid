@@ -167,7 +167,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
                 : 2
               : formatInteger(maxNumTasks)
           }`}
-          rightIcon={IconNames.CARET_DOWN}
+          endIcon={IconNames.CARET_DOWN}
         />
       </PopoverNext>
       {customMaxNumTasksDialogOpen && (

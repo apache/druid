@@ -141,7 +141,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           >
             <Button
               text={RESULT_FORMAT_DESCRIPTION[desiredResultFormat]}
-              rightIcon={IconNames.CARET_DOWN}
+              endIcon={IconNames.CARET_DOWN}
             />
           </PopoverNext>
         </ControlGroup>
@@ -193,7 +193,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 className="download-button"
                 icon={IconNames.DOWNLOAD}
                 text="Download"
-                minimal
+                variant="minimal"
                 href={getResultUrl(value)}
                 download
               />

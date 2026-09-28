@@ -55,20 +55,20 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
           <Button
             disabled={jsonState.loading}
             text="Refresh"
-            minimal
+            variant="minimal"
             onClick={() => queryManager.rerunLastQuery()}
           />
           {downloadFilename && (
             <Button
               disabled={jsonState.loading}
               text="Download"
-              minimal
+              variant="minimal"
               onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
             />
           )}
           <Button
             text="Copy"
-            minimal
+            variant="minimal"
             disabled={jsonState.loading}
             onClick={() => {
               copyToClipboard(jsonValue);
@@ -81,7 +81,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
           <Button
             text="View raw"
             disabled={!jsonValue}
-            minimal
+            variant="minimal"
             onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
           />
         </ButtonGroup>

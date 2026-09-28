@@ -235,7 +235,7 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
             >
               <Button
                 text={selectedSupervisor || 'Select supervisor'}
-                rightIcon={IconNames.CARET_DOWN}
+                endIcon={IconNames.CARET_DOWN}
                 disabled={!availableSupervisors.length}
               />
             </PopoverNext>

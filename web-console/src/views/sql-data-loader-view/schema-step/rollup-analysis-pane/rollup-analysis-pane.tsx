@@ -290,7 +290,7 @@ export const RollupAnalysisPane = React.memo(function RollupAnalysisPane(
 
   return (
     <Callout className="rollup-analysis-pane">
-      <Button className="close" icon={IconNames.CROSS} onClick={onClose} minimal />
+      <Button className="close" icon={IconNames.CROSS} onClick={onClose} variant="minimal" />
       {analyzeQueryState.isInit() && (
         <>
           <p>

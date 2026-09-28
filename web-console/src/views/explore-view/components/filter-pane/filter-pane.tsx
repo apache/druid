@@ -137,7 +137,7 @@ export function FilterPane(props: FilterPaneProps) {
 
   return (
     <DroppableContainer className="filter-pane" onDropColumn={filterOn}>
-      <Button className="filter-icon-button" icon={IconNames.FILTER} minimal disabled />
+      <Button className="filter-icon-button" icon={IconNames.FILTER} variant="minimal" disabled />
       {patterns.map((pattern, i) => {
         return (
           <div className="filter-pill" key={i}>
@@ -180,7 +180,7 @@ export function FilterPane(props: FilterPaneProps) {
               >
                 <Button
                   className={classNames('filter-text-button', { negated: pattern.negated })}
-                  minimal
+                  variant="minimal"
                   text={formatPatternWithoutNegation(pattern, timezone)}
                   onClick={() => setMenuIndex(i)}
                   data-tooltip={i !== menuIndex ? filterTooltip(pattern) : undefined}
@@ -189,7 +189,7 @@ export function FilterPane(props: FilterPaneProps) {
             ) : (
               <Button
                 className={classNames('filter-text-button', { negated: pattern.negated })}
-                minimal
+                variant="minimal"
                 text={formatPatternWithoutNegation(pattern, timezone)}
                 disabled
               />
@@ -197,8 +197,8 @@ export function FilterPane(props: FilterPaneProps) {
             <Button
               className="remove"
               icon={IconNames.CROSS}
-              minimal
-              small
+              variant="minimal"
+              size="small"
               onClick={() => changePatterns(patterns.filter((_clause, idx) => idx !== i))}
               data-tooltip="Remove filter"
             />
@@ -235,7 +235,7 @@ export function FilterPane(props: FilterPaneProps) {
             icon={IconNames.PLUS}
             text={patterns.length ? undefined : 'Add filter'}
             onClick={() => setMenuNew({})}
-            minimal
+            variant="minimal"
             data-tooltip={patterns.length ? 'Add filter' : undefined}
           />
         </PopoverNext>
@@ -244,7 +244,7 @@ export function FilterPane(props: FilterPaneProps) {
           icon={IconNames.PLUS}
           text={patterns.length ? undefined : 'Add filter'}
           disabled
-          minimal
+          variant="minimal"
           data-tooltip="No query source, unable to query"
         />
       )}

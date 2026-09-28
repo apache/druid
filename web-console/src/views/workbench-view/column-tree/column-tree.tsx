@@ -630,7 +630,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
           this.setState({ searchString: e.target.value.substring(0, 100) });
         }}
         rightElement={
-          <ButtonGroup minimal>
+          <ButtonGroup variant="minimal">
             {searchString !== '' && (
               <Button icon={IconNames.CROSS} onClick={() => this.setState({ searchString: '' })} />
             )}

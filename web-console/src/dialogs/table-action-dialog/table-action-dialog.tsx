@@ -59,7 +59,7 @@ export const TableActionDialog = React.memo(function TableActionDialog(
               key={i}
               text={d.text}
               intent={d.active ? Intent.PRIMARY : Intent.NONE}
-              minimal={!d.active}
+              variant={d.active ? undefined : 'minimal'}
               onClick={d.onClick}
             />
           ))}
@@ -70,7 +70,7 @@ export const TableActionDialog = React.memo(function TableActionDialog(
         {actionsMenu && (
           <div className="footer-actions-left">
             <PopoverNext content={actionsMenu} lazy shouldReturnFocusOnClose={false}>
-              <Button icon={IconNames.WRENCH} text="Actions" rightIcon={IconNames.CARET_DOWN} />
+              <Button icon={IconNames.WRENCH} text="Actions" endIcon={IconNames.CARET_DOWN} />
             </PopoverNext>
           </div>
         )}

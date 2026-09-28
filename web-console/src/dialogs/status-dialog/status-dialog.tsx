@@ -127,7 +127,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
         <div className="view-raw-button">
           <Button
             text="View raw"
-            minimal
+            variant="minimal"
             onClick={() => window.open(UrlBaser.base(`/status`), '_blank')}
           />
         </div>

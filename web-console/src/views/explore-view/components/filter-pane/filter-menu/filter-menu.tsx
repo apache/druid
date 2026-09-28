@@ -424,7 +424,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
               lazy
               shouldReturnFocusOnClose={false}
             >
-              <Button icon={IconNames.TH_DERIVED} minimal />
+              <Button icon={IconNames.TH_DERIVED} variant="minimal" />
             </PopoverNext>
           )}
           <div className="button-separator" />

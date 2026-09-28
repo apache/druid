@@ -101,7 +101,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                 { value: 'false', label: 'False' },
                 { value: 'true', label: 'True' },
               ]}
-              small
+              size="small"
             />
           ),
         };
@@ -169,7 +169,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                 }
                 readOnly
                 fill
-                rightElement={<Button icon={IconNames.CARET_DOWN} minimal />}
+                rightElement={<Button icon={IconNames.CARET_DOWN} variant="minimal" />}
               />
             </PopoverNext>
           ),

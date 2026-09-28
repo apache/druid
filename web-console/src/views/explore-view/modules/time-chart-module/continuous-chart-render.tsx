@@ -495,7 +495,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
                 icon={IconNames.ZOOM_IN}
                 text="Zoom in"
                 intent={Intent.PRIMARY}
-                small
+                size="small"
                 onClick={() => {
                   if (!selection) return;
                   setSelection(undefined);
@@ -638,8 +638,8 @@ export const ContinuousChartRender = function ContinuousChartRender(
         className="zoom-out-button"
         icon={IconNames.ZOOM_OUT}
         data-tooltip="Zoom out"
-        small
-        minimal
+        size="small"
+        variant="minimal"
         onClick={() => {
           onChangeRange(zoomedOutRange);
         }}

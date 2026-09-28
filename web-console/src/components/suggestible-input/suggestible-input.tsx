@@ -69,7 +69,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
             lazy
             shouldReturnFocusOnClose={false}
           >
-            <Button icon={IconNames.CARET_DOWN} minimal />
+            <Button icon={IconNames.CARET_DOWN} variant="minimal" />
           </PopoverNext>
         )
       }

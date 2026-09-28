@@ -90,7 +90,11 @@ export function GenericFilterInput({ column, filter, onChange }: ConsoleTableFil
           lazy
           shouldReturnFocusOnClose={false}
         >
-          <Button className="filter-mode-button" icon={TableFilter.modeToIcon(mode)} minimal />
+          <Button
+            className="filter-mode-button"
+            icon={TableFilter.modeToIcon(mode)}
+            variant="minimal"
+          />
         </PopoverNext>
       }
       value={focusedText ?? needle}
@@ -103,7 +107,9 @@ export function GenericFilterInput({ column, filter, onChange }: ConsoleTableFil
         }
       }}
       rightElement={
-        filter ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined
+        filter ? (
+          <Button icon={IconNames.CROSS} variant="minimal" onClick={() => onChange('')} />
+        ) : undefined
       }
       onBlur={e => {
         setFocusedText(undefined);

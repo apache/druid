@@ -299,9 +299,9 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
             <FormGroup>
               <Callout>
                 <Button
-                  rightIcon={checkedCircleIcon(selectTimestamp)}
+                  endIcon={checkedCircleIcon(selectTimestamp)}
                   onClick={() => setSelectTimestamp(!selectTimestamp)}
-                  minimal
+                  variant="minimal"
                 >
                   Select <Tag minimal>{possibleTimeExpression.column}</Tag> as the primary time
                   column
@@ -314,8 +314,8 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
               <Callout>
                 <Button
                   text={altText}
-                  rightIcon={IconNames.ARROW_TOP_RIGHT}
-                  minimal
+                  endIcon={IconNames.ARROW_TOP_RIGHT}
+                  variant="minimal"
                   disabled={nextDisabled}
                   onClick={() => {
                     if (!inputSourceFormatAndMore) return;
@@ -330,7 +330,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
             <Button
               className="next"
               text={doneButton ? 'Done' : 'Next'}
-              rightIcon={doneButton ? IconNames.TICK : IconNames.ARROW_RIGHT}
+              endIcon={doneButton ? IconNames.TICK : IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
               disabled={nextDisabled}
               onClick={() => {

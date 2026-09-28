@@ -75,7 +75,7 @@ export const ColumnPicker = React.memo(function ColumnPicker(props: ColumnPicker
       <Button
         icon={selectedColumn ? columnToIcon(selectedColumn) : undefined}
         text={selectedColumnName}
-        rightIcon={IconNames.CARET_DOWN}
+        endIcon={IconNames.CARET_DOWN}
         fill={fill}
         disabled={disabled}
         onClick={() => {

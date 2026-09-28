@@ -1167,8 +1167,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 return (
                   <Button
                     text="Apply filter to table"
-                    small
-                    rightIcon={IconNames.ARROW_DOWN}
+                    size="small"
+                    endIcon={IconNames.ARROW_DOWN}
                     onClick={() => {
                       let filters = TableFilters.empty();
                       if (start) {

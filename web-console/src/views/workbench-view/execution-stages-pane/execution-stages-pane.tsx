@@ -860,8 +860,8 @@ ${title} uncompressed size: ${formatBytesCompact(
                   <div className="error-warning">
                     {myError && (
                       <Button
-                        minimal
-                        small
+                        variant="minimal"
+                        size="small"
                         icon={IconNames.ERROR}
                         intent={Intent.DANGER}
                         onClick={onErrorClick}
@@ -874,8 +874,8 @@ ${title} uncompressed size: ${formatBytesCompact(
                     {myError && warnings > 0 && ' '}
                     {warnings > 0 && (
                       <Button
-                        minimal
-                        small
+                        variant="minimal"
+                        size="small"
                         icon={IconNames.WARNING_SIGN}
                         text={warnings > 1 ? `${warnings}` : undefined}
                         intent={Intent.WARNING}

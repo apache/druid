@@ -620,7 +620,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
                 icon={IconNames.ZOOM_IN}
                 text="Zoom in"
                 intent={Intent.PRIMARY}
-                small
+                size="small"
                 onClick={() => {
                   if (!selection) return;
                   setSelection(undefined);

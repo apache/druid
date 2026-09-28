@@ -82,7 +82,12 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
     <div className="current-dart-panel">
       <div className="title">
         Current Dart queries
-        <Button className="close-button" icon={IconNames.CROSS} minimal onClick={onClose} />
+        <Button
+          className="close-button"
+          icon={IconNames.CROSS}
+          variant="minimal"
+          onClick={onClose}
+        />
       </div>
       {dartQueryEntries ? (
         <div className="work-entries">

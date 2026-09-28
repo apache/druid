@@ -1801,8 +1801,8 @@ GROUP BY 1, 2`;
                 return (
                   <Button
                     text="Open in segments view"
-                    small
-                    rightIcon={IconNames.ARROW_TOP_RIGHT}
+                    size="small"
+                    endIcon={IconNames.ARROW_TOP_RIGHT}
                     onClick={() => {
                       let filters = TableFilters.empty();
                       if (datasource) {

@@ -231,7 +231,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
                 <Button
                   text="Zoom in"
                   intent={Intent.PRIMARY}
-                  small
+                  size="small"
                   onClick={() => {
                     if (splitColumn) {
                       setWhere(updateFilterClause(where, splitColumn.expression.equal(label)));
@@ -242,7 +242,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
               )}
               <Button
                 text="Close"
-                small
+                size="small"
                 onClick={() => {
                   setHighlight(undefined);
                 }}

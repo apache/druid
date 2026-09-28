@@ -252,7 +252,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
                   <Button
                     text="Zoom in"
                     intent={Intent.PRIMARY}
-                    small
+                    size="small"
                     onClick={() => {
                       setWhere(updateFilterClause(where, C(splitColumn.name).equal(name)));
                       setHighlight(undefined);
@@ -261,7 +261,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
                 )}
                 <Button
                   text="Close"
-                  small
+                  size="small"
                   onClick={() => {
                     setHighlight(undefined);
                   }}

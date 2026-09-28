@@ -597,7 +597,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             lazy
             shouldReturnFocusOnClose={false}
           >
-            <Button icon={IconNames.FILTER} minimal>
+            <Button icon={IconNames.FILTER} variant="minimal">
               Filters &nbsp;
               <Tag minimal round>
                 {ingestQueryPattern ? ingestQueryPattern.filters.length : '?'}
@@ -635,7 +635,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               lazy
               shouldReturnFocusOnClose={false}
             >
-              <Button icon={IconNames.SPLIT_COLUMNS} minimal>
+              <Button icon={IconNames.SPLIT_COLUMNS} variant="minimal">
                 Partition &nbsp;
                 <Tag minimal round>
                   {ingestQueryPattern.partitionedBy === 'all'
@@ -708,7 +708,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               lazy
               shouldReturnFocusOnClose={false}
             >
-              <Button icon={IconNames.MERGE_COLUMNS} minimal>
+              <Button icon={IconNames.MERGE_COLUMNS} variant="minimal">
                 Cluster &nbsp;
                 <Tag minimal round>
                   {ingestQueryPattern.clusteredBy.length}
@@ -722,7 +722,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               setEditorColumn(undefined); // Clear any selected column if any
               setShowRollupConfirm(true);
             }}
-            minimal
+            variant="minimal"
           >
             Rollup &nbsp;
             <Tag minimal round>
@@ -733,7 +733,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             <Button
               className="destination-button"
               icon={IconNames.MULTI_SELECT}
-              minimal
+              variant="minimal"
               onClick={() => setShowDestinationDialog(true)}
             >
               {`Datasource: ${ingestQueryPattern.destinationTableName} `}
@@ -774,7 +774,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               <Button
                 icon={IconNames.LIGHTBULB}
                 text="Analyze rollup"
-                minimal
+                variant="minimal"
                 active={showRollupAnalysisPane}
                 onClick={() => setShowRollupAnalysisPane(!showRollupAnalysisPane)}
               />
@@ -849,7 +849,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           )}
           {effectiveMode === 'sql' && (
             <div className="control-line right">
-              <Button rightIcon={IconNames.ARROW_TOP_RIGHT} onClick={goToQuery}>
+              <Button endIcon={IconNames.ARROW_TOP_RIGHT} onClick={goToQuery}>
                 Open in <strong>Query</strong> view
               </Button>
             </div>
@@ -988,7 +988,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   intent={Intent.WARNING}
-                  minimal
+                  variant="minimal"
                 />
               </Callout>
             )}

@@ -83,7 +83,7 @@ export const TableColumnSelector = React.memo(function TableColumnSelector(
       lazy
       shouldReturnFocusOnClose={false}
     >
-      <Button rightIcon={IconNames.CARET_DOWN}>
+      <Button endIcon={IconNames.CARET_DOWN}>
         Columns <span className="counter">{counterText}</span>
       </Button>
     </PopoverNext>

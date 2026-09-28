@@ -128,7 +128,7 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
                   lazy
                   shouldReturnFocusOnClose={false}
                 >
-                  <Button text={type} rightIcon={IconNames.CARET_DOWN} />
+                  <Button text={type} endIcon={IconNames.CARET_DOWN} />
                 </PopoverNext>
                 {oneOf(type, 'BIGINT', 'DOUBLE', 'FLOAT') ? (
                   <FancyNumericInput

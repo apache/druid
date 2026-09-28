@@ -678,7 +678,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                   <Button
                     className="tab-name"
                     text={tabEntry.tabName}
-                    minimal
+                    variant="minimal"
                     onDoubleClick={() => this.setState({ renamingTab: tabEntry })}
                   />
                 </PopoverNext>
@@ -686,7 +686,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                 <Button
                   className="tab-name"
                   text={tabEntry.tabName}
-                  minimal
+                  variant="minimal"
                   onClick={() => {
                     localStorageSet(LocalStorageKeys.WORKBENCH_LAST_TAB, currentId);
                     onTabChange(currentId);
@@ -697,8 +697,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                 className="tab-close"
                 icon={IconNames.CROSS}
                 data-tooltip={`Close tab: ${tabEntry.tabName}`}
-                small
-                minimal
+                size="small"
+                variant="minimal"
                 onClick={() => {
                   cleanupTabEntry(tabEntry);
                   this.handleQueriesChange(
@@ -717,7 +717,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           className="new-tab"
           icon={IconNames.PLUS}
           data-tooltip="New tab"
-          minimal
+          variant="minimal"
           onClick={() => {
             this.handleNewTab(this.getInitWorkbenchQuery());
           }}
@@ -742,7 +742,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               connectExternalDataDialogOpen: true,
             });
           }}
-          minimal
+          variant="minimal"
         />
         <PopoverNext
           placement="bottom-end"
@@ -773,7 +773,11 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           lazy
           shouldReturnFocusOnClose={false}
         >
-          <Button icon={IconNames.DRAWER_RIGHT} minimal data-tooltip="Open helper panels" />
+          <Button
+            icon={IconNames.DRAWER_RIGHT}
+            variant="minimal"
+            data-tooltip="Open helper panels"
+          />
         </PopoverNext>
       </ButtonGroup>
     );

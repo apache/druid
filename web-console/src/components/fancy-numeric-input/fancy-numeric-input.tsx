@@ -17,7 +17,7 @@
  */
 
 import type { InputGroupProps, Intent } from '@blueprintjs/core';
-import { Button, ButtonGroup, Classes, ControlGroup, InputGroup, Keys } from '@blueprintjs/core';
+import { Button, ButtonGroup, Classes, ControlGroup, InputGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { SqlExpression, SqlFunction, SqlLiteral, SqlMulti } from 'druid-query-toolkit';
@@ -167,8 +167,7 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
         autoComplete="off"
         aria-valuemax={max}
         aria-valuemin={min}
-        small={small}
-        large={large}
+        size={small ? 'small' : large ? 'large' : undefined}
         placeholder={placeholder}
         value={shownValue}
         onChange={e => {
@@ -188,17 +187,17 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
           onBlur?.(e);
         }}
         onKeyDown={e => {
-          const { keyCode } = e;
+          const { key } = e;
 
-          if (keyCode === Keys.ENTER && typeof shownNumberClamped === 'number') {
+          if (key === 'Enter' && typeof shownNumberClamped === 'number') {
             setShownValue(numberToShown(shownNumberClamped));
             return;
           }
 
           let direction = 0;
-          if (keyCode === Keys.ARROW_UP) {
+          if (key === 'ArrowUp') {
             direction = 1;
-          } else if (keyCode === Keys.ARROW_DOWN) {
+          } else if (key === 'ArrowDown') {
             direction = -1;
           }
 

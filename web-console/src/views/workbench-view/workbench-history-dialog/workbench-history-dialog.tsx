@@ -78,8 +78,8 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
                 Object.keys(record.query.queryContext).length,
                 'key',
               )}`}
-              minimal
-              small
+              variant="minimal"
+              size="small"
             />
           </PopoverNext>
         </div>

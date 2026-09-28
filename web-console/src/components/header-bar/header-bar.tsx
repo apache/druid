@@ -264,14 +264,14 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
 
   return (
     <Navbar className="header-bar">
-      <NavbarGroup align={Alignment.LEFT}>
+      <NavbarGroup align={Alignment.START}>
         <a href="#">
           <DruidLogo />
         </a>
         <NavbarDivider />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'workbench'}
           icon={getConsoleViewIcon('workbench')}
           text="Query"
@@ -290,7 +290,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
               className="header-entry"
               icon={getConsoleViewIcon('data-loader')}
               text="Load data"
-              minimal
+              variant="minimal"
               active={loadDataViewsMenuActive}
               disabled={!capabilities.hasEverything()}
             />
@@ -301,7 +301,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
             icon={getConsoleViewIcon('data-loader')}
             text="Load data"
             href="#data-loader"
-            minimal
+            variant="minimal"
             active={loadDataViewsMenuActive}
             disabled={!capabilities.hasEverything()}
           />
@@ -309,7 +309,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         <NavbarDivider />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'datasources'}
           icon={getConsoleViewIcon('datasources')}
           text="Datasources"
@@ -318,7 +318,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'supervisors'}
           icon={getConsoleViewIcon('supervisors')}
           text="Supervisors"
@@ -327,7 +327,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'tasks'}
           icon={getConsoleViewIcon('tasks')}
           text="Tasks"
@@ -336,7 +336,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'segments'}
           icon={getConsoleViewIcon('segments')}
           text="Segments"
@@ -345,7 +345,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         />
         <AnchorButton
           className="header-entry"
-          minimal
+          variant="minimal"
           active={activeView === 'services'}
           icon={getConsoleViewIcon('services')}
           text="Services"
@@ -360,14 +360,14 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
         >
           <Button
             className="header-entry"
-            minimal
+            variant="minimal"
             icon={IconNames.MORE}
             active={moreViewsMenuActive}
             data-tooltip="More views"
           />
         </PopoverNext>
       </NavbarGroup>
-      <NavbarGroup align={Alignment.RIGHT}>
+      <NavbarGroup align={Alignment.END}>
         <RestrictedMode
           capabilities={capabilities}
           onUnrestrict={onUnrestrict}
@@ -408,7 +408,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
               icon={IconNames.HIGH_PRIORITY}
               text="Manual capability detection"
               intent={Intent.DANGER}
-              minimal
+              variant="minimal"
             />
           </PopoverNext>
         )}
@@ -418,7 +418,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           lazy
           shouldReturnFocusOnClose={false}
         >
-          <Button className="header-entry" minimal icon={IconNames.COG} data-tooltip="Settings" />
+          <Button
+            className="header-entry"
+            variant="minimal"
+            icon={IconNames.COG}
+            data-tooltip="Settings"
+          />
         </PopoverNext>
         <PopoverNext
           content={helpMenu}
@@ -426,7 +431,12 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           lazy
           shouldReturnFocusOnClose={false}
         >
-          <Button className="header-entry" minimal icon={IconNames.HELP} data-tooltip="Help" />
+          <Button
+            className="header-entry"
+            variant="minimal"
+            icon={IconNames.HELP}
+            data-tooltip="Help"
+          />
         </PopoverNext>
       </NavbarGroup>
       {aboutDialogOpen && <AboutDialog onClose={() => setAboutDialogOpen(false)} />}

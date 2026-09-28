@@ -93,7 +93,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
         lazy
         shouldReturnFocusOnClose={false}
       >
-        <Button {...other} rightIcon={IconNames.CARET_DOWN} />
+        <Button {...other} endIcon={IconNames.CARET_DOWN} />
       </PopoverNext>
     </ButtonGroup>
   );

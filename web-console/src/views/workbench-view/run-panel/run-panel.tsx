@@ -662,7 +662,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                   ? enginesLabelFn(queryEngine).text
                   : `${autoEngineLabel.text} [${enginesLabelFn(effectiveEngine).text}]`
               }`}
-              rightIcon={IconNames.CARET_DOWN}
+              endIcon={IconNames.CARET_DOWN}
               intent={intent}
             />
           </PopoverNext>
@@ -687,7 +687,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
           lazy
           shouldReturnFocusOnClose={false}
         >
-          <Button rightIcon={IconNames.MORE} data-tooltip="Engine specific tools" />
+          <Button endIcon={IconNames.MORE} data-tooltip="Engine specific tools" />
         </PopoverNext>
       )}
       {editContextDialogOpen && (

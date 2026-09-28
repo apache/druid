@@ -265,7 +265,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
               <Button
                 text="Zoom in"
                 intent={Intent.PRIMARY}
-                small
+                size="small"
                 onClick={() => {
                   if (!timeColumnName) return;
                   setWhere(
@@ -288,7 +288,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
               />
               <Button
                 text="Close"
-                small
+                size="small"
                 onClick={() => {
                   setHighlight(undefined);
                   myChart.dispatchAction({
