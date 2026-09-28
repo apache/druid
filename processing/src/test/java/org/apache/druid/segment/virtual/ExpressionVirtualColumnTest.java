@@ -798,10 +798,12 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
   public void testWithOutputName()
   {
     Assertions.assertTrue(X_PLUS_Y.supportsOutputNameRewrite());
+    final ExpressionVirtualColumn renamed = X_PLUS_Y.withOutputName("declared");
     Assertions.assertEquals(
         new ExpressionVirtualColumn("declared", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE),
-        X_PLUS_Y.withOutputName("declared")
+        renamed
     );
+    Assertions.assertEquals(X_PLUS_Y.getEquivalanceKey(), renamed.getEquivalanceKey());
   }
 
   @Test
