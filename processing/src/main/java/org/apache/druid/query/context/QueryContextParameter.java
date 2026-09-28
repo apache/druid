@@ -108,7 +108,7 @@ public final class QueryContextParameter<T>
     if (value == null && !nullable) {
       throw new IAE("Query context parameter [%s] must not be null", name);
     }
-    if (value != null && valueType.isInstance(value)) {
+    if (valueType.isInstance(value)) {
       return validate(valueType.cast(value));
     }
     return validate(valueType.cast(parser.parse(value)));

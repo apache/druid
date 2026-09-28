@@ -19,26 +19,34 @@
 
 package org.apache.druid.query.context;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
 import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
 
-import javax.annotation.Nullable;
-import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Common query context parameter descriptors.
- */
+/// Central catalog of query context parameter descriptors.
+///
+/// Define user-facing metadata here, including descriptions, default values, constraints,
+/// applicability, and introduction versions. The
+/// {@link org.apache.druid.query.context.docs.ParameterDocumentationGenerator} generates the
+/// corresponding tables in `query-context-reference.md`, `scan-query.md`, and
+/// `sql-query-context.md`.
+///
+/// When adding or changing a descriptor, including introducing a new parameter, run this command
+/// from the repository root to regenerate the checked-in documentation. The default Maven mode
+/// verifies that the generated documentation is up to date.
+///
+/// ```shell
+/// mvn -ntp -pl processing -am -Pskip-static-checks -Dweb.console.skip=true -DskipTests -Dquery.context.docs.mode=generate -T1C process-classes
+/// ```
 public final class QueryContextParameters
 {
   public static final QueryContextParameter<Boolean> USE_RESULT_LEVEL_CACHE = booleanParameter("useResultLevelCache")
@@ -74,49 +82,16 @@ public final class QueryContextParameters
   /** Immutable query context parameter descriptors indexed by parameter name. */
   public static final Map<String, QueryContextParameter<?>> BY_NAME =
       Arrays.stream(QueryContextParameters.class.getDeclaredFields())
-            .filter(field -> Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()))
-            .filter(field -> QueryContextParameter.class.equals(field.getType()))
-            .map(QueryContextParameters::getParameter)
+            .filter(field -> Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()) && QueryContextParameter.class.equals(field.getType()))
+            .map((field) -> {
+              try {
+                return (QueryContextParameter<?>) field.get(null);
+              }
+              catch (final IllegalAccessException e) {
+                throw new ISE(e, "Unable to read query context parameter field [%s]", field.getName());
+              }
+            })
             .collect(Collectors.toUnmodifiableMap(QueryContextParameter::getName, Function.identity()));
-
-  private QueryContextParameters()
-  {
-  }
-
-  /**
-   * Validates a value assigned by a SQL {@code SET} statement.
-   */
-  public static void validate(final String name, @Nullable final Object value)
-  {
-    final QueryContextParameter<?> parameter = BY_NAME.get(name);
-    // Unmigrated parameters are intentionally accepted until the catalog contains every supported context parameter.
-    if (parameter != null) {
-      try {
-        parameter.parse(value);
-      }
-      catch (BadQueryContextException e) {
-        throw new IAE(e, "Invalid query context parameter [%s]: %s", name, e.getMessage());
-      }
-    }
-  }
-
-  /**
-   * Validates every recognized query context parameter in the supplied map.
-   */
-  public static void validate(final Map<String, Object> parameters)
-  {
-    parameters.forEach(QueryContextParameters::validate);
-  }
-
-  private static QueryContextParameter<?> getParameter(final Field field)
-  {
-    try {
-      return (QueryContextParameter<?>) field.get(null);
-    }
-    catch (final IllegalAccessException e) {
-      throw new ISE(e, "Unable to read query context parameter field [%s]", field.getName());
-    }
-  }
 
   // These builders temporarily delegate to QueryContexts for its established coercion behavior. The coercion logic
   // can move into this class after all query context parameters and their callers have migrated to descriptors.

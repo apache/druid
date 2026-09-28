@@ -26,17 +26,17 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-class QueryContextParametersTest
+class QueryContextParameterValidatorTest
 {
   @Test
   void testValidateParameter()
   {
-    assertThrows(IAE.class, () -> QueryContextParameters.validate("maxRowsQueuedForOrdering", -1));
-    assertThrows(IAE.class, () -> QueryContextParameters.validate("maxRowsQueuedForOrdering", "not-an-int"));
-    assertThrows(IAE.class, () -> QueryContextParameters.validate("useResultLevelCache", 1));
-    QueryContextParameters.validate("maxRowsQueuedForOrdering", Integer.MAX_VALUE);
-    QueryContextParameters.validate("maxRowsQueuedForOrdering", null);
-    QueryContextParameters.validate("unmigratedParameter", -1);
+    assertThrows(IAE.class, () -> QueryContextParameterValidator.validate("maxRowsQueuedForOrdering", -1));
+    assertThrows(IAE.class, () -> QueryContextParameterValidator.validate("maxRowsQueuedForOrdering", "not-an-int"));
+    assertThrows(IAE.class, () -> QueryContextParameterValidator.validate("useResultLevelCache", 1));
+    QueryContextParameterValidator.validate("maxRowsQueuedForOrdering", Integer.MAX_VALUE);
+    QueryContextParameterValidator.validate("maxRowsQueuedForOrdering", null);
+    QueryContextParameterValidator.validate("unmigratedParameter", -1);
   }
 
   @Test
@@ -44,10 +44,10 @@ class QueryContextParametersTest
   {
     assertThrows(
         IAE.class,
-        () -> QueryContextParameters.validate(
+        () -> QueryContextParameterValidator.validate(
             Map.of("maxRowsQueuedForOrdering", 0, "unmigratedParameter", -1)
         )
     );
-    QueryContextParameters.validate(Map.of("maxRowsQueuedForOrdering", 1, "unmigratedParameter", -1));
+    QueryContextParameterValidator.validate(Map.of("maxRowsQueuedForOrdering", 1, "unmigratedParameter", -1));
   }
 }

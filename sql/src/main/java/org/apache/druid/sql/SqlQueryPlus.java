@@ -27,7 +27,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.query.context.QueryContextParameterValidator;
 import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
@@ -276,7 +276,7 @@ public class SqlQueryPlus
     {
       final StatementAndSetContext statementAndSetContext = DruidSqlParser.parse(sql, true);
       try {
-        QueryContextParameters.validate(statementAndSetContext.getSetContext());
+        QueryContextParameterValidator.validate(statementAndSetContext.getSetContext());
       }
       catch (IAE e) {
         throw InvalidSqlInput.exception(e, "Invalid query context parameter value: %s", e.getMessage());
