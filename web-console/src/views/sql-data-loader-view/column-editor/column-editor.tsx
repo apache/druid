@@ -24,8 +24,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { QueryResult } from 'druid-query-toolkit';
@@ -187,9 +186,10 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
         );
 
         typeButton = (
-          <Popover
-            position={Position.BOTTOM_LEFT}
-            minimal
+          <PopoverNext
+            placement="bottom-start"
+            animation="minimal"
+            arrow={false}
             content={
               initCastType ? (
                 <Menu>
@@ -242,6 +242,8 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
                 </Menu>
               )
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               text={`Type: ${
@@ -252,7 +254,7 @@ export const ColumnEditor = React.memo(function ColumnEditor(props: ColumnEditor
               }`}
               rightIcon={IconNames.CARET_DOWN}
             />
-          </Popover>
+          </PopoverNext>
         );
       }
     }

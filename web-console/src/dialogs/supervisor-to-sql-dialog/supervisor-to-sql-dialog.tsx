@@ -25,8 +25,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   Radio,
   RadioGroup,
   TextArea,
@@ -216,8 +215,8 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
 
         {supervisorSource === 'select' ? (
           <FormGroup label="Select supervisor">
-            <Popover
-              position={Position.BOTTOM_LEFT}
+            <PopoverNext
+              placement="bottom-start"
               disabled={!availableSupervisors.length}
               content={
                 <Menu>
@@ -231,13 +230,15 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
                   ))}
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <Button
                 text={selectedSupervisor || 'Select supervisor'}
                 rightIcon={IconNames.CARET_DOWN}
                 disabled={!availableSupervisors.length}
               />
-            </Popover>
+            </PopoverNext>
           </FormGroup>
         ) : (
           <FormGroup

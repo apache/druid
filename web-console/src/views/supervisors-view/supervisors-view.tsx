@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, PopoverNext, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
@@ -157,8 +157,8 @@ interface HeaderStatsKeySelectorProps {
 function HeaderStatsKeySelector({ changeStatsKey }: HeaderStatsKeySelectorProps) {
   const { statsKey } = useContext(StatsContext);
   return (
-    <Popover
-      position={Position.BOTTOM}
+    <PopoverNext
+      placement="bottom"
       content={
         <Menu>
           {ROW_STATS_KEYS.map(k => (
@@ -171,11 +171,13 @@ function HeaderStatsKeySelector({ changeStatsKey }: HeaderStatsKeySelectorProps)
           ))}
         </Menu>
       }
+      lazy
+      shouldReturnFocusOnClose={false}
     >
       <i className="title-button">
         {getRowStatsKeyTitle(statsKey)} <Icon icon={IconNames.CARET_DOWN} />
       </i>
-    </Popover>
+    </PopoverNext>
   );
 }
 
@@ -1340,8 +1342,8 @@ export class SupervisorsView extends React.PureComponent<
               this.supervisorQueryManager.rerunLastQuery(auto);
             }}
           />
-          <Popover
-            position={Position.BOTTOM_LEFT}
+          <PopoverNext
+            placement="bottom-start"
             content={
               <Menu>
                 <MenuItem
@@ -1351,9 +1353,11 @@ export class SupervisorsView extends React.PureComponent<
                 />
               </Menu>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button icon={IconNames.PLUS} text="Create" />
-          </Popover>
+          </PopoverNext>
           {this.renderBulkSupervisorActions()}
           <TableColumnSelector
             columns={SUPERVISOR_TABLE_COLUMNS}

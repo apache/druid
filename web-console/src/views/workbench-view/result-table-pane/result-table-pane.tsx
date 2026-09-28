@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
@@ -684,7 +684,11 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             return {
               Header() {
                 return (
-                  <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
+                  <PopoverNext
+                    content={<Deferred content={() => getHeaderMenu(column, i)} />}
+                    lazy
+                    shouldReturnFocusOnClose={false}
+                  >
                     <div className="clickable-cell">
                       <div className="output-name" data-tooltip={columnToSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
@@ -699,7 +703,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                         </div>
                       )}
                     </div>
-                  </Popover>
+                  </PopoverNext>
                 );
               },
               headerClassName: getHeaderClassName(h),
@@ -708,7 +712,11 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 const value = row.value;
                 return (
                   <div>
-                    <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                    <PopoverNext
+                      content={<Deferred content={() => getCellMenu(column, i, value)} />}
+                      lazy
+                      shouldReturnFocusOnClose={false}
+                    >
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
@@ -719,7 +727,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       ) : (
                         <TableCell value={value} unlimited />
                       )}
-                    </Popover>
+                    </PopoverNext>
                   </div>
                 );
               },

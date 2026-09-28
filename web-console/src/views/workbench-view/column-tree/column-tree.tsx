@@ -27,8 +27,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -255,8 +254,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   (searchMode === 'columns-only' ||
                     !tableName.toLowerCase().includes(lowerSearchString))),
               label: (
-                <Popover
-                  position={Position.RIGHT}
+                <PopoverNext
+                  placement="right"
                   content={
                     <Deferred
                       content={() => {
@@ -457,9 +456,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                       }}
                     />
                   }
+                  lazy
+                  shouldReturnFocusOnClose={false}
                 >
                   {tableName}
-                </Popover>
+                </PopoverNext>
               ),
               childNodes: metadata.map((columnData): TreeNodeInfo => ({
                 id: columnData.COLUMN_NAME,
@@ -473,8 +474,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   />
                 ),
                 label: (
-                  <Popover
-                    position={Position.RIGHT}
+                  <PopoverNext
+                    placement="right"
                     autoFocus={false}
                     content={
                       <Deferred
@@ -550,9 +551,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                         }}
                       />
                     }
+                    lazy
+                    shouldReturnFocusOnClose={false}
                   >
                     {columnData.COLUMN_NAME}
-                  </Popover>
+                  </PopoverNext>
                 ),
               })),
             }),
@@ -631,8 +634,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
             {searchString !== '' && (
               <Button icon={IconNames.CROSS} onClick={() => this.setState({ searchString: '' })} />
             )}
-            <Popover
-              position="bottom-left"
+            <PopoverNext
+              placement="bottom-start"
               content={
                 <Menu>
                   <MenuDivider title="Search in" />
@@ -646,9 +649,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   ))}
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <Button icon={IconNames.SETTINGS} data-tooltip="Search settings" />
-            </Popover>
+            </PopoverNext>
           </ButtonGroup>
         }
       />

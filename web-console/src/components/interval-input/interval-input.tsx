@@ -17,7 +17,7 @@
  */
 
 import type { Intent } from '@blueprintjs/core';
-import { Button, InputGroup, Popover, Position } from '@blueprintjs/core';
+import { Button, InputGroup, PopoverNext } from '@blueprintjs/core';
 import type { DateRange } from '@blueprintjs/datetime';
 import { DateRangePicker } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
@@ -41,7 +41,7 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
       placeholder={placeholder}
       rightElement={
         <div>
-          <Popover
+          <PopoverNext
             popoverClassName="calendar"
             content={
               <DateRangePicker
@@ -55,10 +55,12 @@ export const IntervalInput = React.memo(function IntervalInput(props: IntervalIn
                 shortcuts={false}
               />
             }
-            position={Position.BOTTOM_RIGHT}
+            placement="bottom-end"
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button rightIcon={IconNames.CALENDAR} />
-          </Popover>
+          </PopoverNext>
         </div>
       }
       onChange={(e: any) => {

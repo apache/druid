@@ -522,16 +522,13 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               return (
                 <>
                   {entries.map(([n, v], i) => (
-                    <>
-                      <span
-                        key={n}
-                        data-tooltip={`${pluralIfNeeded(Number(v), 'worker')} reporting: ${n}`}
-                      >
+                    <React.Fragment key={n}>
+                      <span data-tooltip={`${pluralIfNeeded(Number(v), 'worker')} reporting: ${n}`}>
                         {n}
                         {Number(v) > 1 && <span className="count">{` (${v})`}</span>}
                       </span>
-                      {i < entries.length - 1 && <span key={`${n}_sep`}>, </span>}
-                    </>
+                      {i < entries.length - 1 && <span>, </span>}
+                    </React.Fragment>
                   ))}
                 </>
               );

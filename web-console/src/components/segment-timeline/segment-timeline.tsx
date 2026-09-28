@@ -22,8 +22,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   ResizeSensor,
 } from '@blueprintjs/core';
 import type { NonNullDateRange } from '@blueprintjs/datetime';
@@ -245,8 +244,8 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
             <Button icon={IconNames.CROSS} small onClick={() => setShownDatasource(undefined)} />
           )}
         </ButtonGroup>
-        <Popover
-          position={Position.BOTTOM_LEFT}
+        <PopoverNext
+          placement="bottom-start"
           content={
             <Menu>
               {INTERVAL_STATS.map(stat => (
@@ -259,13 +258,15 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
               ))}
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <Button
             text={`Show: ${getIntervalStatTitle(activeSegmentStat)}`}
             small
             rightIcon={IconNames.CARET_DOWN}
           />
-        </Popover>
+        </PopoverNext>
         <div className="expander" />
         <ButtonGroup>
           <Button
@@ -306,7 +307,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
               />
             );
           })}
-          <Popover
+          <PopoverNext
             isOpen={showCustomDatePicker}
             onInteraction={setShowCustomDatePicker}
             content={
@@ -326,6 +327,8 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
                 shortcuts={false}
               />
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               icon={IconNames.CALENDAR}
@@ -337,7 +340,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
               data-tooltip={showCustomDatePicker ? undefined : `Select a custom date range`}
               small
             />
-          </Popover>
+          </PopoverNext>
           <Button
             icon={IconNames.PIN}
             data-tooltip={

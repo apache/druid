@@ -23,7 +23,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
@@ -601,8 +601,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               )}
             >
               {active ? (
-                <Popover
-                  position="bottom"
+                <PopoverNext
+                  placement="bottom"
                   content={
                     <Menu>
                       <MenuItem
@@ -672,6 +672,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                       />
                     </Menu>
                   }
+                  lazy
+                  shouldReturnFocusOnClose={false}
                 >
                   <Button
                     className="tab-name"
@@ -679,7 +681,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                     minimal
                     onDoubleClick={() => this.setState({ renamingTab: tabEntry })}
                   />
-                </Popover>
+                </PopoverNext>
               ) : (
                 <Button
                   className="tab-name"
@@ -742,8 +744,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           }}
           minimal
         />
-        <Popover
-          position="bottom-right"
+        <PopoverNext
+          placement="bottom-end"
           content={
             <Menu>
               <MenuCheckbox
@@ -768,9 +770,11 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               />
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <Button icon={IconNames.DRAWER_RIGHT} minimal data-tooltip="Open helper panels" />
-        </Popover>
+        </PopoverNext>
       </ButtonGroup>
     );
   }

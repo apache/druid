@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Popover } from '@blueprintjs/core';
+import { Button, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
@@ -142,10 +142,10 @@ export function FilterPane(props: FilterPaneProps) {
         return (
           <div className="filter-pill" key={i}>
             {querySource ? (
-              <Popover
+              <PopoverNext
                 isOpen={i === menuIndex}
                 onClose={() => setMenuIndex(-1)}
-                position="bottom"
+                placement="bottom"
                 content={
                   <FilterMenu
                     querySource={querySource}
@@ -175,6 +175,8 @@ export function FilterPane(props: FilterPaneProps) {
                     }
                   />
                 }
+                lazy
+                shouldReturnFocusOnClose={false}
               >
                 <Button
                   className={classNames('filter-text-button', { negated: pattern.negated })}
@@ -183,7 +185,7 @@ export function FilterPane(props: FilterPaneProps) {
                   onClick={() => setMenuIndex(i)}
                   data-tooltip={i !== menuIndex ? filterTooltip(pattern) : undefined}
                 />
-              </Popover>
+              </PopoverNext>
             ) : (
               <Button
                 className={classNames('filter-text-button', { negated: pattern.negated })}
@@ -204,10 +206,10 @@ export function FilterPane(props: FilterPaneProps) {
         );
       })}
       {querySource ? (
-        <Popover
+        <PopoverNext
           className="add-button"
           isOpen={Boolean(menuNew)}
-          position="bottom"
+          placement="bottom"
           onClose={() => setMenuNew(undefined)}
           content={
             <FilterMenu
@@ -226,6 +228,8 @@ export function FilterPane(props: FilterPaneProps) {
               onMoveToSourceQueryAsClause={onMoveToSourceQueryAsClause}
             />
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <Button
             icon={IconNames.PLUS}
@@ -234,7 +238,7 @@ export function FilterPane(props: FilterPaneProps) {
             minimal
             data-tooltip={patterns.length ? 'Add filter' : undefined}
           />
-        </Popover>
+        </PopoverNext>
       ) : (
         <Button
           icon={IconNames.PLUS}

@@ -16,7 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, Icon, InputGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import {
+  Button,
+  HTMLSelect,
+  Icon,
+  InputGroup,
+  Menu,
+  MenuItem,
+  PopoverNext,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
@@ -58,9 +66,10 @@ export function GenericFilterInput({ column, filter, onChange }: ConsoleTableFil
         'hide-icon': !filter && !(menuOpen || typeof focusedText === 'string'),
       })}
       leftElement={
-        <Popover
+        <PopoverNext
           placement="bottom-start"
-          minimal
+          animation="minimal"
+          arrow={false}
           isOpen={menuOpen}
           onInteraction={setMenuOpen}
           content={
@@ -78,9 +87,11 @@ export function GenericFilterInput({ column, filter, onChange }: ConsoleTableFil
               )}
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <Button className="filter-mode-button" icon={TableFilter.modeToIcon(mode)} minimal />
-        </Popover>
+        </PopoverNext>
       }
       value={focusedText ?? needle}
       onChange={e => setFocusedText(e.target.value.trimStart())}
@@ -113,9 +124,10 @@ export function suggestibleFilterInput(suggestions: string[]) {
       }
     }
     return (
-      <Popover
+      <PopoverNext
         placement="bottom-start"
-        minimal
+        animation="minimal"
+        arrow={false}
         content={
           <Menu>
             {filterMap(suggestions, (suggestion, i) => {
@@ -146,9 +158,11 @@ export function suggestibleFilterInput(suggestions: string[]) {
             })}
           </Menu>
         }
+        lazy
+        shouldReturnFocusOnClose={false}
       >
         <GenericFilterInput {...props} />
-      </Popover>
+      </PopoverNext>
     );
   };
 }

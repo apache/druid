@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Icon, Popover } from '@blueprintjs/core';
+import { Icon, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
@@ -156,7 +156,11 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
               const value = row.value;
               return (
                 <div>
-                  <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                  <PopoverNext
+                    content={<Deferred content={() => getCellMenu(column, i, value)} />}
+                    lazy
+                    shouldReturnFocusOnClose={false}
+                  >
                     {numericColumnBraces[i] ? (
                       <BracedText
                         className="table-padding"
@@ -167,7 +171,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                     ) : (
                       <TableCell value={value} unlimited />
                     )}
-                  </Popover>
+                  </PopoverNext>
                 </div>
               );
             },

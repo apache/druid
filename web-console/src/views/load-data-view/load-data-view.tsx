@@ -32,7 +32,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
+  PopoverNext,
   Radio,
   RadioGroup,
   Switch,
@@ -2648,9 +2648,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </FormGroup>
               {schemaToolsMenu && (
                 <FormGroup>
-                  <Popover content={schemaToolsMenu}>
+                  <PopoverNext content={schemaToolsMenu} lazy shouldReturnFocusOnClose={false}>
                     <Button icon={IconNames.BUILD} text="Tools" />
-                  </Popover>
+                  </PopoverNext>
                 </FormGroup>
               )}
             </>
@@ -3066,27 +3066,27 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       >
         {selectedDimensionSpec.index !== -1 && (
           <FormGroup>
-            <Popover content={reorderDimensionMenu}>
+            <PopoverNext content={reorderDimensionMenu} lazy shouldReturnFocusOnClose={false}>
               <Button
                 icon={IconNames.ARROWS_HORIZONTAL}
                 text="Reorder dimension"
                 rightIcon={IconNames.CARET_DOWN}
               />
-            </Popover>
+            </PopoverNext>
           </FormGroup>
         )}
         {selectedDimensionSpec.index !== -1 &&
           deepGet(spec, 'spec.dataSchema.metricsSpec') &&
           !selectedTime && (
             <FormGroup>
-              <Popover content={convertToMetricMenu}>
+              <PopoverNext content={convertToMetricMenu} lazy shouldReturnFocusOnClose={false}>
                 <Button
                   icon={IconNames.EXCHANGE}
                   text="Convert to metric"
                   rightIcon={IconNames.CARET_DOWN}
                   disabled={dimensions.length <= 1}
                 />
-              </Popover>
+              </PopoverNext>
             </FormGroup>
           )}
       </FormEditor>
@@ -3151,13 +3151,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           schemaMode === 'fixed' &&
           selectedMetricSpecFieldName && (
             <FormGroup>
-              <Popover content={convertToDimensionMenu}>
+              <PopoverNext content={convertToDimensionMenu} lazy shouldReturnFocusOnClose={false}>
                 <Button
                   icon={IconNames.EXCHANGE}
                   text="Convert to dimension"
                   rightIcon={IconNames.CARET_DOWN}
                 />
-              </Popover>
+              </PopoverNext>
             </FormGroup>
           )}
       </FormEditor>

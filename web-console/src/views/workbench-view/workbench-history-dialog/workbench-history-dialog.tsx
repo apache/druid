@@ -21,7 +21,7 @@ import {
   Classes,
   Dialog,
   Intent,
-  Popover,
+  PopoverNext,
   Tab,
   Tabs,
   TabsExpander,
@@ -64,12 +64,14 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
     return (
       <div className="query-entry">
         <div className="query-info-bar">
-          <Popover
+          <PopoverNext
             content={
               <pre className="json-popover-content">
                 {JSONBig.stringify(record.query.queryContext, undefined, 2)}
               </pre>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               text={`Context: ${pluralIfNeeded(
@@ -79,7 +81,7 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
               minimal
               small
             />
-          </Popover>
+          </PopoverNext>
         </div>
         <AceEditor
           mode={jsonMode ? 'hjson' : 'dsql'}

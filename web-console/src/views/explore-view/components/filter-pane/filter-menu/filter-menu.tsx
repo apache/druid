@@ -25,8 +25,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Timezone } from 'chronoshift';
@@ -386,8 +385,8 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
       {(pattern || tab === 'sql') && (
         <div className="button-bar">
           {pattern && onAddToSourceQueryAsColumn && onMoveToSourceQueryAsClause && (
-            <Popover
-              position={Position.BOTTOM_LEFT}
+            <PopoverNext
+              placement="bottom-start"
               content={
                 <Menu>
                   <MenuItem
@@ -422,9 +421,11 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
                   />
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <Button icon={IconNames.TH_DERIVED} minimal />
-            </Popover>
+            </PopoverNext>
           )}
           <div className="button-separator" />
           <Button text="Cancel" onClick={onClose} />

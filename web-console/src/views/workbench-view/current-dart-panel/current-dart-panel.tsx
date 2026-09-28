@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { type IconName, IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React, { useState } from 'react';
@@ -148,7 +148,14 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             const [icon, color] = stateToIconAndColor(w.state);
             const anonymous = w.identity === 'allowAll' && w.authenticator === 'allowAll';
             return (
-              <Popover className="work-entry" key={w.sqlQueryId} position="left" content={menu}>
+              <PopoverNext
+                className="work-entry"
+                key={w.sqlQueryId}
+                placement="left"
+                content={menu}
+                lazy
+                shouldReturnFocusOnClose={false}
+              >
                 <div onDoubleClick={() => onExecutionDetails(w.sqlQueryId)}>
                   <div
                     className="line1"
@@ -177,7 +184,7 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
                     </div>
                   </div>
                 </div>
-              </Popover>
+              </PopoverNext>
             );
           })}
         </div>

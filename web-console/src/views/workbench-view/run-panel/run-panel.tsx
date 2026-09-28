@@ -24,8 +24,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   Tag,
   useHotkeys,
 } from '@blueprintjs/core';
@@ -334,8 +333,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       )}
       {onQueryChange && (
         <ButtonGroup>
-          <Popover
-            position={Position.BOTTOM_LEFT}
+          <PopoverNext
+            placement="bottom-start"
             content={
               <Menu>
                 {queryEngines.length > 1 && (
@@ -654,6 +653,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 )}
               </Menu>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               text={`Engine: ${
@@ -664,7 +665,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               rightIcon={IconNames.CARET_DOWN}
               intent={intent}
             />
-          </Popover>
+          </PopoverNext>
           {effectiveEngine === 'sql-msq-task' && (
             <MaxTasksButton
               clusterCapacity={clusterCapacity}
@@ -680,9 +681,14 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
         </ButtonGroup>
       )}
       {moreMenu && (
-        <Popover position={Position.BOTTOM_LEFT} content={moreMenu}>
+        <PopoverNext
+          placement="bottom-start"
+          content={moreMenu}
+          lazy
+          shouldReturnFocusOnClose={false}
+        >
           <Button rightIcon={IconNames.MORE} data-tooltip="Engine specific tools" />
-        </Popover>
+        </PopoverNext>
       )}
       {editContextDialogOpen && (
         <EditContextDialog

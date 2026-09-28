@@ -27,8 +27,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { QueryParameter } from 'druid-query-toolkit';
@@ -106,9 +105,10 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
           return (
             <FormGroup key={i} label={`Parameter in position ${i + 1}`}>
               <ControlGroup fill>
-                <Popover
-                  minimal
-                  position={Position.BOTTOM_LEFT}
+                <PopoverNext
+                  animation="minimal"
+                  arrow={false}
+                  placement="bottom-start"
                   content={
                     <Menu>
                       {TYPES.map(t => (
@@ -125,9 +125,11 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
                       ))}
                     </Menu>
                   }
+                  lazy
+                  shouldReturnFocusOnClose={false}
                 >
                   <Button text={type} rightIcon={IconNames.CARET_DOWN} />
-                </Popover>
+                </PopoverNext>
                 {oneOf(type, 'BIGINT', 'DOUBLE', 'FLOAT') ? (
                   <FancyNumericInput
                     value={Number(value)}

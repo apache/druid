@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, PopoverNext } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import type { Timezone } from 'chronoshift';
@@ -442,7 +442,11 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
               return {
                 Header() {
                   return (
-                    <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
+                    <PopoverNext
+                      content={<Deferred content={() => getHeaderMenu(column, i)} />}
+                      lazy
+                      shouldReturnFocusOnClose={false}
+                    >
                       <div className="clickable-cell">
                         <div className="output-name">
                           {icon && <Icon className="type-icon" icon={icon} size={12} />}
@@ -450,7 +454,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                           {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}
                         </div>
                       </div>
-                    </Popover>
+                    </PopoverNext>
                   );
                 },
                 headerClassName: getHeaderClassName(h),
@@ -461,7 +465,11 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                   const formatter = hint?.formatter || formatNumber;
                   return (
                     <div>
-                      <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                      <PopoverNext
+                        content={<Deferred content={() => getCellMenu(column, i, value)} />}
+                        lazy
+                        shouldReturnFocusOnClose={false}
+                      >
                         {numericColumnBraces[i] ? (
                           <BracedText
                             className="table-padding"
@@ -472,7 +480,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                         ) : (
                           <TableCell value={value} timezone={timezone} unlimited />
                         )}
-                      </Popover>
+                      </PopoverNext>
                     </div>
                   );
                 },

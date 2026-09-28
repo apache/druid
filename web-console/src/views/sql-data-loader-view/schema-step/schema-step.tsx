@@ -26,7 +26,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
+  PopoverNext,
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -570,8 +570,8 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
       subtitle="Configure schema"
       toolbar={
         <>
-          <Popover
-            position="bottom"
+          <PopoverNext
+            placement="bottom"
             content={
               <Menu>
                 <MenuItem
@@ -594,6 +594,8 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 )}
               </Menu>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button icon={IconNames.FILTER} minimal>
               Filters &nbsp;
@@ -601,10 +603,10 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 {ingestQueryPattern ? ingestQueryPattern.filters.length : '?'}
               </Tag>
             </Button>
-          </Popover>
+          </PopoverNext>
           {ingestQueryPattern && (
-            <Popover
-              position="bottom"
+            <PopoverNext
+              placement="bottom"
               content={
                 <Menu>
                   {timeColumn ? (
@@ -630,6 +632,8 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   )}
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <Button icon={IconNames.SPLIT_COLUMNS} minimal>
                 Partition &nbsp;
@@ -639,11 +643,11 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     : ingestQueryPattern.partitionedBy}
                 </Tag>
               </Button>
-            </Popover>
+            </PopoverNext>
           )}
           {ingestQueryPattern && (
-            <Popover
-              position="bottom"
+            <PopoverNext
+              placement="bottom"
               content={
                 <Menu>
                   {ingestQueryPattern.clusteredBy.map((p, i) => (
@@ -701,6 +705,8 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   />
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <Button icon={IconNames.MERGE_COLUMNS} minimal>
                 Cluster &nbsp;
@@ -708,7 +714,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   {ingestQueryPattern.clusteredBy.length}
                 </Tag>
               </Button>
-            </Popover>
+            </PopoverNext>
           )}
           <Button
             icon={IconNames.COMPRESSED}
@@ -776,9 +782,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           </div>
           {effectiveMode !== 'sql' && ingestQueryPattern && (
             <div className="control-line right">
-              <Popover
+              <PopoverNext
                 className="add-column-control"
-                position="bottom"
+                placement="bottom"
                 content={
                   <Menu>
                     {ingestQueryPattern.metrics ? (
@@ -828,9 +834,11 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     )}
                   </Menu>
                 }
+                lazy
+                shouldReturnFocusOnClose={false}
               >
                 <Button className="add-column" icon={IconNames.PLUS} text="Add column" />
-              </Popover>
+              </PopoverNext>
               <ClearableInput
                 className="column-filter-control"
                 value={columnSearch}

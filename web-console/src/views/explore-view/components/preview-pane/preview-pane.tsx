@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Popover } from '@blueprintjs/core';
+import { Button, Callout, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
@@ -59,9 +59,14 @@ export const PreviewPane = React.memo(function PreviewPane(props: PreviewPanePro
   return (
     <Callout className="preview-pane" title="Preview">
       {info && (
-        <Popover className="info-popover" content={<PopoverText>{info}</PopoverText>}>
+        <PopoverNext
+          className="info-popover"
+          content={<PopoverText>{info}</PopoverText>}
+          lazy
+          shouldReturnFocusOnClose={false}
+        >
           <Button icon={IconNames.INFO_SIGN} minimal />
-        </Popover>
+        </PopoverNext>
       )}
       {previewState.loading && 'Loading...'}
       {previewState.error && <div className="preview-error">{previewState.getErrorMessage()}</div>}

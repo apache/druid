@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, PopoverNext } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
@@ -214,7 +214,14 @@ LIMIT 100`,
 
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
-              <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
+              <PopoverNext
+                className="work-entry"
+                key={w.taskId}
+                placement="left"
+                content={menu}
+                lazy
+                shouldReturnFocusOnClose={false}
+              >
                 <div
                   data-tooltip={
                     `ID: ${w.taskId}` + (w.errorMessage ? `\n\nError:\n${w.errorMessage}` : '')
@@ -253,7 +260,7 @@ LIMIT 100`,
                     </div>
                   </div>
                 </div>
-              </Popover>
+              </PopoverNext>
             );
           })}
         </div>

@@ -17,7 +17,7 @@
  */
 
 import type { ButtonProps } from '@blueprintjs/core';
-import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
+import { Button, Menu, MenuDivider, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
 import { useState } from 'react';
@@ -76,9 +76,9 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
 
   return (
     <>
-      <Popover
+      <PopoverNext
         className="max-tasks-button"
-        position={Position.BOTTOM_LEFT}
+        placement="bottom-start"
         content={
           <Menu>
             {menuHeader}
@@ -155,6 +155,8 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
             </MenuItem>
           </Menu>
         }
+        lazy
+        shouldReturnFocusOnClose={false}
       >
         <Button
           {...rest}
@@ -167,7 +169,7 @@ export const MaxTasksButton = function MaxTasksButton(props: MaxTasksButtonProps
           }`}
           rightIcon={IconNames.CARET_DOWN}
         />
-      </Popover>
+      </PopoverNext>
       {customMaxNumTasksDialogOpen && (
         <NumericInputDialog
           title="Custom max task number"

@@ -25,7 +25,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
@@ -119,7 +119,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                 data-tooltip="Add column"
                 onClick={() => setColumnEditorOpenOn({})}
               />
-              <Popover
+              <PopoverNext
                 content={
                   <Menu>
                     <MenuItem
@@ -136,9 +136,11 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                     />
                   </Menu>
                 }
+                lazy
+                shouldReturnFocusOnClose={false}
               >
                 <Button icon={IconNames.MORE} data-tooltip="More column options" />
-              </Popover>
+              </PopoverNext>
             </ButtonGroup>
           </div>
           <div className="resource-list">
@@ -147,10 +149,10 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
               const isNestedColumn = column.nativeType === 'COMPLEX<json>';
               if (!caseInsensitiveContains(columnName, columnSearch)) return;
               return (
-                <Popover
+                <PopoverNext
                   className="column-resource"
                   key={i}
-                  position="right"
+                  placement="right"
                   content={
                     <Menu>
                       {isNestedColumn ? (
@@ -211,6 +213,8 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                       />
                     </Menu>
                   }
+                  lazy
+                  shouldReturnFocusOnClose={false}
                 >
                   <div
                     className={Classes.MENU_ITEM}
@@ -230,7 +234,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                       {columnName}
                     </div>
                   </div>
-                </Popover>
+                </PopoverNext>
               );
             })}
           </div>
@@ -251,10 +255,10 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
               const measureName = measure.name;
               if (!caseInsensitiveContains(measureName, columnSearch)) return;
               return (
-                <Popover
+                <PopoverNext
                   className="measure-resource"
                   key={i}
-                  position="right"
+                  placement="right"
                   content={
                     <Menu>
                       <MenuItem
@@ -292,6 +296,8 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                       />
                     </Menu>
                   }
+                  lazy
+                  shouldReturnFocusOnClose={false}
                 >
                   <div
                     className={Classes.MENU_ITEM}
@@ -307,7 +313,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                       {measureName}
                     </div>
                   </div>
-                </Popover>
+                </PopoverNext>
               );
             })}
           </div>
