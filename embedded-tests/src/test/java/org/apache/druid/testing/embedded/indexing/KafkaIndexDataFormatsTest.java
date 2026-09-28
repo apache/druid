@@ -22,7 +22,6 @@ package org.apache.druid.testing.embedded.indexing;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.joda.time.Period;
 
@@ -37,9 +36,15 @@ public class KafkaIndexDataFormatsTest extends StreamIndexDataFormatsTestBase
   }
 
   @Override
-  public SupervisorSpec createSupervisor(String dataSource, String topic, InputFormat inputFormat)
+  protected void runIngestionAndVerify(
+      String dataSource,
+      String topic,
+      InputFormat inputFormat,
+      int expectedCount
+  )
   {
-    return MoreResources.Supervisor.KAFKA_JSON
+    runSupervisorIngestionAndVerify(
+        MoreResources.Supervisor.KAFKA_JSON
         .get()
         .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
         .withIoConfig(
@@ -49,6 +54,9 @@ public class KafkaIndexDataFormatsTest extends StreamIndexDataFormatsTestBase
                 .withSupervisorRunPeriod(Period.millis(10))
         )
         .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(1))
-        .build(dataSource, topic);
+        .build(dataSource, topic),
+        dataSource,
+        expectedCount
+    );
   }
 }

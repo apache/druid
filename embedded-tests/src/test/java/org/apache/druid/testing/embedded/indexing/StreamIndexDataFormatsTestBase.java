@@ -113,10 +113,11 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
   protected abstract StreamIngestResource<?> getStreamResource();
 
-  protected abstract SupervisorSpec createSupervisor(
+  protected abstract void runIngestionAndVerify(
       String dataSource,
       String topic,
-      InputFormat inputFormat
+      InputFormat inputFormat,
+      int expectedCount
   );
 
   @Override
@@ -172,12 +173,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
         null
     );
     
-    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
+    runIngestionAndVerify(dataSource, dataSource, inputFormat, recordCount);
   }
 
   @Test
@@ -198,12 +194,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     );
     AvroStreamInputFormat inputFormat = new AvroStreamInputFormat(null, avroBytesDecoder, null, null);
 
-    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
+    runIngestionAndVerify(dataSource, dataSource, inputFormat, recordCount);
   }
 
   @Test
@@ -215,13 +206,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
 
     CsvInputFormat inputFormat = new CsvInputFormat(WIKI_DIM_LIST, null, null, false, 0, false);
-    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
+    runIngestionAndVerify(dataSource, dataSource, inputFormat, recordCount);
   }
 
   @Test
@@ -233,13 +218,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
     int recordCount = generateStreamAndPublish(dataSource, serializer, false);
     InputFormat inputFormat = new JsonInputFormat(null, null, null, false, null, null);
-    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
+    runIngestionAndVerify(dataSource, dataSource, inputFormat, recordCount);
   }
 
   @Test
@@ -257,13 +236,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
 
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
 
-    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
+    runIngestionAndVerify(dataSource, dataSource, inputFormat, recordCount);
   }
 
   @Test
@@ -283,12 +256,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
         overlord.bindings().jsonMapper()
     );
     ProtobufInputFormat inputFormat = new ProtobufInputFormat(null, protobufBytesDecoder);
-    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
+    runIngestionAndVerify(dataSource, dataSource, inputFormat, recordCount);
   }
 
   @Test
@@ -307,13 +275,7 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
         0,
         null
     );
-    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
-
-    final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
-    Assertions.assertEquals(dataSource, supervisorId);
-
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
+    runIngestionAndVerify(dataSource, dataSource, inputFormat, recordCount);
   }
 
   @Test
@@ -330,30 +292,63 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
         WikipediaThriftEvent.class.getName()
     );
 
-    SupervisorSpec supervisorSpec = createSupervisor(dataSource, dataSource, inputFormat);
+    runIngestionAndVerify(dataSource, dataSource, inputFormat, recordCount);
+  }
+
+  protected final void runSupervisorIngestionAndVerify(
+      SupervisorSpec supervisorSpec,
+      String dataSource,
+      int expectedCount
+  )
+  {
     final String supervisorId = cluster.callApi().postSupervisor(supervisorSpec);
     Assertions.assertEquals(dataSource, supervisorId);
 
-    waitForDataAndVerifyIngestedEvents(dataSource, recordCount);
-    stopSupervisor(supervisorSpec);
+    try {
+      overlord.latchableEmitter().waitForEventAggregate(
+          event -> event.hasMetricName("task/run/time")
+                        .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+          agg -> agg.hasSumAtLeast(1)
+      );
+      waitForSchema(dataSource);
+      assertExactRowCount(dataSource, expectedCount);
+    }
+    finally {
+      cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    }
   }
 
-  private void waitForDataAndVerifyIngestedEvents(String dataSource, int expectedCount)
+  protected final void waitForSchema(String dataSource)
   {
-    // Wait for the task to succeed
-    overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("task/run/time")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasSumAtLeast(1)
-    );
-    // Wait for the schema cache to refresh for the datasource under test
     broker.latchableEmitter().waitForEvent(
         event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource)
     );
+  }
 
-    // Verify the count of rows ingested into the datasource so far
+  protected final void assertExactRowCount(String dataSource, int expectedCount)
+  {
     Assertions.assertEquals(String.valueOf(expectedCount), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+  }
+
+  protected final EmbeddedBroker broker()
+  {
+    return broker;
+  }
+
+  protected final EmbeddedCoordinator coordinator()
+  {
+    return coordinator;
+  }
+
+  protected final EmbeddedIndexer indexer()
+  {
+    return indexer;
+  }
+
+  protected final EmbeddedOverlord overlord()
+  {
+    return overlord;
   }
 
   private int generateStreamAndPublish(String topic, EventSerializer serializer, boolean useSchemaRegistry)
@@ -411,10 +406,5 @@ public abstract class StreamIndexDataFormatsTestBase extends EmbeddedClusterTest
     return DimensionsSpec.builder().setDefaultSchemaDimensions(
         WIKI_DIM_LIST
     ).build();
-  }
-
-  private void stopSupervisor(SupervisorSpec supervisorSpec)
-  {
-    cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
   }
 }
