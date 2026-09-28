@@ -24,8 +24,8 @@ import { LookupsView } from './lookups-view';
 
 // Snapshot the table props and columns, not every rendered cell
 jest.mock(
-  'react-table',
-  () => jest.requireActual('../../test-utils/stub-component').reactTableStub,
+  '../../components/console-table/console-table',
+  () => jest.requireActual('../../test-utils/stub-component').consoleTableStub,
 );
 
 describe('LookupsView', () => {

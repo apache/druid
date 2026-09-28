@@ -20,13 +20,13 @@
 @use '../../../blueprint-overrides/common/colors' as *;
 
 .transform-table {
-  .rt-th {
+  .ct-th {
     &.transformed {
       background: rgba($druid-brand, 0.2);
     }
   }
 
-  .rt-td {
+  .ct-td {
     &.transformed {
       background: rgba($druid-brand, 0.06);
     }

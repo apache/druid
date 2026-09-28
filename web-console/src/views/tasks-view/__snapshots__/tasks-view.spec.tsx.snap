@@ -162,7 +162,7 @@ exports[`TasksView matches snapshot 1`] = `
       </button>
     </span>
   </div>
-  <stub-react-table
+  <stub-console-table
     default-page-size="25"
     filterable="true"
     loading="true"
@@ -231,6 +231,6 @@ exports[`TasksView matches snapshot 1`] = `
     >
       Actions
     </stub-column>
-  </stub-react-table>
+  </stub-console-table>
 </div>
 `;

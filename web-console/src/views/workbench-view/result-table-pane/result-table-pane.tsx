@@ -24,10 +24,16 @@ import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar, SqlType } from 'druid
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
-import type { RowRenderProps } from 'react-table';
-import ReactTable from 'react-table';
 
-import { BracedText, Deferred, TableCell } from '../../../components';
+import type { ConsoleTableCellInfo } from '../../../components';
+import {
+  BracedText,
+  ConsoleTable,
+  Deferred,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  TableCell,
+} from '../../../components';
 import { CellFilterMenu } from '../../../components/cell-filter-menu/cell-filter-menu';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
 import {
@@ -35,7 +41,6 @@ import {
   possibleDruidFormatForValues,
   TIME_COLUMN,
 } from '../../../druid-models';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import type { Pagination, QueryAction } from '../../../utils';
 import {
   columnToIcon,
@@ -657,7 +662,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           />
         </div>
       ) : (
-        <ReactTable
+        <ConsoleTable
           className="-striped -highlight"
           data={queryResult.rows as any[][]}
           ofText={hasMoreResults ? '' : 'of'}
@@ -699,7 +704,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
               },
               headerClassName: getHeaderClassName(h),
               accessor: String(i),
-              Cell(row: RowRenderProps) {
+              Cell(row: ConsoleTableCellInfo<any>) {
                 const value = row.value;
                 return (
                   <div>

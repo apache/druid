@@ -5,106 +5,153 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
   class="datasource-columns-table"
 >
   <div
-    class="ReactTable"
+    class="console-table -striped -highlight padded-header"
   >
     <div
-      class="rt-table"
+      class="ct-table"
       role="grid"
     >
       <div
-        class="rt-thead -header"
+        class="ct-thead -header"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr"
+          class="ct-tr"
           role="row"
         >
           <div
-            class="rt-th rt-resizable-header -cursor-pointer"
+            class="ct-th ct-resizable-header -cursor-pointer"
             role="columnheader"
             style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             tabindex="-1"
           >
             <div
-              class="rt-resizable-header-content"
+              class="ct-resizable-header-content"
             >
               Column name
             </div>
             <div
-              class="rt-resizer"
+              class="ct-resizer"
             />
           </div>
           <div
-            class="rt-th rt-resizable-header -cursor-pointer"
+            class="ct-th ct-resizable-header -cursor-pointer"
             role="columnheader"
             style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             tabindex="-1"
           >
             <div
-              class="rt-resizable-header-content"
+              class="ct-resizable-header-content"
             >
               Data type
             </div>
             <div
-              class="rt-resizer"
+              class="ct-resizer"
             />
           </div>
         </div>
       </div>
       <div
-        class="rt-thead -filters"
+        class="ct-thead -filters"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr"
+          class="ct-tr"
           role="row"
         >
           <div
-            class="rt-th"
+            class="ct-th"
             role="columnheader"
             style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             tabindex="-1"
           >
-            <input
-              style="width: 100%;"
-              type="text"
-              value=""
-            />
+            <div
+              class="bp6-input-group generic-filter-input hide-icon"
+            >
+              <span
+                class="bp6-input-left-container"
+              >
+                <span
+                  class="bp6-popover-target"
+                >
+                  <button
+                    aria-expanded="false"
+                    aria-haspopup="menu"
+                    class="bp6-button bp6-minimal filter-mode-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-search"
+                    >
+                      <svg
+                        data-icon="search"
+                      />
+                    </span>
+                  </button>
+                </span>
+              </span>
+              <input
+                class="bp6-input"
+                style="padding-left: 0px;"
+                type="text"
+                value=""
+              />
+            </div>
           </div>
           <div
-            class="rt-th"
+            class="ct-th"
             role="columnheader"
             style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             tabindex="-1"
           >
-            <input
-              style="width: 100%;"
-              type="text"
-              value=""
-            />
+            <div
+              class="bp6-input-group generic-filter-input hide-icon"
+            >
+              <span
+                class="bp6-input-left-container"
+              >
+                <span
+                  class="bp6-popover-target"
+                >
+                  <button
+                    aria-expanded="false"
+                    aria-haspopup="menu"
+                    class="bp6-button bp6-minimal filter-mode-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-search"
+                    >
+                      <svg
+                        data-icon="search"
+                      />
+                    </span>
+                  </button>
+                </span>
+              </span>
+              <input
+                class="bp6-input"
+                style="padding-left: 0px;"
+                type="text"
+                value=""
+              />
+            </div>
           </div>
         </div>
       </div>
       <div
-        class="rt-tbody"
+        class="ct-tbody"
         style="min-width: 500px;"
       >
         <!-- 25 empty rows -->
       </div>
     </div>
     <div
-      class="rt-noData"
+      class="ct-noData"
     >
       test error
-    </div>
-    <div
-      class="-loading"
-    >
-      <div
-        class="-loading-inner"
-      >
-        Loading...
-      </div>
     </div>
   </div>
 </div>
@@ -115,106 +162,153 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
   class="datasource-columns-table"
 >
   <div
-    class="ReactTable"
+    class="console-table -striped -highlight padded-header"
   >
     <div
-      class="rt-table"
+      class="ct-table"
       role="grid"
     >
       <div
-        class="rt-thead -header"
+        class="ct-thead -header"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr"
+          class="ct-tr"
           role="row"
         >
           <div
-            class="rt-th rt-resizable-header -cursor-pointer"
+            class="ct-th ct-resizable-header -cursor-pointer"
             role="columnheader"
             style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             tabindex="-1"
           >
             <div
-              class="rt-resizable-header-content"
+              class="ct-resizable-header-content"
             >
               Column name
             </div>
             <div
-              class="rt-resizer"
+              class="ct-resizer"
             />
           </div>
           <div
-            class="rt-th rt-resizable-header -cursor-pointer"
+            class="ct-th ct-resizable-header -cursor-pointer"
             role="columnheader"
             style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             tabindex="-1"
           >
             <div
-              class="rt-resizable-header-content"
+              class="ct-resizable-header-content"
             >
               Data type
             </div>
             <div
-              class="rt-resizer"
+              class="ct-resizer"
             />
           </div>
         </div>
       </div>
       <div
-        class="rt-thead -filters"
+        class="ct-thead -filters"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr"
+          class="ct-tr"
           role="row"
         >
           <div
-            class="rt-th"
+            class="ct-th"
             role="columnheader"
             style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             tabindex="-1"
           >
-            <input
-              style="width: 100%;"
-              type="text"
-              value=""
-            />
+            <div
+              class="bp6-input-group generic-filter-input hide-icon"
+            >
+              <span
+                class="bp6-input-left-container"
+              >
+                <span
+                  class="bp6-popover-target"
+                >
+                  <button
+                    aria-expanded="false"
+                    aria-haspopup="menu"
+                    class="bp6-button bp6-minimal filter-mode-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-search"
+                    >
+                      <svg
+                        data-icon="search"
+                      />
+                    </span>
+                  </button>
+                </span>
+              </span>
+              <input
+                class="bp6-input"
+                style="padding-left: 0px;"
+                type="text"
+                value=""
+              />
+            </div>
           </div>
           <div
-            class="rt-th"
+            class="ct-th"
             role="columnheader"
             style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             tabindex="-1"
           >
-            <input
-              style="width: 100%;"
-              type="text"
-              value=""
-            />
+            <div
+              class="bp6-input-group generic-filter-input hide-icon"
+            >
+              <span
+                class="bp6-input-left-container"
+              >
+                <span
+                  class="bp6-popover-target"
+                >
+                  <button
+                    aria-expanded="false"
+                    aria-haspopup="menu"
+                    class="bp6-button bp6-minimal filter-mode-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-search"
+                    >
+                      <svg
+                        data-icon="search"
+                      />
+                    </span>
+                  </button>
+                </span>
+              </span>
+              <input
+                class="bp6-input"
+                style="padding-left: 0px;"
+                type="text"
+                value=""
+              />
+            </div>
           </div>
         </div>
       </div>
       <div
-        class="rt-tbody"
+        class="ct-tbody"
         style="min-width: 500px;"
       >
         <!-- 25 empty rows -->
       </div>
     </div>
     <div
-      class="rt-noData"
+      class="ct-noData"
     >
       No column data found
-    </div>
-    <div
-      class="-loading"
-    >
-      <div
-        class="-loading-inner"
-      >
-        Loading...
-      </div>
     </div>
   </div>
 </div>
@@ -265,106 +359,153 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
   class="datasource-columns-table"
 >
   <div
-    class="ReactTable"
+    class="console-table -striped -highlight padded-header"
   >
     <div
-      class="rt-table"
+      class="ct-table"
       role="grid"
     >
       <div
-        class="rt-thead -header"
+        class="ct-thead -header"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr"
+          class="ct-tr"
           role="row"
         >
           <div
-            class="rt-th rt-resizable-header -cursor-pointer"
+            class="ct-th ct-resizable-header -cursor-pointer"
             role="columnheader"
             style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             tabindex="-1"
           >
             <div
-              class="rt-resizable-header-content"
+              class="ct-resizable-header-content"
             >
               Column name
             </div>
             <div
-              class="rt-resizer"
+              class="ct-resizer"
             />
           </div>
           <div
-            class="rt-th rt-resizable-header -cursor-pointer"
+            class="ct-th ct-resizable-header -cursor-pointer"
             role="columnheader"
             style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             tabindex="-1"
           >
             <div
-              class="rt-resizable-header-content"
+              class="ct-resizable-header-content"
             >
               Data type
             </div>
             <div
-              class="rt-resizer"
+              class="ct-resizer"
             />
           </div>
         </div>
       </div>
       <div
-        class="rt-thead -filters"
+        class="ct-thead -filters"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr"
+          class="ct-tr"
           role="row"
         >
           <div
-            class="rt-th"
+            class="ct-th"
             role="columnheader"
             style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             tabindex="-1"
           >
-            <input
-              style="width: 100%;"
-              type="text"
-              value=""
-            />
+            <div
+              class="bp6-input-group generic-filter-input hide-icon"
+            >
+              <span
+                class="bp6-input-left-container"
+              >
+                <span
+                  class="bp6-popover-target"
+                >
+                  <button
+                    aria-expanded="false"
+                    aria-haspopup="menu"
+                    class="bp6-button bp6-minimal filter-mode-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-search"
+                    >
+                      <svg
+                        data-icon="search"
+                      />
+                    </span>
+                  </button>
+                </span>
+              </span>
+              <input
+                class="bp6-input"
+                style="padding-left: 0px;"
+                type="text"
+                value=""
+              />
+            </div>
           </div>
           <div
-            class="rt-th"
+            class="ct-th"
             role="columnheader"
             style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             tabindex="-1"
           >
-            <input
-              style="width: 100%;"
-              type="text"
-              value=""
-            />
+            <div
+              class="bp6-input-group generic-filter-input hide-icon"
+            >
+              <span
+                class="bp6-input-left-container"
+              >
+                <span
+                  class="bp6-popover-target"
+                >
+                  <button
+                    aria-expanded="false"
+                    aria-haspopup="menu"
+                    class="bp6-button bp6-minimal filter-mode-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-search"
+                    >
+                      <svg
+                        data-icon="search"
+                      />
+                    </span>
+                  </button>
+                </span>
+              </span>
+              <input
+                class="bp6-input"
+                style="padding-left: 0px;"
+                type="text"
+                value=""
+              />
+            </div>
           </div>
         </div>
       </div>
       <div
-        class="rt-tbody"
+        class="ct-tbody"
         style="min-width: 500px;"
       >
         <!-- 25 empty rows -->
       </div>
     </div>
     <div
-      class="rt-noData"
+      class="ct-noData"
     >
       No column data found
-    </div>
-    <div
-      class="-loading"
-    >
-      <div
-        class="-loading-inner"
-      >
-        Loading...
-      </div>
     </div>
   </div>
 </div>
@@ -375,107 +516,163 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
   class="datasource-columns-table"
 >
   <div
-    class="ReactTable"
+    class="console-table -striped -highlight padded-header"
   >
     <div
-      class="rt-table"
+      class="ct-table"
       role="grid"
     >
       <div
-        class="rt-thead -header"
+        class="ct-thead -header"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr"
+          class="ct-tr"
           role="row"
         >
           <div
-            class="rt-th rt-resizable-header -cursor-pointer"
+            class="ct-th ct-resizable-header -cursor-pointer"
             role="columnheader"
             style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             tabindex="-1"
           >
             <div
-              class="rt-resizable-header-content"
+              class="ct-resizable-header-content"
             >
               Column name
             </div>
             <div
-              class="rt-resizer"
+              class="ct-resizer"
             />
           </div>
           <div
-            class="rt-th rt-resizable-header -cursor-pointer"
+            class="ct-th ct-resizable-header -cursor-pointer"
             role="columnheader"
             style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             tabindex="-1"
           >
             <div
-              class="rt-resizable-header-content"
+              class="ct-resizable-header-content"
             >
               Data type
             </div>
             <div
-              class="rt-resizer"
+              class="ct-resizer"
             />
           </div>
         </div>
       </div>
       <div
-        class="rt-thead -filters"
+        class="ct-thead -filters"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr"
+          class="ct-tr"
           role="row"
         >
           <div
-            class="rt-th"
+            class="ct-th"
             role="columnheader"
             style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             tabindex="-1"
           >
-            <input
-              style="width: 100%;"
-              type="text"
-              value=""
-            />
+            <div
+              class="bp6-input-group generic-filter-input hide-icon"
+            >
+              <span
+                class="bp6-input-left-container"
+              >
+                <span
+                  class="bp6-popover-target"
+                >
+                  <button
+                    aria-expanded="false"
+                    aria-haspopup="menu"
+                    class="bp6-button bp6-minimal filter-mode-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-search"
+                    >
+                      <svg
+                        data-icon="search"
+                      />
+                    </span>
+                  </button>
+                </span>
+              </span>
+              <input
+                class="bp6-input"
+                style="padding-left: 0px;"
+                type="text"
+                value=""
+              />
+            </div>
           </div>
           <div
-            class="rt-th"
+            class="ct-th"
             role="columnheader"
             style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             tabindex="-1"
           >
-            <input
-              style="width: 100%;"
-              type="text"
-              value=""
-            />
+            <div
+              class="bp6-input-group generic-filter-input hide-icon"
+            >
+              <span
+                class="bp6-input-left-container"
+              >
+                <span
+                  class="bp6-popover-target"
+                >
+                  <button
+                    aria-expanded="false"
+                    aria-haspopup="menu"
+                    class="bp6-button bp6-minimal filter-mode-button"
+                    type="button"
+                  >
+                    <span
+                      aria-hidden="true"
+                      class="bp6-icon bp6-icon-search"
+                    >
+                      <svg
+                        data-icon="search"
+                      />
+                    </span>
+                  </button>
+                </span>
+              </span>
+              <input
+                class="bp6-input"
+                style="padding-left: 0px;"
+                type="text"
+                value=""
+              />
+            </div>
           </div>
         </div>
       </div>
       <div
-        class="rt-tbody"
+        class="ct-tbody"
         style="min-width: 500px;"
       >
         <div
-          class="rt-tr-group"
+          class="ct-tr-group"
           role="rowgroup"
         >
           <div
-            class="rt-tr -odd"
+            class="ct-tr -odd"
             role="row"
           >
             <div
-              class="rt-td padded"
+              class="ct-td padded"
               role="gridcell"
               style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             >
               channel
             </div>
             <div
-              class="rt-td padded"
+              class="ct-td padded"
               role="gridcell"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             >
@@ -484,22 +681,22 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
           </div>
         </div>
         <div
-          class="rt-tr-group"
+          class="ct-tr-group"
           role="rowgroup"
         >
           <div
-            class="rt-tr -even"
+            class="ct-tr -even"
             role="row"
           >
             <div
-              class="rt-td padded"
+              class="ct-td padded"
               role="gridcell"
               style="flex: 300 0 auto; width: 300px; max-width: 300px;"
             >
               page
             </div>
             <div
-              class="rt-td padded"
+              class="ct-td padded"
               role="gridcell"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
             >
@@ -508,15 +705,6 @@ exports[`DatasourceColumnsTable matches snapshot on some data 1`] = `
           </div>
         </div>
         <!-- 23 empty rows -->
-      </div>
-    </div>
-    <div
-      class="-loading"
-    >
-      <div
-        class="-loading-inner"
-      >
-        Loading...
       </div>
     </div>
   </div>

@@ -101,7 +101,7 @@ exports[`LookupsView matches snapshot 1`] = `
       </button>
     </span>
   </div>
-  <stub-react-table
+  <stub-console-table
     default-page-size="50"
     filterable="true"
     loading="true"
@@ -151,6 +151,6 @@ exports[`LookupsView matches snapshot 1`] = `
     >
       Actions
     </stub-column>
-  </stub-react-table>
+  </stub-console-table>
 </div>
 `;

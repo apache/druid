@@ -371,9 +371,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   // Use this direct DOM manipulation via d3 to avoid re-rendering the table when the selection changes
   useLayoutEffect(() => {
     if (mode !== 'table') return;
-    selectAll('.preview-table .rt-th').classed('selected', false);
+    selectAll('.preview-table .ct-th').classed('selected', false);
     if (selectedColumnIndex !== -1) {
-      select(`.preview-table .rt-th.column${selectedColumnIndex}`).classed('selected', true);
+      select(`.preview-table .ct-th.column${selectedColumnIndex}`).classed('selected', true);
     }
   }, [mode, selectedColumnIndex, columnSearch]);
 

@@ -235,13 +235,13 @@ $actual-icon-height: 400px;
         }
       }
 
-      .ReactTable {
+      .console-table {
         position: absolute;
         width: 100%;
         top: 45px;
         bottom: 0;
 
-        .rt-th {
+        .ct-th {
           position: relative;
 
           &.selected::after {
@@ -268,7 +268,7 @@ $actual-icon-height: 400px;
           }
         }
 
-        .rt-td {
+        .ct-td {
           &.timestamp {
             background: rgba($cobalt3, 0.16);
           }

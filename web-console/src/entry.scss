@@ -23,8 +23,7 @@
 @use './blueprint-overrides/blueprint';
 @use './blueprint-overrides/design-tokens';
 @use './blueprint-overrides/blueprint5-look';
-@use './react-table/react-table-base-styles';
-@use './react-table/react-table-extra';
+@use './components/console-table/console-table';
 @use './variables' as *;
 
 @import '@fontsource/open-sans/400.css'; // Normal

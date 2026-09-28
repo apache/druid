@@ -43,7 +43,7 @@
     }
   }
 
-  .ReactTable {
+  .console-table {
     position: absolute;
     top: 0;
     bottom: 0;
@@ -51,10 +51,10 @@
     font-feature-settings: tnum;
     font-variant-numeric: tabular-nums;
 
-    .rt-thead.-header {
+    .ct-thead.-header {
       box-shadow: 0 1px 0 0 rgba(black, 0.2); // This is a hack! this line is sometimes too weak in tables.
 
-      .rt-th {
+      .ct-th {
         &.aggregate-header {
           background: rgba($druid-brand, 0.06);
         }
@@ -100,7 +100,7 @@
       }
     }
 
-    .rt-td {
+    .ct-td {
       cursor: pointer;
     }
   }

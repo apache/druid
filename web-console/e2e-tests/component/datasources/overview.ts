@@ -65,7 +65,7 @@ export class DatasourcesOverview {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const data = await extractTable(this.page, 'div div.rt-tr-group', 'div.rt-td');
+    const data = await extractTable(this.page, 'div div.ct-tr-group', 'div.ct-td');
 
     return data.map(
       row =>

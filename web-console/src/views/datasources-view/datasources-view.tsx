@@ -21,7 +21,6 @@ import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import { SqlQuery, T } from 'druid-query-toolkit';
 import React from 'react';
-import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
@@ -37,6 +36,11 @@ import {
   TableColumnSelector,
   type TableColumnSelectorColumn,
   ViewControlBar,
+} from '../../components';
+import {
+  ConsoleTable,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
 } from '../../components';
 import {
   AsyncActionDialog,
@@ -64,7 +68,6 @@ import {
   zeroCompactionStatus,
 } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
-import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
 import {
@@ -1207,7 +1210,7 @@ GROUP BY 1, 2`;
     );
 
     return (
-      <ReactTable
+      <ConsoleTable
         data={datasources}
         loading={datasourcesAndDefaultRulesState.loading}
         noDataText={
@@ -1264,7 +1267,7 @@ GROUP BY 1, 2`;
                 num_segments_to_load,
                 num_zero_replica_segments,
                 rules,
-              } = original as Datasource;
+              } = original;
               if (unused) {
                 return (
                   <span>
@@ -1345,7 +1348,7 @@ GROUP BY 1, 2`;
             width: 180,
             className: 'padded',
             Cell: ({ original }) => {
-              const { num_segments_to_load, num_segments_to_drop } = original as Datasource;
+              const { num_segments_to_load, num_segments_to_drop } = original;
               return formatLoadDrop(num_segments_to_load, num_segments_to_drop);
             },
           },
@@ -1391,7 +1394,7 @@ GROUP BY 1, 2`;
             width: 230,
             className: 'padded',
             Cell: ({ value, original }) => {
-              const { min_segment_rows, max_segment_rows } = original as Datasource;
+              const { min_segment_rows, max_segment_rows } = original;
               if (
                 isNumberLikeNaN(value) ||
                 isNumberLikeNaN(min_segment_rows) ||
@@ -1423,7 +1426,7 @@ GROUP BY 1, 2`;
             width: 270,
             className: 'padded',
             Cell: ({ value, original }) => {
-              const { min_segment_size, max_segment_size } = original as Datasource;
+              const { min_segment_size, max_segment_size } = original;
               if (
                 isNumberLikeNaN(value) ||
                 isNumberLikeNaN(min_segment_size) ||
@@ -1464,7 +1467,7 @@ GROUP BY 1, 2`;
                 month_aligned_segments,
                 year_aligned_segments,
                 all_granularity_segments,
-              } = original as Datasource;
+              } = original;
               const segmentGranularities: string[] = [];
               if (!num_segments || isNumberLikeNaN(year_aligned_segments)) return '-';
               if (all_granularity_segments) {
@@ -1552,7 +1555,7 @@ GROUP BY 1, 2`;
             filterable: false,
             width: 180,
             Cell: ({ original }) => {
-              const { datasource, compaction } = original as Datasource;
+              const { datasource, compaction } = original;
               if (!compaction) return;
               return (
                 <TableClickableCell
@@ -1587,7 +1590,7 @@ GROUP BY 1, 2`;
             filterable: false,
             className: 'padded',
             Cell: ({ original }) => {
-              const { compaction } = original as Datasource;
+              const { compaction } = original;
               if (!compaction) return;
 
               const { status } = compaction;
@@ -1643,7 +1646,7 @@ GROUP BY 1, 2`;
             filterable: false,
             className: 'padded',
             Cell: ({ original }) => {
-              const { compaction } = original as Datasource;
+              const { compaction } = original;
               if (!compaction) return;
 
               const { status } = compaction;
@@ -1667,7 +1670,7 @@ GROUP BY 1, 2`;
             filterable: false,
             width: 200,
             Cell: ({ original }) => {
-              const { datasource, rules } = original as Datasource;
+              const { datasource, rules } = original;
               if (!rules) return;
 
               return (
@@ -1703,7 +1706,7 @@ GROUP BY 1, 2`;
             filterable: false,
             sortable: false,
             Cell: ({ value: datasource, original }) => {
-              const { unused, rules, compaction } = original as Datasource;
+              const { unused, rules, compaction } = original;
               const datasourceActions = this.getDatasourceActions(
                 datasource,
                 unused,

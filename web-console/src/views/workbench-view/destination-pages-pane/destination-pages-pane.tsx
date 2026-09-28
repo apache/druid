@@ -30,10 +30,9 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
-import ReactTable from 'react-table';
 
+import { ConsoleTable, SMALL_TABLE_PAGE_SIZE } from '../../../components';
 import type { Execution } from '../../../druid-models';
-import { SMALL_TABLE_PAGE_SIZE } from '../../../react-table';
 import { Api, UrlBaser } from '../../../singletons';
 import { clamp, formatBytes, formatInteger, pluralIfNeeded, tickIcon } from '../../../utils';
 
@@ -152,7 +151,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           download
         />
       </p>
-      <ReactTable
+      <ConsoleTable
         data={pages}
         loading={false}
         sortable={false}

@@ -20,34 +20,26 @@ import { Button, ButtonGroup, Menu, MenuItem, Popover } from '@blueprintjs/core'
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import { formatInteger, nonEmptyArray, tickIcon } from '../../utils';
+import { formatInteger, tickIcon } from '../../../utils';
 
 import { PageJumpDialog } from './page-jump-dialog/page-jump-dialog';
 
-import './react-table-pagination.scss';
-
-interface ReactTablePaginationProps {
-  pages: number;
+export interface ConsoleTablePaginationProps {
   page: number;
-  showPageSizeOptions: boolean;
-  pageSizeOptions: number[];
+  pages: number;
   pageSize: number;
+  pageSizeOptions: number[];
   showPageJump: boolean;
   canPrevious: boolean;
   canNext: boolean;
-  onPageSizeChange: any;
-  previousText: string;
-  nextText: string;
-  onPageChange: any;
+  onPageChange(page: number): void;
+  onPageSizeChange(pageSize: number): void;
   ofText: string;
-  pageText: string;
-  rowsText: string;
-  sortedData?: any[];
-  style: Record<string, any>;
+  rowCount: number;
 }
 
-export const ReactTablePagination = React.memo(function ReactTablePagination(
-  props: ReactTablePaginationProps,
+export const ConsoleTablePagination = React.memo(function ConsoleTablePagination(
+  props: ConsoleTablePaginationProps,
 ) {
   const {
     page,
@@ -57,12 +49,10 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
     onPageSizeChange,
     pageSizeOptions,
     showPageJump,
-    showPageSizeOptions,
     canPrevious,
     canNext,
-    style,
     ofText,
-    sortedData,
+    rowCount,
   } = props;
   const [showPageJumpDialog, setShowPageJumpDialog] = useState(false);
 
@@ -79,7 +69,6 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
   }
 
   function renderPageSizeChangeMenuItem() {
-    if (!showPageSizeOptions) return;
     return (
       <MenuItem text={`Page size: ${pageSize}`}>
         {pageSizeOptions.map((option, i) => (
@@ -99,8 +88,8 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
 
   const start = page * pageSize + 1;
   let end = page * pageSize + pageSize;
-  if (nonEmptyArray(sortedData) && (page === 0 || sortedData.length > pageSize)) {
-    end = Math.min(end, sortedData.length);
+  if (rowCount && (page === 0 || rowCount > pageSize)) {
+    end = Math.min(end, rowCount);
   }
 
   let pageInfo = 'Showing';
@@ -109,8 +98,8 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
   } else {
     pageInfo += '...';
   }
-  if (ofText === 'of' && nonEmptyArray(sortedData)) {
-    pageInfo += ` ${ofText} ${formatInteger(sortedData.length)}`;
+  if (ofText === 'of' && rowCount) {
+    pageInfo += ` ${ofText} ${formatInteger(rowCount)}`;
   } else if (ofText) {
     pageInfo += ` ${ofText}`;
   }
@@ -119,7 +108,7 @@ export const ReactTablePagination = React.memo(function ReactTablePagination(
   const pageSizeChangeMenuItem = renderPageSizeChangeMenuItem();
 
   return (
-    <div className="react-table-pagination" style={style}>
+    <div className="console-table-pagination">
       <ButtonGroup>
         <Button
           icon={IconNames.CHEVRON_LEFT}

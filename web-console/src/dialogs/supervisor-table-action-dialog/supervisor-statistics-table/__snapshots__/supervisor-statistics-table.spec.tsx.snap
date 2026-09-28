@@ -26,87 +26,78 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
     class="main-area"
   >
     <div
-      class="ReactTable"
+      class="console-table -striped -highlight padded-header"
     >
       <div
-        class="rt-table"
+        class="ct-table"
         role="grid"
       >
         <div
-          class="rt-thead -header"
+          class="ct-thead -header"
           style="min-width: 700px;"
         >
           <div
-            class="rt-tr"
+            class="ct-tr"
             role="row"
           >
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 100 0 auto; width: 100px; max-width: 100px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Group ID
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 400 0 auto; width: 400px; max-width: 400px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Task ID
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Totals
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
           </div>
         </div>
         <div
-          class="rt-tbody"
+          class="ct-tbody"
           style="min-width: 700px;"
         >
           <!-- 25 empty rows -->
         </div>
       </div>
       <div
-        class="rt-noData"
+        class="ct-noData"
       >
         test error
-      </div>
-      <div
-        class="-loading"
-      >
-        <div
-          class="-loading-inner"
-        >
-          Loading...
-        </div>
       </div>
     </div>
   </div>
@@ -139,87 +130,78 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
     class="main-area"
   >
     <div
-      class="ReactTable"
+      class="console-table -striped -highlight padded-header"
     >
       <div
-        class="rt-table"
+        class="ct-table"
         role="grid"
       >
         <div
-          class="rt-thead -header"
+          class="ct-thead -header"
           style="min-width: 700px;"
         >
           <div
-            class="rt-tr"
+            class="ct-tr"
             role="row"
           >
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 100 0 auto; width: 100px; max-width: 100px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Group ID
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 400 0 auto; width: 400px; max-width: 400px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Task ID
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Totals
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
           </div>
         </div>
         <div
-          class="rt-tbody"
+          class="ct-tbody"
           style="min-width: 700px;"
         >
           <!-- 25 empty rows -->
         </div>
       </div>
       <div
-        class="rt-noData"
+        class="ct-noData"
       >
         No statistics data found
-      </div>
-      <div
-        class="-loading"
-      >
-        <div
-          class="-loading-inner"
-        >
-          Loading...
-        </div>
       </div>
     </div>
   </div>
@@ -316,87 +298,78 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
     class="main-area"
   >
     <div
-      class="ReactTable"
+      class="console-table -striped -highlight padded-header"
     >
       <div
-        class="rt-table"
+        class="ct-table"
         role="grid"
       >
         <div
-          class="rt-thead -header"
+          class="ct-thead -header"
           style="min-width: 700px;"
         >
           <div
-            class="rt-tr"
+            class="ct-tr"
             role="row"
           >
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 100 0 auto; width: 100px; max-width: 100px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Group ID
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 400 0 auto; width: 400px; max-width: 400px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Task ID
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Totals
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
           </div>
         </div>
         <div
-          class="rt-tbody"
+          class="ct-tbody"
           style="min-width: 700px;"
         >
           <!-- 25 empty rows -->
         </div>
       </div>
       <div
-        class="rt-noData"
+        class="ct-noData"
       >
         No statistics data found
-      </div>
-      <div
-        class="-loading"
-      >
-        <div
-          class="-loading-inner"
-        >
-          Loading...
-        </div>
       </div>
     </div>
   </div>
@@ -429,140 +402,140 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
     class="main-area"
   >
     <div
-      class="ReactTable"
+      class="console-table -striped -highlight padded-header"
     >
       <div
-        class="rt-table"
+        class="ct-table"
         role="grid"
       >
         <div
-          class="rt-thead -header"
+          class="ct-thead -header"
           style="min-width: 1300px;"
         >
           <div
-            class="rt-tr"
+            class="ct-tr"
             role="row"
           >
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 100 0 auto; width: 100px; max-width: 100px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Group ID
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 400 0 auto; width: 400px; max-width: 400px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Task ID
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 Totals
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 1m
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 5m
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
             <div
-              class="rt-th rt-resizable-header -cursor-pointer"
+              class="ct-th ct-resizable-header -cursor-pointer"
               role="columnheader"
               style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               tabindex="-1"
             >
               <div
-                class="rt-resizable-header-content"
+                class="ct-resizable-header-content"
               >
                 15m
               </div>
               <div
-                class="rt-resizer"
+                class="ct-resizer"
               />
             </div>
           </div>
         </div>
         <div
-          class="rt-tbody"
+          class="ct-tbody"
           style="min-width: 1300px;"
         >
           <div
-            class="rt-tr-group"
+            class="ct-tr-group"
             role="rowgroup"
           >
             <div
-              class="rt-tr -odd"
+              class="ct-tr -odd"
               role="row"
             >
               <div
-                class="rt-td padded"
+                class="ct-td padded"
                 role="gridcell"
                 style="flex: 100 0 auto; width: 100px; max-width: 100px;"
               >
                 0
               </div>
               <div
-                class="rt-td padded"
+                class="ct-td padded"
                 role="gridcell"
                 style="flex: 400 0 auto; width: 400px; max-width: 400px;"
               >
                 index_kafka_github_dfde87f265a8cc9_pnmcaldn
               </div>
               <div
-                class="rt-td padded"
+                class="ct-td padded"
                 role="gridcell"
                 style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               >
@@ -576,7 +549,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
                 </div>
               </div>
               <div
-                class="rt-td padded"
+                class="ct-td padded"
                 role="gridcell"
                 style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               >
@@ -590,7 +563,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
                 </div>
               </div>
               <div
-                class="rt-td padded"
+                class="ct-td padded"
                 role="gridcell"
                 style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               >
@@ -604,7 +577,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
                 </div>
               </div>
               <div
-                class="rt-td padded"
+                class="ct-td padded"
                 role="gridcell"
                 style="flex: 200 0 auto; width: 200px; max-width: 200px;"
               >
@@ -620,15 +593,6 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
             </div>
           </div>
           <!-- 24 empty rows -->
-        </div>
-      </div>
-      <div
-        class="-loading"
-      >
-        <div
-          class="-loading-inner"
-        >
-          Loading...
         </div>
       </div>
     </div>

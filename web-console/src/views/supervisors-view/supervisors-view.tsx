@@ -22,17 +22,19 @@ import * as JSONBig from 'json-bigint-native';
 import memoize from 'memoize-one';
 import type { JSX } from 'react';
 import React, { createContext, useContext } from 'react';
-import type { Column, SortingRule } from 'react-table';
-import ReactTable from 'react-table';
 
-import type { TableColumnSelectorColumn } from '../../components';
+import type { ColumnSort, ConsoleTableColumn, TableColumnSelectorColumn } from '../../components';
 import {
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  ConsoleTable,
   MoreButton,
   RefreshButton,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
   TableClickableCell,
   TableColumnSelector,
   TableFilterableCell,
@@ -63,11 +65,6 @@ import {
   getTotalSupervisorStats,
 } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
-import {
-  SMALL_TABLE_PAGE_SIZE,
-  SMALL_TABLE_PAGE_SIZE_OPTIONS,
-  suggestibleFilterInput,
-} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, TableState } from '../../utils';
 import {
@@ -218,7 +215,7 @@ export interface SupervisorsViewState {
   visibleColumns: LocalStorageBackedVisibility;
   page: number;
   pageSize: number;
-  sorted: SortingRule[];
+  sorted: ColumnSort[];
 }
 
 function detailedStateToColor(detailedState: string): string {
@@ -871,7 +868,7 @@ export class SupervisorsView extends React.PureComponent<
     return (
       <StatusContext.Provider value={status}>
         <StatsContext.Provider value={{ stats, statsKey }}>
-          <ReactTable
+          <ConsoleTable
             data={supervisors}
             pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000} // We are hiding the page selector
             loading={supervisorsState.loading}
@@ -905,7 +902,7 @@ export class SupervisorsView extends React.PureComponent<
     (
       visibleColumns: LocalStorageBackedVisibility,
       filters: TableFilters,
-    ): Column<SupervisorQueryResultRow>[] => {
+    ): ConsoleTableColumn<SupervisorQueryResultRow>[] => {
       return [
         {
           Header: 'Supervisor ID',
@@ -1071,7 +1068,7 @@ export class SupervisorsView extends React.PureComponent<
                 )}`}</span>
               ) : null;
             } else if (original.type === 'autocompact') {
-              const compactionConfig: CompactionConfig | undefined = original.spec?.spec;
+              const compactionConfig = original.spec?.spec as CompactionConfig | undefined;
               if (!supervisorStatusPayload || !compactionConfig) return null;
               return formatCompactionInfo({
                 status: supervisorStatusPayload,

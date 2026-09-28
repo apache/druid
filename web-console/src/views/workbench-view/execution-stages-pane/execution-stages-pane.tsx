@@ -21,15 +21,19 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { sum } from 'd3-array';
 import React from 'react';
-import type { Column } from 'react-table';
-import ReactTable from 'react-table';
 
-import { BracedText, TableClickableCell } from '../../../components';
+import type { ConsoleTableColumn } from '../../../components';
+import {
+  BracedText,
+  ConsoleTable,
+  DEFAULT_TABLE_CLASS_NAME,
+  TableClickableCell,
+} from '../../../components';
 import type {
   ChannelCounterName,
-  ChannelFields,
   ClusterBy,
   CounterName,
+  CpusCounter,
   Execution,
   InOut,
   SegmentGenerationProgressFields,
@@ -44,7 +48,6 @@ import {
   Stages,
   summarizeInputSource,
 } from '../../../druid-models';
-import { DEFAULT_TABLE_CLASS_NAME } from '../../../react-table';
 import {
   assemble,
   capitalizeFirst,
@@ -244,7 +247,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     const firstNonInputIndex = counterNames.findIndex(cn => !cn.startsWith('input'));
 
     return (
-      <ReactTable
+      <ConsoleTable
         className="detail-counters-for-workers"
         data={wideCounters}
         loading={false}
@@ -285,7 +288,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
 
               return label;
             },
-          } as Column<SimpleWideCounter>,
+          } as ConsoleTableColumn<SimpleWideCounter>,
           {
             Header: twoLines(
               'CPU utilization',
@@ -300,7 +303,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             width: 240,
             show: stages.hasCounterForStage(stage, 'cpu'),
             Cell({ original }) {
-              const cpuTotals = original.cpu || {};
+              const cpuTotals: Partial<CpusCounter> = original.cpu || {};
               return (
                 <>
                   {filterMap(CPUS_COUNTER_FIELDS, k => {
@@ -324,7 +327,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                 </>
               );
             },
-          } as Column<SimpleWideCounter>,
+          } as ConsoleTableColumn<SimpleWideCounter>,
         ].concat([
           {
             Header: twoLines('Rows processed', <i>rows &nbsp; (input files)</i>),
@@ -493,7 +496,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     ];
 
     return (
-      <ReactTable
+      <ConsoleTable
         className="detail-counters-for-sort"
         data={data}
         loading={false}
@@ -560,7 +563,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     }
 
     return (
-      <ReactTable
+      <ConsoleTable
         className="detail-counters-for-partitions"
         data={wideCounters}
         loading={false}
@@ -578,7 +581,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             Cell({ value }) {
               return `Partition${value}`;
             },
-          } as Column<SimpleWideCounter>,
+          } as ConsoleTableColumn<SimpleWideCounter>,
         ].concat(
           counterNames.map(counterName => {
             return {
@@ -591,7 +594,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               className: 'padded',
               width: 180,
               Cell({ value, original }) {
-                const c: Record<ChannelFields, number> = original[counterName];
+                const c = original[counterName]!;
                 return (
                   <BracedText
                     text={formatRows(value)}
@@ -773,7 +776,7 @@ ${title} uncompressed size: ${formatBytesCompact(
   }
 
   return (
-    <ReactTable
+    <ConsoleTable
       className={classNames('execution-stages-pane', DEFAULT_TABLE_CLASS_NAME)}
       data={stages.stages}
       loading={false}
@@ -846,7 +849,7 @@ ${title} uncompressed size: ${formatBytesCompact(
           className: 'padded',
           width: 160,
           Cell(props) {
-            const stage = props.original as StageDefinition;
+            const stage = props.original;
             const myError = error && error.stageNumber === stage.stageNumber;
             const warnings = stages.getWarningCountForStage(stage);
             return (
@@ -896,7 +899,7 @@ ${title} uncompressed size: ${formatBytesCompact(
           className: 'padded',
           width: 150,
           Cell(props) {
-            const stage = props.original as StageDefinition;
+            const stage = props.original;
             const { input } = stage.definition;
             return (
               <>
@@ -930,7 +933,7 @@ ${title} uncompressed size: ${formatBytesCompact(
           className: 'padded',
           width: 200,
           Cell({ original }) {
-            const stage = original as StageDefinition;
+            const stage = original;
             const { input, broadcast } = stage.definition;
             return (
               <>
@@ -965,7 +968,7 @@ ${title} uncompressed size: ${formatBytesCompact(
           className: 'padded',
           width: 150,
           Cell({ value, original }) {
-            const stage = original as StageDefinition;
+            const stage = original;
             if (typeof value !== 'number') return null;
 
             const byteRate = stages.getRateFromStage(stage, 'bytes');
@@ -1004,7 +1007,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                     className="timing-bar"
                     style={{
                       left: `${(sinceQueryStart / executionDuration) * 100}%`,
-                      width: `max(${(duration / executionDuration) * 100}%, 1px)`,
+                      width: `max(${(duration! / executionDuration) * 100}%, 1px)`,
                     }}
                   />
                 )}

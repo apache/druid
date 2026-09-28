@@ -20,13 +20,13 @@
 @use '../../../blueprint-overrides/common/colors' as *;
 
 .filter-table {
-  .rt-th {
+  .ct-th {
     &.filtered {
       background: rgba($druid-brand, 0.2);
     }
   }
 
-  .rt-td {
+  .ct-td {
     &.filtered {
       background: rgba($druid-brand, 0.06);
     }

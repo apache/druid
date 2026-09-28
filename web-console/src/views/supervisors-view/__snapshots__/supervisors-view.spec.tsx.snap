@@ -127,7 +127,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
       </button>
     </span>
   </div>
-  <stub-react-table
+  <stub-console-table
     filterable="true"
     loading="true"
     manual="true"
@@ -227,6 +227,6 @@ exports[`SupervisorsView matches snapshot 1`] = `
     >
       Actions
     </stub-column>
-  </stub-react-table>
+  </stub-console-table>
 </div>
 `;

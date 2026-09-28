@@ -20,7 +20,7 @@
 @use '../../../blueprint-overrides/common/colors' as *;
 
 .schema-table {
-  .rt-th {
+  .ct-th {
     &.dimension {
       background: rgba($green3, 0.3);
 
@@ -44,7 +44,7 @@
     }
   }
 
-  .rt-td {
+  .ct-td {
     &.dimension {
       background: rgba($green3, 0.12);
 

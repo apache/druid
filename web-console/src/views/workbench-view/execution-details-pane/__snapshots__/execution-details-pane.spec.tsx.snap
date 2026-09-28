@@ -206,22 +206,22 @@ localhost"
         </div>
       </div>
       <div
-        class="ReactTable execution-stages-pane -striped -highlight padded-header"
+        class="console-table execution-stages-pane -striped -highlight padded-header"
       >
         <div
-          class="rt-table"
+          class="ct-table"
           role="grid"
         >
           <div
-            class="rt-thead -header"
+            class="ct-thead -header"
             style="min-width: 1060px;"
           >
             <div
-              class="rt-tr"
+              class="ct-tr"
               role="row"
             >
               <div
-                class="rt-th"
+                class="ct-th"
                 role="columnheader"
                 style="flex: 35 0 auto; width: 35px; max-width: 35px;"
                 tabindex="-1"
@@ -231,13 +231,13 @@ localhost"
                 />
               </div>
               <div
-                class="rt-th rt-resizable-header"
+                class="ct-th ct-resizable-header"
                 role="columnheader"
                 style="flex: 160 0 auto; width: 160px; max-width: 160px;"
                 tabindex="-1"
               >
                 <div
-                  class="rt-resizable-header-content"
+                  class="ct-resizable-header-content"
                 >
                   Stage
                   <br />
@@ -246,32 +246,32 @@ localhost"
                   </i>
                 </div>
                 <div
-                  class="rt-resizer"
+                  class="ct-resizer"
                 />
               </div>
               <div
-                class="rt-th rt-resizable-header"
+                class="ct-th ct-resizable-header"
                 role="columnheader"
                 style="flex: 150 0 auto; width: 150px; max-width: 150px;"
                 tabindex="-1"
               >
                 <div
-                  class="rt-resizable-header-content"
+                  class="ct-resizable-header-content"
                 >
                   Counter
                 </div>
                 <div
-                  class="rt-resizer"
+                  class="ct-resizer"
                 />
               </div>
               <div
-                class="rt-th rt-resizable-header"
+                class="ct-th ct-resizable-header"
                 role="columnheader"
                 style="flex: 200 0 auto; width: 200px; max-width: 200px;"
                 tabindex="-1"
               >
                 <div
-                  class="rt-resizable-header-content"
+                  class="ct-resizable-header-content"
                 >
                   Rows processed
                   <br />
@@ -280,17 +280,17 @@ localhost"
                   </i>
                 </div>
                 <div
-                  class="rt-resizer"
+                  class="ct-resizer"
                 />
               </div>
               <div
-                class="rt-th rt-resizable-header"
+                class="ct-th ct-resizable-header"
                 role="columnheader"
                 style="flex: 150 0 auto; width: 150px; max-width: 150px;"
                 tabindex="-1"
               >
                 <div
-                  class="rt-resizable-header-content"
+                  class="ct-resizable-header-content"
                 >
                   Processing rate
                   <br />
@@ -299,83 +299,83 @@ localhost"
                   </i>
                 </div>
                 <div
-                  class="rt-resizer"
+                  class="ct-resizer"
                 />
               </div>
               <div
-                class="rt-th rt-resizable-header"
+                class="ct-th ct-resizable-header"
                 role="columnheader"
                 style="flex: 170 0 auto; width: 170px; max-width: 170px;"
                 tabindex="-1"
               >
                 <div
-                  class="rt-resizable-header-content"
+                  class="ct-resizable-header-content"
                 >
                   Timing
                 </div>
                 <div
-                  class="rt-resizer"
+                  class="ct-resizer"
                 />
               </div>
               <div
-                class="rt-th rt-resizable-header"
+                class="ct-th ct-resizable-header"
                 role="columnheader"
                 style="flex: 75 0 auto; width: 75px; max-width: 75px;"
                 tabindex="-1"
               >
                 <div
-                  class="rt-resizable-header-content"
+                  class="ct-resizable-header-content"
                 >
                   Num
                   <br />
                   workers
                 </div>
                 <div
-                  class="rt-resizer"
+                  class="ct-resizer"
                 />
               </div>
               <div
-                class="rt-th rt-resizable-header"
+                class="ct-th ct-resizable-header"
                 role="columnheader"
                 style="flex: 120 0 auto; width: 120px; max-width: 120px;"
                 tabindex="-1"
               >
                 <div
-                  class="rt-resizable-header-content"
+                  class="ct-resizable-header-content"
                 >
                   Output
                 </div>
                 <div
-                  class="rt-resizer"
+                  class="ct-resizer"
                 />
               </div>
             </div>
           </div>
           <div
-            class="rt-tbody"
+            class="ct-tbody"
             style="min-width: 1060px;"
           >
             <div
-              class="rt-tr-group"
+              class="ct-tr-group"
               role="rowgroup"
             >
               <div
-                class="rt-tr -odd"
+                class="ct-tr -odd"
                 role="row"
               >
                 <div
-                  class="rt-td rt-expandable"
+                  class="ct-td ct-expandable"
                   role="gridcell"
                   style="flex: 35 0 auto; width: 35px; max-width: 35px;"
                 >
                   <div
-                    class="rt-expander"
+                    class="ct-expander"
                   >
                     •
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 160 0 auto; width: 160px; max-width: 160px;"
                 >
@@ -419,7 +419,7 @@ localhost"
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 150 0 auto; width: 150px; max-width: 150px;"
                 >
@@ -441,7 +441,7 @@ localhost"
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 200 0 auto; width: 200px; max-width: 200px;"
                 >
@@ -506,7 +506,7 @@ Processor output uncompressed size: 712.00B (does not represent size on disk)"
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 150 0 auto; width: 150px; max-width: 150px;"
                 >
@@ -527,7 +527,7 @@ Processor output uncompressed size: 712.00B (does not represent size on disk)"
                   </span>
                 </div>
                 <div
-                  class="rt-td"
+                  class="ct-td"
                   role="gridcell"
                   style="flex: 170 0 auto; width: 170px; max-width: 170px;"
                 >
@@ -555,14 +555,14 @@ Duration: 0:00:04.259"
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 75 0 auto; width: 75px; max-width: 75px;"
                 >
                   1
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 120 0 auto; width: 120px; max-width: 120px;"
                 >
@@ -579,26 +579,26 @@ Cluster by: __boost"
               </div>
             </div>
             <div
-              class="rt-tr-group"
+              class="ct-tr-group"
               role="rowgroup"
             >
               <div
-                class="rt-tr -even"
+                class="ct-tr -even"
                 role="row"
               >
                 <div
-                  class="rt-td rt-expandable"
+                  class="ct-td ct-expandable"
                   role="gridcell"
                   style="flex: 35 0 auto; width: 35px; max-width: 35px;"
                 >
                   <div
-                    class="rt-expander"
+                    class="ct-expander"
                   >
                     •
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 160 0 auto; width: 160px; max-width: 160px;"
                 >
@@ -614,7 +614,7 @@ Cluster by: __boost"
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 150 0 auto; width: 150px; max-width: 150px;"
                 >
@@ -629,7 +629,7 @@ Cluster by: __boost"
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 200 0 auto; width: 200px; max-width: 200px;"
                 >
@@ -652,24 +652,24 @@ Cluster by: __boost"
                   </div>
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 150 0 auto; width: 150px; max-width: 150px;"
                 />
                 <div
-                  class="rt-td"
+                  class="ct-td"
                   role="gridcell"
                   style="flex: 170 0 auto; width: 170px; max-width: 170px;"
                 />
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 75 0 auto; width: 75px; max-width: 75px;"
                 >
                   0
                 </div>
                 <div
-                  class="rt-td padded"
+                  class="ct-td padded"
                   role="gridcell"
                   style="flex: 120 0 auto; width: 120px; max-width: 120px;"
                 >
@@ -685,15 +685,6 @@ Cluster by: __boost"
               </div>
             </div>
             <!-- 5 empty rows -->
-          </div>
-        </div>
-        <div
-          class="-loading"
-        >
-          <div
-            class="-loading-inner"
-          >
-            Loading...
           </div>
         </div>
       </div>

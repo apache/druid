@@ -19,7 +19,9 @@
 // Stand-ins for heavy child components, so a snapshot can stop at a component boundary the way
 // shallow rendering did. Use them from a jest.mock factory, for example:
 //
-//   jest.mock('react-table', () => jest.requireActual('../../test-utils/stub-component').reactTableStub);
+//   jest.mock('../../components/console-table/console-table', () =>
+//     jest.requireActual('../../test-utils/stub-component').consoleTableStub,
+//   );
 
 import React from 'react';
 
@@ -76,9 +78,9 @@ function renderColumns(columns: StubColumn[] | undefined): React.ReactNode {
   );
 }
 
-function StubReactTable(props: any) {
+function StubConsoleTable(props: any) {
   return React.createElement(
-    'stub-react-table',
+    'stub-console-table',
     {
       ...primitiveAttributes(props),
       rows: String(Array.isArray(props.data) ? props.data.length : 0),
@@ -87,8 +89,8 @@ function StubReactTable(props: any) {
   );
 }
 
-/** A module to mock 'react-table' with: renders the table props and column headers, but no cells */
-export const reactTableStub = {
+/** A module to mock 'components/console-table/console-table' with: renders the table props and column headers, but no cells */
+export const consoleTableStub = {
   __esModule: true,
-  default: StubReactTable,
+  ConsoleTable: StubConsoleTable,
 };

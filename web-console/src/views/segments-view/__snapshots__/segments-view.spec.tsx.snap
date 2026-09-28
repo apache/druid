@@ -150,7 +150,7 @@ exports[`SegmentsView matches snapshot 1`] = `
     <div
       class="layout-pane layout-pane-primary"
     >
-      <stub-react-table
+      <stub-console-table
         filterable="true"
         loading="true"
         manual="true"
@@ -304,7 +304,7 @@ exports[`SegmentsView matches snapshot 1`] = `
         >
           Actions
         </stub-column>
-      </stub-react-table>
+      </stub-console-table>
     </div>
   </div>
 </div>

@@ -20,19 +20,13 @@ import { Button, HTMLSelect, Icon, InputGroup, Menu, MenuItem, Popover } from '@
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
-import type { Column, ReactTableFunction } from 'react-table';
 
-import { filterMap, toggle } from '../utils';
-import { TableFilter } from '../utils/table-filters';
+import { filterMap, toggle } from '../../utils';
+import { TableFilter } from '../../utils/table-filters';
 
-interface FilterRendererProps {
-  column: Column;
-  filter: any;
-  onChange: ReactTableFunction;
-  key?: string;
-}
+import type { ConsoleTableFilterProps } from './console-table';
 
-export function GenericFilterInput({ column, filter, onChange, key }: FilterRendererProps) {
+export function GenericFilterInput({ column, filter, onChange }: ConsoleTableFilterProps) {
   const INPUT_DEBOUNCE_TIME_IN_MILLISECONDS = 1000;
   const [menuOpen, setMenuOpen] = useState(false);
   const [focusedText, setFocusedText] = useState<string | undefined>();
@@ -63,7 +57,6 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
       className={classNames('generic-filter-input', {
         'hide-icon': !filter && !(menuOpen || typeof focusedText === 'string'),
       })}
-      key={key}
       leftElement={
         <Popover
           placement="bottom-start"
@@ -110,7 +103,8 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
 }
 
 export function suggestibleFilterInput(suggestions: string[]) {
-  return function SuggestibleFilterInput({ filter, onChange, key, ...rest }: FilterRendererProps) {
+  return function SuggestibleFilterInput(props: ConsoleTableFilterProps) {
+    const { filter, onChange } = props;
     let valuesFilteredOn: string[] | undefined;
     if (filter) {
       const modeAndNeedle = TableFilter.parseModeAndNeedle(filter, true);
@@ -120,7 +114,6 @@ export function suggestibleFilterInput(suggestions: string[]) {
     }
     return (
       <Popover
-        key={key}
         placement="bottom-start"
         minimal
         content={
@@ -154,20 +147,19 @@ export function suggestibleFilterInput(suggestions: string[]) {
           </Menu>
         }
       >
-        <GenericFilterInput filter={filter} onChange={onChange} {...rest} />
+        <GenericFilterInput {...props} />
       </Popover>
     );
   };
 }
 
-export function BooleanFilterInput({ filter, onChange, key }: FilterRendererProps) {
+export function BooleanFilterInput({ filter, onChange }: ConsoleTableFilterProps) {
   return (
     <HTMLSelect
       className="boolean-filter-input"
-      key={key}
       style={{ width: '100%' }}
       onChange={(event: any) => onChange(event.target.value)}
-      value={filter?.value || ''}
+      value={String(filter?.value ?? '')}
       fill
     >
       <option value="">Show all</option>

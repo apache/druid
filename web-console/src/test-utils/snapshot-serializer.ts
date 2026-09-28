@@ -19,7 +19,7 @@
 import type { Ace } from 'ace-builds';
 
 // Removes noise from DOM snapshots so that they stay small and a change shows up as a small diff:
-// - the empty padding rows that react-table always renders are collapsed into a single comment
+// - the empty padding rows that ConsoleTable always renders are collapsed into a single comment
 // - icon <svg>s are reduced to their icon name (the path data changes whenever an icon is redrawn)
 // - the inside of Ace editors (Ace's own DOM, which changes with every Ace version) is replaced with a comment
 //   describing what the console configured: the mode, the value and the placeholder
@@ -45,9 +45,9 @@ function simplifyDom(root: Element, original: Element): void {
     );
   });
 
-  for (const tbody of Array.from(root.querySelectorAll('.rt-tbody'))) {
+  for (const tbody of Array.from(root.querySelectorAll('.ct-tbody'))) {
     const padRowGroups = Array.from(tbody.children).filter(group =>
-      group.querySelector(':scope > .rt-tr.-padRow'),
+      group.querySelector(':scope > .ct-tr.-padRow'),
     );
     if (!padRowGroups.length) continue;
     tbody.insertBefore(

@@ -25,12 +25,17 @@ import type { Column, QueryResult } from 'druid-query-toolkit';
 import { SqlColumn, SqlExpression, SqlLiteral, trimString } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
-import type { Column as TableColumn } from 'react-table';
-import ReactTable from 'react-table';
 
-import { BracedText, Deferred, TableCell } from '../../../../components';
+import type { ConsoleTableColumn } from '../../../../components';
+import {
+  BracedText,
+  ConsoleTable,
+  Deferred,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  TableCell,
+} from '../../../../components';
 import { ShowValueDialog } from '../../../../dialogs/show-value-dialog/show-value-dialog';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../../react-table';
 import type { ColumnHint, Pagination } from '../../../../utils';
 import {
   columnToIcon,
@@ -60,15 +65,15 @@ function isComparable(x: unknown): boolean {
 }
 
 function columnNester(
-  tableColumns: TableColumn[],
+  tableColumns: ConsoleTableColumn[],
   resultColumns: readonly Column[],
   columnHints: Map<string, ColumnHint> | undefined,
-): TableColumn[] {
+): ConsoleTableColumn[] {
   if (!columnHints) return tableColumns;
 
-  const ret: TableColumn[] = [];
+  const ret: ConsoleTableColumn[] = [];
   let currentGroupName: string | null = null;
-  let currentColumnGroup: TableColumn | null = null;
+  let currentColumnGroup: ConsoleTableColumn | null = null;
   for (let i = 0; i < tableColumns.length; i++) {
     const tableColumn = tableColumns[i];
     const group = columnHints.get(resultColumns[i].name)?.group;
@@ -413,7 +418,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
           />
         </div>
       ) : (
-        <ReactTable
+        <ConsoleTable
           className="-striped -highlight"
           data={queryResult.rows as any[][]}
           ofText={hasMoreResults ? '' : 'of'}

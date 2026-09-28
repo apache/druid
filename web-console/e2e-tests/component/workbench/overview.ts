@@ -42,6 +42,6 @@ export class WorkbenchOverview {
     await clickButton(this.page, 'Run');
     await this.page.waitForSelector('div.result-table-pane', { timeout: 4 * 60 * 1000 });
 
-    return await extractTable(this.page, 'div.result-table-pane div.rt-tr-group', 'div.rt-td');
+    return await extractTable(this.page, 'div.result-table-pane div.ct-tr-group', 'div.ct-td');
   }
 }

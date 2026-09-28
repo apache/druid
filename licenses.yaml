@@ -5950,6 +5950,46 @@ version: 0.5.23
 
 ---
 
+name: "@tanstack/react-store"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Tanner Linsley
+version: 0.11.1
+license_file_path: licenses/bin/@tanstack-react-store.MIT
+
+---
+
+name: "@tanstack/react-table"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Tanner Linsley
+version: 9.2.4
+license_file_path: licenses/bin/@tanstack-react-table.MIT
+
+---
+
+name: "@tanstack/store"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Tanner Linsley
+version: 0.11.1
+license_file_path: licenses/bin/@tanstack-store.MIT
+
+---
+
+name: "@tanstack/table-core"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Tanner Linsley
+version: 9.2.4
+license_file_path: licenses/bin/@tanstack-table-core.MIT
+
+---
+
 name: "@types/parse-json"
 license_category: binary
 module: web-console
@@ -5967,16 +6007,6 @@ license_name: MIT License
 copyright: Microsoft Corporation.
 version: 15.7.15
 license_file_path: licenses/bin/@types-prop-types.MIT
-
----
-
-name: "@types/react-table"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Microsoft Corporation.
-version: 6.8.5
-license_file_path: licenses/bin/@types-react-table.MIT
 
 ---
 
@@ -7065,16 +7095,6 @@ license_file_path: licenses/bin/react-popper.MIT
 
 ---
 
-name: "react-table"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Tanner Linsley
-version: 6.11.5
-license_file_path: licenses/bin/react-table.MIT
-
----
-
 name: "react-transition-group"
 license_category: binary
 module: web-console
@@ -7232,6 +7252,16 @@ license_name: MIT License
 copyright: Blake Embrey
 version: 2.0.2
 license_file_path: licenses/bin/upper-case.MIT
+
+---
+
+name: "use-sync-external-store"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Meta Platforms, Inc. and affiliates.
+version: 1.7.0
+license_file_path: licenses/bin/use-sync-external-store.MIT
 
 ---
 

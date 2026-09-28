@@ -21,16 +21,21 @@ import { IconNames } from '@blueprintjs/icons';
 import { max, sum } from 'd3-array';
 import memoize from 'memoize-one';
 import React, { createContext, useContext } from 'react';
-import type { Column, Filter } from 'react-table';
-import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  type ColumnFilter,
+  ConsoleTable,
+  type ConsoleTableColumn,
+  DEFAULT_TABLE_CLASS_NAME,
   MoreButton,
   RefreshButton,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
   TableClickableCell,
   TableColumnSelector,
   type TableColumnSelectorColumn,
@@ -41,12 +46,6 @@ import { AsyncActionDialog, ServiceTableActionDialog } from '../../dialogs';
 import type { CoordinatorDynamicConfig, QueryWithContext } from '../../druid-models';
 import { getConsoleViewIcon } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
-import {
-  DEFAULT_TABLE_CLASS_NAME,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-  suggestibleFilterInput,
-} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
 import {
@@ -676,7 +675,7 @@ ORDER BY
       <LoadQueueInfoContext.Provider value={loadQueueInfo}>
         <CloneStatusContext.Provider value={cloneStatus}>
           <ServerModeContext.Provider value={serverMode}>
-            <ReactTable
+            <ConsoleTable
               data={services}
               loading={servicesState.loading}
               noDataText={
@@ -706,7 +705,7 @@ ORDER BY
       _filters: TableFilters,
       _onFiltersChange: (filters: TableFilters) => void,
       workerInfoLookup: Record<string, WorkerInfo>,
-    ): Column<ServiceResultRow>[] => {
+    ): ConsoleTableColumn<ServiceResultRow>[] => {
       const { capabilities } = this.props;
 
       return [
@@ -947,7 +946,7 @@ ORDER BY
           width: 220,
           Cell: this.renderFilterableCell('start_time', formatDate),
           Aggregated: () => '',
-          filterMethod: (filter: Filter, row: ServiceResultRow) => {
+          filterMethod: (filter: ColumnFilter, row: ServiceResultRow) => {
             const tableFilter = TableFilter.fromFilter(filter);
             const parsedRowTime = formatDate(row.start_time);
             if (tableFilter.mode === '~') {

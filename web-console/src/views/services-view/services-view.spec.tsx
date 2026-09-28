@@ -26,8 +26,8 @@ import { ServicesView } from './services-view';
 
 // Snapshot the table props and columns, not every rendered cell
 jest.mock(
-  'react-table',
-  () => jest.requireActual('../../test-utils/stub-component').reactTableStub,
+  '../../components/console-table/console-table',
+  () => jest.requireActual('../../test-utils/stub-component').consoleTableStub,
 );
 
 jest.useFakeTimers().setSystemTime(Date.parse('2024-06-08T12:34:56Z'));

@@ -133,7 +133,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
     <div
       class="layout-pane layout-pane-primary"
     >
-      <stub-react-table
+      <stub-console-table
         default-page-size="50"
         filterable="true"
         loading="true"
@@ -261,7 +261,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
         >
           Actions
         </stub-column>
-      </stub-react-table>
+      </stub-console-table>
     </div>
   </div>
 </div>

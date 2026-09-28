@@ -142,7 +142,7 @@ exports[`ServicesView renders data 1`] = `
       </button>
     </span>
   </div>
-  <stub-react-table
+  <stub-console-table
     class-name="centered-table -striped -highlight padded-header"
     default-page-size="50"
     filterable="true"
@@ -251,6 +251,6 @@ exports[`ServicesView renders data 1`] = `
     >
       Actions
     </stub-column>
-  </stub-react-table>
+  </stub-console-table>
 </div>
 `;
