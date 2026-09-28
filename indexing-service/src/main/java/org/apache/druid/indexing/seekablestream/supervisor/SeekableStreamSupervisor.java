@@ -2099,13 +2099,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
 
             @Override
-            public void locationChanged(final String taskId, final TaskLocation newLocation)
+            public void locationChanged(final Task task, final TaskLocation newLocation)
             {
               // do nothing
             }
 
             @Override
-            public void statusChanged(String taskId, TaskStatus status)
+            public void statusChanged(Task task, TaskStatus status)
             {
               addNotice(new RunNotice());
             }

@@ -127,7 +127,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
     if (runningItem != null) {
       TaskRunnerUtils.notifyLocationChanged(
           ImmutableList.of(listenerPair),
-          runningItem.getTaskId(),
+          runningItem.getTask(),
           runningItem.getLocation()
       );
     }
@@ -202,7 +202,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
               System.currentTimeMillis() - start
           );
 
-          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
+          TaskRunnerUtils.notifyStatusChanged(listeners, task, taskStatus);
         }
         catch (Exception e) {
           log.makeAlert(e, "Graceful task shutdown failed: %s", task.getDataSource())
@@ -218,7 +218,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           // See https://github.com/apache/druid/issues/11445.
           TaskRunnerUtils.notifyStatusChanged(
               listeners,
-              task.getId(),
+              task,
               TaskStatus.failure(
                   task.getId(),
                   "Failed to stop gracefully with exception. See task logs for more details."
@@ -233,7 +233,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         // See https://github.com/apache/druid/issues/11445.
         TaskRunnerUtils.notifyStatusChanged(
             listeners,
-            task.getId(),
+            task,
             TaskStatus.failure(task.getId(), "Canceled as task execution process stopped")
         );
       }
@@ -471,10 +471,10 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
         log.info("Running task: %s", task.getId());
         TaskRunnerUtils.notifyLocationChanged(
             listeners,
-            task.getId(),
+            task,
             location
         );
-        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
+        TaskRunnerUtils.notifyStatusChanged(listeners, task, TaskStatus.running(task.getId()));
         status = task.run(toolbox);
       }
       catch (InterruptedException e) {
@@ -499,7 +499,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       }
 
       status = status.withDuration(System.currentTimeMillis() - startTime);
-      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+      TaskRunnerUtils.notifyStatusChanged(listeners, task, status);
       return status;
     }
   }
