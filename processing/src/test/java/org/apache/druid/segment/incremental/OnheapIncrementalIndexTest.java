@@ -551,7 +551,7 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testExpressionSelectorCacheSharesSelectorButNotAggregatorState()
+  public void testExpressionSelectorCacheReusesSelector()
   {
     final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
     final Expr expression = Parser.parse("value + 1", TestExprMacroTable.INSTANCE);
@@ -559,14 +559,24 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
     final ColumnValueSelector<?> firstSelector = ExpressionSelectors.makeExprEvalSelector(selectorFactory, expression);
     final ColumnValueSelector<?> secondSelector = ExpressionSelectors.makeExprEvalSelector(selectorFactory, expression);
     Assertions.assertSame(firstSelector, secondSelector);
+  }
 
+  @Test
+  public void testExpressionSelectorCacheReusesConstantSelector()
+  {
+    final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
     final Expr constantExpression = Parser.parse("'constant'", TestExprMacroTable.INSTANCE);
     final ColumnValueSelector<ExprEval> firstConstantSelector =
         ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
     final ColumnValueSelector<ExprEval> secondConstantSelector =
         ExpressionSelectors.makeExprEvalSelector(selectorFactory, constantExpression);
     Assertions.assertSame(firstConstantSelector, secondConstantSelector);
+  }
 
+  @Test
+  public void testExpressionSelectorCacheDoesNotShareAggregatorState()
+  {
+    final OnheapIncrementalIndex.CachingColumnSelectorFactory selectorFactory = makeCachingColumnSelectorFactory();
     final AggregatorFactory aggregatorFactory = new LongSumAggregatorFactory(
         "sum",
         null,
@@ -601,28 +611,29 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
               )
           )
       );
+      // Each row contributes the result of the ingestion expression "value + 1".
       expectedSum += value + 1;
     }
 
-    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
-                .withMetrics(
-                    new LongSumAggregatorFactory(
-                        "sum",
-                        null,
-                        "value + 1",
-                        TestExprMacroTable.INSTANCE
+    try (
+        OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+            .setIndexSchema(
+                new IncrementalIndexSchema.Builder()
+                    .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
+                    .withMetrics(
+                        new LongSumAggregatorFactory(
+                            "sum",
+                            null,
+                            "value + 1",
+                            TestExprMacroTable.INSTANCE
+                        )
                     )
-                )
-                .withRollup(true)
-                .build()
-        )
-        .setMaxRowCount(rowCount + 1)
-        .build();
-
-    try {
+                    .withRollup(true)
+                    .build()
+            )
+            .setMaxRowCount(rowCount + 1)
+            .build()
+    ) {
       for (final InputRow row : rows) {
         index.add(row);
       }
@@ -635,9 +646,6 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       Assertions.assertEquals(rollupKeyCount, index.numRows());
       Assertions.assertEquals(expectedSum, actualSum);
     }
-    finally {
-      index.close();
-    }
   }
 
   @Test
@@ -647,44 +655,52 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
         new MapBasedInputRow(
             0L,
             Collections.singletonList("key"),
-            ImmutableMap.of("key", "key-0", "Aa", List.of("a1", "a2"), "BB", "b")
+            ImmutableMap.of("key", "key-0",
+                            "Aa", List.of("a1", "a2"),
+                            "BB", "b")
         ),
         new MapBasedInputRow(
             0L,
             Collections.singletonList("key"),
-            ImmutableMap.of("key", "key-1", "Aa", "a", "BB", List.of("b1", "b2"))
+            ImmutableMap.of("key", "key-1",
+                            "Aa", "a",
+                            "BB", List.of("b1", "b2"))
         ),
         new MapBasedInputRow(
             0L,
             Collections.singletonList("key"),
-            ImmutableMap.of("key", "key-2", "Aa", List.of("x"), "BB", "yz")
+            ImmutableMap.of("key", "key-2",
+                            "Aa", List.of("x"),
+                            "BB", "yz")
         ),
         new MapBasedInputRow(
             0L,
             Collections.singletonList("key"),
-            ImmutableMap.of("key", "key-3", "Aa", "xy", "BB", List.of("z"))
+            ImmutableMap.of("key", "key-3",
+                            "Aa", "xy",
+                            "BB", List.of("z"))
         )
     );
 
-    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
-        .setIndexSchema(
-            new IncrementalIndexSchema.Builder()
-                .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
-                .withMetrics(
-                    new LongSumAggregatorFactory(
-                        "sum",
-                        null,
-                        "strlen(array_to_string(concat(\"Aa\", \"BB\"), ','))",
-                        TestExprMacroTable.INSTANCE
+    try (
+        OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+            .setIndexSchema(
+                new IncrementalIndexSchema.Builder()
+                    .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
+                    .withMetrics(
+                        new LongSumAggregatorFactory(
+                            "sum",
+                            null,
+                            "strlen(array_to_string(concat(\"Aa\", \"BB\"), ','))",
+                            TestExprMacroTable.INSTANCE
+                        )
                     )
-                )
-                .withRollup(true)
-                .build()
-        )
-        .setMaxRowCount(rows.size() + 1)
-        .build();
-
-    try {
+                    .withRollup(true)
+                    .build()
+            )
+            .setMaxRowCount(rows.size() + 1)
+            .build()
+    ) {
       for (final InputRow row : rows) {
         index.add(row);
       }
@@ -695,10 +711,10 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       }
 
       Assertions.assertEquals(rows.size(), index.numRows());
+
+      // Per-row expression results are 7, 7, 3, and 3, for a total of 20.
+      // For example: Row 1: Aa = ["a1", "a2"], BB = "b", concat("Aa", "BB") = ["a1b", "a2b"], array_to_string = "a1b,a2b", length is 7
       Assertions.assertEquals(20L, actualSum);
-    }
-    finally {
-      index.close();
     }
   }
 

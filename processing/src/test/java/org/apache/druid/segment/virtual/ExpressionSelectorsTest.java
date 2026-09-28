@@ -304,8 +304,11 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_row_based_selector_distinguishes_colliding_array_binding_sets()
+  public void test_row_based_selector_distinguishes_colliding_array_binding_sets() throws IOException
   {
+    // These distinct binding lists collide when keyed only by their hash codes.
+    Assertions.assertEquals(List.of("Aa").hashCode(), List.of("BB").hashCode());
+
     final DateTime timestamp = DateTimes.nowUtc();
     final List<InputRow> rows = List.of(
         new MapBasedInputRow(
@@ -320,25 +323,26 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         )
     );
 
-    final Segment segment = new RowBasedSegment<>(
+    try (final Segment segment = new RowBasedSegment<>(
         Sequences.simple(rows),
         RowAdapters.standardRow(),
         RowSignature.empty()
-    );
-    final CursorFactory cursorFactory = segment.as(CursorFactory.class);
-    Assertions.assertNotNull(cursorFactory);
+    )) {
+      final CursorFactory cursorFactory = segment.as(CursorFactory.class);
+      Assertions.assertNotNull(cursorFactory);
 
-    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
-      final Cursor cursor = cursorHolder.asCursor();
-      final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
-          cursor.getColumnSelectorFactory(),
-          Parser.parse("concat(\"Aa\", \"BB\")", TestExprMacroTable.INSTANCE)
-      );
+      try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        final ColumnValueSelector<ExprEval> selector = ExpressionSelectors.makeExprEvalSelector(
+            cursor.getColumnSelectorFactory(),
+            Parser.parse("concat(\"Aa\", \"BB\")", TestExprMacroTable.INSTANCE)
+        );
 
-      Assertions.assertArrayEquals(new Object[]{"a1b", "a2b"}, selector.getObject().asArray());
+        Assertions.assertArrayEquals(new Object[]{"a1b", "a2b"}, selector.getObject().asArray());
 
-      cursor.advance();
-      Assertions.assertArrayEquals(new Object[]{"ab1", "ab2"}, selector.getObject().asArray());
+        cursor.advance();
+        Assertions.assertArrayEquals(new Object[]{"ab1", "ab2"}, selector.getObject().asArray());
+      }
     }
   }
 
