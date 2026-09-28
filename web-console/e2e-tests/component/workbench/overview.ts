@@ -40,7 +40,19 @@ export class WorkbenchOverview {
     const input = await this.page.waitForSelector('div.flexible-query-input textarea');
     await input.fill(query);
     await clickButton(this.page, 'Run');
-    await this.page.waitForSelector('div.result-table-pane', { timeout: 4 * 60 * 1000 });
+
+    const results = this.page.locator('div.result-table-pane');
+    const capacityAlert = this.page.locator('.alert-dialog').filter({
+      hasText: 'The cluster does not currently have enough available task slots',
+    });
+    const first = await Promise.race([
+      results.waitFor({ timeout: 4 * 60 * 1000 }).then(() => 'results'),
+      capacityAlert.waitFor({ timeout: 4 * 60 * 1000 }).then(() => 'capacityAlert'),
+    ]);
+    if (first === 'capacityAlert') {
+      await capacityAlert.getByRole('button', { name: 'Run it anyway' }).click();
+      await results.waitFor({ timeout: 4 * 60 * 1000 });
+    }
 
     return await extractTable(this.page, 'div.result-table-pane div.rt-tr-group', 'div.rt-td');
   }
