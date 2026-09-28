@@ -1689,8 +1689,8 @@ GROUP BY 1, 2`;
                   {rules.length
                     ? DatasourcesView.formatRules(rules)
                     : defaultRules
-                    ? `Cluster default: ${DatasourcesView.formatRules(defaultRules)}`
-                    : ''}
+                      ? `Cluster default: ${DatasourcesView.formatRules(defaultRules)}`
+                      : ''}
                 </TableClickableCell>
               );
             },

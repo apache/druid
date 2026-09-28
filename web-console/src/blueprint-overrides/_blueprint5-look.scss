@@ -303,8 +303,8 @@ textarea.#{$ns}-input {
 
   .#{$ns}-dark & {
     background: $dark-input-background-color;
-    box-shadow: dark-input-transition-shadow($dark-input-shadow-color-focus),
-      $pt-dark-input-box-shadow;
+    box-shadow:
+      dark-input-transition-shadow($dark-input-shadow-color-focus), $pt-dark-input-box-shadow;
     color: $dark-input-color;
 
     &::placeholder {
@@ -329,7 +329,9 @@ textarea.#{$ns}-input {
     @each $intent, $color in $pt-intent-text-colors {
       &.#{$ns}-intent-#{$intent} {
         $dark-color: map.get($pt-dark-intent-text-colors, $intent);
-        box-shadow: dark-input-transition-shadow($dark-color), inset 0 0 0 1px $dark-color,
+        box-shadow:
+          dark-input-transition-shadow($dark-color),
+          inset 0 0 0 1px $dark-color,
           $pt-dark-input-box-shadow;
 
         &:focus {
@@ -700,7 +702,9 @@ label.#{$ns}-label {
       }
 
       &.#{$ns}-selected {
-        box-shadow: 0 0 0 3px rgba($blue5, 0.4), 0 0 0 1px $blue5;
+        box-shadow:
+          0 0 0 3px rgba($blue5, 0.4),
+          0 0 0 1px $blue5;
       }
     }
   }

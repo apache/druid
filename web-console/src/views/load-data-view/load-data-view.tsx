@@ -596,8 +596,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'publish':
         return Boolean(
           cacheRows &&
-            deepGet(spec, 'spec.dataSchema.timestampSpec') &&
-            deepGet(spec, 'spec.dataSchema.dimensionsSpec'),
+          deepGet(spec, 'spec.dataSchema.timestampSpec') &&
+          deepGet(spec, 'spec.dataSchema.dimensionsSpec'),
         );
 
       default:
@@ -1298,10 +1298,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const specialSource = druidSource
       ? 'druid'
       : fixedFormatSource
-      ? 'fixedFormat'
-      : isKafkaOrKinesis(specType)
-      ? specType
-      : undefined;
+        ? 'fixedFormat'
+        : isKafkaOrKinesis(specType)
+          ? specType
+          : undefined;
 
     let mainFill: JSX.Element | string;
     if (inlineMode) {

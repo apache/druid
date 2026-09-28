@@ -341,14 +341,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           signal,
         );
 
-        const dataset = result.toObjectArray().map(
-          (b): RangeDatum => ({
-            start: b[TIME_NAME].valueOf(),
-            end: granularity.shift(b[TIME_NAME], Timezone.UTC, 1).valueOf(),
-            measures: measures.map((_, i) => Number(b[getMeasureName(i)])),
-            facet: b[FACET_NAME],
-          }),
-        );
+        const dataset = result.toObjectArray().map((b): RangeDatum => ({
+          start: b[TIME_NAME].valueOf(),
+          end: granularity.shift(b[TIME_NAME], Timezone.UTC, 1).valueOf(),
+          measures: measures.map((_, i) => Number(b[getMeasureName(i)])),
+          facet: b[FACET_NAME],
+        }));
 
         return {
           effectiveFacets,

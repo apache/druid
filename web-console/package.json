@@ -92,7 +92,7 @@
   },
   "devDependencies": {
     "@awesome-code-style/eslint-config": "^6.2.1",
-    "@awesome-code-style/prettier-config": "^4.0.0",
+    "@awesome-code-style/prettier-config": "^5.0.2",
     "@awesome-code-style/stylelint-config": "^6.0.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.0.1",
@@ -131,7 +131,7 @@
     "postcss": "^8.5.28",
     "postcss-loader": "^8.2.1",
     "postcss-preset-env": "^11.5.4",
-    "prettier": "^2.5.1",
+    "prettier": "^3.9.9",
     "sass": "^1.99.0",
     "sass-loader": "^17.0.1",
     "snarkdown": "^2.0.0",

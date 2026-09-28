@@ -23,8 +23,10 @@ import { QueryManager, QueryState } from '../utils';
 
 import { usePermanentCallback } from './use-permanent-callback';
 
-export interface UseQueryManagerOptions<Q, R, I, E extends Error>
-  extends Omit<QueryManagerOptions<Q, R, I, E>, 'onStateChange'> {
+export interface UseQueryManagerOptions<Q, R, I, E extends Error> extends Omit<
+  QueryManagerOptions<Q, R, I, E>,
+  'onStateChange'
+> {
   query?: Q | undefined;
   initQuery?: Q;
 }

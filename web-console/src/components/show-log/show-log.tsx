@@ -192,14 +192,14 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
           {logState.loading ? (
             <Loader />
           ) : (
-            showSpecialInstructions(endpoint, logState) ?? (
+            (showSpecialInstructions(endpoint, logState) ?? (
               <textarea
                 className={Classes.INPUT}
                 readOnly
                 value={logState.data || logState.getErrorMessage()}
                 ref={this.log}
               />
-            )
+            ))
           )}
         </div>
       </div>

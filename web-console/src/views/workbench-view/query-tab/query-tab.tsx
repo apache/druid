@@ -72,16 +72,15 @@ function handleSecondaryPaneSizeChange(secondaryPaneSize: number) {
   localStorageSetJson(LocalStorageKeys.WORKBENCH_PANE_SIZE, secondaryPaneSize);
 }
 
-export interface QueryTabProps
-  extends Pick<
-    RunPanelProps,
-    | 'maxTasksMenuHeader'
-    | 'enginesLabelFn'
-    | 'maxTasksLabelFn'
-    | 'fullClusterCapacityLabelFn'
-    | 'maxTasksOptions'
-    | 'hiddenOptions'
-  > {
+export interface QueryTabProps extends Pick<
+  RunPanelProps,
+  | 'maxTasksMenuHeader'
+  | 'enginesLabelFn'
+  | 'maxTasksLabelFn'
+  | 'fullClusterCapacityLabelFn'
+  | 'maxTasksOptions'
+  | 'hiddenOptions'
+> {
   query: WorkbenchQuery;
   id: string;
   mandatoryQueryContext: QueryContext | undefined;

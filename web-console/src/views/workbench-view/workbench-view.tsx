@@ -120,11 +120,10 @@ type MoreMenuItem =
   | 'druid-sql-documentation'
   | 'load-demo-queries';
 
-export interface WorkbenchViewProps
-  extends Pick<
-    QueryTabProps,
-    'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
-  > {
+export interface WorkbenchViewProps extends Pick<
+  QueryTabProps,
+  'maxTasksMenuHeader' | 'enginesLabelFn' | 'maxTasksLabelFn' | 'fullClusterCapacityLabelFn'
+> {
   capabilities: Capabilities;
   tabId: string | undefined;
   onTabChange(newTabId: string): void;
@@ -139,11 +138,9 @@ export interface WorkbenchViewProps
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
   hideToolbar?: boolean;
   maxTasksOptions?:
-    | QueryTabProps['maxTasksOptions']
-    | ((engine: DruidEngine) => QueryTabProps['maxTasksOptions']);
+    QueryTabProps['maxTasksOptions'] | ((engine: DruidEngine) => QueryTabProps['maxTasksOptions']);
   hiddenOptions?:
-    | QueryTabProps['hiddenOptions']
-    | ((engine: DruidEngine) => QueryTabProps['hiddenOptions']);
+    QueryTabProps['hiddenOptions'] | ((engine: DruidEngine) => QueryTabProps['hiddenOptions']);
 }
 
 export interface WorkbenchViewState {
@@ -189,7 +186,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     const showCurrentDartPanel = Boolean(
       queryEngines.includes('sql-msq-dart') &&
-        localStorageGetJson(LocalStorageKeys.WORKBENCH_DART_PANEL),
+      localStorageGetJson(LocalStorageKeys.WORKBENCH_DART_PANEL),
     );
 
     const tabEntries =

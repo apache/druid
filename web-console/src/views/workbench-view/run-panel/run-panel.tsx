@@ -165,11 +165,10 @@ function optionVisible(
   }
 }
 
-export interface RunPanelProps
-  extends Pick<
-    MaxTasksButtonProps,
-    'maxTasksLabelFn' | 'fullClusterCapacityLabelFn' | 'maxTasksOptions'
-  > {
+export interface RunPanelProps extends Pick<
+  MaxTasksButtonProps,
+  'maxTasksLabelFn' | 'fullClusterCapacityLabelFn' | 'maxTasksOptions'
+> {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
   running: boolean;

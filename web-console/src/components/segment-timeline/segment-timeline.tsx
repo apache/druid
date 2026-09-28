@@ -115,7 +115,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
   });
 
   const [initDatasourceDateRangeState] = useQueryManager<string | null, NonNullDateRange>({
-    query: dateRange ? undefined : shownDatasource ?? null,
+    query: dateRange ? undefined : (shownDatasource ?? null),
     processQuery: async (datasource, signal) => {
       let queriedStart: Date;
       let queriedEnd: Date;
