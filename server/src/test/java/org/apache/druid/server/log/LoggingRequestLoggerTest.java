@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.log;
 
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -27,15 +26,13 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FakeQuery;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
-import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.server.QueryStats;
@@ -338,54 +335,5 @@ public class LoggingRequestLoggerTest
       }
     }
     return ImmutableMap.copyOf(context);
-  }
-}
-
-@JsonTypeName("fake")
-class FakeQuery extends BaseQuery<Object>
-{
-  public FakeQuery(
-      DataSource dataSource,
-      QuerySegmentSpec querySegmentSpec,
-      Map<String, Object> context
-  )
-  {
-    super(dataSource, querySegmentSpec, context);
-  }
-
-  @Override
-  public boolean hasFilters()
-  {
-    return false;
-  }
-
-  @Override
-  public DimFilter getFilter()
-  {
-    throw new UnsupportedOperationException("shouldn't be here");
-  }
-
-  @Override
-  public String getType()
-  {
-    return "fake";
-  }
-
-  @Override
-  public Query withQuerySegmentSpec(QuerySegmentSpec spec)
-  {
-    throw new UnsupportedOperationException("shouldn't be here");
-  }
-
-  @Override
-  public Query withDataSource(DataSource dataSource)
-  {
-    throw new UnsupportedOperationException("shouldn't be here");
-  }
-
-  @Override
-  public Query withOverriddenContext(Map contextOverride)
-  {
-    throw new UnsupportedOperationException("shouldn't be here");
   }
 }
