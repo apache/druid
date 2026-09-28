@@ -123,7 +123,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
   // Store the cancellation function for natively run queries allowing us to trigger it only when the user explicitly clicks "cancel" (vs changing tab)
-  const nativeQueryCancelFnRef = useRef<() => void>();
+  const nativeQueryCancelFnRef = useRef<(() => void) | undefined>(undefined);
 
   const handleQueryStringChange = usePermanentCallback((queryString: string) => {
     if (query.isEmptyQuery() && queryString.split('=====').length > 2) {

@@ -82,10 +82,10 @@
     "markdown-table-ts": "^1.0.3",
     "memoize-one": "^6.0.0",
     "numeral": "^2.0.6",
-    "react": "^18.3.1",
+    "react": "^19.3.0",
     "react-ace": "^15.0.0",
     "react-diff-viewer-continued": "~4.0.6",
-    "react-dom": "^18.3.1",
+    "react-dom": "^19.3.0",
     "tslib": "^2.8.0",
     "uuid": "^14.0.2",
     "zustand": "^5.0.15"
@@ -110,8 +110,8 @@
     "@types/lodash.escape": "^4.0.9",
     "@types/node": "^22.19.0",
     "@types/numeral": "^2.0.5",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "ajv": "^8.20.0",
     "autoprefixer": "^10.4.20",
     "browserslist": "^4.28.8",
@@ -144,8 +144,5 @@
     "webpack-bundle-analyzer": "^5.4.0",
     "webpack-cli": "^7.2.3",
     "webpack-dev-server": "^6.0.0"
-  },
-  "overrides": {
-    "@types/react": "$@types/react"
   }
 }

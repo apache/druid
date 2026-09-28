@@ -98,7 +98,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     stringified: stringifyJson(value),
   }));
   const [showErrorIfNeeded, setShowErrorIfNeeded] = useState(false);
-  const aceEditor = useRef<Ace.Editor | undefined>();
+  const aceEditor = useRef<Ace.Editor | undefined>(undefined);
 
   useEffect(() => {
     if (deepEqual(value, internalValue.lastShownValue)) return;

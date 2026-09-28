@@ -201,7 +201,7 @@ exports[`TasksView matches snapshot 1`] = `
       Status
     </stub-column>
     <stub-column
-      hidden="true"
+      hidden=""
       id="error"
       width="300"
     >

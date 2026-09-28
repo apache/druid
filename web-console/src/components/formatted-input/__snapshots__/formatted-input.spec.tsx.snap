@@ -10,7 +10,6 @@ exports[`FormattedInput matches snapshot on undefined value 1`] = `
     <input
       class="bp6-input"
       type="text"
-      value=""
     />
   </div>
 </div>

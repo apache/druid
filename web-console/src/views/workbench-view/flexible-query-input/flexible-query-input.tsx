@@ -22,7 +22,6 @@ import type { Ace } from 'ace-builds';
 import { Range } from 'ace-builds';
 import classNames from 'classnames';
 import { dedupe } from 'druid-query-toolkit';
-import debounce from 'lodash.debounce';
 import React from 'react';
 import AceEditor from 'react-ace';
 
@@ -53,7 +52,12 @@ function getSubQueryMarkerRow(e: React.MouseEvent): number | undefined {
   });
 }
 
+export interface FlexibleQueryInputHandle {
+  goToPosition(rowColumn: RowColumn): void;
+}
+
 export interface FlexibleQueryInputProps {
+  ref?: React.Ref<FlexibleQueryInputHandle | undefined>;
   queryString: string;
   onQueryStringChange?: (newQueryString: string) => void;
   runQuerySlice?: (querySlice: QuerySlice) => void;
@@ -65,11 +69,9 @@ export interface FlexibleQueryInputProps {
   leaveBackground?: boolean;
 }
 
-export const FlexibleQueryInput = React.forwardRef<
-  { goToPosition: (rowColumn: RowColumn) => void } | undefined,
-  FlexibleQueryInputProps
->(function FlexibleQueryInput(props, ref) {
+export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
   const {
+    ref,
     queryString,
     onQueryStringChange,
     runQuerySlice,
@@ -83,9 +85,11 @@ export const FlexibleQueryInput = React.forwardRef<
 
   const availableSqlFunctions = useAvailableSqlFunctions();
   const [editorHeight, setEditorHeight] = React.useState(200);
-  const aceEditorRef = React.useRef<Ace.Editor | undefined>();
+  const aceEditorRef = React.useRef<Ace.Editor | undefined>(undefined);
   const lastFoundQueriesRef = React.useRef<QuerySlice[]>([]);
-  const highlightFoundQueryRef = React.useRef<{ row: number; marker: number } | undefined>();
+  const highlightFoundQueryRef = React.useRef<{ row: number; marker: number } | undefined>(
+    undefined,
+  );
 
   const findAllQueriesByLine = React.useCallback(() => {
     const found = dedupe(findAllSqlQueriesInText(queryString), ({ startRowColumn }) =>
@@ -116,18 +120,15 @@ export const FlexibleQueryInput = React.forwardRef<
     });
   }, [runQuerySlice, findAllQueriesByLine]);
 
-  const markQueriesDebounced = React.useMemo(
-    () => debounce(markQueries, 900, { trailing: true }),
-    [markQueries],
-  );
-
   React.useEffect(() => {
     markQueries();
   }, [markQueries]);
 
+  // Re-mark the queries once the query string has not changed for a bit
   React.useEffect(() => {
-    markQueriesDebounced();
-  }, [queryString, markQueriesDebounced]);
+    const timeout = setTimeout(markQueries, 900);
+    return () => clearTimeout(timeout);
+  }, [queryString, markQueries]);
 
   React.useEffect(() => {
     return () => {
@@ -317,4 +318,4 @@ export const FlexibleQueryInput = React.forwardRef<
       </ResizeSensor>
     </div>
   );
-});
+}

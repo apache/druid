@@ -111,8 +111,8 @@ ModuleRepository.registerModule<BarChartParameterValues>({
       stage,
       runSqlQuery,
     } = props;
-    const containerRef = useRef<HTMLDivElement>();
-    const chartRef = useRef<ECharts>();
+    const containerRef = useRef<HTMLDivElement | undefined>(undefined);
+    const chartRef = useRef<ECharts | undefined>(undefined);
     const [highlight, setHighlight] = useState<BarChartHighlight | undefined>();
 
     const { splitColumn, timeBucket, measure, measureToSort, limit } = parameterValues;

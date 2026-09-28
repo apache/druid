@@ -28,7 +28,7 @@ import type {
   SqlQuery,
 } from 'druid-query-toolkit';
 import { filterPatternsToExpression, fitFilterPatterns } from 'druid-query-toolkit';
-import { forwardRef, useImperativeHandle, useMemo, useState } from 'react';
+import { useImperativeHandle, useMemo, useState } from 'react';
 
 import { useQueryManager } from '../../../../hooks';
 import { prettyFormatIsoDateWithMsIfNeeded, without } from '../../../../utils';
@@ -44,7 +44,12 @@ import { FilterMenu } from './filter-menu/filter-menu';
 
 import './filter-pane.scss';
 
+export interface FilterPaneHandle {
+  filterOn(column: Column): void;
+}
+
 export interface FilterPaneProps {
+  ref?: React.Ref<FilterPaneHandle | undefined>;
   querySource: QuerySource | undefined;
   extraFilter: SqlExpression;
   timezone: Timezone;
@@ -55,8 +60,9 @@ export interface FilterPaneProps {
   onMoveToSourceQueryAsClause?: (expression: SqlExpression, changeWhere?: SqlExpression) => void;
 }
 
-export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps, ref) {
+export function FilterPane(props: FilterPaneProps) {
   const {
+    ref,
     querySource,
     extraFilter,
     timezone,
@@ -240,4 +246,4 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
       )}
     </DroppableContainer>
   );
-});
+}

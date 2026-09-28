@@ -32,7 +32,7 @@ import { IconNames } from '@blueprintjs/icons';
 import { Select } from '@blueprintjs/select';
 import { day, Duration, Timezone } from 'chronoshift';
 import { C, L, N, SqlExpression, SqlQuery } from 'druid-query-toolkit';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
@@ -87,9 +87,11 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
   const [dateRange, setDateRange] = useState<NonNullDateRange | undefined>();
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
 
-  useEffect(() => {
+  const [prevDatasource, setPrevDatasource] = useState(datasource);
+  if (datasource !== prevDatasource) {
+    setPrevDatasource(datasource);
     setShownDatasource(datasource);
-  }, [datasource]);
+  }
 
   const defaultDateRange = useMemo(() => {
     return getDateRange(DEFAULT_SHOWN_DURATION);

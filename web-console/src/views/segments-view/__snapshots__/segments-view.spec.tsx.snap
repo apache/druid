@@ -176,7 +176,7 @@ exports[`SegmentsView matches snapshot 1`] = `
           Datasource
         </stub-column>
         <stub-column
-          hidden="true"
+          hidden=""
           id="interval"
           width="120"
         >
@@ -285,14 +285,14 @@ exports[`SegmentsView matches snapshot 1`] = `
           Is realtime
         </stub-column>
         <stub-column
-          hidden="true"
+          hidden=""
           id="is_published"
           width="100"
         >
           Is published
         </stub-column>
         <stub-column
-          hidden="true"
+          hidden=""
           id="is_overshadowed"
           width="100"
         >

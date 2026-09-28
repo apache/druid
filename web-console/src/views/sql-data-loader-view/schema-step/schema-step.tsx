@@ -43,7 +43,7 @@ import {
   SqlType,
 } from 'druid-query-toolkit';
 import type { JSX } from 'react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 
 import {
   ClearableInput,
@@ -280,7 +280,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   const [showRollupConfirm, setShowRollupConfirm] = useState(false);
   const [showRollupAnalysisPane, setShowRollupAnalysisPane] = useState(false);
   const [showDestinationDialog, setShowDestinationDialog] = useState(false);
-  const lastWorkingQueryPattern = useRef<IngestQueryPattern | undefined>();
+  const [lastWorkingQueryPattern, setLastWorkingQueryPattern] = useState<
+    IngestQueryPattern | undefined
+  >();
 
   const columnFilter = useCallback(
     (columnName: string) => caseInsensitiveContains(columnName, columnSearch),
@@ -533,11 +535,12 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
     backgroundStatusCheck: executionBackgroundResultStatusCheck,
   });
 
-  useEffect(() => {
-    if (!previewResultState.data) return;
-    lastWorkingQueryPattern.current = ingestQueryPattern;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- excluding 'ingestQueryPattern'
-  }, [previewResultState]);
+  // Remember the query pattern that last produced a preview so that an error can be reverted
+  const [prevPreviewResultState, setPrevPreviewResultState] = useState(previewResultState);
+  if (previewResultState !== prevPreviewResultState) {
+    setPrevPreviewResultState(previewResultState);
+    if (previewResultState.data) setLastWorkingQueryPattern(ingestQueryPattern);
+  }
 
   const unusedColumns = ingestQueryPattern
     ? ingestQueryPattern.mainExternalConfig.signature.filter(columnDeclaration => {
@@ -851,11 +854,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 <PreviewError
                   errorMessage={String(previewResultState.getErrorMessage())}
                   onRevert={
-                    lastWorkingQueryPattern.current &&
-                    (() => {
-                      if (!lastWorkingQueryPattern.current) return;
-                      updatePattern(lastWorkingQueryPattern.current);
-                    })
+                    lastWorkingQueryPattern && (() => updatePattern(lastWorkingQueryPattern))
                   }
                 />
               ) : (
@@ -881,13 +880,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             (previewResultState.isError() ? (
               <PreviewError
                 errorMessage={String(previewResultState.getErrorMessage())}
-                onRevert={
-                  lastWorkingQueryPattern.current &&
-                  (() => {
-                    if (!lastWorkingQueryPattern.current) return;
-                    updatePattern(lastWorkingQueryPattern.current);
-                  })
-                }
+                onRevert={lastWorkingQueryPattern && (() => updatePattern(lastWorkingQueryPattern))}
               />
             ) : (
               previewResultSomeData && (

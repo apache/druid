@@ -186,7 +186,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           minimum / average / maximum
         </stub-column>
         <stub-column
-          hidden="true"
+          hidden=""
           id="avg_segment_size"
           width="270"
         >
@@ -195,7 +195,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           minimum / average / maximum
         </stub-column>
         <stub-column
-          hidden="true"
+          hidden=""
           id="segment_granularity"
           width="100"
         >

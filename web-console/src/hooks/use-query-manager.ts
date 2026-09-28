@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { QueryManagerOptions } from '../utils';
 import { QueryManager, QueryState } from '../utils';
@@ -41,8 +41,7 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
     backgroundStatusCheck || ((() => {}) as any),
   );
 
-  const resultStateRef = useRef<QueryState<R, E, I>>(initState || QueryState.INIT);
-  const [_, setResultState] = useState<QueryState<R, E, I>>(initState || QueryState.INIT);
+  const [resultState, setResultState] = useState<QueryState<R, E, I>>(initState || QueryState.INIT);
 
   function makeQueryManager() {
     return new QueryManager<Q, R, I, E>({
@@ -50,10 +49,7 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
       initState,
       processQuery: concreteProcessQuery,
       backgroundStatusCheck: backgroundStatusCheck ? concreteBackgroundStatusCheck : undefined,
-      onStateChange: s => {
-        resultStateRef.current = s;
-        setResultState(s);
-      },
+      onStateChange: setResultState,
     });
   }
 
@@ -69,6 +65,7 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
     let myQueryManager = queryManager;
     if (queryManager.isTerminated()) {
       myQueryManager = makeQueryManager();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- replaces the query manager terminated by a previous unmount
       setQueryManager(myQueryManager);
     }
 
@@ -81,11 +78,12 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const prevQuery = useRef<Q | undefined>(initQuery);
-  if (typeof query !== 'undefined' && query !== prevQuery.current) {
-    prevQuery.current = query;
+  // Run the query as soon as it changes, the loading state it sets is rendered straight away
+  const [prevQuery, setPrevQuery] = useState<Q | undefined>(initQuery);
+  if (typeof query !== 'undefined' && query !== prevQuery) {
+    setPrevQuery(query);
     queryManager.runQuery(query);
   }
 
-  return [resultStateRef.current, queryManager];
+  return [resultState, queryManager];
 }

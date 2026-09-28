@@ -36,7 +36,7 @@ export const SuggestibleInput = React.memo(function SuggestibleInput(props: Sugg
   const { className, value, onValueChange, onFinalize, onBlur, onFocus, suggestions, ...rest } =
     props;
 
-  const lastFocusValue = useRef<string>();
+  const lastFocusValue = useRef<string | undefined>(undefined);
 
   function handleSuggestionSelect(suggestion: undefined | string) {
     onValueChange(suggestion);

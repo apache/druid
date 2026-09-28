@@ -6000,22 +6000,12 @@ license_file_path: licenses/bin/@types-parse-json.MIT
 
 ---
 
-name: "@types/prop-types"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Microsoft Corporation.
-version: 15.7.15
-license_file_path: licenses/bin/@types-prop-types.MIT
-
----
-
 name: "@types/react"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 18.3.31
+version: 19.3.0
 license_file_path: licenses/bin/@types-react.MIT
 
 ---
@@ -7049,8 +7039,8 @@ name: "react-dom"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Facebook, Inc. and its affiliates.
-version: 18.3.1
+copyright: Meta Platforms, Inc. and affiliates.
+version: 19.3.0
 license_file_path: licenses/bin/react-dom.MIT
 
 ---
@@ -7109,8 +7099,8 @@ name: "react"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Facebook, Inc. and its affiliates.
-version: 18.3.1
+copyright: Meta Platforms, Inc. and affiliates.
+version: 19.3.0
 license_file_path: licenses/bin/react.MIT
 
 ---
@@ -7159,8 +7149,8 @@ name: "scheduler"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Facebook, Inc. and its affiliates.
-version: 0.23.2
+copyright: Meta Platforms, Inc. and affiliates.
+version: 0.28.0
 license_file_path: licenses/bin/scheduler.MIT
 
 ---

@@ -113,7 +113,7 @@ export interface ExploreViewProps {
 
 export const ExploreView = React.memo(function ExploreView({ capabilities }: ExploreViewProps) {
   const [shownText, setShownText] = useState<string | undefined>();
-  const filterPane = useRef<{ filterOn(column: Column): void }>();
+  const filterPane = useRef<{ filterOn(column: Column): void } | undefined>(undefined);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const [exploreState, setExploreState] = useHashAndLocalStorageHybridState<ExploreState>(

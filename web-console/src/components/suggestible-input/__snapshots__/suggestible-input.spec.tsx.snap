@@ -11,7 +11,6 @@ exports[`SuggestibleInput matches snapshot 1`] = `
       class="bp6-input"
       style="padding-right: 0px;"
       type="text"
-      value=""
     />
     <span
       class="bp6-input-action"
