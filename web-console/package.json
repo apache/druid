@@ -32,16 +32,16 @@
     "sasslint-fix-changed-only": "npm run sasslint-changed-only -- --fix",
     "prettify": "prettier --write '{src,e2e-tests}/**/*.{ts,tsx,scss}' './*.js'",
     "prettify-check": "prettier --check '{src,e2e-tests}/**/*.{ts,tsx,scss}' './*.js'",
-    "generate-licenses-file": "license-checker-rseidelsohn --production --json --out licenses.json",
-    "check-licenses": "license-checker-rseidelsohn --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;MIT;ISC;CC0-1.0;OFL-1.1' --summary",
+    "generate-licenses-file": "license-checker --production --json --out licenses.json",
+    "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;MIT;ISC;CC0-1.0;OFL-1.1' --summary",
     "start": "webpack serve"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "volta": {
-    "node": "22.23.3",
-    "npm": "10.9.9"
+    "node": "24.21.0",
+    "npm": "11.19.0"
   },
   "browserslist": [
     "> 1% and supports es6",
@@ -94,6 +94,7 @@
     "@awesome-code-style/eslint-config": "^6.2.1",
     "@awesome-code-style/prettier-config": "^5.0.2",
     "@awesome-code-style/stylelint-config": "^6.0.2",
+    "@lizenz/checker": "^0.0.2",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/react": "^16.0.1",
     "@types/d3-array": "^3.2.1",
@@ -108,7 +109,7 @@
     "@types/jest": "^30.0.0",
     "@types/lodash.debounce": "^4.0.8",
     "@types/lodash.escape": "^4.0.9",
-    "@types/node": "^22.19.0",
+    "@types/node": "^24.19.0",
     "@types/numeral": "^2.0.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -125,7 +126,6 @@
     "identity-obj-proxy": "^3.0.0",
     "jest": "^30.5.2",
     "jest-environment-jsdom": "^30.5.2",
-    "license-checker-rseidelsohn": "^4.4.2",
     "playwright-chromium": "^1.63.0",
     "postcss": "^8.5.28",
     "postcss-loader": "^8.2.1",
@@ -144,5 +144,10 @@
     "webpack-bundle-analyzer": "^5.4.0",
     "webpack-cli": "^7.2.3",
     "webpack-dev-server": "^6.0.0"
+  },
+  "allowScripts": {
+    "playwright-chromium": true,
+    "@parcel/watcher": false,
+    "unrs-resolver": false
   }
 }
