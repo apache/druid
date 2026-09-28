@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.minio;
+package org.apache.druid.testing.embedded.s3;
 
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.testing.embedded.indexer.AbstractS3InputSourceParallelIndexTest;

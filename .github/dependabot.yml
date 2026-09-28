@@ -31,6 +31,8 @@ updates:
   # Don't run dependabot on website
   - package-ecosystem: "npm"
     directory: "/website/"
+    schedule:
+      interval: "weekly"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]
@@ -38,6 +40,8 @@ updates:
   # Don't run dependabot on web-console
   - package-ecosystem: "npm"
     directory: "/web-console/"
+    schedule:
+      interval: "weekly"
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-patch", "version-update:semver-minor", "version-update:semver-major"]

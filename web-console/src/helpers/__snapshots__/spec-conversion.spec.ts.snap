@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`spec conversion converts index_hadoop spec (with rollup) 1`] = `
 -- This SQL query was auto generated from an ingestion spec

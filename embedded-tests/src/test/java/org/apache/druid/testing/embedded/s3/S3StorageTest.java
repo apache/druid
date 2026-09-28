@@ -17,23 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.minio;
+package org.apache.druid.testing.embedded.s3;
 
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.IndexTaskTest;
 
 /**
- * Same as {@link IndexTaskTest}, but using a MinIO metadata store through the S3 extension.
+ * Same as {@link IndexTaskTest}, but using S3 deep storage (an S3-compatible testcontainer) through the S3 extension.
  */
-public class MinIOStorageTest extends IndexTaskTest
+public class S3StorageTest extends IndexTaskTest
 {
   @Override
   public EmbeddedDruidCluster createCluster()
   {
     return EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper()
                                .useLatchableEmitter()
-                               .addResource(new MinIOStorageResource())
+                               .addResource(new S3StorageResource())
                                .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(indexer)

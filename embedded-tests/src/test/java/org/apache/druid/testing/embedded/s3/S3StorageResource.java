@@ -17,16 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.minio;
+package org.apache.druid.testing.embedded.s3;
 
 import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.data.input.s3.S3InputSourceConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.TestcontainerResource;
-import org.testcontainers.containers.MinIOContainer;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
@@ -41,39 +43,41 @@ import software.amazon.awssdk.services.sts.model.Credentials;
 import java.net.URI;
 
 /**
- * A MinIO container resource for use in embedded tests as deep storage.
- * Sets up MinIO as S3-compatible storage and configures Druid's S3 connector.
+ * An S3-compatible storage container resource for use in embedded tests as deep storage.
+ * Runs <a href="https://github.com/rustfs/rustfs">RustFS</a> and configures Druid's S3 connector to use it.
  */
-public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
+public class S3StorageResource extends TestcontainerResource<GenericContainer<?>>
 {
-  private static final DockerImageName MINIO_IMAGE =
-      DockerImageName.parse("quay.io/minio/minio:latest").asCompatibleSubstituteFor("minio/minio");
+  private static final DockerImageName IMAGE = DockerImageName.parse("rustfs/rustfs:1.0.0");
+  private static final int S3_PORT = 9000;
   private static final String DEFAULT_BUCKET = "druid-deep-storage";
   private static final String DEFAULT_BASE_KEY = "druid/segments";
-  private static final String ACCESS_KEY = "minioadmin";
-  private static final String SECRET_KEY = "minioadmin";
+  private static final String ACCESS_KEY = "rustfsadmin";
+  private static final String SECRET_KEY = "rustfsadmin";
 
   private final String bucket;
   private final String baseKey;
   private S3Client s3Client;
 
-  public MinIOStorageResource()
+  public S3StorageResource()
   {
     this(DEFAULT_BUCKET, DEFAULT_BASE_KEY);
   }
 
-  public MinIOStorageResource(String bucket, String baseKey)
+  public S3StorageResource(String bucket, String baseKey)
   {
     this.bucket = bucket;
     this.baseKey = baseKey;
   }
 
   @Override
-  protected MinIOContainer createContainer()
+  protected GenericContainer<?> createContainer()
   {
-    return new MinIOContainer(MINIO_IMAGE)
-        .withUserName(getAccessKey())
-        .withPassword(getSecretKey());
+    return new GenericContainer<>(IMAGE)
+        .withExposedPorts(S3_PORT)
+        .withEnv("RUSTFS_ACCESS_KEY", getAccessKey())
+        .withEnv("RUSTFS_SECRET_KEY", getSecretKey())
+        .waitingFor(Wait.forHttp("/health/ready").forPort(S3_PORT));
   }
 
   @Override
@@ -97,7 +101,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
     // Configure S3 connection properties
     cluster.addCommonProperty("druid.s3.endpoint.url", cluster.getEmbeddedHostname().useInUri(getEndpointUrl()));
-    // AWS SDK v2 requires a region; use a fixed value since MinIO doesn't validate it
+    // AWS SDK v2 requires a region; use a fixed value since the storage container doesn't validate it
     cluster.addCommonProperty("druid.s3.endpoint.signingRegion", "us-east-1");
     cluster.addCommonProperty("druid.s3.accessKey", getAccessKey());
     cluster.addCommonProperty("druid.s3.secretKey", getSecretKey());
@@ -129,7 +133,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
   public String getEndpointUrl()
   {
     ensureRunning();
-    return getContainer().getS3URL();
+    return StringUtils.format("http://%s:%d", getContainer().getHost(), getContainer().getMappedPort(S3_PORT));
   }
 
   public S3Client getS3Client()
@@ -144,7 +148,7 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
    *
    * @return S3InputSourceConfig with temporary credentials. The
    * {@code assumeRoleArn} and {@code assumeRoleExternalId} fields are set to null
-   * since MinIO does not support them.
+   * since the storage container does not support them.
    */
   public S3InputSourceConfig createTempCredentialsForInputSource()
   {
@@ -152,11 +156,11 @@ public class MinIOStorageResource extends TestcontainerResource<MinIOContainer>
 
     final StsClient stsClient = createStsClient();
 
-    // SDK v2 requires a non-null roleArn. MinIO does not validate the ARN,
+    // SDK v2 requires a non-null roleArn. The storage container does not validate the ARN,
     // but without an inline policy the resulting session may have no permissions.
     // An explicit S3 full-access policy ensures the temp credentials work.
     final String s3FullAccessPolicy =
-        "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:*\"],\"Resource\":[\"*\"]}]}";
+        "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:*\"],\"Resource\":[\"arn:aws:s3:::*\"]}]}";
     final AssumeRoleRequest assumeRoleRequest = AssumeRoleRequest.builder()
         .roleArn("arn:aws:iam::000000000000:role/test-role")
         .roleSessionName("test-session")

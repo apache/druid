@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`NumberMenuItems matches snapshot when menu is opened for column inside group by 1`] = `
 <div>

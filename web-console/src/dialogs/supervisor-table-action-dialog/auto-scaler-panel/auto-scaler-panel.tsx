@@ -24,6 +24,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader } from '../../../components/loader/loader';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
+import { ECHARTS_BACKGROUND_COLOR, ECHARTS_COLORS } from '../../../utils';
 
 import './auto-scaler-panel.scss';
 
@@ -153,6 +154,8 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
   function setupChart(container: HTMLDivElement): ECharts {
     const myChart = echarts.init(container, 'dark');
     myChart.setOption({
+      color: ECHARTS_COLORS,
+      backgroundColor: ECHARTS_BACKGROUND_COLOR,
       tooltip: {
         trigger: 'axis',
       },
