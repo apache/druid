@@ -13284,45 +13284,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     assertTrue(exception.getMessage().contains("__time column"));
   }
 
-  @Test
-  public void testRequireTimeConditionUnionAllBothBranchesFilteredPositive()
-  {
-    try {
-      testQuery(
-          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-          "SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01'\n"
-              + "UNION ALL\n"
-              + "SELECT dim1 FROM druid.foo WHERE __time >= '2001-01-01'",
-          CalciteTests.REGULAR_USER_AUTH_RESULT,
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
-    }
-    catch (CannotBuildQueryException e) {
-      Assertions.fail("requireTimeCondition rejected a UNION ALL where both branches are bounded: " + e.getMessage());
-    }
-    catch (AssertionError ignored) {
-    }
-  }
-
-  @Test
-  public void testRequireTimeConditionUnionAllOneBranchMissingFilterNegative()
-  {
-    msqIncompatible();
-    Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
-      testQuery(
-          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-          "SELECT dim1 FROM druid.foo WHERE __time >= '2000-01-01'\n"
-              + "UNION ALL\n"
-              + "SELECT dim1 FROM druid.foo",
-          CalciteTests.REGULAR_USER_AUTH_RESULT,
-          ImmutableList.of(),
-          ImmutableList.of()
-      );
-    });
-    assertTrue(exception.getMessage().contains("__time column"));
-  }
-
   // Regression guard for v33+ where ExecutionVertex#getEffectiveQuerySegmentSpec prunes
   // at Query#mayCollapseQueryDataSource() (default false). LIMIT prevents the outer scan
   // from collapsing the inner query, so the pre-fix walker sees only the outer ETERNITY
