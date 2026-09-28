@@ -62,10 +62,12 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
@@ -101,10 +103,13 @@ import static org.easymock.EasyMock.isA;
  */
 public class HttpRemoteTaskRunnerTest
 {
+  private StubServiceEmitter emitter;
+
   @BeforeEach
   public void setup()
   {
-    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+    emitter = new StubServiceEmitter();
+    EmittingLogger.registerEmitter(emitter);
   }
 
   /*
@@ -1474,6 +1479,54 @@ public class HttpRemoteTaskRunnerTest
             ImmutableList.of(task2.getId(), TaskStatus.success(task2.getId()))
         )
     );
+  }
+
+  @Test
+  public void test_taskAddedOrUpdated_taskNotFoundInStorage_raisesAlert_andShutsDownTask()
+  {
+    final Task task = NoopTask.create();
+
+    // Setup storage to return a task status but not the task payload
+    final TaskStatus statusInStorage = TaskStatus.running(task.getId());
+
+    final TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
+    EasyMock.expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(statusInStorage));
+    EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.absent());
+    EasyMock.replay(taskStorage);
+
+    final HttpRemoteTaskRunner taskRunner =
+        createTaskRunnerForTestTaskAddedOrUpdated(taskStorage, new ArrayList<>());
+
+    // Expect worker to get shutdown notification
+    final Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY);
+    final WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    workerHolder.shutdownTask(task.getId());
+    EasyMock.replay(workerHolder);
+
+    Assertions.assertEquals(0, taskRunner.getKnownTasks().size());
+
+    // Send the announcement to the TaskRunner
+    final TaskAnnouncement announcement = TaskAnnouncement.create(
+        task,
+        TaskStatus.running(task.getId()),
+        TaskLocation.create("worker", 1, 2)
+    );
+    taskRunner.taskAddedOrUpdated(announcement, workerHolder);
+
+    // Verify that alert has been raised
+    final List<AlertEvent> alerts = emitter.getAlerts();
+    Assertions.assertEquals(1, alerts.size());
+    Assertions.assertEquals(
+        StringUtils.format(
+            "Could not fetch payload of task[%s] with status[%s]."
+            + " Ignoring notification[%s] from worker[%s].",
+            task.getId(), statusInStorage, announcement, worker.getHost()
+        ),
+        alerts.getFirst().getDescription()
+    );
+
+    EasyMock.verify(workerHolder, taskStorage);
   }
 
   @Test
