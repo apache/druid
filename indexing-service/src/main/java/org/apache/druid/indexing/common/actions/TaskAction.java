@@ -36,6 +36,10 @@ import java.util.concurrent.Future;
     @JsonSubTypes.Type(name = "lockRelease", value = LockReleaseAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalInsert", value = SegmentTransactionalInsertAction.class),
     @JsonSubTypes.Type(name = "segmentTransactionalAppend", value = SegmentTransactionalAppendAction.class),
+    @JsonSubTypes.Type(
+        name = SegmentTransactionalAppendFromShareInboxAction.TYPE,
+        value = SegmentTransactionalAppendFromShareInboxAction.class
+    ),
     @JsonSubTypes.Type(name = "segmentTransactionalReplace", value = SegmentTransactionalReplaceAction.class),
     @JsonSubTypes.Type(name = "markSegmentsToUpgrade", value = MarkSegmentToUpgradeAction.class),
     @JsonSubTypes.Type(name = "retrieveSegmentsById", value = RetrieveSegmentsByIdAction.class),
@@ -46,6 +50,9 @@ import java.util.concurrent.Future;
     @JsonSubTypes.Type(name = "markSegmentsAsUnused", value = MarkSegmentsAsUnusedAction.class),
     @JsonSubTypes.Type(name = "segmentNuke", value = SegmentNukeAction.class),
     @JsonSubTypes.Type(name = "segmentMetadataUpdate", value = SegmentMetadataUpdateAction.class),
+    @JsonSubTypes.Type(name = StageShareInboxBatchAction.TYPE, value = StageShareInboxBatchAction.class),
+    @JsonSubTypes.Type(name = ClaimShareInboxManifestsAction.TYPE, value = ClaimShareInboxManifestsAction.class),
+    @JsonSubTypes.Type(name = RenewShareInboxClaimsAction.TYPE, value = RenewShareInboxClaimsAction.class),
     @JsonSubTypes.Type(name = SegmentAllocateAction.TYPE, value = SegmentAllocateAction.class),
     @JsonSubTypes.Type(name = "resetDataSourceMetadata", value = ResetDataSourceMetadataAction.class),
     @JsonSubTypes.Type(name = "checkPointDataSourceMetadata", value = CheckPointDataSourceMetadataAction.class),
