@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.math.LongMath;
+import org.apache.datasketches.quantiles.ItemsSketch;
 import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.key.ClusterBy;
@@ -44,6 +45,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -96,6 +98,12 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
   // These numbers are roughly 50x lower than authentic production numbers. (See StageDefinition.)
   private static final int MAX_BYTES = 150_000;
   private static final int MAX_BUCKETS = 200;
+
+  @BeforeEach
+  public void seedSketchRandom()
+  {
+    ItemsSketch.rand.setSeed(1L);
+  }
 
   @Test
   public void test_clusterByX_unique()
