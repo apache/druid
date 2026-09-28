@@ -20,18 +20,12 @@ import './bootstrap/ace';
 
 import { Icons } from '@blueprintjs/icons';
 
-import { initAceDsqlMode } from './ace-modes/dsql';
-import { initAceHjsonMode } from './ace-modes/hjson';
 import { UrlBaser } from './singletons';
 import { domSnapshotSerializer } from './test-utils/snapshot-serializer';
 
 UrlBaser.baseUrl = '/some/base_url';
 
 expect.addSnapshotSerializer(domSnapshotSerializer);
-
-// The console registers its custom Ace modes on startup
-initAceDsqlMode(undefined);
-initAceHjsonMode();
 
 beforeAll(async () => {
   await Icons.loadAll();

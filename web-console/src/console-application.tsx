@@ -23,7 +23,6 @@ import type { JSX } from 'react';
 import React from 'react';
 
 import { initAceDsqlMode } from './ace-modes/dsql';
-import { initAceHjsonMode } from './ace-modes/hjson';
 import { HeaderBar, Loader } from './components';
 import { SqlFunctionsProvider } from './contexts/sql-functions-context';
 import type { ConsoleViewId, QueryContext, QueryWithContext } from './druid-models';
@@ -156,7 +155,6 @@ export class ConsoleApplication extends React.PureComponent<
         const capabilities = data?.[0] || Capabilities.FULL;
         const availableSqlFunctions = data?.[1];
         initAceDsqlMode(availableSqlFunctions);
-        initAceHjsonMode();
         this.setState({
           capabilities,
           availableSqlFunctions,

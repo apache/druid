@@ -23,6 +23,7 @@ import AceEditor from 'react-ace';
 
 import { getSqlCompletions } from '../../../../ace-completions/sql-completions';
 import { useAvailableSqlFunctions } from '../../../../contexts/sql-functions-context';
+import { usePermanentCallback } from '../../../../hooks';
 import type { RowColumn } from '../../../../utils';
 
 const V_PADDING = 10;
@@ -80,39 +81,38 @@ export const SqlInput = React.forwardRef<
     aceEditorRef.current = editor;
   }, []);
 
-  const getColumns = () => columns?.map(column => column.name);
-  const cmp: Ace.Completer[] = [
-    {
-      getCompletions: (_state, session, pos, prefix, callback) => {
-        const allText = session.getValue();
-        const line = session.getLine(pos.row);
-        const charBeforePrefix = line[pos.column - prefix.length - 1];
-        const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
-        callback(
-          null,
-          getSqlCompletions({
-            allText,
-            lineBeforePrefix,
-            charBeforePrefix,
-            prefix,
-            columns: getColumns(),
-            availableSqlFunctions,
-            skipAggregates: !includeAggregates,
-          }),
-        );
-      },
+  // Ace reads the completers once, when autocompletion is enabled, so they must not change. The callback always sees
+  // the latest props.
+  const getCompletions = usePermanentCallback<Ace.Completer['getCompletions']>(
+    (_editor, session, pos, prefix, callback) => {
+      const allText = session.getValue();
+      const line = session.getLine(pos.row);
+      const charBeforePrefix = line[pos.column - prefix.length - 1];
+      const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
+      callback(
+        null,
+        getSqlCompletions({
+          allText,
+          lineBeforePrefix,
+          charBeforePrefix,
+          prefix,
+          columns: columns?.map(column => column.name),
+          availableSqlFunctions,
+          skipAggregates: !includeAggregates,
+        }),
+      );
     },
-  ];
+  );
+  const completers = React.useMemo<Ace.Completer[]>(() => [{ getCompletions }], [getCompletions]);
 
   return (
     <AceEditor
       mode="dsql"
       theme={ACE_THEME}
       className="sql-input placeholder-padding"
-      // 'react-ace' types are incomplete. Completion options can accept an array of completers.
-      enableBasicAutocompletion={cmp as any}
-      enableLiveAutocompletion={cmp as any}
-      name="ace-editor"
+      editorProps={{ completers }}
+      enableBasicAutocompletion
+      enableLiveAutocompletion
       onChange={handleChange}
       focus={autoFocus}
       fontSize={12}
@@ -123,12 +123,9 @@ export const SqlInput = React.forwardRef<
       tabSize={2}
       value={value}
       readOnly={!onValueChange}
-      editorProps={{
-        $blockScrolling: Infinity,
-      }}
       setOptions={{
         showLineNumbers: true,
-        newLineMode: 'unix' as any, // This type is specified incorrectly in AceEditor
+        newLineMode: 'unix',
       }}
       placeholder={placeholder || 'SQL filter'}
       onLoad={handleAceLoad}

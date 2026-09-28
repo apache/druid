@@ -100,7 +100,6 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
             showPrintMargin={false}
             showGutter={false}
             value={!jsonState.error ? jsonValue : jsonState.getErrorMessage()}
-            style={{}}
           />
         )}
       </div>

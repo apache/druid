@@ -47,8 +47,8 @@
 
   &.placeholder-padding {
     .ace_placeholder {
-      // This padding is needed because there is a bug in this current version of ACE Editor where the padding set in
-      // code is not being applied to the placeholder element
+      // react-ace renders the placeholder outside of the editor content so it does not get the padding set with
+      // renderer.setPadding and renderer.setScrollMargin
       margin-top: 10px;
     }
   }
@@ -83,10 +83,18 @@
   }
 }
 
-.ace_tooltip {
+// Two classes to win over Ace's `.ace_tooltip.ace_dark`
+.ace_tooltip.ace_tooltip {
   padding: 10px;
+  // The doc tooltip is rendered inside the autocomplete popup, do not inherit its code font
+  font-family: $pt-font-family;
+  font-size: $pt-font-size;
+  line-height: normal;
   color: #c1ccd5;
   width: 500px;
+  // Ace limits the doc tooltip to 400x300 (scrolling the rest)
+  max-width: none !important;
+  max-height: none !important;
   display: block;
   height: auto;
   white-space: initial;

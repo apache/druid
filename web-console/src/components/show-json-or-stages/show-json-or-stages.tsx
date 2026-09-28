@@ -118,7 +118,6 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
             showPrintMargin={false}
             showGutter={false}
             value={!jsonState.error ? jsonValue : jsonState.getErrorMessage()}
-            style={{}}
           />
         )}
       </div>

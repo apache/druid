@@ -85,7 +85,6 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
           mode={jsonMode ? 'hjson' : 'dsql'}
           theme="solarized_dark"
           className="query-string"
-          name="ace-editor"
           fontSize={12}
           width="100%"
           showGutter

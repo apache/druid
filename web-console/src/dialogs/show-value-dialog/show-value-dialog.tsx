@@ -88,7 +88,6 @@ export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowVa
             mode="hjson"
             theme="solarized_dark"
             className="query-string"
-            name="ace-editor"
             fontSize={12}
             width="100%"
             height="100%"

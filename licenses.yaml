@@ -5995,7 +5995,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Ajax.org B.V.
-version: 1.5.3
+version: 1.44.0
 license_file_path: licenses/bin/ace-builds.BSD3
 
 ---
@@ -6476,6 +6476,16 @@ license_file_path: licenses/bin/escape-string-regexp.MIT
 
 ---
 
+name: "fast-equals"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Tony Quetano
+version: 5.4.3
+license_file_path: licenses/bin/fast-equals.MIT
+
+---
+
 name: "file-saver"
 license_category: binary
 module: web-console
@@ -6746,26 +6756,6 @@ license_file_path: licenses/bin/lodash.escape.MIT
 
 ---
 
-name: "lodash.get"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: John-David Dalton
-version: 4.4.2
-license_file_path: licenses/bin/lodash.get.MIT
-
----
-
-name: "lodash.isequal"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: John-David Dalton
-version: 4.5.0
-license_file_path: licenses/bin/lodash.isequal.MIT
-
----
-
 name: "loose-envify"
 license_category: binary
 module: web-console
@@ -7000,7 +6990,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: James Hrisho
-version: 10.1.0
+version: 15.0.0
 license_file_path: licenses/bin/react-ace.MIT
 
 ---
