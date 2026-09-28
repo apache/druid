@@ -19,6 +19,12 @@
 
 package org.apache.druid.server.compaction;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.catalog.MapMetadataCatalog;
+import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
+import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.TableId;
+import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
@@ -44,6 +50,7 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.metadata.DefaultIndexingStateFingerprintMapper;
@@ -53,6 +60,7 @@ import org.apache.druid.segment.metadata.IndexingStateFingerprintMapper;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.coordinator.CatalogDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -78,6 +86,34 @@ public class CompactionStatusTest
       = DataSegment.builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2013-01-01/PT1H"), "v1", 1))
                    .size(100_000_000L)
                    .build();
+
+  private static final String SEALED_WIKI = TestDataSource.WIKI + "_sealed";
+  private static final String UNSEALED_WIKI = TestDataSource.WIKI + "_unsealed";
+  private static final MapMetadataCatalog CATALOG = new MapMetadataCatalog(new DefaultObjectMapper());
+
+  static {
+    // Same clustered layout under both names; the only difference is whether the table declares itself sealed.
+    final List<ColumnSpec> columns = ImmutableList.of(
+        new ColumnSpec("tenant", ColumnType.STRING.asTypeString(), null),
+        new ColumnSpec("region", ColumnType.STRING.asTypeString(), null),
+        new ColumnSpec(ColumnHolder.TIME_COLUMN_NAME, ColumnType.LONG.asTypeString(), null)
+    );
+    CATALOG.addSpec(
+        TableId.datasource(SEALED_WIKI),
+        TableBuilder.datasource(SEALED_WIKI, "PT1H")
+                    .columns(columns)
+                    .baseTable(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null))
+                    .sealed(true)
+                    .buildSpec()
+    );
+    CATALOG.addSpec(
+        TableId.datasource(UNSEALED_WIKI),
+        TableBuilder.datasource(UNSEALED_WIKI, "PT1H")
+                    .columns(columns)
+                    .baseTable(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null))
+                    .buildSpec()
+    );
+  }
 
   private HeapMemoryIndexingStateStorage indexingStateStorage;
   private IndexingStateCache indexingStateCache;
@@ -449,6 +485,104 @@ public class CompactionStatusTest
         fingerprintMapper
     );
     Assertions.assertTrue(status.isComplete());
+  }
+
+  @Test
+  public void testStatusWhenBaseTableHasUndeclaredColumnsAndCatalogTableIsNotSealed()
+  {
+    // A non-sealed table accepts columns it does not declare, so compaction appends what it finds in the segments and
+    // records a baseTable that is a superset of the declared one. Comparing that strictly would leave the datasource
+    // permanently "pending" and recompact it on every coordinator run.
+    final DataSourceCompactionConfig unsealed = catalogCompactionConfig(UNSEALED_WIKI);
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(stateWithUndeclaredColumn(unsealed))
+        .build();
+
+    Assertions.assertTrue(
+        CompactionStatus.compute(List.of(segment), unsealed, fingerprintMapper).isComplete()
+    );
+  }
+
+  @Test
+  public void testStatusWhenBaseTableHasUndeclaredColumnsAndCatalogTableIsSealed()
+  {
+    // A sealed table declares everything, so a segment carrying a column the spec does not have is a real difference
+    // and must be recompacted away.
+    final DataSourceCompactionConfig sealed = catalogCompactionConfig(SEALED_WIKI);
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(stateWithUndeclaredColumn(sealed))
+        .build();
+
+    final CompactionStatus status = CompactionStatus.compute(List.of(segment), sealed, fingerprintMapper);
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertTrue(status.getReason().contains("baseTable"));
+  }
+
+  @Test
+  public void testStatusWhenBaseTableDeclaredColumnChangesAndCatalogTableIsNotSealed()
+  {
+    // The relaxation only forgives columns appended after the declared ones; a change to the declaration itself is
+    // still a change, whether or not the table is sealed.
+    final DataSourceCompactionConfig unsealed = catalogCompactionConfig(UNSEALED_WIKI);
+    final CompactionState declared = unsealed.toCompactionState();
+    final ClusteredValueGroupsBaseTableProjectionSpec reclustered =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new StringDimensionSchema("region"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant", "region")
+                                                   .build();
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(
+            CompactionState.builder()
+                           .partitionsSpec(declared.getPartitionsSpec())
+                           .indexSpec(declared.getIndexSpec())
+                           .segmentGranularitySpec(declared.getSegmentGranularitySpec())
+                           .baseTable(reclustered)
+                           .build()
+        )
+        .build();
+
+    final CompactionStatus status = CompactionStatus.compute(List.of(segment), unsealed, fingerprintMapper);
+    Assertions.assertFalse(status.isComplete());
+    Assertions.assertTrue(status.getReason().contains("baseTable"));
+  }
+
+  /**
+   * The state a compaction of {@code config} would record if the segments carried an extra column the catalog does not
+   * declare: everything the config asks for, plus the discovered column appended to the base table.
+   */
+  private static CompactionState stateWithUndeclaredColumn(DataSourceCompactionConfig config)
+  {
+    final CompactionState declared = config.toCompactionState();
+    return CompactionState.builder()
+                          .partitionsSpec(declared.getPartitionsSpec())
+                          .indexSpec(declared.getIndexSpec())
+                          .segmentGranularitySpec(declared.getSegmentGranularitySpec())
+                          .baseTable(
+                              declared.getBaseTable()
+                                      .withAdditionalColumns(List.of(new StringDimensionSchema("city")))
+                          )
+                          .build();
+  }
+
+  private static CatalogDataSourceCompactionConfig catalogCompactionConfig(String dataSource)
+  {
+    return new CatalogDataSourceCompactionConfig(
+        dataSource,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        CATALOG
+    );
   }
 
   @Test

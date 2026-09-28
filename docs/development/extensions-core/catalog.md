@@ -46,7 +46,7 @@ data is written into a particular column of the table.
 ### Effects of a table definition
 
 A table definition takes effect when it is read, not when it is written: changing one, whether through SQL DDL or the
-REST API, rewrites nothing. What it affects:
+REST API, rewrites nothing by itself. What it affects:
 
 - **SELECT queries** report each declared column with its declared type, in declared order. Segments that store a
   column as a different physical type are converted to the declared type at query time. Columns present in segments
@@ -60,6 +60,9 @@ REST API, rewrites nothing. What it affects:
   override, such as with its own `PARTITIONED BY`.
 - **Streaming and native batch ingestion** do not consult the catalog; their specs are unaffected by any table
   definition.
+- **Existing segments** are rewritten to match the definition only if the datasource is configured for
+  [catalog-based compaction](#catalog-based-compaction), which is off unless you set it up. Without it, a definition
+  never changes data that is already stored.
 
 ### SQL DDL
 
@@ -67,9 +70,11 @@ Tables can be defined with SQL instead of by posting a table specification. `CRE
 submitted to the Broker like any other SQL statement, and write the same catalog metadata the REST API does. They
 return no rows.
 
-These statements change catalog metadata only. They never create, modify, or delete segments: defining a table does
-not ingest anything, and altering a column does not rewrite existing data. Changes take effect for subsequent queries
-and ingestion, as described in [Effects of a table definition](#effects-of-a-table-definition).
+These statements change catalog metadata only. They do not themselves create, modify, or delete segments: defining a
+table does not ingest anything, and altering a column does not rewrite existing data. Changes take effect for
+subsequent queries and ingestion, as described in [Effects of a table definition](#effects-of-a-table-definition). If
+the datasource is configured for [catalog-based compaction](#catalog-based-compaction), compaction later rewrites
+existing segments to match the new definition in the background.
 
 These statements are disabled by default. Set `druid.sql.planner.enableCatalogDdl` to `true` on the Broker to enable
 them. They require both `READ` and `WRITE` permission on the datasource, the same permissions the catalog API
@@ -228,7 +233,8 @@ Unlike an aggregate projection, a `__base` body cannot filter or group: the base
 It is the only projection that chooses a clustering.
 
 `ALTER TABLE ... ADD PROJECTION __base AS ( ... )` gives an existing table a layout, and
-`ALTER TABLE ... DROP PROJECTION __base` removes it. Both affect future segments only.
+`ALTER TABLE ... DROP PROJECTION __base` removes it. Both affect future segments, plus any existing segments that
+[catalog-based compaction](#catalog-based-compaction) later rewrites.
 
 Every other name beginning with `__` remains reserved.
 
@@ -249,6 +255,66 @@ There is no `DROP TABLE`. Deleting a table's catalog entry without deleting its 
 for the statement, so removing a specification is left to the [delete API](#delete-a-table) until the semantics are
 settled.
 
+### Catalog-based compaction
+
+By default, a table definition only shapes data on its way in, and segments written before the definition changed keep
+whatever they were written with. However, [Automatic compaction](../../data-management/automatic-compaction.md) can be
+configured to use the catalog, so that it rewrites existing segments toward the current definition as it compacts them.
+A datasource opts in with a compaction config of type `catalog`, which reads the live table definition on every
+compaction run rather than repeating the schema in the compaction config:
+
+```json
+{
+  "type": "catalog",
+  "dataSource": "events",
+  "engine": "msq"
+}
+```
+
+Once this is configured, editing the table definition becomes a background data change: the next compaction run
+notices that existing segments no longer match the definition and rewrites them. The edit is still not immediate, and
+it only reaches intervals that compaction actually visits.
+
+Not every [table property](#table-properties) drives compaction. These do:
+
+| Property | Effect on existing segments |
+|---|---|
+| `segmentGranularity` | Segments are re-partitioned in time to the declared granularity. |
+| `clusterKeys` | Segments are range-partitioned by the key columns, in the declared order. All key columns must be `VARCHAR`; compaction fails on a numeric one. |
+| `targetSegmentRows` | Rewritten segments are sized to this row count, the same size an `INSERT` produces. |
+| `projections` | Once the table declares any [projection](#projections), the declared set is authoritative: those are built and any others are dropped. A table that declares none leaves whatever the segments already have. |
+| `baseTable` | The table's physical layout, written in SQL as the [`__base` projection](#the-base-table). The stored column order, clustering, and computed columns are rewritten to match it, along with the declared column list it combines with. |
+| `sealed` | On a `__base` table, decides whether columns the table does not declare are kept. See below. |
+
+Everything else a table can declare is ignored by compaction today, including `hiddenColumns` and, on a table with no
+`__base` projection, the column list itself. A plain catalog table's columns therefore never trim: compaction infers
+its schema from the segments it is rewriting, so a column dropped from the definition survives in the data and stays
+queryable.
+
+Dropping a column trims it from storage only on a table that has both a `__base` projection and `SEALED`:
+
+| Table | Effect of dropping a declared column |
+|---|---|
+| No `__base` projection | Column is kept. Compaction takes its schema from the segments. |
+| `__base`, not sealed | Column is kept. Compaction reads the segments for columns the definition omits and appends them after the declared ones, the same as at ingest. |
+| `__base` with `SEALED` | **Column is trimmed.** The declaration is treated as complete, so the rewritten segments no longer store it. |
+
+That last row is the case to be careful with: on a sealed clustered table, `ALTER TABLE ... DROP COLUMN` eventually
+deletes data, just not at the moment the statement runs.
+
+The other column statements behave the same way — nothing on a plain table, a background rewrite on a `__base` table:
+
+- `ADD COLUMN` changes nothing by itself either way. The column has no data in existing segments, and compaction does
+  not invent any.
+- `ALTER COLUMN ... SET DATA TYPE` rewrites the column to the declared type on a `__base` table, since the declared
+  types are what the layout is built from. On a plain table the stored type is left alone and the declared type
+  continues to apply at query time only.
+- Reordering a `__base` body, or changing which columns it clusters by, re-sorts and re-groups the rows of every
+  segment compaction rewrites.
+
+Catalog-based compaction requires the [MSQ task engine](../../multi-stage-query/index.md) for a table with a `__base`
+projection; the native engine rejects the layout.
+
 ### API Objects
 
 #### TableSpec
@@ -266,7 +332,12 @@ A tableSpec defines a table
 | PropertyKeyName      | PropertyValueType | Description                                                                                                                                                                                                                                                                                                                                              | Required | Default |
 |----------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
 | `segmentGranularity` | String            | determines how time-based partitioning is done. See [Partitioning by time](../../multi-stage-query/concepts.md#partitioning-by-time). Can specify any of the values as permitted for [PARTITIONED BY](../../multi-stage-query/reference.md#partitioned-by). This property value may be overridden at query time, by specifying the PARTITIONED BY clause. | no       | null    |
-| `sealed`             | boolean           | require all columns in the table schema to be fully declared before data is ingested. Setting this to true will cause failure when DML queries attempt to add undefined columns to the table.                                                                                                                                                            | no       | false   |
+| `targetSegmentRows`  | Integer           | the number of rows to aim for in each segment. Applied unless the query sets `msqRowsPerSegment` itself. If unset, the system default is used.                                                                                                                                                                                                          | no       | null    |
+| `clusterKeys`        | List&lt;Object\>      | the columns each new segment is clustered by, as objects of the form `{"column": "<name>", "desc": false}`. Acts as a default that an individual statement may override with its own CLUSTERED BY clause. Only ascending order is supported; a key with `"desc": true` is rejected.                                                                     | no       | null    |
+| `hiddenColumns`      | List&lt;String\>      | names of columns present in the segments to hide from the SQL layer, so that unwanted columns can be removed from the table's schema without rewriting existing segments. The data remains stored. `__time` cannot be hidden.                                                                                                                            | no       | null    |
+| `sealed`             | boolean           | require all columns in the table schema to be fully declared before data is ingested. Setting this to true will cause failure when DML queries attempt to add undefined columns to the table. On a table with a `__base` projection it also decides whether [compaction](#catalog-based-compaction) keeps undeclared columns.                             | no       | false   |
+| `projections`        | List&lt;Object\>      | the table's [projections](#projections), as objects of the form `{"spec": {<projection spec>}}`. Usually written with `ADD PROJECTION` rather than set directly.                                                                                                                                                                                        | no       | null    |
+| `baseTable`          | Object            | the table's physical layout, described in SQL as the [`__base` projection](#the-base-table). Combines with the declared column list, which remains the source of truth for column names, types, and order. Usually written with `ADD PROJECTION __base` rather than set directly.                                                                        | no       | null    |
 
 #### ColumnSpec
 

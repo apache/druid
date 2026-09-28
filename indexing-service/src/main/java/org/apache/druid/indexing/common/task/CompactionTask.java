@@ -101,6 +101,7 @@ import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -175,6 +176,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   private final List<AggregateProjectionSpec> projections;
   @Nullable
   private final BaseTableProjectionSpec baseTable;
+  private final boolean sealed;
   @Nullable
   private final CompactionTuningConfig tuningConfig;
   @Nullable
@@ -200,6 +202,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @JsonProperty("baseTable") @Nullable final BaseTableProjectionSpec baseTable,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
+      @JsonProperty("sealed") @Nullable final Boolean sealed,
       @JsonProperty("tuningConfig") @Nullable final TuningConfig tuningConfig,
       @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JsonProperty("compactionRunner") final CompactionRunner compactionRunner,
@@ -272,6 +275,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     }
     this.projections = projections;
     this.baseTable = baseTable;
+    this.sealed = sealed == null || sealed;
     this.tuningConfig = tuningConfig != null ? getTuningConfig(tuningConfig) : null;
     this.segmentProvider = new SegmentProvider(dataSource, this.ioConfig.getInputSpec());
     // Note: The default compactionRunnerType used here should match the default runner used in CompactSegments#run
@@ -445,6 +449,16 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     return baseTable;
   }
 
+  /**
+   * Whether {@link #getBaseTable()} is the complete declaration of the datasource schema. When false, the existing
+   * segments are analyzed and any column the spec does not declare is preserved rather than dropped.
+   */
+  @JsonProperty
+  public boolean isSealed()
+  {
+    return sealed;
+  }
+
   @JsonProperty
   public CompactionRunner getCompactionRunner()
   {
@@ -568,6 +582,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         granularitySpec,
         projections,
         baseTable,
+        sealed,
         getMetricBuilder(),
         this.identifyMultiValuedDimensions()
     );
@@ -604,6 +619,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable final List<AggregateProjectionSpec> projections,
       @Nullable final BaseTableProjectionSpec baseTable,
+      final boolean sealed,
       final ServiceMetricEvent.Builder metricBuilder,
       boolean needMultiValuedColumns
   ) throws IOException
@@ -700,6 +716,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             : granularitySpec.withSegmentGranularity(segmentGranularityToUse),
             projections,
             baseTable,
+            sealed,
             needMultiValuedColumns
         );
         final QuerySegmentSpec querySegmentSpec;
@@ -749,6 +766,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           granularitySpec,
           projections,
           baseTable,
+          sealed,
           needMultiValuedColumns
       );
       final QuerySegmentSpec querySegmentSpec;
@@ -798,6 +816,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nonnull ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable List<AggregateProjectionSpec> projections,
       @Nullable BaseTableProjectionSpec baseTable,
+      boolean sealed,
       boolean needMultiValuedColumns
   )
   {
@@ -805,9 +824,28 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       // BaseTable mode: the spec owns dimensions/metrics and (via its query-granularity virtual column) query
       // granularity; segment granularity + intervals are the compaction config's. Attach the config's query
       // granularity up front (a no-op if absent/NONE); the generator's incremental index applies it at build time.
-      // Existing-segment analysis (dims/metrics/rollup inference) is bypassed — the spec is authoritative.
-      final BaseTableProjectionSpec baseTableSpec =
-          baseTable.withQueryGranularity(granularitySpec.getQueryGranularity());
+      // A sealed spec is the complete declaration of the table, so existing-segment analysis has nothing to add and is
+      // skipped entirely.
+      BaseTableProjectionSpec baseTableSpec = baseTable.withQueryGranularity(granularitySpec.getQueryGranularity());
+      if (!sealed) {
+        // Otherwise the segments may carry columns the spec does not know about. Find them and append them after the
+        // declared columns, leaving the shape the operator asked for unchanged. Only dimensions are carried over; a
+        // spec that stores metrics does not exist yet, and asking the analyzer for them would fail compaction on
+        // segments whose aggregators cannot be merged even though nothing would store them.
+        final ExistingSegmentAnalyzer analyzer = new ExistingSegmentAnalyzer(
+            segments,
+            false,
+            false,
+            true,
+            false,
+            false,
+            false
+        );
+        fetchAndProcess(analyzer, emitter, metricBuilder);
+        baseTableSpec = baseTableSpec.withAdditionalColumns(
+            undeclaredColumns(baseTableSpec, analyzer.getDimensionsSpec())
+        );
+      }
       return CombinedDataSchema.forBaseTable(
           dataSource,
           new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
@@ -832,20 +870,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         needMultiValuedColumns
     );
 
-    final Stopwatch stopwatch = Stopwatch.createStarted();
-    try {
-      existingSegmentAnalyzer.fetchAndProcessIfNeeded();
-    }
-    finally {
-      if (emitter != null) {
-        emitter.emit(
-            metricBuilder.setMetric(
-                "compact/segmentAnalyzer/fetchAndProcessMillis",
-                stopwatch.millisElapsed()
-            )
-        );
-      }
-    }
+    fetchAndProcess(existingSegmentAnalyzer, emitter, metricBuilder);
 
     final Granularity queryGranularityToUse;
     if (granularitySpec.getQueryGranularity() == null) {
@@ -897,6 +922,52 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         projectionSpecs,
         existingSegmentAnalyzer.getMultiValuedDimensions()
     );
+  }
+
+  /**
+   * The dimensions of {@code analyzed} that {@code baseTable} does not already declare, in the order the analyzer
+   * found them. Columns the spec cannot store (the time column, anything a virtual column computes) are left for
+   * {@link BaseTableProjectionSpec#withAdditionalColumns} to reject rather than dropped silently here.
+   */
+  private static List<DimensionSchema> undeclaredColumns(
+      BaseTableProjectionSpec baseTable,
+      DimensionsSpec analyzed
+  )
+  {
+    final Set<String> declared = new HashSet<>();
+    for (DimensionSchema declaredColumn : baseTable.getDimensionsSpec().getDimensions()) {
+      declared.add(declaredColumn.getName());
+    }
+    return analyzed.getDimensions()
+                   .stream()
+                   .filter(dimension -> !declared.contains(dimension.getName()))
+                   .collect(Collectors.toList());
+  }
+
+  /**
+   * Runs the analyzer, timing the segment download and processing so operators can see what schema inference is
+   * costing them. The analyzer itself short-circuits when nothing it was asked for requires reading the segments.
+   */
+  private static void fetchAndProcess(
+      ExistingSegmentAnalyzer analyzer,
+      @Nullable ServiceEmitter emitter,
+      ServiceMetricEvent.Builder metricBuilder
+  )
+  {
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    try {
+      analyzer.fetchAndProcessIfNeeded();
+    }
+    finally {
+      if (emitter != null) {
+        emitter.emit(
+            metricBuilder.setMetric(
+                "compact/segmentAnalyzer/fetchAndProcessMillis",
+                stopwatch.millisElapsed()
+            )
+        );
+      }
+    }
   }
 
   /**
@@ -1042,13 +1113,30 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
             processRollup(index);
             processQueryGranularity(index);
-            processDimensionsSpec(index);
+            // Column data is read from a different index for a clustered segment, but rollup, query granularity,
+            // metrics and projections all come from the top-level metadata either way.
+            final QueryableIndex columnIndex = columnIndex(index);
+            processDimensionsSpec(columnIndex);
             processMetricsSpec(index);
-            processMultiValuedDimensions(index);
+            processMultiValuedDimensions(columnIndex);
             processProjections(index);
           }
         }
       }
+    }
+
+    /**
+     * The index to read column data from. A clustered segment stores its rows in per-cluster-group containers and its
+     * top-level index deliberately holds no columns of its own, so reading the schema from it would find nothing;
+     * every group carries the same schema, so the first one answers for the segment.
+     */
+    private static QueryableIndex columnIndex(QueryableIndex index)
+    {
+      final ClusteredValueGroupsBaseTableSchema clusteredBaseTable = index.getMetadata().getClusteredBaseTable();
+      if (clusteredBaseTable == null || clusteredBaseTable.getClusterGroups().isEmpty()) {
+        return index;
+      }
+      return index.getClusterGroupQueryableIndex(clusteredBaseTable.getClusterGroups().get(0), true);
     }
 
     public Boolean getRollup()
@@ -1437,6 +1525,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private List<AggregateProjectionSpec> projections;
     @Nullable
     private BaseTableProjectionSpec baseTable;
+    private Boolean sealed;
 
     public Builder(
         String dataSource,
@@ -1546,6 +1635,12 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return this;
     }
 
+    public Builder sealed(@Nullable Boolean sealed)
+    {
+      this.sealed = sealed;
+      return this;
+    }
+
     public CompactionTask build()
     {
       return new CompactionTask(
@@ -1563,6 +1658,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           granularitySpec,
           baseTable,
           projections,
+          sealed,
           tuningConfig,
           context,
           compactionRunner,
