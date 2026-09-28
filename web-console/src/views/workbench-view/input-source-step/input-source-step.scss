@@ -18,7 +18,7 @@
 
 @use 'sass:math';
 
-@import '../../../variables';
+@use '../../../variables' as *;
 
 $icon-width: 100px;
 $actual-icon-width: 520px;

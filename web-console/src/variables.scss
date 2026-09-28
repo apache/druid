@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-@import './blueprint-overrides/common/colors';
-@import './blueprint-overrides/common/variables';
-@import '@blueprintjs/core/src/common/variables';
+// The console palette and the Blueprint variables it overrides, followed by the console's own variables
+@forward './blueprint-overrides/common/colors';
+@forward './blueprint-overrides/common/color-aliases';
+@forward './blueprint-overrides/common/variables';
+
+@use './blueprint-overrides/common/colors' as *;
+@use './blueprint-overrides/common/variables' as *;
 
 $header-bar-height: 50px;
 $view-control-bar-height: 30px;

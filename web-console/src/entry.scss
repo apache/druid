@@ -16,17 +16,19 @@
  * limitations under the License.
  */
 
-@import 'normalize.css/normalize';
+@use 'normalize.css/normalize';
+@use './blueprint-overrides/components/button/button-group';
+@use './blueprint-overrides/special-switch-modes';
+@use './blueprint-overrides/segmented-control';
+@use './blueprint-overrides/blueprint';
+@use './blueprint-overrides/design-tokens';
+@use './blueprint-overrides/blueprint5-look';
+@use './react-table/react-table-base-styles';
+@use './react-table/react-table-extra';
+@use './variables' as *;
+
 @import '@fontsource/open-sans/400.css'; // Normal
 @import '@fontsource/open-sans/700.css'; // Bold
-@import './blueprint-overrides';
-@import '@blueprintjs/core/src/blueprint';
-@import '@blueprintjs/datetime/src/blueprint-datetime';
-@import '@blueprintjs/select/src/blueprint-select';
-@import './blueprint-overrides/design-tokens';
-@import './blueprint-overrides/blueprint5-look';
-@import './react-table/react-table-base-styles';
-@import './react-table/react-table-extra';
 
 html,
 body {

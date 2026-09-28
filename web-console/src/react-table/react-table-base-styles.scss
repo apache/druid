@@ -20,7 +20,7 @@
 // https://github.com/react-tools/react-table/blob/master/src/index.styl
 // Released originally under the MIT License https://github.com/react-tools/react-table/blob/master/LICENSE
 
-@import '../variables';
+@use '../variables' as *;
 
 $easeOutQuad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 $easeOutBack: cubic-bezier(0.175, 0.885, 0.32, 1.275);

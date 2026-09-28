@@ -17,6 +17,9 @@
  */
 
 @use 'sass:math';
+@use '../../common/colors' as *;
+@use '../../common/color-aliases' as *;
+@use '../../common/variables' as *;
 
 $button-border-width: 1px;
 $button-padding: ($pt-grid-size * 0.5) ($pt-grid-size * 1.3);

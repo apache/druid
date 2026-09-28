@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-@import '../../variables';
-@import '../../blueprint-overrides/common/colors';
+@use '../../variables' as *;
+@use '../../blueprint-overrides/common/colors' as *;
 
 .tasks-view {
   height: 100%;

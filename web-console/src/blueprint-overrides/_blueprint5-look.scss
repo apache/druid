@@ -19,10 +19,27 @@
 // Blueprint 6 restyled its components with CSS design tokens, a 4px spacing grid and relative colors.
 // The rules below restore the Blueprint 5 metrics and dark theme styling that the console was designed
 // with (the console always renders in dark mode), using the same Sass variables Blueprint 5 used.
-// Must be imported after Blueprint.
+// Must be loaded after Blueprint.
 
 @use 'sass:map';
 @use 'sass:math';
+@use 'index' as *;
+
+$icon-classes: ('.#{$ns}-icon', '.#{$ns}-icon-standard', '.#{$ns}-icon-large');
+
+// From node_modules/@blueprintjs/core/src/components/forms/_common.scss
+@function dark-input-transition-shadow(
+  $color: $dark-input-shadow-color-focus,
+  $focus: false,
+  $outer-shadow-focus-width: 1px
+) {
+  @if $focus {
+    @return inset 0 0 0 1px oklch(from $color l c h / 0.752),
+      0 0 0 $outer-shadow-focus-width oklch(from $color l c h / 0.752);
+  } @else {
+    @return 0 0 0 0 oklch(from $color l c h / 0), 0 0 0 0 oklch(from $color l c h / 0);
+  }
+}
 
 $input-icon-margin: math.div($pt-input-height - $pt-icon-size-standard, 2);
 
