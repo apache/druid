@@ -2667,8 +2667,9 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+checksum
 
- - ../docs/ingestion/kafka-share-group-ingestion.md
+- ../docs/ingestion/kafka-share-group-ingestion.md
 KIP
 KIP-932
 appenderator
@@ -2676,10 +2677,12 @@ isPersistRequired
 ACK
 rebalancing
 deduplication
+deduplicate
 Testcontainers
 30-60s
 E2E
 checksum
+unstaged
 
 - ../docs/development/extensions-contrib/druid-opa-authorizer.md
 Rego
