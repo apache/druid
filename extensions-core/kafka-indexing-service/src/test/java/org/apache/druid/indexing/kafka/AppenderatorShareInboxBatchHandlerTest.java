@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.kafka;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
@@ -124,12 +124,10 @@ public class AppenderatorShareInboxBatchHandlerTest
     return mock(StreamChunkReader.class);
   }
 
-  @SuppressWarnings("unchecked")
-  private static void mockPublish(StreamAppenderatorDriver driver) throws Exception
+  private static void mockPublish(StreamAppenderatorDriver driver)
   {
-    final ListenableFuture<SegmentsAndCommitMetadata> future = mock(ListenableFuture.class);
-    when(future.get()).thenReturn(mock(SegmentsAndCommitMetadata.class));
-    when(driver.publish(any(), any(), any())).thenReturn(future);
+    when(driver.publish(any(), any(), any()))
+        .thenReturn(Futures.immediateFuture(mock(SegmentsAndCommitMetadata.class)));
   }
 
   private static ShareInboxManifest manifest()
