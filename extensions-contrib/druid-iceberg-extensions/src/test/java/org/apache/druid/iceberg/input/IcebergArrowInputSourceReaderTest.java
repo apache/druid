@@ -21,6 +21,7 @@ package org.apache.druid.iceberg.input;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.BatchToInputRowIterator;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -126,6 +127,43 @@ public class IcebergArrowInputSourceReaderTest
     Assertions.assertEquals("bob", rows.get(1).getDimension("name").get(0));
     Assertions.assertEquals(3_000L, rows.get(2).getTimestampFromEpoch());
     Assertions.assertEquals("carol", rows.get(2).getDimension("name").get(0));
+  }
+
+  @Test
+  public void testBatchReadUsesArrowBackedRowsAcrossBatches() throws IOException
+  {
+    final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
+    writeRows(table, row(1_000L, "alice", 1.1), row(2_000L, "bob", 2.2), row(3_000L, "alice", 3.3));
+
+    final IcebergArrowInputSourceReader reader = new IcebergArrowInputSourceReader(
+        table,
+        null,
+        null,
+        true,
+        INPUT_SCHEMA,
+        2
+    );
+
+    try (BatchToInputRowIterator rows = new BatchToInputRowIterator(
+        reader.readBatches(new NoopInputStats()),
+        INPUT_SCHEMA
+    )) {
+      InputRow row = rows.next();
+      Assertions.assertEquals(1_000L, row.getTimestampFromEpoch());
+      Assertions.assertEquals("alice", row.getRaw("name"));
+      Assertions.assertEquals(1.1, row.getMetric("value").doubleValue());
+
+      row = rows.next();
+      Assertions.assertEquals(2_000L, row.getTimestampFromEpoch());
+      Assertions.assertEquals("bob", row.getRaw("name"));
+      Assertions.assertEquals(2.2, row.getMetric("value").doubleValue());
+
+      row = rows.next();
+      Assertions.assertEquals(3_000L, row.getTimestampFromEpoch());
+      Assertions.assertEquals("alice", row.getRaw("name"));
+      Assertions.assertEquals(3.3, row.getMetric("value").doubleValue());
+      Assertions.assertFalse(rows.hasNext());
+    }
   }
 
   @Test
