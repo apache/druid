@@ -42,15 +42,14 @@ import java.util.Optional;
 
 public class ShareGroupRawBatchTest
 {
-  private final ShareGroupRawBatchWriter writer = new ShareGroupRawBatchWriter();
-  private final ShareGroupRawBatchReader reader = new ShareGroupRawBatchReader();
+  private final ShareGroupRawBatchCodec codec = new ShareGroupRawBatchCodec();
 
   @Test
   public void testRoundTripPreservesKafkaRecordMetadata() throws Exception
   {
     final ShareGroupRawBatch batch = batch();
 
-    final ShareGroupRawBatch restored = reader.read(new ByteArrayInputStream(write(batch)));
+    final ShareGroupRawBatch restored = codec.read(new ByteArrayInputStream(write(batch)));
 
     Assertions.assertEquals(batch, restored);
     Assertions.assertEquals(3, restored.getFirstOffset());
@@ -77,7 +76,7 @@ public class ShareGroupRawBatchTest
 
     Assertions.assertThrows(
         IOException.class,
-        () -> reader.read(new ByteArrayInputStream(Arrays.copyOf(bytes, bytes.length - 5)))
+        () -> codec.read(new ByteArrayInputStream(Arrays.copyOf(bytes, bytes.length - 5)))
     );
   }
 
@@ -87,7 +86,7 @@ public class ShareGroupRawBatchTest
     final byte[] bytes = write(batch());
     bytes[bytes.length / 2] ^= 1;
 
-    Assertions.assertThrows(IOException.class, () -> reader.read(new ByteArrayInputStream(bytes)));
+    Assertions.assertThrows(IOException.class, () -> codec.read(new ByteArrayInputStream(bytes)));
   }
 
   @Test
@@ -98,7 +97,7 @@ public class ShareGroupRawBatchTest
 
     final IOException exception = Assertions.assertThrows(
         IOException.class,
-        () -> reader.read(new ByteArrayInputStream(bytes))
+        () -> codec.read(new ByteArrayInputStream(bytes))
     );
     Assertions.assertTrue(exception.getMessage().contains("version"));
   }
@@ -111,7 +110,7 @@ public class ShareGroupRawBatchTest
 
     final IOException exception = Assertions.assertThrows(
         IOException.class,
-        () -> reader.read(new ByteArrayInputStream(bytes))
+        () -> codec.read(new ByteArrayInputStream(bytes))
     );
     Assertions.assertTrue(exception.getMessage().contains("compression"));
   }
@@ -123,7 +122,7 @@ public class ShareGroupRawBatchTest
 
     final IOException exception = Assertions.assertThrows(
         IOException.class,
-        () -> reader.read(new ByteArrayInputStream(bytes), "other-topic", 7)
+        () -> codec.read(new ByteArrayInputStream(bytes), "other-topic", 7)
     );
     Assertions.assertTrue(exception.getMessage().contains("identity mismatch"));
   }
@@ -139,7 +138,7 @@ public class ShareGroupRawBatchTest
         List.of(ShareGroupRawRecord.from(record(1, null, value, TimestampType.CREATE_TIME)))
     );
 
-    final ShareGroupRawBatch restored = reader.read(new ByteArrayInputStream(write(batch)));
+    final ShareGroupRawBatch restored = codec.read(new ByteArrayInputStream(write(batch)));
 
     Assertions.assertEquals(batch, restored);
   }
@@ -176,7 +175,7 @@ public class ShareGroupRawBatchTest
   private byte[] write(ShareGroupRawBatch batch) throws IOException
   {
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    writer.write(batch, output);
+    codec.write(batch, output);
     return output.toByteArray();
   }
 

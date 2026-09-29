@@ -108,8 +108,7 @@ final class ShareGroupBatchStore
 
   private final StorageConnector storageConnector;
   private final String taskId;
-  private final ShareGroupRawBatchWriter writer = new ShareGroupRawBatchWriter();
-  private final ShareGroupRawBatchReader reader = new ShareGroupRawBatchReader();
+  private final ShareGroupRawBatchCodec codec = new ShareGroupRawBatchCodec();
 
   ShareGroupBatchStore(StorageConnector storageConnector, String taskId)
   {
@@ -127,11 +126,11 @@ final class ShareGroupBatchStore
   StoredBatch store(ShareGroupRawBatch batch) throws IOException
   {
     final String path = objectPath(batch);
-    final MessageDigest writeDigest = ShareGroupRawBatchWriter.newDigest();
+    final MessageDigest writeDigest = ShareGroupRawBatchCodec.newDigest();
     final CountingOutputStream countingOutput;
     try (OutputStream storageOutput = storageConnector.write(path)) {
       countingOutput = new CountingOutputStream(storageOutput);
-      writer.write(batch, new DigestOutputStream(countingOutput, writeDigest));
+      codec.write(batch, new DigestOutputStream(countingOutput, writeDigest));
     }
     catch (IOException | RuntimeException e) {
       deleteQuietly(path, e);
@@ -143,11 +142,11 @@ final class ShareGroupBatchStore
       if (!storageConnector.pathExists(path)) {
         throw new IOException("Stored share-group raw batch does not exist at " + path);
       }
-      final MessageDigest readDigest = ShareGroupRawBatchWriter.newDigest();
+      final MessageDigest readDigest = ShareGroupRawBatchCodec.newDigest();
       final ShareGroupRawBatch verifiedBatch;
       try (InputStream storageInput = storageConnector.read(path);
            DigestInputStream digestInput = new DigestInputStream(storageInput, readDigest)) {
-        verifiedBatch = reader.read(digestInput, batch.getTopic(), batch.getPartition());
+        verifiedBatch = codec.read(digestInput, batch.getTopic(), batch.getPartition());
       }
       if (!batch.equals(verifiedBatch) || !Arrays.equals(expectedDigest, readDigest.digest())) {
         throw new IOException("Stored share-group raw batch verification failed at " + path);
@@ -177,11 +176,11 @@ final class ShareGroupBatchStore
       int expectedPartition
   ) throws IOException
   {
-    final MessageDigest digest = ShareGroupRawBatchWriter.newDigest();
+    final MessageDigest digest = ShareGroupRawBatchCodec.newDigest();
     final ShareGroupRawBatch batch;
     try (InputStream storageInput = storageConnector.read(path);
          DigestInputStream digestInput = new DigestInputStream(storageInput, digest)) {
-      batch = reader.read(
+      batch = codec.read(
           digestInput,
           expectedTopic,
           expectedPartition

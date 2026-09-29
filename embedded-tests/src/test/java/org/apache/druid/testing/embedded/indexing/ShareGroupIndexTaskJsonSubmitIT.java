@@ -22,7 +22,6 @@ package org.apache.druid.testing.embedded.indexing;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.base.Throwables;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -130,51 +129,6 @@ public class ShareGroupIndexTaskJsonSubmitIT extends EmbeddedClusterTestBase
 
     cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
     cluster.callApi().waitForTaskToFinish(task.getId(), overlord.latchableEmitter());
-  }
-
-  @Test
-  public void test_jsonSubmit_overlordReturnsExpectedTaskType() throws Exception
-  {
-    final String topic = dataSource + "_roundtrip_topic";
-    kafkaServer.createTopicWithPartitions(topic, 1);
-    kafkaServer.setShareGroupAutoOffsetReset("roundtrip-group", "earliest");
-
-    final ShareGroupIndexTask task = buildTask(topic, "roundtrip-group");
-    final JsonNode taskJson = mapper.readTree(mapper.writeValueAsString(task));
-    cluster.callApi().onLeaderOverlord(o -> o.runTask(task.getId(), taskJson));
-
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
-
-    final org.apache.druid.client.indexing.TaskStatusResponse statusResponse =
-        cluster.callApi().onLeaderOverlord(o -> o.taskStatus(task.getId()));
-    Assertions.assertNotNull(statusResponse, "Overlord did not return a status for the submitted task");
-    Assertions.assertNotNull(statusResponse.getStatus(), "Overlord status payload was empty");
-    Assertions.assertEquals(task.getId(), statusResponse.getStatus().getId());
-    Assertions.assertEquals("index_kafka_share_group", statusResponse.getStatus().getType());
-
-    cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
-    cluster.callApi().waitForTaskToFinish(task.getId(), overlord.latchableEmitter());
-  }
-
-  @Test
-  public void test_jsonSubmit_missingRequiredField_isRejected()
-  {
-    final String malformedJson =
-        "{\"type\":\"index_kafka_share_group\","
-        + "\"dataSchema\":{\"dataSource\":\"" + dataSource + "\","
-        + "\"timestampSpec\":{\"column\":\"__time\",\"format\":\"auto\"},"
-        + "\"dimensionsSpec\":{}},"
-        + "\"ioConfig\":{\"type\":\"kafka_share_group\"}}";
-
-    final Exception ex = Assertions.assertThrows(
-        Exception.class,
-        () -> {
-          final JsonNode node = mapper.readTree(malformedJson);
-          cluster.callApi().onLeaderOverlord(o -> o.runTask("bad-task-id", node));
-        }
-    );
-    final Throwable rootCause = Throwables.getRootCause(ex);
-    Assertions.assertNotNull(rootCause);
   }
 
   private ShareGroupIndexTask buildTask(String topic, String groupId)

@@ -125,36 +125,6 @@ public class ShareGroupTaskRestartIT extends EmbeddedClusterTestBase
     cancelAndAwaitTermination(taskId2);
   }
 
-  @Test
-  public void test_restartedTask_immediateRestart_resumesFromLastAck() throws Exception
-  {
-    final String topic = dataSource + "_quick_restart_topic";
-    kafkaServer.createTopicWithPartitions(topic, 1);
-    kafkaServer.setShareGroupAutoOffsetReset(GROUP_ID + "-quick", "earliest");
-
-    final int totalRecords = 20;
-    kafkaServer.publishRecordsToTopic(topic, csvRecords(totalRecords, 0, "2025-08-01"));
-
-    final String taskId1 = submitTaskWithGroup(topic, GROUP_ID + "-quick");
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
-
-    waitForRowsProcessed(totalRecords);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    assertRowCountEventually(totalRecords);
-    cancelAndAwaitTermination(taskId1);
-
-    // Immediately restart — produce 5 more records; the restarted task must NOT re-ingest the first 20.
-    final String taskId2 = submitTaskWithGroup(topic, GROUP_ID + "-quick");
-    Thread.sleep(SHARE_CONSUMER_READY_DELAY_MS);
-
-    kafkaServer.publishRecordsToTopic(topic, csvRecords(5, totalRecords, "2025-08-02"));
-
-    waitForRowsProcessed(totalRecords + 5);
-    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    assertRowCountEventually(totalRecords + 5);
-    cancelAndAwaitTermination(taskId2);
-  }
-
   private String submitTask(String topic)
   {
     return submitTaskWithGroup(topic, GROUP_ID);

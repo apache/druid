@@ -2673,14 +2673,8 @@ checksum
 KIP
 KIP-932
 appenderator
-isPersistRequired
 ACK
-rebalancing
-deduplication
 deduplicate
-Testcontainers
-30-60s
-E2E
 checksum
 unstaged
 

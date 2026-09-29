@@ -27,21 +27,17 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
-import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
-import org.apache.druid.indexing.common.actions.LockReleaseAction;
-import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.task.InputRowFilter;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.input.InputRowSchemas;
-import org.apache.druid.indexing.seekablestream.SeekableStreamAppenderatorConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.StreamChunkReader;
 import org.apache.druid.indexing.seekablestream.common.AcknowledgingRecordSupplier;
 import org.apache.druid.java.util.common.ISE;
@@ -55,7 +51,6 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.storage.StorageConnector;
-import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 
@@ -179,60 +174,23 @@ public class ShareGroupIndexTaskRunner
         parseExceptionHandler
     );
 
-    final Appenderator appenderator = toolbox.getAppenderatorsManager().createRealtimeAppenderatorForTask(
-        toolbox.getSegmentLoaderConfig(),
+    final Appenderator appenderator = SeekableStreamIndexTask.newAppenderator(
+        toolbox,
         task.getId(),
         dataSchema,
-        SeekableStreamAppenderatorConfig.fromTuningConfig(
-            tuningConfig.withBasePersistDirectory(toolbox.getPersistDir()),
-            toolbox.getProcessingConfig()
-        ),
-        toolbox.getConfig(),
+        tuningConfig,
         segmentGenerationMetrics,
-        toolbox.getSegmentPusher(),
-        toolbox.getJsonMapper(),
-        toolbox.getIndexIO(),
-        toolbox.getIndexMerger(),
-        toolbox.getQueryRunnerFactoryConglomerate(),
-        toolbox.getSegmentAnnouncer(),
-        toolbox.getEmitter(),
-        toolbox.getQueryProcessingPool(),
-        toolbox.getJoinableFactory(),
-        toolbox.getCache(),
-        toolbox.getCacheConfig(),
-        toolbox.getCachePopulatorStats(),
-        toolbox.getPolicyEnforcer(),
         rowIngestionMeters,
-        parseExceptionHandler,
-        toolbox.getCentralizedTableSchemaConfig(),
-        interval -> {
-          toolbox.getTaskActionClient().submit(new LockReleaseAction(interval));
-        }
+        parseExceptionHandler
     );
 
-    final StreamAppenderatorDriver driver = new StreamAppenderatorDriver(
+    final StreamAppenderatorDriver driver = SeekableStreamIndexTask.newDriver(
         appenderator,
-        new ActionBasedSegmentAllocator(
-            toolbox.getTaskActionClient(),
-            dataSchema,
-            (schema, row, sequenceName, previousSegmentId, skipSegmentLineageCheck) -> new SegmentAllocateAction(
-                schema.getDataSource(),
-                row.getTimestamp(),
-                schema.getGranularitySpec().getQueryGranularity(),
-                schema.getGranularitySpec().getSegmentGranularity(),
-                sequenceName,
-                previousSegmentId,
-                skipSegmentLineageCheck,
-                NumberedPartialShardSpec.instance(),
-                lockGranularity,
-                lockType
-            )
-        ),
-        toolbox.getSegmentHandoffNotifierFactory(),
-        new ActionBasedPublishedSegmentRetriever(toolbox.getTaskActionClient()),
-        toolbox.getDataSegmentKiller(),
-        toolbox.getJsonMapper(),
-        segmentGenerationMetrics
+        toolbox,
+        segmentGenerationMetrics,
+        dataSchema,
+        lockGranularity,
+        lockType
     );
 
     final org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor metricsMonitor =

@@ -23,41 +23,80 @@ import org.apache.kafka.common.record.TimestampType;
 
 import javax.annotation.Nullable;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
+import java.security.DigestOutputStream;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
-final class ShareGroupRawBatchReader
+final class ShareGroupRawBatchCodec
 {
+  private static final int MAGIC = 0x44525347;
+  private static final short VERSION = 1;
+  private static final byte GZIP = 1;
+  private static final int DIGEST_SIZE = 32;
   private static final int MAX_STRING_BYTES = 1 << 20;
   private static final int MAX_RECORD_BYTES = 128 << 20;
   private static final int MAX_RECORDS = 1_000_000;
   private static final int MAX_HEADERS = 100_000;
 
+  void write(ShareGroupRawBatch batch, OutputStream outputStream) throws IOException
+  {
+    final DataOutputStream envelope = new DataOutputStream(outputStream);
+    envelope.writeInt(MAGIC);
+    envelope.writeShort(VERSION);
+    envelope.writeByte(GZIP);
+    envelope.writeByte(0);
+
+    final GZIPOutputStream gzip = new GZIPOutputStream(envelope);
+    final DigestOutputStream digestOutput = new DigestOutputStream(gzip, newDigest());
+    final DataOutputStream payload = new DataOutputStream(digestOutput);
+    writeString(payload, batch.getTopic());
+    payload.writeInt(batch.getPartition());
+    payload.writeInt(batch.getRecords().size());
+    payload.writeLong(batch.getFirstOffset());
+    payload.writeLong(batch.getLastOffset());
+    for (ShareGroupRawRecord record : batch.getRecords()) {
+      writeRecord(payload, record);
+    }
+    payload.flush();
+
+    digestOutput.on(false);
+    final byte[] digest = digestOutput.getMessageDigest().digest();
+    payload.writeInt(digest.length);
+    payload.write(digest);
+    payload.flush();
+    gzip.finish();
+    envelope.flush();
+  }
+
   ShareGroupRawBatch read(InputStream inputStream) throws IOException
   {
     final DataInputStream envelope = new DataInputStream(inputStream);
     final int magic = envelope.readInt();
-    if (magic != ShareGroupRawBatchWriter.MAGIC) {
+    if (magic != MAGIC) {
       throw new IOException("Invalid share-group raw batch magic");
     }
     final short version = envelope.readShort();
-    if (version != ShareGroupRawBatchWriter.VERSION) {
+    if (version != VERSION) {
       throw new IOException("Unsupported share-group raw batch version " + version);
     }
     final byte compression = envelope.readByte();
-    if (compression != ShareGroupRawBatchWriter.GZIP) {
+    if (compression != GZIP) {
       throw new IOException("Unsupported share-group raw batch compression " + compression);
     }
     envelope.readByte();
 
-    final MessageDigest digest = ShareGroupRawBatchWriter.newDigest();
+    final MessageDigest digest = newDigest();
     final DigestInputStream digestInput = new DigestInputStream(new GZIPInputStream(envelope), digest);
     final DataInputStream payload = new DataInputStream(digestInput);
     final String topic = readString(payload);
@@ -71,8 +110,8 @@ final class ShareGroupRawBatchReader
     }
 
     digestInput.on(false);
-    final int digestSize = readSize(payload, ShareGroupRawBatchWriter.DIGEST_SIZE, "digest size");
-    if (digestSize != ShareGroupRawBatchWriter.DIGEST_SIZE) {
+    final int digestSize = readSize(payload, DIGEST_SIZE, "digest size");
+    if (digestSize != DIGEST_SIZE) {
       throw new IOException("Invalid share-group raw batch digest size " + digestSize);
     }
     final byte[] expectedDigest = new byte[digestSize];
@@ -102,6 +141,40 @@ final class ShareGroupRawBatchReader
       );
     }
     return batch;
+  }
+
+  static MessageDigest newDigest()
+  {
+    try {
+      return MessageDigest.getInstance("SHA-256");
+    }
+    catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
+  private static void writeRecord(DataOutputStream output, ShareGroupRawRecord record) throws IOException
+  {
+    output.writeLong(record.getOffset());
+    output.writeLong(record.getTimestamp());
+    output.writeByte(record.getTimestampType().id);
+    output.writeInt(record.getSerializedKeySize());
+    output.writeInt(record.getSerializedValueSize());
+    writeNullableBytes(output, record.getKey());
+    writeNullableBytes(output, record.getValue());
+    output.writeInt(record.getHeaders().size());
+    for (ShareGroupRawRecord.RawHeader header : record.getHeaders()) {
+      writeString(output, header.getKey());
+      writeNullableBytes(output, header.getValue());
+    }
+    output.writeBoolean(record.getLeaderEpoch().isPresent());
+    if (record.getLeaderEpoch().isPresent()) {
+      output.writeInt(record.getLeaderEpoch().get());
+    }
+    output.writeBoolean(record.getDeliveryCount().isPresent());
+    if (record.getDeliveryCount().isPresent()) {
+      output.writeShort(record.getDeliveryCount().get());
+    }
   }
 
   private static ShareGroupRawRecord readRecord(DataInputStream input) throws IOException
@@ -138,12 +211,29 @@ final class ShareGroupRawBatchReader
     );
   }
 
+  private static void writeString(DataOutputStream output, String value) throws IOException
+  {
+    final byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+    output.writeInt(bytes.length);
+    output.write(bytes);
+  }
+
   private static String readString(DataInputStream input) throws IOException
   {
     final int size = readSize(input, MAX_STRING_BYTES, "string length");
     final byte[] bytes = new byte[size];
     input.readFully(bytes);
     return new String(bytes, StandardCharsets.UTF_8);
+  }
+
+  private static void writeNullableBytes(DataOutputStream output, byte[] value) throws IOException
+  {
+    if (value == null) {
+      output.writeInt(-1);
+    } else {
+      output.writeInt(value.length);
+      output.write(value);
+    }
   }
 
   @Nullable

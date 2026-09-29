@@ -42,6 +42,36 @@ import java.util.function.ToLongFunction;
 
 final class ShareGroupAcquisitionLoop
 {
+  private static final class StagingCompletion
+  {
+    private static final StagingCompletion STOP = new StagingCompletion(List.of(), false, true);
+
+    private final List<ShareGroupAcquisitionRegistry.UploadAttempt> attempts;
+    private final boolean successful;
+    private final boolean stop;
+
+    private StagingCompletion(
+        List<ShareGroupAcquisitionRegistry.UploadAttempt> attempts,
+        boolean successful,
+        boolean stop
+    )
+    {
+      this.attempts = List.copyOf(attempts);
+      this.successful = successful;
+      this.stop = stop;
+    }
+
+    private static StagingCompletion success(List<ShareGroupAcquisitionRegistry.UploadAttempt> attempts)
+    {
+      return new StagingCompletion(attempts, true, false);
+    }
+
+    private static StagingCompletion failure(List<ShareGroupAcquisitionRegistry.UploadAttempt> attempts)
+    {
+      return new StagingCompletion(attempts, false, false);
+    }
+  }
+
   private final String topic;
   private final AcknowledgingRecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> recordSupplier;
   private final ShareGroupBatchStager batchStager;
@@ -50,7 +80,7 @@ final class ShareGroupAcquisitionLoop
   private final ToLongFunction<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> byteEstimator;
   private final long pollTimeoutMs;
   private final long maxPollIntervalMs;
-  private final BlockingQueue<ShareGroupStagingCompletion> completions = new LinkedBlockingQueue<>();
+  private final BlockingQueue<StagingCompletion> completions = new LinkedBlockingQueue<>();
   private final AtomicBoolean stopRequested = new AtomicBoolean();
   private Thread ownerThread;
 
@@ -167,7 +197,7 @@ final class ShareGroupAcquisitionLoop
   void requestStop()
   {
     stopRequested.set(true);
-    completions.offer(ShareGroupStagingCompletion.stop());
+    completions.offer(StagingCompletion.STOP);
     recordSupplier.wakeup();
   }
 
@@ -185,10 +215,10 @@ final class ShareGroupAcquisitionLoop
     final Runnable stagingTask = () -> {
       try {
         batchStager.stage(immutableRecords);
-        completions.add(ShareGroupStagingCompletion.success(attempts));
+        completions.add(StagingCompletion.success(attempts));
       }
-      catch (Exception e) {
-        completions.add(ShareGroupStagingCompletion.failure(attempts, e));
+      catch (Exception ignored) {
+        completions.add(StagingCompletion.failure(attempts));
       }
     };
     try {
@@ -221,7 +251,7 @@ final class ShareGroupAcquisitionLoop
         return;
       }
 
-      final ShareGroupStagingCompletion completion = completions.poll(waitNanos, TimeUnit.NANOSECONDS);
+      final StagingCompletion completion = completions.poll(waitNanos, TimeUnit.NANOSECONDS);
       if (completion != null) {
         applyCompletion(completion);
       }
@@ -230,19 +260,19 @@ final class ShareGroupAcquisitionLoop
 
   private void drainCompletions()
   {
-    ShareGroupStagingCompletion completion;
+    StagingCompletion completion;
     while ((completion = completions.poll()) != null) {
       applyCompletion(completion);
     }
   }
 
-  private void applyCompletion(ShareGroupStagingCompletion completion)
+  private void applyCompletion(StagingCompletion completion)
   {
-    if (completion.isStop()) {
+    if (completion.stop) {
       return;
     }
-    for (ShareGroupAcquisitionRegistry.UploadAttempt attempt : completion.getAttempts()) {
-      if (completion.isSuccessful()) {
+    for (ShareGroupAcquisitionRegistry.UploadAttempt attempt : completion.attempts) {
+      if (completion.successful) {
         registry.markDurable(attempt);
       } else {
         registry.markFailed(attempt);
