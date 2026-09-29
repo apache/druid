@@ -346,6 +346,87 @@ textarea.#{$ns}-input {
   }
 }
 
+.#{$ns}-tag-input {
+  height: auto;
+  line-height: inherit;
+  min-height: $pt-input-height;
+  padding-left: $pt-grid-size * 0.5;
+  padding-right: 0;
+
+  .#{$ns}-tag-input-icon {
+    margin-left: $pt-grid-size * 0.2;
+    margin-right: $pt-grid-size * 0.7;
+    margin-top: $pt-grid-size * 0.7;
+  }
+
+  .#{$ns}-tag-input-values {
+    margin-right: $pt-grid-size * 0.7;
+    margin-top: $pt-grid-size * 0.5;
+
+    &::before,
+    > * {
+      margin-right: $pt-grid-size * 0.5;
+    }
+
+    > * {
+      margin-bottom: $pt-grid-size * 0.5;
+    }
+
+    &:first-child .#{$ns}-input-ghost {
+      padding-left: $pt-grid-size * 0.5;
+    }
+  }
+
+  .#{$ns}-input-ghost {
+    line-height: $pt-input-height - $pt-grid-size;
+    width: $pt-grid-size * 8;
+  }
+
+  .#{$ns}-button,
+  .#{$ns}-spinner {
+    margin: math.div($pt-input-height - $pt-button-height-small, 2);
+    margin-left: 0;
+  }
+
+  .#{$ns}-button {
+    min-height: $pt-button-height-small;
+    min-width: $pt-button-height-small;
+    padding: 0 $pt-grid-size * 0.7;
+  }
+
+  &.#{$ns}-large {
+    height: auto;
+    min-height: $pt-input-height-large;
+
+    &::before,
+    > * {
+      margin-right: $pt-grid-size;
+    }
+
+    .#{$ns}-tag-input-icon {
+      margin-left: $pt-grid-size * 0.5;
+      margin-top: $pt-grid-size;
+    }
+
+    .#{$ns}-input-ghost {
+      line-height: $pt-input-height;
+    }
+
+    .#{$ns}-button {
+      margin: $pt-grid-size * 0.5;
+      margin-left: 0;
+      min-height: $pt-input-height;
+      min-width: $pt-input-height;
+      padding: $pt-grid-size * 0.5 $pt-grid-size * 1.3;
+    }
+
+    .#{$ns}-spinner {
+      margin: $pt-grid-size * 0.8;
+      margin-left: 0;
+    }
+  }
+}
+
 .#{$ns}-input-group {
   .#{$ns}-input:not(:first-child) {
     padding-left: $pt-input-height;
@@ -831,6 +912,7 @@ label.#{$ns}-label {
   margin-right: -($pt-grid-size * 0.6);
   margin-top: -2px;
   padding: 2px;
+  padding-left: 0;
 
   .#{$ns}-large & {
     margin-right: -$pt-grid-size;
