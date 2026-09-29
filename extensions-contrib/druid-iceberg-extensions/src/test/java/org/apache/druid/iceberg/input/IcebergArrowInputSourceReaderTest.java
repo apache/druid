@@ -34,6 +34,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.filter.IcebergEqualsFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.iceberg.DataFile;
 import org.apache.iceberg.DataFiles;
@@ -61,10 +62,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 public class IcebergArrowInputSourceReaderTest
 {
+  private static final Logger LOG = new Logger(IcebergArrowInputSourceReaderTest.class);
   private static final String NAMESPACE = "default";
   private static final String TABLE = "arrowTestTable";
 
@@ -362,8 +365,24 @@ public class IcebergArrowInputSourceReaderTest
         IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
-    final List<InputRow> rows = readAll(reader);
-    Assertions.assertEquals(count, rows.size());
+    final long legacyStartNanos = System.nanoTime();
+    final long legacyChecksum = readChecksum(reader.read(new NoopInputStats()), count);
+    final long legacyElapsedNanos = System.nanoTime() - legacyStartNanos;
+
+    final long batchStartNanos = System.nanoTime();
+    final long batchChecksum = readChecksum(
+        new BatchToInputRowIterator(reader.readBatches(new NoopInputStats()), INPUT_SCHEMA),
+        count
+    );
+    final long batchElapsedNanos = System.nanoTime() - batchStartNanos;
+
+    Assertions.assertEquals(legacyChecksum, batchChecksum);
+    LOG.info(
+        "Read rows [%,d] using legacy path in [%.2f] ms and batch-backed path in [%.2f] ms",
+        count,
+        legacyElapsedNanos / 1_000_000D,
+        batchElapsedNanos / 1_000_000D
+    );
   }
 
   @Test
@@ -634,6 +653,24 @@ public class IcebergArrowInputSourceReaderTest
       }
     }
     return result;
+  }
+
+  private static long readChecksum(final CloseableIterator<InputRow> rows, final int expectedRowCount)
+      throws IOException
+  {
+    long checksum = 1;
+    int rowCount = 0;
+    try (rows) {
+      while (rows.hasNext()) {
+        final InputRow row = rows.next();
+        checksum = 31 * checksum + row.getTimestampFromEpoch();
+        checksum = 31 * checksum + Objects.hashCode(row.getRaw("name"));
+        checksum = 31 * checksum + Objects.hashCode(row.getRaw("value"));
+        rowCount++;
+      }
+    }
+    Assertions.assertEquals(expectedRowCount, rowCount);
+    return checksum;
   }
 
   private static final class NoopInputStats implements org.apache.druid.data.input.InputStats
