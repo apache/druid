@@ -452,6 +452,9 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/assignSkipped/count`|Number of segments that could not be assigned to any server for loading. This can occur due to replication throttling, no available disk space, or a full load queue.|`dataSource`, `server`, `tier`, `description`|Varies|
 |`segment/moveSkipped/count`|Number of segments that were chosen for balancing but could not be moved. This can occur when segments are already optimally placed.|`dataSource`, `server`, `tier`, `description`|Varies|
 |`segment/dropSkipped/count`|Number of segments that could not be dropped from any server.|`dataSource`, `server`, `tier`, `description`|Varies|
+|`segment/clone/assigned/count`|Number of segments assigned to be loaded on a historical clone.|`dataSource`, `server`, `tier`|Varies|
+|`segment/clone/dropped/count`|Number of segments dropped from a historical clone.|`dataSource`, `server`, `tier`|Varies|
+|`segment/clone/pendingSync/count`|Number of segments that still need to be loaded on a historical clone but are already loaded on its source server.|`server`, `tier`|Varies|
 |`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
 |`segment/loading/rateKbps`|Current rate of segment loading on a server in kbps (1000 bits per second). The rate is calculated as a moving average over the last 10 GiB or more of successful segment loads on that server.|`server`|Varies|
@@ -468,9 +471,15 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
 |`tier/historical/count`|Number of available historical nodes in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/historical/clone/count`|Number of historical nodes in a tier which are a clone of another historical in the same or different tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/historical/clone/synced`|Number of historical clones in a tier which are currently in sync with their source server. |`server`, `tier`|1 if synced, O if not synced|
 |`tier/replication/factor`|Configured maximum replication factor in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
-|`tier/required/capacity`|Total capacity in bytes required in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
-|`tier/total/capacity`|Total capacity in bytes available in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/storage/required`|Segment storage in bytes that the load rules require in each tier, counting each replica at its full segment size. Compare against `tier/storage/capacity` to see how heavily the tier is subscribed. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/storage/capacity`|Total segment storage in bytes that each tier advertises for segment assignment. Can be greater than the physical disk reported by `tier/segmentCache/capacity` if using virtual storage, so use that metric rather than this one to monitor physical capacity. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/segmentCache/capacity`|Total physical size in bytes of the segment cache locations configured on the historicals in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/segmentCache/used`|Bytes occupied on disk in each tier by the segments its historicals have announced. Partially loaded segments count only the bytes the historical reported loading, not their full size. Compare against `tier/segmentCache/capacity` to see how full the tier's disks are. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
+|`tier/required/capacity`|Deprecated. Use `tier/storage/required` instead, which reports the same value under a name that groups it with the storage capacity it should be compared against. This metric will be removed in a future release.|`tier`, `tierAlias`|Varies|
+|`tier/total/capacity`|Deprecated. Use `tier/storage/capacity` instead, which reports the same value under a name that groups it with the required storage it should be compared against. This metric will be removed in a future release.|`tier`, `tierAlias`|Varies|
 |`compact/task/count`|Number of tasks issued in the auto compaction run.| |Varies|
 |`compactTask/maxSlot/count`|Maximum number of task slots available for auto compaction tasks in the auto compaction run.| |Varies|
 |`compactTask/availableSlot/count`|Number of currently vacant task slots out of the total slots allocated for auto compaction tasks. This value is computed as the difference between the total number of task slots allocated for auto compaction and the estimated number of task slots currently occupied by running compaction tasks. The number of sub-tasks of each compaction task is estimated to be `maxNumConcurrentSubTasks`.| |Varies|
@@ -543,6 +552,26 @@ These metrics are emitted when `druid.auth.emitAuthMetrics` is set to `true`.
 |`segment/pendingDelete`|On-disk size in bytes of segments that are waiting to be cleared out.| |Varies|
 |`segment/rowCount/avg`| The average number of rows per segment on a historical. `SegmentStatsMonitor` must be enabled.| `dataSource`, `tier`, `priority`|Varies. See [segment optimization](../operations/segment-optimization.md) for guidance on optimal segment sizes. |
 |`segment/rowCount/range/count`| The number of segments in a bucket. `SegmentStatsMonitor` must be enabled.| `dataSource`, `tier`, `priority`, `range`|Varies|
+
+### HTTP client connection pools
+
+These metrics are only available if the `HttpClientPoolMonitor` module is included in `druid.monitoring.monitors`.
+They cover the connection pools that Druid services use to talk to each other, one emission per remote end. The
+`server` dimension is that remote end, and the `httpClient` dimension names the client that pools the connections to
+it: `client` and `escalatedClient` are configured by `druid.broker.http`, `global` and `escalatedGlobal` by
+`druid.global.http`. A remote end that a service has stopped talking to keeps being reported, with zeroes, until the
+service is restarted.
+
+|Metric|Description|Dimensions|Normal value|
+|------|-----------|----------|------------|
+|`httpClient/pool/opened`|Number of connections opened.|`httpClient`, `server`|Varies. Steady churn on an idle cluster points at connections being discarded too eagerly.|
+|`httpClient/pool/closed`|Number of connections closed, whether they were broken, unused for too long, or surplus.|`httpClient`, `server`|Varies|
+|`httpClient/pool/errored`|Number of failures while opening, health checking, or closing a connection.|`httpClient`, `server`|0|
+|`httpClient/pool/timedOut`|Number of connections discarded for being unused longer than `unusedConnectionTimeout`.|`httpClient`, `server`|Varies|
+|`httpClient/pool/taken`|Number of connections handed to a caller, that is, the number of requests that got a connection.|`httpClient`, `server`|Varies|
+|`httpClient/pool/returned`|Number of connections given back by a caller.|`httpClient`, `server`|Close to `httpClient/pool/taken`|
+|`httpClient/pool/used`|Number of connections in the hands of callers at the time of the emission, that is, the requests in flight to that remote end. A level, not a per period count.|`httpClient`, `server`|&le; `druid.<service>.http.numConnections`. Sitting at that ceiling means requests are waiting for a connection.|
+|`httpClient/pool/idle`|Number of connections parked for the next caller at the time of the emission. A level, not a per period count.|`httpClient`, `server`|&le; `druid.<service>.http.numConnections`|
 
 ### JVM
 

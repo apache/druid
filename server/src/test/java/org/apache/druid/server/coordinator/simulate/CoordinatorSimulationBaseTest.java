@@ -26,6 +26,7 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverDropRule;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -167,6 +169,13 @@ public abstract class CoordinatorSimulationBaseTest implements
   public double getLoadPercentage(String datasource)
   {
     return sim.coordinator().getLoadPercentage(datasource);
+  }
+
+  @Nullable
+  @Override
+  public ServerCloneStatus getCloneStatus(DruidServer cloneTarget)
+  {
+    return sim.coordinator().getCloneStatus(cloneTarget);
   }
 
   // Verification methods

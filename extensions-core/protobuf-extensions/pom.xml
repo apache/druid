@@ -35,7 +35,7 @@
   </parent>
 
   <properties>
-    <okio.version>3.18.1</okio.version>
+    <okio.version>3.18.2</okio.version>
   </properties>
 
   <repositories>
@@ -234,7 +234,7 @@
       <plugin>
         <groupId>io.github.ascopes</groupId>
         <artifactId>protobuf-maven-plugin</artifactId>
-        <version>5.1.8</version>
+        <version>5.1.9</version>
         <configuration>
           <protoc kind="binary-maven">
             <version>${protobuf.version}</version>

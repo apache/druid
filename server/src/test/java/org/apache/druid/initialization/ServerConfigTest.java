@@ -44,6 +44,7 @@ public class ServerConfigTest
     Assertions.assertEquals(defaultConfig, defaultConfig2);
     Assertions.assertFalse(defaultConfig2.isEnableForwardedRequestCustomizer());
     Assertions.assertFalse(defaultConfig2.isEnableHSTS());
+    Assertions.assertFalse(defaultConfig2.isEnableResponseIdentityHeaders());
     Assertions.assertEquals(UriCompliance.LEGACY, defaultConfig.getUriCompliance());
     Assertions.assertEquals(true, defaultConfig.isEnforceStrictSNIHostChecking());
 
@@ -69,6 +70,7 @@ public class ServerConfigTest
         new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*")),
         "my-cool-policy",
         true,
+        true,
         UriCompliance.RFC3986,
         false
     );
@@ -84,6 +86,7 @@ public class ServerConfigTest
     Assertions.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
     Assertions.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
     Assertions.assertTrue(modifiedConfig2.isEnableHSTS());
+    Assertions.assertTrue(modifiedConfig2.isEnableResponseIdentityHeaders());
     Assertions.assertEquals(UriCompliance.RFC3986, modifiedConfig2.getUriCompliance());
     Assertions.assertFalse(modifiedConfig2.isEnforceStrictSNIHostChecking());
   }

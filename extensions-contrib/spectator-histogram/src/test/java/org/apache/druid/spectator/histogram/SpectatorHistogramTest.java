@@ -59,7 +59,7 @@ public class SpectatorHistogramTest
     byte[] bytes = histogram.toBytes();
     int keySize = Short.BYTES;
     int valSize = 0;
-    Assertions.assertEquals(5 * (keySize + valSize), bytes.length, "Should compact small values within key bytes");
+    Assertions.assertEquals(5L * (keySize + valSize), bytes.length, "Should compact small values within key bytes");
 
     SpectatorHistogram deserialized = SpectatorHistogram.deserialize(bytes);
     Assertions.assertEquals(1L, deserialized.get(PercentileBuckets.indexOf(10)));
@@ -88,7 +88,7 @@ public class SpectatorHistogramTest
     byte[] bytes = histogram.toBytes();
     int keySize = Short.BYTES;
     int valSize = Byte.BYTES;
-    Assertions.assertEquals(5 * (keySize + valSize), bytes.length, "Should compact small values to a byte");
+    Assertions.assertEquals(5L * (keySize + valSize), bytes.length, "Should compact small values to a byte");
 
     SpectatorHistogram deserialized = SpectatorHistogram.deserialize(bytes);
     Assertions.assertEquals(64L, deserialized.get(PercentileBuckets.indexOf(10)));
@@ -117,7 +117,7 @@ public class SpectatorHistogramTest
     byte[] bytes = histogram.toBytes();
     int keySize = Short.BYTES;
     int valSize = Short.BYTES;
-    Assertions.assertEquals(5 * (keySize + valSize), bytes.length, "Should compact medium values to short");
+    Assertions.assertEquals(5L * (keySize + valSize), bytes.length, "Should compact medium values to short");
 
     SpectatorHistogram deserialized = SpectatorHistogram.deserialize(bytes);
     Assertions.assertEquals(512L, deserialized.get(PercentileBuckets.indexOf(10)));
@@ -146,7 +146,7 @@ public class SpectatorHistogramTest
     byte[] bytes = histogram.toBytes();
     int keySize = Short.BYTES;
     int valSize = Integer.BYTES;
-    Assertions.assertEquals(5 * (keySize + valSize), bytes.length, "Should compact larger values to integer");
+    Assertions.assertEquals(5L * (keySize + valSize), bytes.length, "Should compact larger values to integer");
 
     SpectatorHistogram deserialized = SpectatorHistogram.deserialize(bytes);
     Assertions.assertEquals(100000L, deserialized.get(PercentileBuckets.indexOf(10)));
@@ -175,7 +175,7 @@ public class SpectatorHistogramTest
     byte[] bytes = histogram.toBytes();
     int keySize = Short.BYTES;
     int valSize = Long.BYTES;
-    Assertions.assertEquals(5 * (keySize + valSize), bytes.length, "Should not compact larger values");
+    Assertions.assertEquals(5L * (keySize + valSize), bytes.length, "Should not compact larger values");
 
     SpectatorHistogram deserialized = SpectatorHistogram.deserialize(bytes);
     Assertions.assertEquals(10000000000L, deserialized.get(PercentileBuckets.indexOf(10)));
@@ -203,7 +203,7 @@ public class SpectatorHistogramTest
 
     byte[] bytes = histogram.toBytes();
     int keySize = Short.BYTES;
-    Assertions.assertEquals((5 * keySize) + 0 + 2 + 4 + 8 + 8, bytes.length, "Should not compact larger values");
+    Assertions.assertEquals((5L * keySize) + 0 + 2 + 4 + 8 + 8, bytes.length, "Should not compact larger values");
 
     SpectatorHistogram deserialized = SpectatorHistogram.deserialize(bytes);
     Assertions.assertEquals(1L, deserialized.get(PercentileBuckets.indexOf(10)));
@@ -234,7 +234,7 @@ public class SpectatorHistogramTest
 
     byte[] bytes = histogram.toBytes();
     int keySize = Short.BYTES;
-    Assertions.assertEquals((8 * keySize) + 0 + 1 + 1 + 2 + 2 + 4 + 4 + 8, bytes.length, "Should compact");
+    Assertions.assertEquals((8L * keySize) + 0 + 1 + 1 + 2 + 2 + 4 + 4 + 8, bytes.length, "Should compact");
 
     SpectatorHistogram deserialized = SpectatorHistogram.deserialize(bytes);
     Assertions.assertEquals(63L, deserialized.get(6));

@@ -126,7 +126,7 @@ public class RetryableS3OutputStreamTest
     }
     // each chunk is 10 bytes, so there should be 10 chunks.
     Assertions.assertEquals(10, s3.partRequests.size());
-    s3.assertCompleted(chunkSize, Integer.BYTES * 25);
+    s3.assertCompleted(chunkSize, Integer.BYTES * 25L);
   }
 
   @Test
@@ -144,7 +144,7 @@ public class RetryableS3OutputStreamTest
     }
     // each chunk 10 bytes, so there should be 2 chunks.
     Assertions.assertEquals(2, s3.partRequests.size());
-    s3.assertCompleted(chunkSize, Integer.BYTES * 3);
+    s3.assertCompleted(chunkSize, Integer.BYTES * 3L);
   }
 
   @Test
@@ -195,7 +195,7 @@ public class RetryableS3OutputStreamTest
     }
     // each chunk is 10 bytes, so there should be 10 chunks.
     Assertions.assertEquals(10, s3.partRequests.size());
-    s3.assertCompleted(chunkSize, Integer.BYTES * 25);
+    s3.assertCompleted(chunkSize, Integer.BYTES * 25L);
   }
 
   /**
