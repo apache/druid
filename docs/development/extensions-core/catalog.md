@@ -196,11 +196,33 @@ dropping a projection does not rewrite data.
 #### The base table
 
 The reserved projection name `__base` describes the table's own physical layout rather than an additional
-pre-aggregation. Defining it makes the table a 'clustered' table: rows of segments are stored grouped by the clustering
-columns.
+pre-aggregation. Its body lists the columns in the order segments store them, so it must name every declared column.
+The shape of the body chooses the layout: a bare select declares a plain table, `CLUSTERED BY` declares a clustered
+table, and `GROUP BY` declares a [rollup](../../ingestion/rollup.md) table. Whatever the layout, a `__base` body cannot
+filter as the base table represents every ingested row.
 
-Its body lists the columns in the order segments store them, so it must name every declared column, in declared
-order. An item written as `<expr> AS <name>` makes that column computed at ingest time, from the columns it reads:
+A plain table stores rows as they arrive, sorted in declared columns order. The only expression it accepts is
+`TIME_FLOOR(__time, <period>)` selected as `__time`, which declares the table's query granularity: the granularity
+ingested timestamps are floored to. A query granularity must be a period granularity in the UTC time zone, matching
+the UTC-stored `__time` column:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  user_id VARCHAR,
+  __time TIMESTAMP,
+  pages_visited BIGINT,
+  PROJECTION __base AS (
+    SELECT user_id, TIME_FLOOR(__time, 'PT1H') AS __time, pages_visited
+  )
+)
+PARTITIONED BY DAY
+```
+
+This is the default base table spec, so may be omitted unless flooring `__time` values is desired.
+
+A clustered table stores the rows of each segment internally partitioned by the clustering columns, which must be the
+leading columns of the table. An item written as `<expr> AS <name>` makes that column computed at ingest time, from the
+columns it reads:
 
 ```sql
 CREATE TABLE "druid"."events" SEALED (
@@ -217,15 +239,37 @@ CREATE TABLE "druid"."events" SEALED (
 PARTITIONED BY DAY
 ```
 
-The clustering columns must be the leading columns of the table, because the declared order is the physical order.
-`SEALED` is optional: a column the query produces but the table does not declare is stored after the declared
-layout, in the order it arrives. Declare `SEALED` to reject such columns instead.
-
 Computed columns, like `bucket` in the example above, are computed based on inputs provided by the `INSERT` or
-`REPLACE`. In terms of the example, the `INSERT` or `REPLACE` command should provide `user_id`, not `bucket`.
+`REPLACE`. In terms of the example, the `INSERT` or `REPLACE` command should provide `user_id`, not `bucket`. Only a
+clustered table materializes computed columns.
 
-Unlike an aggregate projection, a `__base` body cannot filter or group: the base table stores every ingested row.
-It is the only projection that chooses a clustering.
+A rollup table aggregates rows with identical grouping values into a single row at ingest time, expressed as a
+`GROUP BY` query. Grouping columns must reference declared columns in order (or the `TIME_FLOOR` of `__time`, declaring
+the query granularity rows are floored to before grouping), and each aggregate fills the declared metric column it is
+named for, reading the column it fills. In the example below, ingestion supplies `total` values and the table sums them:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  user_id VARCHAR,
+  __time TIMESTAMP,
+  total BIGINT,
+  PROJECTION __base AS (
+    SELECT user_id, TIME_FLOOR(__time, 'PT1H') AS __time, SUM(total) AS total
+    GROUP BY 1, 2
+  )
+)
+PARTITIONED BY DAY
+```
+
+The metric columns must be declared after the grouping columns, because the declared order is the physical order. A
+rollup body accepts the same
+[aggregation functions that are supported for rollup at ingestion time](../../multi-stage-query/concepts.md#rollup)
+and, like an aggregate projection, cannot compute expressions over aggregates. A body that groups without any
+aggregates collapses duplicate rows. A rollup table cannot also declare `CLUSTERED BY`.
+
+For every layout, `SEALED` is optional: a column the ingestion query produces but the table does not declare is
+stored after the declared layout, in the order it arrives (for a rollup table, as an additional grouping column).
+Declare `SEALED` to reject such columns instead.
 
 `ALTER TABLE ... ADD PROJECTION __base AS ( ... )` gives an existing table a layout, and
 `ALTER TABLE ... DROP PROJECTION __base` removes it. Both affect future segments only.

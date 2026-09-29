@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.indexing;
 
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.RollupTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TableProjectionSpec;
 import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
@@ -29,6 +30,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -159,6 +161,56 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
         + "\nbanana,2,2025-06-01T01:00:00.000Z"
         + "\ncherry,3,2025-06-01T05:00:00.000Z",
         cluster.runSql("SELECT item, \"value\", __time FROM %s", dataSource)
+    );
+  }
+
+  /**
+   * Batch ingestion driven by a {@link RollupTableProjectionSpec} base table: the declared columns are the grouping
+   * columns (item before __time — declared order is the sort order), the query-granularity carrier floors
+   * {@code __time} to the hour, and rows with identical grouping values after flooring are aggregated into one by the
+   * spec's aggregators.
+   */
+  @Test
+  @Timeout(60)
+  public void test_runIndexTask_withRollupBaseTableSpec()
+  {
+    final String taskId = EmbeddedClusterApis.newTaskId(dataSource);
+    final RollupTableProjectionSpec baseTable = RollupTableProjectionSpec
+        .builder()
+        .groupingColumns(
+            new StringDimensionSchema("item"),
+            new LongDimensionSchema("__time")
+        )
+        .aggregators(new LongSumAggregatorFactory("total", "value"))
+        .build()
+        .withQueryGranularity(Granularities.HOUR);
+    final IndexTask task = TaskBuilder
+        .ofTypeIndex()
+        .isoTimestampColumn("time")
+        .csvInputFormatWithColumns("time", "item", "value")
+        .inlineInputSourceWithData(
+            "2025-06-01T05:10:00.000Z,apple,1"
+            + "\n2025-06-01T05:20:00.000Z,apple,2"
+            + "\n2025-06-01T05:30:00.000Z,banana,4"
+            + "\n2025-06-01T09:10:00.000Z,apple,8"
+        )
+        .dataSchema(
+            schema -> schema
+                .withBaseTable(baseTable)
+                .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
+        )
+        .dataSource(dataSource)
+        .withId(taskId);
+
+    cluster.callApi().runTask(task, overlord);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    // The two 5-o'clock apple rows collapsed into one with total summed; scan order is the declared grouping order.
+    Assertions.assertEquals(
+        "apple,2025-06-01T05:00:00.000Z,3"
+        + "\napple,2025-06-01T09:00:00.000Z,8"
+        + "\nbanana,2025-06-01T05:00:00.000Z,4",
+        cluster.runSql("SELECT item, __time, total FROM %s", dataSource)
     );
   }
 

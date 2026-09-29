@@ -37,39 +37,34 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
- * {@link BaseTableProjectionSpec} for a plain (non-clustered, non-rollup) table: the operator declares a single
- * ordered {@link #columns} list, the full set of columns in segment order, and rows are stored and sorted by every
- * column in declared order. The time position is an explicit positional entry in {@link #columns} named
- * {@code __time}. A plain base table is never rollup and has no metric columns.
+ * {@link BaseTableProjectionSpec} for a rollup table: the plain {@link TableProjectionSpec} shape plus
+ * {@link #aggregators}. The declared {@link #groupingColumns} are the grouping columns, rows with identical grouping values
+ * (after query-granularity flooring of {@code __time}) are aggregated into one at ingest time, with each aggregator
+ * producing a metric column after the grouping columns. As in the plain layout, the time position is an explicit
+ * positional entry in {@link #groupingColumns} named {@code __time}, declared column order is the segment storage and sort
+ * order, and query granularity rides as the {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} carrier virtual
+ * column (the only virtual column accepted).
  * <p>
- * Operator-facing counterpart of the segment metadata-side {@link org.apache.druid.segment.projections.TableProjectionSchema}.
+ * Operator-facing counterpart of the segment metadata-side
+ * {@link org.apache.druid.segment.projections.RollupTableProjectionSchema}.
  * <p>
- * {@link #getDimensionsSpec()} returns the unified spec built from {@link #columns} in declared order with
- * {@code forceSegmentSortByTime=false}; {@link #getOrdering()} is computed as every column of {@link #columns}
- * ascending, in list order.
- * <p>
- * Query granularity, when wanted, is a virtual column in {@link #getVirtualColumns()} named
- * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME}. It is a granularity <em>carrier</em>: it supplies the
- * granularity that floors the stored {@code __time} column, and is NOT itself a stored column, so it never appears in
- * {@link #columns} (declare {@code __time} there as the time column). Absent that virtual column the query granularity
- * is {@code NONE}.
- * <p>
- * The granularity carrier is the only virtual column a plain base table accepts. The standard segment-generation path
- * this spec lowers into does not evaluate spec virtual columns (only the clustered write path materializes them), so a
- * materialized virtual column here would be silently dropped; computed columns belong in a
- * {@code transformSpec} instead. This can be relaxed if the plain write path learns to materialize virtual columns.
+ * Aggregators may be empty: a rollup table without metrics collapses rows with identical grouping values, mirroring
+ * the legacy {@code rollup=true} granularity spec without a {@code metricsSpec}.
  */
-@JsonTypeName(TableProjectionSpec.TYPE_NAME)
-public final class TableProjectionSpec implements BaseTableProjectionSpec
+@JsonTypeName(RollupTableProjectionSpec.TYPE_NAME)
+public final class RollupTableProjectionSpec implements BaseTableProjectionSpec
 {
-  public static final String TYPE_NAME = "table";
+  public static final String TYPE_NAME = "rollupTable";
 
   private final VirtualColumns virtualColumns;
-  private final List<DimensionSchema> columns;
+  private final List<DimensionSchema> groupingColumns;
+  private final AggregatorFactory[] aggregators;
   private final DimensionsSpec dimensionsSpec;
   private final List<OrderBy> ordering;
 
@@ -79,20 +74,23 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
   }
 
   @JsonCreator
-  public TableProjectionSpec(
+  public RollupTableProjectionSpec(
       @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
-      @JsonProperty("columns") List<DimensionSchema> columns
+      @JsonProperty("groupingColumns") List<DimensionSchema> groupingColumns,
+      @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
   )
   {
-    BaseTableProjectionSpec.validateDeclaredColumns(columns, "columns", TYPE_NAME);
+    BaseTableProjectionSpec.validateDeclaredColumns(groupingColumns, "groupingColumns", TYPE_NAME);
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     BaseTableProjectionSpec.validateGranularityOnlyVirtualColumns(this.virtualColumns, TYPE_NAME);
-    this.columns = Collections.unmodifiableList(new ArrayList<>(columns));
+    this.groupingColumns = Collections.unmodifiableList(new ArrayList<>(groupingColumns));
+    this.aggregators = aggregators == null ? new AggregatorFactory[0] : aggregators;
+    validateAggregators(this.groupingColumns, this.aggregators);
     this.dimensionsSpec = DimensionsSpec.builder()
-                                        .setDimensions(this.columns)
+                                        .setDimensions(this.groupingColumns)
                                         .setForceSegmentSortByTime(false)
                                         .build();
-    this.ordering = BaseTableProjectionSpec.declaredOrderAscending(this.columns);
+    this.ordering = BaseTableProjectionSpec.declaredOrderAscending(this.groupingColumns);
   }
 
   @Override
@@ -104,19 +102,25 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
   }
 
   /**
-   * The full, ordered list of columns in segment order, with the explicit {@code __time} (or query-granularity)
-   * marker at its declared position.
+   * The full, ordered list of grouping columns in segment order, with the explicit {@code __time} (or
+   * query-granularity) marker at its declared position.
    */
-  @JsonProperty("columns")
-  public List<DimensionSchema> getColumns()
+  @JsonProperty("groupingColumns")
+  public List<DimensionSchema> getGroupingColumns()
   {
-    return columns;
+    return groupingColumns;
   }
 
+  /**
+   * The aggregators computed over the rows collapsed into each grouping tuple, each producing a metric column stored
+   * after the grouping columns.
+   */
   @Override
+  @JsonProperty("aggregators")
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public AggregatorFactory[] getMetrics()
   {
-    return new AggregatorFactory[0];
+    return aggregators;
   }
 
   @Override
@@ -133,6 +137,12 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
     return dimensionsSpec;
   }
 
+  @Override
+  public boolean isRollup()
+  {
+    return true;
+  }
+
   /**
    * Returns a copy of this spec with a new {@code queryGranularity}, expressed as a
    * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} virtual column added to {@link #getVirtualColumns()}. A
@@ -146,7 +156,7 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
    * with the query-derived granularity, which must not double-add.)
    */
   @Override
-  public TableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity)
+  public RollupTableProjectionSpec withQueryGranularity(@Nullable Granularity queryGranularity)
   {
     if (Granularities.ALL.equals(queryGranularity)) {
       throw InvalidInput.exception(
@@ -164,44 +174,44 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
         Granularities.toVirtualColumn(queryGranularity, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
     final List<VirtualColumn> merged = new ArrayList<>(Arrays.asList(virtualColumns.getVirtualColumns()));
     merged.add(granularityVirtualColumn);
-    return new TableProjectionSpec(VirtualColumns.create(merged), columns);
+    return new RollupTableProjectionSpec(VirtualColumns.create(merged), groupingColumns, aggregators);
   }
 
   /**
-   * Compares table-spec state for compaction up-to-date checks: query granularity is compared separately (via its
-   * carrier virtual column), so it is stripped from both sides; everything else (the columns, and any other virtual
-   * columns) must match. A spec of a different type is never equivalent.
+   * Compares rollup-spec state for compaction up-to-date checks: query granularity is compared separately (via its
+   * carrier virtual column), so it is stripped from both sides; everything else (the grouping columns, the
+   * aggregators, and any other virtual columns) must match. A spec of a different type is never equivalent.
    */
   @Override
   public boolean hasEqualCompactionState(BaseTableProjectionSpec other)
   {
-    if (!(other instanceof TableProjectionSpec)) {
+    if (!(other instanceof RollupTableProjectionSpec)) {
       return false;
     }
-    return withoutQueryGranularity().equals(((TableProjectionSpec) other).withoutQueryGranularity());
+    return withoutQueryGranularity().equals(((RollupTableProjectionSpec) other).withoutQueryGranularity());
   }
 
   @Override
-  public TableProjectionSpec withAdditionalColumns(@Nullable List<DimensionSchema> additionalColumns)
+  public RollupTableProjectionSpec withAdditionalColumns(@Nullable List<DimensionSchema> additionalColumns)
   {
     if (additionalColumns == null || additionalColumns.isEmpty()) {
       return this;
     }
-    final List<DimensionSchema> revised = new ArrayList<>(columns.size() + additionalColumns.size());
-    revised.addAll(columns);
+    final List<DimensionSchema> revised = new ArrayList<>(groupingColumns.size() + additionalColumns.size());
+    revised.addAll(groupingColumns);
     for (DimensionSchema additionalColumn : additionalColumns) {
       if (ColumnHolder.TIME_COLUMN_NAME.equals(additionalColumn.getName())) {
         throw InvalidInput.exception(
-            "Cannot append column [%s] to a [%s] base table; it must be declared at its position in the column list",
+            "Cannot append column [%s] to a [%s] base table; it must be declared at its position in the grouping column list",
             ColumnHolder.TIME_COLUMN_NAME,
             TYPE_NAME
         );
       }
       revised.add(additionalColumn);
     }
-    // Duplicates of a declared column, and a column named for the query-granularity carrier, are rejected by the
-    // constructor's validation.
-    return new TableProjectionSpec(virtualColumns, revised);
+    // Duplicates of a declared column or aggregator, and a column named for the query-granularity carrier, are
+    // rejected by the constructor's validation.
+    return new RollupTableProjectionSpec(virtualColumns, revised, aggregators);
   }
 
   /**
@@ -209,7 +219,7 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
    * the inverse of {@link #withQueryGranularity(Granularity)}. If no such virtual column is present this returns
    * {@code this} unchanged. Used to compare schema independently of query granularity in {@link #hasEqualCompactionState}.
    */
-  private TableProjectionSpec withoutQueryGranularity()
+  private RollupTableProjectionSpec withoutQueryGranularity()
   {
     if (virtualColumns.getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME) == null) {
       return this;
@@ -220,7 +230,30 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
         remaining.add(vc);
       }
     }
-    return new TableProjectionSpec(VirtualColumns.create(remaining), columns);
+    return new RollupTableProjectionSpec(VirtualColumns.create(remaining), groupingColumns, aggregators);
+  }
+
+  /**
+   * Aggregators produce the metric columns, so their names share a namespace with the grouping columns: a collision
+   * means one column with two definitions.
+   */
+  private static void validateAggregators(List<DimensionSchema> groupingColumns, AggregatorFactory[] aggregators)
+  {
+    final Set<String> names = new HashSet<>();
+    for (DimensionSchema column : groupingColumns) {
+      names.add(column.getName());
+    }
+    for (AggregatorFactory aggregator : aggregators) {
+      if (aggregator == null) {
+        throw InvalidInput.exception("aggregators must not contain null entries");
+      }
+      if (!names.add(aggregator.getName())) {
+        throw InvalidInput.exception(
+            "aggregator [%s] duplicates the name of a column or another aggregator",
+            aggregator.getName()
+        );
+      }
+    }
   }
 
   @Override
@@ -232,35 +265,39 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    TableProjectionSpec that = (TableProjectionSpec) o;
+    RollupTableProjectionSpec that = (RollupTableProjectionSpec) o;
     return Objects.equals(virtualColumns, that.virtualColumns)
-           && Objects.equals(columns, that.columns);
+           && Objects.equals(groupingColumns, that.groupingColumns)
+           && Arrays.equals(aggregators, that.aggregators);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(virtualColumns, columns);
+    return Objects.hash(virtualColumns, groupingColumns, Arrays.hashCode(aggregators));
   }
 
   @Override
   public String toString()
   {
-    return "TableProjectionSpec{" +
+    return "RollupTableProjectionSpec{" +
            "virtualColumns=" + virtualColumns +
-           ", columns=" + columns +
+           ", groupingColumns=" + groupingColumns +
+           ", aggregators=" + Arrays.toString(aggregators) +
            '}';
   }
 
   /**
-   * Fluent builder for {@link TableProjectionSpec}, avoiding the constructor's positional nullable leading
-   * {@code virtualColumns} argument. {@link #columns} (the full ordered column list) is required.
+   * Fluent builder for {@link RollupTableProjectionSpec}, avoiding the constructor's positional nullable leading
+   * {@code virtualColumns} argument. {@link #groupingColumns} (the full ordered grouping column list) is required.
    */
   public static final class Builder
   {
     @Nullable
     private VirtualColumns virtualColumns;
-    private List<DimensionSchema> columns = Collections.emptyList();
+    private List<DimensionSchema> groupingColumns = Collections.emptyList();
+    @Nullable
+    private AggregatorFactory[] aggregators;
 
     public Builder virtualColumns(@Nullable VirtualColumns virtualColumns)
     {
@@ -269,22 +306,28 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
     }
 
     /**
-     * The full, ordered list of columns in segment order, including the explicit time marker.
+     * The full, ordered list of grouping columns in segment order, including the explicit time marker.
      */
-    public Builder columns(List<DimensionSchema> columns)
+    public Builder groupingColumns(List<DimensionSchema> groupingColumns)
     {
-      this.columns = columns;
+      this.groupingColumns = groupingColumns;
       return this;
     }
 
-    public Builder columns(DimensionSchema... columns)
+    public Builder groupingColumns(DimensionSchema... groupingColumns)
     {
-      return columns(Arrays.asList(columns));
+      return groupingColumns(Arrays.asList(groupingColumns));
     }
 
-    public TableProjectionSpec build()
+    public Builder aggregators(AggregatorFactory... aggregators)
     {
-      return new TableProjectionSpec(virtualColumns, columns);
+      this.aggregators = aggregators;
+      return this;
+    }
+
+    public RollupTableProjectionSpec build()
+    {
+      return new RollupTableProjectionSpec(virtualColumns, groupingColumns, aggregators);
     }
   }
 }
