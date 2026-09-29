@@ -154,7 +154,8 @@ public class ExpressionSelectors
     );
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
-    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
+    // Non-deterministic expressions must be evaluated for each row, so they cannot use input-value result caches.
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR) && !plan.getAnalysis().isNonDeterministic()) {
       final String column = plan.getSingleInputName();
       final ColumnType inputType = plan.getSingleInputType();
       if (inputType.is(ValueType.LONG)) {

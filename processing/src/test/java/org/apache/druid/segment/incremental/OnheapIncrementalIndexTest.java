@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -60,6 +61,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
 {
@@ -715,6 +717,68 @@ public class OnheapIncrementalIndexTest extends InitializedNullHandlingTest
       // Per-row expression results are 7, 7, 3, and 3, for a total of 20.
       // For example: Row 1: Aa = ["a1", "a2"], BB = "b", concat("Aa", "BB") = ["a1b", "a2b"], array_to_string = "a1b,a2b", length is 7
       Assertions.assertEquals(20L, actualSum);
+    }
+  }
+
+  @Test
+  public void testExpressionSelectorCacheReevaluatesNonDeterministicExpressionAcrossRollupKeys()
+  {
+    // MapBasedInputRow exposes its timestamp as __time. Use the same value for both rollup keys.
+    final long inputTimestamp = 0L;
+    try (
+        OnheapIncrementalIndex index = (OnheapIncrementalIndex) new OnheapIncrementalIndex.Builder()
+            .setIndexSchema(
+                new IncrementalIndexSchema.Builder()
+                    .withDimensionsSpec(new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("key"))))
+                    .withMetrics(
+                        new LongSumAggregatorFactory(
+                            "expressionResult",
+                            null,
+                            "now() - __time",
+                            ExprMacroTable.nil()
+                        )
+                    )
+                    .withRollup(true)
+                    .build()
+            )
+            .setMaxRowCount(3)
+            .build()
+    ) {
+      index.add(
+          new MapBasedInputRow(
+              inputTimestamp,
+              Collections.singletonList("key"),
+              ImmutableMap.of("key", "key-0")
+          )
+      );
+
+      // Since __time is 0, wait until a new now() evaluation must be greater than the first result.
+      final IncrementalIndexRow firstIndexRow = index.getFacts().keySet().iterator().next();
+      final long firstExpressionResult = index.getMetricLongValue(firstIndexRow.getRowIndex(), 0);
+      final long waitDeadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
+      while (System.currentTimeMillis() <= firstExpressionResult) {
+        Assertions.assertTrue(System.nanoTime() < waitDeadline, "Timed out waiting for the clock to advance");
+        Thread.onSpinWait();
+      }
+
+      index.add(
+          new MapBasedInputRow(
+              inputTimestamp,
+              Collections.singletonList("key"),
+              ImmutableMap.of("key", "key-1")
+          )
+      );
+
+      final List<Long> expressionResults = new ArrayList<>();
+      for (final IncrementalIndexRow row : index.getFacts().keySet()) {
+        expressionResults.add(index.getMetricLongValue(row.getRowIndex(), 0));
+      }
+
+      Assertions.assertEquals(2, expressionResults.size());
+      Assertions.assertTrue(
+          expressionResults.stream().anyMatch(expressionResult -> expressionResult > firstExpressionResult),
+          "The non-deterministic expression should be reevaluated for the second rollup key"
+      );
     }
   }
 
