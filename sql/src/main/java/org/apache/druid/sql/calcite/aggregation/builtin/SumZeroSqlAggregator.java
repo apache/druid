@@ -19,7 +19,7 @@
 
 package org.apache.druid.sql.calcite.aggregation.builtin;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
@@ -30,6 +30,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
 
+import javax.annotation.Nullable;
+
 public class SumZeroSqlAggregator extends SumSqlAggregator
 {
   @Override
@@ -39,11 +41,13 @@ public class SumZeroSqlAggregator extends SumSqlAggregator
   }
 
   @Override
+  @Nullable
   Aggregation getAggregation(
       final String name,
       final AggregateCall aggregateCall,
       final ExprMacroTable macroTable,
-      final String fieldName
+      final String fieldName,
+      final boolean filteredByElseZeroRewrite
   )
   {
     final ColumnType valueType = Calcites.getColumnTypeForRelDataType(aggregateCall.getType());
@@ -51,21 +55,23 @@ public class SumZeroSqlAggregator extends SumSqlAggregator
       return null;
     }
 
-    if (aggregateCall.filterArg >= 0) {
-      // SQL SUM0 semantics require 0 when the filter matches nothing, but the native
-      // FilteredAggregatorFactory chain outputs null for empty input. Wrap the sum in
-      // an expression post-aggregator that replaces null with 0. This keeps the
-      // D1 rewrite of DruidAggregateCaseToFilterRule semantically consistent with the
-      // original SUM(CASE WHEN ... THEN ... ELSE 0 END).
-      // Unfiltered SUM0 keeps the plain factory path to avoid widening this fix.
-      final String innerName = name + ":sum";
-      final AggregatorFactory innerFactory =
-          createSumAggregatorFactory(valueType, innerName, fieldName, macroTable);
+    if (filteredByElseZeroRewrite) {
+      // This SUM0 only exists because DruidAggregateCaseToFilterRule rewrote the D1 shape
+      // SUM(CASE WHEN COND THEN value ELSE 0 END) into SUM0(value) FILTER (WHERE COND), and the
+      // native filtered aggregator returns null when the filter matches no row, while the
+      // original CASE expression returned 0. Restore that by wrapping the filtered sum in an
+      // expression post-aggregator that replaces null with 0.
+      //
+      // The post-aggregator is created here, instead of leaving it to Aggregation.filter, on
+      // purpose: the Aggregation returned by this method carries no aggregator factory, so
+      // Aggregation.filter never pushes the filter down into a FilteredAggregatorFactory. The
+      // resulting post-aggregator-only Aggregation is what Windowing accepts for window
+      // aggregations, while the equivalent factory-based post-aggregator
+      // ([expressionPostAgg, filteredAgg]) is rejected by Windowing.fromCalciteStuff.
       return Aggregation.create(
-          ImmutableList.of(innerFactory),
           new ExpressionPostAggregator(
               name,
-              "nvl(\"" + innerName + "\", 0)",
+              "nvl(\"" + fieldName + "\", 0)",
               null,
               valueType,
               macroTable
@@ -73,6 +79,9 @@ public class SumZeroSqlAggregator extends SumSqlAggregator
       );
     }
 
+    // Plain SQL SUM0(x) and SUM0(x) FILTER (WHERE ...): keep the native nullable factory, which
+    // preserves the documented null-on-empty behavior for those calls. Only the D1 rewrite above
+    // is required to return 0.
     return Aggregation.create(createSumAggregatorFactory(valueType, name, fieldName, macroTable));
   }
 }
