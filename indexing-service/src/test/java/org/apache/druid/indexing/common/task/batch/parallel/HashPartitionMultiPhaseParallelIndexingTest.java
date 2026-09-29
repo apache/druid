@@ -40,11 +40,11 @@ import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -62,7 +62,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "lockGranularity={0}, maxNumConcurrentSubTasks={1}, intervalToIndex={2}, numShards={3}")
+@MethodSource("constructorFeeder")
 public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPhaseParallelIndexingTest
 {
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
@@ -80,9 +81,6 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
   private static final String INPUT_FILTER = "test_*";
 
-  @Parameterized.Parameters(
-      name = "lockGranularity={0}, maxNumConcurrentSubTasks={1}, intervalToIndex={2}, numShards={3}"
-  )
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
@@ -120,7 +118,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     this.numShards = numShards;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     inputDir = temporaryFolder.newFolder("data");
@@ -210,12 +208,12 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         expectedIntervalToNumSegmentsAfterReplace.put(ds.getInterval(), 1);
       }
     }
-    Assert.assertEquals(5, tombstones); // five tombstones
+    Assertions.assertEquals(5, tombstones); // five tombstones
     int expectedSegments = 12;
     if (numShards == null) {
       expectedSegments = 6;
     }
-    Assert.assertEquals(expectedSegments, publishedSegmentsAfterReplace.size() - tombstones); //  six segments
+    Assertions.assertEquals(expectedSegments, publishedSegmentsAfterReplace.size() - tombstones); //  six segments
     assertHashedPartition(publishedSegmentsAfterReplace, expectedIntervalToNumSegmentsAfterReplace);
   }
 
@@ -307,11 +305,11 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
       for (DataSegment hashedSegment : hashedSegments) {
         final HashBasedNumberedShardSpec hashShardSpec = (HashBasedNumberedShardSpec) hashedSegment.getShardSpec();
         for (DataSegment linearSegment : linearSegments) {
-          Assert.assertEquals(hashedSegment.getInterval(), linearSegment.getInterval());
-          Assert.assertEquals(hashedSegment.getVersion(), linearSegment.getVersion());
+          Assertions.assertEquals(hashedSegment.getInterval(), linearSegment.getInterval());
+          Assertions.assertEquals(hashedSegment.getVersion(), linearSegment.getVersion());
           final NumberedShardSpec numberedShardSpec = (NumberedShardSpec) linearSegment.getShardSpec();
-          Assert.assertEquals(hashShardSpec.getNumCorePartitions(), numberedShardSpec.getNumCorePartitions());
-          Assert.assertTrue(hashShardSpec.getPartitionNum() < numberedShardSpec.getPartitionNum());
+          Assertions.assertEquals(hashShardSpec.getNumCorePartitions(), numberedShardSpec.getNumCorePartitions());
+          Assertions.assertTrue(hashShardSpec.getPartitionNum() < numberedShardSpec.getPartitionNum());
         }
       }
     }
@@ -347,24 +345,24 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
     publishedSegments.forEach(
         segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
     );
-    Assert.assertEquals(new HashSet<>(inputIntervals), intervalToSegments.keySet());
+    Assertions.assertEquals(new HashSet<>(inputIntervals), intervalToSegments.keySet());
     final File tempSegmentDir = temporaryFolder.newFolder();
     for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
       Interval interval = entry.getKey();
       List<DataSegment> segmentsInInterval = entry.getValue();
-      Assert.assertEquals(expectedIntervalToNumSegments.get(interval).intValue(), segmentsInInterval.size());
+      Assertions.assertEquals(expectedIntervalToNumSegments.get(interval).intValue(), segmentsInInterval.size());
       for (DataSegment segment : segmentsInInterval) {
         HashBasedNumberedShardSpec shardSpec = null;
         if (segment.isTombstone()) {
-          Assert.assertSame(TombstoneShardSpec.class, segment.getShardSpec().getClass());
+          Assertions.assertSame(TombstoneShardSpec.class, segment.getShardSpec().getClass());
         } else {
-          Assert.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
+          Assertions.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
           shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-          Assert.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
+          Assertions.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
         }
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
         if (segment.isTombstone()) {
-          Assert.assertTrue(results.isEmpty());
+          Assertions.assertTrue(results.isEmpty());
         } else {
           final int hash = shardSpec.getPartitionFunction().hash(
               HashBasedNumberedShardSpec.serializeGroupKey(
@@ -374,7 +372,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
               shardSpec.getNumBuckets()
           );
           for (ScanResultValue value : results) {
-            Assert.assertEquals(
+            Assertions.assertEquals(
                 hash,
                 shardSpec.getPartitionFunction().hash(
                     HashBasedNumberedShardSpec.serializeGroupKey(

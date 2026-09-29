@@ -22,8 +22,8 @@ package org.apache.druid.msq.statistics;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class QuantilesSketchKeyCollectorSnapshotTest
 {
@@ -34,6 +34,6 @@ public class QuantilesSketchKeyCollectorSnapshotTest
   {
     QuantilesSketchKeyCollectorSnapshot snapshot = new QuantilesSketchKeyCollectorSnapshot("sketchString", 100);
     String jsonStr = jsonMapper.writeValueAsString(snapshot);
-    Assert.assertEquals(snapshot, jsonMapper.readValue(jsonStr, QuantilesSketchKeyCollectorSnapshot.class));
+    Assertions.assertEquals(snapshot, jsonMapper.readValue(jsonStr, QuantilesSketchKeyCollectorSnapshot.class));
   }
 }

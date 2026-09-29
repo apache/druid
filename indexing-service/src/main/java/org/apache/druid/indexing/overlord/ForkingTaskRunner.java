@@ -53,6 +53,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -87,6 +88,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -413,10 +415,10 @@ public class ForkingTaskRunner
                         processHolder.registerWithCloser(closer);
                       }
 
-                      TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                      TaskRunnerUtils.notifyLocationChanged(listeners, task, taskLocation);
                       TaskRunnerUtils.notifyStatusChanged(
                           listeners,
-                          task.getId(),
+                          task,
                           TaskStatus.running(task.getId())
                       );
 
@@ -444,7 +446,7 @@ public class ForkingTaskRunner
                       } else {
                         failedTaskCount.incrementAndGet();
                       }
-                      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+                      TaskRunnerUtils.notifyStatusChanged(listeners, task, status);
                       return status;
                     }
                     catch (Throwable t) {
@@ -695,6 +697,20 @@ public class ForkingTaskRunner
         return RunnerTaskState.NONE;
       }
     }
+  }
+
+  @Override
+  protected void notifyLocationChanged(
+      ForkingTaskRunnerWorkItem item,
+      TaskRunnerListener listener,
+      Executor executor
+  )
+  {
+    TaskRunnerUtils.notifyLocationChanged(
+        List.of(Pair.of(listener, executor)),
+        item.getTask(),
+        item.getLocation()
+    );
   }
 
   @Override

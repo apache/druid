@@ -107,14 +107,14 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -448,8 +448,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   }
 
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final List<InputRow> rows;
 
@@ -501,7 +501,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     CursorStuff cursorStuff = adaptersForClass.get(testName);
     if (cursorStuff == null) {
       Pair<CursorFactory, Closeable> pair = finisher.apply(
-          indexBuilder.tmpDir(temporaryFolder).rows(rows)
+          indexBuilder.tmpDir(temporaryFolder.getRoot()).rows(rows)
       );
       cursorStuff = new CursorStuff(
           pair.lhs,

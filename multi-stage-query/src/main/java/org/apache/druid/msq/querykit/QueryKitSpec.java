@@ -20,27 +20,32 @@
 package org.apache.druid.msq.querykit;
 
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 
 /**
- * Container for {@link QueryKit} plus the queryId that we want to build.
+ * Container for {@link QueryKit}, {@link DataSourcePlanners}, and the queryId that we want to build.
  */
 public class QueryKitSpec
 {
   private final QueryKit<Query<?>> queryKit;
   private final String queryId;
+  private final DataSourcePlanners dataSourcePlanners;
 
   /**
-   * @param queryKit              kit that is used to translate native subqueries; i.e.,
-   *                              {@link org.apache.druid.query.QueryDataSource}. Typically a {@link MultiQueryKit}.
-   * @param queryId               queryId of the resulting {@link QueryDefinition}
+   * @param queryKit           kit that is used to translate native subqueries; i.e.,
+   *                           {@link org.apache.druid.query.QueryDataSource}. Typically a {@link MultiQueryKit}.
+   * @param dataSourcePlanners planners for datasource types that {@link DataSourcePlan} does not handle itself
+   * @param queryId            queryId of the resulting {@link QueryDefinition}
    */
   public QueryKitSpec(
       QueryKit<Query<?>> queryKit,
+      DataSourcePlanners dataSourcePlanners,
       String queryId
   )
   {
     this.queryId = queryId;
+    this.dataSourcePlanners = dataSourcePlanners;
     this.queryKit = queryKit;
   }
 
@@ -50,6 +55,14 @@ public class QueryKitSpec
   public QueryKit<Query<?>> getQueryKit()
   {
     return queryKit;
+  }
+
+  /**
+   * Registered {@link DataSourcePlanner}, keyed on the exact {@link DataSource} class each one plans.
+   */
+  public DataSourcePlanners getDataSourcePlanners()
+  {
+    return dataSourcePlanners;
   }
 
   /**

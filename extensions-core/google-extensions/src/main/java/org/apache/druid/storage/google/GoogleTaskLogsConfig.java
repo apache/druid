@@ -20,8 +20,7 @@
 package org.apache.druid.storage.google;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 public class GoogleTaskLogsConfig
 {

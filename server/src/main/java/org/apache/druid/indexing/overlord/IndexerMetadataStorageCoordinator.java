@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord;
 
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -35,7 +36,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;

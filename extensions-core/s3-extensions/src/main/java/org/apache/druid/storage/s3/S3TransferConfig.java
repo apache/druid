@@ -20,10 +20,9 @@
 package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.storage.s3.output.S3OutputConfig;
-
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 
 /**
  */

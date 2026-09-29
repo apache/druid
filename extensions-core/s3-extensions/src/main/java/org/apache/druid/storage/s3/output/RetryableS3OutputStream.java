@@ -22,6 +22,7 @@ package org.apache.druid.storage.s3.output;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -295,9 +296,16 @@ public class RetryableS3OutputStream extends OutputStream
     }
   }
 
+  /**
+   * Waits for every queued part, then either finalizes the multipart upload or aborts it. An abort discards the parts
+   * uploaded so far and leaves no object at {@link #s3Key} and finally throws a {@link DruidException} to ensure
+   * callers know an error occurred and that the object is not available for reading. The failure is an operator
+   * concern rather than a Druid defect: it means S3 rejected the parts.
+   */
   private void completeMultipartUpload()
   {
     final List<CompletedPart> pushResults = new ArrayList<>();
+    Exception partUploadFailure = null;
     for (Future<UploadPartResponse> future : futures) {
       if (error) {
         future.cancel(true);
@@ -311,6 +319,9 @@ public class RetryableS3OutputStream extends OutputStream
       }
       catch (Exception e) {
         error = true;
+        if (partUploadFailure == null) {
+          partUploadFailure = e;
+        }
         LOG.error(e, "Error in uploading part for upload ID [%s]", uploadId);
       }
     }
@@ -349,6 +360,20 @@ public class RetryableS3OutputStream extends OutputStream
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+
+    // If an error occurred during the upload of any part, we aborted the whole upload and there is nothing to read
+    // downstream. We must throw here to indicate that the object was not written and avoid callers assuming that the
+    // object is available for reading.
+    if (error) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(
+                              partUploadFailure,
+                              "Aborted multipart upload[%s] for s3Key[%s]; no object was written",
+                              uploadId,
+                              s3Key
+                          );
     }
   }
 

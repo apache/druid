@@ -34,6 +34,7 @@ import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -45,7 +46,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -65,8 +66,10 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   @BeforeEach
   public void setUp()
   {
+    final AuthenticationResult authenticationResult = CalciteTests.SUPER_USER_AUTH_RESULT;
+
     qf = queryFramework();
-    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchemaProvider(
         CalciteTests.INJECTOR,
         qf.conglomerate(),
         qf.walker(),
@@ -75,19 +78,20 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
         new NoopDruidSchemaManager(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CatalogResolver.NULL_RESOLVER
-    );
+    ).createRootSchema(authenticationResult);
 
     informationSchema = new InformationSchema(
         rootSchema,
+        qf.operatorTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        qf.operatorTable()
+        authenticationResult
     );
   }
 
   @Test
   public void testGetTableNamesMap()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("SCHEMATA", "TABLES", "COLUMNS", "ROUTINES"),
         informationSchema.getTableNames()
     );
@@ -102,19 +106,21 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertTrue("There should at least be 1 built-in function that gets statically loaded by default",
-                      rows.size() > 0);
+    Assertions.assertTrue(
+        rows.size() > 0,
+        "There should at least be 1 built-in function that gets statically loaded by default"
+    );
     RelDataType rowType = routinesTable.getRowType(new JavaTypeFactoryImpl());
-    Assert.assertEquals(6, rowType.getFieldCount());
+    Assertions.assertEquals(6, rowType.getFieldCount());
 
     for (Object[] row : rows) {
-      Assert.assertEquals(rowType.getFieldCount(), row.length);
-      Assert.assertEquals("druid", row[0]);
-      Assert.assertEquals("INFORMATION_SCHEMA", row[1]);
-      Assert.assertNotNull(row[2]);
-      Assert.assertNotNull(row[3]);
+      Assertions.assertEquals(rowType.getFieldCount(), row.length);
+      Assertions.assertEquals("druid", row[0]);
+      Assertions.assertEquals("INFORMATION_SCHEMA", row[1]);
+      Assertions.assertNotNull(row[2]);
+      Assertions.assertNotNull(row[3]);
       String isAggregator = row[4].toString();
-      Assert.assertTrue(isAggregator.contains("YES") || isAggregator.contains("NO"));
+      Assertions.assertTrue(isAggregator.contains("YES") || isAggregator.contains("NO"));
       // nothing to validate for signatures as it may be not be present if operandTypeChecker is not defined.
     }
   }
@@ -135,14 +141,17 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertNotNull(rows);
-    Assert.assertEquals("There should be exactly 2 rows; any non-function syntax operator should get filtered out",
-                        2, rows.size());
+    Assertions.assertNotNull(rows);
+    Assertions.assertEquals(
+        2,
+        rows.size(),
+        "There should be exactly 2 rows; any non-function syntax operator should get filtered out"
+    );
     Object[] expectedRow1 = {"druid", "INFORMATION_SCHEMA", "FOO", "FUNCTION", "NO", "'FOO([<ANY>])'"};
-    Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
+    Assertions.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
 
     Object[] expectedRow2 = {"druid", "INFORMATION_SCHEMA", "BAR", "FUNCTION", "NO", "'BAR(<INTEGER>, <INTEGER>)'"};
-    Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow2)));
+    Assertions.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow2)));
   }
 
   @Test
@@ -159,8 +168,8 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertNotNull(rows);
-    Assert.assertEquals(0, rows.size());
+    Assertions.assertNotNull(rows);
+    Assertions.assertEquals(0, rows.size());
   }
 
   private static Set<SqlOperatorConversion> customOperatorsToOperatorConversions()
@@ -251,7 +260,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
       @Override
       public Object get(String authorizerName)
       {
-        return CalciteTests.SUPER_USER_AUTH_RESULT;
+        return null;
       }
     };
   }

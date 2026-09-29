@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.stats;
 
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -38,18 +38,18 @@ public class DropwizardRowIngestionMetersTest
     meters.incrementUnparseable();
     meters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
 
-    Assert.assertEquals(1, meters.getProcessed());
-    Assert.assertEquals(100, meters.getProcessedBytes());
-    Assert.assertEquals(1, meters.getProcessedWithError());
-    Assert.assertEquals(1, meters.getUnparseable());
-    Assert.assertEquals(1, meters.getThrownAway());
+    Assertions.assertEquals(1, meters.getProcessed());
+    Assertions.assertEquals(100, meters.getProcessedBytes());
+    Assertions.assertEquals(1, meters.getProcessedWithError());
+    Assertions.assertEquals(1, meters.getUnparseable());
+    Assertions.assertEquals(1, meters.getThrownAway());
 
     RowIngestionMetersTotals totals = meters.getTotals();
-    Assert.assertEquals(1, totals.getProcessed());
-    Assert.assertEquals(100, totals.getProcessedBytes());
-    Assert.assertEquals(1, totals.getProcessedWithError());
-    Assert.assertEquals(1, totals.getUnparseable());
-    Assert.assertEquals(1, totals.getThrownAway());
+    Assertions.assertEquals(1, totals.getProcessed());
+    Assertions.assertEquals(100, totals.getProcessedBytes());
+    Assertions.assertEquals(1, totals.getProcessedWithError());
+    Assertions.assertEquals(1, totals.getUnparseable());
+    Assertions.assertEquals(1, totals.getThrownAway());
   }
 
   @Test
@@ -66,14 +66,14 @@ public class DropwizardRowIngestionMetersTest
     meters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
 
     // Total thrownAway should be sum of all reasons
-    Assert.assertEquals(7, meters.getThrownAway());
+    Assertions.assertEquals(7, meters.getThrownAway());
 
     // Check per-reason counts
     Map<String, Long> byReason = meters.getThrownAwayByReason();
-    Assert.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
-    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
-    Assert.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
-    Assert.assertEquals(Long.valueOf(3), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
+    Assertions.assertEquals(Long.valueOf(2), byReason.get(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason()));
+    Assertions.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.BEFORE_MIN_MESSAGE_TIME.getReason()));
+    Assertions.assertEquals(Long.valueOf(1), byReason.get(InputRowFilterResult.AFTER_MAX_MESSAGE_TIME.getReason()));
+    Assertions.assertEquals(Long.valueOf(3), byReason.get(InputRowFilterResult.CUSTOM_FILTER.getReason()));
   }
 
   @Test
@@ -83,7 +83,7 @@ public class DropwizardRowIngestionMetersTest
 
     // With no increments, all reasons should be present with 0 counts
     Map<String, Long> byReason = meters.getThrownAwayByReason();
-    Assert.assertTrue(byReason.isEmpty());
+    Assertions.assertTrue(byReason.isEmpty());
   }
 
   @Test
@@ -95,10 +95,9 @@ public class DropwizardRowIngestionMetersTest
     meters.incrementThrownAway(InputRowFilterResult.CUSTOM_FILTER);
 
     Map<String, Object> movingAverages = meters.getMovingAverages();
-    Assert.assertNotNull(movingAverages);
-    Assert.assertTrue(movingAverages.containsKey(DropwizardRowIngestionMeters.ONE_MINUTE_NAME));
-    Assert.assertTrue(movingAverages.containsKey(DropwizardRowIngestionMeters.FIVE_MINUTE_NAME));
-    Assert.assertTrue(movingAverages.containsKey(DropwizardRowIngestionMeters.FIFTEEN_MINUTE_NAME));
+    Assertions.assertNotNull(movingAverages);
+    Assertions.assertTrue(movingAverages.containsKey(DropwizardRowIngestionMeters.ONE_MINUTE_NAME));
+    Assertions.assertTrue(movingAverages.containsKey(DropwizardRowIngestionMeters.FIVE_MINUTE_NAME));
+    Assertions.assertTrue(movingAverages.containsKey(DropwizardRowIngestionMeters.FIFTEEN_MINUTE_NAME));
   }
 }
-

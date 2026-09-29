@@ -20,20 +20,19 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.Sets;
-import junitparams.converters.Nullable;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.constant.LongConstantAggregator;
 import org.apache.druid.query.aggregation.constant.LongConstantBufferAggregator;
 import org.apache.druid.query.aggregation.constant.LongConstantVectorAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import javax.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -53,7 +52,7 @@ public class GroupingAggregatorFactoryTest
   {
     private ColumnSelectorFactory metricFactory;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
       metricFactory = EasyMock.mock(ColumnSelectorFactory.class);
@@ -64,8 +63,8 @@ public class GroupingAggregatorFactoryTest
     {
       GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
       Aggregator aggregator = factory.factorize(metricFactory);
-      Assert.assertEquals(LongConstantAggregator.class, aggregator.getClass());
-      Assert.assertEquals(1, aggregator.getLong());
+      Assertions.assertEquals(LongConstantAggregator.class, aggregator.getClass());
+      Assertions.assertEquals(1, aggregator.getLong());
     }
 
     @Test
@@ -73,18 +72,18 @@ public class GroupingAggregatorFactoryTest
     {
       GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
       BufferAggregator aggregator = factory.factorizeBuffered(metricFactory);
-      Assert.assertEquals(LongConstantBufferAggregator.class, aggregator.getClass());
-      Assert.assertEquals(1, aggregator.getLong(null, 0));
+      Assertions.assertEquals(LongConstantBufferAggregator.class, aggregator.getClass());
+      Assertions.assertEquals(1, aggregator.getLong(null, 0));
     }
 
     @Test
     public void testNewVectorAggregator()
     {
       GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
-      Assert.assertTrue(factory.canVectorize(metricFactory));
+      Assertions.assertTrue(factory.canVectorize(metricFactory));
       VectorAggregator aggregator = factory.factorizeVector(null);
-      Assert.assertEquals(LongConstantVectorAggregator.class, aggregator.getClass());
-      Assert.assertEquals(1L, aggregator.get(null, 0));
+      Assertions.assertEquals(LongConstantVectorAggregator.class, aggregator.getClass());
+      Assertions.assertEquals(1L, aggregator.get(null, 0));
     }
 
     @Test
@@ -92,56 +91,67 @@ public class GroupingAggregatorFactoryTest
     {
       GroupingAggregatorFactory factory = makeFactory(new String[]{"a", "b"}, new String[]{"a"});
       Aggregator aggregator = factory.factorize(metricFactory);
-      Assert.assertEquals(1, aggregator.getLong());
+      Assertions.assertEquals(1, aggregator.getLong());
       factory = factory.withKeyDimensions(Sets.newHashSet("b"));
       aggregator = factory.factorize(metricFactory);
-      Assert.assertEquals(2, aggregator.getLong());
+      Assertions.assertEquals(2, aggregator.getLong());
     }
   }
 
   public static class GroupingDimensionsTest
   {
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
-
     @Test
     public void testFactory_nullGroupingDimensions()
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("Must have a non-empty grouping dimensions");
-      GroupingAggregatorFactory factory = new GroupingAggregatorFactory("name", null, Sets.newHashSet("b"));
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> new GroupingAggregatorFactory("name", null, Sets.newHashSet("b"))
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Must have a non-empty grouping dimensions"));
     }
 
     @Test
     public void testFactory_emptyGroupingDimensions()
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("Must have a non-empty grouping dimensions");
-      makeFactory(new String[0], null);
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> makeFactory(new String[0], null)
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Must have a non-empty grouping dimensions"));
     }
 
     @Test
     public void testFactory_highNumberOfGroupingDimensions()
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage(StringUtils.format(
-          "Number of dimensions %d is more than supported %d",
-          Long.SIZE,
-          Long.SIZE - 1
-      ));
-      makeFactory(new String[Long.SIZE], null);
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> makeFactory(new String[Long.SIZE], null)
+      );
+      Assertions.assertTrue(
+          exception.getMessage().contains(StringUtils.format(
+              "Number of dimensions %d is more than supported %d",
+              Long.SIZE,
+              Long.SIZE - 1
+          ))
+      );
     }
 
     @Test
     public void testWithDuplicateGroupings()
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("Encountered same dimension more than once in groupings");
-      makeFactory(new String[]{"a", "a"}, null);
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> makeFactory(new String[]{"a", "a"}, null)
+      );
+      Assertions.assertTrue(
+          exception.getMessage().contains("Encountered same dimension more than once in groupings")
+      );
     }
   }
 
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+
+  @MethodSource("arguments")
   public static class ValueTests
   {
     private final GroupingAggregatorFactory factory;
@@ -153,7 +163,6 @@ public class GroupingAggregatorFactoryTest
       this.value = value;
     }
 
-    @Parameterized.Parameters
     public static Collection arguments()
     {
       String[] maxGroupingList = new String[Long.SIZE - 1];
@@ -175,7 +184,7 @@ public class GroupingAggregatorFactoryTest
     @Test
     public void testValue()
     {
-      Assert.assertEquals(value, factory.factorize(null).getLong());
+      Assertions.assertEquals(value, factory.factorize(null).getLong());
     }
   }
 }

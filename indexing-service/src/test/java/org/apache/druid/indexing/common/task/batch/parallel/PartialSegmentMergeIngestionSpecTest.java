@@ -24,20 +24,21 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collections;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "partitionLocation = {0}")
+@MethodSource("data")
 public class PartialSegmentMergeIngestionSpecTest
 {
   private static final ObjectMapper OBJECT_MAPPER = ParallelIndexTestingFactory.createObjectMapper();
 
-  @Parameterized.Parameters(name = "partitionLocation = {0}")
   public static Iterable<?> data()
   {
     return Arrays.asList(
@@ -46,7 +47,7 @@ public class PartialSegmentMergeIngestionSpecTest
     );
   }
 
-  @Parameterized.Parameter
+  @Parameter
   public PartitionLocation partitionLocation;
 
   private static final GenericPartitionLocation GENERIC_PARTITION_LOCATION = new GenericPartitionLocation(
@@ -67,7 +68,7 @@ public class PartialSegmentMergeIngestionSpecTest
 
   private PartialSegmentMergeIngestionSpec target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     PartialSegmentMergeIOConfig ioConfig =

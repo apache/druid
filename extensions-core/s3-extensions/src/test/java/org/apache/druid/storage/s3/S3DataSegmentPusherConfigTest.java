@@ -21,13 +21,13 @@ package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -40,7 +40,7 @@ public class S3DataSegmentPusherConfigTest
   public void testSerialization() throws IOException
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                        + "\"disableAcl\":false,\"maxListingLength\":2000,\"zip\":true}";
+                        + "\"disableAcl\":false,\"maxListingLength\":2000}";
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Map<String, String> expected = JSON_MAPPER.readValue(jsonConfig, Map.class);
@@ -53,7 +53,7 @@ public class S3DataSegmentPusherConfigTest
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\"}";
     String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                                + "\"disableAcl\":false,\"maxListingLength\":1024,\"zip\":true}";
+                                + "\"disableAcl\":false,\"maxListingLength\":1024}";
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Map<String, String> expected = JSON_MAPPER.readValue(expectedJsonConfig, Map.class);
     Map<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), Map.class);
@@ -64,7 +64,7 @@ public class S3DataSegmentPusherConfigTest
   public void testSerializationValidatingMaxListingLength() throws IOException
   {
     String jsonConfig = "{\"bucket\":\"bucket1\",\"baseKey\":\"dataSource1\","
-                        + "\"disableAcl\":false,\"maxListingLength\":-1,\"zip\":true}";
+                        + "\"disableAcl\":false,\"maxListingLength\":-1}";
     Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);

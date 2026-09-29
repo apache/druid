@@ -51,8 +51,7 @@ import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -119,8 +118,8 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
         "SELECT concat(dim3, 'foo'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         groupByOnMultiValueColumnDisabled,
         RuntimeException.class,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
+        e -> Assertions.assertTrue(
+            e.getMessage().contains(
                 StringUtils.format(
                     "org.apache.druid.query.groupby.epinephelinae.UnexpectedMultiValueDimensionException: "
                     + "Encountered multi-value dimension [%s] that cannot be processed with '%s' set to false."

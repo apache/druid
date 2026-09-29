@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.momentsketch;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class MomentSketchObjectStrategyTest
 {
@@ -28,6 +28,6 @@ public class MomentSketchObjectStrategyTest
   public void testReadRetainsBufferReference()
   {
     MomentSketchObjectStrategy strategy = new MomentSketchObjectStrategy();
-    Assert.assertFalse(strategy.readRetainsBufferReference());
+    Assertions.assertFalse(strategy.readRetainsBufferReference());
   }
 }

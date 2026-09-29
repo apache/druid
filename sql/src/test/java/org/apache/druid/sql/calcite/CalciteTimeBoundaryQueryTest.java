@@ -198,7 +198,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMaxTimeQueryWithJoin()
   {
-    // Cannot vectorize timeBoundary with maxTime (the engine will request descending order, which cannot vectorize).
+    // Cannot vectorize join.
     cannotVectorize();
 
     HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);

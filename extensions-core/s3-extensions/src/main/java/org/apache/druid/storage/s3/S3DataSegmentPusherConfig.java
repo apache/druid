@@ -20,8 +20,7 @@
 package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import javax.validation.constraints.Min;
+import jakarta.validation.constraints.Min;
 
 /**
  */
@@ -39,9 +38,6 @@ public class S3DataSegmentPusherConfig
   @JsonProperty
   @Min(1)
   private int maxListingLength = 1024;
-
-  @JsonProperty
-  private boolean zip = true;
 
   public void setBucket(String bucket)
   {
@@ -81,10 +77,5 @@ public class S3DataSegmentPusherConfig
   public int getMaxListingLength()
   {
     return maxListingLength;
-  }
-
-  public boolean isZip()
-  {
-    return zip;
   }
 }

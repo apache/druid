@@ -216,7 +216,7 @@ interface SegmentQueryResultRow {
   version: string;
   shard_spec: ShardSpec;
   partition_num: number;
-  size: number;
+  size: NumberLike;
   num_rows: NumberLike;
   avg_row_size: NumberLike;
   num_replicas: number;

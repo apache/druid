@@ -21,19 +21,19 @@ package org.apache.druid.java.util.metrics.cgroups;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class ProcCgroupDiscovererTest
 {
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -41,8 +41,8 @@ public class ProcCgroupDiscovererTest
   @BeforeEach
   public void setUp() throws Exception
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
+    cgroupDir = temporaryFolder.newFolder("cgroup");
+    procDir = temporaryFolder.newFolder("proc");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
   }
@@ -89,8 +89,8 @@ public class ProcCgroupDiscovererTest
   @Test
   public void testFallBack() throws Exception
   {
-    File cgroupDir = FileUtils.createTempDirInLocation(tempDir, "fallbackCgroup");
-    File procDir = FileUtils.createTempDirInLocation(tempDir, "fallbackProc");
+    File cgroupDir = temporaryFolder.newFolder("fallbackCgroup");
+    File procDir = temporaryFolder.newFolder("fallbackProc");
     TestUtils.setUpCgroups(procDir, cgroupDir);
 
     // Swap out the cgroup path with a default path

@@ -25,8 +25,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.SegmentDescriptor;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -45,9 +45,9 @@ public class MinorCompactionInputSpecTest
     String json = mapper.writeValueAsString(spec);
     MinorCompactionInputSpec deserialized = mapper.readValue(json, MinorCompactionInputSpec.class);
 
-    Assert.assertEquals(spec, deserialized);
-    Assert.assertEquals(interval, deserialized.getInterval());
-    Assert.assertEquals(segments, deserialized.getSegments());
+    Assertions.assertEquals(spec, deserialized);
+    Assertions.assertEquals(interval, deserialized.getInterval());
+    Assertions.assertEquals(segments, deserialized.getSegments());
   }
 
   @Test
@@ -62,9 +62,9 @@ public class MinorCompactionInputSpecTest
 
     MinorCompactionInputSpec deserialized = mapper.readValue(clientJson, MinorCompactionInputSpec.class);
 
-    Assert.assertEquals(Intervals.of("2015-04-11/2015-04-12"), deserialized.getInterval());
-    Assert.assertEquals(1, deserialized.getSegments().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(Intervals.of("2015-04-11/2015-04-12"), deserialized.getInterval());
+    Assertions.assertEquals(1, deserialized.getSegments().size());
+    Assertions.assertEquals(
         new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0),
         deserialized.getSegments().get(0)
     );
@@ -77,18 +77,18 @@ public class MinorCompactionInputSpecTest
         new SegmentDescriptor(Intervals.of("2015-04-11/2015-04-12"), "v1", 0)
     );
 
-    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(null, segments));
+    Assertions.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(null, segments));
 
     Interval emptyInterval = Intervals.of("2015-04-11/2015-04-11");
-    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(emptyInterval, segments));
+    Assertions.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(emptyInterval, segments));
   }
 
   @Test
   public void testThrowsExceptionWhenInvalidSegments()
   {
     Interval interval = Intervals.of("2015-04-11/2015-04-12");
-    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, null));
-    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, List.of()));
+    Assertions.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, null));
+    Assertions.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, List.of()));
   }
 
   @Test
@@ -99,6 +99,6 @@ public class MinorCompactionInputSpecTest
         new SegmentDescriptor(Intervals.of("2015-05-11/2015-05-12"), "v1", 0)
     );
 
-    Assert.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, segments));
+    Assertions.assertThrows(DruidException.class, () -> new MinorCompactionInputSpec(interval, segments));
   }
 }

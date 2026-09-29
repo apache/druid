@@ -25,15 +25,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class SendPartialKeyStatisticsInformationSerdeTest
 {
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     objectMapper = TestHelper.makeJsonMapper();
@@ -55,8 +55,8 @@ public class SendPartialKeyStatisticsInformationSerdeTest
         json,
         PartialKeyStatisticsInformation.class
     );
-    Assert.assertEquals(json, partialInformation.getTimeSegments(), deserializedKeyStatistics.getTimeSegments());
-    Assert.assertEquals(json, partialInformation.hasMultipleValues(), deserializedKeyStatistics.hasMultipleValues());
-    Assert.assertEquals(json, partialInformation.getBytesRetained(), deserializedKeyStatistics.getBytesRetained(), 0);
+    Assertions.assertEquals(partialInformation.getTimeSegments(), deserializedKeyStatistics.getTimeSegments(), json);
+    Assertions.assertEquals(partialInformation.hasMultipleValues(), deserializedKeyStatistics.hasMultipleValues(), json);
+    Assertions.assertEquals(partialInformation.getBytesRetained(), deserializedKeyStatistics.getBytesRetained(), 0, json);
   }
 }

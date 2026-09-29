@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -49,7 +51,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.NilStorageConnector;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -110,7 +112,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     ), SqlStatementResourceTest.makeOkRequest());
 
 
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
     String taskId = ((SqlStatementResult) response.getEntity()).getQueryId();
 
@@ -141,7 +143,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                                null
         );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         objectMapper.writeValueAsString(expected),
         objectMapper.writeValueAsString(response.getEntity())
     );
@@ -196,7 +198,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                     .build(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
     SqlStatementResult actual = (SqlStatementResult) response.getEntity();
 
@@ -226,7 +228,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                     .build(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
     SqlStatementResult actual = (SqlStatementResult) response.getEntity();
 
@@ -257,7 +259,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
                     .build(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
     SqlStatementResult actual = (SqlStatementResult) response.getEntity();
 
@@ -303,7 +305,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         null
     ), SqlStatementResourceTest.makeOkRequest());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{PLAN=[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"dim1\",\"dim2\",\"dim3\",\"cnt\",\"m1\",\"m2\",\"unique_dim1\"],\"context\":{\"__resultFormat\":\"object\",\"debug\":\"false\",\"executionMode\":\"ASYNC\",\"sqlQueryId\":\"queryId\"},\"columnTypes\":[\"LONG\",\"STRING\",\"STRING\",\"STRING\",\"LONG\",\"FLOAT\",\"DOUBLE\",\"COMPLEX<hyperUnique>\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}], RESOURCES=[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}], ATTRIBUTES={\"statementType\":\"SELECT\"}}",
         String.valueOf(SqlStatementResourceTest.getResultRowsFromResponse(response).get(0))
     );
@@ -312,7 +314,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   @Test
   public void forbiddenTest()
   {
-    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), resource.doPost(
+    // The datasource is not visible to this user, so it cannot be resolved.
+    final Response response = resource.doPost(
         new SqlQuery(
             StringUtils.format("select * from %s", CalciteTests.FORBIDDEN_DATASOURCE),
             null,
@@ -323,7 +326,17 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             null
         ),
         SqlStatementResourceTest.makeOkRequest()
-    ).getStatus());
+    );
+
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+
+    final DruidException e = ((ErrorResponse) response.getEntity()).getUnderlyingException();
+    DruidExceptionMatcher.assertThat(
+        e,
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            StringUtils.format("Object '%s' not found", CalciteTests.FORBIDDEN_DATASOURCE)
+        )
+    );
   }
 
   @Test
@@ -383,7 +396,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     ).getEntity();
 
-    Assert.assertEquals(ImmutableList.of(
+    Assertions.assertEquals(ImmutableList.of(
         new PageInformation(0, 2L, 120L, 0, 0),
         new PageInformation(1, 2L, 118L, 0, 1),
         new PageInformation(2, 2L, 122L, 0, 2)
@@ -471,7 +484,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     ).getEntity();
 
-    Assert.assertEquals(ImmutableList.of(
+    Assertions.assertEquals(ImmutableList.of(
         new PageInformation(0, 2L, 128L, 0, 0),
         new PageInformation(1, 2L, 132L, 1, 1),
         new PageInformation(2, 2L, 128L, 0, 2),
@@ -492,7 +505,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
     rows.add(ImmutableList.of(1466985600000L, "GiftBot"));
 
-    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assertions.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         null,
         ResultFormat.ARRAY.name(),
@@ -500,7 +513,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     )));
 
-    Assert.assertEquals(rows.subList(0, 2), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assertions.assertEquals(rows.subList(0, 2), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         0L,
         ResultFormat.ARRAY.name(),
@@ -508,7 +521,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     )));
 
-    Assert.assertEquals(rows.subList(2, 4), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assertions.assertEquals(rows.subList(2, 4), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         1L,
         ResultFormat.ARRAY.name(),
@@ -516,7 +529,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     )));
 
-    Assert.assertEquals(rows.subList(4, 6), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assertions.assertEquals(rows.subList(4, 6), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         2L,
         ResultFormat.ARRAY.name(),
@@ -524,7 +537,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     )));
 
-    Assert.assertEquals(rows.subList(6, 8), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assertions.assertEquals(rows.subList(6, 8), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         3L,
         ResultFormat.ARRAY.name(),
@@ -532,7 +545,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     )));
 
-    Assert.assertEquals(rows.subList(8, 10), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assertions.assertEquals(rows.subList(8, 10), SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         4L,
         ResultFormat.ARRAY.name(),
@@ -575,7 +588,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     );
 
     for (ResultFormat resultFormat : ResultFormat.values()) {
-      Assert.assertArrayEquals(
+      Assertions.assertArrayEquals(
           createExpectedResultsInFormat(resultFormat, expectedRows, columnNameAndTypes, objectMapper),
           responseToByteArray(
               resource.doGetResults(
@@ -588,7 +601,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
           )
       );
 
-      Assert.assertArrayEquals(
+      Assertions.assertArrayEquals(
           createExpectedResultsInFormat(resultFormat, expectedRows, columnNameAndTypes, objectMapper),
           responseToByteArray(
               resource.doGetResults(
@@ -631,7 +644,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     rows.add(ImmutableList.of(1, "def"));
     rows.add(ImmutableList.of(1, "abc"));
 
-    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assertions.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         null,
         ResultFormat.ARRAY.name(),
@@ -639,7 +652,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         SqlStatementResourceTest.makeOkRequest()
     )));
 
-    Assert.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
+    Assertions.assertEquals(rows, SqlStatementResourceTest.getResultRowsFromResponse(resource.doGetResults(
         sqlStatementResult.getQueryId(),
         0L,
         ResultFormat.ARRAY.name(),
@@ -666,7 +679,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
       throws IOException
   {
     byte[] bytes = responseToByteArray(resultsResponse, objectMapper);
-    Assert.assertEquals(expectedResult, new String(bytes, StandardCharsets.UTF_8));
+    Assertions.assertEquals(expectedResult, new String(bytes, StandardCharsets.UTF_8));
   }
 
   public static byte[] responseToByteArray(Response resp, ObjectMapper objectMapper) throws IOException
@@ -692,7 +705,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         defaultAsyncContext(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
     SqlStatementResult actual = (SqlStatementResult) response.getEntity();
 
@@ -709,7 +722,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     assertSqlStatementResult(expected, actual);
 
     Response getResponse = resource.doGetStatus(actual.getQueryId(), false, SqlStatementResourceTest.makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
     assertSqlStatementResult(expected, (SqlStatementResult) getResponse.getEntity());
 
     Response resultsResponse = resource.doGetResults(
@@ -719,8 +732,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         null,
         SqlStatementResourceTest.makeOkRequest()
     );
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
-    Assert.assertNull(resultsResponse.getEntity());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
+    Assertions.assertNull(resultsResponse.getEntity());
   }
 
 
@@ -736,7 +749,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         defaultAsyncContext(),
         null
     ), SqlStatementResourceTest.makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
     SqlStatementResult actual = (SqlStatementResult) response.getEntity();
 
@@ -753,7 +766,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
     assertSqlStatementResult(expected, actual);
 
     Response getResponse = resource.doGetStatus(actual.getQueryId(), false, SqlStatementResourceTest.makeOkRequest());
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), getResponse.getStatus());
     assertSqlStatementResult(expected, (SqlStatementResult) getResponse.getEntity());
 
     Response resultsResponse = resource.doGetResults(
@@ -763,8 +776,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         null,
         SqlStatementResourceTest.makeOkRequest()
     );
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
-    Assert.assertNull(resultsResponse.getEntity());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), resultsResponse.getStatus());
+    Assertions.assertNull(resultsResponse.getEntity());
   }
 
 
@@ -777,25 +790,25 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
 
   private void assertSqlStatementResult(SqlStatementResult expected, SqlStatementResult actual)
   {
-    Assert.assertEquals(expected.getQueryId(), actual.getQueryId());
-    Assert.assertEquals(expected.getCreatedAt(), actual.getCreatedAt());
-    Assert.assertEquals(expected.getSqlRowSignature(), actual.getSqlRowSignature());
-    Assert.assertEquals(expected.getDurationMs(), actual.getDurationMs());
-    Assert.assertEquals(expected.getStages(), actual.getStages());
-    Assert.assertEquals(expected.getState(), actual.getState());
-    Assert.assertEquals(expected.getWarnings(), actual.getWarnings());
-    Assert.assertEquals(expected.getResultSetInformation(), actual.getResultSetInformation());
+    Assertions.assertEquals(expected.getQueryId(), actual.getQueryId());
+    Assertions.assertEquals(expected.getCreatedAt(), actual.getCreatedAt());
+    Assertions.assertEquals(expected.getSqlRowSignature(), actual.getSqlRowSignature());
+    Assertions.assertEquals(expected.getDurationMs(), actual.getDurationMs());
+    Assertions.assertEquals(expected.getStages(), actual.getStages());
+    Assertions.assertEquals(expected.getState(), actual.getState());
+    Assertions.assertEquals(expected.getWarnings(), actual.getWarnings());
+    Assertions.assertEquals(expected.getResultSetInformation(), actual.getResultSetInformation());
 
     if (actual.getCounters() == null || expected.getCounters() == null) {
-      Assert.assertEquals(expected.getCounters(), actual.getCounters());
+      Assertions.assertEquals(expected.getCounters(), actual.getCounters());
     } else {
-      Assert.assertEquals(expected.getCounters().toString(), actual.getCounters().toString());
+      Assertions.assertEquals(expected.getCounters().toString(), actual.getCounters().toString());
     }
 
     if (actual.getErrorResponse() == null || expected.getErrorResponse() == null) {
-      Assert.assertEquals(expected.getErrorResponse(), actual.getErrorResponse());
+      Assertions.assertEquals(expected.getErrorResponse(), actual.getErrorResponse());
     } else {
-      Assert.assertEquals(expected.getErrorResponse().getAsMap(), actual.getErrorResponse().getAsMap());
+      Assertions.assertEquals(expected.getErrorResponse().getAsMap(), actual.getErrorResponse().getAsMap());
     }
   }
 }

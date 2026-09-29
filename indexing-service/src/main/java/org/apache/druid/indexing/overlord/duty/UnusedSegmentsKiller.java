@@ -25,6 +25,7 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -34,7 +35,6 @@ import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -75,6 +75,12 @@ public class UnusedSegmentsKiller implements OverlordDuty
   private static final EmittingLogger log = new EmittingLogger(UnusedSegmentsKiller.class);
 
   private static final String TASK_ID_PREFIX = "overlord-issued";
+
+  /**
+   * Task type for embedded kill tasks. This type is not registered as a valid
+   * JSON subtype of {@code Task} since embedded kill tasks are never serialized.
+   */
+  public static final String TASK_TYPE_EMBEDDED_KILL = "kill_embedded";
 
   private static final int INITIAL_KILL_QUEUE_SIZE = 1000;
   private static final int MAX_INTERVALS_TO_KILL = 10_000;
@@ -125,7 +131,6 @@ public class UnusedSegmentsKiller implements OverlordDuty
   @Inject
   public UnusedSegmentsKiller(
       SegmentsMetadataManagerConfig config,
-      DefaultTaskConfig defaultTaskConfig,
       TaskActionClientFactory taskActionClientFactory,
       IndexerMetadataStorageCoordinator storageCoordinator,
       @IndexingService DruidLeaderSelector leaderSelector,
@@ -260,7 +265,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
       // Identify intervals with unused segments which are eligible for kill
       final Map<DatasourceInterval, Integer> eligibleIntervals =
           storageCoordinator.retrieveSomeUnusedSegmentIntervals(
-              DateTimes.nowUtc().minus(killConfig.getBufferPeriod()),
+              killConfig.getMaxUpdatedTimeOfKillableSegment(),
               MAX_INTERVALS_TO_KILL,
               killConfig.getMaxSegmentsToKill()
           );
@@ -372,7 +377,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     final EmbeddedKillTask killTask = new EmbeddedKillTask(
         taskId,
         candidate,
-        DateTimes.nowUtc().minus(killConfig.getBufferPeriod())
+        killConfig.getMaxUpdatedTimeOfKillableSegment()
     );
 
     final TaskActionClient taskActionClient = taskActionClientFactory.create(killTask);
@@ -474,11 +479,20 @@ public class UnusedSegmentsKiller implements OverlordDuty
           candidate.dataSource(),
           candidate.interval(),
           null,
-          Map.of(Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY),
+          Map.of(
+              Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY,
+              Tasks.TASK_LOCK_TYPE, TaskLockType.KILL.name()
+          ),
           MAX_SEGMENTS_TO_KILL_IN_BATCH,
           candidate.numSegmentsToKill(),
           maxUpdatedTimeOfEligibleSegment
       );
+    }
+
+    @Override
+    public String getType()
+    {
+      return TASK_TYPE_EMBEDDED_KILL;
     }
 
     @Override

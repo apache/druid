@@ -35,7 +35,6 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -101,13 +100,13 @@ import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -147,6 +146,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private static final int DEFAULT_WORKER_THREADS = 2;
   private static final int DEFAULT_TASKS_PER_WORKER_THREAD = 4;
 
+  private static void assertInvalidInputException(DruidException exception, String message)
+  {
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(message, exception.getMessage());
+  }
+
   private TaskStorage taskStorage;
   private TaskMaster taskMaster;
   private TaskRunner taskRunner;
@@ -163,7 +170,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private StubServiceEmitter emitter;
 
-  @Before
+  @BeforeEach
   public void setupTest()
   {
     taskStorage = createMock(TaskStorage.class);
@@ -225,27 +232,27 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
   }
@@ -267,12 +274,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     );
     checkOffsetAvailability.setAccessible(true);
 
-    final InvocationTargetException exception = Assert.assertThrows(
+    final InvocationTargetException exception = Assertions.assertThrows(
         InvocationTargetException.class,
         () -> checkOffsetAvailability.invoke(supervisor, SHARD_ID, "1")
     );
-    Assert.assertEquals(IllegalStateException.class, exception.getCause().getClass());
-    Assert.assertFalse(supervisor.getRecordSupplierLock().isLocked());
+    Assertions.assertEquals(IllegalStateException.class, exception.getCause().getClass());
+    Assertions.assertFalse(supervisor.getRecordSupplierLock().isLocked());
     verifyAll();
   }
 
@@ -293,37 +300,37 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.CREATING_TASKS, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.CREATING_TASKS, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
     List<SupervisorStateManager.ExceptionEvent> exceptionEvents = supervisor.stateManager.getExceptionEvents();
-    Assert.assertEquals(1, exceptionEvents.size());
-    Assert.assertFalse(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
-    Assert.assertEquals(ISE.class.getName(), exceptionEvents.get(0).getExceptionClass());
-    Assert.assertEquals(StringUtils.format("unable to fetch sequence number for partition[%s] from stream", SHARD_ID), exceptionEvents.get(0).getMessage());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertEquals(1, exceptionEvents.size());
+    Assertions.assertFalse(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
+    Assertions.assertEquals(ISE.class.getName(), exceptionEvents.get(0).getExceptionClass());
+    Assertions.assertEquals(StringUtils.format("unable to fetch sequence number for partition[%s] from stream", SHARD_ID), exceptionEvents.get(0).getMessage());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.CREATING_TASKS, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(2, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.CREATING_TASKS, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(2, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
   }
@@ -367,15 +374,15 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     for (Future<Boolean> future : futures) {
       try {
         Boolean result = future.get();
-        Assert.assertTrue(result);
+        Assertions.assertTrue(result);
       }
       catch (ExecutionException e) {
-        Assert.fail();
+        Assertions.fail();
       }
     }
     CopyOnWriteArrayList<SeekableStreamSupervisor.TaskGroup> taskGroups = supervisor.getPendingCompletionTaskGroups(0);
-    Assert.assertEquals(1, taskGroups.size());
-    Assert.assertEquals(3, taskGroups.get(0).tasks.size());
+    Assertions.assertEquals(1, taskGroups.size());
+    Assertions.assertEquals(3, taskGroups.get(0).tasks.size());
 
     // Test concurrent threads adding to different task groups
     task1 = () -> {
@@ -416,20 +423,20 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     for (Future<Boolean> future : futures) {
       try {
         Boolean result = future.get();
-        Assert.assertTrue(result);
+        Assertions.assertTrue(result);
       }
       catch (ExecutionException e) {
-        Assert.fail();
+        Assertions.fail();
       }
     }
 
     taskGroups = supervisor.getPendingCompletionTaskGroups(1);
-    Assert.assertEquals(1, taskGroups.size());
-    Assert.assertEquals(3, taskGroups.get(0).tasks.size());
+    Assertions.assertEquals(1, taskGroups.size());
+    Assertions.assertEquals(3, taskGroups.get(0).tasks.size());
 
     taskGroups = supervisor.getPendingCompletionTaskGroups(2);
-    Assert.assertEquals(1, taskGroups.size());
-    Assert.assertEquals(2, taskGroups.get(0).tasks.size());
+    Assertions.assertEquals(1, taskGroups.size());
+    Assertions.assertEquals(2, taskGroups.get(0).tasks.size());
   }
 
   @Test
@@ -489,18 +496,18 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     for (Future<Boolean> future : futures) {
       try {
         Boolean result = future.get();
-        Assert.assertTrue(result);
+        Assertions.assertTrue(result);
       }
       catch (ExecutionException e) {
-        Assert.fail();
+        Assertions.fail();
       }
     }
 
     CopyOnWriteArrayList<SeekableStreamSupervisor.TaskGroup> taskGroups = supervisor.getPendingCompletionTaskGroups(0);
 
-    Assert.assertEquals(2, taskGroups.size());
-    Assert.assertEquals(3, taskGroups.get(0).tasks.size());
-    Assert.assertEquals(3, taskGroups.get(1).tasks.size());
+    Assertions.assertEquals(2, taskGroups.size());
+    Assertions.assertEquals(3, taskGroups.get(0).tasks.size());
+    Assertions.assertEquals(3, taskGroups.get(1).tasks.size());
   }
 
   @Test
@@ -519,41 +526,41 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
     List<SupervisorStateManager.ExceptionEvent> exceptionEvents = supervisor.stateManager.getExceptionEvents();
-    Assert.assertEquals(1, exceptionEvents.size());
-    Assert.assertTrue(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
-    Assert.assertEquals(IllegalStateException.class.getName(), exceptionEvents.get(0).getExceptionClass());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, exceptionEvents.size());
+    Assertions.assertTrue(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
+    Assertions.assertEquals(IllegalStateException.class.getName(), exceptionEvents.get(0).getExceptionClass());
+    Assertions.assertEquals(
         StringUtils.format("%s: %s", IllegalStateException.class.getName(), EXCEPTION_MSG),
         exceptionEvents.get(0).getMessage()
     );
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(2, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(2, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
   }
@@ -580,54 +587,54 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.CONNECTING_TO_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
     supervisor.runInternal();
-    Assert.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(SeekableStreamState.UNABLE_TO_CONNECT_TO_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
     supervisor.runInternal();
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
     supervisor.runInternal();
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
     supervisor.runInternal();
-    Assert.assertEquals(SeekableStreamState.LOST_CONTACT_WITH_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertEquals(SeekableStreamState.LOST_CONTACT_WITH_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.LOST_CONTACT_WITH_STREAM, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.LOST_CONTACT_WITH_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.LOST_CONTACT_WITH_STREAM, supervisor.stateManager.getSupervisorState());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.LOST_CONTACT_WITH_STREAM, supervisor.stateManager.getSupervisorState());
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
   }
@@ -648,62 +655,62 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.start();
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.DISCOVERING_INITIAL_TASKS, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.DISCOVERING_INITIAL_TASKS, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
     List<SupervisorStateManager.ExceptionEvent> exceptionEvents = supervisor.stateManager.getExceptionEvents();
-    Assert.assertEquals(1, exceptionEvents.size());
-    Assert.assertFalse(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
-    Assert.assertEquals(IllegalStateException.class.getName(), exceptionEvents.get(0).getExceptionClass());
-    Assert.assertEquals(EXCEPTION_MSG, exceptionEvents.get(0).getMessage());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertEquals(1, exceptionEvents.size());
+    Assertions.assertFalse(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
+    Assertions.assertEquals(IllegalStateException.class.getName(), exceptionEvents.get(0).getExceptionClass());
+    Assertions.assertEquals(EXCEPTION_MSG, exceptionEvents.get(0).getMessage());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.DISCOVERING_INITIAL_TASKS, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(2, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.DISCOVERING_INITIAL_TASKS, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(2, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
   }
@@ -750,46 +757,46 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.setStreamOffsets(ImmutableMap.of("0", "10"));
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     Thread.sleep(100L);
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     Thread.sleep(100L);
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     Thread.sleep(100L);
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
   }
@@ -851,29 +858,29 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.setStreamOffsets(initialOffsets);
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.IDLE, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.setStreamOffsets(laterOffsets);
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
   }
 
   @Test
@@ -893,63 +900,63 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.start();
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.CREATING_TASKS, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.CREATING_TASKS, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
     List<SupervisorStateManager.ExceptionEvent> exceptionEvents = supervisor.stateManager.getExceptionEvents();
-    Assert.assertEquals(1, exceptionEvents.size());
-    Assert.assertFalse(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
-    Assert.assertEquals(IllegalStateException.class.getName(), exceptionEvents.get(0).getExceptionClass());
-    Assert.assertEquals(EXCEPTION_MSG, exceptionEvents.get(0).getMessage());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertEquals(1, exceptionEvents.size());
+    Assertions.assertFalse(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
+    Assertions.assertEquals(IllegalStateException.class.getName(), exceptionEvents.get(0).getExceptionClass());
+    Assertions.assertEquals(EXCEPTION_MSG, exceptionEvents.get(0).getMessage());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(SeekableStreamState.CREATING_TASKS, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(2, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(SeekableStreamState.CREATING_TASKS, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(2, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(3, supervisor.stateManager.getExceptionEvents().size());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
-    Assert.assertFalse(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertFalse(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.UNHEALTHY_SUPERVISOR, supervisor.stateManager.getSupervisorState());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
   }
@@ -968,27 +975,27 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     verifyAll();
   }
@@ -1011,25 +1018,25 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.stop(false);
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
 
     verifyAll();
   }
@@ -1074,35 +1081,36 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.RUNNING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
     supervisor.stop(true);
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
 
     // Subsequent run after graceful shutdown has begun
     supervisor.runInternal();
-    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.STOPPING, supervisor.stateManager.getSupervisorState().getBasicState());
 
     verifyAll();
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testCheckpointForActiveTaskGroup() throws InterruptedException, JsonProcessingException
   {
     DateTime startTime = DateTimes.nowUtc();
@@ -1309,10 +1317,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertTrue(supervisor.getNoticesQueueSize() == 0);
+    Assertions.assertTrue(supervisor.getNoticesQueueSize() == 0);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
   public void testEarlyStoppingOfTaskGroupBasedOnStopTaskCount() throws InterruptedException, JsonProcessingException
   {
     // Assuming tasks have surpassed their duration limit at test execution
@@ -1526,7 +1535,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
 
-    Assert.assertNull(id1.getCurrentRunnerStatus());
+    Assertions.assertNull(id1.getCurrentRunnerStatus());
 
     supervisor.checkpoint(
         0,
@@ -1541,10 +1550,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertTrue(supervisor.getNoticesQueueSize() == 0);
+    Assertions.assertTrue(supervisor.getNoticesQueueSize() == 0);
   }
 
-  @Test(timeout = 10_000L)
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
   public void testSupervisorStopTaskGroupEarly() throws JsonProcessingException, InterruptedException
   {
     DateTime startTime = DateTimes.nowUtc();
@@ -1664,8 +1674,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.runInternal();
     supervisor.handoffTaskGroupsEarly(ImmutableList.of(0));
 
-    Assert.assertNull(id1.getCurrentRunnerStatus());
-    Assert.assertEquals("NOT_STARTED", id1.getCurrentRunnerStatus());
+    Assertions.assertNull(id1.getCurrentRunnerStatus());
+    Assertions.assertEquals("NOT_STARTED", id1.getCurrentRunnerStatus());
 
     while (supervisor.getNoticesQueueSize() > 0) {
       Thread.sleep(100);
@@ -1690,11 +1700,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
 
     latch.await();
@@ -1724,11 +1734,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
 
     latch.await();
@@ -1756,11 +1766,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
 
     latch.await();
@@ -1789,11 +1799,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
 
     latch.await();
@@ -1819,11 +1829,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null
     );
     supervisor.start();
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
     latch.await();
 
     final Map<String, Object> dimFilters = ImmutableMap.of(
@@ -1832,7 +1842,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         "noticeType", "run_notice"
     );
     long observedNoticeTime = emitter.getValue("ingest/notices/time", dimFilters).longValue();
-    Assert.assertTrue(observedNoticeTime > 0);
+    Assertions.assertTrue(observedNoticeTime > 0);
 
     verifyAll();
   }
@@ -1854,10 +1864,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
 
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
+    Assertions.assertTrue(supervisor.stateManager.isHealthy());
+    Assertions.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState());
+    Assertions.assertEquals(BasicState.SUSPENDED, supervisor.stateManager.getSupervisorState().getBasicState());
+    Assertions.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
 
 
     latch.await();
@@ -1910,9 +1920,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertEquals(1, stats.size());
-    Assert.assertEquals(ImmutableSet.of("0"), stats.keySet());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, stats.size());
+    Assertions.assertEquals(ImmutableSet.of("0"), stats.keySet());
+    Assertions.assertEquals(
         ImmutableMap.of(
             "task1", ImmutableMap.of("prop1", "val1"),
             "task2", ImmutableMap.of("prop2", "val2")
@@ -1955,9 +1965,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null
     );
 
-    Assert.assertEquals(1, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
-    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+    Assertions.assertEquals(1, supervisor.getActiveTaskGroupsCount());
+    Assertions.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assertions.assertEquals(0, supervisor.getPartitionOffsets().size());
 
     supervisor.reset(null);
     validateSupervisorStateAfterResetOffsets(supervisor, ImmutableMap.of(), 0);
@@ -2014,9 +2024,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         )
     );
 
-    Assert.assertEquals(1, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
-    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+    Assertions.assertEquals(1, supervisor.getActiveTaskGroupsCount());
+    Assertions.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assertions.assertEquals(0, supervisor.getPartitionOffsets().size());
 
     supervisor.resetOffsets(resetMetadata);
 
@@ -2101,12 +2111,12 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.registerNewVersionOfPendingSegment(pendingSegmentRecord0);
     supervisor.registerNewVersionOfPendingSegment(pendingSegmentRecord1);
 
-    Assert.assertEquals(pendingSegmentRecord0, captured0.getValue());
-    Assert.assertEquals(pendingSegmentRecord1, captured1.getValue());
+    Assertions.assertEquals(pendingSegmentRecord0, captured0.getValue());
+    Assertions.assertEquals(pendingSegmentRecord1, captured1.getValue());
 
     // Both records matched a running task, so each emits a notified metric and none is unmatched.
-    Assert.assertEquals(2, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
-    Assert.assertEquals(0, emitter.getMetricEventCount(SegmentUpgradeMetrics.UNMATCHED));
+    Assertions.assertEquals(2, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
+    Assertions.assertEquals(0, emitter.getMetricEventCount(SegmentUpgradeMetrics.UNMATCHED));
     verifyAll();
   }
 
@@ -2141,8 +2151,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.registerNewVersionOfPendingSegment(record);
 
-    Assert.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.UNMATCHED));
-    Assert.assertEquals(0, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
+    Assertions.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.UNMATCHED));
+    Assertions.assertEquals(0, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
     verifyAll();
   }
 
@@ -2180,8 +2190,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.registerNewVersionOfPendingSegment(record);
 
     // The record matched task0 (so notified fires) but delivery failed over the wire (so sendFailed fires).
-    Assert.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
-    Assert.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.SEND_FAILED));
+    Assertions.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.NOTIFIED));
+    Assertions.assertEquals(1, emitter.getMetricEventCount(SegmentUpgradeMetrics.SEND_FAILED));
     verifyAll();
   }
 
@@ -2259,9 +2269,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         )
     );
 
-    Assert.assertEquals(3, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
-    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+    Assertions.assertEquals(3, supervisor.getActiveTaskGroupsCount());
+    Assertions.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assertions.assertEquals(0, supervisor.getPartitionOffsets().size());
 
     supervisor.resetOffsets(resetMetadata);
 
@@ -2333,9 +2343,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         )
     );
 
-    Assert.assertEquals(3, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
-    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+    Assertions.assertEquals(3, supervisor.getActiveTaskGroupsCount());
+    Assertions.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assertions.assertEquals(0, supervisor.getPartitionOffsets().size());
 
     supervisor.resetOffsets(resetMetadata);
 
@@ -2401,9 +2411,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         )
     );
 
-    Assert.assertEquals(2, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
-    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+    Assertions.assertEquals(2, supervisor.getActiveTaskGroupsCount());
+    Assertions.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assertions.assertEquals(0, supervisor.getPartitionOffsets().size());
 
     supervisor.resetOffsets(resetMetadata);
 
@@ -2470,9 +2480,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         )
     );
 
-    Assert.assertEquals(2, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(0, supervisor.getNoticesQueueSize());
-    Assert.assertEquals(0, supervisor.getPartitionOffsets().size());
+    Assertions.assertEquals(2, supervisor.getActiveTaskGroupsCount());
+    Assertions.assertEquals(0, supervisor.getNoticesQueueSize());
+    Assertions.assertEquals(0, supervisor.getPartitionOffsets().size());
 
     supervisor.resetOffsets(resetMetadata);
 
@@ -2510,13 +2520,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     verifyAll();
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () ->
-            supervisor.resetOffsets(null)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Reset dataSourceMetadata is required for resetOffsets."
-        )
+    assertInvalidInputException(
+        Assertions.assertThrows(DruidException.class, () -> supervisor.resetOffsets(null)),
+        "Reset dataSourceMetadata is required for resetOffsets."
     );
   }
 
@@ -2559,15 +2565,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         )
     );
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () ->
-            supervisor.resetOffsets(dataSourceMetadata)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            StringUtils.format(
-                "Provided datasourceMetadata[%s] is invalid. Sequence numbers can only be of type[SeekableStreamEndSequenceNumbers], but found[SeekableStreamStartSequenceNumbers].",
-                dataSourceMetadata
-            )
+    assertInvalidInputException(
+        Assertions.assertThrows(DruidException.class, () -> supervisor.resetOffsets(dataSourceMetadata)),
+        StringUtils.format(
+            "Provided datasourceMetadata[%s] is invalid. Sequence numbers can only be of type[SeekableStreamEndSequenceNumbers], but found[SeekableStreamStartSequenceNumbers].",
+            dataSourceMetadata
         )
     );
   }
@@ -2610,13 +2612,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         )
     );
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () ->
-            supervisor.resetOffsets(dataSourceMetadata)
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Stream[i-am-not-real] doesn't exist in the supervisor[testSupervisorId]. Supervisor is consuming stream[stream]."
-        )
+    assertInvalidInputException(
+        Assertions.assertThrows(DruidException.class, () -> supervisor.resetOffsets(dataSourceMetadata)),
+        "Stream[i-am-not-real] doesn't exist in the supervisor[testSupervisorId]. Supervisor is consuming stream[stream]."
     );
   }
 
@@ -2641,9 +2639,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     latch.await();
 
     supervisor.emitLag();
-    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/lag").size());
-    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/maxLag").size());
-    Assert.assertEquals(0, emitter.getMetricEvents("ingest/test/avgLag").size());
+    Assertions.assertEquals(0, emitter.getMetricEvents("ingest/test/lag").size());
+    Assertions.assertEquals(0, emitter.getMetricEvents("ingest/test/maxLag").size());
+    Assertions.assertEquals(0, emitter.getMetricEvents("ingest/test/avgLag").size());
   }
 
   private void validateSupervisorStateAfterResetOffsets(
@@ -2657,10 +2655,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       Thread.sleep(100);
     }
     Thread.sleep(1000);
-    Assert.assertEquals(expectedActiveTaskCount, supervisor.getActiveTaskGroupsCount());
-    Assert.assertEquals(expectedResetOffsets.size(), supervisor.getPartitionOffsets().size());
+    Assertions.assertEquals(expectedActiveTaskCount, supervisor.getActiveTaskGroupsCount());
+    Assertions.assertEquals(expectedResetOffsets.size(), supervisor.getPartitionOffsets().size());
     for (Map.Entry<String, String> entry : expectedResetOffsets.entrySet()) {
-      Assert.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get(entry.getKey()));
+      Assertions.assertEquals(supervisor.getNotSetMarker(), supervisor.getPartitionOffsets().get(entry.getKey()));
     }
     verifyAll();
   }
@@ -2721,7 +2719,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final int taskCount = 1;
     SeekableStreamSupervisorTuningConfig tuningConfig = createSupervisorTuningConfigWithWorkerThreads(numWorkerThreads);
     SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(taskCount, null);
-    Assert.assertEquals(numWorkerThreads, SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig));
+    Assertions.assertEquals(numWorkerThreads, SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig));
   }
 
   @Test
@@ -2730,7 +2728,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final int taskCount = 1;
     SeekableStreamSupervisorTuningConfig tuningConfig = createSupervisorTuningConfig();
     SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(taskCount, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DEFAULT_WORKER_THREADS,
         SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
     );
@@ -2742,7 +2740,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final int taskCount = 7;
     SeekableStreamSupervisorTuningConfig tuningConfig = createSupervisorTuningConfig();
     SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(taskCount, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DEFAULT_WORKER_THREADS,
         SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
     );
@@ -2754,7 +2752,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     final int taskCount = 18;
     SeekableStreamSupervisorTuningConfig tuningConfig = createSupervisorTuningConfig();
     SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(taskCount, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         taskCount / DEFAULT_TASKS_PER_WORKER_THREAD,
         SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
     );
@@ -2788,7 +2786,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         null
     );
     SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, autoScalerConfig, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         taskCountMax / DEFAULT_TASKS_PER_WORKER_THREAD,
         SeekableStreamSupervisor.calculateWorkerThreads(tuningConfig, ioConfig)
     );
@@ -2870,9 +2868,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         .withStopTaskCount(1) // ensure this is overridden
         .build();
 
-    Assert.assertEquals(2, config.getMaxAllowedStops());
+    Assertions.assertEquals(2, config.getMaxAllowedStops());
     config.setTaskCount(30);
-    Assert.assertEquals(12, config.getMaxAllowedStops());
+    Assertions.assertEquals(12, config.getMaxAllowedStops());
   }
 
   @Test
@@ -2891,7 +2889,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(mockSpec.createAutoscaler(supervisor)).andReturn(null).once();
     EasyMock.replay(mockSpec);
 
-    Assert.assertNull(supervisor.createAutoscaler(mockSpec));
+    Assertions.assertNull(supervisor.createAutoscaler(mockSpec));
     EasyMock.verify(mockSpec);
 
     verifyAll();
@@ -2902,7 +2900,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(5, Map.of(10, 2, 20, 3));
 
-    Assert.assertEquals(5, (int) ioConfig.getReplicas());
+    Assertions.assertEquals(5, (int) ioConfig.getReplicas());
 
     EasyMock.reset(spec);
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
@@ -2930,7 +2928,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             Map.of()
         );
 
-    Assert.assertEquals(List.of(20, 20, 20, 10, 10), supervisor.computeUnassignedServerPriorities(taskGroup1, 5));
+    Assertions.assertEquals(List.of(20, 20, 20, 10, 10), supervisor.computeUnassignedServerPriorities(taskGroup1, 5));
 
     // Two tasks with priority 10 already assigned, need 3 more replicas
     final SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup taskGroup2 =
@@ -2944,7 +2942,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             Map.of("task1", 10, "task2", 10)
         );
 
-    Assert.assertEquals(List.of(20, 20, 20), supervisor.computeUnassignedServerPriorities(taskGroup2, 3));
+    Assertions.assertEquals(List.of(20, 20, 20), supervisor.computeUnassignedServerPriorities(taskGroup2, 3));
 
     // Two tasks with priority 10 and one with priority 20 assigned, need 2 more replicas
     final SeekableStreamSupervisor<String, String, ByteEntity>.TaskGroup taskGroup3 =
@@ -2958,7 +2956,123 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             Map.of("task1", 10, "task2", 10, "task3", 20)
         );
 
-    Assert.assertEquals(List.of(20, 20), supervisor.computeUnassignedServerPriorities(taskGroup3, 2));
+    Assertions.assertEquals(List.of(20, 20), supervisor.computeUnassignedServerPriorities(taskGroup3, 2));
+
+    verifyAll();
+  }
+
+  /**
+   * A bounded task group that has reached its configured end offsets is not topped up with replacement replicas,
+   * exercising the metadata-based completion path (non-empty range with committed offsets at the end).
+   */
+  @Test
+  public void testCreateNewTasks_boundedGroupReachedEnd_doesNotTopUpReplicas()
+  {
+    // replicas = 2, taskCount = 1, non-empty bounded range [0, 100).
+    final BoundedStreamConfig boundedConfig = new BoundedStreamConfig(
+        ImmutableMap.of("0", "0"),
+        ImmutableMap.of("0", "100")
+    );
+    final SeekableStreamSupervisorIOConfig ioConfig =
+        new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+            .withStream(STREAM)
+            .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+            .withReplicas(2)
+            .withTaskCount(1)
+            .withTaskDuration(new Period("PT1H"))
+            .withStartDelay(new Period("P1D"))
+            .withSupervisorRunPeriod(new Period("PT30S"))
+            .withUseEarliestSequenceNumber(false)
+            .withCompletionTimeout(new Period("PT30M"))
+            .withLagAggregator(LagAggregator.DEFAULT)
+            .withBoundedStreamConfig(boundedConfig)
+            .build();
+
+    // A single already-running task for group 0 whose committed offset ("100") has reached the configured end, so the
+    // group has one task, i.e. fewer than the configured replica count (2). That would normally trigger a top-up.
+    // minMsgTime/maxMsgTime and start sequences must match the injected task group so isTaskCurrent() keeps the task.
+    final SeekableStreamIndexTaskIOConfig taskIoConfig = createTaskIoConfigExt(
+        0,
+        Map.of("0", "100"),
+        Map.of("0", "100"),
+        "test",
+        null,
+        null,
+        Set.of(),
+        ioConfig
+    );
+    final TestSeekableStreamIndexTask task1 = createTestTask("task1", "0", null, taskIoConfig, recordSupplier);
+
+    EasyMock.reset(spec);
+    EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.getContextValue(DruidMetrics.TAGS)).andReturn(METRIC_TAGS).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+
+    // Metadata store reports committed offsets that have reached the end, with a bounded config matching the
+    // supervisor's, so hasTaskGroupReachedBoundedEnd() returns true through its metadata-offset path.
+    EasyMock.reset(indexerMetadataStorageCoordinator);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(SUPERVISOR_ID))
+            .andReturn(new TestSeekableStreamDataSourceMetadata(
+                new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of("0", "100")),
+                boundedConfig
+            ))
+            .anyTimes();
+
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of("0")).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("task1")).andReturn(Optional.of(TaskStatus.running("task1"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("task1")).andReturn(Optional.of(task1)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE))
+            .andReturn(Map.of(task1.getId(), task1))
+            .anyTimes();
+    // Task checkpoints match the reached-end committed offsets so the task is not killed as inconsistent.
+    final TreeMap<Integer, Map<String, String>> task1Checkpoints = new TreeMap<>();
+    task1Checkpoints.put(0, ImmutableMap.of("0", "100"));
+    EasyMock.expect(indexTaskClient.getCheckpointsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(task1Checkpoints))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStatusAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(SeekableStreamIndexTaskRunner.Status.READING))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getStartTimeAsync(EasyMock.anyString()))
+            .andReturn(Futures.immediateFuture(DateTimes.nowUtc()))
+            .anyTimes();
+    EasyMock.expect(indexTaskClient.getCurrentOffsetsAsync(EasyMock.anyString(), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(ImmutableMap.of("0", "100")))
+            .anyTimes();
+    EasyMock.expect(taskRunner.getRunningTasks()).andReturn(ImmutableList.of()).anyTimes();
+
+    final Capture<Task> submittedTasks = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskQueue.add(EasyMock.capture(submittedTasks))).andReturn(true).anyTimes();
+
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.start();
+    // Pre-populate an actively-reading task group with the single running task. This keeps isBoundedWorkComplete()
+    // false (there is an active group), so runInternal() flows through to createNewTasks() rather than short-circuiting
+    // on completion, and it models the real churn scenario where a completed replica has exited leaving fewer tasks
+    // than the configured replica count.
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        0,
+        ImmutableMap.of("0", "100"),
+        null,
+        null,
+        Set.of("task1"),
+        Set.of(),
+        Map.of()
+    );
+    supervisor.runInternal();
+
+    Assertions.assertFalse(
+        submittedTasks.hasCaptured(),
+        "No replica top-up task should be submitted for a bounded task group that has reached its end offsets"
+    );
+    Assertions.assertEquals(1, supervisor.getActiveTaskGroup(0).tasks.size());
 
     verifyAll();
   }
@@ -3119,8 +3233,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // The StreamException is recorded exactly once — not once per unavailable partition.
     final List<SupervisorStateManager.ExceptionEvent> exceptionEvents = supervisor.stateManager.getExceptionEvents();
-    Assert.assertEquals(1, exceptionEvents.size());
-    Assert.assertTrue(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
+    Assertions.assertEquals(1, exceptionEvents.size());
+    Assertions.assertTrue(((SeekableStreamExceptionEvent) exceptionEvents.get(0)).isStreamException());
 
     // EasyMock validates that resetDataSourceMetadata was called exactly once (see .times(1) above).
     verifyAll();
@@ -3748,6 +3862,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       super(partitions);
     }
 
+    public TestSeekableStreamDataSourceMetadata(
+            SeekableStreamSequenceNumbers<String, String> partitions,
+            BoundedStreamConfig boundedStreamConfig
+    )
+    {
+      super(partitions, boundedStreamConfig);
+    }
+
     @Override
     public DataSourceMetadata asStartMetadata()
     {
@@ -3802,7 +3924,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(5, Map.of(10, 2, 20, 3));
 
-    Assert.assertEquals(5, (int) ioConfig.getReplicas());
+    Assertions.assertEquals(5, (int) ioConfig.getReplicas());
 
     final SeekableStreamIndexTaskIOConfig taskIoConfig = createTaskIoConfigExt(
         0,
@@ -3865,14 +3987,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // Verify that tasks were discovered and their server priorities were captured
     SeekableStreamSupervisor.TaskGroup taskGroup = supervisor.getActiveTaskGroup(0);
-    Assert.assertEquals(0, taskGroup.groupId);
-    Assert.assertEquals(3, taskGroup.tasks.size());
+    Assertions.assertEquals(0, taskGroup.groupId);
+    Assertions.assertEquals(3, taskGroup.tasks.size());
 
     // Verify server priorities were correctly stored
     Map<String, Integer> taskIdToServerPriority = taskGroup.taskIdToServerPriority;
-    Assert.assertEquals(Integer.valueOf(20), taskIdToServerPriority.get("task1"));
-    Assert.assertEquals(Integer.valueOf(20), taskIdToServerPriority.get("task2"));
-    Assert.assertEquals(Integer.valueOf(10), taskIdToServerPriority.get("task3"));
+    Assertions.assertEquals(Integer.valueOf(20), taskIdToServerPriority.get("task1"));
+    Assertions.assertEquals(Integer.valueOf(20), taskIdToServerPriority.get("task2"));
+    Assertions.assertEquals(Integer.valueOf(10), taskIdToServerPriority.get("task3"));
 
     verifyAll();
   }
@@ -3888,7 +4010,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // replicas=2, taskCount=1, priorities {0:1, 1:1}
     final SeekableStreamSupervisorIOConfig ioConfig = createSupervisorIOConfig(1, Map.of(0, 1, 1, 1));
 
-    Assert.assertEquals(2, (int) ioConfig.getReplicas());
+    Assertions.assertEquals(2, (int) ioConfig.getReplicas());
 
     EasyMock.reset(spec);
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR_ID).anyTimes();
@@ -3963,10 +4085,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // Run 1 should have submitted 2 replicas.
     final List<Task> run1Tasks = submittedTasks.getValues();
-    Assert.assertEquals(2, run1Tasks.size());
+    Assertions.assertEquals(2, run1Tasks.size());
     final TestSeekableStreamIndexTask orphan = (TestSeekableStreamIndexTask) run1Tasks.get(0);
     final TestSeekableStreamIndexTask survivor = (TestSeekableStreamIndexTask) run1Tasks.get(1);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(0, 1),
         Set.of(orphan.getServerPriority(), survivor.getServerPriority())
     );
@@ -3990,7 +4112,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // Replacement task should carry the orphan's missing priority, not duplicate the survivor's.
     final TestSeekableStreamIndexTask replacement = (TestSeekableStreamIndexTask) replacementCapture.getValue();
-    Assert.assertEquals(orphan.getServerPriority(), replacement.getServerPriority());
+    Assertions.assertEquals(orphan.getServerPriority(), replacement.getServerPriority());
   }
 
 
@@ -4006,11 +4128,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // minScaleUpDelay = 0 means any scale-up is immediately allowed.
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals("Exactly one required-tasks emission expected", 1, events.size());
+    Assertions.assertEquals(1, events.size(), "Exactly one required-tasks emission expected");
     assertScaledToTaskCount(events.get(0), 5);
   }
 
@@ -4025,15 +4147,15 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // First scale-up succeeds and stamps the last-scale timestamp.
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-up is within the 1h minScaleUpDelay window and must be blocked.
     supervisor.handleDynamicAllocationTasksNotice(() -> 7, () -> {}, scalingEmitter);
-    Assert.assertEquals("Second scale-up must not take effect", 5, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount(), "Second scale-up must not take effect");
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals("Two required-tasks emissions expected (one applied, one skipped)", 2, events.size());
+    Assertions.assertEquals(2, events.size(), "Two required-tasks emissions expected (one applied, one skipped)");
     // First emission: the successful scale carries no skip-reason dim and reports the applied count.
     assertScaledToTaskCount(events.get(0), 5);
     // Second emission: the gated scale carries the cooldown skip-reason dim and the proposed (not applied) count.
@@ -4052,11 +4174,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     // minScaleDownDelay = 0 means any scale-down is immediately allowed.
     supervisor.handleDynamicAllocationTasksNotice(() -> 2, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(2, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(2, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals("Exactly one required-tasks emission expected", 1, events.size());
+    Assertions.assertEquals(1, events.size(), "Exactly one required-tasks emission expected");
     assertScaledToTaskCount(events.get(0), 2);
   }
 
@@ -4071,15 +4193,15 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     // First scale-down succeeds and stamps the last-scale timestamp.
     supervisor.handleDynamicAllocationTasksNotice(() -> 3, () -> {}, scalingEmitter);
-    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
     // Second scale-down is within the 1h minScaleDownDelay window and must be blocked.
     supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
-    Assert.assertEquals("Second scale-down must not take effect", 3, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount(), "Second scale-down must not take effect");
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals("Two required-tasks emissions expected (one applied, one skipped)", 2, events.size());
+    Assertions.assertEquals(2, events.size(), "Two required-tasks emissions expected (one applied, one skipped)");
     assertScaledToTaskCount(events.get(0), 3);
     assertScaleSkipped(events.get(1), 1, "Scale cooldown not elapsed yet");
   }
@@ -4096,11 +4218,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.handleDynamicAllocationTasksNotice(() -> 20, () -> {}, scalingEmitter);
 
     // Task count is clamped to max (10), not the scaler's desired (20).
-    Assert.assertEquals(10, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(10, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals(1, events.size());
+    Assertions.assertEquals(1, events.size());
     // The emitted metric value reflects the scaler's unclamped desired (the operator hint), not
     // the clamped value the supervisor actually applied.
     assertScaledToTaskCount(events.get(0), 20);
@@ -4117,11 +4239,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(3, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals(1, events.size());
+    Assertions.assertEquals(1, events.size());
     assertScaledToTaskCount(events.get(0), 1);
   }
 
@@ -4137,11 +4259,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.handleDynamicAllocationTasksNotice(() -> 15, () -> {}, scalingEmitter);
 
-    Assert.assertEquals("Task count must not change when at max", 10, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(10, supervisor.getIoConfig().getTaskCount(), "Task count must not change when at max");
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals(1, events.size());
+    Assertions.assertEquals(1, events.size());
     assertScaleSkipped(events.get(0), 15, "Already at max task count");
   }
 
@@ -4157,11 +4279,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.handleDynamicAllocationTasksNotice(() -> 1, () -> {}, scalingEmitter);
 
-    Assert.assertEquals("Task count must not change when at min", 3, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(3, supervisor.getIoConfig().getTaskCount(), "Task count must not change when at min");
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals(1, events.size());
+    Assertions.assertEquals(1, events.size());
     assertScaleSkipped(events.get(0), 1, "Already at min task count");
   }
 
@@ -4176,11 +4298,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.handleDynamicAllocationTasksNotice(() -> 5, () -> {}, scalingEmitter);
 
-    Assert.assertEquals(5, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount());
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertTrue("No metric should be emitted in the steady-state no-op case", events.isEmpty());
+    Assertions.assertTrue(events.isEmpty(), "No metric should be emitted in the steady-state no-op case");
   }
 
   @Test
@@ -4195,11 +4317,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.handleDynamicAllocationTasksNotice(() -> -1, () -> {}, scalingEmitter);
 
-    Assert.assertEquals("Task count must not change on pathological return", 5, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(5, supervisor.getIoConfig().getTaskCount(), "Task count must not change on pathological return");
 
     final List<ServiceMetricEvent> events =
         scalingEmitter.getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC);
-    Assert.assertEquals(1, events.size());
+    Assertions.assertEquals(1, events.size());
     assertScaleSkipped(events.get(0), -1, "Auto-scaler failed to compute a task count");
   }
 
@@ -4211,11 +4333,11 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private static void assertScaledToTaskCount(ServiceMetricEvent event, int expectedRequiredCount)
   {
     assertStandardDimensions(event);
-    Assert.assertNull(
-        "Attempted scale must not carry a scalingSkipReason dim",
-        event.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
+    Assertions.assertNull(
+        event.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION),
+        "Attempted scale must not carry a scalingSkipReason dim"
     );
-    Assert.assertEquals(expectedRequiredCount, event.getValue().intValue());
+    Assertions.assertEquals(expectedRequiredCount, event.getValue().intValue());
   }
 
   /**
@@ -4226,19 +4348,19 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private static void assertScaleSkipped(ServiceMetricEvent event, int expectedRequiredCount, String expectedReason)
   {
     assertStandardDimensions(event);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedReason,
         event.getUserDims().get(SeekableStreamSupervisor.AUTOSCALER_SKIP_REASON_DIMENSION)
     );
-    Assert.assertEquals(expectedRequiredCount, event.getValue().intValue());
+    Assertions.assertEquals(expectedRequiredCount, event.getValue().intValue());
   }
 
   private static void assertStandardDimensions(ServiceMetricEvent event)
   {
     final Map<String, Object> dims = event.getUserDims();
-    Assert.assertEquals(SUPERVISOR_ID, dims.get(DruidMetrics.SUPERVISOR_ID));
-    Assert.assertEquals(DATASOURCE, dims.get(DruidMetrics.DATASOURCE));
-    Assert.assertEquals(STREAM, dims.get(DruidMetrics.STREAM));
+    Assertions.assertEquals(SUPERVISOR_ID, dims.get(DruidMetrics.SUPERVISOR_ID));
+    Assertions.assertEquals(DATASOURCE, dims.get(DruidMetrics.DATASOURCE));
+    Assertions.assertEquals(STREAM, dims.get(DruidMetrics.STREAM));
   }
 
   private static TestSeekableStreamIndexTask createTestTask(String taskId, String groupId, @Nullable Integer serverPriority, SeekableStreamIndexTaskIOConfig taskIoConfig, RecordSupplier recordSupplier)

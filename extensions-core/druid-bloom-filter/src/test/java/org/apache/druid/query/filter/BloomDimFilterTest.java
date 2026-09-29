@@ -349,7 +349,7 @@ public class BloomDimFilterTest extends BaseFilterTest
   public void testStringHiveCompat() throws IOException
   {
     org.apache.hive.common.util.BloomKFilter hiveFilter =
-        new org.apache.hive.common.util.BloomKFilter(1500);
+        org.apache.hive.common.util.BloomKFilter.build(1500);
     hiveFilter.addString("myTestString");
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
     org.apache.hive.common.util.BloomKFilter.serialize(byteArrayOutputStream, hiveFilter);
@@ -366,7 +366,7 @@ public class BloomDimFilterTest extends BaseFilterTest
   public void testFloatHiveCompat() throws IOException
   {
     org.apache.hive.common.util.BloomKFilter hiveFilter =
-        new org.apache.hive.common.util.BloomKFilter(1500);
+        org.apache.hive.common.util.BloomKFilter.build(1500);
     hiveFilter.addFloat(32.0F);
     hiveFilter.addFloat(66.4F);
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -385,7 +385,7 @@ public class BloomDimFilterTest extends BaseFilterTest
   public void testDoubleHiveCompat() throws IOException
   {
     org.apache.hive.common.util.BloomKFilter hiveFilter =
-        new org.apache.hive.common.util.BloomKFilter(1500);
+        org.apache.hive.common.util.BloomKFilter.build(1500);
     hiveFilter.addDouble(32.0D);
     hiveFilter.addDouble(66.4D);
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -403,7 +403,7 @@ public class BloomDimFilterTest extends BaseFilterTest
   public void testLongHiveCompat() throws IOException
   {
     org.apache.hive.common.util.BloomKFilter hiveFilter =
-        new org.apache.hive.common.util.BloomKFilter(1500);
+        org.apache.hive.common.util.BloomKFilter.build(1500);
     hiveFilter.addLong(32L);
     hiveFilter.addLong(664L);
     ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();

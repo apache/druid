@@ -21,11 +21,11 @@ package org.apache.druid.data.input.parquet;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -39,13 +39,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @SuppressWarnings("ALL")
 public class ParquetToJsonTest
 {
-  @TempDir
-  public static File tmp;
+  @RegisterExtension
+  public static final TemporaryFolderExtension TMP = TemporaryFolderExtension.classScoped();
 
   @Test
   public void testSanity() throws Exception
   {
-    final File tmpDir = newFolder(tmp, "junit");
+    final File tmpDir = TMP.newFolder();
     try (InputStream in = new BufferedInputStream(ClassLoader.getSystemResourceAsStream("smlTbl.parquet"))) {
       Files.copy(in, tmpDir.toPath().resolve("smlTbl.parquet"));
     }
@@ -76,7 +76,7 @@ public class ParquetToJsonTest
   @Test
   public void testConvertedDates() throws Exception
   {
-    final File tmpDir = newFolder(tmp, "junit");
+    final File tmpDir = TMP.newFolder();
     try (InputStream in = new BufferedInputStream(ClassLoader.getSystemResourceAsStream("smlTbl.parquet"))) {
       Files.copy(in, tmpDir.toPath().resolve("smlTbl.parquet"));
     }
@@ -115,14 +115,14 @@ public class ParquetToJsonTest
   @Test
   public void testEmptyDir() throws Exception
   {
-    final File tmpDir = newFolder(tmp, "junit");
+    final File tmpDir = TMP.newFolder();
     Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {tmpDir.getAbsolutePath()}));
   }
 
   @Test
   public void testSomeFile() throws Exception
   {
-    final File file = File.createTempFile("junit", null, tmp);
+    final File file = File.createTempFile("junit", null, TMP.getRoot());
     assertTrue(file.exists());
     Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
   }
@@ -130,13 +130,9 @@ public class ParquetToJsonTest
   @Test
   public void testNonExistentFile() throws Exception
   {
-    final File file = new File(tmp, "nonExistent");
+    final File file = new File(TMP.getRoot(), "nonExistent");
     assertFalse(file.exists());
     Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
   }
 
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
-  }
 }

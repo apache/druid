@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`makeDocHtml correctly formats helper HTML 1`] = `
 "<div class="doc-name">COUNT</div>

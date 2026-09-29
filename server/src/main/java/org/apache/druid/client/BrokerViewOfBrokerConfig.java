@@ -22,6 +22,7 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
@@ -38,7 +39,6 @@ import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
 
-import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 /**

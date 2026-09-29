@@ -22,23 +22,17 @@ package org.apache.druid.server.log;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.ProvisionException;
+import jakarta.validation.Validation;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import javax.validation.Validation;
 import java.util.Properties;
 
 public class RequestLoggerProviderTest
 {
   private final DefaultObjectMapper mapper = new DefaultObjectMapper();
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
 
   public RequestLoggerProviderTest()
   {
@@ -69,7 +63,7 @@ public class RequestLoggerProviderTest
         RequestLoggerProvider.class,
         NoopRequestLoggerProvider.class
     );
-    MatcherAssert.assertThat(provider, CoreMatchers.instanceOf(NoopRequestLoggerProvider.class));
+    Assertions.assertInstanceOf(NoopRequestLoggerProvider.class, provider);
   }
 
   @Test
@@ -84,14 +78,15 @@ public class RequestLoggerProviderTest
                   .getValidator()
     );
 
-    expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("missing type id property 'type'");
-
-    configurator.configurate(
-        properties,
-        "log",
-        RequestLoggerProvider.class,
-        NoopRequestLoggerProvider.class
+    final ProvisionException exception = Assertions.assertThrows(
+        ProvisionException.class,
+        () -> configurator.configurate(
+            properties,
+            "log",
+            RequestLoggerProvider.class,
+            NoopRequestLoggerProvider.class
+        )
     );
+    Assertions.assertTrue(exception.getMessage().contains("missing type id property 'type'"));
   }
 }

@@ -21,19 +21,17 @@ package org.apache.druid.storage.google.output;
 
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.io.File;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public class GoogleOutputConfigTest
 {
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private static final String BUCKET = "bucket";
   private static final String PREFIX = "prefix";
@@ -45,12 +43,8 @@ public class GoogleOutputConfigTest
     HumanReadableBytes chunkSize = new HumanReadableBytes("17MiB");
     Assertions.assertThrows(
         DruidException.class,
-        () -> new GoogleOutputConfig(BUCKET, PREFIX, newFolder(temporaryFolder, "junit"), chunkSize, MAX_RETRY_COUNT)
+        () -> new GoogleOutputConfig(BUCKET, PREFIX, temporaryFolder.newFolder(), chunkSize, MAX_RETRY_COUNT)
     );
   }
 
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
-  }
 }

@@ -35,6 +35,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.WriteOutBytes;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CloseableUtils;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
@@ -43,7 +44,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -60,6 +61,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 @ParameterizedClass
+
 @MethodSource("constructorFeeder")
 public class CompressedColumnarIntsSerializerTest
 {
@@ -72,8 +74,8 @@ public class CompressedColumnarIntsSerializerTest
   public ByteOrder byteOrder;
   private final Random rand = new Random(0);
   private int[] vals;
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public static Stream<Object[]> constructorFeeder()
   {
@@ -149,14 +151,15 @@ public class CompressedColumnarIntsSerializerTest
   @Test
   public void testLargeColumn() throws IOException
   {
-    final File columnDir = new File(temporaryFolder, "columnDir");
-    FileUtils.mkdirp(columnDir);
+    final File columnDir = temporaryFolder.newFolder("columnDir");
     final String columnName = "column";
     final long numRows = 500_000; // enough values that we expect to switch into large-column mode
 
     try (
         SegmentWriteOutMedium segmentWriteOutMedium =
-            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(new File(temporaryFolder, "medium1"));
+            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(
+                temporaryFolder.newFolder("medium1")
+            );
         FileSmoosher smoosher = new FileSmoosher(columnDir)
     ) {
       final Random random = new Random(0);
@@ -212,7 +215,7 @@ public class CompressedColumnarIntsSerializerTest
           try (
               SegmentWriteOutMedium segmentWriteOutMedium =
                   TmpFileSegmentWriteOutMediumFactory.instance()
-                                                     .makeSegmentWriteOutMedium(new File(temporaryFolder, "medium2"))
+                                                     .makeSegmentWriteOutMedium(temporaryFolder.newFolder("medium2"))
           ) {
             CompressedColumnarIntsSerializer serializer = new CompressedColumnarIntsSerializer(
                 "test",
@@ -245,8 +248,9 @@ public class CompressedColumnarIntsSerializerTest
 
   private void checkSerializedSizeAndData(int chunkFactor) throws Exception
   {
-    final File smoosherDir = new File(temporaryFolder, StringUtils.replace("smoosher_" + compressionStrategy + "_" + byteOrder.toString(), " ", ""));
-    FileUtils.mkdirp(smoosherDir);
+    final File smoosherDir = temporaryFolder.newFolder(
+        StringUtils.replace("smoosher_" + compressionStrategy + "_" + byteOrder.toString(), " ", "")
+    );
     FileSmoosher smoosher = new FileSmoosher(smoosherDir);
 
     CompressedColumnarIntsSerializer writer = new CompressedColumnarIntsSerializer(

@@ -23,7 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.compact.CompactionScheduler;
@@ -49,12 +49,11 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -88,7 +87,7 @@ public class OverlordCompactionResourceTest
    */
   private CompactionScheduler validator;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     useSupervisors.set(true);
@@ -130,7 +129,7 @@ public class OverlordCompactionResourceTest
     EasyMock.replay(validator, taskMaster, authorizerMapper);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(
@@ -164,8 +163,8 @@ public class OverlordCompactionResourceTest
         new ClusterCompactionConfig(0.5, 10, null, true, CompactionEngine.MSQ, true),
         httpRequest
     );
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("success", true), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(Map.of("success", true), response.getEntity());
   }
 
   @Test
@@ -179,8 +178,8 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     final Response response = compactionResource.getClusterCompactionConfig();
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(clusterConfig, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(clusterConfig, response.getEntity());
   }
 
   @Test
@@ -208,8 +207,8 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     final Response response = compactionResource.getDatasourceCompactionSnapshot(TestDataSource.WIKI);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(snapshot, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(snapshot, response.getEntity());
   }
 
   @Test
@@ -220,7 +219,7 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     final Response response = compactionResource.getDatasourceCompactionSnapshot(TestDataSource.KOALA);
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
   }
 
   @Test
@@ -235,8 +234,8 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     final Response response = compactionResource.getDatasourceCompactionSnapshot(TestDataSource.WIKI);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(snapshot, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(snapshot, response.getEntity());
   }
 
   @Test
@@ -253,8 +252,8 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     final Response response = compactionResource.getAllCompactionSnapshots(httpRequest);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new CompactionStatusResponse(List.of(snapshot)), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(new CompactionStatusResponse(List.of(snapshot)), response.getEntity());
   }
 
   @Test
@@ -273,8 +272,8 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     final Response response = compactionResource.getAllCompactionSnapshots(httpRequest);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new CompactionStatusResponse(List.of(snapshot)), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(new CompactionStatusResponse(List.of(snapshot)), response.getEntity());
   }
 
   @Test
@@ -287,8 +286,8 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     final Response response = compactionResource.getDatasourceCompactionConfig(TestDataSource.WIKI);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(wikiConfig, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(wikiConfig, response.getEntity());
   }
 
   @Test
@@ -325,7 +324,7 @@ public class OverlordCompactionResourceTest
 
     final Response response = compactionResource
         .updateDatasourceCompactionConfig(TestDataSource.WIKI, wikiConfig, httpRequest);
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
   }
 
   @Test
@@ -354,7 +353,7 @@ public class OverlordCompactionResourceTest
 
     final Response response = compactionResource
         .deleteDatasourceCompactionConfig(TestDataSource.WIKI, httpRequest);
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
   }
 
   @Test
@@ -390,8 +389,8 @@ public class OverlordCompactionResourceTest
     replayAll();
 
     final Response response = compactionResource.getAllCompactionConfigs(httpRequest);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new CompactionConfigsResponse(List.of(wikiConfig)), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(new CompactionConfigsResponse(List.of(wikiConfig)), response.getEntity());
   }
 
   @Test
@@ -419,26 +418,26 @@ public class OverlordCompactionResourceTest
 
     Response response = compactionResource
         .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, null, null);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(toHistoryResponse(history), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(toHistoryResponse(history), response.getEntity());
 
     // Filter by count
     response = compactionResource
         .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, null, 2);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(toHistoryResponse(history.subList(0, 2)), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(toHistoryResponse(history.subList(0, 2)), response.getEntity());
 
     // Filter by interval
     response = compactionResource
         .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, "2025-01/P40D", null);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(toHistoryResponse(history.subList(1, 3)), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(toHistoryResponse(history.subList(1, 3)), response.getEntity());
 
     // Filter by interval and count
     response = compactionResource
         .getDatasourceCompactionConfigHistory(TestDataSource.WIKI, "2025-01/P40D", 1);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(toHistoryResponse(history.subList(1, 2)), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(toHistoryResponse(history.subList(1, 2)), response.getEntity());
   }
 
   private static CompactionConfigHistoryResponse toHistoryResponse(
@@ -450,12 +449,13 @@ public class OverlordCompactionResourceTest
 
   private void verifyInvalidInputResponse(Response response, String message)
   {
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
-    MatcherAssert.assertThat(
-        ((ErrorResponse) response.getEntity()).getUnderlyingException(),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(message)
-    );
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertTrue(response.getEntity() instanceof ErrorResponse);
+    final DruidException exception = ((ErrorResponse) response.getEntity()).getUnderlyingException();
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(message, exception.getMessage());
   }
 
   private void setupMockRequestForUser(String user)

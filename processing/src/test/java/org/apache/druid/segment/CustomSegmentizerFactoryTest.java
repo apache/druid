@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -35,15 +34,15 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
 {
@@ -51,8 +50,8 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   private static IndexIO INDEX_IO;
   private static IndexMerger INDEX_MERGER;
 
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeAll
   public static void setup()
@@ -79,7 +78,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   public void testDefaultSegmentizerPersist() throws IOException
   {
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
-    File segment = new File(FileUtils.createTempDirInLocation(tempDir, "seg"), "segment");
+    File segment = new File(temporaryFolder.newFolder("seg"), "segment");
     File persisted = INDEX_MERGER.persist(
         data,
         Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z"),
@@ -98,7 +97,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   public void testCustomSegmentizerPersist() throws IOException
   {
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
-    File segment = new File(FileUtils.createTempDirInLocation(tempDir, "seg"), "segment");
+    File segment = new File(temporaryFolder.newFolder("seg"), "segment");
     File persisted = INDEX_MERGER.persist(
         data,
         Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z"),

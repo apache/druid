@@ -43,9 +43,10 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -93,13 +94,14 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     super(LockGranularity.SEGMENT, DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     inputDir = temporaryFolder.newFolder("data");
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsFirstPhase() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
@@ -125,20 +127,21 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
 
     TaskStatus taskStatus = task.runRangePartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-1]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsSecondPhase() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
@@ -164,20 +167,21 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
 
     TaskStatus taskStatus = task.runRangePartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-2]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsThirdPhase() throws Exception
   {
     int targetRowsPerSegment = NUM_ROW * 2 / DIM_FILE_CARDINALITY / NUM_PARTITION;
@@ -203,14 +207,14 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
     task.setToolbox(toolbox);
     TaskStatus taskStatus = task.runRangePartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-3]. See task logs for details.",
         taskStatus.getErrorMsg()
     );

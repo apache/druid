@@ -26,9 +26,9 @@ import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.HashSet;
@@ -43,7 +43,7 @@ public class BrokerViewOfCoordinatorConfigTest
   private CoordinatorDynamicConfig config;
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     config = CoordinatorDynamicConfig.builder()
@@ -59,7 +59,7 @@ public class BrokerViewOfCoordinatorConfigTest
   {
     target.start();
     Mockito.verify(coordinatorClient, Mockito.times(1)).getCoordinatorDynamicConfig();
-    Assert.assertEquals(config, target.getDynamicConfig());
+    Assertions.assertEquals(config, target.getDynamicConfig());
   }
 
   @Test
@@ -72,9 +72,9 @@ public class BrokerViewOfCoordinatorConfigTest
         target.getQueryableServers(servers, CloneQueryMode.EXCLUDECLONES);
 
     Set<String> hosts = extractHosts(result);
-    Assert.assertFalse("target clone server host1 should be filtered", hosts.contains("host1"));
-    Assert.assertTrue("source clone server host2 should remain", hosts.contains("host2"));
-    Assert.assertTrue("non-clone server host3 should remain", hosts.contains("host3"));
+    Assertions.assertFalse(hosts.contains("host1"), "target clone server host1 should be filtered");
+    Assertions.assertTrue(hosts.contains("host2"), "source clone server host2 should remain");
+    Assertions.assertTrue(hosts.contains("host3"), "non-clone server host3 should remain");
   }
 
   @Test
@@ -87,9 +87,9 @@ public class BrokerViewOfCoordinatorConfigTest
         target.getQueryableServers(servers, CloneQueryMode.PREFERCLONES);
 
     Set<String> hosts = extractHosts(result);
-    Assert.assertTrue("target clone server host1 should remain", hosts.contains("host1"));
-    Assert.assertFalse("source clone server host2 should be filtered", hosts.contains("host2"));
-    Assert.assertTrue("non-clone server host3 should remain", hosts.contains("host3"));
+    Assertions.assertTrue(hosts.contains("host1"), "target clone server host1 should remain");
+    Assertions.assertFalse(hosts.contains("host2"), "source clone server host2 should be filtered");
+    Assertions.assertTrue(hosts.contains("host3"), "non-clone server host3 should remain");
   }
 
   @Test
@@ -101,7 +101,7 @@ public class BrokerViewOfCoordinatorConfigTest
     Int2ObjectRBTreeMap<Set<QueryableDruidServer>> result =
         target.getQueryableServers(servers, CloneQueryMode.INCLUDECLONES);
 
-    Assert.assertSame("INCLUDECLONES should return the original map", servers, result);
+    Assertions.assertSame(servers, result, "INCLUDECLONES should return the original map");
   }
 
   @Test
@@ -120,9 +120,9 @@ public class BrokerViewOfCoordinatorConfigTest
         target.getQueryableServers(servers, CloneQueryMode.EXCLUDECLONES);
 
     Set<String> hosts = extractHosts(result);
-    Assert.assertFalse("new target clone host3 should be filtered", hosts.contains("host3"));
-    Assert.assertTrue("host1 is now source, should remain", hosts.contains("host1"));
-    Assert.assertTrue("host2 is unrelated, should remain", hosts.contains("host2"));
+    Assertions.assertFalse(hosts.contains("host3"), "new target clone host3 should be filtered");
+    Assertions.assertTrue(hosts.contains("host1"), "host1 is now source, should remain");
+    Assertions.assertTrue(hosts.contains("host2"), "host2 is unrelated, should remain");
   }
 
   /**

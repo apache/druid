@@ -65,4 +65,22 @@ public class EnvironmentVariableDynamicConfigProviderTest
     Assertions.assertEquals("druid", provider.getConfig().get("user"));
     Assertions.assertEquals("123", provider.getConfig().get("password"));
   }
+
+  @Test
+  public void testGetConfigSkipsUnsetVariables()
+  {
+    final ImmutableMap<String, String> env = ImmutableMap.of("DRUID_USER", "druid");
+
+    Map<String, String> config = ImmutableMap.of("user", "DRUID_USER", "password", "DRUID_PASSWORD");
+    EnvironmentVariableDynamicConfigProvider provider = new EnvironmentVariableDynamicConfigProvider(config)
+    {
+      @Override
+      protected String getEnv(String var)
+      {
+        return env.get(var);
+      }
+    };
+
+    Assertions.assertEquals(ImmutableMap.of("user", "druid"), provider.getConfig());
+  }
 }

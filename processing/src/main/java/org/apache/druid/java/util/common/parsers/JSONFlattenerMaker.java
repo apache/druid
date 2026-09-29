@@ -27,7 +27,10 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
+import net.thisptr.jackson.jq.BuiltinFunctionLoader;
 import net.thisptr.jackson.jq.JsonQuery;
+import net.thisptr.jackson.jq.Scope;
+import net.thisptr.jackson.jq.Versions;
 import net.thisptr.jackson.jq.exception.JsonQueryException;
 import org.apache.druid.data.input.impl.FastJacksonJsonNodeJsonProvider;
 import org.apache.druid.java.util.common.StringUtils;
@@ -46,6 +49,7 @@ import java.util.function.Function;
 public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonNode>
 {
   private static final JsonProvider JSON_PROVIDER = new FastJacksonJsonNodeJsonProvider();
+  private static final Scope JSON_QUERY_SCOPE = createJsonQueryScope();
 
   private static final Configuration JSONPATH_CONFIGURATION =
       Configuration.builder()
@@ -53,6 +57,13 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
                    .mappingProvider(new JacksonMappingProvider())
                    .options(EnumSet.of(Option.SUPPRESS_EXCEPTIONS))
                    .build();
+
+  private static Scope createJsonQueryScope()
+  {
+    final Scope scope = Scope.newEmptyScope();
+    BuiltinFunctionLoader.getInstance().loadFunctions(Versions.JQ_1_6, scope);
+    return scope;
+  }
 
   private final CharsetEncoder enc = StandardCharsets.UTF_8.newEncoder();
   private final boolean keepNullValues;
@@ -102,10 +113,12 @@ public class JSONFlattenerMaker implements ObjectFlatteners.FlattenerMaker<JsonN
   public Function<JsonNode, Object> makeJsonQueryExtractor(final String expr)
   {
     try {
-      final JsonQuery jsonQuery = JsonQuery.compile(expr);
+      final JsonQuery jsonQuery = JsonQuery.compile(expr, Versions.JQ_1_6);
       return jsonNode -> {
         try {
-          return finalizeConversionForMap(jsonQuery.apply(jsonNode).get(0));
+          final List<JsonNode> output = new ArrayList<>();
+          jsonQuery.apply(JSON_QUERY_SCOPE, jsonNode, output::add);
+          return finalizeConversionForMap(output.get(0));
         }
         catch (JsonQueryException e) {
           throw new RuntimeException(e);

@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.google.common.base.Optional;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.indexer.TaskIdStatus;
 import org.apache.druid.indexer.TaskInfo;
@@ -30,7 +31,6 @@ import org.apache.druid.metadata.TaskLookup.TaskLookupType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

@@ -56,9 +56,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -117,13 +117,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     super(0.0, 0.0);
   }
 
-  @After
-  public void teardown()
-  {
-    temporaryFolder.delete();
-  }
-
-  @Test(timeout = 20000L)
+  @Test
+  @Timeout(20)
   public void testAPIs() throws Exception
   {
     task = newTask(
@@ -139,17 +134,17 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
     Thread.sleep(1000);
 
     final SinglePhaseParallelIndexTaskRunner runner = (SinglePhaseParallelIndexTaskRunner) task.getCurrentRunner();
-    Assert.assertNotNull("runner is null", runner);
+    Assertions.assertNotNull(runner, "runner is null");
 
     // test getMode
     Response response = task.getMode(newRequest());
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals("parallel", response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals("parallel", response.getEntity());
 
     // test expectedNumSucceededTasks
     response = task.getProgress(newRequest());
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(
         NUM_SUB_TASKS,
         ((ParallelIndexingPhaseProgress) response.getEntity()).getEstimatedExpectedSucceeded()
     );
@@ -218,11 +213,11 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         buildStateMap()
     );
 
-    Assert.assertEquals(1, runningSpecs.size());
+    Assertions.assertEquals(1, runningSpecs.size());
     final String lastRunningSpecId = runningSpecs.keySet().iterator().next();
     final List<TaskStatusPlus> taskHistory = taskHistories.get(lastRunningSpecId);
     // This should be a failed task history because new tasks appear later in runningTasks.
-    Assert.assertEquals(1, taskHistory.size());
+    Assertions.assertEquals(1, taskHistory.size());
 
     // Test one more failure
     runningTasks.get(0).setState(TaskState.FAILED);
@@ -239,7 +234,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         failedTasks,
         buildStateMap()
     );
-    Assert.assertEquals(2, taskHistory.size());
+    Assertions.assertEquals(2, taskHistory.size());
 
     runningTasks.get(0).setState(TaskState.SUCCESS);
     succeededTasks++;
@@ -247,7 +242,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskState.SUCCESS,
         getIndexingServiceClient().waitToFinish(task, 1000, TimeUnit.MILLISECONDS).getStatusCode()
     );
@@ -257,7 +252,7 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   private int getNumSubTasks(Function<ParallelIndexingPhaseProgress, Integer> func)
   {
     final Response response = task.getProgress(newRequest());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     return func.apply((ParallelIndexingPhaseProgress) response.getEntity());
   }
 
@@ -285,40 +280,40 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   )
   {
     Response response = task.getProgress(newRequest());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     final ParallelIndexingPhaseProgress monitorStatus = (ParallelIndexingPhaseProgress) response.getEntity();
 
     // Verify the number of tasks in different states
-    Assert.assertEquals(runningTasks.size(), monitorStatus.getRunning());
-    Assert.assertEquals(expectedSucceededTasks, monitorStatus.getSucceeded());
-    Assert.assertEquals(expectedFailedTask, monitorStatus.getFailed());
-    Assert.assertEquals(expectedSucceededTasks + expectedFailedTask, monitorStatus.getComplete());
-    Assert.assertEquals(runningTasks.size() + expectedSucceededTasks + expectedFailedTask, monitorStatus.getTotal());
+    Assertions.assertEquals(runningTasks.size(), monitorStatus.getRunning());
+    Assertions.assertEquals(expectedSucceededTasks, monitorStatus.getSucceeded());
+    Assertions.assertEquals(expectedFailedTask, monitorStatus.getFailed());
+    Assertions.assertEquals(expectedSucceededTasks + expectedFailedTask, monitorStatus.getComplete());
+    Assertions.assertEquals(runningTasks.size() + expectedSucceededTasks + expectedFailedTask, monitorStatus.getTotal());
 
     // runningSubTasks
     response = task.getRunningTasks(newRequest());
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(
         runningTasks.stream().map(AbstractTask::getId).collect(Collectors.toSet()),
         new HashSet<>((Collection<String>) response.getEntity())
     );
 
     // subTaskSpecs
     response = task.getSubTaskSpecs(newRequest());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     List<SubTaskSpec<SinglePhaseSubTask>> actualSubTaskSpecMap =
         (List<SubTaskSpec<SinglePhaseSubTask>>) response.getEntity();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         subTaskSpecs.keySet(),
         actualSubTaskSpecMap.stream().map(SubTaskSpec::getId).collect(Collectors.toSet())
     );
 
     // runningSubTaskSpecs
     response = task.getRunningSubTaskSpecs(newRequest());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     actualSubTaskSpecMap =
         (List<SubTaskSpec<SinglePhaseSubTask>>) response.getEntity();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         runningSpecs.keySet(),
         actualSubTaskSpecMap.stream().map(SubTaskSpec::getId).collect(Collectors.toSet())
     );
@@ -333,31 +328,31 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         .collect(Collectors.toList());
 
     response = task.getCompleteSubTaskSpecs(newRequest());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     List<SubTaskSpec<SinglePhaseSubTask>> actual = (List<SubTaskSpec<SinglePhaseSubTask>>) response.getEntity();
     actual.sort(Comparator.comparing(SubTaskSpec::getId));
-    Assert.assertEquals(completeSubTaskSpecs, actual);
+    Assertions.assertEquals(completeSubTaskSpecs, actual);
 
     // subTaskSpec
     final String subTaskId = runningSpecs.keySet().iterator().next();
     response = task.getSubTaskSpec(subTaskId, newRequest());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     final SubTaskSpec<SinglePhaseSubTask> subTaskSpec =
         (SubTaskSpec<SinglePhaseSubTask>) response.getEntity();
-    Assert.assertEquals(subTaskId, subTaskSpec.getId());
+    Assertions.assertEquals(subTaskId, subTaskSpec.getId());
 
     // subTaskState
     response = task.getSubTaskState(subTaskId, newRequest());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     final SubTaskSpecStatus expectedResponse = Preconditions.checkNotNull(
         expectedSubTaskStateResponses.get(subTaskId),
         "response for task[%s]",
         subTaskId
     );
     final SubTaskSpecStatus actualResponse = (SubTaskSpecStatus) response.getEntity();
-    Assert.assertEquals(expectedResponse.getSpec().getId(), actualResponse.getSpec().getId());
-    Assert.assertEquals(expectedResponse.getCurrentStatus(), actualResponse.getCurrentStatus());
-    Assert.assertEquals(expectedResponse.getTaskHistory(), actualResponse.getTaskHistory());
+    Assertions.assertEquals(expectedResponse.getSpec().getId(), actualResponse.getSpec().getId());
+    Assertions.assertEquals(expectedResponse.getCurrentStatus(), actualResponse.getCurrentStatus());
+    Assertions.assertEquals(expectedResponse.getTaskHistory(), actualResponse.getTaskHistory());
 
     // completeSubTaskSpecAttemptHistory
     final String completeSubTaskSpecId = expectedSubTaskStateResponses
@@ -374,8 +369,8 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
         .orElse(null);
     if (completeSubTaskSpecId != null) {
       response = task.getCompleteSubTaskSpecAttemptHistory(completeSubTaskSpecId, newRequest());
-      Assert.assertEquals(200, response.getStatus());
-      Assert.assertEquals(
+      Assertions.assertEquals(200, response.getStatus());
+      Assertions.assertEquals(
           expectedSubTaskStateResponses.get(completeSubTaskSpecId).getTaskHistory(),
           response.getEntity()
       );

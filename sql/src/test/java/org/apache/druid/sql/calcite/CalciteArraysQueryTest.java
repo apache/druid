@@ -77,7 +77,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -112,12 +112,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     if (expected instanceof List && actual instanceof List) {
       List expectedList = (List) expected;
       List actualList = (List) actual;
-      Assert.assertEquals(path + " arrays length mismatch", expectedList.size(), actualList.size());
+      Assertions.assertEquals(expectedList.size(), actualList.size(), path + " arrays length mismatch");
       for (int i = 0; i < expectedList.size(); i++) {
         assertDeepEquals(path + "[" + i + "]", expectedList.get(i), actualList.get(i));
       }
     } else {
-      Assert.assertEquals(path, expected, actual);
+      Assertions.assertEquals(expected, actual, path);
     }
   }
 

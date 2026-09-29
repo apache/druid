@@ -53,18 +53,15 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
 {
@@ -1333,7 +1330,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   {
     // Test to verify that "maxUnapplyCountForDruidReverseLookupRule" works properly. This ensures that the *other*
     // tests are correctly validating that we aren't doing too many reverse lookups.
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'xabc' OR LOOKUP(dim2, 'lookyloo') = 'x6'"),
@@ -1343,10 +1340,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Too many optimize calls[2]"))
-    );
+    Assertions.assertTrue(e.getMessage().startsWith("Too many optimize calls[2]"));
   }
 
   @Test

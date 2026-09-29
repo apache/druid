@@ -22,13 +22,9 @@ package org.apache.druid.indexing.common.task.batch.parallel.iterator;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -45,9 +41,6 @@ public class RangePartitionIndexTaskInputRowIteratorBuilderTest
           )
       );
   private static final InputRow NO_NEXT_INPUT_ROW = null;
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void invokesDimensionValueCountFilterLast()
@@ -100,14 +93,15 @@ public class RangePartitionIndexTaskInputRowIteratorBuilderTest
         IndexTaskInputRowIteratorBuilderTestingFactory.PRESENT_BUCKET_INTERVAL_OPT
     );
 
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Cannot partition on multi-value dimension [dimension]");
-
-    HANDLER_TESTER.invokeHandlers(
-        inputRowIterator,
-        granularitySpec,
-        NO_NEXT_INPUT_ROW
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> HANDLER_TESTER.invokeHandlers(
+            inputRowIterator,
+            granularitySpec,
+            NO_NEXT_INPUT_ROW
+        )
     );
+    Assertions.assertTrue(exception.getMessage().contains("Cannot partition on multi-value dimension [dimension]"));
   }
 
   @Test
@@ -131,7 +125,7 @@ public class RangePartitionIndexTaskInputRowIteratorBuilderTest
             inputRow
         );
 
-    Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
+    Assertions.assertEquals(Collections.emptyList(), handlerInvocationHistory);
   }
 
   @Test
@@ -193,7 +187,7 @@ public class RangePartitionIndexTaskInputRowIteratorBuilderTest
             inputRow
         );
 
-    Assert.assertEquals(Collections.emptyList(), handlerInvocationHistory);
+    Assertions.assertEquals(Collections.emptyList(), handlerInvocationHistory);
   }
 
   private static void assertNotInHandlerInvocationHistory(
@@ -201,6 +195,6 @@ public class RangePartitionIndexTaskInputRowIteratorBuilderTest
       IndexTaskInputRowIteratorBuilderTestingFactory.HandlerTester.Handler handler
   )
   {
-    MatcherAssert.assertThat(handlerInvocationHistory, Matchers.not(Matchers.contains(handler)));
+    Assertions.assertFalse(handlerInvocationHistory.contains(handler));
   }
 }

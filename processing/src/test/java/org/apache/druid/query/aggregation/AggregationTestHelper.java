@@ -55,7 +55,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
@@ -84,9 +83,9 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
-import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -158,7 +157,7 @@ public class AggregationTestHelper implements Closeable
   public static AggregationTestHelper createGroupByQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       GroupByQueryConfig config,
-      TemporaryFolder tempFolder
+      TemporaryFolderExtension tempFolder
   )
   {
     return createGroupByQueryAggregationTestHelper(
@@ -168,7 +167,7 @@ public class AggregationTestHelper implements Closeable
     );
   }
 
-  public static AggregationTestHelper createGroupByQueryAggregationTestHelperWithTempDir(
+  public static AggregationTestHelper createGroupByQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       GroupByQueryConfig config,
       File tempFolder
@@ -193,7 +192,7 @@ public class AggregationTestHelper implements Closeable
     for (Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
     }
-    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTestHelper.makeQueryRunnerFactory(
         mapper,
         config,
         groupByBuffers
@@ -221,7 +220,7 @@ public class AggregationTestHelper implements Closeable
 
   public static AggregationTestHelper createTimeseriesQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
-      TemporaryFolder tempFolder
+      TemporaryFolderExtension tempFolder
   )
   {
     return createTimeseriesQueryAggregationTestHelper(
@@ -278,7 +277,7 @@ public class AggregationTestHelper implements Closeable
 
   public static AggregationTestHelper createTopNQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
-      TemporaryFolder tempFolder
+      TemporaryFolderExtension tempFolder
   )
   {
     return createTopNQueryAggregationTestHelper(
@@ -347,7 +346,7 @@ public class AggregationTestHelper implements Closeable
 
   public static AggregationTestHelper createScanQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
-      TemporaryFolder tempFolder
+      TemporaryFolderExtension tempFolder
   )
   {
     return createScanQueryAggregationTestHelper(
@@ -405,7 +404,7 @@ public class AggregationTestHelper implements Closeable
     );
   }
 
-  private static TempFolderProvider tempFolderProvider(final TemporaryFolder tempFolder)
+  private static TempFolderProvider tempFolderProvider(final TemporaryFolderExtension tempFolder)
   {
     return () -> tempFolder.newFolder();
   }

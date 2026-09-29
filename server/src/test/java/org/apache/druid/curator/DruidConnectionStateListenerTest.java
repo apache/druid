@@ -22,16 +22,16 @@ package org.apache.druid.curator;
 import org.apache.curator.framework.state.ConnectionState;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class DruidConnectionStateListenerTest
 {
   private StubServiceEmitter emitter;
   private DruidConnectionStateListener listener;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     emitter = new StubServiceEmitter("DruidConnectionStateListenerTest", "localhost");
@@ -41,26 +41,26 @@ public class DruidConnectionStateListenerTest
   @Test
   public void test_isConnected()
   {
-    Assert.assertFalse(listener.isConnected());
+    Assertions.assertFalse(listener.isConnected());
 
     listener.stateChanged(null, ConnectionState.CONNECTED);
-    Assert.assertTrue(listener.isConnected());
+    Assertions.assertTrue(listener.isConnected());
 
     listener.stateChanged(null, ConnectionState.SUSPENDED);
-    Assert.assertFalse(listener.isConnected());
+    Assertions.assertFalse(listener.isConnected());
 
     listener.stateChanged(null, ConnectionState.RECONNECTED);
-    Assert.assertTrue(listener.isConnected());
+    Assertions.assertTrue(listener.isConnected());
 
     listener.stateChanged(null, ConnectionState.LOST);
-    Assert.assertFalse(listener.isConnected());
+    Assertions.assertFalse(listener.isConnected());
   }
 
   @Test
   public void test_doMonitor_init()
   {
     listener.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue("zk/connected", 0);
   }
 
@@ -69,7 +69,7 @@ public class DruidConnectionStateListenerTest
   {
     listener.stateChanged(null, ConnectionState.CONNECTED);
     listener.doMonitor(emitter);
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
 
     emitter.verifyValue("zk/connected", 1);
   }
@@ -79,7 +79,7 @@ public class DruidConnectionStateListenerTest
   {
     listener.stateChanged(null, ConnectionState.SUSPENDED);
     listener.doMonitor(emitter);
-    Assert.assertEquals(2, emitter.getNumEmittedEvents()); // 2 because stateChanged emitted an alert
+    Assertions.assertEquals(2, emitter.getNumEmittedEvents()); // 2 because stateChanged emitted an alert
 
     emitter.verifyValue("zk/connected", 0);
   }
@@ -88,24 +88,24 @@ public class DruidConnectionStateListenerTest
   public void test_suspendedAlert()
   {
     listener.stateChanged(null, ConnectionState.SUSPENDED);
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
 
     final AlertEvent alert = emitter.getAlerts().get(0);
-    Assert.assertEquals("alerts", alert.getFeed());
-    Assert.assertEquals("ZooKeeper connection[SUSPENDED]", alert.getDescription());
+    Assertions.assertEquals("alerts", alert.getFeed());
+    Assertions.assertEquals("ZooKeeper connection[SUSPENDED]", alert.getDescription());
   }
 
   @Test
   public void test_reconnectedMetric()
   {
     listener.stateChanged(null, ConnectionState.SUSPENDED);
-    Assert.assertEquals(1, emitter.getNumEmittedEvents()); // the first stateChanged emits an alert
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents()); // the first stateChanged emits an alert
 
     listener.stateChanged(null, ConnectionState.RECONNECTED);
-    Assert.assertEquals(2, emitter.getNumEmittedEvents()); // the second stateChanged emits a metric
+    Assertions.assertEquals(2, emitter.getNumEmittedEvents()); // the second stateChanged emits a metric
 
     long observedReconnectTime = emitter.getValue("zk/reconnect/time", null).longValue();
-    Assert.assertTrue(observedReconnectTime >= 0);
+    Assertions.assertTrue(observedReconnectTime >= 0);
   }
 
 }

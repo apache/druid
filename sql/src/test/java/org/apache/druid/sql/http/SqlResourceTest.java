@@ -82,7 +82,6 @@ import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
@@ -91,6 +90,7 @@ import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -101,7 +101,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
@@ -143,8 +143,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 @SuppressWarnings("ALL")
 public class SqlResourceTest extends CalciteTestBase
@@ -237,7 +235,7 @@ public class SqlResourceTest extends CalciteTestBase
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
     final PlannerConfig plannerConfig = PlannerConfig.builder().build();
-    final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
+    final DruidSchemaCatalogProvider schemaProvider = CalciteTests.createMockRootSchemaProvider(
         conglomerate,
         walker,
         plannerConfig,
@@ -251,7 +249,7 @@ public class SqlResourceTest extends CalciteTestBase
     testRequestLogger = new TestRequestLogger();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        schemaProvider,
         operatorTable,
         macroTable,
         plannerConfig,
@@ -355,14 +353,18 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testUnauthorized()
+  public void testUnauthorized() throws Exception
   {
-    ForbiddenException e = Assertions.assertThrows(ForbiddenException.class, () -> {
-      postForAsyncResponse(createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"), request());
-    });
-    Assertions.assertEquals("Unauthorized", e.getMessage());
+    // Unauthorized tables are validation errors ("not found") because DruidSchemaProvider filters them out.
+    ErrorResponse errorResponse =
+        postSyncForException("select count(*) from forbiddenDatasource", Status.BAD_REQUEST.getStatusCode());
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Object 'forbiddenDatasource' not found"
+    );
+
     Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
-    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test
@@ -1598,6 +1600,66 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testInvalidTimestampLiteral() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT * FROM druid.foo WHERE __time BETWEEN '2026-09-10 00:00:00' AND '20260-09-11 00:00:00' LIMIT 1",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [20260-09-11 00:00:00]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
+  public void testInvalidTimestampExpressionWithoutCast() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT MILLIS_TO_TIMESTAMP(253402300800000)",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [MILLIS_TO_TIMESTAMP(253402300800000:BIGINT)]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
+  public void testInvalidTimestampLiteralWithExplicitCast() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SELECT CAST('20260-09-11 00:00:00' AS TIMESTAMP)",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Invalid TIMESTAMP value [20260-09-11 00:00:00]"
+    );
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+    stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
+    Assertions.assertEquals(
+        Status.BAD_REQUEST.getStatusCode(),
+        stubServiceEmitter.getMetricEvents("sqlQuery/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
   public void testResourceLimitExceeded() throws Exception
   {
     final ErrorResponse errorResponse = doPost(
@@ -1779,7 +1841,7 @@ public class SqlResourceTest extends CalciteTestBase
         Status.BAD_REQUEST.getStatusCode()
     );
 
-    assertThat(
+    BaseCalciteQueryTest.assertDruidException(
         exception.getUnderlyingException(),
         DruidExceptionMatcher
             .invalidSqlInput()

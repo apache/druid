@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -38,7 +38,7 @@ public class MessageBatchTest
     final MessageBatch<String> batch = new MessageBatch<>(ImmutableList.of("foo", "bar"), 123L, 456L);
     final MessageBatch<String> batch2 =
         objectMapper.readValue(objectMapper.writeValueAsBytes(batch), new TypeReference<>() {});
-    Assert.assertEquals(batch, batch2);
+    Assertions.assertEquals(batch, batch2);
   }
 
   @Test

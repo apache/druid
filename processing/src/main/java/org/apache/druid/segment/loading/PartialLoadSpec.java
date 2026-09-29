@@ -24,14 +24,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Base for {@link LoadSpec} wrappers that carry partial-load metadata (a fingerprint identifying the request the
@@ -167,4 +170,16 @@ public abstract class PartialLoadSpec implements LoadSpec
    * bootstrap re-discovers the segment).
    */
   public abstract List<String> getSelectedBundleNames(DataSegment segment, SegmentFileMetadata metadata);
+
+  /**
+   * The distinct bundle names carried by {@code metadata}, in container order.
+   */
+  protected static Set<String> presentBundleNames(SegmentFileMetadata metadata)
+  {
+    final Set<String> names = new LinkedHashSet<>();
+    for (SegmentFileContainerMetadata container : metadata.getContainers()) {
+      names.add(container.getBundle());
+    }
+    return names;
+  }
 }

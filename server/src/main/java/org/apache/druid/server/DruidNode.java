@@ -26,14 +26,14 @@ import com.fasterxml.jackson.annotation.OptBoolean;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;

@@ -40,12 +40,13 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.TestMapLookupExtractorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -799,16 +800,16 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       NonnullPair<Expr.ObjectBinding[], Expr.VectorInputBinding> bindings
   )
   {
-    Assert.assertTrue(StringUtils.format("Cannot vectorize[%s]", expr), expr.canVectorize(bindings.rhs));
+    Assertions.assertTrue(expr.canVectorize(bindings.rhs), StringUtils.format("Cannot vectorize[%s]", expr));
 
     final ExpressionType outputType = expr.getOutputType(bindings.rhs);
     final Either<String, Object[]> vectorEval = evalVector(expr, bindings.rhs, outputType);
     final Either<String, Object[]> nonVectorEval = evalNonVector(expr, bindings.lhs, outputType);
 
-    Assert.assertEquals(
-        StringUtils.format("Errors do not match for expr[%s], bindings[%s]", exprString, bindings.lhs),
+    Assertions.assertEquals(
         nonVectorEval.isError() ? nonVectorEval.error() : "",
-        vectorEval.isError() ? vectorEval.error() : ""
+        vectorEval.isError() ? vectorEval.error() : "",
+        StringUtils.format("Errors do not match for expr[%s], bindings[%s]", exprString, Arrays.toString(bindings.lhs))
     );
 
     if (vectorEval.isValue() && nonVectorEval.isValue()) {
@@ -821,16 +822,16 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
             bindings.lhs[i]
         );
         if (outputType != null && outputType.isArray()) {
-          Assert.assertArrayEquals(
-              message,
+          Assertions.assertArrayEquals(
               (Object[]) nonVectorEval.valueOrThrow()[i],
-              (Object[]) vectorEval.valueOrThrow()[i]
+              (Object[]) vectorEval.valueOrThrow()[i],
+              message
           );
         } else {
-          Assert.assertEquals(
-              message,
+          Assertions.assertEquals(
               nonVectorEval.valueOrThrow()[i],
-              vectorEval.valueOrThrow()[i]
+              vectorEval.valueOrThrow()[i],
+              message
           );
         }
       }
@@ -996,7 +997,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     final Object[] vectorVals = vectorEval.getObjectVector();
     // if outputType is known, verify the expr returns the correct type
     if (outputType != null) {
-      Assert.assertEquals("vector eval type", outputType, vectorEval.getType());
+      Assertions.assertEquals(outputType, vectorEval.getType(), "vector eval type");
     }
 
     return Either.value(vectorVals);
@@ -1024,7 +1025,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
       }
       // if outputType is known, verify the expr returns the correct type
       if (outputType != null && eval.value() != null) {
-        Assert.assertEquals("nonvector eval type", eval.type(), outputType);
+        Assertions.assertEquals(eval.type(), outputType, "nonvector eval type");
       }
       exprValues[i] = eval.value();
     }

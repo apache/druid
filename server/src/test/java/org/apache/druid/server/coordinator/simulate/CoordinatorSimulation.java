@@ -22,9 +22,12 @@ package org.apache.druid.server.coordinator.simulate;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.ServerCloneStatus;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -96,6 +99,12 @@ public interface CoordinatorSimulation
      * Gets the load percentage of the specified datasource as seen by the coordinator.
      */
     double getLoadPercentage(String datasource);
+
+    /**
+     * Gets the current cloning status for the given clone target server.
+     */
+    @Nullable
+    ServerCloneStatus getCloneStatus(DruidServer cloneTarget);
   }
 
   interface ClusterState
@@ -106,6 +115,11 @@ public interface CoordinatorSimulation
      * callbacks on the coordinator.
      */
     void loadQueuedSegments();
+
+    /**
+     * Gets the segments currently in the load queue of the given server.
+     */
+    List<SegmentHolder> getQueuedSegments(DruidServer server);
 
     /**
      * Finishes load of all the segments that were queued in the previous

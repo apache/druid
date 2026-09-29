@@ -217,7 +217,10 @@ public class AutoCompactionTest extends CompactionTestBase
                                .addExtension(SketchModule.class)
                                .addExtension(HllSketchModule.class)
                                .addExtension(DoublesSketchModule.class)
-                               .addServer(overlord)
+                               // Shorten segment polling for this test so it does not wait for the production interval.
+                               .addServer(
+                                   overlord.addProperty("druid.manager.segments.pollDuration", "PT1S")
+                               )
                                .addServer(coordinator)
                                .addServer(broker)
                                .addServer(new EmbeddedIndexer().addProperty("druid.worker.capacity", "10").setServerMemory(2_000_000_000L))

@@ -23,17 +23,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import javax.annotation.Nonnull;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -55,8 +57,8 @@ import static org.mockito.Mockito.verify;
 public class RetryingInputStreamTest
 {
   private static final int MAX_RETRY = 5;
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File testFile;
 
   private int readBytesBeforeExceptions = 0;
@@ -83,7 +85,7 @@ public class RetryingInputStreamTest
   @BeforeEach
   public void setup() throws IOException
   {
-    testFile = File.createTempFile("retrying", null, temporaryFolder);
+    testFile = temporaryFolder.newFile();
 
     try (FileOutputStream fis = new FileOutputStream(testFile);
          GZIPOutputStream gis = new GZIPOutputStream(fis);

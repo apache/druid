@@ -39,8 +39,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.server.QueryStats;
 import org.apache.druid.server.RequestLogLine;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -86,7 +86,7 @@ public class DefaultRequestLogEventTest
         + "\"context\":{\"key\":\"value\"}},\"host\":\"127.0.0.1\",\"timestamp\":\"2019-12-12T03:01:00.000Z\","
         + "\"service\":\"druid-service\",\"sql\":null,\"sqlQueryContext\":{},\"remoteAddr\":\"127.0.0.1\","
         + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
-    Assert.assertEquals(objectMapper.readTree(expected), objectMapper.readTree(logEventJson));
+    Assertions.assertEquals(objectMapper.readTree(expected), objectMapper.readTree(logEventJson));
   }
 
   @Test
@@ -129,7 +129,7 @@ public class DefaultRequestLogEventTest
     expected.put("remoteAddr", host);
     expected.put("queryStats", queryStats);
 
-    Assert.assertEquals(expected, defaultRequestLogEvent.toMap());
+    Assertions.assertEquals(expected, defaultRequestLogEvent.toMap());
   }
 
   @Test
@@ -177,8 +177,8 @@ public class DefaultRequestLogEventTest
     expected.put("queryStats", queryStats);
 
     final EventMap observedEventMap = defaultRequestLogEvent.toMap();
-    Assert.assertEquals(expected, observedEventMap);
-    Assert.assertEquals(
+    Assertions.assertEquals(expected, observedEventMap);
+    Assertions.assertEquals(
         StringUtils.format(
             "{\"feed\":\"test\",\"timestamp\":\"%s\",\"service\":\"druid-service\",\"host\":\"127.0.0.1\",\"remoteAddr\":\"127.0.0.1\",\"queryStats\":{\"sqlQuery/time\":13,\"sqlQuery/planningTimeMs\":1,\"sqlQuery/bytes\":10,\"success\":true,\"identity\":\"allowAll\"},\"sqlQueryContext\":{},\"sql\":\"select * from foo where x = ?\",\"sqlParameters\":[{\"type\":\"BIGINT\",\"value\":1234}]}",
             timestamp
@@ -220,7 +220,7 @@ public class DefaultRequestLogEventTest
                       + "\"remoteAddr\":\"127.0.0.1\""
                       + "}";
 
-    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assertions.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
   @Test
@@ -283,7 +283,7 @@ public class DefaultRequestLogEventTest
                       + "\"remoteAddr\":\"127.0.0.1\","
                       + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
 
-    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assertions.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
   @Test
@@ -356,7 +356,7 @@ public class DefaultRequestLogEventTest
                       + "\"text\":\"some text\","
                       + "\"queryStats\":{\"query/time\":13,\"query/bytes\":10,\"success\":true,\"identity\":\"allowAll\"}}";
 
-    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assertions.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
 }

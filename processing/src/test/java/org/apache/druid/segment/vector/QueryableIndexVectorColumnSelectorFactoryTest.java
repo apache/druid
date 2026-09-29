@@ -21,7 +21,6 @@ package org.apache.druid.segment.vector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import junitparams.converters.Nullable;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -45,13 +44,15 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
+import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -120,8 +121,8 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
     return row;
   }
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   Closer closer;
   ColumnCache theCache;
@@ -133,7 +134,7 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     closer = Closer.create();
     index = IndexBuilder.create(TestHelper.makeJsonMapper())
-                        .tmpDir(temporaryFolder)
+                        .tmpDir(temporaryFolder.getRoot())
                         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                         .schema(
                             new IncrementalIndexSchema.Builder()

@@ -78,7 +78,7 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
 
   public void initBloomFilterGroupByQueryTest(final GroupByQueryConfig config)
   {
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Lists.newArrayList(MODULE.getJacksonModules()),
         config,
         tempFolder

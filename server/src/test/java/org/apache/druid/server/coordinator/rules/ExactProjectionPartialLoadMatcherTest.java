@@ -26,10 +26,10 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.loading.PartialBaseTableLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -79,39 +79,53 @@ public class ExactProjectionPartialLoadMatcherTest
   }
 
   @Test
-  void testMatchReturnsNullWhenNoIntersection()
+  void testMatchFallsBackToBaseTableWhenNoIntersection()
   {
+    // None of the configured projections are on the segment. The base table can always answer what a projection
+    // would have, so the matcher asks for that rather than going opaque.
     ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
         List.of("x", "y")
     );
     DataSegment segment = segmentWithProjections(List.of("a", "b"));
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
+    assertBaseTableLoad(matcher.match(segment, segment.getLoadSpec()), segment);
   }
 
   @Test
-  void testMatchReturnsNullForProjectionAgnosticSegment()
+  void testMatchFallsBackToBaseTableForProjectionAgnosticSegment()
   {
     ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
         List.of("a")
     );
     DataSegment segment = segmentWithProjections(null);
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
+    assertBaseTableLoad(matcher.match(segment, segment.getLoadSpec()), segment);
   }
 
   @Test
-  void testMatchReturnsNullForEmptyProjectionsList()
+  void testMatchFallsBackToBaseTableForEmptyProjectionsList()
   {
     ExactProjectionPartialLoadMatcher matcher = new ExactProjectionPartialLoadMatcher(
         List.of("a")
     );
     DataSegment segment = segmentWithProjections(Collections.emptyList());
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
+    assertBaseTableLoad(matcher.match(segment, segment.getLoadSpec()), segment);
+  }
+
+  @Test
+  void testBaseTableFallbackFingerprintIsStableAcrossConfigurations()
+  {
+    // Two differently-configured matchers that both find nothing produce the same load, so they must agree on the
+    // fingerprint or the coordinator would see a rule change that isn't one.
+    DataSegment segment = segmentWithProjections(List.of("a", "b"));
+    Assertions.assertEquals(
+        new ExactProjectionPartialLoadMatcher(List.of("x")).match(segment, segment.getLoadSpec()),
+        new ExactProjectionPartialLoadMatcher(List.of("y", "z")).match(segment, segment.getLoadSpec())
+    );
   }
 
   @Test
   void testConstructorRejectsNullNames()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ExactProjectionPartialLoadMatcher(null)
@@ -123,7 +137,7 @@ public class ExactProjectionPartialLoadMatcherTest
   @Test
   void testConstructorRejectsEmptyNames()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ExactProjectionPartialLoadMatcher(Collections.emptyList())
@@ -160,6 +174,16 @@ public class ExactProjectionPartialLoadMatcherTest
   void testEquals()
   {
     EqualsVerifier.forClass(ExactProjectionPartialLoadMatcher.class).usingGetClass().verify();
+  }
+
+  private static void assertBaseTableLoad(PartialLoadMatcher.MatchResult result, DataSegment segment)
+  {
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(PartialBaseTableLoadSpec.FINGERPRINT, result.fingerprint());
+    Assertions.assertEquals(
+        PartialBaseTableLoadSpec.wireForm(segment.getLoadSpec(), PartialBaseTableLoadSpec.FINGERPRINT),
+        result.wrappedLoadSpec()
+    );
   }
 
   private static DataSegment segmentWithProjections(List<String> projections)

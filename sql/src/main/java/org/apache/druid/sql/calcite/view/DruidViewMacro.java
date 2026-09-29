@@ -28,6 +28,7 @@ import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.schema.impl.ViewTable;
+import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -41,28 +42,34 @@ public class DruidViewMacro implements TableMacro
   private final PlannerFactory plannerFactory;
   private final String viewSql;
   private final String druidSchemaName;
+  private final Escalator escalator;
 
   @Inject
   public DruidViewMacro(
       @Assisted final PlannerFactory plannerFactory,
       @Assisted final String viewSql,
-      @DruidSchemaName String druidSchemaName
+      @DruidSchemaName final String druidSchemaName,
+      final Escalator escalator
   )
   {
     this.plannerFactory = plannerFactory;
     this.viewSql = viewSql;
     this.druidSchemaName = druidSchemaName;
+    this.escalator = escalator;
   }
 
   @Override
   public TranslatableTable apply(final List<?> arguments)
   {
     final RelDataType rowType;
+
+    // Determine the row type of the view using an escalated planner, which will be able to see all tables.
     try (final DruidPlanner planner =
              plannerFactory.createPlanner(
                  ViewSqlEngine.INSTANCE,
                  viewSql,
                  DruidSqlParser.parse(viewSql, false).getMainStatement(), // views cannot embed SET
+                 escalator.createEscalatedAuthenticationResult(),
                  Collections.emptySet(),
                  Collections.emptyMap(),
                  null
@@ -70,9 +77,6 @@ public class DruidViewMacro implements TableMacro
     ) {
       planner.validate();
       rowType = planner.prepare().getValidatedRowType();
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
     }
 
     return new ViewTable(

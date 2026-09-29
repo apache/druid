@@ -39,6 +39,7 @@ To ensure a clean migration, shut down the non-coordinator services to ensure th
 change as you do the migration.
 
 When migrating from Derby, the coordinator processes will still need to be up initially, as they host the Derby database.
+When migrating from PostgreSQL or another external metadata store, no Druid processes need to be running.
 
 ## Copy segments from old deep storage to new deep storage.
 
@@ -48,7 +49,7 @@ For information on what path structure to use in the new deep storage, please se
 
 ## Export segments with rewritten load specs
 
-Druid provides an [Export Metadata Tool](../operations/export-metadata.md) for exporting metadata from Derby into CSV files
+Druid provides an [Export Metadata Tool](../operations/export-metadata.md) for exporting metadata from Derby or PostgreSQL into CSV files
 which can then be reimported.
 
 By setting [deep storage migration options](../operations/export-metadata.md#deep-storage-migration), the `export-metadata` tool will export CSV files where the segment load specs have been rewritten to load from your new deep storage location.

@@ -21,31 +21,30 @@ package org.apache.druid.storage.remote;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.List;
 
 public class ChunkingStorageConnectorTest
 {
 
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private StorageConnector storageConnector;
 
   @BeforeEach
   public void setup() throws IOException
   {
-    storageConnector = new TestStorageConnector(FileUtils.createTempDirInLocation(tempDir, "storage"));
+    storageConnector = new TestStorageConnector(temporaryFolder.newFolder("storage"));
   }
 
   @Test

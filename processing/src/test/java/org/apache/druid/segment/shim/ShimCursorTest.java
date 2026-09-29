@@ -55,9 +55,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
@@ -81,7 +81,6 @@ public class ShimCursorTest
     ExpressionProcessing.initializeForTests();
   }
 
-  @Parameterized.Parameters
   public static Collection<Object> vectorSizes()
   {
     return List.of(1, 2, 4, 7, 512);

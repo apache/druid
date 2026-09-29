@@ -385,6 +385,7 @@ public class SqlTestFrameworkConfig
       SqlTestFramework.Builder builder = new SqlTestFramework.Builder(testHost)
           .withConfig(config)
           .catalogResolver(testHost.createCatalogResolver())
+          .catalogTableWriter(testHost.createCatalogTableWriter())
           .mergeBufferCount(config.numMergeBuffers)
           .withOverrideModule(config.resultCache.makeModule());
 

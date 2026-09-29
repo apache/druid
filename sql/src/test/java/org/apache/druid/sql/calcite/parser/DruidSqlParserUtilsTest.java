@@ -40,11 +40,11 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
@@ -323,6 +323,28 @@ public class DruidSqlParserUtilsTest
       DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs("Invalid CLUSTERED BY clause [`DIM4` DESC]: cannot sort in descending order.")
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs));
+    }
+
+    /**
+     * Tests clause "CLUSTERED BY DIM1, DIM2 AS ALIAS2"
+     */
+    @Test
+    public void testClusteredByColumnsWithAliasThrowsException()
+    {
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("DIM1", SqlParserPos.ZERO));
+      clusteredByArgs.add(
+          SqlStdOperatorTable.AS.createCall(
+              SqlParserPos.ZERO,
+              new SqlIdentifier("DIM2", SqlParserPos.ZERO),
+              new SqlIdentifier("ALIAS2", SqlParserPos.ZERO)
+          )
+      );
+
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs("Invalid CLUSTERED BY clause [`DIM2` AS `ALIAS2`]: cannot use an alias.")
           .assertThrowsAndMatches(() -> DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs));
     }
 
@@ -619,7 +641,7 @@ public class DruidSqlParserUtilsTest
           )
       );
 
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()

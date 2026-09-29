@@ -19,6 +19,7 @@
 
 package org.apache.druid.common.asyncresource;
 
+import org.apache.druid.error.DruidException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -127,5 +128,66 @@ public class CollectAsyncResourceTest
 
     collected.close();
     Assertions.assertEquals(1, aCancel.get(), "closing the collect must cancel pending sources");
+  }
+
+  @Test
+  public void testCloseBeforeReadyWakesConsumerAndReportsCancellation()
+  {
+    final AtomicInteger fired = new AtomicInteger();
+    final SettableAsyncResource<String> a = new SettableAsyncResource<>();
+    final SettableAsyncResource<String> b = new SettableAsyncResource<>();
+
+    final AsyncResource<List<String>> collected = AsyncResources.collect(List.of(a, b));
+    collected.addReadyCallback(fired::incrementAndGet);
+
+    // Closing must reach a consumer waiting on the collected resource, not just cancel the sources. Each source's
+    // close also drives this class's own onOneSourceReady, which must not complete or re-fire anything.
+    collected.close();
+
+    Assertions.assertEquals(1, fired.get(), "closing must wake a waiting consumer exactly once");
+    Assertions.assertTrue(collected.isReady());
+    Assertions.assertThrows(AsyncResourceCanceledException.class, collected::get);
+  }
+
+  @Test
+  public void testCloseWithAMixOfReadyAndPendingSourcesReportsCancellation()
+  {
+    final AtomicInteger fired = new AtomicInteger();
+    final AtomicInteger aClose = new AtomicInteger();
+    final SettableAsyncResource<String> a = new SettableAsyncResource<>();
+    final SettableAsyncResource<String> b = new SettableAsyncResource<>();
+    a.set("a", aClose::incrementAndGet);
+
+    final AsyncResource<List<String>> collected = AsyncResources.collect(List.of(a, b));
+    collected.addReadyCallback(fired::incrementAndGet);
+    Assertions.assertFalse(collected.isReady(), "one source is still pending");
+
+    // The already-ready source counted toward readiness, so closing the pending one brings the internal count to the
+    // source count and runs the collect body against sources this close just tore down. That must stay harmless.
+    collected.close();
+
+    Assertions.assertEquals(1, fired.get());
+    Assertions.assertEquals(1, aClose.get(), "the ready source's value must still be closed");
+    Assertions.assertThrows(AsyncResourceCanceledException.class, collected::get);
+  }
+
+  @Test
+  public void testThrowingConstructionLeavesSourcesToTheCaller()
+  {
+    final AtomicInteger aCancel = new AtomicInteger();
+    final SettableAsyncResource<String> a = new SettableAsyncResource<>();
+    a.setCanceler(aCancel::incrementAndGet);
+
+    // A closed source rejects addReadyCallback, so collect throws partway through registering. Nothing has been taken
+    // over at that point, so the caller still owns every input: collect must not have canceled or closed any of them.
+    final SettableAsyncResource<String> closed = new SettableAsyncResource<>();
+    closed.close();
+
+    Assertions.assertThrows(DruidException.class, () -> AsyncResources.collect(List.of(a, closed)));
+    Assertions.assertEquals(0, aCancel.get(), "a failed collect must leave its inputs alone");
+
+    // Still the caller's to close, and still usable.
+    a.close();
+    Assertions.assertEquals(1, aCancel.get());
   }
 }

@@ -101,6 +101,18 @@ public class StorageMonitor extends AbstractMonitor
   public static final String VSF_HOLD_BYTES = "storage/virtual/hold/bytes";
 
   /**
+   * internal holds, such as one cache entry places on another it depends on, or that a partial-load rule places on
+   * what it selected, rather than a caller waiting on the entry. Counted in the totals above because they pin an
+   * entry against reclaim identically.
+   */
+  public static final String VSF_INTERNAL_HOLD_COUNT = "storage/virtual/hold/internal/count";
+
+  /**
+   * Total bytes from the holds counted by {@link #VSF_INTERNAL_HOLD_COUNT}.
+   */
+  public static final String VSF_INTERNAL_HOLD_BYTES = "storage/virtual/hold/internal/bytes";
+
+  /**
    * Number of acquire operations during the measurement period that found an existing weakly-held entry already in
    * virtual storage.
    */
@@ -215,6 +227,8 @@ public class StorageMonitor extends AbstractMonitor
         emitter.emit(builder.setMetric(VSF_USED_BYTES, weakStats.getUsedBytes()));
         emitter.emit(builder.setMetric(VSF_HOLD_COUNT, weakStats.getHoldCount()));
         emitter.emit(builder.setMetric(VSF_HOLD_BYTES, weakStats.getHoldBytes()));
+        emitter.emit(builder.setMetric(VSF_INTERNAL_HOLD_COUNT, weakStats.getInternalHoldCount()));
+        emitter.emit(builder.setMetric(VSF_INTERNAL_HOLD_BYTES, weakStats.getInternalHoldBytes()));
         emitter.emit(builder.setMetric(VSF_HIT_COUNT, weakStats.getHitCount()));
         emitter.emit(builder.setMetric(VSF_HIT_BYTES, weakStats.getHitBytes()));
         emitter.emit(builder.setMetric(VSF_LOAD_BEGIN_COUNT, weakStats.getLoadBeginCount()));

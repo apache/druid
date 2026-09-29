@@ -71,7 +71,7 @@ public class ArrayOfDoublesSketchAggregationTest extends InitializedNullHandling
   {
     ArrayOfDoublesSketchModule.registerSerde();
     DruidModule module = new ArrayOfDoublesSketchModule();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(), config, tempFolder);
     tsHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         module.getJacksonModules(),

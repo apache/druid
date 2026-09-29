@@ -53,7 +53,7 @@ import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -403,7 +403,7 @@ public class QueryStackTests
       final TestBufferPool testBufferPool,
       final TestGroupByBuffers groupByBuffers)
   {
-    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = GroupByQueryRunnerTestHelper.makeQueryRunnerFactory(
         jsonMapper,
         new GroupByQueryConfig()
         {

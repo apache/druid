@@ -46,7 +46,7 @@ public class GoogleTimestampVersionedDataFinderTest
     storageObject4.setLastUpdateTimeMillis(System.currentTimeMillis() + 100);
     final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
-    final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage);
+    final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage, new GoogleInputDataConfig());
     Pattern pattern = Pattern.compile("v.*");
     URI latest = finder.getLatestVersion(URI.create(StringUtils.format("gs://%s/%s", bucket, keyPrefix)), pattern);
     URI expected = URI.create(StringUtils.format("gs://%s/%s", bucket, storageObject3.getName()));
@@ -70,7 +70,7 @@ public class GoogleTimestampVersionedDataFinderTest
     storageObject4.setLastUpdateTimeMillis(System.currentTimeMillis() + 100);
     final GoogleStorage storage = ObjectStorageIteratorTest.makeMockClient(ImmutableList.of(storageObject1, storageObject2, storageObject3, storageObject4));
 
-    final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage);
+    final GoogleTimestampVersionedDataFinder finder = new GoogleTimestampVersionedDataFinder(storage, new GoogleInputDataConfig());
     Pattern pattern = Pattern.compile("v.*");
     URI latest = finder.getLatestVersion(URI.create(StringUtils.format("gs://%s/%s", bucket, keyPrefix)), pattern);
     URI expected = URI.create(StringUtils.format("gs://%s/%s", bucket, storageObject3.getName()));
