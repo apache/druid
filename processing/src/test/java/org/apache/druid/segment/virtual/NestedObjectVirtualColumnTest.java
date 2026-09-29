@@ -53,6 +53,22 @@ public class NestedObjectVirtualColumnTest
   }
 
   @Test
+  public void testWithOutputName()
+  {
+    Map<String, NestedObjectVirtualColumn.TypedExpression> keyExprMap = ImmutableMap.of(
+        "computed", new NestedObjectVirtualColumn.TypedExpression("col1 + col2", ColumnType.LONG)
+    );
+    NestedObjectVirtualColumn original = new NestedObjectVirtualColumn("v0", keyExprMap, TestExprMacroTable.INSTANCE);
+    Assertions.assertTrue(original.supportsOutputNameRewrite());
+    NestedObjectVirtualColumn renamed = original.withOutputName("declared");
+    Assertions.assertEquals(
+        new NestedObjectVirtualColumn("declared", keyExprMap, TestExprMacroTable.INSTANCE),
+        renamed
+    );
+    Assertions.assertEquals(original.getEquivalanceKey(), renamed.getEquivalanceKey());
+  }
+
+  @Test
   public void testGetKeyExprMap()
   {
     Map<String, NestedObjectVirtualColumn.TypedExpression> keyExprMap = ImmutableMap.of(

@@ -548,6 +548,26 @@ public interface VirtualColumn extends Cacheable
     return null;
   }
 
+  /**
+   * Returns true if the virtual column supports {@link #withOutputName(String)}
+   */
+  default boolean supportsOutputNameRewrite()
+  {
+    return false;
+  }
+
+  /**
+   * Returns a copy of this virtual column identical except for the given output name. Used where a virtual column
+   * generated under a synthetic name (such as the planner's {@code v0}, {@code v1}, ...) must be re-issued under a
+   * declared column name — for example, lifting the computed columns of a catalog base-table definition out of a
+   * planned query. Callers should check {@link #supportsOutputNameRewrite()} first to ensure that this method is
+   * supported.
+   */
+  default VirtualColumn withOutputName(String outputName)
+  {
+    throw DruidException.defensive("Output name rewrite is not supported by virtual column[%s].", getOutputName());
+  }
+
   @SubclassesMustOverrideEqualsAndHashCode
   interface EquivalenceKey
   {
