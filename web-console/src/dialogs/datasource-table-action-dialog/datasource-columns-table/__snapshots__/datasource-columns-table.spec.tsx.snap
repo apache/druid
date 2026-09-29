@@ -149,7 +149,7 @@ exports[`DatasourceColumnsTable matches snapshot on error 1`] = `
       </div>
     </div>
     <div
-      class="ct-noData"
+      class="ct-no-data"
     >
       test error
     </div>
@@ -306,7 +306,7 @@ exports[`DatasourceColumnsTable matches snapshot on init 1`] = `
       </div>
     </div>
     <div
-      class="ct-noData"
+      class="ct-no-data"
     >
       No column data found
     </div>
@@ -503,7 +503,7 @@ exports[`DatasourceColumnsTable matches snapshot on no data 1`] = `
       </div>
     </div>
     <div
-      class="ct-noData"
+      class="ct-no-data"
     >
       No column data found
     </div>

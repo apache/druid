@@ -849,7 +849,7 @@ export function ConsoleTable<T>(props: ConsoleTableProps<T>) {
           />
         </div>
       )}
-      {!pageRows.length && !!noDataText && <div className="ct-noData">{noDataText}</div>}
+      {!pageRows.length && !!noDataText && <div className="ct-no-data">{noDataText}</div>}
       <Loader loading={loading} loadingText="" />
     </div>
   );

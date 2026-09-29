@@ -95,7 +95,7 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
         </div>
       </div>
       <div
-        class="ct-noData"
+        class="ct-no-data"
       >
         test error
       </div>
@@ -199,7 +199,7 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
         </div>
       </div>
       <div
-        class="ct-noData"
+        class="ct-no-data"
       >
         No statistics data found
       </div>
@@ -367,7 +367,7 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
         </div>
       </div>
       <div
-        class="ct-noData"
+        class="ct-no-data"
       >
         No statistics data found
       </div>

@@ -234,7 +234,7 @@ describe('ConsoleTable', () => {
       { id: 'nameLength', value: '~5' },
     ]);
     expect(getRows(container)).toEqual([]);
-    expect(container.querySelector('.ct-noData')!.textContent).toEqual('No rows found');
+    expect(container.querySelector('.ct-no-data')!.textContent).toEqual('No rows found');
 
     typeFilter(container, 2, '5');
     expect(getRows(container).map(r => r.split('|')[0])).toEqual(['Kitty']);
@@ -396,11 +396,11 @@ describe('ConsoleTable', () => {
     const { container, rerender } = render(
       <ConsoleTable data={[]} columns={COLUMNS} noDataText="No pets" loading />,
     );
-    expect(container.querySelector('.ct-noData')!.textContent).toEqual('No pets');
+    expect(container.querySelector('.ct-no-data')!.textContent).toEqual('No pets');
     expect(container.querySelector('.loader')).toBeTruthy();
 
     rerender(<ConsoleTable data={PETS} columns={COLUMNS} />);
-    expect(container.querySelector('.ct-noData')).toBeNull();
+    expect(container.querySelector('.ct-no-data')).toBeNull();
     expect(container.querySelector('.loader')).toBeNull();
   });
 });
