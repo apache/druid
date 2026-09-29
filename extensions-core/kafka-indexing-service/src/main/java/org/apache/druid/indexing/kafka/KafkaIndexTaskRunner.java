@@ -84,30 +84,51 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
       return recordSupplier.poll(task.getIOConfig().getPollTimeout());
     }
     catch (OffsetOutOfRangeException e) {
+      // OffsetOutOfRangeException means one of two things:
+      //
+      // 1) the seeked-to offset is below the earliest available offset of the partition. If
+      //    resetOffsetAutomatically is set, re-throw so the supervisor can reset the offsets. Note that
+      //    we must not simply fail the task here: only the supervisor can update the metadata, and it
+      //    recognizes the reset from the exception.
+      // 2) the seeked-to offset is beyond the current end of the partition. This is legitimate - a task
+      //    can be asked to read data that has not been written yet - so wait for it to show up. Kafka
+      //    tasks use auto.offset.reset=none, so polling such an offset raises this exception instead of
+      //    silently repositioning the consumer.
       log.warn("OffsetOutOfRangeException with message [%s]", e.getMessage());
 
-      if (task.getTuningConfig().isResetOffsetAutomatically()) {
-        // Check if any partition has an offset that is below the earliest available offset.
-        // If so, re-throw the exception so the supervisor can detect and handle the reset.
-        final String stream = task.getIOConfig().getStartSequenceNumbers().getStream();
-        final boolean isMultiTopic = task.getIOConfig().isMultiTopic();
-        for (Map.Entry<TopicPartition, Long> entry : e.offsetOutOfRangePartitions().entrySet()) {
-          final TopicPartition topicPartition = entry.getKey();
-          final StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(
-              stream,
-              new KafkaTopicPartition(isMultiTopic, topicPartition.topic(), topicPartition.partition())
-          );
-          final Long earliestOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
-          if (earliestOffset != null && earliestOffset > entry.getValue()) {
-            // The requested offset is below the earliest available offset.
-            // Re-throw to let the supervisor handle the reset.
-            throw e;
-          }
+      boolean belowEarliestOffset = false;
+      boolean futureOffset = false;
+      final String stream = task.getIOConfig().getStartSequenceNumbers().getStream();
+      final boolean isMultiTopic = task.getIOConfig().isMultiTopic();
+
+      for (Map.Entry<TopicPartition, Long> entry : e.offsetOutOfRangePartitions().entrySet()) {
+        final TopicPartition topicPartition = entry.getKey();
+        final StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(
+            stream,
+            new KafkaTopicPartition(isMultiTopic, topicPartition.topic(), topicPartition.partition())
+        );
+        final Long earliestOffset = recordSupplier.getEarliestSequenceNumber(streamPartition);
+        final Long latestOffset = recordSupplier.getLatestSequenceNumber(streamPartition);
+
+        if (earliestOffset != null && earliestOffset > entry.getValue()) {
+          belowEarliestOffset = true;
+        } else if (latestOffset != null && latestOffset < entry.getValue()) {
+          // Not written yet. Waiting for it to appear is the correct behavior; resetting would skip data.
+          futureOffset = true;
         }
       }
 
-      // Offset is either in the future (not yet written) or a temporary issue.
-      // Wait and retry instead of failing.
+      if (belowEarliestOffset && task.getTuningConfig().isResetOffsetAutomatically()) {
+        throw e;
+      }
+
+      if (futureOffset) {
+        log.info(
+            "Offsets %s are not yet available in the stream, waiting for them to be written",
+            e.offsetOutOfRangePartitions().keySet()
+        );
+      }
+
       log.warn("Retrying in %dms", task.getPollRetryMs());
       pollRetryLock.lockInterruptibly();
       try {
@@ -129,12 +150,14 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
       Object object
   )
   {
-    return mapper.convertValue(object, mapper.getTypeFactory().constructParametrizedType(
-        SeekableStreamEndSequenceNumbers.class,
-        SeekableStreamEndSequenceNumbers.class,
-        KafkaTopicPartition.class,
-        Long.class
-    ));
+    return mapper.convertValue(
+        object,
+        mapper.getTypeFactory().constructParametricType(
+            SeekableStreamEndSequenceNumbers.class,
+            KafkaTopicPartition.class,
+            Long.class
+        )
+    );
   }
 
   @Override
