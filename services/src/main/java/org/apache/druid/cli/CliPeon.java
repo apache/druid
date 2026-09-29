@@ -57,6 +57,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleServer;
 import org.apache.druid.guice.PeonProcessingModule;
+import org.apache.druid.guice.PeonServerModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
@@ -342,6 +343,7 @@ public class CliPeon extends GuiceRunnable
           }
         },
         new QueryablePeonModule(),
+        new PeonServerModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),
