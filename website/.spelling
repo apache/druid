@@ -2677,3 +2677,9 @@ dylan
 eve
 opaUri
 rego
+
+- ../docs/querying/sql-jdbc.md
+getters
+savepoints
+Scrollable
+updatable
