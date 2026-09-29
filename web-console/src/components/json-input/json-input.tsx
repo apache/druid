@@ -20,7 +20,7 @@ import type { Ace } from 'ace-builds';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import AceEditor from 'react-ace';
 
 import { getHjsonCompletions } from '../../ace-completions/hjson-completions';
@@ -100,13 +100,17 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
   const [showErrorIfNeeded, setShowErrorIfNeeded] = useState(false);
   const aceEditor = useRef<Ace.Editor | undefined>(undefined);
 
-  useEffect(() => {
+  const showValue = useEffectEvent((value: any) => {
     if (deepEqual(value, internalValue.lastShownValue)) return;
     setInternalValue({
       lastShownValue: value,
       stringified: stringifyJson(value),
     });
-  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  });
+
+  useEffect(() => {
+    showValue(value);
+  }, [value]);
 
   // Ace reads the completers once, when autocompletion is enabled, so they must not change. The callback always sees
   // the latest props.

@@ -21,7 +21,7 @@ import { IconNames } from '@blueprintjs/icons';
 import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
 import { F, SqlExpression, SqlFunction } from 'druid-query-toolkit';
 import type { JSX } from 'react';
-import React, { useEffect } from 'react';
+import React, { useEffect, useEffectEvent } from 'react';
 
 import type { Execution } from '../../../../druid-models';
 import { executionBackgroundStatusCheck, submitTaskQuery } from '../../../../helpers';
@@ -207,10 +207,13 @@ export const RollupAnalysisPane = React.memo(function RollupAnalysisPane(
 
   const analysis = analyzeQueryState.data;
 
-  useEffect(() => {
+  const resetAnalysis = useEffectEvent(() => {
     if (!analysis) return;
     analyzeQueryManager.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  useEffect(() => {
+    resetAnalysis();
   }, [queryResult]);
 
   function renderOverallResult() {

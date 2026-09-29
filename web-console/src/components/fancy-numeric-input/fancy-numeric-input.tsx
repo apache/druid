@@ -21,7 +21,7 @@ import { Button, ButtonGroup, Classes, ControlGroup, InputGroup } from '@bluepri
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import { SqlExpression, SqlFunction, SqlLiteral, SqlMulti } from 'druid-query-toolkit';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useEffectEvent, useState } from 'react';
 
 import { clamp } from '../../utils';
 
@@ -124,11 +124,14 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
   const shownNumberRaw = shownToNumber(shownValue);
   const shownNumberClamped = shownNumberRaw ? roundAndClamp(shownNumberRaw) : undefined;
 
-  useEffect(() => {
-    if (effectiveValue !== shownNumberClamped) {
-      setShownValue(numberToShown(effectiveValue));
+  const showValue = useEffectEvent((value: number | undefined) => {
+    if (value !== shownNumberClamped) {
+      setShownValue(numberToShown(value));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  useEffect(() => {
+    showValue(effectiveValue);
   }, [effectiveValue]);
 
   const containerClasses = classNames(

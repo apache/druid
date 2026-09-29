@@ -122,14 +122,9 @@ export function FilterPane(props: FilterPaneProps) {
     }
   }
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      filterOn,
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [patterns],
-  );
+  useImperativeHandle(ref, () => ({
+    filterOn,
+  }));
 
   function changePatterns(newPatterns: FilterPattern[]) {
     onFilterChange(filterPatternsToExpression(newPatterns));

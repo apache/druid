@@ -31,7 +31,7 @@ import {
   TextArea,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import React, { useState } from 'react';
+import React, { useEffectEvent, useState } from 'react';
 
 import { ExternalLink } from '../../components';
 import type { IngestionSpec, QueryWithContext } from '../../druid-models';
@@ -178,11 +178,12 @@ export const SupervisorToSqlDialog = React.memo(function SupervisorToSqlDialog(
     }
   }, [selectedSupervisor, supervisorSource]);
 
+  const reparsePastedSupervisor = useEffectEvent(() => parsePastedSupervisor());
   React.useEffect(() => {
     if (supervisorSource !== 'paste') return;
     // Always reparse on entering paste mode or editing the text so a stale select-mode spec is
     // dropped and a cleared paste disables Generate SQL
-    parsePastedSupervisor();
+    reparsePastedSupervisor();
   }, [pastedSupervisor, supervisorSource]);
 
   return (

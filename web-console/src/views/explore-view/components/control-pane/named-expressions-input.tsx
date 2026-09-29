@@ -73,8 +73,7 @@ export const NamedExpressionsInput = function NamedExpressionsInput<
 
       setDropIndex(i);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dropIndex],
+    [dragIndex, dropIndex],
   );
 
   const onDrop = useCallback(

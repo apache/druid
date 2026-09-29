@@ -24,7 +24,7 @@ import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression } from 'druid-query-toolkit';
 import { QueryRunner, SqlLiteral, SqlQuery } from 'druid-query-toolkit';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 
 import { Loader, SplitterLayout } from '../../components';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
@@ -155,14 +155,17 @@ export const ExploreView = React.memo(function ExploreView({ capabilities }: Exp
   // -------------------------------------------------------
   // If we have a TIMESTAMP column and no filter, then add a filter
 
-  useEffect(() => {
-    const columns = querySourceState.data?.columns;
-    if (!columns) return;
+  const addInitTimeFilterIfNeeded = useEffectEvent((columns: readonly Column[]) => {
     const newExploreState = exploreState.addInitTimeFilterIfNeeded(columns);
     if (exploreState !== newExploreState) {
       setExploreState(newExploreState);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+
+  useEffect(() => {
+    const columns = querySourceState.data?.columns;
+    if (!columns) return;
+    addInitTimeFilterIfNeeded(columns);
   }, [querySourceState.data]);
 
   // -------------------------------------------------------

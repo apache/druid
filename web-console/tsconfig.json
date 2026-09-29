@@ -2,11 +2,10 @@
   "compilerOptions": {
     "declaration": false,
     "esModuleInterop": true,
-    "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
     "importHelpers": true,
     "jsx": "react-jsx",
-    "lib": ["dom", "es2021", "esnext"],
+    "lib": ["dom", "esnext"],
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmitOnError": true,
@@ -20,7 +19,7 @@
     "skipLibCheck": true,
     "strict": true,
     "useUnknownInCatchVariables": false,
-    "target": "es2020",
+    "target": "es2022",
     "types": ["jest"]
   },
   "include": ["src", "e2e-tests", "typings"]

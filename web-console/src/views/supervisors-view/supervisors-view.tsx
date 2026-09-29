@@ -868,8 +868,8 @@ export class SupervisorsView extends React.PureComponent<
       stats: {},
     };
     return (
-      <StatusContext.Provider value={status}>
-        <StatsContext.Provider value={{ stats, statsKey }}>
+      <StatusContext value={status}>
+        <StatsContext value={{ stats, statsKey }}>
           <ConsoleTable
             data={supervisors}
             pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000} // We are hiding the page selector
@@ -895,8 +895,8 @@ export class SupervisorsView extends React.PureComponent<
             ofText={count >= 0 ? `of ${formatInteger(count)}` : ''}
             columns={this.getTableColumns(visibleColumns, filters)}
           />
-        </StatsContext.Provider>
-      </StatusContext.Provider>
+        </StatsContext>
+      </StatusContext>
     );
   }
 

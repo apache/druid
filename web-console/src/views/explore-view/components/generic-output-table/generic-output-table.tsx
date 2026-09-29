@@ -136,8 +136,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
 
   // Reset page to 0 if number of results changes
   useEffect(() => {
-    if (!pagination?.page) return;
-    setPagination(undefined);
+    setPagination(pagination => (pagination?.page ? undefined : pagination));
   }, [queryResult.rows.length]);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {

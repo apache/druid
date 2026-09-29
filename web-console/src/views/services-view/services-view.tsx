@@ -672,9 +672,9 @@ ORDER BY
     };
 
     return (
-      <LoadQueueInfoContext.Provider value={loadQueueInfo}>
-        <CloneStatusContext.Provider value={cloneStatus}>
-          <ServerModeContext.Provider value={serverMode}>
+      <LoadQueueInfoContext value={loadQueueInfo}>
+        <CloneStatusContext value={cloneStatus}>
+          <ServerModeContext value={serverMode}>
             <ConsoleTable
               data={services}
               loading={servicesState.loading}
@@ -693,9 +693,9 @@ ORDER BY
               showPagination={services.length > STANDARD_TABLE_PAGE_SIZE}
               columns={this.getTableColumns(visibleColumns, filters, onFiltersChange, workerInfo)}
             />
-          </ServerModeContext.Provider>
-        </CloneStatusContext.Provider>
-      </LoadQueueInfoContext.Provider>
+          </ServerModeContext>
+        </CloneStatusContext>
+      </LoadQueueInfoContext>
     );
   }
 

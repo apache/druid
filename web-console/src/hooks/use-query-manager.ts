@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 
 import type { QueryManagerOptions } from '../utils';
 import { QueryManager, QueryState } from '../utils';
@@ -55,27 +55,31 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
 
   const [queryManager, setQueryManager] = useState<QueryManager<Q, R, I, E>>(makeQueryManager);
 
-  useEffect(() => {
-    // Initialize queryManager on mount if needed to ensure that useQueryManager
-    // will be compatible with future React versions that may mount/unmount/remount
-    // the same component multiple times while.
-    //
-    // See https://reactjs.org/docs/strict-mode#ensuring-reusable-state
-    // and https://github.com/reactwg/react-18/discussions/18
+  // Initialize queryManager on mount if needed to ensure that useQueryManager
+  // will be compatible with future React versions that may mount/unmount/remount
+  // the same component multiple times while.
+  //
+  // See https://reactjs.org/docs/strict-mode#ensuring-reusable-state
+  // and https://github.com/reactwg/react-18/discussions/18
+  const startQueryManager = useEffectEvent(() => {
     let myQueryManager = queryManager;
     if (queryManager.isTerminated()) {
       myQueryManager = makeQueryManager();
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- replaces the query manager terminated by a previous unmount
       setQueryManager(myQueryManager);
     }
 
     if (typeof initQuery !== 'undefined') {
       myQueryManager.runQuery(initQuery);
     }
+    return myQueryManager;
+  });
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- replaces the query manager terminated by a previous unmount
+    const myQueryManager = startQueryManager();
     return () => {
       myQueryManager.terminate();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Run the query as soon as it changes, the loading state it sets is rendered straight away
