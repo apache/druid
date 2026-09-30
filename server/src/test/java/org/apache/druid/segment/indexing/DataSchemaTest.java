@@ -983,7 +983,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
             new StringDimensionSchema("page"),
             new LongDimensionSchema("__time")
         )
-        .aggregators(new LongSumAggregatorFactory("total", "cnt"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
         .build()
         .withQueryGranularity(Granularities.HOUR);
     final DataSchema original = DataSchema.builder()
@@ -1002,7 +1002,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
     Assertions.assertEquals(spec, deserialized.getBaseTable());
 
     Assertions.assertArrayEquals(
-        new AggregatorFactory[]{new LongSumAggregatorFactory("total", "cnt")},
+        new AggregatorFactory[]{new LongSumAggregatorFactory("total", "total")},
         original.getAggregators()
     );
     final GranularitySpec effectiveGranularity = original.getGranularitySpec();

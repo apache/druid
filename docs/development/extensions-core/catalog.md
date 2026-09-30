@@ -264,8 +264,10 @@ PARTITIONED BY DAY
 The metric columns must be declared after the grouping columns, because the declared order is the physical order. A
 rollup body accepts the same
 [aggregation functions that are supported for rollup at ingestion time](../../multi-stage-query/concepts.md#rollup)
-and, like an aggregate projection, cannot compute expressions over aggregates. A body that groups without any
-aggregates collapses duplicate rows. A rollup table cannot also declare `CLUSTERED BY`.
+and, like an aggregate projection, cannot compute expressions over aggregates. Because the same aggregators serve both
+ingestion and re-aggregation of stored rows, each aggregate must combine its own output: an aggregate that does not,
+such as `COUNT(*)`, is rejected, store a count by summing a count column, as in `SUM(cnt) AS cnt`. A body that groups
+without any aggregates collapses duplicate rows. A rollup table cannot also declare `CLUSTERED BY`.
 
 For every layout, `SEALED` is optional: a column the ingestion query produces but the table does not declare is
 stored after the declared layout, in the order it arrives (for a rollup table, as an additional grouping column).

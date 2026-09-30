@@ -151,6 +151,38 @@ public class RollupTableBaseTableMetadataTest extends InitializedNullHandlingTes
     );
   }
 
+  /**
+   * A declared metric column named for the query-granularity carrier slips past the grouping-column carrier-name
+   * check (it is matched to its aggregator, not treated as a grouping column), so the spec's aggregator validation is
+   * what rejects it: the carrier virtual column would shadow the metric once a query granularity is attached.
+   */
+  @Test
+  public void testCreateSpecAggregatorNamedForGranularityCarrierFails()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> new RollupTableBaseTableMetadata(
+            null,
+            new AggregatorFactory[]{
+                new LongSumAggregatorFactory(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "cnt")
+            },
+            null
+        ).createSpec(
+            Arrays.asList(
+                new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+                new ColumnSpec(Columns.TIME_COLUMN, Columns.SQL_TIMESTAMP, null),
+                new ColumnSpec(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, Columns.SQL_BIGINT, null)
+            )
+        )
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains(
+            "aggregator cannot be named [" + Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME + "]"
+        ),
+        e.getMessage()
+    );
+  }
+
   @Test
   public void testCreateSpecAggregatorWithoutDeclaredColumnFails()
   {

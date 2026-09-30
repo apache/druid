@@ -181,13 +181,13 @@ public class IndexTaskTest extends EmbeddedClusterTestBase
             new StringDimensionSchema("item"),
             new LongDimensionSchema("__time")
         )
-        .aggregators(new LongSumAggregatorFactory("total", "value"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
         .build()
         .withQueryGranularity(Granularities.HOUR);
     final IndexTask task = TaskBuilder
         .ofTypeIndex()
         .isoTimestampColumn("time")
-        .csvInputFormatWithColumns("time", "item", "value")
+        .csvInputFormatWithColumns("time", "item", "total")
         .inlineInputSourceWithData(
             "2025-06-01T05:10:00.000Z,apple,1"
             + "\n2025-06-01T05:20:00.000Z,apple,2"

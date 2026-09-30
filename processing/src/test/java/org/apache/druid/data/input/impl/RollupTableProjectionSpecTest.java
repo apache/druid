@@ -50,7 +50,7 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
   {
     return RollupTableProjectionSpec.builder()
         .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
-        .aggregators(new LongSumAggregatorFactory("total", "cnt"), new CountAggregatorFactory("rows"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"), new LongSumAggregatorFactory("rows", "rows"))
         .build();
   }
 
@@ -68,7 +68,7 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
     Assertions.assertEquals(spec.getGroupingColumns(), spec.getDimensionsSpec().getDimensions());
     Assertions.assertFalse(spec.getDimensionsSpec().isForceSegmentSortByTime());
     Assertions.assertArrayEquals(
-        new AggregatorFactory[]{new LongSumAggregatorFactory("total", "cnt"), new CountAggregatorFactory("rows")},
+        new AggregatorFactory[]{new LongSumAggregatorFactory("total", "total"), new LongSumAggregatorFactory("rows", "rows")},
         spec.getMetrics()
     );
     Assertions.assertTrue(spec.isRollup());
@@ -109,12 +109,65 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> RollupTableProjectionSpec.builder()
             .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
-            .aggregators(new LongSumAggregatorFactory("total", "cnt"), new CountAggregatorFactory("total"))
+            .aggregators(new LongSumAggregatorFactory("total", "total"), new CountAggregatorFactory("total"))
             .build()
     );
     Assertions.assertTrue(
         e.getMessage().contains("aggregator [total] duplicates the name of a column or another aggregator"),
         e.getMessage()
+    );
+  }
+
+  /**
+   * A metric named for the query-granularity carrier would be shadowed by the carrier virtual column once a query
+   * granularity is attached (virtual columns resolve before stored columns), so it is rejected at construction.
+   */
+  @Test
+  void testAggregatorNamedForGranularityCarrierRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+            .aggregators(new LongSumAggregatorFactory(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "cnt"))
+            .build()
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains(
+            "aggregator cannot be named [" + Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME + "]"
+        ),
+        e.getMessage()
+    );
+  }
+
+  /**
+   * The spec's aggregators are applied uniformly: ingestion combines what arrives under the metric column's name, and
+   * compaction re-aggregates stored rows. An aggregator that is not its own combining form (a COUNT, a sketch build,
+   * an input field differing from the output) would silently change results on re-aggregation, so it is rejected — a
+   * count is stored by summing a count column.
+   */
+  @Test
+  void testNonSelfCombiningAggregatorRejected()
+  {
+    final DruidException count = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+            .aggregators(new CountAggregatorFactory("rows"))
+            .build()
+    );
+    Assertions.assertTrue(count.getMessage().contains("aggregator [rows] is not its own combining form"), count.getMessage());
+
+    final DruidException differentInput = Assertions.assertThrows(
+        DruidException.class,
+        () -> RollupTableProjectionSpec.builder()
+            .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+            .aggregators(new LongSumAggregatorFactory("total", "cnt"))
+            .build()
+    );
+    Assertions.assertTrue(
+        differentInput.getMessage().contains("aggregator [total] is not its own combining form"),
+        differentInput.getMessage()
     );
   }
 
@@ -125,7 +178,7 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> RollupTableProjectionSpec.builder()
             .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
-            .aggregators(new LongSumAggregatorFactory("total", "cnt"), null)
+            .aggregators(new LongSumAggregatorFactory("total", "total"), null)
             .build()
     );
     Assertions.assertTrue(e.getMessage().contains("aggregators must not contain null entries"), e.getMessage());
@@ -176,7 +229,7 @@ class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
 
     final RollupTableProjectionSpec differentAggregators = RollupTableProjectionSpec.builder()
         .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
-        .aggregators(new LongSumAggregatorFactory("total", "cnt"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
         .build();
     Assertions.assertFalse(pagesSpec().hasEqualCompactionState(differentAggregators));
   }

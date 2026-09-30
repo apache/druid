@@ -234,8 +234,10 @@ public final class RollupTableProjectionSpec implements BaseTableProjectionSpec
   }
 
   /**
-   * Aggregators produce the metric columns, so their names share a namespace with the grouping columns: a collision
-   * means one column with two definitions.
+   * Aggregators produce the metric columns, so their names share a namespace with the grouping columns — a collision
+   * means one column with two definitions — and with the query-granularity carrier: virtual columns shadow stored
+   * columns when selectors resolve, so a metric named for the carrier would be unreadable once a query granularity is
+   * attached.
    */
   private static void validateAggregators(List<DimensionSchema> groupingColumns, AggregatorFactory[] aggregators)
   {
@@ -247,10 +249,29 @@ public final class RollupTableProjectionSpec implements BaseTableProjectionSpec
       if (aggregator == null) {
         throw InvalidInput.exception("aggregators must not contain null entries");
       }
+      if (Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(aggregator.getName())) {
+        throw InvalidInput.exception(
+            "aggregator cannot be named [%s]; it is the query-granularity virtual column, not a metric column",
+            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
+        );
+      }
       if (!names.add(aggregator.getName())) {
         throw InvalidInput.exception(
             "aggregator [%s] duplicates the name of a column or another aggregator",
             aggregator.getName()
+        );
+      }
+      // The spec's aggregators are applied uniformly by every consumer: ingestion combines whatever arrives under the
+      // metric column's name, and compaction re-aggregates the rows the table has already stored. Both are only
+      // correct for an aggregator that combines its own output, so anything else (a COUNT, a sketch build, an input
+      // field that differs from the output) is rejected rather than silently changing results on re-aggregation.
+      final AggregatorFactory combining = aggregator.getCombiningFactory().withName(aggregator.getName());
+      if (!aggregator.equals(combining)) {
+        throw InvalidInput.exception(
+            "aggregator [%s] is not its own combining form: a rollup table re-aggregates the rows it has stored, so"
+            + " its aggregators must combine their own output. Declare the combining form instead, for example [%s]",
+            aggregator.getName(),
+            combining
         );
       }
     }

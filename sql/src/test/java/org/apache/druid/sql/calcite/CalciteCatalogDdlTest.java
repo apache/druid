@@ -1173,6 +1173,28 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   }
 
   /**
+   * A rollup table's aggregators must combine their own output (the same aggregators serve ingestion and
+   * re-aggregation of stored rows), so an aggregate that is not its own combining form is rejected: a count is stored
+   * by summing a count column, not with {@code COUNT(*)}.
+   */
+  @Test
+  public void testRollupBaseProjectionRejectsNonSelfCombiningAggregate()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, cnt BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time, COUNT(*) AS cnt GROUP BY 1, 2))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains("aggregator [cnt] is not its own combining form"),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
    * The declared type of a metric column must match what its aggregator stores; the check runs in the metadata's
    * createSpec, attributed to the statement.
    */

@@ -505,6 +505,53 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
   }
 
   /**
+   * The canonical count workflow for a rollup table: the table cannot declare {@code COUNT(*)} (an aggregator must
+   * combine its own output), so it declares {@code SUM(cnt) AS cnt} and the ingestion query computes the raw count —
+   * {@code COUNT(*) AS cnt} — which the table then sums on any re-aggregation.
+   */
+  @Test
+  public void testCreateRollupBaseTableThenIngestCounts()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (\n"
+        + "  tenant VARCHAR,\n"
+        + "  __time TIMESTAMP,\n"
+        + "  cnt BIGINT,\n"
+        + "  PROJECTION __base AS (\n"
+        + "    SELECT tenant, TIME_FLOOR(__time, 'PT1H') AS __time, SUM(cnt) AS cnt\n"
+        + "    GROUP BY 1, 2\n"
+        + "  )\n"
+        + ")\n"
+        + "PARTITIONED BY DAY",
+        tableName
+    );
+
+    ingest(
+        "INSERT INTO \"%s\"\n"
+        + "SELECT b AS tenant, TIME_FLOOR(TIME_PARSE(a), 'PT1H') AS __time, COUNT(*) AS cnt\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"inline\",\"data\":\"2022-12-26T05:10:00,bbb"
+        + "\\n2022-12-26T05:20:00,aaa\\n2022-12-26T05:40:00,aaa\\n2022-12-26T09:10:00,aaa\"}',\n"
+        + "    '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"a\",\"b\"]}'\n"
+        + "  )\n"
+        + ") EXTEND (a VARCHAR, b VARCHAR)\n"
+        + "GROUP BY 1, 2",
+        tableName
+    );
+
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        tableName,
+        "aaa,2022-12-26T05:00:00.000Z,2\n"
+        + "aaa,2022-12-26T09:00:00.000Z,1\n"
+        + "bbb,2022-12-26T05:00:00.000Z,1"
+    );
+  }
+
+  /**
    * A {@code __base} projection without {@code CLUSTERED BY} declares the plain-table layout: declared column order is
    * the segment storage and sort order, and {@code TIME_FLOOR(__time, <period>)} declares the table's query
    * granularity. Rows arrive unsorted with unfloored timestamps and come back sorted by the declared order (item
