@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`AboutDialog matches snapshot 1`] = `
 <div
@@ -142,6 +142,7 @@ exports[`AboutDialog matches snapshot 1`] = `
               href="https://druid.apache.org"
               rel="noopener noreferrer"
               role="button"
+              tabindex="0"
               target="_blank"
             >
               <span

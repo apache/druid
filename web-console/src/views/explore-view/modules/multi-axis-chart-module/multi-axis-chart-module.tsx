@@ -27,6 +27,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
 import {
+  bigIntsToNumbers,
+  ECHARTS_BACKGROUND_COLOR,
+  ECHARTS_BRUSH_STYLE,
+  ECHARTS_COLORS,
   formatInteger,
   formatIsoDateRange,
   formatNumber,
@@ -114,7 +118,10 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           throw new Error(`Must have a column of type TIMESTAMP for the multi-axis chart to work`);
         }
 
-        return (await runSqlQuery(query, signal)).toObjectArray();
+        return bigIntsToNumbers(
+          (await runSqlQuery(query, signal)).toObjectArray(),
+          measures.map(measure => measure.name),
+        );
       },
     });
 
@@ -122,6 +129,8 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
       const myChart = echarts.init(container, 'dark');
 
       myChart.setOption({
+        color: ECHARTS_COLORS,
+        backgroundColor: ECHARTS_BACKGROUND_COLOR,
         tooltip: {
           trigger: 'axis',
           axisPointer: {
@@ -144,6 +153,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
         brush: {
           toolbox: ['lineX'],
           xAxisIndex: 0,
+          brushStyle: ECHARTS_BRUSH_STYLE,
         },
         grid: {
           left: '3%',

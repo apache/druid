@@ -345,7 +345,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           (b): RangeDatum => ({
             start: b[TIME_NAME].valueOf(),
             end: granularity.shift(b[TIME_NAME], Timezone.UTC, 1).valueOf(),
-            measures: measures.map((_, i) => b[getMeasureName(i)]),
+            measures: measures.map((_, i) => Number(b[getMeasureName(i)])),
             facet: b[FACET_NAME],
           }),
         );

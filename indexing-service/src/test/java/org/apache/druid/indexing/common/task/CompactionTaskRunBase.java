@@ -96,6 +96,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.handoff.NoopSegmentHandoffNotifierFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
@@ -1731,7 +1732,7 @@ public abstract class CompactionTaskRunBase
         .config(new TaskConfigBuilder().build())
         .emitter(NoopServiceEmitter.instance())
         .taskActionClient(taskActionClient)
-        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), new DeepStorageSegmentConfig()))
         .dataSegmentKiller(new NoopDataSegmentKiller())
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .segmentCacheManager(cacheManager)

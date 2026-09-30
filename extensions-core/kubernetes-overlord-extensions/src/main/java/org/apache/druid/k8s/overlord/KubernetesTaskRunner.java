@@ -333,13 +333,13 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   @Override
   public void updateStatus(Task task, TaskStatus status)
   {
-    TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+    TaskRunnerUtils.notifyStatusChanged(listeners, task, status);
   }
 
   @Override
   public void updateLocation(Task task, TaskLocation location)
   {
-    TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), location);
+    TaskRunnerUtils.notifyLocationChanged(listeners, task, location);
   }
 
   @Override

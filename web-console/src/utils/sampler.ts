@@ -625,8 +625,7 @@ export async function sampleForSchema(
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
-  const transformSpec: TransformSpec =
-    deepGet(spec, 'spec.dataSchema.transformSpec') || ({} as TransformSpec);
+  const transformSpec: TransformSpec = deepGet(spec, 'spec.dataSchema.transformSpec') || {};
   const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec');
   const metricsSpec: MetricSpec[] = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
   const queryGranularity: string =

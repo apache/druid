@@ -185,6 +185,27 @@ class AggregateProjectionSpecTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testComputeOrdering_floorOfNonTimeColumnIsNotATimeColumn()
+  {
+    // A grouping column flooring some column other than {@code __time} is a perfectly good grouping column, but it is
+    // not a time grouping: its granularity describes buckets of the other column, so designating it the time column
+    // would claim a time bucketing the projection does not have.
+    ExpressionVirtualColumn dailyOther = new ExpressionVirtualColumn(
+        "dailyOther",
+        "timestamp_floor(other, 'P1D', null, null)",
+        ColumnType.LONG,
+        TestExprMacroTable.INSTANCE
+    );
+    Assertions.assertNull(new AggregateProjectionSpec(
+        "some_projection",
+        null,
+        VirtualColumns.create(dailyOther),
+        List.of(new LongDimensionSchema("dailyOther")),
+        new AggregatorFactory[]{}
+    ).toMetadataSchema().getTimeColumnName());
+  }
+
+  @Test
   void testMissingName()
   {
     Throwable t = Assertions.assertThrows(

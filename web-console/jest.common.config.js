@@ -22,7 +22,7 @@ process.env.TZ = 'UTC';
 
 module.exports = {
   testEnvironment: 'jsdom',
-  transformIgnorePatterns: ['/node_modules/(?!(d3-.+)/)'],
+  transformIgnorePatterns: ['/node_modules/(?!(d3-.+|internmap)/)'],
   ...createJsWithTsPreset({
     tsconfig: './tsconfig.test.json',
   }),

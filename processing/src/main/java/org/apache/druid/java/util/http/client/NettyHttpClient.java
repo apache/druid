@@ -87,6 +87,11 @@ public class NettyHttpClient extends AbstractHttpClient
     this.compressionCodec = Preconditions.checkNotNull(compressionCodec);
   }
 
+  public ResourcePool<String, ChannelFuture> getPool()
+  {
+    return pool;
+  }
+
   @LifecycleStart
   public void start()
   {

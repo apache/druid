@@ -6202,6 +6202,51 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCountStarWithFilterOnCastAsLong()
+  {
+    // LONG is a non-reserved alias for BIGINT, so this must plan identically to
+    // testCountStarWithFilterOnCastedString() above.
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE CAST(dim1 AS long) = 2",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(equality("dim1", 2L, ColumnType.LONG))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
+  public void testLongIsUsableAsAnIdentifier()
+  {
+    // LONG is added to nonReservedKeywordsToAdd, so it must remain usable unquoted as a column alias.
+    testQuery(
+        "SELECT dim1 AS long FROM druid.foo LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1")
+                .columnTypes(ColumnType.STRING)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithTimeFilter()
   {
     testQuery(

@@ -19,8 +19,8 @@
 import { Classes, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import type { JSX } from 'react';
 import type React from 'react';
+import type { JSX } from 'react';
 import { useCallback, useState } from 'react';
 
 import type { ExpressionMeta, Measure } from '../../models';

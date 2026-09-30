@@ -25,6 +25,7 @@ export * from './download';
 export * from './download-query-detail-archive';
 export * from './druid-lookup';
 export * from './druid-query';
+export * from './echarts-theme';
 export * from './explain';
 export * from './formatter';
 export * from './general';

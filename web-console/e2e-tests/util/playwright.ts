@@ -41,7 +41,6 @@ export async function createPage(browser: playwright.Browser): Promise<playwrigh
   const page = await context.newPage();
   await page.setViewportSize({ width: WIDTH, height: HEIGHT });
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   page.on('response', async response => {
     if (response.status() < 400) return;
 

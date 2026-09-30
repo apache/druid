@@ -164,8 +164,8 @@ interface ServiceResultRow {
   readonly version: string;
   readonly build_revision: string;
   readonly labels: string | null;
-  readonly available_processors: number;
-  readonly total_memory: number;
+  readonly available_processors: NumberLike;
+  readonly total_memory: NumberLike;
 }
 
 interface CloneStatusInfo {
@@ -174,7 +174,7 @@ interface CloneStatusInfo {
   readonly state: string;
   readonly segmentLoadsRemaining: number;
   readonly segmentDropsRemaining: number;
-  readonly bytesToLoad: number;
+  readonly bytesToLoad: NumberLike;
 }
 
 interface ServerModeInfo {
@@ -810,7 +810,7 @@ ORDER BY
           Aggregated: ({ subRows }) => {
             const originalRows = subRows.map(r => r._original);
             if (!originalRows.some(r => r.service_type === 'historical')) return '';
-            const totalCurr = sum(originalRows, s => s.curr_size);
+            const totalCurr = sum(originalRows, s => Number(s.curr_size));
             return formatBytes(totalCurr);
           },
           Cell: ({ value, aggregated, original }) => {
@@ -830,7 +830,7 @@ ORDER BY
           Aggregated: ({ subRows }) => {
             const originalRows = subRows.map(r => r._original);
             if (!originalRows.some(r => r.service_type === 'historical')) return '';
-            const totalEffectiveSize = sum(originalRows, s => s.effective_size);
+            const totalEffectiveSize = sum(originalRows, s => Number(s.effective_size));
             return formatBytes(totalEffectiveSize);
           },
           Cell: ({ value, aggregated, original }) => {
@@ -988,7 +988,7 @@ ORDER BY
           Cell: ({ value }) => (value === null ? '' : formatInteger(value)),
           Aggregated: ({ subRows }) => {
             const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
-            const totalAvailableProcessors = sum(originalRows, s => s.available_processors);
+            const totalAvailableProcessors = sum(originalRows, s => Number(s.available_processors));
             return totalAvailableProcessors;
           },
         },
@@ -1005,7 +1005,7 @@ ORDER BY
           },
           Aggregated: ({ subRows }) => {
             const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
-            const totalMemory = sum(originalRows, s => s.total_memory);
+            const totalMemory = sum(originalRows, s => Number(s.total_memory));
             return formatBytes(totalMemory, true);
           },
         },

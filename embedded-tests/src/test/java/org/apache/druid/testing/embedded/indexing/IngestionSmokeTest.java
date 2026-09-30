@@ -24,6 +24,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -33,6 +34,9 @@ import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.indexing.overlord.TaskRunner;
+import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -40,6 +44,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.postgresql.PostgreSQLMetadataStorageModule;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
@@ -51,9 +56,9 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.emitter.LatchableEmitterModule;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
 import org.apache.druid.testing.embedded.psql.PostgreSQLMetadataResource;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
 import org.apache.druid.testing.embedded.server.EmbeddedEventCollector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -67,6 +72,7 @@ import org.junit.jupiter.api.Test;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -116,7 +122,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
             )
             .useDefaultTimeoutForLatchableEmitter(20)
             .addResource(new PostgreSQLMetadataResource())
-            .addResource(new MinIOStorageResource())
+            .addResource(new S3StorageResource())
             .addResource(kafkaServer)
             .addCommonProperty("druid.manager.segments.useIncrementalCache", "always")
             .addCommonProperty("druid.emitter", "http")
@@ -145,7 +151,51 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
   @AfterEach
   public void cleanUp()
   {
-    markSegmentsAsUnused(dataSource);
+    try {
+      final List<SupervisorStatus> supervisors = new ArrayList<>();
+      cluster.callApi().onLeaderOverlord(OverlordClient::supervisorStatuses).forEachRemaining(supervisors::add);
+      for (final SupervisorStatus supervisor : supervisors) {
+        if (dataSource.equals(supervisor.getId())) {
+          cluster.callApi().onLeaderOverlord(o -> o.terminateSupervisor(supervisor.getId()));
+        }
+      }
+
+      cluster.callApi()
+             .waitForResult(this::cancelTasksForCurrentTest, Set::isEmpty)
+             .withTimeoutMillis(60_000)
+             .go();
+    }
+    finally {
+      markSegmentsAsUnused(dataSource);
+    }
+  }
+
+  private Set<String> cancelTasksForCurrentTest()
+  {
+    final Set<String> taskIds = new HashSet<>();
+    for (final String state : List.of("running", "pending", "waiting")) {
+      for (final TaskStatusPlus task : cluster.callApi().getTasks(dataSource, state)) {
+        taskIds.add(task.getId());
+      }
+    }
+
+    // A task can be complete in storage while still occupying a worker slot.
+    // Docker subclasses may use an external leader, so its runner is not available here.
+    final Optional<TaskRunner> taskRunner = overlord.bindings().getInstance(TaskMaster.class).getTaskRunner();
+    if (taskRunner.isPresent()) {
+      final List<TaskRunnerWorkItem> runnerTasks = new ArrayList<>(taskRunner.get().getPendingTasks());
+      runnerTasks.addAll(taskRunner.get().getRunningTasks());
+      for (final TaskRunnerWorkItem task : runnerTasks) {
+        if (dataSource.equals(task.getDataSource())) {
+          taskIds.add(task.getTaskId());
+        }
+      }
+    }
+
+    for (final String taskId : taskIds) {
+      cluster.callApi().onLeaderOverlord(o -> o.cancelTask(taskId));
+    }
+    return taskIds;
   }
 
   protected int markSegmentsAsUnused(String dataSource)
@@ -363,7 +413,7 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
     final String taskId = IdUtils.getRandomId();
     final long runDurationMillis = 100_000L;
     cluster.callApi().onLeaderOverlord(
-        o -> o.runTask(taskId, new NoopTask(taskId, null, null, runDurationMillis, 0L, null))
+        o -> o.runTask(taskId, new NoopTask(taskId, null, dataSource, runDurationMillis, 0L, null))
     );
 
     eventCollector.latchableEmitter().waitForEvent(

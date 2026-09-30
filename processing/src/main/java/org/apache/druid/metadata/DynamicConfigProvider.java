@@ -36,5 +36,12 @@ import java.util.Map;
 })
 public interface DynamicConfigProvider<T>
 {
+  /**
+   * Returns the resolved configuration.
+   *
+   * Implementations must not return null values. Consumers copy the map into containers such as
+   * {@link java.util.Properties} that do not allow null. A key that cannot be resolved is skipped, which consumers
+   * treat as "not configured".
+   */
   Map<String, T> getConfig();
 }

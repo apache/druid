@@ -408,6 +408,102 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
   }
 
   /**
+   * A computed column composed of specialized expressions is lifted with its dependency closure (the inner JSON_MERGE
+   * becomes an intermediary virtual column the outer nested-field virtual column reads by synthetic name), and the
+   * clustered write path evaluates the chain at ingest to materialize the declared column.
+   */
+  @Test
+  public void testCreateClusteredBaseTableWithComposedComputedColumn()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (\n"
+        + "  tenant VARCHAR,\n"
+        + "  __time TIMESTAMP,\n"
+        + "  payload TYPE('COMPLEX<json>'),\n"
+        + "  v BIGINT,\n"
+        + "  PROJECTION __base AS (\n"
+        + "    SELECT tenant, __time, payload, JSON_VALUE(JSON_MERGE(payload, payload), '$.v' RETURNING BIGINT) AS v\n"
+        + "    CLUSTERED BY tenant\n"
+        + "  )\n"
+        + ")\n"
+        + "PARTITIONED BY DAY",
+        tableName
+    );
+
+    // 'v' is computed by the base table, so the INSERT supplies only its input column.
+    ingest(
+        "INSERT INTO \"%s\"\n"
+        + "SELECT TIME_PARSE(t) AS __time, a AS tenant, p AS payload\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"inline\",\"data\":\""
+        + "{\\\"t\\\":\\\"2022-12-26T12:34:56\\\",\\\"a\\\":\\\"bbb\\\",\\\"p\\\":{\\\"v\\\":7}}"
+        + "\\n{\\\"t\\\":\\\"2022-12-26T12:34:56\\\",\\\"a\\\":\\\"aaa\\\",\\\"p\\\":{\\\"v\\\":12}}\"}',\n"
+        + "    '{\"type\":\"json\"}'\n"
+        + "  )\n"
+        + ") EXTEND (t VARCHAR, a VARCHAR, p TYPE('COMPLEX<json>'))\n",
+        tableName
+    );
+
+    // Rows come back in clustering order, with 'v' materialized at ingest by the composed virtual column chain.
+    cluster.callApi().verifySqlQuery(
+        "SELECT tenant, v FROM %s",
+        tableName,
+        "aaa,12\n"
+        + "bbb,7"
+    );
+  }
+
+  /**
+   * A {@code __base} projection without {@code CLUSTERED BY} declares the plain-table layout: declared column order is
+   * the segment storage and sort order, and {@code TIME_FLOOR(__time, <period>)} declares the table's query
+   * granularity. Rows arrive unsorted with unfloored timestamps and come back sorted by the declared order (item
+   * before {@code __time}) with {@code __time} floored to the hour.
+   */
+  @Test
+  public void testCreatePlainBaseTableThenIngestAndQuery()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (\n"
+        + "  item VARCHAR,\n"
+        + "  __time TIMESTAMP,\n"
+        + "  val BIGINT,\n"
+        + "  PROJECTION __base AS (SELECT item, TIME_FLOOR(__time, 'PT1H') AS __time, val)\n"
+        + ")\n"
+        + "PARTITIONED BY DAY",
+        tableName
+    );
+
+    final TableMetadata table = client.readTable(TableId.datasource(tableName));
+    assertNotNull(table.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
+
+    ingest(
+        "INSERT INTO \"%s\"\n"
+        + "SELECT TIME_PARSE(a) AS __time, b AS item, c AS val\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"inline\",\"data\":\"2022-12-26T05:30:10,cherry,3"
+        + "\\n2022-12-26T01:45:20,banana,2\\n2022-12-26T09:10:30,apple,1\"}',\n"
+        + "    '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"a\",\"b\",\"c\"]}'\n"
+        + "  )\n"
+        + ") EXTEND (a VARCHAR, b VARCHAR, c BIGINT)\n",
+        tableName
+    );
+
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        tableName,
+        "apple,2022-12-26T09:00:00.000Z,1\n"
+        + "banana,2022-12-26T01:00:00.000Z,2\n"
+        + "cherry,2022-12-26T05:00:00.000Z,3"
+    );
+  }
+
+  /**
    * The same layout without SEALED: a column the query produces but the table does not declare is stored after the
    * declared layout rather than rejected or dropped, and the clustering the table declared is unchanged.
    */

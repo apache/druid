@@ -36,7 +36,7 @@ export interface SupervisorStatus {
     publishingTasks: SupervisorStatusTask[];
     latestOffsets?: SupervisorOffsetMap;
     minimumLag?: SupervisorOffsetMap;
-    aggregateLag: number;
+    aggregateLag: NumberLike;
     offsetsLastUpdated: string;
     suspended: boolean;
     healthy: boolean;
@@ -46,15 +46,15 @@ export interface SupervisorStatus {
 
     // autocompact
     scheduleStatus: string;
-    bytesAwaitingCompaction: number;
-    bytesCompacted: number;
-    bytesSkipped: number;
-    segmentCountAwaitingCompaction: number;
-    segmentCountCompacted: number;
-    segmentCountSkipped: number;
-    intervalCountAwaitingCompaction: number;
-    intervalCountCompacted: number;
-    intervalCountSkipped: number;
+    bytesAwaitingCompaction: NumberLike;
+    bytesCompacted: NumberLike;
+    bytesSkipped: NumberLike;
+    segmentCountAwaitingCompaction: NumberLike;
+    segmentCountCompacted: NumberLike;
+    segmentCountSkipped: NumberLike;
+    intervalCountAwaitingCompaction: NumberLike;
+    intervalCountCompacted: NumberLike;
+    intervalCountSkipped: NumberLike;
   };
 }
 
@@ -93,30 +93,33 @@ export interface RowStats {
 }
 
 export interface RowStatsCounter {
-  processed: number;
-  processedBytes: number;
-  processedWithError: number;
-  thrownAway: number;
-  unparseable: number;
+  processed: NumberLike;
+  processedBytes: NumberLike;
+  processedWithError: NumberLike;
+  thrownAway: NumberLike;
+  unparseable: NumberLike;
 }
 
-function sumRowStatsCounter(rowStats: RowStatsCounter[]): RowStatsCounter {
+// Aggregating coerces away any BigInt, so the result is safe to do arithmetic on
+export type AggregatedRowStatsCounter = Record<keyof RowStatsCounter, number>;
+
+function sumRowStatsCounter(rowStats: RowStatsCounter[]): AggregatedRowStatsCounter {
   return {
-    processed: sum(rowStats, d => d.processed),
-    processedBytes: sum(rowStats, d => d.processedBytes),
-    processedWithError: sum(rowStats, d => d.processedWithError),
-    thrownAway: sum(rowStats, d => d.thrownAway),
-    unparseable: sum(rowStats, d => d.unparseable),
+    processed: sum(rowStats, d => Number(d.processed)),
+    processedBytes: sum(rowStats, d => Number(d.processedBytes)),
+    processedWithError: sum(rowStats, d => Number(d.processedWithError)),
+    thrownAway: sum(rowStats, d => Number(d.thrownAway)),
+    unparseable: sum(rowStats, d => Number(d.unparseable)),
   };
 }
 
-function maxRowStatsCounter(rowStats: RowStatsCounter[]): RowStatsCounter {
+function maxRowStatsCounter(rowStats: RowStatsCounter[]): AggregatedRowStatsCounter {
   return {
-    processed: max(rowStats, d => d.processed) ?? 0,
-    processedBytes: max(rowStats, d => d.processedBytes) ?? 0,
-    processedWithError: max(rowStats, d => d.processedWithError) ?? 0,
-    thrownAway: max(rowStats, d => d.thrownAway) ?? 0,
-    unparseable: max(rowStats, d => d.unparseable) ?? 0,
+    processed: max(rowStats, d => Number(d.processed)) ?? 0,
+    processedBytes: max(rowStats, d => Number(d.processedBytes)) ?? 0,
+    processedWithError: max(rowStats, d => Number(d.processedWithError)) ?? 0,
+    thrownAway: max(rowStats, d => Number(d.thrownAway)) ?? 0,
+    unparseable: max(rowStats, d => Number(d.unparseable)) ?? 0,
   };
 }
 
@@ -132,7 +135,7 @@ export function getTotalSupervisorStats(
   stats: SupervisorStats,
   key: RowStatsKey,
   activeTaskIds: string[] | undefined,
-): RowStatsCounter {
+): AggregatedRowStatsCounter {
   return sumRowStatsCounter(
     Object.values(stats).map(s =>
       maxRowStatsCounter(

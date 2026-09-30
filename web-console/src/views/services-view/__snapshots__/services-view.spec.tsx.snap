@@ -1,4 +1,4 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`ServicesView renders data 1`] = `
 <div
@@ -36,13 +36,8 @@ exports[`ServicesView renders data 1`] = `
     />
     <Memo(MoreButton)>
       <Blueprint5.MenuItem
-        active={false}
-        disabled={false}
         icon="application"
-        multiline={false}
         onClick={[Function]}
-        popoverProps={{}}
-        shouldDismissPopover={true}
         text="View SQL query for table"
       />
     </Memo(MoreButton)>

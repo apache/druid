@@ -20,7 +20,7 @@ import { shallow } from '../../utils/shallow-renderer';
 
 import { TimezoneMenuItems } from './timezone-menu-items';
 
-jest.useFakeTimers('modern').setSystemTime(Date.parse('2024-06-08T12:34:56Z'));
+jest.useFakeTimers().setSystemTime(Date.parse('2024-06-08T12:34:56Z'));
 
 describe('TimezoneMenuItems', () => {
   it('ensure UTC', () => {
