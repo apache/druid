@@ -78,7 +78,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -392,6 +395,57 @@ public class FrameProcessorExecutorTest
     }
 
     @Test
+    @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
+    public void test_runFully_cancelRacingRegistration_leavesNoOrphanProcessor() throws Exception
+    {
+      // runFully registers its return future and its processor in two separate critical sections. A cancel that lands
+      // between them sweeps cancelableProcessors without ever seeing the processor, so registering it anyway would
+      // leave an entry that no cancel will ever remove, running on past cancel()'s wait. However the race goes, once
+      // both calls have returned there must be nothing left registered under the canceled id.
+      final ExecutorService launcher = Execs.singleThreaded("cancel-race-launcher-%s");
+
+      try {
+        for (int i = 0; i < 300; i++) {
+          final String cancellationId = "race-" + i;
+          final SleepyFrameProcessor processor = new SleepyFrameProcessor();
+          exec.registerCancellationId(cancellationId);
+
+          final CountDownLatch ready = new CountDownLatch(1);
+          final Future<ListenableFuture<Long>> launched = launcher.submit(() -> {
+            ready.countDown();
+            return exec.runFully(processor, cancellationId);
+          });
+
+          // Release the launcher and cancel from this thread, so the cancel lands somewhere inside runFully.
+          ready.await();
+          exec.cancel(cancellationId);
+
+          // Bounded rather than open-ended: if a processor does leak through, it is a SleepyFrameProcessor that never
+          // stops, and on the single-threaded parameterization this get() is where the test would otherwise hang and
+          // die on @Timeout with no clue which iteration broke.
+          final ListenableFuture<Long> future = launched.get(30, TimeUnit.SECONDS);
+
+          // Asserted every iteration rather than once at the end, so a leak is reported against the iteration that
+          // caused it, before a leaked processor can wedge the exec for the iterations after it.
+          Assertions.assertEquals(
+              0,
+              exec.cancelableProcessorCount(),
+              StringUtils.format("orphaned processor on iteration[%d]", i)
+          );
+
+          // The count alone cannot tell "cleaned up" apart from "silently dropped": a processor that was never
+          // registered is absent from cancelableProcessors either way. Whoever ended up owning this processor, it
+          // must have been cleaned up and its future resolved.
+          Assertions.assertTrue(future.isDone(), StringUtils.format("future resolved on iteration[%d]", i));
+          Assertions.assertTrue(processor.didCleanup(), StringUtils.format("processor cleaned on iteration[%d]", i));
+        }
+      }
+      finally {
+        launcher.shutdownNow();
+      }
+    }
+
+    @Test
     public void test_runFully_nonexistentCancellationId()
     {
       final SleepyFrameProcessor processor = new SleepyFrameProcessor();
@@ -400,11 +454,13 @@ public class FrameProcessorExecutorTest
       // Don't registerCancellationId(cancellationId).
       final ListenableFuture<Long> future = exec.runFully(processor, cancellationId);
 
-      // Future should be immediately canceled, without running the processor.
+      // Future should be immediately canceled, without running the processor. The processor is still cleaned up:
+      // runFully is the only party that ever saw it, so if it doesn't, nobody does, and its channels (plus, under
+      // runAllFully, the Bouncer ticket carried as its baggage) would leak.
       Assertions.assertTrue(future.isDone());
       Assertions.assertTrue(future.isCancelled());
       Assertions.assertFalse(processor.didGetInterrupt());
-      Assertions.assertFalse(processor.didCleanup());
+      Assertions.assertTrue(processor.didCleanup());
     }
 
     @Test
