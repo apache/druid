@@ -351,8 +351,15 @@ public class IcebergArrowInputSourceReaderTest
     final Table table = catalog.retrieveCatalog().createTable(tableId, SCHEMA);
     final int count = 5_000;
     final GenericRecord[] data = new GenericRecord[count];
+    long expectedChecksum = 1;
     for (int i = 0; i < count; i++) {
-      data[i] = row((long) (i + 1) * 1000, "user" + i, i * 0.1);
+      final long timestamp = (long) (i + 1) * 1000;
+      final String name = "user" + i;
+      final double value = i * 0.1;
+      data[i] = row(timestamp, name, value);
+      expectedChecksum = 31 * expectedChecksum + timestamp;
+      expectedChecksum = 31 * expectedChecksum + name.hashCode();
+      expectedChecksum = 31 * expectedChecksum + Double.hashCode(value);
     }
     writeRows(table, data);
 
@@ -365,23 +372,33 @@ public class IcebergArrowInputSourceReaderTest
         IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE
     );
 
-    final long legacyStartNanos = System.nanoTime();
-    final long legacyChecksum = readChecksum(reader.read(new NoopInputStats()), count);
-    final long legacyElapsedNanos = System.nanoTime() - legacyStartNanos;
+    for (int i = 0; i < 2; i++) {
+      timeRead(reader, false, count, expectedChecksum);
+      timeRead(reader, true, count, expectedChecksum);
+    }
 
-    final long batchStartNanos = System.nanoTime();
-    final long batchChecksum = readChecksum(
-        new BatchToInputRowIterator(reader.readBatches(new NoopInputStats()), INPUT_SCHEMA),
-        count
-    );
-    final long batchElapsedNanos = System.nanoTime() - batchStartNanos;
-
-    Assertions.assertEquals(legacyChecksum, batchChecksum);
+    final int measuredReads = 4;
+    long materializedElapsedNanos = 0;
+    long batchElapsedNanos = 0;
+    for (int i = 0; i < measuredReads; i++) {
+      if (i % 2 == 0) {
+        materializedElapsedNanos += timeRead(reader, false, count, expectedChecksum);
+        batchElapsedNanos += timeRead(reader, true, count, expectedChecksum);
+      } else {
+        batchElapsedNanos += timeRead(reader, true, count, expectedChecksum);
+        materializedElapsedNanos += timeRead(reader, false, count, expectedChecksum);
+      }
+    }
     LOG.info(
-        "Read rows [%,d] using legacy path in [%.2f] ms and batch-backed path in [%.2f] ms",
+        "Iceberg Arrow reader diagnostic timing: rows [%,d], columns [%d], batchSize [%d], measuredReadsPerPath [%d], "
+        + "materializedRowsMeanMs [%.2f], batchBackedRowsMeanMs [%.2f], materializedToBatchRatio [%.2f]",
         count,
-        legacyElapsedNanos / 1_000_000D,
-        batchElapsedNanos / 1_000_000D
+        SCHEMA.columns().size(),
+        IcebergArrowInputSourceReader.DEFAULT_BATCH_SIZE,
+        measuredReads,
+        materializedElapsedNanos / (measuredReads * 1_000_000D),
+        batchElapsedNanos / (measuredReads * 1_000_000D),
+        (double) materializedElapsedNanos / batchElapsedNanos
     );
   }
 
@@ -653,6 +670,26 @@ public class IcebergArrowInputSourceReaderTest
       }
     }
     return result;
+  }
+
+  private static long timeRead(
+      final IcebergArrowInputSourceReader reader,
+      final boolean batchBacked,
+      final int expectedRowCount,
+      final long expectedChecksum
+  ) throws IOException
+  {
+    final long startNanos = System.nanoTime();
+    final CloseableIterator<InputRow> rows = batchBacked
+                                            ? new BatchToInputRowIterator(
+                                                reader.readBatches(new NoopInputStats()),
+                                                INPUT_SCHEMA
+                                            )
+                                            : reader.read(new NoopInputStats());
+    final long checksum = readChecksum(rows, expectedRowCount);
+    final long elapsedNanos = System.nanoTime() - startNanos;
+    Assertions.assertEquals(expectedChecksum, checksum);
+    return elapsedNanos;
   }
 
   private static long readChecksum(final CloseableIterator<InputRow> rows, final int expectedRowCount)
