@@ -19,10 +19,9 @@
 
 package org.apache.druid.k8s.overlord;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.joda.time.Period;
-
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 
 import java.util.List;
 import java.util.Map;

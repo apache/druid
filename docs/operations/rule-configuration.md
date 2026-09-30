@@ -22,7 +22,7 @@ title: "Using rules to drop and retain data"
   ~ under the License.
   -->
 
-Data retention rules allow you to configure Apache Druid to conform to your data retention policies. Your data retention policies specify which data to retain and which data to drop from the cluster.
+Data retention rules allow you to configure Apache&circledR; Druid to conform to your data retention policies. Your data retention policies specify which data to retain and which data to drop from the cluster.
 
 Druid supports [load](#load-rules), [drop](#drop-rules), and [broadcast](#broadcast-rules) rules. Each rule is a JSON object. See the [rule definitions below](#load-rules) for details.
 

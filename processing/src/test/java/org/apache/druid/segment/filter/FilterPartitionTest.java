@@ -42,19 +42,21 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.index.BitmapColumnIndex;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class FilterPartitionTest extends BaseFilterTest
 {
   private static class NoBitmapSelectorFilter extends SelectorFilter
@@ -155,6 +157,12 @@ public class FilterPartitionTest extends BaseFilterTest
       .add(makeDefaultSchemaRow("9", "1", ImmutableList.of("foo", "bar"), null, null, null, null, null))
       .build();
 
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
+
   public FilterPartitionTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -166,7 +174,7 @@ public class FilterPartitionTest extends BaseFilterTest
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(FilterPartitionTest.class.getName());
@@ -555,8 +563,8 @@ public class FilterPartitionTest extends BaseFilterTest
     Filter filter1 = dimFilter1.toFilter();
     Filter filter1CNF = Filters.toCnf(filter1);
 
-    Assert.assertEquals(AndFilter.class, filter1CNF.getClass());
-    Assert.assertEquals(2, ((AndFilter) filter1CNF).getFilters().size());
+    Assertions.assertEquals(AndFilter.class, filter1CNF.getClass());
+    Assertions.assertEquals(2, ((AndFilter) filter1CNF).getFilters().size());
 
     assertFilterMatches(
         dimFilter1,
@@ -613,8 +621,8 @@ public class FilterPartitionTest extends BaseFilterTest
     Filter filter1 = dimFilter1.toFilter();
     Filter filter1CNF = Filters.toCnf(filter1);
 
-    Assert.assertEquals(AndFilter.class, filter1CNF.getClass());
-    Assert.assertEquals(2, ((AndFilter) filter1CNF).getFilters().size());
+    Assertions.assertEquals(AndFilter.class, filter1CNF.getClass());
+    Assertions.assertEquals(2, ((AndFilter) filter1CNF).getFilters().size());
 
     assertFilterMatches(
         dimFilter1,

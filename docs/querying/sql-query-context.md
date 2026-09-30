@@ -24,11 +24,11 @@ sidebar_label: "SQL query context"
   -->
 
 :::info
- Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
 
-In Apache Druid, you can control how your [Druid SQL queries](./sql.md) queries run by using query context parameters. The parameters let you adjust aspects of query processing such as using approximations, selecting particular filters, controlling how lookups are executed.
+In Apache&circledR; Druid, you can control how your [Druid SQL queries](./sql.md) queries run by using query context parameters. The parameters let you adjust aspects of query processing such as using approximations, selecting particular filters, controlling how lookups are executed.
 
 For additional context parameters supported for all query types, refer to [Query context reference](query-context-reference.md). To learn how to set the query context, see [Set query context](../querying/query-context.md).
 
@@ -56,8 +56,10 @@ The table below lists the query context parameters you can use with Druid SQL.
 |`inFunctionThreshold`| At or beyond this threshold number of values, Druid converts SQL `IN` to [`SCALAR_IN_ARRAY`](sql-functions.md#scalar_in_array). A threshold of 0 forces this conversion in all cases. A threshold of `Integer.MAX_VALUE` disables this conversion. The converted function is eligible for fewer planning-time optimizations, which speeds up planning, but may prevent certain planning-time optimizations.| `100`|
 |`inFunctionExprThreshold`|At or beyond this threshold number of values, SQL `IN` is eligible for execution using the native function `scalar_in_array` rather than an <code>&#124;&#124;</code> of `==`, even if the number of values is below `inFunctionThreshold`. This property only affects translation of SQL `IN` to a [native expression](math-expr.md). It doesn't affect translation of SQL `IN` to a [native filter](filters.md). This property is provided for backwards compatibility purposes, and may be removed in a future release.|`2`|
 |`inSubQueryThreshold`|At or beyond this threshold number of values, Druid converts SQL `IN` to `JOIN` on an inline table. `inFunctionThreshold` takes priority over this setting. A threshold of 0 forces usage of an inline table in all cases where the size of a SQL `IN` is larger than `inFunctionThreshold`. A threshold of `2147483647` disables the rewrite of SQL `IN` to `JOIN`. |`2147483647`|
+|`maxPlanningTimeMs`|Maximum wall-clock time, in milliseconds, allowed for planning this query on the Broker. When planning exceeds this budget, planning is aborted and the query fails with an HTTP 504 `Query timeout` error. Use this to guard against pathological queries, such as one with a very large `IN` filter, whose planning time can spike. A non-positive value disables the timeout. To apply a cluster-wide default, set the `druid.query.default.context.maxPlanningTimeMs` runtime property (or the Broker's dynamic `queryContext` config); see [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values).|`0` (disabled)|
 
 ## Learn more
 - [Set query context](../querying/query-context.md) for how to set the query context.
 - [Query context reference](query-context-reference.md)  for available query context parameters.
+- [Overriding default query context values](../configuration/index.md#overriding-default-query-context-values) for how to set cluster-wide defaults for any query context parameter with `druid.query.default.context.*`.
 - [MSQ context parameters](../multi-stage-query/reference.md#context-parameters) for how to set context parameters for Multi-Stage Queries.

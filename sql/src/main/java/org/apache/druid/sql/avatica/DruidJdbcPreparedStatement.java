@@ -29,6 +29,7 @@ import org.apache.druid.sql.PreparedStatement;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 /**
@@ -94,12 +95,12 @@ public class DruidJdbcPreparedStatement extends AbstractDruidJdbcStatement
     return signature;
   }
 
-  public synchronized void execute(List<TypedValue> parameters)
+  public synchronized void execute(List<TypedValue> parameters, @Nullable String remoteAddress)
   {
     ensure(State.PREPARED);
     closeResultSet();
     try {
-      DirectStatement directStmt = sqlStatement.execute(parameters);
+      DirectStatement directStmt = sqlStatement.execute(parameters, remoteAddress);
       resultSet = new DruidJdbcResultSet(this, directStmt, maxRowCount, fetcherFactory);
       resultSet.execute();
     }

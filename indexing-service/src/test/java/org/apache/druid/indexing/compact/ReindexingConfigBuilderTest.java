@@ -21,6 +21,10 @@ package org.apache.druid.indexing.compact;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
@@ -76,6 +80,7 @@ public class ReindexingConfigBuilderTest
                     new AggregatorFactory[]{new CountAggregatorFactory("count")},
                     Granularities.HOUR,
                     true,
+                    null,
                     ImmutableList.of()
                 )
             )
@@ -137,6 +142,64 @@ public class ReindexingConfigBuilderTest
     // Verify config matches
     InlineSchemaDataSourceCompactionConfig configFromDetails = builderForDetails.build();
     Assertions.assertEquals(config.getGranularitySpec(), configFromDetails.getGranularitySpec());
+  }
+
+  @Test
+  public void test_applyTo_dataSchemaRuleWithBaseTable_appliesBaseTable()
+  {
+    final BaseTableProjectionSpec baseTable = ClusteredValueGroupsBaseTableProjectionSpec
+        .builder()
+        .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+        .clusteringColumns("tenant")
+        .build();
+
+    ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
+        .dataSchemaRules(
+            ImmutableList.of(
+                new ReindexingDataSchemaRule(
+                    "schema-baseTable-30d",
+                    null,
+                    Period.days(30),
+                    null,
+                    null,
+                    null,
+                    null,
+                    baseTable,
+                    null
+                )
+            )
+        ).build();
+
+    InlineSchemaDataSourceCompactionConfig.Builder builder =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource("test_datasource");
+
+    ImmutableList<IntervalPartitioningInfo> syntheticTimeline = ImmutableList.of(
+        new IntervalPartitioningInfo(
+            TEST_INTERVAL,
+            ReindexingPartitioningRule.syntheticRule(
+                Granularities.DAY,
+                new DynamicPartitionsSpec(5000000, null),
+                null
+            ),
+            true
+        )
+    );
+
+    ReindexingConfigBuilder configBuilder = new ReindexingConfigBuilder(
+        provider,
+        TEST_INTERVAL,
+        REFERENCE_TIME,
+        syntheticTimeline,
+        null
+    );
+
+    int count = configBuilder.applyTo(builder);
+
+    Assertions.assertEquals(1, count);
+
+    InlineSchemaDataSourceCompactionConfig config = builder.build();
+    Assertions.assertEquals(baseTable, config.getBaseTable());
   }
 
   @Test
@@ -634,6 +697,7 @@ public class ReindexingConfigBuilderTest
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         Granularities.HOUR,
         true,
+        null,
         ImmutableList.of(
             new AggregateProjectionSpec("proj1", null, null, null,
                                         new AggregatorFactory[]{new CountAggregatorFactory("count1")}),
@@ -650,6 +714,7 @@ public class ReindexingConfigBuilderTest
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         Granularities.HOUR,
         true,
+        null,
         ImmutableList.of(
             new AggregateProjectionSpec("proj3", null, null, null,
                                         new AggregatorFactory[]{new CountAggregatorFactory("count3")})

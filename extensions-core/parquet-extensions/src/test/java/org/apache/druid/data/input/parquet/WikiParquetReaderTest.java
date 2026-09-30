@@ -28,8 +28,8 @@ import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -47,11 +47,11 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
     InputEntityReader reader = createReader("example/wiki/wiki.parquet", schema, JSONPathSpec.DEFAULT);
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("Gypsy Danger", rows.get(0).getDimension("page").get(0));
+    Assertions.assertEquals("Gypsy Danger", rows.get(0).getDimension("page").get(0));
     String s1 = rows.get(0).getDimension("language").get(0);
     String s2 = rows.get(0).getDimension("language").get(1);
-    Assert.assertEquals("en", s1);
-    Assert.assertEquals("zh", s2);
+    Assertions.assertEquals("en", s1);
+    Assertions.assertEquals("zh", s2);
 
     reader = createReader("example/wiki/wiki.parquet", schema, JSONPathSpec.DEFAULT);
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
@@ -74,7 +74,7 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
                                 + "  \"user\" : \"nuclear\",\n"
                                 + "  \"timestamp\" : \"2013-08-31T01:02:33Z\"\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -93,6 +93,6 @@ public class WikiParquetReaderTest extends BaseParquetReaderTest
                                 + "  \"foo\" : \"baz\",\n"
                                 + "  \"time\" : 1678853101621\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 }

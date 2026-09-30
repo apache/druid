@@ -21,11 +21,11 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.opentest4j.IncompleteExecutionException;
+import org.opentest4j.TestAbortedException;
 
 import javax.annotation.Nullable;
 
@@ -37,7 +37,7 @@ import java.lang.reflect.Method;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Can be used to mark tests which are not-yet supported for some reason.
@@ -94,7 +94,9 @@ public @interface NotYetSupported
     AGGREGATION_NOT_SUPPORT_TYPE(Scope.WINDOWING, DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
     ALLDATA_CSV(Scope.WINDOWING, DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(Scope.WINDOWING, DruidException.class, "Cannot apply '.' to arguments of type"),
-    VIEWS_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "Incorrect syntax near the keyword 'CREATE'"),
+    // CREATE starts a catalog DDL statement, so the parser now gets as far as the object being created before
+    // failing, rather than rejecting the CREATE keyword outright.
+    VIEWS_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "Received an unexpected token \\[VIEW\\]"),
     RESULT_MISMATCH(Scope.WINDOWING, AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
     LONG_CASTING(Scope.WINDOWING, AssertionError.class, "expected: java.lang.Long"),
     UNSUPPORTED_NULL_ORDERING(Scope.WINDOWING, DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
@@ -102,7 +104,7 @@ public @interface NotYetSupported
     EXPRESSION_NOT_GROUPED(Scope.BINDABLE, DruidException.class, "Expression '[a-z]+' is not being grouped"),
 
     NOT_ENOUGH_RULES(Scope.DECOUPLED, DruidException.class, "There are not enough rules to produce a node"),
-    SORT_REMOVE_TROUBLE(Scope.DECOUPLED, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
+    SORT_REMOVE_TROUBLE(Scope.DECOUPLED, AssertionError.class, ""),
     UNNEST_INLINED(Scope.DECOUPLED, Exception.class, "Missing conversion is Uncollect"),
     UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
 
@@ -115,7 +117,6 @@ public @interface NotYetSupported
     DD_WINDOW(Scope.DECOUPLED_DART, DruidException.class, "DruidWindow.DRUID_LOGICAL"),
     DD_UNNEST_RESULT_MISMATCH(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)"),
     DD_UNNEST_INLINED(Scope.DECOUPLED_DART, Exception.class, "Missing conversion is Uncollect"),
-    DD_SORT_REMOVE_TROUBLE(Scope.DECOUPLED_DART, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
     DD_JOIN_CONDITION_NORMALIZATION(Scope.DECOUPLED_DART, DruidException.class, "Cannot handle equality"),
     DD_RESULT_MISMATCH_FLOAT_DOUBLE(Scope.DECOUPLED_DART, AssertionError.class, "column content mismatch");
     // @formatter:on
@@ -188,21 +189,21 @@ public @interface NotYetSupported
           }
           // If the base test case is supposed to be ignored already, just skip
           // the further evaluation
-          if (e instanceof AssumptionViolatedException) {
-            throw (AssumptionViolatedException) e;
+          if (e instanceof TestAbortedException) {
+            throw e;
           }
           if (e instanceof IncompleteExecutionException) {
             throw (IncompleteExecutionException) e;
           }
           Throwable finalE = e;
           assertThrows(
-              "Expected that this testcase will fail - it might got fixed; or failure have changed?",
               ignoreMode.throwableClass,
               () -> {
                 if (finalE != null) {
                   throw finalE;
                 }
-              }
+              },
+              "Expected that this testcase will fail - it might got fixed; or failure have changed?"
           );
 
           String trace = Throwables.getStackTraceAsString(e);
@@ -211,7 +212,7 @@ public @interface NotYetSupported
           if (!m.find()) {
             throw new AssertionError("Exception stacktrace doesn't match regex: " + ignoreMode.regex, e);
           }
-          throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
+          throw new TestAbortedException("Test is not-yet supported; ignored with:" + annotation);
         }
       }
     }

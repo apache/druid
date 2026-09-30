@@ -71,6 +71,18 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("cloneLoad", "segment/clone/assigned/count");
     public static final CoordinatorStat DROPPED_FROM_CLONE
         = CoordinatorStat.toDebugAndEmit("cloneDrop", "segment/clone/dropped/count");
+    public static final CoordinatorStat PENDING_SYNC_ON_CLONE
+        = CoordinatorStat.toDebugAndEmit("clonePendingSync", "segment/clone/pendingSync/count");
+
+    // Partial-load reconciliation in a run
+    public static final CoordinatorStat PARTIAL_ASSIGNED
+        = CoordinatorStat.toDebugAndEmit("partialAssigned", "segment/partial/assigned/count");
+    public static final CoordinatorStat PARTIAL_STALE_DROPPED
+        = CoordinatorStat.toDebugAndEmit("partialStaleDropped", "segment/partial/staleDropped/count");
+    public static final CoordinatorStat PARTIAL_STALE_CANCELLED
+        = CoordinatorStat.toDebugAndEmit("partialStaleCancelled", "segment/partial/staleCancelled/count");
+    public static final CoordinatorStat PARTIAL_RULE_REVERTED
+        = CoordinatorStat.toDebugAndEmit("partialRuleReverted", "segment/partial/ruleReverted/count");
   }
 
   public static class SegmentQueue
@@ -96,18 +108,60 @@ public class Stats
 
   public static class Tier
   {
-    public static final CoordinatorStat REQUIRED_CAPACITY
-        = CoordinatorStat.toDebugAndEmit("reqdCap", "tier/required/capacity");
-    public static final CoordinatorStat TOTAL_CAPACITY
-        = CoordinatorStat.toDebugAndEmit("totalCap", "tier/total/capacity");
+    // Segment storage of a tier, denominated in full segment size. These are the assignment ledger: REQUIRED_STORAGE
+    // is the demand the rules place on the tier, STORAGE_CAPACITY the supply it advertises. Under virtual storage a
+    // tier can address more storage than it has disk, so both may exceed CACHE_CAPACITY.
+
+    /**
+     * The demand the rules place on the tier to full load all segments.
+     */
+    public static final CoordinatorStat REQUIRED_STORAGE
+        = CoordinatorStat.toDebugAndEmit("reqdStorage", "tier/storage/required");
+    /**
+     * The total storage the tier advertises for assignment, defined by summing the configured max size of all servers
+     * in the tier.
+     */
     public static final CoordinatorStat STORAGE_CAPACITY
         = CoordinatorStat.toDebugAndEmit("storageCap", "tier/storage/capacity");
+    /**
+     * Superseded by {@link #REQUIRED_STORAGE}, which carries the same value under a name that groups it with the
+     * storage capacity it should be compared against. Still emitted so existing dashboards keep working; remove
+     * after deprecation.
+     */
+    @Deprecated
+    public static final CoordinatorStat REQUIRED_CAPACITY
+        = CoordinatorStat.toDebugAndEmit("reqdCap", "tier/required/capacity");
+    /**
+     * Superseded by {@link #STORAGE_CAPACITY}, which carries the same value under a name that groups it with the
+     * required storage it should be compared against. Still emitted so existing dashboards keep working; remove after
+     * deprecation.
+     */
+    @Deprecated
+    public static final CoordinatorStat TOTAL_CAPACITY
+        = CoordinatorStat.toDebugAndEmit("totalCap", "tier/total/capacity");
+
+    // Physical segment cache of a tier: the size of the segment cache locations configured on its historicals and the
+    // bytes actually occupied on them. Named for druid.segmentCache.locations, which is what these measure.
+
+    /**
+     * Aggregate physical disk capacity of the tier's segment cache locations.
+     */
+    public static final CoordinatorStat CACHE_CAPACITY
+        = CoordinatorStat.toDebugAndEmit("cacheCap", "tier/segmentCache/capacity");
+    /**
+     * Actual physical disk consumed by the tier. Only reports realized bytes on disk, so partial loads when using
+     * virtual storage report their true loaded size, which can be less than the full segment size.
+     */
+    public static final CoordinatorStat CACHE_USED
+        = CoordinatorStat.toDebugAndEmit("cacheUsed", "tier/segmentCache/used");
     public static final CoordinatorStat REPLICATION_FACTOR
         = CoordinatorStat.toDebugAndEmit("maxRepFactor", "tier/replication/factor");
     public static final CoordinatorStat HISTORICAL_COUNT
         = CoordinatorStat.toDebugAndEmit("numHistorical", "tier/historical/count");
     public static final CoordinatorStat CLONE_COUNT
         = CoordinatorStat.toDebugAndEmit("numClones", "tier/historical/clone/count");
+    public static final CoordinatorStat CLONE_SYNCED
+        = CoordinatorStat.toDebugAndEmit("cloneSynced", "tier/historical/clone/synced");
   }
 
   public static class Compaction

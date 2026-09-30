@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.indexer.TaskLocation;
@@ -55,7 +56,6 @@ import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
 import org.apache.druid.server.metrics.IndexerTaskCountStatsProvider;
 import org.apache.druid.utils.CollectionUtils;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import java.io.File;
 import java.io.IOException;
@@ -96,10 +96,8 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
 
   private final ConcurrentMap<String, Task> assignedTasks = new ConcurrentHashMap<>();
 
-  // ZK_CLEANUP_TODO : these are marked protected to be used in subclass WorkerTaskMonitor that updates ZK.
-  // should be marked private alongwith WorkerTaskMonitor removal.
-  protected final ConcurrentMap<String, TaskDetails> runningTasks = new ConcurrentHashMap<>();
-  protected final ConcurrentMap<String, TaskAnnouncement> completedTasks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, TaskDetails> runningTasks = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, TaskAnnouncement> completedTasks = new ConcurrentHashMap<>();
 
   private final ChangeRequestHistory<WorkerHistoryItem> changeHistory = new ChangeRequestHistory<>();
 
@@ -242,13 +240,13 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
           }
 
           @Override
-          public void locationChanged(final String taskId, final TaskLocation newLocation)
+          public void locationChanged(final Task task, final TaskLocation newLocation)
           {
-            submitNoticeToExec(new LocationNotice(taskId, newLocation));
+            submitNoticeToExec(new LocationNotice(task.getId(), newLocation));
           }
 
           @Override
-          public void statusChanged(final String taskId, final TaskStatus status)
+          public void statusChanged(final Task task, final TaskStatus status)
           {
             // do nothing
           }
@@ -633,7 +631,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     catch (ExecutionException e) {
       if (e.getCause() instanceof HttpResponseException) {
         final HttpResponseStatus status = ((HttpResponseException) e.getCause()).getResponse().getStatus();
-        if (status.getCode() == 404) {
+        if (status.code() == 404) {
           // NOTE: this is to support backward compatibility, when overlord doesn't have "activeTasks" endpoint.
           // this if clause should be removed in a future release.
           log.debug("Deleting all completed tasks. Overlord appears to be running on older version.");
@@ -782,8 +780,6 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
               "Got run notice for task [%s] that I am already running or completed...",
               task.getId()
           );
-
-          taskStarted(task.getId());
           return;
         }
 
@@ -801,9 +797,6 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
         cleanupAssignedTask(task);
         log.info("Task[%s] started.", task.getId());
       }
-
-      taskAnnouncementChanged(announcement);
-      taskStarted(task.getId());
     }
   }
 
@@ -855,7 +848,6 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
         moveFromRunningToCompleted(task.getId(), latest);
 
         changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
-        taskAnnouncementChanged(latest);
         log.info(
             "Task [%s] completed with status [%s].",
             task.getId(),
@@ -903,24 +895,8 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
           );
 
           changeHistory.addChangeRequest(new WorkerHistoryItem.TaskUpdate(latest));
-          taskAnnouncementChanged(latest);
         }
       }
     }
-  }
-
-  // ZK_CLEANUP_TODO :
-  //Note: Following abstract methods exist only to support WorkerTaskMonitor that
-  //watches task assignments and updates task statuses inside Zookeeper. When the transition to HTTP is complete
-  //in Overlord as well as MiddleManagers then WorkerTaskMonitor should be deleted, this class should no longer be abstract
-  //and the methods below should be removed.
-  protected void taskStarted(String taskId)
-  {
-
-  }
-
-  protected void taskAnnouncementChanged(TaskAnnouncement announcement)
-  {
-
   }
 }

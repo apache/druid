@@ -27,7 +27,7 @@ description: How to use EXTERN to export query results.
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial demonstrates how to use the Apache Druid&circledR; SQL [EXTERN](../multi-stage-query/reference.md#extern-function) function to export data.
+This tutorial demonstrates how to use the Apache&circledR; Druid SQL [EXTERN](../multi-stage-query/reference.md#extern-function) function to export data.
 
 ## Prerequisites
 
@@ -167,7 +167,7 @@ Druid supports Amazon S3 or Google Cloud Storage (GCS) as cloud storage destinat
     ```sql
     INSERT INTO
     EXTERN(
-      s3(bucket => 'your_bucket', prefix => 'prefix/to/files'))
+      s3(bucket => 'your_bucket', prefix => 'prefix/to/files', assumeRoleArn => 'arn:aws:iam::some-role'))
     AS CSV
     SELECT "channel",
     SUM("delta") AS "changes"

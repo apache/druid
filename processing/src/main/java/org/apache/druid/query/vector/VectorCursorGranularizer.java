@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.vector;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -75,7 +77,11 @@ public class VectorCursorGranularizer
       return null;
     }
 
-    final Iterable<Interval> bucketIterable = granularity.getIterable(clippedQueryInterval);
+    Iterable<Interval> bucketIterable = granularity.getIterable(clippedQueryInterval);
+    if (timeOrder == Order.DESCENDING) {
+      // Descending cursors emit rows latest-first, so iterate the buckets latest-first as well.
+      bucketIterable = Lists.reverse(ImmutableList.copyOf(bucketIterable));
+    }
     final Interval firstBucket = granularity.bucket(clippedQueryInterval.getStart());
 
     final VectorValueSelector timeSelector;
@@ -88,7 +94,7 @@ public class VectorCursorGranularizer
       timeSelector = cursor.getColumnSelectorFactory().makeValueSelector(ColumnHolder.TIME_COLUMN_NAME);
     }
 
-    return new VectorCursorGranularizer(cursor, bucketIterable, timeSelector);
+    return new VectorCursorGranularizer(cursor, bucketIterable, timeSelector, timeOrder == Order.DESCENDING);
   }
 
   private final VectorCursor cursor;
@@ -99,6 +105,9 @@ public class VectorCursorGranularizer
   // Vector selector for the "__time" column.
   @Nullable
   private final VectorValueSelector timeSelector;
+
+  // Whether the cursor (and hence the timestamps within each vector) is time-descending.
+  private final boolean descending;
 
   // Current time vector.
   @Nullable
@@ -113,12 +122,14 @@ public class VectorCursorGranularizer
   private VectorCursorGranularizer(
       VectorCursor cursor,
       Iterable<Interval> bucketIterable,
-      @Nullable VectorValueSelector timeSelector
+      @Nullable VectorValueSelector timeSelector,
+      boolean descending
   )
   {
     this.cursor = cursor;
     this.bucketIterable = bucketIterable;
     this.timeSelector = timeSelector;
+    this.descending = descending;
   }
 
   public void setCurrentOffsets(final Interval bucketInterval)
@@ -134,16 +145,31 @@ public class VectorCursorGranularizer
         timestamps = timeSelector.getLongVector();
       }
 
-      // Skip "offset" to start of bucketInterval.
-      while (startOffset < vectorSize && timestamps[startOffset] < timeStart) {
-        startOffset++;
-      }
+      if (descending) {
+        // Timestamps within the vector are descending. Skip rows at or after the (exclusive) end of the bucket; these
+        // belong to later buckets, which have already been processed.
+        while (startOffset < vectorSize && timestamps[startOffset] >= timeEnd) {
+          startOffset++;
+        }
 
-      // Find end of bucketInterval.
-      for (endOffset = vectorSize - 1;
-           endOffset >= startOffset && timestamps[endOffset] >= timeEnd;
-           endOffset--) {
-        // nothing needed, "for" is doing the work.
+        // Find end of bucketInterval: the first row (from the back) whose timestamp is still within the bucket.
+        for (endOffset = vectorSize - 1;
+             endOffset >= startOffset && timestamps[endOffset] < timeStart;
+             endOffset--) {
+          // nothing needed, "for" is doing the work.
+        }
+      } else {
+        // Skip "offset" to start of bucketInterval.
+        while (startOffset < vectorSize && timestamps[startOffset] < timeStart) {
+          startOffset++;
+        }
+
+        // Find end of bucketInterval.
+        for (endOffset = vectorSize - 1;
+             endOffset >= startOffset && timestamps[endOffset] >= timeEnd;
+             endOffset--) {
+          // nothing needed, "for" is doing the work.
+        }
       }
 
       // Adjust: endOffset is now pointing at the last row to aggregate, but we want it

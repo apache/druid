@@ -188,7 +188,8 @@ public class TableProjectionSchema implements BaseTableProjectionSchema
         effectiveGranularity,
         false,
         ordering,
-        projections
+        projections,
+        null
     );
   }
 

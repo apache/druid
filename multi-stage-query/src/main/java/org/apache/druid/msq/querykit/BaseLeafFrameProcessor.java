@@ -32,15 +32,12 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.utils.CloseableUtils;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -154,19 +151,6 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
       throw DruidException.defensive("Missing segmentReference[%s]", segmentHolder.getDescriptor());
     }
 
-    try {
-      final ChannelCounters counters = segmentHolder.getInputCounters();
-      if (counters != null) {
-        // Attach a counters.addFile call to the closer, to ensure input metrics are updated.
-        // Get row count prior to mapping, because mapped segments often do not provide PhysicalSegmentInspector.
-        final int rowCount = getSegmentRowCount(segmentReference);
-        closer.register(() -> counters.addFile(rowCount, 0));
-      }
-    }
-    catch (Throwable e) {
-      throw CloseableUtils.closeAndWrapInCatch(e, segmentReference);
-    }
-
     final Segment segment = closer.register(segmentReference.map(segmentMapFn)).getSegmentReference().orElse(null);
     if (segment == null) {
       throw DruidException.defensive("Missing segment[%s]", segmentHolder.getDescriptor());
@@ -186,18 +170,5 @@ public abstract class BaseLeafFrameProcessor implements FrameProcessor<Object>
         "Segment[%s] went unexpectedly empty after mapping",
         segment.getId()
     ));
-  }
-
-  /**
-   * Helper to get the number of rows for a segment, using a {@link PhysicalSegmentInspector}. Returns 0 when the
-   * number is unknown.
-   */
-  private int getSegmentRowCount(final SegmentReference segmentReference)
-  {
-    return segmentReference
-        .getSegmentReference()
-        .flatMap(segment -> Optional.ofNullable(segment.as(PhysicalSegmentInspector.class)))
-        .map(PhysicalSegmentInspector::getNumRows)
-        .orElse(0);
   }
 }

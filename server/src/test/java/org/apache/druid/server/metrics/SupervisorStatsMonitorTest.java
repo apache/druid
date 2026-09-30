@@ -21,9 +21,9 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -31,7 +31,7 @@ public class SupervisorStatsMonitorTest
 {
   private SupervisorStatsProvider statsProvider;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     statsProvider = () -> ImmutableList.of(
@@ -49,7 +49,7 @@ public class SupervisorStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(4, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(4, emitter.getNumEmittedEvents());
 
     emitter.verifyValue(
         "supervisor/count",
@@ -81,7 +81,7 @@ public class SupervisorStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(0, emitter.getNumEmittedEvents());
   }
 
   @Test
@@ -92,7 +92,7 @@ public class SupervisorStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(0, emitter.getNumEmittedEvents());
   }
 
   @Test
@@ -105,7 +105,7 @@ public class SupervisorStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "supervisor/count",
         Map.of("supervisorId", "unknown-supervisor", "type", "scheduled_batch", "state", "UNKNOWN", "dataSource", "compaction-ds", "detailedState", "UNKNOWN"),
@@ -123,7 +123,7 @@ public class SupervisorStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "supervisor/count",
         Map.of("supervisorId", "compaction-supervisor", "type", "compaction", "state", "RUNNING", "dataSource", "compaction-ds"),
@@ -141,7 +141,7 @@ public class SupervisorStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "supervisor/count",
         Map.of("supervisorId", "multi-ds-supervisor", "type", "kafka", "state", "RUNNING", "dataSource", "[ds1, ds2]", "stream", "multi-topic", "detailedState", "RUNNING"),
@@ -159,7 +159,7 @@ public class SupervisorStatsMonitorTest
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(1, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "supervisor/count",
         Map.of("supervisorId", "connecting-supervisor", "type", "kafka", "state", "RUNNING", "dataSource", "clicks", "stream", "clicks-topic", "detailedState", "CONNECTING_TO_STREAM"),

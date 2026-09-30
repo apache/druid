@@ -34,8 +34,8 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,7 +78,7 @@ public class AggregatorUtilTest
             aggregator
         ), aggregator.getName()
     );
-    Assert.assertEquals(Lists.newArrayList(dependency1, dependency2, aggregator), prunedAgg);
+    Assertions.assertEquals(Lists.newArrayList(dependency1, dependency2, aggregator), prunedAgg);
   }
 
   @Test
@@ -113,7 +113,7 @@ public class AggregatorUtilTest
             dependency2
         ), aggregator.getName()
     );
-    Assert.assertEquals(Lists.newArrayList(dependency1, aggregator), prunedAgg);
+    Assertions.assertEquals(Lists.newArrayList(dependency1, aggregator), prunedAgg);
   }
 
   @Test
@@ -140,11 +140,11 @@ public class AggregatorUtilTest
         QueryRunnerTestHelper.dependentPostAggMetric
     );
     // verify aggregators
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(QueryRunnerTestHelper.ROWS_COUNT, QueryRunnerTestHelper.INDEX_DOUBLE_SUM),
         aggregatorsPair.lhs
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
             QueryRunnerTestHelper.DEPENDENT_POST_AGG
@@ -170,7 +170,7 @@ public class AggregatorUtilTest
         Lists.newArrayList(new FieldAccessPostAggregator(null, "agg1"), new FieldAccessPostAggregator(null, "agg2"))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new Pair<>(Lists.newArrayList(agg1, agg2), Collections.singletonList(postAgg2)),
         AggregatorUtil.condensedAggregators(
             Lists.newArrayList(agg1, agg2),
@@ -198,7 +198,7 @@ public class AggregatorUtilTest
         Lists.newArrayList(new FieldAccessPostAggregator(null, "Agg1"), new FieldAccessPostAggregator(null, "Agg2"))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new Pair<>(Lists.newArrayList(agg1, agg2), Collections.singletonList(postAgg2)),
         AggregatorUtil.condensedAggregators(
             Lists.newArrayList(agg1, agg2),
@@ -214,7 +214,7 @@ public class AggregatorUtilTest
     ColumnInspector inspector = makeInspector(
         Map.of("col", ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG))
     );
-    Assert.assertTrue(AggregatorUtil.canVectorize(inspector, "col", null, Suppliers.ofInstance(null)));
+    Assertions.assertTrue(AggregatorUtil.canVectorize(inspector, "col", null, Suppliers.ofInstance(null)));
   }
 
   @Test
@@ -222,7 +222,7 @@ public class AggregatorUtilTest
   {
     // null capabilities (unknown column) is treated as vectorizable
     ColumnInspector inspector = makeInspector(Map.of());
-    Assert.assertTrue(AggregatorUtil.canVectorize(inspector, "unknown_col", null, Suppliers.ofInstance(null)));
+    Assertions.assertTrue(AggregatorUtil.canVectorize(inspector, "unknown_col", null, Suppliers.ofInstance(null)));
   }
 
   @Test
@@ -231,7 +231,7 @@ public class AggregatorUtilTest
     ColumnInspector inspector = makeInspector(
         Map.of("col", ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities())
     );
-    Assert.assertFalse(AggregatorUtil.canVectorize(inspector, "col", null, Suppliers.ofInstance(null)));
+    Assertions.assertFalse(AggregatorUtil.canVectorize(inspector, "col", null, Suppliers.ofInstance(null)));
   }
 
   @Test
@@ -245,7 +245,7 @@ public class AggregatorUtilTest
     );
     String expression = "long1 + long2";
     Expr expr = Parser.parse(expression, TestExprMacroTable.INSTANCE);
-    Assert.assertTrue(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
+    Assertions.assertTrue(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
   }
 
   @Test
@@ -260,7 +260,7 @@ public class AggregatorUtilTest
     );
     String expression = "concat(string_unknown, 'x')";
     Expr expr = Parser.parse(expression, TestExprMacroTable.INSTANCE);
-    Assert.assertFalse(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
+    Assertions.assertFalse(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
   }
 
   @Test
@@ -279,14 +279,14 @@ public class AggregatorUtilTest
     );
     String expression = "concat(multi_string, 'x')";
     Expr expr = Parser.parse(expression, TestExprMacroTable.INSTANCE);
-    Assert.assertFalse(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
+    Assertions.assertFalse(AggregatorUtil.canVectorize(inspector, null, expression, Suppliers.ofInstance(expr)));
   }
 
   @Test
   public void testCanVectorizeNeitherFieldNameNorExpression()
   {
     ColumnInspector inspector = makeInspector(Map.of());
-    Assert.assertFalse(AggregatorUtil.canVectorize(inspector, null, null, Suppliers.ofInstance(null)));
+    Assertions.assertFalse(AggregatorUtil.canVectorize(inspector, null, null, Suppliers.ofInstance(null)));
   }
 
   private static ColumnInspector makeInspector(Map<String, ColumnCapabilities> capabilitiesMap)

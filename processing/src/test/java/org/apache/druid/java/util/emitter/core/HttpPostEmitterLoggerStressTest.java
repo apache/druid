@@ -21,16 +21,15 @@ package org.apache.druid.java.util.emitter.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.testing.junit.LoggerCaptureRule;
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
 import org.apache.logging.log4j.Level;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
 import java.util.Locale;
@@ -39,21 +38,10 @@ import java.util.concurrent.TimeoutException;
 
 public class HttpPostEmitterLoggerStressTest
 {
-  public LoggerCaptureRule logCapture = new LoggerCaptureRule(HttpPostEmitter.class);
+  @RegisterExtension
+  public final LoggerCaptureExtension logCapture = new LoggerCaptureExtension(HttpPostEmitter.class);
 
   private final MockHttpClient httpClient = new MockHttpClient();
-
-  @BeforeEach
-  public void setUpLogCapture()
-  {
-    logCapture.before();
-  }
-
-  @AfterEach
-  public void tearDownLogCapture()
-  {
-    logCapture.after();
-  }
 
   @Test
   @Timeout(value = 20_000L, unit = TimeUnit.MILLISECONDS)

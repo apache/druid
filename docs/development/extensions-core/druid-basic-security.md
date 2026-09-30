@@ -23,7 +23,7 @@ title: "Basic Security"
   -->
 
 
-The Basic Security extension for Apache Druid adds:
+The Basic Security extension for Apache&circledR; Druid adds:
 
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store.
 - an Escalator which determines the authentication scheme for internal Druid processes.
@@ -260,6 +260,18 @@ The max duration in seconds for valid credentials that can reside in cache regar
 The valid credentials cache size. The cache uses a LRU policy.<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: 100
+
+**`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupBaseDn`**
+
+The base DN for searching LDAP groups. When set together with `groupSearch`, Druid performs a reverse group lookup to populate the `memberOf` attribute during authentication. This is needed when the LDAP server does not return `memberOf` in user search results. If not set, Druid relies on the `memberOf` attribute being returned directly by the user search.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
+
+**`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupSearch`**
+
+The LDAP search filter for finding groups that contain a user. The filter must contain a literal `%s` placeholder, which is replaced with the user's full DN. Note that `%%s` does not count, as it is a placeholder escaped for `String.format`. For example, `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`. A filter without the placeholder is rejected at startup because it would match all groups under `groupBaseDn` for every user.<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
+&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.skipOnFailure`**
 

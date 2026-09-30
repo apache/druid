@@ -37,10 +37,26 @@ import java.util.Map;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = UnknownPartialLoadMatcher.class)
 @JsonSubTypes({
     @JsonSubTypes.Type(name = ExactProjectionPartialLoadMatcher.TYPE, value = ExactProjectionPartialLoadMatcher.class),
-    @JsonSubTypes.Type(name = WildcardProjectionPartialLoadMatcher.TYPE, value = WildcardProjectionPartialLoadMatcher.class)
+    @JsonSubTypes.Type(name = WildcardProjectionPartialLoadMatcher.TYPE, value = WildcardProjectionPartialLoadMatcher.class),
+    @JsonSubTypes.Type(name = WildcardClusterGroupPartialLoadMatcher.TYPE, value = WildcardClusterGroupPartialLoadMatcher.class),
+    @JsonSubTypes.Type(name = CompositePartialLoadMatcher.TYPE, value = CompositePartialLoadMatcher.class)
 })
 public interface PartialLoadMatcher
 {
+  /**
+   * Universal fingerprint sentinel for an "empty match" — a matcher decision to partial-load a segment with no
+   * scheme-specific content. A matcher that applies to a segment but resolves to no positive content (e.g., a
+   * cluster-group matcher on a clustered segment whose tuples don't intersect any configured pattern) returns a
+   * {@link MatchResult} with this fingerprint. The empty load is dispatched like any other partial load onto the
+   * rule's tiered replicants, so the segment stays announced (and thus in the broker's timeline); the historical
+   * downloads no scheme-specific content for it.
+   *
+   * <p>All matchers share this fingerprint for empty loads — different matchers' empty wire forms are equivalent
+   * from a "what's on the historical" perspective (no scheme-specific extras downloaded), and at most one rule
+   * applies per segment per coordinator run, so cross-matcher reconciliation isn't a concern.
+   */
+  String EMPTY_LOAD_FINGERPRINT = "v1:partial-empty";
+
   /**
    * Returns the {@link MatchResult} this matcher produces for the given segment, or null if the matcher does not apply
    * to the segment. When null, {@link PartialLoadRule} consults {@link CannotMatchBehavior} to decide whether the rule

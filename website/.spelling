@@ -62,10 +62,12 @@ CORS
 CNF
 CPUs
 CSVs
+CTEs
 CentralizedDatasourceSchema
 Ceph
 circledR
 CloudWatch
+ClusterRole
 ColumnDescriptor
 Corretto
 CLI
@@ -73,6 +75,7 @@ CUME_DIST
 DDL
 DENSE_RANK
 DML
+DN
 DNS
 DRUIDVERSION
 DataSketches
@@ -102,9 +105,11 @@ DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
+EKS
 EMR
 EMRFS
 ETL
+emits
 Elasticsearch
 Enums
 FIRST_VALUE
@@ -115,6 +120,7 @@ Float.POSITIVE_INFINITY
 Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
+GKE
 GPG
 GoogleCloudStorageInputSource
 GSSAPI
@@ -146,6 +152,7 @@ ISO8601
 IndexSpec
 IndexTask
 InfluxDB
+InnoDB
 InputFormat
 InputSource
 InputSources
@@ -160,6 +167,7 @@ JDK7
 JDK8
 JKS
 jks
+JNDI
 JMX
 JRE
 JS
@@ -174,6 +182,7 @@ Joda
 JsonProperty
 Jupyter
 JupyterLab
+KIP-392
 KMS
 Kerberized
 Kerberos
@@ -196,21 +205,27 @@ Lucene
 MapBD
 MapDB
 MariaDB
+Marquez
 MiddleManager
 MiddleManagers
 Montréal
+MSK
 MSQ
 Murmur3
 MVCC
 MV_TO_ARRAY
+Netty
 NFS
 NodeCache
 OCF
 OIDC
 OLAP
 OOMs
+OPA
 OpenJDK
 OpenLDAP
+openlineage
+OpenLineage
 OpenTSDB
 OutputStream
 ParAccel
@@ -226,6 +241,7 @@ ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
 ROUTINE_TYPE
+RPC
 Rackspace
 Redis
 residualFilterMode
@@ -233,6 +249,7 @@ S3
 SAS
 SDK
 SIGAR
+SIMD
 SNI
 SPNEGO
 Splunk
@@ -291,6 +308,7 @@ averagers
 backend
 backfills
 backfilled
+backfilling
 backpressure
 base64
 baseTime
@@ -303,6 +321,7 @@ boolean
 breakpoint
 broadcasted
 bucketSize
+checkpointed
 checksums
 classpath
 clickstream
@@ -331,6 +350,7 @@ deepstore
 denormalization
 denormalize
 denormalized
+deduplicated
 deprioritization
 deprioritizes
 dequeued
@@ -407,6 +427,7 @@ kbps
 kerberos
 keystore
 keytool
+kubelet
 keytab
 kubeconfig
 kubernetes
@@ -414,6 +435,7 @@ kubexit
 k8s
 laning
 lifecycle
+lineage
 localhost
 log4j
 log4j2
@@ -508,11 +530,13 @@ prepends
 prepopulated
 preprocessing
 priori
+reprocessing
 procs
 processFromRaw
 programmatically
 proto
 proxied
+proxying
 proxyConfig
 python2
 python3
@@ -523,9 +547,11 @@ quantile
 quantiles
 queryable
 quickstart
+RE2
 realtime
 rebalance
 redis
+ReDoS
 regexes
 reimported
 reindex
@@ -715,6 +741,7 @@ druid.sql.planner.useApproximateTopN
 druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
+error_message
 error_msg
 exprs
 group_id
@@ -895,8 +922,6 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
-minScaleUpDelay
-minScaleDownDelay
 NUMBER_FEATURES
 NUMBER_OF_CONTRIBUTORS
 PreparedStatement
@@ -1683,6 +1708,7 @@ un
 G1GC
 GroupBys
 QoS-type
+QoS
 DumpSegment
 SegmentMetadata
 __time
@@ -2393,6 +2419,7 @@ druid-orc-extensions
 druid-parquet-extensions
 druid-protobuf-extensions
 druid-ranger-security
+druid-opa-authorizer
 druid-s3-extensions
 druid-ec2-extensions
 druid-aws-rds-extensions
@@ -2646,3 +2673,19 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+checksum
+
+- ../docs/development/extensions-contrib/druid-opa-authorizer.md
+Rego
+alice
+christy
+dylan
+eve
+opaUri
+rego
+
+- ../docs/querying/sql-jdbc.md
+getters
+savepoints
+Scrollable
+updatable

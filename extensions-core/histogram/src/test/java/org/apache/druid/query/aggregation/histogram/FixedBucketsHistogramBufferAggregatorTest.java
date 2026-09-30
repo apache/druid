@@ -30,8 +30,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -79,15 +79,14 @@ public class FixedBucketsHistogramBufferAggregatorTest
 
     FixedBucketsHistogram h = ((FixedBucketsHistogram) agg.get(buf, position));
 
-    Assert.assertArrayEquals(
-        "final bin counts don't match expected counts",
-        new long[]{2, 3, 1, 3, 1}, h.getHistogram()
+    Assertions.assertArrayEquals(
+        new long[]{2, 3, 1, 3, 1}, h.getHistogram(), "final bin counts don't match expected counts"
     );
 
-    Assert.assertEquals("getMin value doesn't match expected getMin", 2, h.getMin(), 0);
-    Assert.assertEquals("getMax value doesn't match expected getMax", 45, h.getMax(), 0);
+    Assertions.assertEquals(2, h.getMin(), 0, "getMin value doesn't match expected getMin");
+    Assertions.assertEquals(45, h.getMax(), 0, "getMax value doesn't match expected getMax");
 
-    Assert.assertEquals("count doesn't match expected count", 10, h.getCount());
+    Assertions.assertEquals(10, h.getCount(), "count doesn't match expected count");
   }
 
   @Test
@@ -130,14 +129,14 @@ public class FixedBucketsHistogramBufferAggregatorTest
 
     Object finalizedObjectHumanReadable = humanReadableFactory.finalizeComputation(agg.get());
     String finalStringHumanReadable = objectMapper.writeValueAsString(finalizedObjectHumanReadable);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"{lowerLimit=0.0, upperLimit=50.0, numBuckets=5, upperOutlierCount=0, lowerOutlierCount=0, missingValueCount=0, histogram=[0, 0, 1, 0, 0], outlierHandlingMode=overflow, count=1, max=23.0, min=23.0}\"",
         finalStringHumanReadable
     );
 
     Object finalizedObjectBinary = binaryFactory.finalizeComputation(agg.get());
     String finalStringBinary = objectMapper.writeValueAsString(finalizedObjectBinary);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"AQIAAAAAAAAAAEBJAAAAAAAAAAAABQEAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEA3AAAAAAAAQDcAAAAAAAAAAAABAAAAAgAAAAAAAAAB\"",
         finalStringBinary
     );
@@ -163,7 +162,7 @@ public class FixedBucketsHistogramBufferAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("fixedHisto", null)
@@ -189,7 +188,7 @@ public class FixedBucketsHistogramBufferAggregatorTest
         FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
         false
     );
-    Assert.assertEquals(factory, factory.withName("billy"));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName("billy"));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

@@ -21,7 +21,6 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -48,6 +47,7 @@ import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
 import org.apache.druid.msq.input.MapInputSliceReader;
 import org.apache.druid.msq.input.NilInputSlice;
 import org.apache.druid.msq.input.NilInputSliceReader;
@@ -71,6 +71,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -391,6 +392,7 @@ public class RunWorkOrder
         frameContext,
         counterTracker,
         workerContext.threadCount(),
+        workerContext.segmentLoadAheadCount(workOrder),
         cancellationId,
         listener
     );
@@ -399,16 +401,28 @@ public class RunWorkOrder
   private InputSliceReader makeInputSliceReader()
   {
     final boolean reindex = MultiStageQueryContext.isReindex(workOrder.getWorkerContext());
-    return new MapInputSliceReader(
-        ImmutableMap.<Class<? extends InputSlice>, InputSliceReader>builder()
-                    .put(NilInputSlice.class, NilInputSliceReader.INSTANCE)
-                    .put(StageInputSlice.class, StageInputSliceReader.INSTANCE)
-                    .put(ExternalInputSlice.class, new ExternalInputSliceReader(frameContext.tempDir("external")))
-                    .put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()))
-                    .put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()))
-                    .put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext, reindex))
-                    .build()
+    LinkedHashMap<Class<? extends InputSlice>, InputSliceReader> readers = new LinkedHashMap<>();
+    readers.put(NilInputSlice.class, NilInputSliceReader.INSTANCE);
+    readers.put(StageInputSlice.class, StageInputSliceReader.INSTANCE);
+    readers.put(
+        ExternalInputSlice.class,
+        new ExternalInputSliceReader(
+            frameContext.virtualStorageManager(),
+            frameContext.tempDir("external"),
+            MultiStageQueryContext.isBackgroundFetchExternalFiles(workOrder.getWorkerContext())
+        )
     );
+    readers.put(InlineInputSlice.class, new InlineInputSliceReader(frameContext.segmentWrangler()));
+    readers.put(LookupInputSlice.class, new LookupInputSliceReader(frameContext.segmentWrangler()));
+    readers.put(SegmentsInputSlice.class, new SegmentsInputSliceReader(frameContext, reindex));
+
+    // Context-supplied providers override the default ones, so they get added last.
+    for (final InputSliceReaderProvider readerProvider : workerContext.inputSliceReaderProviders()) {
+      final InputSliceReader reader = readerProvider.createReader(frameContext, workOrder.getWorkerContext());
+      readers.put(readerProvider.sliceClass(), reader);
+    }
+
+    return new MapInputSliceReader(readers);
   }
 
   private OutputChannelFactory makeStageOutputChannelFactory()

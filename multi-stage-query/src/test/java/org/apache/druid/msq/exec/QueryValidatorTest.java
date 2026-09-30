@@ -29,17 +29,14 @@ import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
 import java.util.stream.IntStream;
 
 public class QueryValidatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testValidQueryDefination()
@@ -54,42 +51,41 @@ public class QueryValidatorTest
   @Test
   public void testNegativeWorkers()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Number of workers must be greater than 0");
-    QueryValidator.validateQueryDef(createQueryDefinition(1, -1));
+    Throwable exception = Assertions.assertThrows(ISE.class, () ->
+      QueryValidator.validateQueryDef(createQueryDefinition(1, -1)));
+    Assertions.assertTrue(exception.getMessage().contains("Number of workers must be greater than 0"));
   }
 
   @Test
   public void testZeroWorkers()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Number of workers must be greater than 0");
-    QueryValidator.validateQueryDef(createQueryDefinition(1, 0));
+    Throwable exception = Assertions.assertThrows(ISE.class, () ->
+      QueryValidator.validateQueryDef(createQueryDefinition(1, 0)));
+    Assertions.assertTrue(exception.getMessage().contains("Number of workers must be greater than 0"));
   }
 
   @Test
   public void testGreaterThanMaxWorkers()
   {
-    expectedException.expect(MSQException.class);
-    expectedException.expectMessage(
-        StringUtils.format(
-            "Too many workers (current = %d; max = %d)",
-            Limits.MAX_WORKERS + 1,
-            Limits.MAX_WORKERS
-        ));
-    QueryValidator.validateQueryDef(createQueryDefinition(1, Limits.MAX_WORKERS + 1));
+    Throwable exception = Assertions.assertThrows(MSQException.class, () ->
+      QueryValidator.validateQueryDef(createQueryDefinition(1, Limits.MAX_WORKERS + 1)));
+    Assertions.assertTrue(exception.getMessage().contains(StringUtils.format(
+        "Too many workers (current = %d; max = %d)",
+        Limits.MAX_WORKERS + 1,
+        Limits.MAX_WORKERS
+    )));
   }
 
   @Test
   public void testGreaterThanMaxColumns()
   {
-    expectedException.expect(MSQException.class);
-    expectedException.expectMessage(StringUtils.format(
+    Throwable exception = Assertions.assertThrows(MSQException.class, () ->
+      QueryValidator.validateQueryDef(createQueryDefinition(Limits.MAX_FRAME_COLUMNS + 1, 1)));
+    Assertions.assertTrue(exception.getMessage().contains(StringUtils.format(
         "Too many output columns (requested = %d, max = %d)",
         Limits.MAX_FRAME_COLUMNS + 1,
         Limits.MAX_FRAME_COLUMNS
-    ));
-    QueryValidator.validateQueryDef(createQueryDefinition(Limits.MAX_FRAME_COLUMNS + 1, 1));
+    )));
   }
 
   public static QueryDefinition createQueryDefinition(int numColumns, int numWorkers)

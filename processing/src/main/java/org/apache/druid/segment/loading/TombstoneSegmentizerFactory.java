@@ -27,6 +27,7 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.NoopQueryableIndex;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.ResidentCursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -88,7 +89,7 @@ public class TombstoneSegmentizerFactory implements SegmentizerFactory
       public <T> T as(@Nonnull Class<T> clazz)
       {
         if (CursorFactory.class.equals(clazz)) {
-          return (T) new CursorFactory()
+          return (T) new ResidentCursorFactory()
           {
             @Override
             public CursorHolder makeCursorHolder(CursorBuildSpec spec)

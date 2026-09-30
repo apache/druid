@@ -21,13 +21,12 @@ package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.PasswordProvider;
 import org.joda.time.Period;
 import redis.clients.jedis.Protocol;
-
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 
 public class RedisCacheConfig
 {
@@ -144,6 +143,19 @@ public class RedisCacheConfig
   @Min(0)
   private int database = Protocol.DEFAULT_DATABASE;
 
+  /**
+   * whether to connect to redis server/cluster over TLS.
+   */
+  @JsonProperty
+  private boolean enableTls = false;
+
+  /**
+   * whether to skip verifying that the server certificate matches the redis hostname when TLS is
+   * enabled. defaults to false (the hostname is verified)
+   */
+  @JsonProperty
+  private boolean skipTlsHostnameVerification = false;
+
   @JsonProperty
   private RedisClusterConfig cluster;
 
@@ -195,5 +207,15 @@ public class RedisCacheConfig
   public int getDatabase()
   {
     return database;
+  }
+
+  public boolean getEnableTls()
+  {
+    return enableTls;
+  }
+
+  public boolean getSkipTlsHostnameVerification()
+  {
+    return skipTlsHostnameVerification;
   }
 }

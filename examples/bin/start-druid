@@ -31,5 +31,5 @@ elif [ -x "$(command -v python)" ]
 then
   exec python "$WHEREAMI/start-druid-main.py" "$@"
 else
-  echo "python interepreter not found"
+  echo "python interpreter not found"
 fi

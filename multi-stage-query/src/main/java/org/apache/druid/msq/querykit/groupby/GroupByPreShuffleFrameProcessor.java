@@ -52,6 +52,7 @@ import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.SegmentReferenceHolder;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -220,12 +221,9 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         } else {
           currentCursorFactory = Objects.requireNonNull(segment.as(CursorFactory.class));
           // Resolve this query using a cursor.
-          final GroupByQuery segmentQuery = (GroupByQuery) query
-              .withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor()))
-              .optimizeForSegment(new PerSegmentQueryOptimizationContext(segmentHolder.getDescriptor()));
           asyncCursorHolder = closer.register(
               groupingEngine.makeCursorHolderAsync(
-                  segmentQuery,
+                  computeQueryForSegment(segmentHolder.getDescriptor()),
                   currentCursorFactory,
                   null
               )
@@ -245,7 +243,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
         // currentCursorFactory is non-null whenever asyncCursorHolder is non-null (both are set together in the
         // first-invocation branch above). The requireNonNull pins the invariant for static analysis.
         final Sequence<ResultRow> rowSequence = groupingEngine.processCursorHolder(
-            query.withQuerySegmentSpec(new SpecificSegmentSpec(segmentHolder.getDescriptor())),
+            computeQueryForSegment(segmentHolder.getDescriptor()),
             Objects.requireNonNull(currentCursorFactory),
             holder,
             currentTimeBoundaryInspector,
@@ -365,5 +363,12 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
     if (tmp != null) {
       tmp.close();
     }
+  }
+
+  private GroupByQuery computeQueryForSegment(final SegmentDescriptor descriptor)
+  {
+    return (GroupByQuery) query
+        .withQuerySegmentSpec(new SpecificSegmentSpec(descriptor))
+        .optimizeForSegment(new PerSegmentQueryOptimizationContext(descriptor));
   }
 }

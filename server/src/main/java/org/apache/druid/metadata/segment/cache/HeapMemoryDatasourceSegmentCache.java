@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -67,6 +68,15 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
    * always performed within a ConcurrentHashMap.compute() which is atomic.
    */
   private final AtomicInteger references = new AtomicInteger(0);
+
+  /**
+   * Set when a write-through transaction mutates this cache directly (via
+   * {@link HeapMemorySegmentMetadataCache#writeCacheForDataSource}), so that the
+   * incremental snapshot rebuild in the next sync refreshes this datasource even
+   * though the metadata store and cache already agree (the DB diff would report
+   * no change). Cleared while the snapshot is being rebuilt.
+   */
+  private final AtomicBoolean hasNewWrites = new AtomicBoolean(false);
 
   HeapMemoryDatasourceSegmentCache(String dataSource)
   {
@@ -114,6 +124,46 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache implements AutoClo
   boolean isBeingUsedByTransaction()
   {
     return references.get() > 0;
+  }
+
+  /**
+   * Marks that a write-through transaction has mutated this cache directly, so
+   * the next snapshot rebuild must refresh this datasource. Called under the
+   * write lock held by {@link HeapMemorySegmentMetadataCache#writeCacheForDataSource}.
+   */
+  void markHasNewWrites()
+  {
+    hasNewWrites.set(true);
+  }
+
+  /**
+   * If a write-through mutation occurred since the last snapshot rebuild, returns
+   * all used segments and clears the flag (atomically under the write lock);
+   * otherwise returns null. Used to catch datasources whose cache diverged from
+   * the last published snapshot without a corresponding metadata-store diff.
+   */
+  @Nullable
+  Set<DataSegment> getUsedSegmentsIfHasNewWrites()
+  {
+    return withWriteLock(() -> {
+      if (!hasNewWrites.getAndSet(false)) {
+        return null;
+      }
+      return findUsedSegmentsOverlappingAnyOf(List.of());
+    });
+  }
+
+  /**
+   * Returns all used segments and clears the new-writes flag, atomically under
+   * the write lock. Used for datasources already being refreshed from the
+   * metadata-store diff, so a concurrent write-through is not lost.
+   */
+  Set<DataSegment> getUsedSegmentsAndClearNewWrites()
+  {
+    return withWriteLock(() -> {
+      hasNewWrites.set(false);
+      return findUsedSegmentsOverlappingAnyOf(List.of());
+    });
   }
 
   /**

@@ -19,7 +19,16 @@
 import { max, sum } from 'd3-array';
 
 import { AutoForm } from '../../components';
-import { countBy, deleteKeys, filterMap, groupByAsMap, oneOf, zeroDivide } from '../../utils';
+import type { NumberLike } from '../../utils';
+import {
+  countBy,
+  deleteKeys,
+  filterMap,
+  groupByAsMap,
+  isNumberLike,
+  oneOf,
+  zeroDivide,
+} from '../../utils';
 import type { InputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
 
@@ -31,8 +40,8 @@ const READING_INPUT_WITH_SHUFFLE_WEIGHT = 1 - SHUFFLE_WEIGHT;
 
 export type InOut = 'in' | 'out';
 
-function simpleSum(xs: number[]) {
-  return sum(xs);
+function simpleSum(xs: NumberLike[]): number {
+  return sum(xs, x => Number(x));
 }
 
 function aggregateThings<T>(
@@ -155,7 +164,7 @@ export type ChannelCounterName = `input${number}` | 'output' | 'shuffle';
 export type CounterName = keyof StageWorkerCounter;
 
 function tallyWarningCount(warningCounter: WarningCounter): number {
-  return sum(Object.values(warningCounter), v => (typeof v === 'number' ? v : 0));
+  return sum(Object.values(warningCounter), v => (isNumberLike(v) ? Number(v) : 0));
 }
 
 function sumByKey(objs: Record<string, number>[]): Record<string, number> {
@@ -172,17 +181,17 @@ function sumByKey(objs: Record<string, number>[]): Record<string, number> {
 
 export interface ChannelCounter {
   type: 'channel';
-  rows?: number[];
-  bytes?: number[];
-  frames?: number[];
-  files?: number[];
-  totalFiles?: number[];
-  loadBytes?: number[];
-  loadTime?: number[];
-  loadWait?: number[];
-  loadFiles?: number[];
-  queries?: number[];
-  totalQueries?: number[];
+  rows?: NumberLike[];
+  bytes?: NumberLike[];
+  frames?: NumberLike[];
+  files?: NumberLike[];
+  totalFiles?: NumberLike[];
+  loadBytes?: NumberLike[];
+  loadTime?: NumberLike[];
+  loadWait?: NumberLike[];
+  loadFiles?: NumberLike[];
+  queries?: NumberLike[];
+  totalQueries?: NumberLike[];
 }
 
 export type ChannelFields =
@@ -236,10 +245,10 @@ export function aggregateSortProgressCounters(
 
 export interface SegmentGenerationProgressCounter {
   type: 'segmentGenerationProgress';
-  rowsProcessed: number;
-  rowsPersisted: number;
-  rowsMerged: number;
-  rowsPushed: number;
+  rowsProcessed: NumberLike;
+  rowsPersisted: NumberLike;
+  rowsMerged: NumberLike;
+  rowsPushed: NumberLike;
 }
 
 export type SegmentGenerationProgressFields =
@@ -298,11 +307,22 @@ export interface CpusCounter {
 
 export interface CpuCounter {
   type: 'cpu';
-  cpu: number;
-  wall: number;
+  cpu: NumberLike;
+  wall: NumberLike;
 }
 
 export interface StorageCounter {
+  type: 'storage';
+  localBytesMax?: NumberLike;
+  localBytesReserved: NumberLike;
+  localFilesWritten: NumberLike;
+  localBytesWritten: NumberLike;
+  durableFileCount: NumberLike;
+  durableBytesWritten: NumberLike;
+}
+
+// normalizeStorageCounter() has coerced these, so they are safe to do arithmetic on
+export interface NormalizedStorageCounter {
   type: 'storage';
   localBytesMax?: number;
   localBytesReserved: number;
@@ -312,7 +332,9 @@ export interface StorageCounter {
   durableBytesWritten: number;
 }
 
-function normalizeStorageCounter(s: StorageCounter | undefined): StorageCounter | undefined {
+function normalizeStorageCounter(
+  s: StorageCounter | undefined,
+): NormalizedStorageCounter | undefined {
   if (!s) return;
   return {
     type: 'storage',
@@ -340,7 +362,7 @@ export interface SimpleWideCounter {
   shuffle?: Record<ChannelFields, number>;
   segmentGenerationProgress?: SegmentGenerationProgressCounter;
   cpu?: CpusCounter;
-  storage?: StorageCounter;
+  storage?: NormalizedStorageCounter;
 }
 
 function zeroChannelFields(): Record<ChannelFields, number> {
@@ -585,7 +607,7 @@ export class Stages {
     return sum(this.getCountersForStage(stage), c => {
       const counter = c[counterName];
       if (counter?.type !== 'channel') return 0;
-      return sum(counter[field] || []);
+      return simpleSum(counter[field] || []);
     });
   }
 
@@ -608,7 +630,7 @@ export class Stages {
     if (!counters) return 0;
     return zeroDivide(
       sum(this.getCountersForStage(stage), c => {
-        const rowsToSort = c.output ? sum(c.output.rows || []) : 0;
+        const rowsToSort = c.output ? simpleSum(c.output.rows || []) : 0;
         const progressDigest = c.sortProgress?.progressDigest || 0;
         return Math.floor(rowsToSort * progressDigest);
       }),
@@ -622,7 +644,9 @@ export class Stages {
   ): number {
     const { counters } = this;
     if (!counters) return 0;
-    return sum(this.getCountersForStage(stage), c => c.segmentGenerationProgress?.[field] || 0);
+    return sum(this.getCountersForStage(stage), c =>
+      Number(c.segmentGenerationProgress?.[field] || 0),
+    );
   }
 
   getChannelCounterNamesForStage(stage: StageDefinition): ChannelCounterName[] {
@@ -649,17 +673,17 @@ export class Stages {
         const c = stageCounters[channel];
         newWideCounter[channel] = c
           ? {
-              rows: sum(c.rows || []),
-              bytes: sum(c.bytes || []),
-              frames: sum(c.frames || []),
-              files: sum(c.files || []),
-              totalFiles: sum(c.totalFiles || []),
-              loadBytes: sum(c.loadBytes || []),
-              loadTime: sum(c.loadTime || []),
-              loadWait: sum(c.loadWait || []),
-              loadFiles: sum(c.loadFiles || []),
-              queries: sum(c.queries || []),
-              totalQueries: sum(c.totalQueries || []),
+              rows: simpleSum(c.rows || []),
+              bytes: simpleSum(c.bytes || []),
+              frames: simpleSum(c.frames || []),
+              files: simpleSum(c.files || []),
+              totalFiles: simpleSum(c.totalFiles || []),
+              loadBytes: simpleSum(c.loadBytes || []),
+              loadTime: simpleSum(c.loadTime || []),
+              loadWait: simpleSum(c.loadWait || []),
+              loadFiles: simpleSum(c.loadFiles || []),
+              queries: simpleSum(c.queries || []),
+              totalQueries: simpleSum(c.totalQueries || []),
             }
           : zeroChannelFields();
       }
@@ -684,7 +708,7 @@ export class Stages {
         // Check if the worker has any wall time recorded
         const { cpu } = stageCounters;
         if (cpu) {
-          const totalWall = sum(CPUS_COUNTER_FIELDS, field => cpu[field]?.wall || 0);
+          const totalWall = sum(CPUS_COUNTER_FIELDS, field => Number(cpu[field]?.wall || 0));
           if (totalWall > 0) return 0;
         }
 
@@ -694,10 +718,10 @@ export class Stages {
             const c = stageCounters[channel];
             if (!c) return true;
             return (
-              sum(c.rows || []) === 0 &&
-              sum(c.files || []) === 0 &&
-              sum(c.bytes || []) === 0 &&
-              sum(c.frames || []) === 0
+              simpleSum(c.rows || []) === 0 &&
+              simpleSum(c.files || []) === 0 &&
+              simpleSum(c.bytes || []) === 0 &&
+              simpleSum(c.frames || []) === 0
             );
           }),
         );
@@ -760,15 +784,15 @@ export class Stages {
 
         for (let i = 0; i < n; i++) {
           const c = simpleCounters[i][counterName]!; // This must be defined as we initialized all the counters above
-          c.rows += channelCounter.rows?.[i] || 0;
-          c.bytes += channelCounter.bytes?.[i] || 0;
-          c.frames += channelCounter.frames?.[i] || 0;
-          c.files += channelCounter.files?.[i] || 0;
-          c.totalFiles += channelCounter.totalFiles?.[i] || 0;
-          c.loadBytes += channelCounter.loadBytes?.[i] || 0;
-          c.loadTime += channelCounter.loadTime?.[i] || 0;
-          c.loadWait += channelCounter.loadWait?.[i] || 0;
-          c.loadFiles += channelCounter.loadFiles?.[i] || 0;
+          c.rows += Number(channelCounter.rows?.[i] || 0);
+          c.bytes += Number(channelCounter.bytes?.[i] || 0);
+          c.frames += Number(channelCounter.frames?.[i] || 0);
+          c.files += Number(channelCounter.files?.[i] || 0);
+          c.totalFiles += Number(channelCounter.totalFiles?.[i] || 0);
+          c.loadBytes += Number(channelCounter.loadBytes?.[i] || 0);
+          c.loadTime += Number(channelCounter.loadTime?.[i] || 0);
+          c.loadWait += Number(channelCounter.loadWait?.[i] || 0);
+          c.loadFiles += Number(channelCounter.loadFiles?.[i] || 0);
         }
       }
     }

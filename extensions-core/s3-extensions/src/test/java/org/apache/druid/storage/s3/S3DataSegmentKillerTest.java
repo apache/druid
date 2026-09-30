@@ -29,13 +29,13 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.LogicalOperator;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.core.exception.AbortedException;
 import software.amazon.awssdk.core.exception.SdkClientException;
@@ -53,7 +53,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.List;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class S3DataSegmentKillerTest extends EasyMockSupport
 {
   private static final String KEY_1 = "key1";
@@ -147,7 +147,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     catch (ISE e) {
       thrownISEException = true;
     }
-    Assert.assertTrue(thrownISEException);
+    Assertions.assertTrue(thrownISEException);
     EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
 
@@ -280,7 +280,7 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assertions.assertTrue(ioExceptionThrown);
     EasyMock.verify(s3Client, segmentPusherConfig, inputDataConfig);
   }
 
@@ -380,11 +380,11 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
 
-    SegmentLoadingException thrown = Assert.assertThrows(
+    SegmentLoadingException thrown = Assertions.assertThrows(
         SegmentLoadingException.class,
         () -> segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2))
     );
-    Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
+    Assertions.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
   }
 
   @Test
@@ -408,12 +408,12 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     for (int ii = 0; ii < 501; ii++) {
       builder.add(DATA_SEGMENT_1);
     }
-    SegmentLoadingException thrown = Assert.assertThrows(
+    SegmentLoadingException thrown = Assertions.assertThrows(
         SegmentLoadingException.class,
         () -> segmentKiller.kill(builder.build())
     );
 
-    Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
+    Assertions.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
   }
 
   @Test
@@ -433,11 +433,11 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
 
-    SegmentLoadingException thrown = Assert.assertThrows(
+    SegmentLoadingException thrown = Assertions.assertThrows(
         SegmentLoadingException.class,
         () -> segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2))
     );
-    Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
+    Assertions.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
   }
 
   @Test
@@ -463,17 +463,17 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
 
     // Verify the second request only contained the failed key
     List<DeleteObjectsRequest> requests = capturedRequests.getValues();
-    Assert.assertEquals(2, requests.size());
+    Assertions.assertEquals(2, requests.size());
 
     List<String> firstKeys = requests.get(0).delete().objects()
                                  .stream().map(ObjectIdentifier::key).collect(java.util.stream.Collectors.toList());
-    Assert.assertTrue("First request should contain KEY_1_PATH", firstKeys.contains(KEY_1_PATH));
-    Assert.assertTrue("First request should contain KEY_2_PATH", firstKeys.contains(KEY_2_PATH));
+    Assertions.assertTrue(firstKeys.contains(KEY_1_PATH), "First request should contain KEY_1_PATH");
+    Assertions.assertTrue(firstKeys.contains(KEY_2_PATH), "First request should contain KEY_2_PATH");
 
     List<String> retryKeys = requests.get(1).delete().objects()
                                  .stream().map(ObjectIdentifier::key).collect(java.util.stream.Collectors.toList());
-    Assert.assertEquals("Retry should only contain the failed key", 1, retryKeys.size());
-    Assert.assertEquals(KEY_1_PATH, retryKeys.get(0));
+    Assertions.assertEquals(1, retryKeys.size(), "Retry should only contain the failed key");
+    Assertions.assertEquals(KEY_1_PATH, retryKeys.get(0));
   }
 
   @Test
@@ -490,11 +490,11 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
 
-    SegmentLoadingException thrown = Assert.assertThrows(
+    SegmentLoadingException thrown = Assertions.assertThrows(
         SegmentLoadingException.class,
         () -> segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2))
     );
-    Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
+    Assertions.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
   }
 
   @Test
@@ -531,11 +531,11 @@ public class S3DataSegmentKillerTest extends EasyMockSupport
     EasyMock.replay(s3Client, segmentPusherConfig, inputDataConfig);
     segmentKiller = new S3DataSegmentKiller(Suppliers.ofInstance(s3Client), segmentPusherConfig, inputDataConfig);
 
-    SegmentLoadingException thrown = Assert.assertThrows(
+    SegmentLoadingException thrown = Assertions.assertThrows(
         SegmentLoadingException.class,
         () -> segmentKiller.kill(ImmutableList.of(DATA_SEGMENT_1, DATA_SEGMENT_2))
     );
-    Assert.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
+    Assertions.assertEquals("Couldn't delete segments from S3. See the task logs for more details.", thrown.getMessage());
   }
 
   @Test

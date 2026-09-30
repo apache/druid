@@ -25,12 +25,11 @@ import io.delta.kernel.types.LongType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
+import org.apache.druid.delta.DeltaAssertions;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -54,8 +53,8 @@ public class DeltaAndFilterTest
 
     Predicate predicate = andFilter.getFilterPredicate(SCHEMA);
 
-    Assert.assertTrue(predicate instanceof And);
-    Assert.assertEquals(2, predicate.getChildren().size());
+    Assertions.assertTrue(predicate instanceof And);
+    Assertions.assertEquals(2, predicate.getChildren().size());
   }
 
   @Test
@@ -68,33 +67,29 @@ public class DeltaAndFilterTest
         )
     );
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () -> andFilter.getFilterPredicate(SCHEMA)),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            StringUtils.format("column[name2] doesn't exist in schema[%s]", SCHEMA)
-        )
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(DruidException.class, () -> andFilter.getFilterPredicate(SCHEMA)),
+        StringUtils.format("column[name2] doesn't exist in schema[%s]", SCHEMA)
     );
   }
 
   @Test
   public void testAndFilterWithNoFilterPredicates()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new DeltaAndFilter(null)
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Delta and filter requires 2 filter predicates and must be non-empty. None provided."
-        )
+        "Delta and filter requires 2 filter predicates and must be non-empty. None provided."
     );
   }
 
   @Test
   public void testAndFilterWithOneFilterPredicate()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new DeltaAndFilter(
                 Collections.singletonList(
@@ -102,9 +97,7 @@ public class DeltaAndFilterTest
                 )
             )
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Delta and filter requires 2 filter predicates, but provided [1]."
-        )
+        "Delta and filter requires 2 filter predicates, but provided [1]."
     );
   }
 }

@@ -28,7 +28,9 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.calcite.schema.Table;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -51,6 +53,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
@@ -60,6 +63,9 @@ import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
+import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -75,6 +81,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * Like {@link PlannerConfig}, but that has static configuration and this class
@@ -138,13 +146,32 @@ public class PlannerContext
   private final String sql;
   private final SqlNode sqlNode;
   private final SqlEngine engine;
+  private final DruidSchemaCatalog rootSchema;
+  private final AuthenticationResult authenticationResult;
   private final Set<String> authContextKeys;
   private final Map<String, Object> queryContext;
   private final CopyOnWriteArrayList<String> nativeQueryIds = new CopyOnWriteArrayList<>();
   private final PlannerHook hook;
   private final Set<String> lookupsToLoad = new HashSet<>();
 
+  /**
+   * Cancel flag inherited by any {@link PlannerContext} created on this thread while set, so nested view-expansion
+   * planners share the top-level query's {@link #cancelFlag}. Managed by {@link #withInheritedCancelFlag}.
+   */
+  private static final ThreadLocal<CancelFlag> INHERITED_CANCEL_FLAG = new ThreadLocal<>();
+
+  /**
+   * Calcite cancellation flag, wired into the planner via the framework {@link org.apache.calcite.plan.Context} in
+   * {@link PlannerFactory}; tripping it enforces the planning timeout ({@link PlannerConfig#getMaxPlanningTimeMs()}).
+   */
+  private final CancelFlag cancelFlag = inheritedOrNewCancelFlag();
+
   private PlannerConfig plannerConfig;
+  /**
+   * Root schema created with {@link DruidSchemaCatalogProvider#createEscalatedRootSchema()}, for use in
+   * view expansion. See {@link ViewManager} for details on the security model.
+   */
+  private DruidSchemaCatalog escalatedRootSchema;
   private String sqlQueryId;
   private boolean stringifyArrays;
   private boolean useBoundsAndSelectors;
@@ -156,8 +183,6 @@ public class PlannerContext
 
   // bindings for dynamic parameters to bind during planning
   private List<TypedValue> parameters = Collections.emptyList();
-  // result of authentication, providing identity to authorize set of resources produced by validation
-  private AuthenticationResult authenticationResult;
   // set of datasources and views which must be authorized, initialized to null so we can detect if it has been set.
   private Set<ResourceAction> resourceActions;
   // result of authorizing set of resources against authentication identity
@@ -176,6 +201,8 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
+      final DruidSchemaCatalog rootSchema,
+      final AuthenticationResult authenticationResult,
       final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -186,6 +213,8 @@ public class PlannerContext
     this.sql = sql;
     this.sqlNode = sqlNode;
     this.engine = engine;
+    this.rootSchema = rootSchema;
+    this.authenticationResult = authenticationResult;
     this.authContextKeys = authContextKeys;
     this.queryContext = new LinkedHashMap<>(queryContext);
     this.hook = hook == null ? NoOpPlannerHook.INSTANCE : hook;
@@ -197,6 +226,7 @@ public class PlannerContext
       final String sql,
       final SqlNode sqlNode,
       final SqlEngine engine,
+      final AuthenticationResult authenticationResult,
       final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -207,6 +237,8 @@ public class PlannerContext
         sql,
         sqlNode,
         engine,
+        plannerToolbox.rootSchemaProvider.createRootSchema(authenticationResult),
+        authenticationResult,
         authContextKeys,
         queryContext,
         hook
@@ -229,26 +261,6 @@ public class PlannerContext
     return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
   }
 
-  private static JoinAlgorithm getJoinAlgorithmFromContextValue(final Object object)
-  {
-    final String s = QueryContexts.getAsString(
-        CTX_SQL_JOIN_ALGORITHM,
-        object,
-        DEFAULT_SQL_JOIN_ALGORITHM.toString()
-    );
-
-    try {
-      return JoinAlgorithm.fromString(s);
-    }
-    catch (IllegalArgumentException e) {
-      throw QueryContexts.badValueException(
-          CTX_SQL_JOIN_ALGORITHM,
-          StringUtils.format("one of %s", Arrays.toString(JoinAlgorithm.values())),
-          object
-      );
-    }
-  }
-
   public PlannerToolbox getPlannerToolbox()
   {
     return plannerToolbox;
@@ -263,7 +275,6 @@ public class PlannerContext
   {
     return expressionParser;
   }
-
 
   /**
    * Equivalent to {@link ExpressionParser#parse(String)} on {@link #getExpressionParser()}.
@@ -284,6 +295,37 @@ public class PlannerContext
     return plannerConfig;
   }
 
+  public CancelFlag getCancelFlag()
+  {
+    return cancelFlag;
+  }
+
+  private static CancelFlag inheritedOrNewCancelFlag()
+  {
+    final CancelFlag inherited = INHERITED_CANCEL_FLAG.get();
+    return inherited != null ? inherited : new CancelFlag(new AtomicBoolean(false));
+  }
+
+  /**
+   * Runs {@code action} with {@code cancelFlag} installed as the flag that {@link PlannerContext}s created on this
+   * thread inherit, so one planning timeout governs nested view-expansion planners. Restores the prior value after.
+   */
+  public static <T> T withInheritedCancelFlag(final CancelFlag cancelFlag, final Supplier<T> action)
+  {
+    final CancelFlag previous = INHERITED_CANCEL_FLAG.get();
+    INHERITED_CANCEL_FLAG.set(cancelFlag);
+    try {
+      return action.get();
+    }
+    finally {
+      if (previous != null) {
+        INHERITED_CANCEL_FLAG.set(previous);
+      } else {
+        INHERITED_CANCEL_FLAG.remove();
+      }
+    }
+  }
+
   public DateTime getLocalNow()
   {
     return localNow;
@@ -299,10 +341,45 @@ public class PlannerContext
     return plannerToolbox.joinableFactoryWrapper();
   }
 
+  /**
+   * Returns the {@link Table} object corresponding to a Druid table/datasource, or null if none exists.
+   */
   @Nullable
-  public String getSchemaResourceType(String schema, String resourceName)
+  public Table getDruidTable(String tableName)
   {
-    return plannerToolbox.rootSchema().getResourceType(schema, resourceName);
+    return rootSchema.getSubSchema(plannerToolbox.druidSchemaName()).tables().get(tableName);
+  }
+
+  /**
+   * Returns the root schema created with {@link DruidSchemaCatalogProvider#createRootSchema(AuthenticationResult)},
+   * scoped for {@link #getAuthenticationResult()}.
+   */
+  public DruidSchemaCatalog getRootSchema()
+  {
+    return rootSchema;
+  }
+
+  /**
+   * Returns the root schema created with {@link DruidSchemaCatalogProvider#createEscalatedRootSchema()},
+   * for use in view expansion. See {@link ViewManager} for details on the security model.
+   */
+  public DruidSchemaCatalog getEscalatedRootSchema()
+  {
+    if (escalatedRootSchema == null) {
+      escalatedRootSchema = plannerToolbox.rootSchemaProvider.createEscalatedRootSchema();
+    }
+    return escalatedRootSchema;
+  }
+
+  /**
+   * Returns the {@link Resource} to authorize against for a particular resource (e.g. table, view) located in a
+   * particular schema. If null, there is no authorization associated with the named resource (all authenticated
+   * users may access it).
+   */
+  @Nullable
+  public Resource getSchemaResource(String schema, String resourceName)
+  {
+    return rootSchema.getResource(schema, resourceName);
   }
 
   /**
@@ -542,16 +619,6 @@ public class PlannerContext
     this.parameters = Preconditions.checkNotNull(parameters, "parameters");
   }
 
-  public void setAuthenticationResult(AuthenticationResult authenticationResult)
-  {
-    if (this.authenticationResult != null) {
-      // It's a bug if this happens, because setAuthenticationResult should be called exactly once.
-      throw new ISE("Authentication result has already been set");
-    }
-
-    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
-  }
-
   public void setAuthorizationResult(AuthorizationResult access)
   {
     if (this.authorizationResult != null) {
@@ -744,6 +811,26 @@ public class PlannerContext
       plannerConfig = plannerConfig.withOverrides(queryContext);
     } else {
       plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(queryContext);
+    }
+  }
+
+  private static JoinAlgorithm getJoinAlgorithmFromContextValue(final Object object)
+  {
+    final String s = QueryContexts.getAsString(
+        CTX_SQL_JOIN_ALGORITHM,
+        object,
+        DEFAULT_SQL_JOIN_ALGORITHM.toString()
+    );
+
+    try {
+      return JoinAlgorithm.fromString(s);
+    }
+    catch (IllegalArgumentException e) {
+      throw QueryContexts.badValueException(
+          CTX_SQL_JOIN_ALGORITHM,
+          StringUtils.format("one of %s", Arrays.toString(JoinAlgorithm.values())),
+          object
+      );
     }
   }
 }

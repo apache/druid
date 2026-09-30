@@ -25,36 +25,48 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.file.SegmentFileMetadata;
+import org.apache.druid.segment.projections.ProjectionMetadata;
+import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
 
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * A {@link LoadSpec} wrapper that carries partial-projection metadata from the coordinator to a historical alongside
- * the original backend-specific load spec. The wrapped {@code delegate} is held as a raw {@link Map} so that the
- * concrete backend type (e.g. {@code s3}, {@code local}, {@code hdfs}) is materialized only when needed; this avoids
- * pulling backend-specific dependencies onto every node that touches the wire form.
- * <p>
- * Both {@link #loadSegment(File)} and {@link #openRangeReader()} delegate verbatim to the inner load spec. The
- * historical-side partial-load path inspects this wrapper at mount time to learn which projections to range-read and
- * the fingerprint identifying the request the coordinator made.
+ * A {@link PartialLoadSpec} that requests partial loading of a segment's projections. The base class carries the
+ * common {@code fingerprint} and {@code delegate} wire fields; this subtype adds the resolved projection names that
+ * the historical should range-read into the local segment.
  */
 @JsonTypeName(PartialProjectionLoadSpec.TYPE)
-public class PartialProjectionLoadSpec implements LoadSpec
+public class PartialProjectionLoadSpec extends PartialLoadSpec
 {
   public static final String TYPE = "partialProjection";
 
-  private final Map<String, Object> delegate;
+  /**
+   * Builds the raw wire-form {@link Map} representation of a {@link PartialProjectionLoadSpec} request. Used by the
+   * coordinator-side matcher (which doesn't instantiate the typed class because doing so would require plumbing an
+   * {@link ObjectMapper} through every matcher just to satisfy the constructor's lazy-delegate supplier).
+   */
+  public static Map<String, Object> wireForm(
+      Map<String, Object> delegate,
+      List<String> projections,
+      String fingerprint
+  )
+  {
+    return Map.of(
+        TYPE_FIELD, TYPE,
+        DELEGATE_FIELD, delegate,
+        "projections", projections,
+        FINGERPRINT_FIELD, fingerprint
+    );
+  }
+
   private final List<String> projections;
-  private final String fingerprint;
-  private final Supplier<LoadSpec> materializedDelegateSupplier;
 
   @JsonCreator
   public PartialProjectionLoadSpec(
@@ -64,21 +76,12 @@ public class PartialProjectionLoadSpec implements LoadSpec
       @JacksonInject ObjectMapper jsonMapper
   )
   {
-    Preconditions.checkNotNull(jsonMapper, "jsonMapper");
-    this.delegate = Preconditions.checkNotNull(delegate, "delegate");
+    super(delegate, fingerprint, jsonMapper);
     Preconditions.checkArgument(
         !CollectionUtils.isNullOrEmpty(projections),
         "projections must not be null or empty"
     );
     this.projections = List.copyOf(projections);
-    this.fingerprint = Preconditions.checkNotNull(fingerprint, "fingerprint");
-    this.materializedDelegateSupplier = Suppliers.memoize(() -> jsonMapper.convertValue(delegate, LoadSpec.class));
-  }
-
-  @JsonProperty
-  public Map<String, Object> getDelegate()
-  {
-    return delegate;
   }
 
   @JsonProperty
@@ -87,23 +90,40 @@ public class PartialProjectionLoadSpec implements LoadSpec
     return projections;
   }
 
-  @JsonProperty
-  public String getFingerprint()
-  {
-    return fingerprint;
-  }
-
+  /**
+   * Projection names double as bundle names in the V10 partial-segment layout (each projection's containers are
+   * tagged with its name as the bundle prefix), so the load spec selection maps to bundle names verbatim after
+   * validating that each requested name refers to a projection actually present on the segment.
+   * <p>
+   * These are pure defensive tripwires: the coordinator-side matcher derives the wire form from the same segment
+   * metadata this method reads, so a mismatch here indicates a coding bug (matcher/reader drift, writer/reader
+   * contract violation, or serialization corruption).
+   */
   @Override
-  public LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException
+  public List<String> getSelectedBundleNames(DataSegment segment, SegmentFileMetadata metadata)
   {
-    return materializedDelegateSupplier.get().loadSegment(destDir);
-  }
-
-  @Override
-  @Nullable
-  public SegmentRangeReader openRangeReader() throws IOException
-  {
-    return materializedDelegateSupplier.get().openRangeReader();
+    final List<ProjectionMetadata> segmentProjections = metadata.getProjections();
+    if (segmentProjections == null || segmentProjections.isEmpty()) {
+      throw DruidException.defensive(
+          "Cannot resolve projection bundles for segment[%s]: metadata has no projections",
+          segment.getId()
+      );
+    }
+    final Set<String> known = segmentProjections.stream()
+                                                .map(pm -> pm.getSchema().getName())
+                                                .collect(Collectors.toSet());
+    for (String projection : projections) {
+      if (!known.contains(projection)) {
+        throw DruidException.defensive(
+            "Segment[%s] does not contain projection[%s]; matcher/reader drift or writer/reader contract violation."
+            + " Known projections: %s",
+            segment.getId(),
+            projection,
+            known
+        );
+      }
+    }
+    return projections;
   }
 
   @Override
@@ -116,24 +136,24 @@ public class PartialProjectionLoadSpec implements LoadSpec
       return false;
     }
     PartialProjectionLoadSpec that = (PartialProjectionLoadSpec) o;
-    return Objects.equals(delegate, that.delegate)
+    return Objects.equals(getDelegate(), that.getDelegate())
         && Objects.equals(projections, that.projections)
-        && Objects.equals(fingerprint, that.fingerprint);
+        && Objects.equals(getFingerprint(), that.getFingerprint());
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(delegate, projections, fingerprint);
+    return Objects.hash(getDelegate(), projections, getFingerprint());
   }
 
   @Override
   public String toString()
   {
     return "PartialProjectionLoadSpec{" +
-           "delegate=" + delegate +
+           "delegate=" + getDelegate() +
            ", projections=" + projections +
-           ", fingerprint=" + fingerprint +
+           ", fingerprint=" + getFingerprint() +
            '}';
   }
 }

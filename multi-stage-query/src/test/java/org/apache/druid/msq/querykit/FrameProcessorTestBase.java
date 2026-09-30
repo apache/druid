@@ -34,8 +34,8 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,14 +49,14 @@ public class FrameProcessorTestBase extends InitializedNullHandlingTest
   private ListeningExecutorService innerExec;
   protected FrameProcessorExecutor exec;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     innerExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("test-exec"));
     exec = new FrameProcessorExecutor(innerExec);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     innerExec.shutdownNow();

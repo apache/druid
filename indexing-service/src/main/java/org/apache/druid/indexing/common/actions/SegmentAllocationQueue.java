@@ -745,6 +745,7 @@ public class SegmentAllocationQueue
 
       if (result.isSuccess()) {
         emitTaskMetric("task/action/success/count", 1L, request);
+        IndexTaskUtils.emitSegmentAllocateMetric(result.getSegmentId(), request.getTask(), emitter);
         requestToFuture.remove(request).complete(result.getSegmentId());
       } else if (request.canRetry()) {
         log.debug(

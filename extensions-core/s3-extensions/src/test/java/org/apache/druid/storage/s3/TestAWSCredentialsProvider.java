@@ -27,10 +27,9 @@ import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
@@ -42,8 +41,8 @@ import java.nio.charset.StandardCharsets;
 
 public class TestAWSCredentialsProvider
 {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  public File folder;
 
   private final AWSModule awsModule = new AWSModule();
   private final S3StorageDruidModule s3Module = new S3StorageDruidModule();
@@ -58,8 +57,8 @@ public class TestAWSCredentialsProvider
 
     AwsCredentialsProvider provider = awsModule.getAWSCredentialsProvider(config);
     AwsCredentials credentials = provider.resolveCredentials();
-    Assert.assertEquals("accessKeySample", credentials.accessKeyId());
-    Assert.assertEquals("secretKeySample", credentials.secretAccessKey());
+    Assertions.assertEquals("accessKeySample", credentials.accessKeyId());
+    Assertions.assertEquals("secretKeySample", credentials.secretAccessKey());
 
     // try to create
     ServerSideEncryptingAmazonS3.Builder amazonS3ClientBuilder = s3Module.getServerSideEncryptingAmazonS3Builder(
@@ -81,7 +80,7 @@ public class TestAWSCredentialsProvider
     AWSCredentialsConfig config = EasyMock.createMock(AWSCredentialsConfig.class);
     EasyMock.expect(config.getAccessKey()).andReturn(new DefaultPasswordProvider(""));
     EasyMock.expect(config.getSecretKey()).andReturn(new DefaultPasswordProvider(""));
-    File file = folder.newFile();
+    File file = File.createTempFile("credentials", ".properties", folder);
     try (BufferedWriter out = Files.newWriter(file, StandardCharsets.UTF_8)) {
       out.write("sessionToken=sessionTokenSample\nsecretKey=secretKeySample\naccessKey=accessKeySample\n");
     }
@@ -90,11 +89,11 @@ public class TestAWSCredentialsProvider
 
     AwsCredentialsProvider provider = awsModule.getAWSCredentialsProvider(config);
     AwsCredentials credentials = provider.resolveCredentials();
-    Assert.assertTrue(credentials instanceof AwsSessionCredentials);
+    Assertions.assertTrue(credentials instanceof AwsSessionCredentials);
     AwsSessionCredentials sessionCredentials = (AwsSessionCredentials) credentials;
-    Assert.assertEquals("accessKeySample", sessionCredentials.accessKeyId());
-    Assert.assertEquals("secretKeySample", sessionCredentials.secretAccessKey());
-    Assert.assertEquals("sessionTokenSample", sessionCredentials.sessionToken());
+    Assertions.assertEquals("accessKeySample", sessionCredentials.accessKeyId());
+    Assertions.assertEquals("secretKeySample", sessionCredentials.secretAccessKey());
+    Assertions.assertEquals("sessionTokenSample", sessionCredentials.sessionToken());
 
     // try to create
     ServerSideEncryptingAmazonS3.Builder amazonS3ClientBuilder = s3Module.getServerSideEncryptingAmazonS3Builder(

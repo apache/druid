@@ -35,8 +35,8 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -56,8 +56,8 @@ public class ArrayOfDoublesSketchToEstimatePostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -68,7 +68,7 @@ public class ArrayOfDoublesSketchToEstimatePostAggregatorTest
         new ConstantPostAggregator("", 0)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ArrayOfDoublesSketchToEstimatePostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
         postAgg.toString()
     );
@@ -104,7 +104,7 @@ public class ArrayOfDoublesSketchToEstimatePostAggregatorTest
     // estimate1 is 1.0, estimate2 is 2.0
     Double estimate1 = postAgg1.compute(ImmutableMap.of());
     Double estimate2 = postAgg2.compute(ImmutableMap.of());
-    Assert.assertEquals(-1, postAgg1.getComparator().compare(estimate1, estimate2));
+    Assertions.assertEquals(-1, postAgg1.getComparator().compare(estimate1, estimate2));
   }
 
   @Test
@@ -135,7 +135,7 @@ public class ArrayOfDoublesSketchToEstimatePostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

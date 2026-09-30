@@ -23,7 +23,7 @@ title: "Bloom Filter"
   -->
 
 
-To use the Apache Druid&circledR; Bloom filter extension, include `druid-bloom-filter` in the extensions load list. See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
+To use the Apache&circledR; Druid Bloom filter extension, include `druid-bloom-filter` in the extensions load list. See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
 
 This extension adds the abilities to construct Bloom filters from query results and to filter query results by testing
 against a Bloom filter. A Bloom filter is a probabilistic data structure to check for set membership. A Bloom
@@ -44,7 +44,7 @@ this implementation uses Murmur3 as the hash algorithm.
 The following Java example shows how to construct a BloomKFilter externally:
 
 ```java
-BloomKFilter bloomFilter = new BloomKFilter(1500);
+BloomKFilter bloomFilter = BloomKFilter.build(1500);
 bloomFilter.addString("value 1");
 bloomFilter.addString("value 2");
 bloomFilter.addString("value 3");

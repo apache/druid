@@ -22,9 +22,10 @@ package org.apache.druid.server.coordinator.rules;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
+import org.apache.druid.segment.loading.PartialBaseTableLoadSpec;
+import org.apache.druid.segment.loading.PartialProjectionLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -32,41 +33,51 @@ import java.util.Map;
 /**
  * Base for {@link PartialLoadMatcher} implementations that decide which of a segment's V10 projections to load.
  * Subclasses supply the resolution policy via {@link #resolveProjectionNames(DataSegment)}; this base handles
- * fingerprint computation and wraps the result into the {@code partialProjection} load-spec wire form consumed
- * by the historical-side {@code PartialProjectionLoadSpec}.
+ * fingerprint computation and wraps the result into the {@code partialProjection} load spec consumed by the
+ * historical-side {@link PartialProjectionLoadSpec}.
  * <p>
  * The fingerprint is a hash of what projections are partially loaded on a segment by this rule; the data node will
  * include this value in the segment announcement so that it can be used as a lightweight value to compare against
  * to handle things like rule change so that we can ensure that the 'right' partial load is in place from run to run.
+ * <p>
+ * <b>Projection matchers always apply.</b> When none of the configured projections are present on a segment, the
+ * matcher resolves to a {@link PartialBaseTableLoadSpec} (every row, no projections) instead of going opaque. A
+ * projection is precomputation that is always recoverable from the base table, so the base table is a correct
+ * substitute for one the segment doesn't carry, and it is strictly less data than every bundle on the segment. This
+ * is the ordinary state of affairs mid-rollout, when a new projection is being reindexed in and only some segments
+ * carry it yet.
+ * <p>
+ * Because {@link #match} therefore never returns {@code null}, a rule whose only matcher is a projection matcher
+ * never consults its {@link CannotMatchBehavior}, and "segments lacking projection p belong to a different rule" is
+ * not expressible via {@link CannotMatchBehavior#FALL_THROUGH}. Scope such rules by interval or period instead.
  */
 public abstract class ProjectionPartialLoadMatcher implements PartialLoadMatcher
 {
-  static final String LOAD_SPEC_TYPE = "partialProjection";
   static final String FINGERPRINT_VERSION = "v1";
 
   /**
    * Returns the sorted, deduped list of projection names from {@link DataSegment#getProjections()} that this matcher
    * selects. Returns an empty list when nothing matches (the segment exposes no projections, or no configured pattern
-   * intersects what the segment has).
+   * intersects what the segment has), which {@link #match} turns into a base-table load rather than a non-match.
    */
   protected abstract List<String> resolveProjectionNames(DataSegment segment);
 
+  /**
+   * Never returns {@code null}; see the class doc. Either the resolved projections, or a base-table load when none of
+   * them are present on {@code segment}.
+   */
   @Override
-  @Nullable
   public MatchResult match(DataSegment segment, Map<String, Object> baseLoadSpec)
   {
     final List<String> resolved = resolveProjectionNames(segment);
     if (resolved.isEmpty()) {
-      return null;
+      return new MatchResult(
+          PartialBaseTableLoadSpec.wireForm(baseLoadSpec, PartialBaseTableLoadSpec.FINGERPRINT),
+          PartialBaseTableLoadSpec.FINGERPRINT
+      );
     }
     final String fingerprint = computeFingerprint(resolved);
-    final Map<String, Object> wrapped = Map.of(
-        "type", LOAD_SPEC_TYPE,
-        "delegate", baseLoadSpec,
-        "projections", resolved,
-        "fingerprint", fingerprint
-    );
-    return new MatchResult(wrapped, fingerprint);
+    return new MatchResult(PartialProjectionLoadSpec.wireForm(baseLoadSpec, resolved, fingerprint), fingerprint);
   }
 
   static String computeFingerprint(List<String> sortedDedupedNames)

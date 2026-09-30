@@ -21,6 +21,7 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -30,13 +31,12 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Predicate;
 
 /**
- * A mutable collection of metadata of segments ({@link DataSegment} objects), belonging to a particular data source.
- *
- * Concurrency: could be updated concurrently via {@link #addSegment}, {@link #removeSegment}, and {@link
- * #removeSegmentsIf}, and accessed concurrently (e. g. via {@link #getSegments}) as well.
+ * A mutable collection of metadata of {@link DataSegment}, belonging to a particular data source.
+ * By default segments are stored as bare {@code DataSegment} when fully loading; segments that carry a
+ * {@link PartialLoadProfile} are stored as {@link DataSegmentAndLoadProfile} (a {@code DataSegment} subclass) instead,
+ * so partial-load metadata travels alongside the segment.
  *
  * @see ImmutableDruidDataSource - an immutable counterpart of this class
  */
@@ -45,7 +45,8 @@ public class DruidDataSource
   private final String name;
   private final Map<String, String> properties;
   /**
-   * This map needs to be concurrent to support concurrent iteration and updates.
+   * Concurrent to support concurrent iteration and updates. Values are bare {@link DataSegment} for full-load slots
+   * and {@link DataSegmentAndLoadProfile} for partial-load slots.
    */
   private final ConcurrentMap<SegmentId, DataSegment> idToSegmentMap = new ConcurrentHashMap<>();
 
@@ -73,22 +74,29 @@ public class DruidDataSource
     return idToSegmentMap.get(segmentId);
   }
 
+  /**
+   * Returns the partial-load profile for the given segment, or {@code null} if the segment was loaded as a regular
+   * full-load (no partial-load metadata announced) or is not present in this data source.
+   */
+  @Nullable
+  public PartialLoadProfile getPartialLoadProfile(SegmentId segmentId)
+  {
+    return DataSegmentAndLoadProfile.profileOf(idToSegmentMap.get(segmentId));
+  }
+
   public Collection<DataSegment> getSegments()
   {
     return Collections.unmodifiableCollection(idToSegmentMap.values());
   }
 
-  /**
-   * Removes segments for which the given filter returns true.
-   */
-  public void removeSegmentsIf(Predicate<DataSegment> filter)
-  {
-    idToSegmentMap.values().removeIf(filter);
-  }
-
   public DruidDataSource addSegment(DataSegment dataSegment)
   {
-    idToSegmentMap.put(dataSegment.getId(), dataSegment);
+    return addSegment(dataSegment, null);
+  }
+
+  public DruidDataSource addSegment(DataSegment dataSegment, @Nullable PartialLoadProfile profile)
+  {
+    idToSegmentMap.put(dataSegment.getId(), wrapIfNeeded(dataSegment, profile));
     return this;
   }
 
@@ -98,14 +106,22 @@ public class DruidDataSource
    */
   public boolean addSegmentIfAbsent(DataSegment dataSegment)
   {
-    return idToSegmentMap.putIfAbsent(dataSegment.getId(), dataSegment) == null;
+    return addSegmentIfAbsent(dataSegment, null);
+  }
+
+  public boolean addSegmentIfAbsent(DataSegment dataSegment, @Nullable PartialLoadProfile profile)
+  {
+    return idToSegmentMap.putIfAbsent(dataSegment.getId(), wrapIfNeeded(dataSegment, profile)) == null;
   }
 
   /**
-   * Returns the removed segment, or null if there was no segment with the given {@link SegmentId} in this
-   * DruidDataSource.
+   * Returns the removed segment, or {@code null} if there was no segment with the given {@link SegmentId} in this
+   * DruidDataSource. The returned value may be a {@link DataSegmentAndLoadProfile} when the removed entry carried a
+   * partial-load profile; callers that need the profile or its {@code loadedBytes} should use
+   * {@link DataSegmentAndLoadProfile#profileOf} / {@link DataSegmentAndLoadProfile#effectiveSizeOf}.
    */
-  public @Nullable DataSegment removeSegment(SegmentId segmentId)
+  @Nullable
+  public DataSegment removeSegment(SegmentId segmentId)
   {
     return idToSegmentMap.remove(segmentId);
   }
@@ -118,6 +134,11 @@ public class DruidDataSource
   public ImmutableDruidDataSource toImmutableDruidDataSource()
   {
     return new ImmutableDruidDataSource(name, properties, idToSegmentMap);
+  }
+
+  private static DataSegment wrapIfNeeded(DataSegment dataSegment, @Nullable PartialLoadProfile profile)
+  {
+    return profile == null ? dataSegment : new DataSegmentAndLoadProfile(dataSegment, profile);
   }
 
   @Override

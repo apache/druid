@@ -23,7 +23,7 @@ title: "Arrays"
   -->
 
 
-Apache Druid supports SQL standard `ARRAY` typed columns for `VARCHAR`, `BIGINT`, and `DOUBLE` types (native types `ARRAY<STRING>`, `ARRAY<LONG>`, and `ARRAY<DOUBLE>`). Other more complicated ARRAY types must be stored in [nested columns](nested-columns.md). Druid ARRAY types are distinct from [multi-value dimension](multi-value-dimensions.md), which have significantly different behavior than standard arrays.
+Apache&circledR; Druid supports SQL standard `ARRAY` typed columns for `VARCHAR`, `BIGINT`, and `DOUBLE` types (native types `ARRAY<STRING>`, `ARRAY<LONG>`, and `ARRAY<DOUBLE>`). Other more complicated ARRAY types must be stored in [nested columns](nested-columns.md). Druid ARRAY types are distinct from [multi-value dimension](multi-value-dimensions.md), which have significantly different behavior than standard arrays.
 
 This document describes inserting, filtering, and grouping behavior for `ARRAY` typed columns.
 Refer to the [Druid SQL data type documentation](sql-data-types.md#arrays) and [SQL array function reference](sql-array-functions.md) for additional details
@@ -42,7 +42,7 @@ The following sections describe inserting, filtering, and grouping behavior base
 ## Ingesting arrays
 
 ### Native batch and streaming ingestion
-When using native [batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../ingestion/kafka-ingestion.md), arrays can be ingested using the [`"auto"`](../ingestion/ingestion-spec.md#dimension-objects) type dimension schema which is shared with [type-aware schema discovery](../ingestion/schema-design.md#type-aware-schema-discovery).
+When using native [batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka&circledR;](../ingestion/kafka-ingestion.md), arrays can be ingested using the [`"auto"`](../ingestion/ingestion-spec.md#dimension-objects) type dimension schema which is shared with [type-aware schema discovery](../ingestion/schema-design.md#type-aware-schema-discovery).
 
 When ingesting from TSV or CSV data, you can specify the array delimiters using the `listDelimiter` field in the `inputFormat`. JSON data must be formatted as a JSON array to be ingested as an array type. JSON data does not require `inputFormat` configuration.
 

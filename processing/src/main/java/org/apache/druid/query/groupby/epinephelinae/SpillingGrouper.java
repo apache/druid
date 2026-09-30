@@ -47,6 +47,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -248,7 +249,12 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   public void close()
   {
     perQueryStats.dictionarySize(getDictionarySizeEstimate());
-    perQueryStats.maxMergeBufferUsedBytes(getMaxMergeBufferUsedBytes());
+    if (grouper.isInitialized()) {
+      // Merge-buffer usage and spill proximity are only meaningful once the grouper touched the buffer;
+      // an untouched slice contributes nothing.
+      perQueryStats.addMergeBufferUsedBytes(grouper.getMaxMergeBufferUsedBytes());
+      perQueryStats.spillProximity(grouper.getMaxSpillProximity());
+    }
     // Record spilled bytes before deleteFiles() decrements bytesUsed in temporaryStorage.
     long spilledBytes = 0;
     for (final File file : files) {
@@ -264,11 +270,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     pendingSpillBytes = 0;
     pendingDictionaryEntries.clear();
     deleteFiles();
-  }
-
-  private long getMaxMergeBufferUsedBytes()
-  {
-    return grouper.isInitialized() ? grouper.getMaxMergeBufferUsedBytes() : 0L;
   }
 
   private long getDictionarySizeEstimate()
@@ -374,28 +375,24 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
 
   private void spill() throws IOException
   {
-    // Stream directly to a temp file first, then check the file size. If the file is small
-    // (serialized size much smaller than the pre-allocated buffer, e.g. HLL sketches in List mode),
-    // read it back into memory for batching to avoid creating thousands of tiny disk files.
-    // If the file is already large enough, keep it on disk as-is.
-    final File file;
+    final SpillOutputStream spillOut = new SpillOutputStream(temporaryStorage, minSpillFileSize);
     try (CloseableIterator<Entry<KeyType>> iterator = grouper.iterator(true)) {
-      file = spill(iterator);
+      serializeToStream(iterator, spillOut);
     }
+
     pendingDictionaryEntries.addAll(keySerde.getDictionary());
     grouper.reset();
 
-    final long fileSize = file.length();
-    if (fileSize < minSpillFileSize) {
-      pendingSpillRuns.add(Files.readAllBytes(file.toPath()));
-      pendingSpillBytes += fileSize;
-      temporaryStorage.delete(file);
+    if (spillOut.isInMemory()) {
+      final byte[] bytes = spillOut.toByteArray();
+      pendingSpillRuns.add(bytes);
+      pendingSpillBytes += bytes.length;
 
       if (pendingSpillBytes >= minSpillFileSize) {
         flushPendingRunsToDisk();
       }
     } else {
-      files.add(file);
+      files.add(spillOut.getFile());
       dictionaryFiles.add(spill(pendingDictionaryEntries.iterator()));
       pendingDictionaryEntries.clear();
     }
@@ -483,20 +480,24 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     );
   }
 
-  private <T> File spill(Iterator<T> iterator) throws IOException
+  private <T> void serializeToStream(Iterator<T> iterator, OutputStream out) throws IOException
   {
     try (
-        final LimitedTemporaryStorage.LimitedOutputStream out = temporaryStorage.createFile();
         final LZ4BlockOutputStream compressedOut = new LZ4BlockOutputStream(out);
         final JsonGenerator jsonGenerator = spillMapper.getFactory().createGenerator(compressedOut)
     ) {
       final SerializerProvider serializers = spillMapper.getSerializerProviderInstance();
-
       while (iterator.hasNext()) {
         BaseQuery.checkInterrupted();
         JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializers, iterator.next());
       }
+    }
+  }
 
+  private <T> File spill(Iterator<T> iterator) throws IOException
+  {
+    try (final LimitedTemporaryStorage.LimitedOutputStream out = temporaryStorage.createFile()) {
+      serializeToStream(iterator, out);
       return out.getFile();
     }
   }

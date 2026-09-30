@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.utils.CollectionUtils;
@@ -42,7 +44,6 @@ import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -174,7 +175,9 @@ public class KafkaIndexTaskRunner extends SeekableStreamIndexTaskRunner<KafkaTop
       SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> partitions
   )
   {
-    return new KafkaDataSourceMetadata(partitions);
+    // Include bounded config if this is a bounded task
+    BoundedStreamConfig boundedConfig = task.getIOConfig().getBoundedStreamConfig();
+    return new KafkaDataSourceMetadata(partitions, boundedConfig);
   }
 
   @Override

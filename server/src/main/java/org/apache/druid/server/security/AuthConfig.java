@@ -65,7 +65,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false, false, null, null, false);
+    this(null, null, null, false, false, null, null, false, false);
   }
 
   @JsonProperty
@@ -102,6 +102,9 @@ public class AuthConfig
   @JsonProperty
   private final boolean enableInputSourceSecurity;
 
+  @JsonProperty
+  private final boolean emitAuthMetrics;
+
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticatorChain,
@@ -111,7 +114,8 @@ public class AuthConfig
       @JsonProperty("authorizeQueryContextParams") boolean authorizeQueryContextParams,
       @JsonProperty("unsecuredContextKeys") Set<String> unsecuredContextKeys,
       @JsonProperty("securedContextKeys") Set<String> securedContextKeys,
-      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity
+      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity,
+      @JsonProperty("emitAuthMetrics") boolean emitAuthMetrics
   )
   {
     this.authenticatorChain = authenticatorChain;
@@ -124,6 +128,7 @@ public class AuthConfig
                                 : unsecuredContextKeys;
     this.securedContextKeys = securedContextKeys;
     this.enableInputSourceSecurity = enableInputSourceSecurity;
+    this.emitAuthMetrics = emitAuthMetrics;
   }
 
   public List<String> getAuthenticatorChain()
@@ -154,6 +159,11 @@ public class AuthConfig
   public boolean isEnableInputSourceSecurity()
   {
     return enableInputSourceSecurity;
+  }
+
+  public boolean isEmitAuthMetrics()
+  {
+    return emitAuthMetrics;
   }
 
   /**
@@ -198,6 +208,7 @@ public class AuthConfig
     AuthConfig that = (AuthConfig) o;
     return allowUnauthenticatedHttpOptions == that.allowUnauthenticatedHttpOptions
            && authorizeQueryContextParams == that.authorizeQueryContextParams
+           && emitAuthMetrics == that.emitAuthMetrics
            && Objects.equals(authenticatorChain, that.authenticatorChain)
            && Objects.equals(authorizers, that.authorizers)
            && Objects.equals(unsecuredPaths, that.unsecuredPaths)
@@ -217,7 +228,8 @@ public class AuthConfig
         authorizeQueryContextParams,
         unsecuredContextKeys,
         securedContextKeys,
-        enableInputSourceSecurity
+        enableInputSourceSecurity,
+        emitAuthMetrics
     );
   }
 
@@ -233,6 +245,7 @@ public class AuthConfig
            ", unsecuredContextKeys=" + unsecuredContextKeys +
            ", securedContextKeys=" + securedContextKeys +
            ", enableInputSourceSecurity=" + enableInputSourceSecurity +
+           ", emitAuthMetrics=" + emitAuthMetrics +
            '}';
   }
 
@@ -254,6 +267,7 @@ public class AuthConfig
     private Set<String> unsecuredContextKeys;
     private Set<String> securedContextKeys;
     private boolean enableInputSourceSecurity;
+    private boolean emitAuthMetrics;
 
     public Builder setAuthenticatorChain(List<String> authenticatorChain)
     {
@@ -303,6 +317,12 @@ public class AuthConfig
       return this;
     }
 
+    public Builder setEmitAuthMetrics(boolean emitAuthMetrics)
+    {
+      this.emitAuthMetrics = emitAuthMetrics;
+      return this;
+    }
+
     public AuthConfig build()
     {
       return new AuthConfig(
@@ -313,7 +333,8 @@ public class AuthConfig
           authorizeQueryContextParams,
           unsecuredContextKeys,
           securedContextKeys,
-          enableInputSourceSecurity
+          enableInputSourceSecurity,
+          emitAuthMetrics
       );
     }
   }

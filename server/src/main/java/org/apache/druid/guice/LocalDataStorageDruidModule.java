@@ -29,13 +29,12 @@ import org.apache.druid.data.SearchableVersionedDataFinder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalFileTimestampVersionFinder;
 import org.apache.druid.segment.loading.LocalLoadSpec;
-import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 
 import java.util.List;
 
@@ -48,9 +47,12 @@ public class LocalDataStorageDruidModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(SegmentCacheManager.class).to(SegmentLocalCacheManager.class).in(LazySingleton.class);
-
     bindDeepStorageLocal(binder);
+
+    // The segment layout properties are not specific to local deep storage: they are bound here, next to the
+    // DataSegmentPusher choice, because this module is always installed, so every deep storage implementation can read
+    // the same config object instead of declaring the properties itself.
+    JsonConfigProvider.bind(binder, "druid.storage", DeepStorageSegmentConfig.class);
 
     PolyBind.createChoice(
         binder,

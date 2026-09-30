@@ -44,19 +44,25 @@ public class GuiceAnnotationIntrospector extends NopAnnotationIntrospector
   @Override
   public JacksonInject.Value findInjectableValue(AnnotatedMember m)
   {
-    Object id = findGuiceInjectId(m);
+    // Preserve useInput / optional from the annotation. The simpler Value.forId(id) drops
+    // them and relies on AnnotationIntrospectorPair's fallback. See FasterXML/jackson-databind#1381.
+    final JacksonInject annotation = m.getAnnotation(JacksonInject.class);
+    if (annotation == null) {
+      return null;
+    }
+    final Object id = findGuiceInjectId(m);
     if (id == null) {
       return null;
     }
-    return JacksonInject.Value.forId(id);
+    return JacksonInject.Value.from(annotation).withId(id);
   }
 
+  /**
+   * Resolves the Guice {@link Key} for an annotated member. Callers must verify that {@code m}
+   * carries a {@link JacksonInject} annotation before invoking; this method does not re-check.
+   */
   private Object findGuiceInjectId(AnnotatedMember m)
   {
-    if (m.getAnnotation(JacksonInject.class) == null) {
-      return null;
-    }
-
     Type genericType = null;
 
     Annotation guiceAnnotation = null;

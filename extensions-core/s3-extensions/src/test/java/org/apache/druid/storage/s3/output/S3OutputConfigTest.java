@@ -19,20 +19,19 @@
 
 package org.apache.druid.storage.s3.output;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class S3OutputConfigTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @TempDir
+  public Path temporaryFolder;
   private static String BUCKET = "BUCKET";
   private static String PREFIX = "PREFIX";
   private static int MAX_RETRY_COUNT = 0;
@@ -42,17 +41,17 @@ public class S3OutputConfigTest
   {
     long chunkSize = S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES + 1;
 
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(
-        "chunkSize[5368709121] should be >= "
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new S3OutputConfig(
+            BUCKET,
+            PREFIX,
+            FileUtils.createTempDirInLocation(temporaryFolder, "s3output"),
+            HumanReadableBytes.valueOf(chunkSize),
+            MAX_RETRY_COUNT,
+            true
+        )
     );
-    new S3OutputConfig(
-        BUCKET,
-        PREFIX,
-        temporaryFolder.newFolder(),
-        HumanReadableBytes.valueOf(chunkSize),
-        MAX_RETRY_COUNT,
-        true
-    );
+    Assertions.assertTrue(exception.getMessage().contains("chunkSize[5368709121] should be >= "));
   }
 }

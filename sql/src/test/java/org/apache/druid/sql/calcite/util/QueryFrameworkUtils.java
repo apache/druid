@@ -23,8 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -59,20 +57,18 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProviderImpl;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
-import org.apache.druid.sql.calcite.schema.InformationSchema;
+import org.apache.druid.sql.calcite.schema.DruidSchemaProvider;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
-import org.apache.druid.sql.calcite.schema.NamedDruidSchema;
 import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
-import org.apache.druid.sql.calcite.schema.NamedSystemSchema;
-import org.apache.druid.sql.calcite.schema.NamedViewSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.PhysicalDatasourceMetadataFactory;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
-import org.apache.druid.sql.calcite.schema.ViewSchema;
+import org.apache.druid.sql.calcite.schema.SchemaProvider;
+import org.apache.druid.sql.calcite.schema.SystemSchemaProvider;
+import org.apache.druid.sql.calcite.schema.ViewSchemaProvider;
 import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
 
@@ -81,11 +77,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class QueryFrameworkUtils
 {
-  public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
 
   public static QueryLifecycleFactory createMockQueryLifecycleFactory(
       final QuerySegmentWalker walker,
@@ -144,7 +138,7 @@ public class QueryFrameworkUtils
     );
   }
 
-  public static DruidSchemaCatalog createMockRootSchema(
+  public static DruidSchemaCatalogProvider createMockRootSchemaProvider(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
@@ -154,8 +148,7 @@ public class QueryFrameworkUtils
       final AuthorizerMapper authorizerMapper,
       final CatalogResolver catalogResolver)
   {
-    TimelineServerView timelineServerView = new TestTimelineServerView(walker.getSegments());
-    return createMockRootSchema(
+    return createMockRootSchemaProvider(
         injector,
         conglomerate,
         walker,
@@ -164,11 +157,11 @@ public class QueryFrameworkUtils
         druidSchemaManager,
         authorizerMapper,
         catalogResolver,
-        timelineServerView
+        new TestTimelineServerView(walker.getSegments())
     );
   }
 
-  public static DruidSchemaCatalog createMockRootSchema(
+  public static DruidSchemaCatalogProvider createMockRootSchemaProvider(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
@@ -180,76 +173,66 @@ public class QueryFrameworkUtils
       final TimelineServerView timelineServerView
   )
   {
-    DruidSchema druidSchema = createMockSchema(
+    DruidSchemaProvider druidSchemaProvider = createMockSchemaProvider(
         injector,
         conglomerate,
         walker,
         druidSchemaManager,
+        plannerConfig,
+        authorizerMapper,
         catalogResolver,
         timelineServerView
     );
-    SystemSchema systemSchema =
-        CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
+    SystemSchemaProvider systemSchemaProvider = CalciteTests.createMockSystemSchemaProvider(
+        druidSchemaProvider.getSegmentMetadataCache(),
+        timelineServerView,
+        authorizerMapper,
+        plannerConfig
+    );
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
     DruidOperatorTable createOperatorTable = createOperatorTable(injector);
 
-    return createMockRootSchema(
-        plannerConfig,
+    return createMockRootSchemaProvider(
         viewManager,
         authorizerMapper,
-        druidSchema,
-        systemSchema,
+        druidSchemaProvider,
+        systemSchemaProvider,
         lookupSchema,
-        createOperatorTable
+        createOperatorTable,
+        plannerConfig
     );
   }
 
-  public static DruidSchemaCatalog createMockRootSchema(
-      final PlannerConfig plannerConfig,
+  public static DruidSchemaCatalogProvider createMockRootSchemaProvider(
       final ViewManager viewManager,
       final AuthorizerMapper authorizerMapper,
-      DruidSchema druidSchema,
-      SystemSchema systemSchema,
-      LookupSchema lookupSchema,
-      DruidOperatorTable createOperatorTable
+      final DruidSchemaProvider druidSchemaProvider,
+      final SystemSchemaProvider systemSchemaProvider,
+      final LookupSchema lookupSchema,
+      final DruidOperatorTable createOperatorTable,
+      final PlannerConfig plannerConfig
   )
   {
-    ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
+    final Set<NamedSchema> namedSchemas = Set.of(new NamedLookupSchema(lookupSchema));
 
-    SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
-    Set<NamedSchema> namedSchemas = new HashSet<>();
-    namedSchemas.add(new NamedDruidSchema(druidSchema, CalciteTests.DRUID_SCHEMA_NAME));
-    namedSchemas.add(new NamedSystemSchema(plannerConfig, systemSchema));
-    namedSchemas.add(new NamedLookupSchema(lookupSchema));
-
-    if (viewSchema != null) {
-      namedSchemas.add(new NamedViewSchema(viewSchema));
+    final Set<SchemaProvider> schemaProviders = new HashSet<>();
+    schemaProviders.add(druidSchemaProvider);
+    schemaProviders.add(systemSchemaProvider);
+    if (viewManager != null) {
+      schemaProviders.add(new ViewSchemaProvider(viewManager, authorizerMapper, plannerConfig));
     }
 
-    DruidSchemaCatalog catalog = new DruidSchemaCatalog(
-        rootSchema,
-        namedSchemas.stream().collect(Collectors.toMap(NamedSchema::getSchemaName, x -> x))
+    return new DruidSchemaCatalogProviderImpl(
+        namedSchemas,
+        schemaProviders,
+        createOperatorTable,
+        authorizerMapper,
+        CalciteTests.TEST_AUTHENTICATOR_ESCALATOR
     );
-    InformationSchema informationSchema =
-        new InformationSchema(
-            catalog,
-            authorizerMapper,
-            createOperatorTable
-        );
-    rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
-    rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);
-    rootSchema.add(NamedSystemSchema.NAME, systemSchema);
-    rootSchema.add(NamedLookupSchema.NAME, lookupSchema);
-
-    if (viewSchema != null) {
-      rootSchema.add(NamedViewSchema.NAME, viewSchema);
-    }
-
-    return catalog;
   }
 
-  public static DruidSchemaCatalog createMockRootSchema(
+  public static DruidSchemaCatalogProvider createMockRootSchemaProvider(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
@@ -257,7 +240,7 @@ public class QueryFrameworkUtils
       final AuthorizerMapper authorizerMapper
   )
   {
-    return createMockRootSchema(
+    return createMockRootSchemaProvider(
         injector,
         conglomerate,
         walker,
@@ -269,11 +252,13 @@ public class QueryFrameworkUtils
     );
   }
 
-  public static DruidSchema createMockSchema(
+  public static DruidSchemaProvider createMockSchemaProvider(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final DruidSchemaManager druidSchemaManager,
+      final PlannerConfig plannerConfig,
+      final AuthorizerMapper authorizerMapper,
       final CatalogResolver catalog,
       final TimelineServerView timelineServerView
   )
@@ -309,7 +294,14 @@ public class QueryFrameworkUtils
     }
 
     cache.stop();
-    return new DruidSchema(cache, druidSchemaManager, catalog);
+    return new DruidSchemaProvider(
+        CalciteTests.DRUID_SCHEMA_NAME,
+        cache,
+        druidSchemaManager,
+        catalog,
+        plannerConfig,
+        authorizerMapper
+    );
   }
 
   public static JoinableFactory createDefaultJoinableFactory(Injector injector)
@@ -360,7 +352,7 @@ public class QueryFrameworkUtils
     public DirectStatement directStatement(SqlQueryPlus sqlRequest)
     {
       // override direct statement creation to allow calcite tests to test multi-part set statements
-      return new DirectStatement(toolbox, sqlRequest)
+      return new DirectStatement(toolbox, sqlRequest, null)
       {
         @Override
         protected DruidPlanner createPlanner()
@@ -369,6 +361,7 @@ public class QueryFrameworkUtils
               engine,
               queryPlus.sql(),
               queryPlus.sqlNode(),
+              queryPlus.authResult(),
               queryPlus.authContextKeys(),
               queryContext,
               hook
@@ -380,7 +373,7 @@ public class QueryFrameworkUtils
     @Override
     public PreparedStatement preparedStatement(SqlQueryPlus sqlRequest)
     {
-      return new PreparedStatement(toolbox, sqlRequest)
+      return new PreparedStatement(toolbox, sqlRequest, null)
       {
         @Override
         protected DruidPlanner getPlanner()
@@ -389,6 +382,7 @@ public class QueryFrameworkUtils
               engine,
               queryPlus.sql(),
               queryPlus.sqlNode(),
+              queryPlus.authResult(),
               queryPlus.authContextKeys(),
               queryContext,
               hook
@@ -396,7 +390,7 @@ public class QueryFrameworkUtils
         }
 
         @Override
-        public DirectStatement execute(List<TypedValue> parameters)
+        public DirectStatement execute(List<TypedValue> parameters, String remoteAddress)
         {
           return directStatement(queryPlus.withParameters(parameters));
         }

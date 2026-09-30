@@ -30,6 +30,7 @@ import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.input.stage.ReadablePartitions;
 import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
@@ -70,9 +71,9 @@ public class InlineInputSliceReader implements InputSliceReader
 
     for (final Segment segment : segmentWrangler.getSegmentsForIntervals(dataSource, Intervals.ONLY_ETERNITY)) {
       segments.add(
-          AdaptedLoadableSegment.create(
+          AdaptedLoadableSegment.fromUnmanagedSegment(
               segment,
-              Intervals.ETERNITY,
+              new SegmentDescriptor(Intervals.ETERNITY, "0", 0),
               "inline data",
               counters.channel(CounterNames.inputChannel(inputNumber))
           )

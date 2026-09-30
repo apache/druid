@@ -21,6 +21,7 @@ package org.apache.druid.test.utils;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
@@ -104,7 +105,7 @@ public class TestSegmentManager
     if (dataSegment == null) {
       return null;
     }
-    return segmentManager.acquireCachedSegment(dataSegment).orElse(null);
+    return segmentManager.acquireCachedSegment(dataSegment, AcquireMode.FULL).orElse(null);
   }
 
   /**

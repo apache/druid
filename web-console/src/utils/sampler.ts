@@ -37,6 +37,7 @@ import {
   getDimensionNamesFromTransforms,
   getDimensionSpecName,
   getFlattenSpec,
+  getPossibleSystemFieldsForInputSource,
   getSpecType,
   getTimestampSchema,
   isDruidSource,
@@ -221,6 +222,7 @@ function makeSamplerIoConfig(
   if (ioConfig.inputFormat) {
     ioConfig = deepSet(ioConfig, 'inputFormat.keepNullColumns', true);
   }
+
   return ioConfig;
 }
 
@@ -285,6 +287,14 @@ export async function sampleForConnect(
     );
   }
 
+  const addFileUri = Boolean(
+    ioConfig.inputSource &&
+      getPossibleSystemFieldsForInputSource(ioConfig.inputSource).includes('__file_uri'),
+  );
+  if (addFileUri) {
+    ioConfig = deepSet(ioConfig, 'inputSource.systemFields', ['__file_uri']);
+  }
+
   const reingestMode = isDruidSource(spec);
   const sampleSpec: SampleSpec = {
     type: samplerType,
@@ -294,7 +304,10 @@ export async function sampleForConnect(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
-        dimensionsSpec: { useSchemaDiscovery: true },
+        dimensionsSpec: {
+          useSchemaDiscovery: true,
+          dimensions: addFileUri ? ['__file_uri'] : undefined,
+        },
         granularitySpec: {
           rollup: false,
         },
@@ -612,8 +625,7 @@ export async function sampleForSchema(
 ): Promise<SampleResponse> {
   const samplerType = getSpecType(spec);
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
-  const transformSpec: TransformSpec =
-    deepGet(spec, 'spec.dataSchema.transformSpec') || ({} as TransformSpec);
+  const transformSpec: TransformSpec = deepGet(spec, 'spec.dataSchema.transformSpec') || {};
   const dimensionsSpec: DimensionsSpec = deepGet(spec, 'spec.dataSchema.dimensionsSpec');
   const metricsSpec: MetricSpec[] = deepGet(spec, 'spec.dataSchema.metricsSpec') || [];
   const queryGranularity: string =

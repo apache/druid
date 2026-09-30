@@ -25,8 +25,8 @@ import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -49,9 +49,9 @@ public class CoordinatorSegmentMetadataCacheConfigTest
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final SegmentMetadataCacheConfig config = provider.get();
-    Assert.assertFalse(config.isAwaitInitializationOnStart());
-    Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
-    Assert.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
+    Assertions.assertFalse(config.isAwaitInitializationOnStart());
+    Assertions.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
+    Assertions.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }
 
   @Test
@@ -71,9 +71,9 @@ public class CoordinatorSegmentMetadataCacheConfigTest
     properties.setProperty(CONFIG_BASE + ".awaitInitializationOnStart", "false");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final SegmentMetadataCacheConfig config = provider.get();
-    Assert.assertFalse(config.isAwaitInitializationOnStart());
-    Assert.assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
-    Assert.assertEquals(
+    Assertions.assertFalse(config.isAwaitInitializationOnStart());
+    Assertions.assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
+    Assertions.assertEquals(
         new AbstractSegmentMetadataCache.FirstTypeMergePolicy(),
         config.getMetadataColumnTypeMergePolicy()
     );
@@ -83,9 +83,8 @@ public class CoordinatorSegmentMetadataCacheConfigTest
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
-            binder -> {
-              JsonConfigProvider.bind(binder, CONFIG_BASE, SegmentMetadataCacheConfig.class);
-            }
+            binder ->
+              JsonConfigProvider.bind(binder, CONFIG_BASE, SegmentMetadataCacheConfig.class)
         )
     );
   }

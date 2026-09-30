@@ -60,6 +60,12 @@ public class RestrictedCursorFactory implements CursorFactory
   }
 
   @Override
+  public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
+  {
+    return delegate.makeCursorHolderAsync(policy.visit(spec));
+  }
+
+  @Override
   public RowSignature getRowSignature()
   {
     return delegate.getRowSignature();

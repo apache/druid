@@ -132,13 +132,13 @@ import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -151,20 +151,19 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -180,7 +179,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class CompactionTaskTest
 {
   private static final long SEGMENT_SIZE_BYTES = 100;
@@ -221,7 +220,7 @@ public class CompactionTaskTest
   private TaskToolbox toolbox;
   private SegmentCacheManagerFactory segmentCacheManagerFactory;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     MIXED_TYPE_COLUMN_MAP.put(Intervals.of("2017-01-01/2017-02-01"), new StringDimensionSchema(MIXED_TYPE_COLUMN));
@@ -305,11 +304,11 @@ public class CompactionTaskTest
             List.of(
                 binder -> {
                   binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-                  binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
+                  binder.bind(ChatHandlerProvider.class).toInstance(new ChatHandlerProvider());
                   binder.bind(RowIngestionMetersFactory.class).toInstance(TEST_UTILS.getRowIngestionMetersFactory());
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
                   binder.bind(SegmentCacheManagerFactory.class)
-                        .toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
+                        .toInstance(SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(new TestAppenderatorsManager());
                   binder.bind(ExprMacroTable.class).toInstance(TestExprMacroTable.INSTANCE);
                 }
@@ -359,15 +358,12 @@ public class CompactionTaskTest
         .build();
   }
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Rule
+  @RegisterExtension
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private StubServiceEmitter emitter;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     final TestIndexIO testIndexIO = new TestIndexIO(OBJECT_MAPPER, SEGMENT_MAP);
@@ -377,7 +373,7 @@ public class CompactionTaskTest
         testIndexIO,
         SEGMENT_MAP
     );
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER);
+    segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, OBJECT_MAPPER);
   }
 
   @Test
@@ -400,13 +396,13 @@ public class CompactionTaskTest
     builder2.tuningConfig(createTuningConfig());
     builder2.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, Granularities.DAY, null));
     final CompactionTask taskCreatedWithGranularitySpec = builder2.build();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         taskCreatedWithGranularitySpec.getSegmentGranularity(),
         taskCreatedWithSegmentGranularity.getSegmentGranularity()
     );
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testCreateCompactionTaskWithConflictingGranularitySpecAndSegmentGranularityShouldThrowIAE()
   {
     final Builder builder = new Builder(
@@ -417,21 +413,15 @@ public class CompactionTaskTest
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.MINUTE, Granularities.DAY, null));
-    try {
-      builder.build();
-    }
-    catch (IAE iae) {
-      Assert.assertEquals(
-          StringUtils.format(
-              CONFLICTING_SEGMENT_GRANULARITY_FORMAT,
-              Granularities.HOUR,
-              Granularities.MINUTE
-          ),
-          iae.getMessage()
-      );
-      throw iae;
-    }
-    Assert.fail("Should not have reached here!");
+    final IAE exception = Assertions.assertThrows(IAE.class, builder::build);
+    Assertions.assertEquals(
+        StringUtils.format(
+            CONFLICTING_SEGMENT_GRANULARITY_FORMAT,
+            Granularities.HOUR,
+            Granularities.MINUTE
+        ),
+        exception.getMessage()
+    );
   }
 
   @Test
@@ -447,7 +437,7 @@ public class CompactionTaskTest
     builder.tuningConfig(createTuningConfig());
     builder.transformSpec(transformSpec);
     final CompactionTask taskCreatedWithTransformSpec = builder.build();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         transformSpec,
         taskCreatedWithTransformSpec.getTransformSpec()
     );
@@ -465,13 +455,13 @@ public class CompactionTaskTest
     builder.tuningConfig(createTuningConfig());
     builder.metricsSpec(aggregatorFactories);
     final CompactionTask taskCreatedWithTransformSpec = builder.build();
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         aggregatorFactories,
         taskCreatedWithTransformSpec.getMetricsSpec()
     );
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testCreateCompactionTaskWithNullSegmentGranularityInGranularitySpecAndSegmentGranularityShouldSucceed()
   {
     final Builder builder = new Builder(
@@ -482,21 +472,15 @@ public class CompactionTaskTest
     builder.tuningConfig(createTuningConfig());
     builder.segmentGranularity(Granularities.HOUR);
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, Granularities.DAY, null));
-    try {
-      builder.build();
-    }
-    catch (IAE iae) {
-      Assert.assertEquals(
-          StringUtils.format(
-              CONFLICTING_SEGMENT_GRANULARITY_FORMAT,
-              Granularities.HOUR,
-              null
-          ),
-          iae.getMessage()
-      );
-      throw iae;
-    }
-    Assert.fail("Should not have reached here!");
+    final IAE exception = Assertions.assertThrows(IAE.class, builder::build);
+    Assertions.assertEquals(
+        StringUtils.format(
+            CONFLICTING_SEGMENT_GRANULARITY_FORMAT,
+            Granularities.HOUR,
+            null
+        ),
+        exception.getMessage()
+    );
   }
 
   @Test
@@ -511,7 +495,7 @@ public class CompactionTaskTest
     builder.segmentGranularity(Granularities.HOUR);
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.HOUR, Granularities.DAY, null));
     final CompactionTask taskCreatedWithSegmentGranularity = builder.build();
-    Assert.assertEquals(Granularities.HOUR, taskCreatedWithSegmentGranularity.getSegmentGranularity());
+    Assertions.assertEquals(Granularities.HOUR, taskCreatedWithSegmentGranularity.getSegmentGranularity());
   }
 
   @Test
@@ -609,7 +593,7 @@ public class CompactionTaskTest
 
     final byte[] bytes = OBJECT_MAPPER.writeValueAsBytes(task);
     final CompactionTask fromJson = OBJECT_MAPPER.readValue(bytes, CompactionTask.class);
-    Assert.assertEquals(projections, fromJson.getProjections());
+    Assertions.assertEquals(projections, fromJson.getProjections());
     assertEquals(task, fromJson);
   }
 
@@ -684,7 +668,7 @@ public class CompactionTaskTest
         .context(Map.of("testKey", "testContext"))
         .build();
 
-    Assert.assertTrue(task.getInputSourceResources().isEmpty());
+    Assertions.assertTrue(task.getInputSourceResources().isEmpty());
   }
 
   @Test
@@ -722,7 +706,7 @@ public class CompactionTaskTest
         .withReportParseExceptions(false)
         .build();
 
-    Assert.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(indexTuningConfig));
+    Assertions.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(indexTuningConfig));
 
   }
 
@@ -763,18 +747,18 @@ public class CompactionTaskTest
         .withPushTimeout(5000L)
         .build();
 
-    Assert.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(parallelIndexTuningConfig));
+    Assertions.assertEquals(compactionTuningConfig, CompactionTask.getTuningConfig(parallelIndexTuningConfig));
   }
 
   private static void assertEquals(CompactionTask expected, CompactionTask actual)
   {
-    Assert.assertEquals(expected.getType(), actual.getType());
-    Assert.assertEquals(expected.getDataSource(), actual.getDataSource());
-    Assert.assertEquals(expected.getIoConfig(), actual.getIoConfig());
-    Assert.assertEquals(expected.getDimensionsSpec(), actual.getDimensionsSpec());
-    Assert.assertArrayEquals(expected.getMetricsSpec(), actual.getMetricsSpec());
-    Assert.assertEquals(expected.getTuningConfig(), actual.getTuningConfig());
-    Assert.assertEquals(expected.getContext(), actual.getContext());
+    Assertions.assertEquals(expected.getType(), actual.getType());
+    Assertions.assertEquals(expected.getDataSource(), actual.getDataSource());
+    Assertions.assertEquals(expected.getIoConfig(), actual.getIoConfig());
+    Assertions.assertEquals(expected.getDimensionsSpec(), actual.getDimensionsSpec());
+    Assertions.assertArrayEquals(expected.getMetricsSpec(), actual.getMetricsSpec());
+    Assertions.assertEquals(expected.getTuningConfig(), actual.getTuningConfig());
+    Assertions.assertEquals(expected.getContext(), actual.getContext());
   }
 
   @Test
@@ -785,11 +769,14 @@ public class CompactionTaskTest
         new CompactionIntervalSpec(Intervals.of("2021-01-01/P1D"), null)
     );
 
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage(
-        "No segments found for compaction. Please check that datasource name and interval are correct."
+    final IllegalStateException exception = Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> provider.checkSegments(LockGranularity.TIME_CHUNK, List.of())
     );
-    provider.checkSegments(LockGranularity.TIME_CHUNK, List.of());
+    Assertions.assertEquals(
+        "No segments found for compaction. Please check that datasource name and interval are correct.",
+        exception.getMessage()
+    );
   }
 
   @Test
@@ -799,6 +786,7 @@ public class CompactionTaskTest
         toolbox,
         LockGranularity.TIME_CHUNK,
         new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
         null,
         null,
         null,
@@ -825,7 +813,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -867,6 +855,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -888,7 +877,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -931,6 +920,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -952,7 +942,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -996,6 +986,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1016,7 +1007,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -1068,6 +1059,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1087,7 +1079,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     final List<DimensionsSpec> dimensionsSpecs = new ArrayList<>(6);
     IntStream.range(0, 6).forEach(i -> dimensionsSpecs.add(customSpec));
     assertIngestionSchema(
@@ -1120,6 +1112,7 @@ public class CompactionTaskTest
         customMetricsSpec,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1141,7 +1134,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -1165,6 +1158,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1186,7 +1180,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -1201,82 +1195,88 @@ public class CompactionTaskTest
   @Test
   public void testCreateIngestionSchemaWithDifferentSegmentSet() throws IOException
   {
-    expectedException.expect(CoreMatchers.instanceOf(IllegalStateException.class));
-    expectedException.expectMessage(CoreMatchers.containsString("are different from the current used segments"));
-
     final List<DataSegment> segments = new ArrayList<>(SEGMENTS);
     Collections.sort(segments);
     // Remove one segment in the middle
     segments.remove(segments.size() / 2);
-    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
-        toolbox,
-        LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
-        null,
-        null,
-        null,
-        null,
-        null,
-        METRIC_BUILDER,
-        false
-    );
+    final IllegalStateException exception = Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> {
+          final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
+              toolbox,
+              LockGranularity.TIME_CHUNK,
+              new SegmentProvider(DATA_SOURCE, SpecificSegmentsSpec.fromSegments(segments)),
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              METRIC_BUILDER,
+              false
+          );
 
-    NativeCompactionRunner.createIngestionSpecs(
-        inputSchemas,
-        toolbox,
-        new CompactionIOConfig(null, false, null),
-        new PartitionConfigurationManager(TUNING_CONFIG),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory
+          NativeCompactionRunner.createIngestionSpecs(
+              inputSchemas,
+              toolbox,
+              new CompactionIOConfig(null, false, null),
+              new PartitionConfigurationManager(TUNING_CONFIG),
+              COORDINATOR_CLIENT,
+              segmentCacheManagerFactory
+          );
+        }
     );
+    Assertions.assertTrue(exception.getMessage().contains("are different from the current used segments"));
   }
 
   @Test
   public void testMissingMetadata() throws IOException
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(CoreMatchers.startsWith("Index metadata doesn't exist for segment"));
-
     final TestIndexIO indexIO = (TestIndexIO) toolbox.getIndexIO();
     indexIO.removeMetadata(Iterables.getFirst(indexIO.getQueryableIndexMap().keySet(), null));
-    final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
-        toolbox,
-        LockGranularity.TIME_CHUNK,
-        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
-        null,
-        null,
-        null,
-        null,
-        null,
-        METRIC_BUILDER,
-        false
-    );
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> {
+          final Map<QuerySegmentSpec, DataSchema> inputSchemas = CompactionTask.createInputDataSchemas(
+              toolbox,
+              LockGranularity.TIME_CHUNK,
+              new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              METRIC_BUILDER,
+              false
+          );
 
-    NativeCompactionRunner.createIngestionSpecs(
-        inputSchemas,
-        toolbox,
-        new CompactionIOConfig(null, false, null),
-        new PartitionConfigurationManager(TUNING_CONFIG),
-        COORDINATOR_CLIENT,
-        segmentCacheManagerFactory
+          NativeCompactionRunner.createIngestionSpecs(
+              inputSchemas,
+              toolbox,
+              new CompactionIOConfig(null, false, null),
+              new PartitionConfigurationManager(TUNING_CONFIG),
+              COORDINATOR_CLIENT,
+              segmentCacheManagerFactory
+          );
+        }
     );
+    Assertions.assertTrue(exception.getMessage().startsWith("Index metadata doesn't exist for segment"));
   }
 
   @Test
   public void testEmptyInterval()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage(CoreMatchers.containsString("must specify a nonempty interval"));
-
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory
     );
 
-    @SuppressWarnings("unused")
-    final CompactionTask task = builder
-        .interval(Intervals.of("2000-01-01/2000-01-01"))
-        .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> builder.interval(Intervals.of("2000-01-01/2000-01-01")).build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("must specify a nonempty interval"));
   }
 
   @Test
@@ -1290,6 +1290,7 @@ public class CompactionTaskTest
         null,
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
+        null,
         null,
         METRIC_BUILDER,
         false
@@ -1313,7 +1314,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(1, ingestionSpecs.size());
+    Assertions.assertEquals(1, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -1337,6 +1338,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1356,7 +1358,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -1384,6 +1386,7 @@ public class CompactionTaskTest
             null
         ),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1408,7 +1411,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(1, ingestionSpecs.size());
+    Assertions.assertEquals(1, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -1433,6 +1436,7 @@ public class CompactionTaskTest
         null,
         null,
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1455,7 +1459,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -1480,6 +1484,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1502,7 +1507,7 @@ public class CompactionTaskTest
             s2.getDataSchema().getGranularitySpec().inputIntervals().get(0)
         )
     );
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     assertIngestionSchema(
         ingestionSpecs,
         expectedDimensionsSpec,
@@ -1527,6 +1532,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1540,9 +1546,9 @@ public class CompactionTaskTest
         segmentCacheManagerFactory
     );
 
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
-      Assert.assertTrue(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
+      Assertions.assertTrue(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
     }
   }
 
@@ -1559,6 +1565,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         null,
+        null,
         METRIC_BUILDER,
         false
     );
@@ -1573,10 +1580,10 @@ public class CompactionTaskTest
     );
 
 
-    Assert.assertEquals(6, ingestionSpecs.size());
+    Assertions.assertEquals(6, ingestionSpecs.size());
     for (ParallelIndexIngestionSpec indexIngestionSpec : ingestionSpecs) {
       //Expect false since rollup value in metadata of existing segments are null
-      Assert.assertFalse(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
+      Assertions.assertFalse(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
     }
   }
 
@@ -1593,12 +1600,13 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         null,
+        null,
         METRIC_BUILDER,
         true
     );
     for (DataSchema dataSchema : inputSchemas.values()) {
-      Assert.assertTrue(dataSchema instanceof CombinedDataSchema);
-      Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedDimensions().isEmpty());
+      Assertions.assertTrue(dataSchema instanceof CombinedDataSchema);
+      Assertions.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedDimensions().isEmpty());
     }
   }
 
@@ -1613,7 +1621,7 @@ public class CompactionTaskTest
     builder.compactionRunner(new TestMSQCompactionRunner());
     final CompactionTask compactionTask = builder.build();
     // granularitySpec=null should assume a possible rollup
-    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+    Assertions.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1637,7 +1645,7 @@ public class CompactionTaskTest
                                                 ))
                                             .build());
     final CompactionTask compactionTask = builder.build();
-    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+    Assertions.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1655,7 +1663,7 @@ public class CompactionTaskTest
     builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     final CompactionTask compactionTask = builder.build();
     // A string dimension with rollup=true should need MVD info
-    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+    Assertions.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1682,7 +1690,7 @@ public class CompactionTaskTest
                                             .build());
     builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     CompactionTask compactionTask = builder.build();
-    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+    Assertions.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1709,7 +1717,7 @@ public class CompactionTaskTest
                                             .build());
     builder.dimensionsSpec(new DimensionsSpec(List.of(stringDim)));
     CompactionTask compactionTask = builder.build();
-    Assert.assertFalse(compactionTask.identifyMultiValuedDimensions());
+    Assertions.assertFalse(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1726,7 +1734,7 @@ public class CompactionTaskTest
         Granularities.ALL,
         Granularities.MINUTE
     );
-    Assert.assertEquals(Granularities.SECOND, chooseFinestGranularityHelper(input));
+    Assertions.assertEquals(Granularities.SECOND, chooseFinestGranularityHelper(input));
   }
 
   @Test
@@ -1743,7 +1751,7 @@ public class CompactionTaskTest
         Granularities.NONE,
         Granularities.MINUTE
     );
-    Assert.assertEquals(Granularities.NONE, chooseFinestGranularityHelper(input));
+    Assertions.assertEquals(Granularities.NONE, chooseFinestGranularityHelper(input));
   }
 
   @Test
@@ -1755,7 +1763,7 @@ public class CompactionTaskTest
         null,
         null
     );
-    Assert.assertNull(chooseFinestGranularityHelper(input));
+    Assertions.assertNull(chooseFinestGranularityHelper(input));
   }
 
   @Test
@@ -1768,7 +1776,7 @@ public class CompactionTaskTest
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-02"))
         .build();
-    Assert.assertEquals(LookupLoadingSpec.NONE, task.getLookupLoadingSpec());
+    Assertions.assertEquals(LookupLoadingSpec.NONE, task.getLookupLoadingSpec());
   }
 
   @Test
@@ -1782,7 +1790,7 @@ public class CompactionTaskTest
         .interval(Intervals.of("2000-01-01/2000-01-02"))
         .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null))
         .build();
-    Assert.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
+    Assertions.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
   }
 
   private Granularity chooseFinestGranularityHelper(List<Granularity> granularities)
@@ -1902,21 +1910,21 @@ public class CompactionTaskTest
 
       // assert dataSchema
       final DataSchema dataSchema = ingestionSchema.getDataSchema();
-      Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
+      Assertions.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
           dataSchema.getTimestampSpec()
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           new HashSet<>(expectedDimensionsSpec.getDimensions()),
           new HashSet<>(dataSchema.getDimensionsSpec().getDimensions())
       );
 
       // metrics
-      Assert.assertEquals(expectedMetricsSpec, Arrays.asList(dataSchema.getAggregators()));
-      Assert.assertEquals(
+      Assertions.assertEquals(expectedMetricsSpec, Arrays.asList(dataSchema.getAggregators()));
+      Assertions.assertEquals(
           new UniformGranularitySpec(
               expectedSegmentGranularity,
               expectedQueryGranularity,
@@ -1928,20 +1936,20 @@ public class CompactionTaskTest
 
       // assert ioConfig
       final ParallelIndexIOConfig ioConfig = ingestionSchema.getIOConfig();
-      Assert.assertFalse(ioConfig.isAppendToExisting());
-      Assert.assertEquals(
+      Assertions.assertFalse(ioConfig.isAppendToExisting());
+      Assertions.assertEquals(
           expectedDropExisting,
           ioConfig.isDropExisting()
       );
       final InputSource inputSource = ioConfig.getInputSource();
-      Assert.assertTrue(inputSource instanceof DruidInputSource);
+      Assertions.assertTrue(inputSource instanceof DruidInputSource);
       final DruidInputSource druidInputSource = (DruidInputSource) inputSource;
-      Assert.assertEquals(DATA_SOURCE, druidInputSource.getDataSource());
-      Assert.assertEquals(expectedSegmentIntervals.get(i), druidInputSource.getInterval());
-      Assert.assertNull(druidInputSource.getDimFilter());
+      Assertions.assertEquals(DATA_SOURCE, druidInputSource.getDataSource());
+      Assertions.assertEquals(expectedSegmentIntervals.get(i), druidInputSource.getInterval());
+      Assertions.assertNull(druidInputSource.getDimFilter());
 
       // assert tuningConfig
-      Assert.assertEquals(expectedTuningConfig, ingestionSchema.getTuningConfig());
+      Assertions.assertEquals(expectedTuningConfig, ingestionSchema.getTuningConfig());
     }
   }
 
@@ -1973,13 +1981,13 @@ public class CompactionTaskTest
     final SegmentCacheManager segmentCacheManager = new NoopSegmentCacheManager()
     {
       @Override
-      public void load(DataSegment segment)
+      public DataSegment load(DataSegment segment)
       {
-        // do nothing
+        return segment;
       }
 
       @Override
-      public Optional<Segment> acquireCachedSegment(SegmentId segmentId)
+      public Optional<Segment> acquireCachedSegment(SegmentId segmentId, AcquireMode acquireMode)
       {
         for (Map.Entry<DataSegment, File> entry : segments.entrySet()) {
           if (entry.getKey().getId().equals(segmentId)) {
@@ -1992,7 +2000,7 @@ public class CompactionTaskTest
       }
 
       @Override
-      public AcquireSegmentAction acquireSegment(DataSegment dataSegment)
+      public AcquireSegmentAction acquireSegment(DataSegment dataSegment, AcquireMode acquireMode)
       {
         final Segment segment =
             new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId());
@@ -2025,7 +2033,7 @@ public class CompactionTaskTest
         ))
         .taskReportFileWriter(new NoopTestTaskReportFileWriter())
         .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-        .chatHandlerProvider(new NoopChatHandlerProvider())
+        .chatHandlerProvider(new ChatHandlerProvider())
         .rowIngestionMetersFactory(TEST_UTILS.getRowIngestionMetersFactory())
         .appenderatorsManager(new TestAppenderatorsManager())
         .coordinatorClient(COORDINATOR_CLIENT)
@@ -2040,7 +2048,7 @@ public class CompactionTaskTest
   @Test
   public void testMinorCompactionChecksIfSegmentsToCompactIsEmpty()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> new MinorCompactionInputSpec(COMPACTION_INTERVAL, List.of())
     );
@@ -2058,7 +2066,7 @@ public class CompactionTaskTest
         List.of(segment.toDescriptor())
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         // Setting dropExisting == false disables REPLACE mode.
         () -> new Builder(DATA_SOURCE, segmentCacheManagerFactory)
@@ -2106,7 +2114,7 @@ public class CompactionTaskTest
     };
 
     task.determineLockGranularityAndTryLock(segmentAwareClient, List.of(testInterval));
-    Assert.assertEquals(LockGranularity.TIME_CHUNK, task.getTaskLockHelper().getLockGranularityToUse());
+    Assertions.assertEquals(LockGranularity.TIME_CHUNK, task.getTaskLockHelper().getLockGranularityToUse());
   }
 
   @Test
@@ -2180,7 +2188,7 @@ public class CompactionTaskTest
     };
     subtask.determineLockGranularityAndTryLock(segmentAwareClient, List.of(testInterval));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         LockGranularity.TIME_CHUNK,
         subtask.getTaskLockHelper().getLockGranularityToUse()
     );
@@ -2251,12 +2259,12 @@ public class CompactionTaskTest
         segmentCacheManagerFactory
     );
 
-    Assert.assertEquals(1, ingestionSpecs.size());
+    Assertions.assertEquals(1, ingestionSpecs.size());
     final InputSource inputSource = ingestionSpecs.get(0).getIOConfig().getInputSource();
-    Assert.assertTrue(inputSource instanceof DruidInputSource);
+    Assertions.assertTrue(inputSource instanceof DruidInputSource);
     final DruidInputSource druidInputSource = (DruidInputSource) inputSource;
-    Assert.assertNotNull(druidInputSource.getSegmentIds());
-    Assert.assertEquals(2, druidInputSource.getSegmentIds().size());
+    Assertions.assertNotNull(druidInputSource.getSegmentIds());
+    Assertions.assertEquals(2, druidInputSource.getSegmentIds().size());
   }
 
   private DataSegment createSegmentWithPartition(Interval interval, String version, int partitionNum)
@@ -2346,6 +2354,7 @@ public class CompactionTaskTest
                 return new Metadata(
                     null,
                     aggregatorFactories.toArray(new AggregatorFactory[0]),
+                    null,
                     null,
                     null,
                     null,

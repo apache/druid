@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.common.config.Configs;
@@ -34,12 +35,16 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -56,6 +61,9 @@ import java.util.stream.Collectors;
  * only segments that were created before the REPLACE lock was acquired are
  * returned for an interval. This ensures that the input set of segments for this
  * replace task remains consistent even when new data is appended by other concurrent tasks.
+ * <p>
+ * Callers declare which optional segment details they need through {@code details}. Details that
+ * are not requested are nulled out of the returned segments.
  */
 public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSegment>>
 {
@@ -65,11 +73,18 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   private final List<Interval> intervals;
   private final Segments visibility;
 
-  @JsonCreator
+  /**
+   * Optional segment details to include in the returned segments; see {@link SegmentDetail}. Null means "include
+   * everything", which is what a client older than this parameter expects.
+   */
+  @Nullable
+  private final Set<SegmentDetail> details;
+
   public RetrieveUsedSegmentsAction(
-      @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("intervals") Collection<Interval> intervals,
-      @JsonProperty("visibility") @Nullable Segments visibility
+      String dataSource,
+      Collection<Interval> intervals,
+      @Nullable Segments visibility,
+      @Nullable EnumSet<SegmentDetail> details
   )
   {
     if (CollectionUtils.isNullOrEmpty(intervals)) {
@@ -79,11 +94,31 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     this.dataSource = dataSource;
     this.intervals = JodaUtils.condenseIntervals(intervals);
     this.visibility = Configs.valueOrDefault(visibility, Segments.ONLY_VISIBLE);
+    this.details = details == null ? null : Collections.unmodifiableSet(EnumSet.copyOf(details));
   }
 
-  public RetrieveUsedSegmentsAction(String dataSource, Collection<Interval> intervals)
+  public RetrieveUsedSegmentsAction(
+      String dataSource,
+      Collection<Interval> intervals,
+      EnumSet<SegmentDetail> details
+  )
   {
-    this(dataSource, intervals, Segments.ONLY_VISIBLE);
+    this(dataSource, intervals, Segments.ONLY_VISIBLE, details);
+  }
+
+  /**
+   * Factory for deserialization. Takes the details as raw names rather than as {@link SegmentDetail} so that a name
+   * this version of Druid does not know about is skipped instead of failing the whole request.
+   */
+  @JsonCreator
+  static RetrieveUsedSegmentsAction fromJson(
+      @JsonProperty("dataSource") String dataSource,
+      @JsonProperty("intervals") Collection<Interval> intervals,
+      @JsonProperty("visibility") @Nullable Segments visibility,
+      @JsonProperty("details") @Nullable Collection<String> details
+  )
+  {
+    return new RetrieveUsedSegmentsAction(dataSource, intervals, visibility, SegmentDetail.fromNamesLenient(details));
   }
 
   @JsonProperty
@@ -104,6 +139,19 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
     return visibility;
   }
 
+  /**
+   * Segment details to include. Null means include all details, empty means include no details.
+   *
+   * @see DataSegment#retainOnlyDetails(Set)
+   */
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Set<SegmentDetail> getDetails()
+  {
+    return details;
+  }
+
   @Override
   public TypeReference<Collection<DataSegment>> getReturnTypeReference()
   {
@@ -112,6 +160,11 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
 
   @Override
   public Collection<DataSegment> perform(Task task, TaskActionToolbox toolbox)
+  {
+    return retainRequestedDetails(retrieveSegments(task, toolbox));
+  }
+
+  private Collection<DataSegment> retrieveSegments(Task task, TaskActionToolbox toolbox)
   {
     // When fetching segments for a datasource other than the one this task is writing to,
     // just return all segments with the needed visibility.
@@ -186,6 +239,23 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
                   .retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility);
   }
 
+  /**
+   * Strips the optional details that the caller did not ask for out of {@code segments}. A null {@link #details} means
+   * the caller is older than this parameter and expects every detail, so the segments pass through untouched.
+   */
+  private Collection<DataSegment> retainRequestedDetails(final Collection<DataSegment> segments)
+  {
+    if (details == null) {
+      return segments;
+    }
+
+    final List<DataSegment> retVal = new ArrayList<>(segments.size());
+    for (final DataSegment segment : segments) {
+      retVal.add(segment.retainOnlyDetails(details));
+    }
+    return retVal;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -198,19 +268,16 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
 
     RetrieveUsedSegmentsAction that = (RetrieveUsedSegmentsAction) o;
 
-    if (!dataSource.equals(that.dataSource)) {
-      return false;
-    }
-    if (!intervals.equals(that.intervals)) {
-      return false;
-    }
-    return visibility.equals(that.visibility);
+    return dataSource.equals(that.dataSource)
+           && intervals.equals(that.intervals)
+           && visibility.equals(that.visibility)
+           && Objects.equals(details, that.details);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, intervals, visibility);
+    return Objects.hash(dataSource, intervals, visibility, details);
   }
 
   @Override
@@ -220,6 +287,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
            "dataSource='" + dataSource + '\'' +
            ", intervals=" + intervals +
            ", visibility=" + visibility +
+           ", details=" + details +
            '}';
   }
 }

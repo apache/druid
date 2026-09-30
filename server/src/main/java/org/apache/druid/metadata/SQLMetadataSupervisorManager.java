@@ -172,7 +172,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
       payload = jsonMapper.readValue(r.getBytes("payload"), SupervisorSpec.class);
     }
     catch (JsonParseException | JsonMappingException e) {
-      log.warn("Failed to deserialize payload for spec_id[%s]", r.getString("spec_id"));
+      log.warn(e, "Failed to deserialize payload for spec_id[%s]", r.getString("spec_id"));
       payload = null;
     }
     catch (IOException e) {

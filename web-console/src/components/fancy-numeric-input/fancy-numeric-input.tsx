@@ -172,7 +172,7 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
         placeholder={placeholder}
         value={shownValue}
         onChange={e => {
-          const valueAsString = (e.target as HTMLInputElement).value;
+          const valueAsString = e.target.value;
           setShownValue(valueAsString);
 
           const shownNumber = shownToNumber(valueAsString);
@@ -220,14 +220,20 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
           disabled={effectiveDisabled || isIncrementDisabled}
           icon={IconNames.CHEVRON_UP}
           intent={intent}
-          onMouseDown={e => increment(getIncrementSize(e.shiftKey, e.altKey))}
+          onMouseDown={e => {
+            e.preventDefault();
+            increment(getIncrementSize(e.shiftKey, e.altKey));
+          }}
         />
         <Button
           aria-label="decrement"
           disabled={effectiveDisabled || isDecrementDisabled}
           icon={IconNames.CHEVRON_DOWN}
           intent={intent}
-          onMouseDown={e => increment(-getIncrementSize(e.shiftKey, e.altKey))}
+          onMouseDown={e => {
+            e.preventDefault();
+            increment(-getIncrementSize(e.shiftKey, e.altKey));
+          }}
         />
       </ButtonGroup>
     </ControlGroup>

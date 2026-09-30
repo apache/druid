@@ -17,9 +17,9 @@
   ~ under the License.
   -->
 
-# `druid-multi-stage-query` developer notes
+# Multi-stage query developer notes
 
-This document provides developer notes for the major packages of the `druid-multi-stage-query` extension. It does not
+This document provides developer notes for the major packages of the multi-stage query module. It does not
 discuss future plans; these are discussed on the list or in GitHub issues.
 
 ## Model

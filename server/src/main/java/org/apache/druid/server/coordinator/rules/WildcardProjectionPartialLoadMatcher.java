@@ -72,8 +72,8 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
     }
     this.patterns = List.copyOf(patterns);
     this.excludePatterns = excludePatterns == null ? List.of() : List.copyOf(excludePatterns);
-    this.compiledPatterns = compileAll(this.patterns);
-    this.compiledExcludePatterns = compileAll(this.excludePatterns);
+    this.compiledPatterns = Globs.compileAll(this.patterns);
+    this.compiledExcludePatterns = Globs.compileAll(this.excludePatterns);
   }
 
   @JsonProperty
@@ -98,97 +98,14 @@ public class WildcardProjectionPartialLoadMatcher extends ProjectionPartialLoadM
     }
     final TreeSet<String> matched = new TreeSet<>();
     for (String name : segmentProjections) {
-      if (matchesAny(name, compiledExcludePatterns)) {
+      if (Globs.matchesAny(name, compiledExcludePatterns)) {
         continue;
       }
-      if (matchesAny(name, compiledPatterns)) {
+      if (Globs.matchesAny(name, compiledPatterns)) {
         matched.add(name);
       }
     }
     return new ArrayList<>(matched);
-  }
-
-  private static List<Pattern> compileAll(List<String> globs)
-  {
-    if (globs.isEmpty()) {
-      return List.of();
-    }
-    final List<Pattern> compiled = new ArrayList<>(globs.size());
-    for (String glob : globs) {
-      compiled.add(Pattern.compile(globToRegex(glob)));
-    }
-    return List.copyOf(compiled);
-  }
-
-  private static boolean matchesAny(String name, List<Pattern> patterns)
-  {
-    for (Pattern pattern : patterns) {
-      if (pattern.matcher(name).matches()) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Translates a glob pattern with {@code *}, {@code ?}, and {@code \} escape semantics into an equivalent regex
-   * pattern that matches the entire input string. Regex metacharacters in literal positions are escaped.
-   *
-   * @throws org.apache.druid.error.DruidException if {@code glob} ends with an unescaped backslash
-   */
-  static String globToRegex(String glob)
-  {
-    final StringBuilder sb = new StringBuilder(glob.length() + 4);
-    boolean escaping = false;
-    for (int i = 0; i < glob.length(); i++) {
-      final char c = glob.charAt(i);
-      if (escaping) {
-        appendLiteral(sb, c);
-        escaping = false;
-        continue;
-      }
-      switch (c) {
-        case '\\':
-          escaping = true;
-          break;
-        case '*':
-          sb.append(".*");
-          break;
-        case '?':
-          sb.append('.');
-          break;
-        default:
-          appendLiteral(sb, c);
-      }
-    }
-    if (escaping) {
-      throw InvalidInput.exception("Glob pattern [%s] ends with an unescaped backslash", glob);
-    }
-    return sb.toString();
-  }
-
-  private static void appendLiteral(StringBuilder sb, char c)
-  {
-    switch (c) {
-      case '.':
-      case '(':
-      case ')':
-      case '[':
-      case ']':
-      case '{':
-      case '}':
-      case '+':
-      case '|':
-      case '^':
-      case '$':
-      case '\\':
-      case '*':
-      case '?':
-        sb.append('\\').append(c);
-        break;
-      default:
-        sb.append(c);
-    }
   }
 
   @Override

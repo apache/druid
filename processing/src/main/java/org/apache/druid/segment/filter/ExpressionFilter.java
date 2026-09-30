@@ -175,6 +175,9 @@ public class ExpressionFilter implements Filter
               }
 
               return Arrays.stream(result).filter(Objects::nonNull).anyMatch(o -> Evals.asBoolean((double) o));
+            case ARRAY:
+            case COMPLEX:
+              break;
           }
         }
         return eval.asBoolean();
@@ -192,6 +195,9 @@ public class ExpressionFilter implements Filter
   @Override
   public BitmapColumnIndex getBitmapColumnIndex(ColumnIndexSelector selector)
   {
+    if (bindingDetails.get().isNonDeterministic()) {
+      return null;
+    }
     return expr.get().asBitmapColumnIndex(selector);
   }
 

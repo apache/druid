@@ -19,19 +19,32 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.worker.Worker;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
 public class TaskRunnerUtils
@@ -40,18 +53,18 @@ public class TaskRunnerUtils
 
   public static void notifyLocationChanged(
       final Iterable<Pair<TaskRunnerListener, Executor>> listeners,
-      final String taskId,
+      final Task task,
       final TaskLocation location
   )
   {
-    log.debug("Task [%s] location changed to [%s].", taskId, location);
+    log.debug("Task [%s] location changed to [%s].", task.getId(), location);
     for (final Pair<TaskRunnerListener, Executor> listener : listeners) {
       try {
-        listener.rhs.execute(() -> listener.lhs.locationChanged(taskId, location));
+        listener.rhs.execute(() -> listener.lhs.locationChanged(task, location));
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to notify task listener")
-           .addData("taskId", taskId)
+           .addData("taskId", task.getId())
            .addData("taskLocation", location)
            .addData("listener", listener.toString())
            .emit();
@@ -61,18 +74,18 @@ public class TaskRunnerUtils
 
   public static void notifyStatusChanged(
       final Iterable<Pair<TaskRunnerListener, Executor>> listeners,
-      final String taskId,
+      final Task task,
       final TaskStatus status
   )
   {
-    log.debug("Task [%s] status changed to [%s].", taskId, status.getStatusCode());
+    log.debug("Task [%s] status changed to [%s].", task.getId(), status.getStatusCode());
     for (final Pair<TaskRunnerListener, Executor> listener : listeners) {
       try {
-        listener.rhs.execute(() -> listener.lhs.statusChanged(taskId, status));
+        listener.rhs.execute(() -> listener.lhs.statusChanged(task, status));
       }
       catch (Exception e) {
         log.makeAlert(e, "Unable to notify task listener")
-           .addData("taskId", taskId)
+           .addData("taskId", task.getId())
            .addData("taskStatus", status.getStatusCode())
            .addData("listener", listener.toString())
            .emit();
@@ -108,6 +121,39 @@ public class TaskRunnerUtils
       return taskLocation.makeURL(path);
     }
     catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static Optional<InputStream> streamTaskReportsFromTaskLocation(
+      final HttpClient httpClient,
+      final URL url
+  ) throws IOException
+  {
+    try {
+      final InputStreamFullResponseHolder response = httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamFullResponseHandler()
+      ).get();
+      final HttpResponseStatus responseStatus = response.getResponse().getStatus();
+
+      if (HttpResponseStatus.OK.equals(responseStatus)) {
+        return Optional.of(response.getContent());
+      } else if (HttpResponseStatus.NOT_FOUND.equals(responseStatus)
+                 || HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)) {
+        return Optional.absent();
+      } else {
+        throw new IOE(
+            "Failed to stream task reports from url[%s]. Response status[%s].",
+            url, responseStatus
+        );
+      }
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      Throwables.propagateIfPossible(e.getCause(), IOException.class);
       throw new RuntimeException(e);
     }
   }

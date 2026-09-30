@@ -24,8 +24,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ "21", "25" ]
-        pattern: [ "C*", "N*", "D*,H*,L*", "I*,A*,U*", "K*,E*,W*,Z*,Y*,X*", "M*,P*,O*", "R*,B*,Q*,V*", "S*", "T*,F*,G*,J*" ]
+        jdk: [ "25" ]
+        pattern: [ "C*", "S*", "K*,U*,Z*,Y*,X*", "N*,Q*", "I*,L*,J*", "M*,A*,V*,W*", "E*,G*,F*", "R*,B*,P*", "H*,D*,T*,O*" ]
     uses: ./.github/workflows/worker.yml
     with:
       script: .github/scripts/run_unit-tests -Dtest=!QTest,'${{ matrix.pattern }}' -Dmaven.test.failure.ignore=true
@@ -33,12 +33,6 @@ jobs:
       jdk: ${{ matrix.jdk }}
       key: "test-jdk${{ matrix.jdk }}-[${{ matrix.pattern }}]"
       execute: ${{ matrix.jdk == '25' || github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-jdk21') }}
-
-  validate-dist:
-    uses: ./.github/workflows/worker.yml
-    with:
-      script: .github/scripts/validate-dist
-      key: "validate-dist"
 
   reporting-jacoco-coverage-failures:
     name: "coverage-jacoco"

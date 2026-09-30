@@ -79,6 +79,9 @@ public class ExpressionTypeFactory implements TypeFactory<ExpressionType>
           return ExpressionType.DOUBLE_ARRAY;
         case LONG:
           return ExpressionType.LONG_ARRAY;
+        case ARRAY:
+        case COMPLEX:
+          break;
       }
     }
     return INTERNER.intern(new ExpressionType(ExprType.ARRAY, null, elementType));

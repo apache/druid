@@ -35,9 +35,9 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -62,7 +62,7 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
       new SerializablePairLongFloat(11111L, 233.5232f)
   };
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     floatLastAggregatorFactory = new FloatLastAggregatorFactory("billy", "nilly", null);
@@ -94,10 +94,10 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
 
-    Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(floats[0], result.rhs, 0.0001);
-    Assert.assertEquals((long) floats[0], agg.getLong());
-    Assert.assertEquals(floats[0], agg.getFloat(), 0.0001);
+    Assertions.assertEquals(times[0], result.lhs.longValue());
+    Assertions.assertEquals(floats[0], result.rhs, 0.0001);
+    Assertions.assertEquals((long) floats[0], agg.getLong());
+    Assertions.assertEquals(floats[0], agg.getFloat(), 0.0001);
   }
 
   @Test
@@ -112,10 +112,10 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
 
-    Assert.assertEquals(customTimes[1], result.lhs.longValue());
-    Assert.assertEquals(floats[1], result.rhs, 0.0001);
-    Assert.assertEquals((long) floats[1], agg.getLong());
-    Assert.assertEquals(floats[1], agg.getFloat(), 0.0001);
+    Assertions.assertEquals(customTimes[1], result.lhs.longValue());
+    Assertions.assertEquals(floats[1], result.rhs, 0.0001);
+    Assertions.assertEquals((long) floats[1], agg.getLong());
+    Assertions.assertEquals(floats[1], agg.getFloat(), 0.0001);
   }
 
   @Test
@@ -134,10 +134,10 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
 
-    Assert.assertEquals(times[0], result.lhs.longValue());
-    Assert.assertEquals(floats[0], result.rhs, 0.0001);
-    Assert.assertEquals((long) floats[0], agg.getLong(buffer, 0));
-    Assert.assertEquals(floats[0], agg.getFloat(buffer, 0), 0.0001);
+    Assertions.assertEquals(times[0], result.lhs.longValue());
+    Assertions.assertEquals(floats[0], result.rhs, 0.0001);
+    Assertions.assertEquals((long) floats[0], agg.getLong(buffer, 0));
+    Assertions.assertEquals(floats[0], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -156,10 +156,10 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
 
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
 
-    Assert.assertEquals(customTimes[1], result.lhs.longValue());
-    Assert.assertEquals(floats[1], result.rhs, 0.0001);
-    Assert.assertEquals((long) floats[1], agg.getLong(buffer, 0));
-    Assert.assertEquals(floats[1], agg.getFloat(buffer, 0), 0.0001);
+    Assertions.assertEquals(customTimes[1], result.lhs.longValue());
+    Assertions.assertEquals(floats[1], result.rhs, 0.0001);
+    Assertions.assertEquals((long) floats[1], agg.getLong(buffer, 0));
+    Assertions.assertEquals(floats[1], agg.getFloat(buffer, 0), 0.0001);
   }
 
   @Test
@@ -167,7 +167,7 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
   {
     SerializablePairLongFloat pair1 = new SerializablePairLongFloat(1467225000L, 3.621f);
     SerializablePairLongFloat pair2 = new SerializablePairLongFloat(1467240000L, 785.4f);
-    Assert.assertEquals(pair2, floatLastAggregatorFactory.combine(pair1, pair2));
+    Assertions.assertEquals(pair2, floatLastAggregatorFactory.combine(pair1, pair2));
   }
 
   @Test
@@ -176,10 +176,10 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     SerializablePairLongFloat pair1 = new SerializablePairLongFloat(1467225000L, 3.621f);
     SerializablePairLongFloat pair2 = new SerializablePairLongFloat(1467240000L, null);
     Comparator comparator = floatLastAggregatorFactory.getComparator();
-    Assert.assertEquals(1, comparator.compare(pair1, pair2));
-    Assert.assertEquals(0, comparator.compare(pair1, pair1));
-    Assert.assertEquals(0, comparator.compare(pair2, pair2));
-    Assert.assertEquals(-1, comparator.compare(pair2, pair1));
+    Assertions.assertEquals(1, comparator.compare(pair1, pair2));
+    Assertions.assertEquals(0, comparator.compare(pair1, pair1));
+    Assertions.assertEquals(0, comparator.compare(pair2, pair2));
+    Assertions.assertEquals(-1, comparator.compare(pair2, pair1));
   }
 
   @Test
@@ -195,10 +195,10 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get();
     Pair<Long, Float> expected = (Pair<Long, Float>) pairs[2];
 
-    Assert.assertEquals(expected.lhs, result.lhs);
-    Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
-    Assert.assertEquals(expected.rhs.longValue(), agg.getLong());
-    Assert.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
+    Assertions.assertEquals(expected.lhs, result.lhs);
+    Assertions.assertEquals(expected.rhs, result.rhs, 0.0001);
+    Assertions.assertEquals(expected.rhs.longValue(), agg.getLong());
+    Assertions.assertEquals(expected.rhs, agg.getFloat(), 0.0001);
   }
 
   @Test
@@ -218,10 +218,10 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     Pair<Long, Float> result = (Pair<Long, Float>) agg.get(buffer, 0);
     Pair<Long, Float> expected = (Pair<Long, Float>) pairs[2];
 
-    Assert.assertEquals(expected.lhs, result.lhs);
-    Assert.assertEquals(expected.rhs, result.rhs, 0.0001);
-    Assert.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
-    Assert.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 0.0001);
+    Assertions.assertEquals(expected.lhs, result.lhs);
+    Assertions.assertEquals(expected.rhs, result.rhs, 0.0001);
+    Assertions.assertEquals(expected.rhs.longValue(), agg.getLong(buffer, 0));
+    Assertions.assertEquals(expected.rhs, agg.getFloat(buffer, 0), 0.0001);
   }
 
 
@@ -231,8 +231,8 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     DefaultObjectMapper mapper = new DefaultObjectMapper();
     String floatSpecJson = "{\"type\":\"floatLast\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
     AggregatorFactory deserialized = mapper.readValue(floatSpecJson, AggregatorFactory.class);
-    Assert.assertEquals(floatLastAggregatorFactory, deserialized);
-    Assert.assertArrayEquals(floatLastAggregatorFactory.getCacheKey(), deserialized.getCacheKey());
+    Assertions.assertEquals(floatLastAggregatorFactory, deserialized);
+    Assertions.assertArrayEquals(floatLastAggregatorFactory.getCacheKey(), deserialized.getCacheKey());
   }
 
   @Test
@@ -242,22 +242,22 @@ public class FloatLastAggregationTest extends InitializedNullHandlingTest
     AggregateCombiner floatLastAggregateCombiner = combiningAggFactory.makeAggregateCombiner();
     floatLastAggregateCombiner.reset(columnSelector);
 
-    Assert.assertEquals(pairs[0], floatLastAggregateCombiner.getObject());
+    Assertions.assertEquals(pairs[0], floatLastAggregateCombiner.getObject());
 
     columnSelector.increment();
     floatLastAggregateCombiner.fold(columnSelector);
-    Assert.assertEquals(pairs[1], floatLastAggregateCombiner.getObject());
+    Assertions.assertEquals(pairs[1], floatLastAggregateCombiner.getObject());
 
     columnSelector.increment();
     floatLastAggregateCombiner.fold(columnSelector);
-    Assert.assertEquals(pairs[2], floatLastAggregateCombiner.getObject());
+    Assertions.assertEquals(pairs[2], floatLastAggregateCombiner.getObject());
 
     columnSelector.increment();
     floatLastAggregateCombiner.fold(columnSelector);
-    Assert.assertEquals(pairs[2], floatLastAggregateCombiner.getObject());
+    Assertions.assertEquals(pairs[2], floatLastAggregateCombiner.getObject());
 
     floatLastAggregateCombiner.reset(columnSelector);
-    Assert.assertEquals(pairs[3], floatLastAggregateCombiner.getObject());
+    Assertions.assertEquals(pairs[3], floatLastAggregateCombiner.getObject());
   }
 
   private void aggregate(

@@ -27,7 +27,7 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-This topic describes the API endpoints to submit JSON-based [native queries](../querying/querying.md) to Apache Druid.
+This topic describes the API endpoints to submit JSON-based [native queries](../querying/querying.md) to Apache&circledR; Druid.
 
 In this topic, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 

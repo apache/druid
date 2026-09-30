@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
 
@@ -42,6 +43,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final DateTime maximumMessageTime;
   private final InputFormat inputFormat;
   private final Long refreshRejectionPeriodsInMinutes;
+  private final BoundedStreamConfig boundedStreamConfig;
 
   public SeekableStreamIndexTaskIOConfig(
       @Nullable final Integer taskGroupId, // can be null for backward compabitility
@@ -52,7 +54,8 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       @Nullable final DateTime minimumMessageTime,
       @Nullable final DateTime maximumMessageTime,
       @Nullable final InputFormat inputFormat,
-      @Nullable final Long refreshRejectionPeriodsInMinutes // can be null for backward compabitility
+      @Nullable final Long refreshRejectionPeriodsInMinutes, // can be null for backward compabitility
+      @Nullable final BoundedStreamConfig boundedStreamConfig
   )
   {
     this.taskGroupId = taskGroupId;
@@ -64,6 +67,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     this.maximumMessageTime = maximumMessageTime;
     this.inputFormat = inputFormat;
     this.refreshRejectionPeriodsInMinutes = refreshRejectionPeriodsInMinutes;
+    this.boundedStreamConfig = boundedStreamConfig;
 
     Preconditions.checkArgument(
         startSequenceNumbers.getStream().equals(endSequenceNumbers.getStream()),
@@ -142,5 +146,13 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   public Long getRefreshRejectionPeriodsInMinutes()
   {
     return refreshRejectionPeriodsInMinutes;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public BoundedStreamConfig getBoundedStreamConfig()
+  {
+    return boundedStreamConfig;
   }
 }

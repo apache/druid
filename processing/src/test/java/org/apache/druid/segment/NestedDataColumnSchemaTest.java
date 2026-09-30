@@ -83,7 +83,7 @@ public class NestedDataColumnSchemaTest
   {
     final String there = "{\"type\":\"json\", \"name\":\"test\"}";
     NestedDataColumnSchema andBack = MAPPER.readValue(there, NestedDataColumnSchema.class);
-    Assertions.assertEquals(new NestedDataColumnSchema("test", 5), andBack);
+    Assertions.assertEquals(new NestedDataColumnSchema("test", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION), andBack);
   }
 
   @Test

@@ -79,9 +79,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -91,7 +91,7 @@ import java.util.List;
 
 public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     AggregatorsModule.registerComplexMetricsAndSerde();
@@ -136,8 +136,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -197,8 +197,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -260,8 +260,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -345,8 +345,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -437,8 +437,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -501,8 +501,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -556,7 +556,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    Assertions.assertEquals(result1, fromCacheResult);
   }
 
   @Test
@@ -608,7 +608,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    Assertions.assertEquals(result1, fromCacheResult);
   }
 
   @Test
@@ -639,58 +639,58 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10.0};
     final ResultRow resultRow = ResultRow.of(rowObjects);
 
-    Assert.assertArrayEquals(
-        "standard mapper reads ResultRows",
+    Assertions.assertArrayEquals(
         rowObjects,
         objectMapper.readValue(
             arraysObjectMapper.writeValueAsBytes(resultRow),
             Object[].class
-        )
+        ),
+        "standard mapper reads ResultRows"
     );
 
-    Assert.assertEquals(
-        "standard mapper reads MapBasedRows",
+    Assertions.assertEquals(
         resultRow.toMapBasedRow(query),
         objectMapper.readValue(
             mapsObjectMapper.writeValueAsBytes(resultRow),
             Row.class
-        )
+        ),
+        "standard mapper reads MapBasedRows"
     );
 
-    Assert.assertEquals(
-        "array mapper reads arrays",
+    Assertions.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
             arraysObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "array mapper reads arrays"
     );
 
-    Assert.assertEquals(
-        "array mapper reads arrays (2)",
+    Assertions.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
             StringUtils.format("[%s, \"foo\", 100, 10.0]", DateTimes.of("2000").getMillis()),
             ResultRow.class
-        )
+        ),
+        "array mapper reads arrays (2)"
     );
 
-    Assert.assertEquals(
-        "map mapper reads arrays",
+    Assertions.assertEquals(
         resultRow,
         mapsObjectMapper.readValue(
             arraysObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "map mapper reads arrays"
     );
 
-    Assert.assertEquals(
-        "map mapper reads maps",
+    Assertions.assertEquals(
         resultRow,
         mapsObjectMapper.readValue(
             mapsObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "map mapper reads maps"
     );
   }
 
@@ -738,40 +738,40 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     // There are no tests with the standard mapper since it cannot convert the generic deserialized type for Pair class
     // into the Pair class
 
-    Assert.assertEquals(
-        "array mapper reads arrays",
+    Assertions.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
             arraysObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "array mapper reads arrays"
     );
 
-    Assert.assertEquals(
-        "array mapper reads arrays (2)",
+    Assertions.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
             StringUtils.format("[%s, \"foo\", {\"lhs\":1,\"rhs\":\"test\"}, 100, 10.0]", DateTimes.of("2000").getMillis()),
             ResultRow.class
-        )
+        ),
+        "array mapper reads arrays (2)"
     );
 
-    Assert.assertEquals(
-        "map mapper reads arrays",
+    Assertions.assertEquals(
         resultRow,
         mapsObjectMapper.readValue(
             arraysObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "map mapper reads arrays"
     );
 
-    Assert.assertEquals(
-        "map mapper reads maps",
+    Assertions.assertEquals(
         resultRow,
         mapsObjectMapper.readValue(
             mapsObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "map mapper reads maps"
     );
   }
 
@@ -817,7 +817,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final ResultRow resultRow = ResultRow.of(rowObjects);
 
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
             StringUtils.format("[%s, \"foo\", 100, 10.0]", DateTimes.of("2000").getMillis()),
@@ -825,40 +825,40 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertArrayEquals(
-        "standard mapper reads ResultRows",
+    Assertions.assertArrayEquals(
         rowObjects,
         objectMapper.readValue(
             arraysObjectMapper.writeValueAsBytes(resultRow),
             Object[].class
-        )
+        ),
+        "standard mapper reads ResultRows"
     );
 
-    Assert.assertEquals(
-        "standard mapper reads MapBasedRows",
+    Assertions.assertEquals(
         resultRow.toMapBasedRow(query),
         objectMapper.readValue(
             mapsObjectMapper.writeValueAsBytes(resultRow),
             Row.class
-        )
+        ),
+        "standard mapper reads MapBasedRows"
     );
 
-    Assert.assertEquals(
-        "array mapper reads arrays",
+    Assertions.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
             arraysObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "array mapper reads arrays"
     );
 
-    Assert.assertEquals(
-        "array mapper reads maps",
+    Assertions.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
             mapsObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "array mapper reads maps"
     );
 
     TestHelper.assertRow(
@@ -877,22 +877,22 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
-        "map mapper reads arrays",
+    Assertions.assertEquals(
         resultRow,
         mapsObjectMapper.readValue(
             arraysObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "map mapper reads arrays"
     );
 
-    Assert.assertEquals(
-        "map mapper reads maps",
+    Assertions.assertEquals(
         resultRow,
         mapsObjectMapper.readValue(
             mapsObjectMapper.writeValueAsBytes(resultRow),
             ResultRow.class
-        )
+        ),
+        "map mapper reads maps"
     );
   }
 
@@ -908,7 +908,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.CONSTANT))
         .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .add("dim", ColumnType.STRING)
                     .add("rows", ColumnType.LONG)
@@ -932,7 +932,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.CONSTANT))
         .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("dim", ColumnType.STRING)
@@ -1006,7 +1006,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @Test
   public void testCanPerformSubqueryOnGroupBys()
   {
-    Assert.assertTrue(
+    Assertions.assertTrue(
         new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             new GroupByQuery.Builder()
                 .setDataSource(
@@ -1028,7 +1028,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @Test
   public void testCanPerformSubqueryOnTimeseries()
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -1042,7 +1042,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @Test
   public void testCanPerformSubqueryOnGroupByOfTimeseries()
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             new GroupByQuery.Builder()
                 .setDataSource(
@@ -1137,7 +1137,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    Assertions.assertEquals(result1, fromCacheResult);
 
     // test timestamps that result in integer size millis
     final ResultRow result2 = ResultRow.of(123L, dimValue, 1, dimValue, 10, 20);
@@ -1163,7 +1163,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     );
 
     ResultRow fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
-    Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
+    Assertions.assertEquals(typeAdjustedResult2, fromResultCacheResult);
   }
 
   @Test
@@ -1216,8 +1216,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertFalse(Arrays.equals(
         strategy1.computeCacheKey(query1),
         strategy2.computeCacheKey(queryNoLimit)
     ));
@@ -1253,8 +1253,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertTrue(
+    Assertions.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    Assertions.assertTrue(
         Arrays.equals(
             strategy1.computeResultLevelCacheKey(query1),
             strategy2.computeResultLevelCacheKey(query2)
@@ -1309,17 +1309,17 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query, mapper);
-    Assert.assertTrue(
-        "result level cache on broker server for GroupByStrategyV2 should be enabled",
-        cacheStrategy.isCacheable(query, false, false)
+    Assertions.assertTrue(
+        cacheStrategy.isCacheable(query, false, false),
+        "result level cache on broker server for GroupByStrategyV2 should be enabled"
     );
-    Assert.assertFalse(
-        "segment level cache on broker server for GroupByStrategyV2 should be disabled",
-        cacheStrategy.isCacheable(query, false, true)
+    Assertions.assertFalse(
+        cacheStrategy.isCacheable(query, false, true),
+        "segment level cache on broker server for GroupByStrategyV2 should be disabled"
     );
-    Assert.assertTrue(
-        "segment level cache on data server for GroupByStrategyV2 should be enabled",
-        cacheStrategy.isCacheable(query, true, true)
+    Assertions.assertTrue(
+        cacheStrategy.isCacheable(query, true, true),
+        "segment level cache on data server for GroupByStrategyV2 should be enabled"
     );
   }
 }

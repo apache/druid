@@ -23,11 +23,13 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -75,6 +77,14 @@ public class ServerHolder implements Comparable<ServerHolder>
    * Do not remove entries on load/drop success or failure during the run.
    */
   private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
+
+  /**
+   * Tracks the {@link PartialLoadProfile} for in-flight load operations on this server. Populated from the peon's
+   * existing queue at construction time and updated by {@link #startOperation(SegmentAction, DataSegment,
+   * PartialLoadProfile)} when a fresh partial load is queued during the run. Cleared when the corresponding queued
+   * operation is canceled. Read by the partial-load reconciler to classify in-flight replicas as matching or stale.
+   */
+  private final Map<DataSegment, PartialLoadProfile> inFlightProfiles = new HashMap<>();
 
   private final SegmentCountsPerInterval projectedSegmentCounts = new SegmentCountsPerInterval();
 
@@ -157,7 +167,10 @@ public class ServerHolder implements Comparable<ServerHolder>
       }
 
       final SegmentAction action = holder.getAction();
-      addToQueuedSegments(holder.getSegment(), simplify(action));
+      addToQueuedSegments(holder.getSegment(), action);
+      if (holder.getProfile() != null) {
+        inFlightProfiles.put(holder.getSegment(), holder.getProfile());
+      }
 
       if (action == SegmentAction.MOVE_TO) {
         movingSegmentCount.incrementAndGet();
@@ -210,7 +223,9 @@ public class ServerHolder implements Comparable<ServerHolder>
    * The total size:
    * <ol>
    * <li>INCLUDES segments loaded on this server</li>
-   * <li>INCLUDES segments loading on this server (actions: LOAD/REPLICATE)</li>
+   * <li>INCLUDES segments loading on this server (actions: LOAD/REPLICATE). A load of a segment this server already
+   * serves is an in-place reload, and is counted at its {@link #inPlaceReloadSizeDelta} rather than its full size, so
+   * that the bytes already on disk are not counted twice</li>
    * <li>INCLUDES segments moving to this server (action: MOVE_TO)</li>
    * <li>INCLUDES segments moving from this server (action: MOVE_FROM). This is
    * because these segments have only been <i>marked</i> for drop. We include
@@ -285,7 +300,6 @@ public class ServerHolder implements Comparable<ServerHolder>
    * <ul>
    * <li>Contains segments present in the queue when the current coordinator run started.</li>
    * <li>Contains segments added to the queue during the current run.</li>
-   * <li>Maps replicating segments to LOAD rather than REPLICATE for simplicity.</li>
    * <li>Does not contain segments whose actions were cancelled.</li>
    * </ul>
    */
@@ -337,7 +351,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   {
     final List<DataSegment> loadingSegments = new ArrayList<>();
     queuedSegments.forEach((segment, action) -> {
-      if (action == SegmentAction.LOAD) {
+      if (action == SegmentAction.LOAD || action == SegmentAction.REPLICATE) {
         loadingSegments.add(segment);
       }
     });
@@ -363,7 +377,8 @@ public class ServerHolder implements Comparable<ServerHolder>
 
   public boolean isLoadingSegment(DataSegment segment)
   {
-    return getActionOnSegment(segment) == SegmentAction.LOAD;
+    final SegmentAction action = getActionOnSegment(segment);
+    return action == SegmentAction.LOAD || action == SegmentAction.REPLICATE;
   }
 
   public boolean isDroppingSegment(DataSegment segment)
@@ -386,7 +401,29 @@ public class ServerHolder implements Comparable<ServerHolder>
     return queuedSegments.size();
   }
 
+  /**
+   * Convenience that delegates to {@link #startOperation(SegmentAction, DataSegment, PartialLoadProfile)} with no
+   * partial-load profile, for the regular full-load / drop / move paths that don't carry one.
+   */
   public boolean startOperation(SegmentAction action, DataSegment segment)
+  {
+    return startOperation(action, segment, null);
+  }
+
+  /**
+   * Records the start of {@code action} on {@code segment} on this server for the current coordinator run.
+   * <p>
+   * If the segment already has a queued action, returns {@code false} and does nothing (the caller is expected to
+   * treat this as a no-op / collision). Otherwise: marks the segment as queued, increments the per-run assignment
+   * counter for load actions (so {@link #isLoadQueueFull()} converges), and updates projected segment counts and
+   * size accounting via {@link #addToQueuedSegments}.
+   * <p>
+   * When {@code profile} is non-null, the {@link PartialLoadProfile} is stashed so the partial-load reconciler can
+   * read the in-flight fingerprint back during the same coordinator run via {@link #getInFlightProfile(DataSegment)}.
+   * The profile is cleared on {@link #cancelOperation}; it stays put on success/failure of the queued action so the
+   * inventory's eventual announcement (with realized fingerprint and loadedBytes) is what overwrites it.
+   */
+  public boolean startOperation(SegmentAction action, DataSegment segment, @Nullable PartialLoadProfile profile)
   {
     if (queuedSegments.containsKey(segment)) {
       return false;
@@ -396,7 +433,10 @@ public class ServerHolder implements Comparable<ServerHolder>
       ++totalAssignmentsInRun;
     }
 
-    addToQueuedSegments(segment, simplify(action));
+    addToQueuedSegments(segment, action);
+    if (profile != null) {
+      inFlightProfiles.put(segment, profile);
+    }
     return true;
   }
 
@@ -404,7 +444,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   {
     // Cancel only if the action is currently in queue
     final SegmentAction queuedAction = queuedSegments.get(segment);
-    if (queuedAction != simplify(action)) {
+    if (queuedAction != action) {
       return false;
     }
 
@@ -412,10 +452,52 @@ public class ServerHolder implements Comparable<ServerHolder>
     // MOVE_FROM operations are not sent to the peon, so they can be considered cancelled
     if (queuedAction == SegmentAction.MOVE_FROM || peon.cancelOperation(segment)) {
       removeFromQueuedSegments(segment, queuedAction);
+      inFlightProfiles.remove(segment);
       return true;
     } else {
       return false;
     }
+  }
+
+  /**
+   * Cancels a {@link SegmentAction#REPLICATE} or {@link SegmentAction#LOAD} if
+   * it is currently being performed on the given segment.
+   *
+   * @return true if the operation was cancelled successfully.
+   */
+  public boolean cancelLoad(DataSegment segment)
+  {
+    return cancelOperation(SegmentAction.REPLICATE, segment)
+           || cancelOperation(SegmentAction.LOAD, segment);
+  }
+
+  /**
+   * Returns the {@link PartialLoadProfile} for an in-flight load of {@code segment} on this server, or {@code null}
+   * if there's no in-flight load or the in-flight load is a regular full-load (no profile). Used by the partial-load
+   * reconciler to classify in-flight replicas as matching or stale relative to the current rule's fingerprint.
+   */
+  @Nullable
+  public PartialLoadProfile getInFlightProfile(DataSegment segment)
+  {
+    return inFlightProfiles.get(segment);
+  }
+
+  /**
+   * The {@link PartialLoadProfile} this server is expected to hold {@code segment} under once its queued operations
+   * finish: the profile of an in-flight load if one is queued, else the profile announced for the loaded replica.
+   * Returns null when the replica is (or is becoming) a regular full load, including an in-flight load that carries
+   * no profile.
+   * <p>
+   * Read this before {@link #cancelOperation}, which clears the in-flight profile.
+   */
+  @Nullable
+  public PartialLoadProfile getProjectedProfile(DataSegment segment)
+  {
+    final SegmentAction action = getActionOnSegment(segment);
+    if (action != null && action.isLoad()) {
+      return getInFlightProfile(segment);
+    }
+    return server.getPartialLoadProfile(segment.getId());
   }
 
   private boolean hasSegmentLoaded(SegmentId segmentId)
@@ -429,19 +511,18 @@ public class ServerHolder implements Comparable<ServerHolder>
            || server.getType() == ServerType.INDEXER_EXECUTOR;
   }
 
-  private SegmentAction simplify(SegmentAction action)
-  {
-    return action == SegmentAction.REPLICATE ? SegmentAction.LOAD : action;
-  }
-
   private void addToQueuedSegments(DataSegment segment, SegmentAction action)
   {
     queuedSegments.put(segment, action);
 
     // Add to projected if load is started, remove from projected if drop has started
     if (action.isLoad()) {
-      projectedSegmentCounts.addSegment(segment);
-      sizeOfLoadingSegments += segment.getSize();
+      if (hasSegmentLoaded(segment.getId())) {
+        sizeOfLoadingSegments += inPlaceReloadSizeDelta(segment);
+      } else {
+        projectedSegmentCounts.addSegment(segment);
+        sizeOfLoadingSegments += segment.getSize();
+      }
     } else {
       projectedSegmentCounts.removeSegment(segment);
       if (action == SegmentAction.DROP) {
@@ -457,14 +538,33 @@ public class ServerHolder implements Comparable<ServerHolder>
     queuedSegments.remove(segment);
 
     if (action.isLoad()) {
-      projectedSegmentCounts.removeSegment(segment);
-      sizeOfLoadingSegments -= segment.getSize();
+      if (hasSegmentLoaded(segment.getId())) {
+        sizeOfLoadingSegments -= inPlaceReloadSizeDelta(segment);
+      } else {
+        projectedSegmentCounts.removeSegment(segment);
+        sizeOfLoadingSegments -= segment.getSize();
+      }
     } else {
       projectedSegmentCounts.addSegment(segment);
       if (action == SegmentAction.DROP) {
         sizeOfDroppingSegments -= segment.getSize();
       }
     }
+  }
+
+  /**
+   * Upper bound of bytes an in-place reload of {@code segment} can still add to this server, i.e. a load queued on a
+   * server that is already serving it. This is an upper bound, not the exact delta, which the coordinator cannot know
+   * until the historical announces the footprint it realized.
+   * <p>
+   * Both the loaded set and the announced profile come from this run's immutable server snapshot, so the value is
+   * stable across the {@link #addToQueuedSegments} / {@link #removeFromQueuedSegments} pair for a canceled operation.
+   */
+  private long inPlaceReloadSizeDelta(DataSegment segment)
+  {
+    final PartialLoadProfile loaded = server.getPartialLoadProfile(segment.getId());
+    final Long loadedBytes = loaded == null ? null : loaded.loadedBytes();
+    return loadedBytes == null ? 0L : Math.max(0L, segment.getSize() - loadedBytes);
   }
 
   @Override

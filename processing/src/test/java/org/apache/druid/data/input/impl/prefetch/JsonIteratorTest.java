@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,13 +42,16 @@ import java.util.Map;
 
 public class JsonIteratorTest
 {
+  @TempDir
+  public File temporaryFolder;
+
   @Test
   public void testSerde() throws IOException
   {
     final ObjectMapper mapper = new ObjectMapper(new SmileFactory());
-    List<Map<String, Object>> expectedList = ImmutableList.of(ImmutableMap.of("key1", "value1", "key2", 2));
-    File testFile = File.createTempFile("testfile", "");
-    TypeReference<Map<String, Object>> type = new TypeReference<>() {};
+    final List<Map<String, Object>> expectedList = ImmutableList.of(ImmutableMap.of("key1", "value1", "key2", 2));
+    final File testFile = new File(temporaryFolder, "testfile");
+    final TypeReference<Map<String, Object>> type = new TypeReference<>() {};
     try (FileOutputStream fos = new FileOutputStream(testFile)) {
       final JsonGenerator jg = mapper.getFactory().createGenerator(fos);
       final SerializerProvider serializers = mapper.getSerializerProviderInstance();
@@ -59,9 +63,13 @@ public class JsonIteratorTest
       jg.close();
     }
 
-    JsonIterator<Map<String, Object>> testJsonIterator = new JsonIterator<>(type, new FileInputStream(testFile), () -> {
-    }, mapper);
-    List<Map<String, Object>> actualList = new ArrayList<>();
+    final JsonIterator<Map<String, Object>> testJsonIterator = new JsonIterator<>(
+        type,
+        new FileInputStream(testFile),
+        () -> {},
+        mapper
+    );
+    final List<Map<String, Object>> actualList = new ArrayList<>();
     while (testJsonIterator.hasNext()) {
       actualList.add(testJsonIterator.next());
     }

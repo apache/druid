@@ -22,8 +22,8 @@ package org.apache.druid.server.broker;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class PerSegmentTimeoutConfigTest
 {
@@ -34,15 +34,15 @@ public class PerSegmentTimeoutConfigTest
   {
     String json = "{\"perSegmentTimeoutMs\": 5000, \"monitorOnly\": true}";
     PerSegmentTimeoutConfig config = mapper.readValue(json, PerSegmentTimeoutConfig.class);
-    Assert.assertEquals(5000L, config.getPerSegmentTimeoutMs());
-    Assert.assertTrue(config.isMonitorOnly());
+    Assertions.assertEquals(5000L, config.getPerSegmentTimeoutMs());
+    Assertions.assertTrue(config.isMonitorOnly());
 
     // Round-trip
     PerSegmentTimeoutConfig roundTripped = mapper.readValue(
         mapper.writeValueAsString(config),
         PerSegmentTimeoutConfig.class
     );
-    Assert.assertEquals(config, roundTripped);
+    Assertions.assertEquals(config, roundTripped);
   }
 
   @Test
@@ -50,14 +50,14 @@ public class PerSegmentTimeoutConfigTest
   {
     String json = "{\"perSegmentTimeoutMs\": 3000}";
     PerSegmentTimeoutConfig config = mapper.readValue(json, PerSegmentTimeoutConfig.class);
-    Assert.assertEquals(3000L, config.getPerSegmentTimeoutMs());
-    Assert.assertFalse(config.isMonitorOnly());
+    Assertions.assertEquals(3000L, config.getPerSegmentTimeoutMs());
+    Assertions.assertFalse(config.isMonitorOnly());
   }
 
   @Test
   public void testRejectsZeroTimeout()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new PerSegmentTimeoutConfig(0, null)
     );
@@ -66,7 +66,7 @@ public class PerSegmentTimeoutConfigTest
   @Test
   public void testRejectsNegativeTimeout()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new PerSegmentTimeoutConfig(-1, null)
     );

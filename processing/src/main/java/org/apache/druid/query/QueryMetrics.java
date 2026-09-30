@@ -329,7 +329,16 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportQueryBytes(long byteCount);
 
   /**
-   * Registers "segments queried count" metric.
+   * Registers the {@code query/segments/count} metric, the number of segments touched by the query.
+   *
+   * Emitted once per query. The meaning of the metric depends on the emitting process:
+   * <ul>
+   *   <li>On the Broker, it is the number of segments in the planned query distribution (a snapshot-based
+   *       count that may double-count segments that moved and were re-fetched).</li>
+   *   <li>On a data node (Historical, Peon/realtime), it is the number of segments that node actually scanned
+   *       for the query.</li>
+   * </ul>
+   * The two are disambiguated by the emitting service/host, not by the metric name.
    */
   QueryMetrics<QueryType> reportQueriedSegmentCount(long segmentCount);
 

@@ -50,12 +50,15 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME
       = "java.sql.SQLTransientException";
   private static final String MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
+      = "org.mariadb.jdbc.export.MaxAllowedPacketException";
+  private static final String LEGACY_MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
       = "org.mariadb.jdbc.internal.util.exceptions.MaxAllowedPacketException";
   private static final String MYSQL_PACKET_EXCEPTION_CLASS_NAME
       = "com.mysql.jdbc.PacketTooBigException";
 
   @Nullable
   private final Class<?> myTransientExceptionClass;
+  private final boolean mariaDbDriver;
   private final DBI dbi;
 
   @Inject
@@ -70,6 +73,7 @@ public class MySQLConnector extends SQLMetadataConnector
     super(config, dbTables, centralizedDatasourceSchemaConfig);
     log.info("Loading MySQL metadata connector driver %s", driverConfig.getDriverClassName());
     tryLoadDriverClass(driverConfig.getDriverClassName(), true);
+    mariaDbDriver = MySQLConnectorDriverConfig.MARIA_DB_DRIVER.equals(driverConfig.getDriverClassName());
 
     if (driverConfig.getDriverClassName().contains("mysql")) {
       myTransientExceptionClass = tryLoadDriverClass(MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME, false);
@@ -180,6 +184,13 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   public int getStreamingFetchSize()
   {
+    if (mariaDbDriver) {
+      // MariaDB Connector/J 2.7.3 had a compatibility branch in
+      // Statement.setFetchSize(Integer.MIN_VALUE) that stored fetchSize=1, while 3.x requires non-negative values.
+      // Source: https://github.com/mariadb-corporation/mariadb-connector-j/blob/2.7.3/src/main/java/org/mariadb/jdbc/MariaDbStatement.java#L1296-L1305
+      return 1;
+    }
+
     // this is MySQL's way of indicating you want results streamed back
     // see http://dev.mysql.com/doc/connector-j/5.1/en/connector-j-reference-implementation-notes.html
     return Integer.MIN_VALUE;
@@ -189,6 +200,13 @@ public class MySQLConnector extends SQLMetadataConnector
   public String limitClause(int limit)
   {
     return String.format(Locale.ENGLISH, "LIMIT %d", limit);
+  }
+
+  @Override
+  protected String getDropIndexStatement(String indexName, String tableName)
+  {
+    // MySQL requires the target table in a DROP INDEX statement.
+    return StringUtils.format("DROP INDEX %s ON %s", indexName, tableName);
   }
 
   @Override
@@ -234,6 +252,7 @@ public class MySQLConnector extends SQLMetadataConnector
 
     final String className = t.getClass().getName();
     return MARIA_DB_PACKET_EXCEPTION_CLASS_NAME.equals(className)
+           || LEGACY_MARIA_DB_PACKET_EXCEPTION_CLASS_NAME.equals(className)
            || MYSQL_PACKET_EXCEPTION_CLASS_NAME.equals(className)
            || isRootCausePacketTooBigException(t.getCause());
   }

@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class S3InputSourceConfigTest
 {
@@ -40,7 +40,7 @@ public class S3InputSourceConfigTest
         new DefaultPasswordProvider("the-secret-token")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         config,
         mapper.readValue(mapper.writeValueAsString(config), S3InputSourceConfig.class)
     );
@@ -58,7 +58,7 @@ public class S3InputSourceConfigTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         config,
         mapper.readValue(mapper.writeValueAsString(config), S3InputSourceConfig.class)
     );

@@ -33,8 +33,8 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFac
 import org.apache.druid.query.groupby.epinephelinae.Grouper;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.query.groupby.epinephelinae.IntKey;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -80,19 +80,19 @@ public class BufferHashGrouperUsingSketchMergeAggregatorFactoryTest
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("sketch", sketchHolder)));
 
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk(), String.valueOf(i));
       }
 
       updateSketch.update(3);
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("sketch", sketchHolder)));
 
       for (int i = 0; i < expectedMaxSize; i++) {
-        Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk(), String.valueOf(i));
       }
 
       Object[] holders = Lists.newArrayList(grouper.iterator(true)).get(0).getValues();
 
-      Assert.assertEquals(2.0d, ((SketchHolder) holders[0]).getEstimate(), 0);
+      Assertions.assertEquals(2.0d, ((SketchHolder) holders[0]).getEstimate(), 0);
     }
     finally {
       grouper.close();

@@ -747,17 +747,15 @@ public class ApproximateHistogram
 
     // if there are values below the lower limit, fill in array position 1
     // else array position 0
-    while (j != leftBinCount || k != rightBinCount) {
+    if (j != leftBinCount || k != rightBinCount) {
       if (j != leftBinCount && (k == rightBinCount || leftPositions[j] < rightPositions[k])) {
         mergedPositions[pos] = leftPositions[j];
         mergedBins[pos] = leftBins[j];
         ++j;
-        break;
       } else {
         mergedPositions[pos] = rightPositions[k];
         mergedBins[pos] = rightBins[k];
         ++k;
-        break;
       }
     }
 

@@ -20,10 +20,21 @@
 package org.apache.druid.msq.guice;
 
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.msq.dart.Dart;
+import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.msq.input.InputSliceReaderProvider;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
+import org.apache.druid.msq.querykit.DataSourcePlanner;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+
+import java.lang.annotation.Annotation;
 
 /**
  * Utility class for MSQ-related Guice bindings.
@@ -49,5 +60,47 @@ public class MSQBinders
         new TypeLiteral<>() {},
         new TypeLiteral<>() {}
     );
+  }
+
+  /**
+   * Creates a MapBinder for {@link DataSourcePlanner} implementations, keyed on the exact {@link DataSource} class
+   * they plan. Extensions can use this to make their own {@link DataSource} types planable by {@link QueryKit}.
+   *
+   * Example usage:
+   * <pre>
+   * MSQBinders.dataSourcePlannerBinder(binder)
+   *     .addBinding(MyCustomDataSource.class)
+   *     .to(MyCustomDataSourcePlanner.class);
+   * </pre>
+   */
+  @SuppressWarnings("rawtypes")
+  public static MapBinder<Class<? extends DataSource>, DataSourcePlanner> dataSourcePlannerBinder(Binder binder)
+  {
+    return MapBinder.newMapBinder(binder, new TypeLiteral<>() {}, new TypeLiteral<>() {});
+  }
+
+  /**
+   * Bind an {@link InputSpecSlicerProvider} for use on a controller. The annotation should be
+   * {@link IndexingService} for providers used by tasks, or {@link Dart} for providers used by Dart.
+   */
+  public static Multibinder<InputSpecSlicerProvider> inputSpecSlicerProviderBinder(
+      Binder binder,
+      Class<? extends Annotation> annotation
+  )
+  {
+    return Multibinder.newSetBinder(binder, Key.get(InputSpecSlicerProvider.class, annotation));
+  }
+
+  /**
+   * Bind an {@link InputSliceReaderProvider} for use on a worker, to handle a particular {@link InputSlice}.
+   * The annotation should be {@link IndexingService} for providers used by tasks, or {@link Dart} for providers
+   * used by Dart.
+   */
+  public static Multibinder<InputSliceReaderProvider> inputSliceReaderProviderBinder(
+      Binder binder,
+      Class<? extends Annotation> annotation
+  )
+  {
+    return Multibinder.newSetBinder(binder, Key.get(InputSliceReaderProvider.class, annotation));
   }
 }

@@ -22,8 +22,8 @@ package org.apache.druid.query.aggregation.histogram;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class BucketsPostAggregatorTest
 {
@@ -39,11 +39,11 @@ public class BucketsPostAggregatorTest
         BucketsPostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertEquals(there.getBucketSize(), andBackAgain.getBucketSize(), 0.0001);
-    Assert.assertEquals(there.getOffset(), andBackAgain.getOffset(), 0.0001);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
-    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertEquals(there.getBucketSize(), andBackAgain.getBucketSize(), 0.0001);
+    Assertions.assertEquals(there.getOffset(), andBackAgain.getOffset(), 0.0001);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
@@ -52,7 +52,7 @@ public class BucketsPostAggregatorTest
     PostAggregator postAgg =
         new BucketsPostAggregator("buckets_post_aggregator", "test_field", 2f, 4f);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "BucketsPostAggregator{name='buckets_post_aggregator', fieldName='test_field', bucketSize=2.0, offset=4.0}",
         postAgg.toString()
     );

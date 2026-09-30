@@ -24,7 +24,7 @@ sidebar_label: Load from Apache Kafka
   -->
 
 
-This tutorial shows you how to load data into Apache Druid from a Kafka stream, using Druid's Kafka indexing service. 
+This tutorial shows you how to load data into Apache&circledR; Druid from a Kafka stream, using Druid's Kafka indexing service. 
 
 The tutorial guides you through the steps to load sample nested clickstream data from the [Koalas to the Max](https://www.koalastothemax.com/) game into a Kafka topic, then ingest the data into Druid.
 
@@ -34,7 +34,7 @@ Before you follow the steps in this tutorial, download Druid as described in the
 
 ## Download and start Kafka
 
-[Apache Kafka](http://kafka.apache.org/) is a high-throughput message bus that works well with Druid. For this tutorial, use Kafka 2.7.0. 
+[Apache Kafka&circledR;](http://kafka.apache.org/) is a high-throughput message bus that works well with Druid. For this tutorial, use Kafka 2.7.0. 
 
 1. To download Kafka, run the following commands in your terminal:
 
@@ -46,7 +46,7 @@ Before you follow the steps in this tutorial, download Druid as described in the
 2. If you're already running Kafka on the machine you're using for this tutorial, delete or rename the `kafka-logs` directory in `/tmp`.
    
 :::info
- Druid and Kafka both rely on [Apache ZooKeeper](https://zookeeper.apache.org/) to coordinate and manage services. Because Druid is already running, Kafka attaches to the Druid ZooKeeper instance when it starts up.<br />
+ Druid and Kafka both rely on [Apache&circledR; ZooKeeper](https://zookeeper.apache.org/) to coordinate and manage services. Because Druid is already running, Kafka attaches to the Druid ZooKeeper instance when it starts up.<br />
 
  In a production environment where you're running Druid and Kafka on different machines, [start the Kafka ZooKeeper](https://kafka.apache.org/quickstart) before you start the Kafka broker.
 :::

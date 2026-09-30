@@ -38,32 +38,31 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class ArrayOfDoublesSketchSetOpPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testConstructorNumArgs()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Illegal number of fields[0], must be > 1");
-    final PostAggregator there = new ArrayOfDoublesSketchSetOpPostAggregator(
-        "a",
-        "UNION",
-        null,
-        null,
-        ImmutableList.of()
-    );
+    Throwable exception = Assertions.assertThrows(IAE.class, () -> {
+      new ArrayOfDoublesSketchSetOpPostAggregator(
+          "a",
+          "UNION",
+          null,
+          null,
+          ImmutableList.of()
+      );
+    });
+    assertTrue(exception.getMessage().contains("Illegal number of fields[0], must be > 1"));
   }
   @Test
   public void testSerde() throws JsonProcessingException
@@ -82,8 +81,8 @@ public class ArrayOfDoublesSketchSetOpPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -97,7 +96,7 @@ public class ArrayOfDoublesSketchSetOpPostAggregatorTest
         Arrays.asList(new ConstantPostAggregator("", 0), new ConstantPostAggregator("", 0))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ArrayOfDoublesSketchSetOpPostAggregator{name='a', fields=[ConstantPostAggregator{name='', constantValue=0}, ConstantPostAggregator{name='', constantValue=0}], operation=UNION, nominalEntries=16, numberOfValues=1000}",
         postAgg.toString()
     );
@@ -157,8 +156,8 @@ public class ArrayOfDoublesSketchSetOpPostAggregatorTest
     ArrayOfDoublesSketch sketch2 = postAgg2.compute(ImmutableMap.of());
 
     // comparator compares value of each sketches estimate so should be identical
-    Assert.assertEquals(0, comparator.compare(sketch1, sketch2));
-    Assert.assertEquals(0, Double.compare(sketch1.getEstimate(), sketch2.getEstimate()));
+    Assertions.assertEquals(0, comparator.compare(sketch1, sketch2));
+    Assertions.assertEquals(0, Double.compare(sketch1.getEstimate(), sketch2.getEstimate()));
   }
 
   @Test
@@ -195,7 +194,7 @@ public class ArrayOfDoublesSketchSetOpPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

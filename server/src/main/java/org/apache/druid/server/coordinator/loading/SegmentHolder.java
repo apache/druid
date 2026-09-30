@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.guava.Comparators;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
@@ -43,6 +44,8 @@ import java.util.Objects;
  */
 public class SegmentHolder implements Comparable<SegmentHolder>
 {
+  private static final Logger log = new Logger(SegmentHolder.class);
+
   /**
    * Orders newest segments first (i.e. segments with most recent intervals).
    * <p>
@@ -76,6 +79,8 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   private final DataSegment segment;
   private final DataSegmentChangeRequest changeRequest;
   private final SegmentAction action;
+  @Nullable
+  private final PartialLoadProfile profile;
 
   private final Duration requestTimeout;
 
@@ -91,15 +96,51 @@ public class SegmentHolder implements Comparable<SegmentHolder>
       @Nullable LoadPeonCallback callback
   )
   {
+    this(segment, action, null, requestTimeout, callback);
+  }
+
+  /**
+   * Creates a holder for a load (or move) request that may carry a partial-load profile. When {@code profile} is
+   * non-null and the action is a load, the outbound {@link SegmentChangeRequestLoad}'s segment has its load spec
+   * replaced with {@link PartialLoadProfile#wrappedLoadSpec()} so the historical sees the partial-load wrapper. The
+   * holder's own {@link #segment} field stays the original so identity / equals / hashCode / callback resolution
+   * remain unchanged from the regular full-load path.
+   */
+  public SegmentHolder(
+      DataSegment segment,
+      SegmentAction action,
+      @Nullable PartialLoadProfile profile,
+      Duration requestTimeout,
+      @Nullable LoadPeonCallback callback
+  )
+  {
     this.segment = segment;
     this.action = action;
-    this.changeRequest = (action == SegmentAction.DROP)
-                         ? new SegmentChangeRequestDrop(segment)
-                         : new SegmentChangeRequestLoad(segment);
+    this.profile = profile;
+    if (action == SegmentAction.DROP) {
+      this.changeRequest = new SegmentChangeRequestDrop(segment);
+    } else if (profile != null) {
+      // Stamp the wrapped load-spec map onto the outbound segment so the historical receives the partial-load
+      // wrapper; identity (segment field) stays original so dedup in the load queue is unaffected.
+      this.changeRequest = new SegmentChangeRequestLoad(segment.withLoadSpec(profile.wrappedLoadSpec()));
+    } else {
+      this.changeRequest = new SegmentChangeRequestLoad(segment);
+    }
     if (callback != null) {
       callbacks.add(callback);
     }
     this.requestTimeout = requestTimeout;
+  }
+
+  /**
+   * Returns the {@link PartialLoadProfile} that this holder was created with, or {@code null} for regular full-load
+   * (or drop) requests. The fingerprint inside the profile is what an in-flight reconciler reads to decide whether
+   * an in-flight load satisfies the current rule.
+   */
+  @Nullable
+  public PartialLoadProfile getProfile()
+  {
+    return profile;
   }
 
   public DataSegment getSegment()

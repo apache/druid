@@ -188,9 +188,13 @@ Treat `__time` as a millisecond timestamp: the number of milliseconds since Jan 
 The `dimensionsSpec` is located in `dataSchema` → `dimensionsSpec` and is responsible for
 configuring [dimensions](./schema-model.md#dimensions).
 
-You can either manually specify the dimensions or take advantage of schema auto-discovery where you allow Druid to infer all or some of the schema for your data. This means that you don't have to explicitly specify your dimensions and their type. 
+You can either manually specify the dimensions or take advantage of type-aware schema auto-discovery where you allow Druid to infer all or some of the schema for your data. This means that you don't have to explicitly specify your dimensions and their type. 
 
-To use schema auto-discovery, set `useSchemaDiscovery` to `true`. 
+:::caution
+When using type-aware schema auto-discovery, Druid discovers the type for all dimensions unless you use the `dimensionExclusions` field to explicitly specify dimensions to ignore. This helps you control storage costs by preventing Druid from unintentionally ingesting dimensions.
+:::
+
+To use type-aware schema auto-discovery, set `useSchemaDiscovery` to `true`. 
 
 Alternatively, you can use the string-based schemaless ingestion where any discovered dimensions are treated as strings. To do so, leave `useSchemaDiscovery` set to `false` (default). Then, set the dimensions list to empty or set the  `includeAllDimensions` property to `true`.
 
@@ -439,7 +443,7 @@ Projections you define become a dimension for your datasource. To remove a proje
 
 ## `ioConfig`
 
-The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted
+The `ioConfig` influences how data is read from a source system, such as Apache Kafka&circledR;, Amazon S3, a mounted
 filesystem, or any other supported source system. The `inputFormat` property applies to all
 [ingestion method](./index.md#ingestion-methods).
 The rest of `ioConfig` is specific to each individual ingestion method.

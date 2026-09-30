@@ -25,6 +25,7 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
@@ -45,16 +46,15 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.UnusedSegmentKillerConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
@@ -63,11 +63,12 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * {@link OverlordDuty} to delete unused segments from metadata store and the
  * deep storage. Launches {@link EmbeddedKillTask}s to clean unused segments
- * of a single datasource-interval.
+ * of a single datasource-interval. These tasks use EXCLUSIVE locks by default.
  *
- * @see SegmentsMetadataManagerConfig to enable the cleanup
- * @see org.apache.druid.server.coordinator.duty.KillUnusedSegments for legacy
- * mode of killing unused segments via Coordinator duties
+ * @see SegmentsMetadataManagerConfig#getKillUnused() Config to enable the cleanup
+ * @see org.apache.druid.server.coordinator.duty.KillUnusedSegments
+ * Legacy mode of killing segments via Coordinator duties
+ * @see KillUnusedSegmentsTask Behaviour of kill task with concurrent locks
  */
 public class UnusedSegmentsKiller implements OverlordDuty
 {
@@ -75,9 +76,21 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
   private static final String TASK_ID_PREFIX = "overlord-issued";
 
+  /**
+   * Task type for embedded kill tasks. This type is not registered as a valid
+   * JSON subtype of {@code Task} since embedded kill tasks are never serialized.
+   */
+  public static final String TASK_TYPE_EMBEDDED_KILL = "kill_embedded";
+
   private static final int INITIAL_KILL_QUEUE_SIZE = 1000;
-  private static final int MAX_INTERVALS_TO_KILL_IN_DATASOURCE = 10_000;
-  private static final int MAX_SEGMENTS_TO_KILL_IN_INTERVAL = 1000;
+  private static final int MAX_INTERVALS_TO_KILL = 10_000;
+  private static final int MAX_SEGMENTS_TO_KILL_IN_BATCH = 1000;
+
+  /**
+   * Keep max segments to kill in a single kill task small so that the EXCLUSIVE
+   * lock on the underlying interval is not held for too long.
+   */
+  private static final int MAX_SEGMENTS_TO_KILL_IN_TASK = 10 * MAX_SEGMENTS_TO_KILL_IN_BATCH;
 
   /**
    * Period after which the queue is reset even if there are existing jobs in queue.
@@ -85,9 +98,11 @@ public class UnusedSegmentsKiller implements OverlordDuty
   private static final Duration QUEUE_RESET_PERIOD = Duration.standardDays(1);
 
   /**
-   * Duration for which a kill task is allowed to run.
+   * Duration for which a kill task is allowed to run. Assuming that processing
+   * each batch of segments takes around 30s, each kill task (upto 10 batches)
+   * should normally finish in 5 minutes.
    */
-  private static final Duration MAX_TASK_DURATION = Duration.standardMinutes(10);
+  private static final Duration MAX_TASK_DURATION = Duration.standardMinutes(30);
 
   private final ServiceEmitter emitter;
   private final GlobalTaskLockbox taskLockbox;
@@ -139,7 +154,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
       this.killQueue = new PriorityBlockingQueue<>(
           INITIAL_KILL_QUEUE_SIZE,
           Ordering.from(Comparators.intervalsByEndThenStart())
-                  .onResultOf(candidate -> candidate.interval)
+                  .onResultOf(KillCandidate::interval)
       );
     } else {
       this.exec = null;
@@ -193,7 +208,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
       // Schedule the first run after some delay since the segment metadata cache
       // might take time for the sync to finish if this Overlord has just started.
       final long periodMillis = killConfig.getDutyPeriod().toStandardDuration().getMillis();
-      final long initialDelayMillis = periodMillis / 4;
+      final long initialDelayMillis = periodMillis / 2;
 
       log.info(
           "Unused segment killer is enabled and will start after [%d] millis."
@@ -245,22 +260,53 @@ public class UnusedSegmentsKiller implements OverlordDuty
         return;
       }
 
-      final Set<String> dataSources = storageCoordinator.retrieveAllDatasourceNames();
-
       final Map<String, Integer> dataSourceToIntervalCounts = new HashMap<>();
-      for (String dataSource : dataSources) {
-        storageCoordinator.retrieveUnusedSegmentIntervals(dataSource, MAX_INTERVALS_TO_KILL_IN_DATASOURCE).forEach(
-            interval -> {
-              dataSourceToIntervalCounts.merge(dataSource, 1, Integer::sum);
-              killQueue.offer(new KillCandidate(dataSource, interval));
-            }
+
+      // Identify intervals with unused segments which are eligible for kill
+      final Map<DatasourceInterval, Integer> eligibleIntervals =
+          storageCoordinator.retrieveSomeUnusedSegmentIntervals(
+              killConfig.getMaxUpdatedTimeOfKillableSegment(),
+              MAX_INTERVALS_TO_KILL,
+              killConfig.getMaxSegmentsToKill()
+          );
+
+      // Add kill candidates to the queue
+      eligibleIntervals.forEach((entry, numEligibleSegments) -> {
+        dataSourceToIntervalCounts.merge(entry.dataSource(), 1, Integer::sum);
+
+        // Queue multiple candidates for the same datasource-interval if the
+        // number of segments to kill is large to avoid holding a lock for too long
+        int remainingSegmentsToKill = numEligibleSegments;
+        while (remainingSegmentsToKill > 0) {
+          int numSegmentsToKill
+              = Math.min(remainingSegmentsToKill, MAX_SEGMENTS_TO_KILL_IN_TASK);
+          remainingSegmentsToKill -= numSegmentsToKill;
+
+          // If only a few segments remain, add them to the same candidate
+          if (remainingSegmentsToKill < MAX_SEGMENTS_TO_KILL_IN_BATCH) {
+            numSegmentsToKill += remainingSegmentsToKill;
+            remainingSegmentsToKill = 0;
+          }
+
+          killQueue.offer(
+              new KillCandidate(entry.dataSource(), entry.interval(), numSegmentsToKill)
+          );
+        }
+
+        emitMetric(
+            Metric.ELIGIBLE_UNUSED_SEGMENTS,
+            numEligibleSegments,
+            Map.of(
+                DruidMetrics.DATASOURCE, entry.dataSource(),
+                DruidMetrics.INTERVAL, entry.interval().toString()
+            )
         );
-      }
+      });
 
       lastResetTime.set(DateTimes.nowUtc());
       log.info(
           "Queued [%d] kill jobs for [%d] datasources in [%d] millis.",
-          killQueue.size(), dataSources.size(), resetDuration.millisElapsed()
+          killQueue.size(), dataSourceToIntervalCounts.size(), resetDuration.millisElapsed()
       );
       dataSourceToIntervalCounts.forEach(
           (dataSource, intervalCount) -> emitMetric(
@@ -306,8 +352,8 @@ public class UnusedSegmentsKiller implements OverlordDuty
       final String taskId = IdUtils.newTaskId(
           TASK_ID_PREFIX,
           KillUnusedSegmentsTask.TYPE,
-          candidate.dataSource,
-          candidate.interval
+          candidate.dataSource(),
+          candidate.interval()
       );
 
       final Future<?> taskFuture = exec.submit(() -> {
@@ -331,7 +377,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     final EmbeddedKillTask killTask = new EmbeddedKillTask(
         taskId,
         candidate,
-        DateTimes.nowUtc().minus(killConfig.getBufferPeriod())
+        killConfig.getMaxUpdatedTimeOfKillableSegment()
     );
 
     final TaskActionClient taskActionClient = taskActionClientFactory.create(killTask);
@@ -339,6 +385,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, killTask);
+    metricBuilder.setDimension(DruidMetrics.INTERVAL, candidate.interval());
 
     try {
       taskLockbox.add(killTask);
@@ -361,7 +408,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     }
     finally {
       cleanupLocksSilently(killTask);
-      emitMetric(Metric.PROCESSED_KILL_JOBS, 1L, Map.of(DruidMetrics.DATASOURCE, candidate.dataSource));
+      emitMetric(Metric.PROCESSED_KILL_JOBS, 1L, Map.of(DruidMetrics.DATASOURCE, candidate.dataSource()));
     }
   }
 
@@ -387,16 +434,9 @@ public class UnusedSegmentsKiller implements OverlordDuty
   /**
    * Represents a single candidate interval that contains unused segments.
    */
-  private static class KillCandidate
+  private record KillCandidate(String dataSource, Interval interval, int numSegmentsToKill)
   {
-    private final String dataSource;
-    private final Interval interval;
 
-    private KillCandidate(String dataSource, Interval interval)
-    {
-      this.dataSource = dataSource;
-      this.interval = interval;
-    }
   }
 
   /**
@@ -436,34 +476,55 @@ public class UnusedSegmentsKiller implements OverlordDuty
     {
       super(
           taskId,
-          candidate.dataSource,
-          candidate.interval,
+          candidate.dataSource(),
+          candidate.interval(),
           null,
-          Map.of(Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY),
-          null,
-          null,
+          Map.of(
+              Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY,
+              Tasks.TASK_LOCK_TYPE, TaskLockType.KILL.name()
+          ),
+          MAX_SEGMENTS_TO_KILL_IN_BATCH,
+          candidate.numSegmentsToKill(),
           maxUpdatedTimeOfEligibleSegment
       );
     }
 
-    @Nullable
     @Override
-    protected Integer getNumTotalBatches()
+    public String getType()
     {
-      // Do everything in a single batch so that locks are not held for very long
-      return 1;
+      return TASK_TYPE_EMBEDDED_KILL;
     }
 
     @Override
-    protected List<DataSegment> fetchNextBatchOfUnusedSegments(TaskToolbox toolbox, int nextBatchSize)
+    protected List<DataSegmentPlus> fetchNextBatchOfUnusedSegments(TaskToolbox toolbox, int nextBatchSize)
     {
-      // Kill only 1000 segments in the batch so that locks are not held for very long
       return storageCoordinator.retrieveUnusedSegmentsWithExactInterval(
           getDataSource(),
           getInterval(),
           getMaxUsedStatusLastUpdatedTime(),
-          MAX_SEGMENTS_TO_KILL_IN_INTERVAL
+          nextBatchSize
       );
+    }
+
+    @Override
+    protected Map<String, String> fetchParentIdsForSegments(
+        TaskToolbox toolbox,
+        Map<String, DataSegmentPlus> unusedIdToSegmentPlus
+    )
+    {
+      // No need to make another DB call, the parent IDs have already been fetched
+      // in fetchNextBatchOfUnusedSegments
+      final Map<String, String> unusedSegmentIdToParentId = new HashMap<>();
+      for (DataSegmentPlus segment : unusedIdToSegmentPlus.values()) {
+        if (segment.getUpgradedFromSegmentId() != null) {
+          unusedSegmentIdToParentId.put(
+              segment.getDataSegment().getId().toString(),
+              segment.getUpgradedFromSegmentId()
+          );
+        }
+      }
+
+      return unusedSegmentIdToParentId;
     }
 
     @Override
@@ -482,5 +543,6 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
     public static final String SKIPPED_INTERVALS = "segment/kill/skippedIntervals/count";
     public static final String UNUSED_SEGMENT_INTERVALS = "segment/kill/unusedIntervals/count";
+    public static final String ELIGIBLE_UNUSED_SEGMENTS = "segment/kill/eligibleSegments/count";
   }
 }

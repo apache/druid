@@ -119,6 +119,34 @@ public class Comparators
     }
   };
 
+  private static final Comparator<Interval> INTERVAL_BY_START = new Comparator<>()
+  {
+    private final DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
+
+    @Override
+    public int compare(Interval lhs, Interval rhs)
+    {
+      if (lhs.getChronology().equals(rhs.getChronology())) {
+        return Long.compare(lhs.getStartMillis(), rhs.getStartMillis());
+      }
+      return dateTimeComp.compare(lhs.getStart(), rhs.getStart());
+    }
+  };
+
+  private static final Comparator<Interval> INTERVAL_BY_END = new Comparator<>()
+  {
+    private final DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
+
+    @Override
+    public int compare(Interval lhs, Interval rhs)
+    {
+      if (lhs.getChronology().equals(rhs.getChronology())) {
+        return Long.compare(lhs.getEndMillis(), rhs.getEndMillis());
+      }
+      return dateTimeComp.compare(lhs.getEnd(), rhs.getEnd());
+    }
+  };
+
   @Deprecated
   public static Comparator<Interval> intervals()
   {
@@ -134,5 +162,16 @@ public class Comparators
   {
     return INTERVAL_BY_END_THEN_START;
   }
+
+  public static Comparator<Interval> intervalsByStart()
+  {
+    return INTERVAL_BY_START;
+  }
+
+  public static Comparator<Interval> intervalsByEnd()
+  {
+    return INTERVAL_BY_END;
+  }
+
 
 }

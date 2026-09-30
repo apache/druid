@@ -26,9 +26,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -53,7 +53,7 @@ public class ApproximateHistogramVectorAggregatorTest
   };
   private VectorColumnSelectorFactory vectorColumnSelectorFactory;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     VectorValueSelector vectorValueSelector_1 = createMock(VectorValueSelector.class);
@@ -89,10 +89,10 @@ public class ApproximateHistogramVectorAggregatorTest
   public void doNotVectorizedNonNumericTypes()
   {
     ApproximateHistogramAggregatorFactory factory = buildHistogramAggFactory("string_field");
-    Assert.assertFalse(factory.canVectorize(vectorColumnSelectorFactory));
+    Assertions.assertFalse(factory.canVectorize(vectorColumnSelectorFactory));
 
     factory = buildHistogramAggFactory("complex_field");
-    Assert.assertFalse(factory.canVectorize(vectorColumnSelectorFactory));
+    Assertions.assertFalse(factory.canVectorize(vectorColumnSelectorFactory));
   }
 
   @Test
@@ -100,15 +100,15 @@ public class ApproximateHistogramVectorAggregatorTest
   {
     ApproximateHistogramAggregatorFactory factory = buildHistogramAggFactory("field_1");
     ByteBuffer byteBuffer = ByteBuffer.allocate(factory.getMaxIntermediateSizeWithNulls());
-    Assert.assertTrue(factory.canVectorize(vectorColumnSelectorFactory));
+    Assertions.assertTrue(factory.canVectorize(vectorColumnSelectorFactory));
     VectorAggregator vectorAggregator = factory.factorizeVector(vectorColumnSelectorFactory);
     vectorAggregator.init(byteBuffer, 0);
     vectorAggregator.aggregate(byteBuffer, 0, 0, 11);
     ApproximateHistogram h = (ApproximateHistogram) vectorAggregator.get(byteBuffer, 0);
 
     // (2, 1), (9.5, 2), (19.33, 3), (32.67, 3), (45, 1)
-    Assert.assertArrayEquals(new float[]{2, 9.5f, 19.33f, 32.67f, 45f}, h.positions(), 0.1f);
-    Assert.assertArrayEquals(new long[]{1, 2, 3, 3, 1}, h.bins());
+    Assertions.assertArrayEquals(new float[]{2, 9.5f, 19.33f, 32.67f, 45f}, h.positions(), 0.1f);
+    Assertions.assertArrayEquals(new long[]{1, 2, 3, 3, 1}, h.bins());
 
     factory = buildHistogramAggFactory("field_2");
     vectorAggregator = factory.factorizeVector(vectorColumnSelectorFactory);
@@ -116,8 +116,8 @@ public class ApproximateHistogramVectorAggregatorTest
     vectorAggregator.aggregate(byteBuffer, 0, 0, 10);
     h = (ApproximateHistogram) vectorAggregator.get(byteBuffer, 0);
 
-    Assert.assertArrayEquals(new float[]{2, 9.5f, 19.33f, 32.67f, 45f}, h.positions(), 0.1f);
-    Assert.assertArrayEquals(new long[]{1, 2, 3, 3, 1}, h.bins());
+    Assertions.assertArrayEquals(new float[]{2, 9.5f, 19.33f, 32.67f, 45f}, h.positions(), 0.1f);
+    Assertions.assertArrayEquals(new long[]{1, 2, 3, 3, 1}, h.bins());
 
   }
 
@@ -140,11 +140,11 @@ public class ApproximateHistogramVectorAggregatorTest
     vectorAggregator.aggregate(byteBuffer, 2, positions, new int[]{10, 0}, 0);
 
     ApproximateHistogram h0 = (ApproximateHistogram) vectorAggregator.get(byteBuffer, 0);
-    Assert.assertEquals(0, h0.count());
+    Assertions.assertEquals(0, h0.count());
 
     ApproximateHistogram h1 = (ApproximateHistogram) vectorAggregator.get(byteBuffer, size);
-    Assert.assertArrayEquals(new float[]{23}, h1.positions(), 0.1f);
-    Assert.assertArrayEquals(new long[]{1}, h1.bins());
+    Assertions.assertArrayEquals(new float[]{23}, h1.positions(), 0.1f);
+    Assertions.assertArrayEquals(new long[]{1}, h1.bins());
   }
 
   @Test
@@ -164,12 +164,12 @@ public class ApproximateHistogramVectorAggregatorTest
     }
 
     ApproximateHistogram h0 = (ApproximateHistogram) vectorAggregator.get(byteBuffer, 0);
-    Assert.assertArrayEquals(new float[]{2, 9.5f, 19.33f, 32.67f, 45f}, h0.positions(), 0.1f);
-    Assert.assertArrayEquals(new long[]{1, 2, 3, 3, 1}, h0.bins());
+    Assertions.assertArrayEquals(new float[]{2, 9.5f, 19.33f, 32.67f, 45f}, h0.positions(), 0.1f);
+    Assertions.assertArrayEquals(new long[]{1, 2, 3, 3, 1}, h0.bins());
 
     ApproximateHistogram h2 = (ApproximateHistogram) vectorAggregator.get(byteBuffer, size);
-    Assert.assertArrayEquals(new float[]{19}, h2.positions(), 0.1f);
-    Assert.assertArrayEquals(new long[]{10}, h2.bins());
+    Assertions.assertArrayEquals(new float[]{19}, h2.positions(), 0.1f);
+    Assertions.assertArrayEquals(new long[]{10}, h2.bins());
   }
 
   private ApproximateHistogramAggregatorFactory buildHistogramAggFactory(String fieldName)

@@ -21,8 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.kll;
 
 import org.apache.datasketches.kll.KllDoublesSketch;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -37,13 +37,13 @@ public class KllDoublesSketchOperationsTest
     final byte[] bytes = sketch.toByteArray();
     final String base64 = StringUtils.encodeBase64String(bytes);
 
-    Assert.assertArrayEquals(bytes, KllDoublesSketchOperations.deserializeSafe(sketch).toByteArray());
-    Assert.assertArrayEquals(bytes, KllDoublesSketchOperations.deserializeSafe(bytes).toByteArray());
-    Assert.assertArrayEquals(bytes, KllDoublesSketchOperations.deserializeSafe(base64).toByteArray());
+    Assertions.assertArrayEquals(bytes, KllDoublesSketchOperations.deserializeSafe(sketch).toByteArray());
+    Assertions.assertArrayEquals(bytes, KllDoublesSketchOperations.deserializeSafe(bytes).toByteArray());
+    Assertions.assertArrayEquals(bytes, KllDoublesSketchOperations.deserializeSafe(base64).toByteArray());
 
     final byte[] trunacted = Arrays.copyOfRange(bytes, 0, 20);
-    Assert.assertThrows(IndexOutOfBoundsException.class, () -> KllDoublesSketchOperations.deserializeSafe(trunacted));
-    Assert.assertThrows(
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> KllDoublesSketchOperations.deserializeSafe(trunacted));
+    Assertions.assertThrows(
         IndexOutOfBoundsException.class,
         () -> KllDoublesSketchOperations.deserializeSafe(StringUtils.encodeBase64String(trunacted))
     );

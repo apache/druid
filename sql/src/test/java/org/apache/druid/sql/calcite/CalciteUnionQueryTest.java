@@ -30,10 +30,8 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteUnionQueryTest extends BaseCalciteQueryTest
 {
@@ -134,10 +132,10 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
+      assertDruidException(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
     }
   }
 
@@ -284,7 +282,6 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       // UnionToDistinctRule
       testBuilder()
           .sql(sql)
-          .expectedResults(ImmutableList.of(new Object[] {"def", 2L}))
           .expectedResults(
               ResultMatchMode.RELAX_NULLS,
               ImmutableList.of(
@@ -298,7 +295,6 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
                   new Object[] {"he", "\u05D3\u05E8\u05D5\u05D0\u05D9\u05D3", 1.0F},
                   new Object[] {"ru", "\u0434\u0440\u0443\u0438\u0434", 1.0F}
               )
-
           )
           .run();
     } else {
@@ -463,10 +459,10 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
+      assertDruidException(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
@@ -483,10 +479,10 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
+      assertDruidException(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
@@ -503,10 +499,10 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
+      assertDruidException(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
     }
   }
 

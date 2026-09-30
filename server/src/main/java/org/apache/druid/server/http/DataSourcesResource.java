@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.audit.AuditEntry;
@@ -68,7 +69,6 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -284,7 +284,7 @@ public class DataSourcesResource
       final Throwable rootCause = Throwables.getRootCause(e);
       if (rootCause instanceof HttpResponseException) {
         HttpResponseStatus status = ((HttpResponseException) rootCause).getResponse().getStatus();
-        if (status.getCode() == 404) {
+        if (status.code() == 404) {
           final String errorMessage = "Could not update segments since Overlord is on an older version.";
           log.error(errorMessage);
           return ServletResourceUtils.buildErrorResponseFrom(
@@ -755,7 +755,14 @@ public class DataSourcesResource
       }
     }
 
-    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap);
+    // Use the Collection<DataSegment> @JsonCreator overload here rather than passing segmentMap directly. The two
+    // ImmutableDruidDataSource constructors differ in how they compute totalSizeOfSegments: the Map-based in-process
+    // constructor sums effectiveSizeOf (per-server realized loadedBytes when a segment is wrapped with a partial-load
+    // profile), whereas the Collection-based @JsonCreator overload sums DataSegment.getSize() (the segment's logical
+    // full size). For this synthesized cross-server view, where Map.put dedup picks an arbitrary "winning" server's
+    // instance per segmentId, reporting per-server realized sizes from arbitrary winners would mis-report the total.
+    // Logical-size accumulation is the operator-meaningful "how big is this datasource" semantic.
+    return new ImmutableDruidDataSource(dataSourceName, Collections.emptyMap(), segmentMap.values());
   }
 
   @Nullable
@@ -916,7 +923,7 @@ public class DataSourcesResource
   )
   {
     try {
-      final List<Rule> rules = metadataRuleManager.getRulesWithDefault(dataSourceName);
+      final List<Rule> rules = metadataRuleManager.getRulesSnapshot().getEffectiveRules(dataSourceName);
       final Interval theInterval = Intervals.of(interval);
       final SegmentDescriptor descriptor = new SegmentDescriptor(theInterval, version, partitionNumber);
       final DateTime now = DateTimes.nowUtc();

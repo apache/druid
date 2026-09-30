@@ -22,85 +22,110 @@ package org.apache.druid.server.coordinator.balancer;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.druid.server.coordinator.ServerHolder;
+import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.timeline.DataSegment;
 
+import java.util.List;
+import java.util.function.ToDoubleFunction;
+
 /**
- * A {@link BalancerStrategy} which normalizes the cost of placing a segment on a
- * server as calculated by {@link CostBalancerStrategy} by multiplying it by the
- * server's disk usage ratio.
+ * A {@link BalancerStrategy} which penalizes the cost of placing a segment on a
+ * server when the server's projected disk utilization is higher than the least
+ * utilized candidate by more than the configured utilization threshold.
  * <pre>
- * normalizedCost = cost * usageRatio
- *     where usageRatio = diskUsed / totalDiskSpace
+ * adjustedCost = cost, when utilizationGap <= utilizationThreshold
+ * adjustedCost = cost * exp((utilizationGap - utilizationThreshold) / utilizationThreshold), otherwise
+ *     where utilizationGap = projectedUsageRatio - minProjectedUsageRatio
+ *     and projectedUsageRatio = (diskUsed + segmentSizeIfNotAlreadyProjected) / totalDiskSpace
  * </pre>
- * This penalizes servers that are more full, driving disk utilization to equalize
- * across the tier. When all servers have equal disk usage, the behavior is identical
- * to {@link CostBalancerStrategy}. When historicals have different disk capacities,
- * this naturally accounts for both fill level and total capacity.
- * <p>
- * To prevent oscillation when servers have similar utilization, any server that
- * is already projected to hold the segment (the source on a move, or a currently
- * serving node on a drop) receives a cost discount equal to
- * {@link #DEFAULT_MOVE_COST_SAVINGS_THRESHOLD}. A move therefore fires only when
- * the destination saves at least this fraction of the source's cost. The default
- * is configurable via
- * {@code druid.coordinator.balancer.diskNormalized.moveCostSavingsThreshold}.
+ * Servers inside the threshold band use the normal cost strategy, which avoids
+ * using small utilization differences as a reason to move segments back and
+ * forth. Servers outside the band are penalized exponentially by the amount
+ * they exceed it.
  */
 public class DiskNormalizedCostBalancerStrategy extends CostBalancerStrategy
 {
-  /**
-   * Default minimum fractional cost reduction required before a segment will
-   * be moved off a server that is already projected to hold it. A value of
-   * {@code 0.05} means the destination must be at least 5% cheaper than the
-   * source for the move to happen.
-   */
-  static final double DEFAULT_MOVE_COST_SAVINGS_THRESHOLD = 0.05;
-
-  private final double sourceCostMultiplier;
+  private final double utilizationThreshold;
 
   public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec)
   {
-    this(exec, DEFAULT_MOVE_COST_SAVINGS_THRESHOLD);
+    this(exec, DiskNormalizedCostBalancerStrategyConfig.DEFAULT_UTILIZATION_THRESHOLD);
   }
 
-  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double moveCostSavingsThreshold)
+  public DiskNormalizedCostBalancerStrategy(ListeningExecutorService exec, double utilizationThreshold)
   {
     super(exec);
     Preconditions.checkArgument(
-        moveCostSavingsThreshold >= 0.0 && moveCostSavingsThreshold < 1.0,
-        "moveCostSavingsThreshold[%s] must be in [0.0, 1.0)",
-        moveCostSavingsThreshold
+        utilizationThreshold > 0.0 && utilizationThreshold < 1.0,
+        "utilizationThreshold[%s] must be in (0.0, 1.0)",
+        utilizationThreshold
     );
-    this.sourceCostMultiplier = 1.0 - moveCostSavingsThreshold;
+    this.utilizationThreshold = utilizationThreshold;
   }
 
   @Override
-  protected double computePlacementCost(
+  protected ToDoubleFunction<ServerHolder> makePlacementCostFunction(
+      final DataSegment proposalSegment,
+      final List<ServerHolder> serverHolders,
+      final SegmentAction action
+  )
+  {
+    final double minProjectedUsageRatio = serverHolders.stream()
+                                                       .filter(server -> isCandidateForUtilizationBaseline(
+                                                           proposalSegment,
+                                                           server,
+                                                           action
+                                                       ))
+                                                       .mapToDouble(server -> computeProjectedUsageRatio(
+                                                           proposalSegment,
+                                                           server
+                                                       ))
+                                                       .filter(Double::isFinite)
+                                                       .min()
+                                                       .orElse(0.0);
+
+    return server -> {
+      final double cost = super.computePlacementCost(proposalSegment, server);
+
+      if (cost == Double.POSITIVE_INFINITY) {
+        return cost;
+      }
+
+      final double projectedUsageRatio = computeProjectedUsageRatio(proposalSegment, server);
+      if (!Double.isFinite(projectedUsageRatio)) {
+        return cost;
+      }
+
+      final double utilizationGap = projectedUsageRatio - minProjectedUsageRatio;
+      if (utilizationGap <= utilizationThreshold) {
+        return cost;
+      }
+
+      return cost * Math.exp((utilizationGap - utilizationThreshold) / utilizationThreshold);
+    };
+  }
+
+  private static boolean isCandidateForUtilizationBaseline(
+      final DataSegment proposalSegment,
+      final ServerHolder server,
+      final SegmentAction action
+  )
+  {
+    return action != SegmentAction.LOAD || server.canLoadSegment(proposalSegment);
+  }
+
+  private static double computeProjectedUsageRatio(
       final DataSegment proposalSegment,
       final ServerHolder server
   )
   {
-    double cost = super.computePlacementCost(proposalSegment, server);
-
-    if (cost == Double.POSITIVE_INFINITY) {
-      return cost;
-    }
-
-    // Guard against NaN propagation in the cost comparator if a server
-    // somehow reports a non-positive maxSize. Such a server cannot hold
-    // anything and will be rejected by canLoadSegment, so returning the
-    // raw cost is safe.
     final long maxSize = server.getMaxSize();
     if (maxSize <= 0) {
-      return cost;
+      return Double.POSITIVE_INFINITY;
     }
 
-    double usageRatio = (double) server.getSizeUsed() / maxSize;
-    double normalizedCost = cost * usageRatio;
-
-    if (server.isProjectedSegment(proposalSegment)) {
-      normalizedCost *= sourceCostMultiplier;
-    }
-
-    return normalizedCost;
+    final boolean alreadyProjected = server.isProjectedSegment(proposalSegment);
+    final long projectedSizeUsed = server.getSizeUsed() + (alreadyProjected ? 0 : proposalSegment.getSize());
+    return (double) projectedSizeUsed / maxSize;
   }
 }

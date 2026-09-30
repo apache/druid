@@ -19,26 +19,32 @@
 
 package org.apache.druid.security.authentication.validator;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.BasicAuthLDAPConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authentication.validator.LDAPCredentialsValidator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
+import javax.naming.directory.Attribute;
+import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
 import javax.naming.ldap.LdapContext;
 import javax.naming.spi.InitialContextFactory;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 
 public class LDAPCredentialsValidatorTest
@@ -60,7 +66,7 @@ public class LDAPCredentialsValidatorTest
   {
     String input = "user1";
     String encoded = LDAPCredentialsValidator.encodeForLDAP(input, true);
-    Assert.assertEquals(input, encoded);
+    Assertions.assertEquals(input, encoded);
   }
 
   @Test
@@ -71,8 +77,8 @@ public class LDAPCredentialsValidatorTest
     String encodedWildcardFalse = LDAPCredentialsValidator.encodeForLDAP(input, false);
     String expectedWildcardTrue = "user1\\5c\\2a\\28\\29\\00\\2fuser1";
     String expectedWildcardFalse = "user1\\5c*\\28\\29\\00\\2fuser1";
-    Assert.assertEquals(expectedWildcardTrue, encodedWildcardTrue);
-    Assert.assertEquals(expectedWildcardFalse, encodedWildcardFalse);
+    Assertions.assertEquals(expectedWildcardTrue, encodedWildcardTrue);
+    Assertions.assertEquals(expectedWildcardFalse, encodedWildcardFalse);
   }
 
   /**
@@ -96,56 +102,206 @@ public class LDAPCredentialsValidatorTest
     validator.validateCredentials("ldap", "ldap", "validUser", "password".toCharArray());
   }
 
-  public static class MockContextFactory implements InitialContextFactory
+  private static final BasicAuthLDAPConfig LDAP_CONFIG_WITH_GROUP_SEARCH = new BasicAuthLDAPConfig(
+      "ldaps://my-ldap-url",
+      "bindUser",
+      new DefaultPasswordProvider("bindPassword"),
+      "",
+      "",
+      "",
+      BasicAuthUtils.DEFAULT_KEY_ITERATIONS,
+      BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS,
+      BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS,
+      BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE,
+      "ou=Groups,dc=example,dc=org",
+      "(uniqueMember=%s)"
+  );
+
+  @Test
+  public void testValidateCredentialsWithGroupSearch()
   {
-    @SuppressWarnings("BanJNDI") // False positive: usage here is a mock in tests.
+    Properties properties = new Properties();
+    properties.put(Context.INITIAL_CONTEXT_FACTORY, MockGroupSearchContextFactory.class.getName());
+    LDAPCredentialsValidator validator = new LDAPCredentialsValidator(
+        LDAP_CONFIG_WITH_GROUP_SEARCH,
+        new LDAPCredentialsValidator.LruBlockCache(
+            3600,
+            3600,
+            100
+        ),
+        properties
+    );
+    final AuthenticationResult result =
+        validator.validateCredentials("ldap", "ldap", "validUser", "password".toCharArray());
+    Assertions.assertNotNull(result);
+    Assertions.assertNotNull(result.getContext());
+
+    final Object searchResultObj = result.getContext().get(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY);
+    Assertions.assertNotNull(searchResultObj);
+    Assertions.assertInstanceOf(SearchResult.class, searchResultObj);
+
+    final SearchResult sr = (SearchResult) searchResultObj;
+    final Attribute memberOf = sr.getAttributes().get("memberOf");
+    Assertions.assertNotNull(memberOf, "memberOf should be populated by reverse group search");
+    Assertions.assertEquals(2, memberOf.size());
+  }
+
+  @Test
+  public void testGroupSearchWithoutUserDnPlaceholderIsRejected()
+  {
+    // Filters without an unescaped %s, including escaped sequences that String.format emits literally
+    final List<String> invalidFilters = Arrays.asList(
+        "(uniqueMember=*)",
+        "(uniqueMember=%%s*)",
+        "(uniqueMember=%%%%s)",
+        "(uniqueMember=%d)"
+    );
+    for (String groupSearch : invalidFilters) {
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> configWithGroupSearch(groupSearch),
+          groupSearch
+      );
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertEquals(
+          StringUtils.format("groupSearch filter[%s] must contain the placeholder[%%s] for the user DN.", groupSearch),
+          e.getMessage()
+      );
+    }
+  }
+
+  @Test
+  public void testGroupSearchWithUserDnPlaceholderIsAccepted()
+  {
+    final List<String> validFilters = Arrays.asList(
+        "(uniqueMember=%s)",
+        "(member=%s)",
+        "(&(uniqueMember=%s)(cn=%%s))",
+        "(uniqueMember=%%%s)"
+    );
+    for (String groupSearch : validFilters) {
+      Assertions.assertEquals(groupSearch, configWithGroupSearch(groupSearch).getGroupSearch());
+    }
+  }
+
+  private static BasicAuthLDAPConfig configWithGroupSearch(String groupSearch)
+  {
+    return new BasicAuthLDAPConfig(
+        "ldaps://my-ldap-url",
+        "bindUser",
+        new DefaultPasswordProvider("bindPassword"),
+        "",
+        "",
+        "",
+        BasicAuthUtils.DEFAULT_KEY_ITERATIONS,
+        BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS,
+        BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS,
+        BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE,
+        "ou=Groups,dc=example,dc=org",
+        groupSearch
+    );
+  }
+
+  public static class MockGroupSearchContextFactory implements InitialContextFactory
+  {
+    @SuppressWarnings("BanJNDI")
     @Override
     public Context getInitialContext(Hashtable<?, ?> environment) throws NamingException
     {
-      LdapContext context = Mockito.mock(LdapContext.class);
+      final LdapContext context = Mockito.mock(LdapContext.class);
 
-      String encodedUsername = LDAPCredentialsValidator.encodeForLDAP("validUser", true);
-      SearchResult result = Mockito.mock(SearchResult.class);
+      // User search result with no memberOf attribute
+      final String encodedUsername = LDAPCredentialsValidator.encodeForLDAP("validUser", true);
+      final BasicAttributes userAttrs = new BasicAttributes(true);
+      userAttrs.put("uid", "validUser");
+      final SearchResult userResult = new SearchResult(
+          "uid=validUser,ou=Users,dc=example,dc=org",
+          null,
+          userAttrs
+      );
+      userResult.setNameInNamespace("uid=validUser,ou=Users,dc=example,dc=org");
+      final Iterator<SearchResult> userResults = Collections.singletonList(userResult).iterator();
+
+      Mockito.when(
+          context.search(
+              ArgumentMatchers.eq(LDAP_CONFIG_WITH_GROUP_SEARCH.getBaseDn()),
+              ArgumentMatchers.eq(StringUtils.format(LDAP_CONFIG_WITH_GROUP_SEARCH.getUserSearch(), encodedUsername)),
+              ArgumentMatchers.any(SearchControls.class))
+      ).thenReturn(makeNamingEnum(userResults));
+
+      final SearchResult group1 = new SearchResult("cn=admins,ou=Groups,dc=example,dc=org", null, new BasicAttributes(true));
+      group1.setNameInNamespace("cn=admins,ou=Groups,dc=example,dc=org");
+      final SearchResult group2 = new SearchResult("cn=developers,ou=Groups,dc=example,dc=org", null, new BasicAttributes(true));
+      group2.setNameInNamespace("cn=developers,ou=Groups,dc=example,dc=org");
+      final List<SearchResult> groupList = Arrays.asList(group1, group2);
+      final Iterator<SearchResult> groupResults = groupList.iterator();
+
+      final String escapedDn = LDAPCredentialsValidator.encodeForLDAP("uid=validUser,ou=Users,dc=example,dc=org", true);
+      Mockito.when(
+          context.search(
+              ArgumentMatchers.eq(LDAP_CONFIG_WITH_GROUP_SEARCH.getGroupBaseDn()),
+              ArgumentMatchers.eq(StringUtils.format(LDAP_CONFIG_WITH_GROUP_SEARCH.getGroupSearch(), escapedDn)),
+              ArgumentMatchers.any(SearchControls.class))
+      ).thenReturn(makeNamingEnum(groupResults));
+
+      return context;
+    }
+  }
+
+  private static NamingEnumeration<SearchResult> makeNamingEnum(final Iterator<SearchResult> iter)
+  {
+    return new NamingEnumeration<SearchResult>()
+    {
+      @Override
+      public SearchResult next()
+      {
+        return iter.next();
+      }
+
+      @Override
+      public boolean hasMore()
+      {
+        return iter.hasNext();
+      }
+
+      @Override
+      public void close()
+      {
+      }
+
+      @Override
+      public boolean hasMoreElements()
+      {
+        return iter.hasNext();
+      }
+
+      @Override
+      public SearchResult nextElement()
+      {
+        return iter.next();
+      }
+    };
+  }
+
+  public static class MockContextFactory implements InitialContextFactory
+  {
+    @SuppressWarnings("BanJNDI")
+    @Override
+    public Context getInitialContext(Hashtable<?, ?> environment) throws NamingException
+    {
+      final LdapContext context = Mockito.mock(LdapContext.class);
+
+      final String encodedUsername = LDAPCredentialsValidator.encodeForLDAP("validUser", true);
+      final SearchResult result = Mockito.mock(SearchResult.class);
       Mockito.when(result.getNameInNamespace()).thenReturn("uid=user,ou=Users,dc=example,dc=org");
-      Iterator<SearchResult> results = Collections.singletonList(result).iterator();
+      final Iterator<SearchResult> results = Collections.singletonList(result).iterator();
 
       Mockito.when(
           context.search(
               ArgumentMatchers.eq(LDAP_CONFIG.getBaseDn()),
               ArgumentMatchers.eq(StringUtils.format(LDAP_CONFIG.getUserSearch(), encodedUsername)),
               ArgumentMatchers.any(SearchControls.class))
-      ).thenReturn(new NamingEnumeration<>()
-      {
-        @Override
-        public SearchResult next()
-        {
-          return results.next();
-        }
-
-        @Override
-        public boolean hasMore()
-        {
-          return results.hasNext();
-        }
-
-        @Override
-        public void close()
-        {
-          // No-op
-        }
-
-        @Override
-        public boolean hasMoreElements()
-        {
-          return results.hasNext();
-        }
-
-        @Override
-        public SearchResult nextElement()
-        {
-          return results.next();
-        }
-      });
+      ).thenReturn(makeNamingEnum(results));
 
       return context;
     }

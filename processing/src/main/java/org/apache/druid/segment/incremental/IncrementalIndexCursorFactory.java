@@ -19,22 +19,41 @@
 
 package org.apache.druid.segment.incremental;
 
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ConcatenatingCursor;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
+import org.apache.druid.segment.EmptyCursorHolder;
+import org.apache.druid.segment.MergingClusterGroupCursor;
+import org.apache.druid.segment.ResidentCursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
+import org.apache.druid.segment.projections.ClusteringColumnSelectorFactory;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public class IncrementalIndexCursorFactory implements CursorFactory
+public class IncrementalIndexCursorFactory implements ResidentCursorFactory
 {
   private static final ColumnCapabilities.CoercionLogic COERCE_LOGIC =
       new ColumnCapabilities.CoercionLogic()
@@ -82,6 +101,15 @@ public class IncrementalIndexCursorFactory implements CursorFactory
   {
     final QueryableProjection<IncrementalIndexRowSelector> projection = index.getProjection(spec);
     if (projection == null) {
+      // Clustered base tables keep their rows in per-tuple cluster groups, not the base facts holder (which is
+      // empty), so a plain IncrementalIndexCursorHolder over the base index would yield no rows. Dispatch to the
+      // clustered path, mirroring historical equivalent.
+      if (index instanceof OnheapIncrementalIndex) {
+        final OnHeapClusteredBaseTable clusteredBaseTable = ((OnheapIncrementalIndex) index).getClusteredBaseTable();
+        if (clusteredBaseTable != null) {
+          return makeClusteredCursorHolder(spec, clusteredBaseTable);
+        }
+      }
       return new IncrementalIndexCursorHolder(index, spec);
     } else {
       // currently we only have aggregated projections, so isPreAggregated is always true
@@ -109,6 +137,112 @@ public class IncrementalIndexCursorFactory implements CursorFactory
         }
       };
     }
+  }
+
+  /**
+   * Build a cursor holder for clustered base table using {@link Projections#planClusterGroupQuery}
+   */
+  private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec, OnHeapClusteredBaseTable clusteredBaseTable)
+  {
+    final ClusteredValueGroupsBaseTableSchema summary = clusteredBaseTable.toMetadataSchema();
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(summary.getClusterGroups(), spec);
+    final List<TableClusterGroupSpec> surviving = plan.survivingGroups();
+
+    if (surviving.isEmpty()) {
+      return EmptyCursorHolder.forSpec(spec);
+    }
+
+    final RowSignature clusteringColumns = summary.getClusteringColumns();
+    final List<Object[]> clusteringValuesByGroup = new ArrayList<>(surviving.size());
+    final List<Supplier<CursorHolder>> holderSuppliers = new ArrayList<>(surviving.size());
+    final Closer closer = Closer.create();
+    for (TableClusterGroupSpec valueGroup : surviving) {
+      final Object[] groupClusteringValues = valueGroup.lookupClusteringValues();
+      final OnHeapClusterGroup group = clusteredBaseTable.getGroupForClusteringValues(groupClusteringValues);
+      if (group == null) {
+        throw DruidException.defensive(
+            "No cluster group for clustering values [%s]",
+            Arrays.toString(groupClusteringValues)
+        );
+      }
+      clusteringValuesByGroup.add(groupClusteringValues);
+      final CursorBuildSpec groupSpec = plan.rebuildCursorBuildSpec(spec, valueGroup);
+      holderSuppliers.add(
+          Suppliers.memoize(() -> closer.register(
+              new IncrementalIndexCursorHolder(group, groupSpec)
+              {
+                @Override
+                public ColumnSelectorFactory makeSelectorFactory(
+                    CursorBuildSpec buildSpec,
+                    IncrementalIndexRowHolder currEntry
+                )
+                {
+                  return new ClusteringAwareIncrementalIndexColumnSelectorFactory(
+                      group,
+                      currEntry,
+                      buildSpec,
+                      getTimeOrder(),
+                      clusteringColumns,
+                      groupClusteringValues
+                  );
+                }
+              }
+          ))
+      );
+    }
+
+    // when the query asks for __time ordering and each group is individually __time-sorted (__time first
+    // non-clustering column), present a globally __time-ordered cursor via a k-way merge across groups
+    if (Projections.useTimeOrderedCursors(spec, summary)) {
+      final boolean descending = Cursors.getTimeOrdering(spec.getPreferredOrdering()) == Order.DESCENDING;
+      return MergingClusterGroupCursor.makeCursorHolder(
+          holderSuppliers,
+          clusteringColumns,
+          clusteringValuesByGroup,
+          descending,
+          spec.getVirtualColumns(),
+          plan.virtualColumnRemap(),
+          closer
+      );
+    }
+
+    // The wrapper starts with a throwing placeholder delegate; ConcatenatingCursor swaps in each group's real
+    // selector factory (and clustering constants) on init, before any selector is exposed.
+    final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
+        ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
+        clusteringColumns,
+        clusteringValuesByGroup.getFirst(),
+        spec.getVirtualColumns()
+    );
+    final ConcatenatingCursor cursor = new ConcatenatingCursor(
+        holderSuppliers,
+        clusteringValuesByGroup,
+        wrapperFactory,
+        plan.virtualColumnRemap()
+    );
+
+    return new CursorHolder()
+    {
+      @Override
+      public Cursor asCursor()
+      {
+        return cursor;
+      }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        // Groups are walked in clustering-value order and each group's rows follow the segment ordering with the
+        // clustering prefix dropped, so the concatenated output is in the full segment ordering.
+        return summary.getOrdering();
+      }
+
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(closer);
+      }
+    };
   }
 
   @Override

@@ -21,7 +21,6 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.longs.LongArraySet;
@@ -79,6 +78,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -349,14 +349,28 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             unknownsIndex
         );
       } else {
-        // values in set are not sorted in double order, transform them on the fly and iterate them all
+        // The values in the set are not sorted in long order, so we need to coerce them to longs and iterate them all.
+        // Values which cannot be equal to a long are dropped instead of being truncated into a value that would match
+        // incorrectly.
+        final ExpressionType matchExpressionType = ExpressionType.fromColumnTypeStrict(matchValueType);
+        final List<Long> longs = new ArrayList<>(sortedValues.size());
+        for (Object value : sortedValues) {
+          if (value == null) {
+            longs.add(null);
+            continue;
+          }
+          final ExprEval<?> castForComparison = ExprEval.castForEqualityComparison(
+              ExprEval.ofType(matchExpressionType, value),
+              ExpressionType.LONG
+          );
+          if (castForComparison != null) {
+            longs.add(castForComparison.asLong());
+          }
+        }
         return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
             bitmapFactory,
-            Iterables.transform(
-                sortedValues,
-                DimensionHandlerUtils::convertObjectToLong
-            ),
-            sortedValues.size(),
+            longs,
+            longs.size(),
             dictionary,
             valueIndexes,
             unknownsIndex

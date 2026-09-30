@@ -36,8 +36,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
 {
@@ -54,7 +54,7 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         postAgg,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(postAgg), ExpressionPostAggregator.class)
     );
@@ -71,7 +71,7 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         postAgg,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(postAgg), ExpressionPostAggregator.class)
     );
@@ -105,9 +105,9 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
     SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", 2L)
                                                                .withBinding("y", 3.0);
 
-    Assert.assertEquals(ColumnType.DOUBLE, postAgg.getType(signature));
+    Assertions.assertEquals(ColumnType.DOUBLE, postAgg.getType(signature));
 
-    Assert.assertEquals(5.0, postAgg.compute(binding.asMap()));
+    Assertions.assertEquals(5.0, postAgg.compute(binding.asMap()));
   }
 
   @Test
@@ -129,9 +129,9 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
     SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", 2L)
                                                                .withBinding("y", 3.0);
 
-    Assert.assertEquals(ColumnType.FLOAT, postAgg.getType(signature));
+    Assertions.assertEquals(ColumnType.FLOAT, postAgg.getType(signature));
 
-    Assert.assertEquals(5.0f, postAgg.compute(binding.asMap()));
+    Assertions.assertEquals(5.0f, postAgg.compute(binding.asMap()));
   }
 
   @Test
@@ -156,12 +156,12 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
     SettableObjectBinding binding2 = new SettableObjectBinding().withBinding("x", 3L)
                                                                 .withBinding("y", 4L);
 
-    Assert.assertEquals(ColumnType.LONG_ARRAY, postAgg.getType(signature));
+    Assertions.assertEquals(ColumnType.LONG_ARRAY, postAgg.getType(signature));
 
-    Assert.assertArrayEquals(new Object[]{2L, 3L}, (Object[]) postAgg.compute(binding.asMap()));
-    Assert.assertArrayEquals(new Object[]{3L, 4L}, (Object[]) postAgg.compute(binding2.asMap()));
+    Assertions.assertArrayEquals(new Object[]{2L, 3L}, (Object[]) postAgg.compute(binding.asMap()));
+    Assertions.assertArrayEquals(new Object[]{3L, 4L}, (Object[]) postAgg.compute(binding2.asMap()));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         -1,
         postAgg.getComparator().compare(postAgg.compute(binding.asMap()), postAgg.compute(binding2.asMap()))
     );
@@ -186,15 +186,15 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
     SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", "abc")
                                                                .withBinding("y", "def");
 
-    Assert.assertEquals(ColumnType.STRING_ARRAY, postAgg.getType(signature));
+    Assertions.assertEquals(ColumnType.STRING_ARRAY, postAgg.getType(signature));
 
-    Assert.assertArrayEquals(new Object[]{"abc", "def"}, (Object[]) postAgg.compute(binding.asMap()));
+    Assertions.assertArrayEquals(new Object[]{"abc", "def"}, (Object[]) postAgg.compute(binding.asMap()));
 
     SettableObjectBinding binding2 = new SettableObjectBinding().withBinding("x", "abc")
                                                                 .withBinding("y", "abc");
 
     // ordering by arrays doesn't work if no outputType is specified...
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ClassCastException.class,
         () -> postAgg.getComparator().compare(postAgg.compute(binding.asMap()), postAgg.compute(binding2.asMap()))
     );
@@ -219,9 +219,9 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
     SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", "abc")
                                                                .withBinding("y", "def");
 
-    Assert.assertEquals(ColumnType.STRING, postAgg.getType(signature));
+    Assertions.assertEquals(ColumnType.STRING, postAgg.getType(signature));
 
-    Assert.assertEquals(ImmutableList.of("abc", "def"), postAgg.compute(binding.asMap()));
+    Assertions.assertEquals(ImmutableList.of("abc", "def"), postAgg.compute(binding.asMap()));
   }
 
   @Test
@@ -241,9 +241,9 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
 
     SettableObjectBinding binding = new SettableObjectBinding().withBinding("x", "abc");
 
-    Assert.assertEquals(ColumnType.STRING, postAgg.getType(signature));
+    Assertions.assertEquals(ColumnType.STRING, postAgg.getType(signature));
 
-    Assert.assertEquals("abc", postAgg.compute(binding.asMap()));
+    Assertions.assertEquals("abc", postAgg.compute(binding.asMap()));
   }
 
   @Test
@@ -260,7 +260,7 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
     RowSignature signature = RowSignature.builder().build();
 
     // columns not existing in the output signature means they don't exist, so the output is also null
-    Assert.assertNull(postAgg.getType(signature));
+    Assertions.assertNull(postAgg.getType(signature));
   }
 
   @Test
@@ -285,7 +285,7 @@ public class ExpressionPostAggregatorTest extends InitializedNullHandlingTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

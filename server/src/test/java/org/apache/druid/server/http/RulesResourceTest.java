@@ -29,9 +29,9 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.List;
@@ -42,7 +42,7 @@ public class RulesResourceTest
   private MetadataRuleManager databaseRuleManager;
   private AuditManager auditManager;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     databaseRuleManager = EasyMock.createStrictMock(MetadataRuleManager.class);
@@ -67,9 +67,9 @@ public class RulesResourceTest
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", null, 2);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
-    Assert.assertEquals(2, rulesHistory.size());
-    Assert.assertEquals(entry1, rulesHistory.get(0));
-    Assert.assertEquals(entry2, rulesHistory.get(1));
+    Assertions.assertEquals(2, rulesHistory.size());
+    Assertions.assertEquals(entry1, rulesHistory.get(0));
+    Assertions.assertEquals(entry2, rulesHistory.get(1));
 
     EasyMock.verify(auditManager);
   }
@@ -98,9 +98,9 @@ public class RulesResourceTest
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", interval, null);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
-    Assert.assertEquals(2, rulesHistory.size());
-    Assert.assertEquals(entry1, rulesHistory.get(0));
-    Assert.assertEquals(entry2, rulesHistory.get(1));
+    Assertions.assertEquals(2, rulesHistory.size());
+    Assertions.assertEquals(entry1, rulesHistory.get(0));
+    Assertions.assertEquals(entry2, rulesHistory.get(1));
 
     EasyMock.verify(auditManager);
   }
@@ -117,9 +117,9 @@ public class RulesResourceTest
 
     Response response = rulesResource.getDatasourceRuleHistory("datasource1", null, -1);
     Map<String, Object> rulesHistory = (Map) response.getEntity();
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertTrue(rulesHistory.containsKey("error"));
-    Assert.assertEquals("Limit must be greater than zero!", rulesHistory.get("error"));
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertTrue(rulesHistory.containsKey("error"));
+    Assertions.assertEquals("Limit must be greater than zero!", rulesHistory.get("error"));
 
     EasyMock.verify(auditManager);
   }
@@ -142,9 +142,9 @@ public class RulesResourceTest
 
     Response response = rulesResource.getDatasourceRuleHistory(null, 2);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
-    Assert.assertEquals(2, rulesHistory.size());
-    Assert.assertEquals(entry1, rulesHistory.get(0));
-    Assert.assertEquals(entry2, rulesHistory.get(1));
+    Assertions.assertEquals(2, rulesHistory.size());
+    Assertions.assertEquals(entry1, rulesHistory.get(0));
+    Assertions.assertEquals(entry2, rulesHistory.get(1));
 
     EasyMock.verify(auditManager);
   }
@@ -169,9 +169,9 @@ public class RulesResourceTest
 
     Response response = rulesResource.getDatasourceRuleHistory(interval, null);
     List<AuditEntry> rulesHistory = (List) response.getEntity();
-    Assert.assertEquals(2, rulesHistory.size());
-    Assert.assertEquals(entry1, rulesHistory.get(0));
-    Assert.assertEquals(entry2, rulesHistory.get(1));
+    Assertions.assertEquals(2, rulesHistory.size());
+    Assertions.assertEquals(entry1, rulesHistory.get(0));
+    Assertions.assertEquals(entry2, rulesHistory.get(1));
 
     EasyMock.verify(auditManager);
   }
@@ -188,9 +188,9 @@ public class RulesResourceTest
 
     Response response = rulesResource.getDatasourceRuleHistory(null, -1);
     Map<String, Object> rulesHistory = (Map) response.getEntity();
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertTrue(rulesHistory.containsKey("error"));
-    Assert.assertEquals("Limit must be greater than zero!", rulesHistory.get("error"));
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertTrue(rulesHistory.containsKey("error"));
+    Assertions.assertEquals("Limit must be greater than zero!", rulesHistory.get("error"));
 
     EasyMock.verify(auditManager);
   }

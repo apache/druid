@@ -45,6 +45,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
@@ -445,6 +446,23 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   }
 
   /**
+   * Like {@link #iterateSegmentMetadata()} but restricted to the given datasources, so a pushed-down
+   * {@code datasource} predicate from sys.segments scans only the matching datasources' segment maps
+   * rather than the whole cluster. A {@code null} argument iterates all datasources.
+   */
+  public Iterator<AvailableSegmentMetadata> iterateSegmentMetadata(@Nullable Set<String> dataSources)
+  {
+    if (dataSources == null) {
+      return iterateSegmentMetadata();
+    }
+    return FluentIterable.from(dataSources)
+                         .transform(segmentMetadataInfo::get)
+                         .filter(Objects::nonNull)
+                         .transformAndConcat(Map::values)
+                         .iterator();
+  }
+
+  /**
    * Get metadata for the specified segment, which includes information like RowSignature, realtime & numRows.
    *
    * @param datasource segment datasource
@@ -573,7 +591,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       segmentsNeedingRefresh.remove(segment.getId());
       unmarkSegmentAsMutable(segment.getId());
 
-      segmentMetadataInfo.compute(
+      final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> remainingSegments = segmentMetadataInfo.compute(
           segment.getDataSource(),
           (dataSource, segmentsMap) -> {
             if (segmentsMap == null) {
@@ -587,7 +605,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               }
               removeSegmentAction(segment.getId());
               if (segmentsMap.isEmpty()) {
-                tables.remove(segment.getDataSource());
+                // Emit the removal action only if this call actually removed the table, so that a concurrent
+                // refresh which also finds the datasource gone cannot report the same removal twice.
+                if (tables.remove(segment.getDataSource()) != null) {
+                  removeDataSourceAction(segment.getDataSource());
+                }
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
                 return null;
               } else {
@@ -597,6 +619,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
             }
           }
       );
+      if (remainingSegments == null) {
+        dataSourcesNeedingRebuild.remove(segment.getDataSource());
+      }
 
       lock.notifyAll();
     }
@@ -606,6 +631,16 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * This method should be overridden by child classes to execute any action on segment removal.
    */
   protected abstract void removeSegmentAction(SegmentId segmentId);
+
+  /**
+   * Called under the cache lock after the last segment of a datasource has been removed and its table was actually
+   * removed from {@link #tables} by that removal. It is not called when no table existed for the datasource, so a
+   * single datasource removal triggers this action at most once even if a refresh observes the removal concurrently.
+   */
+  protected void removeDataSourceAction(String dataSource)
+  {
+    // No additional action by default.
+  }
 
   @VisibleForTesting
   public void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
@@ -717,11 +752,41 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                 .add(segmentId);
     }
 
+    // Refresh each dataSource independently so one failure (e.g. a metadata query timeout) does not
+    // abort the cycle and starve the rest.
     for (Map.Entry<String, TreeSet<SegmentId>> entry : segmentMap.entrySet()) {
-      updatedSegmentIds.addAll(refreshSegmentsForDataSource(entry.getKey(), entry.getValue()));
+      final String dataSource = entry.getKey();
+      try {
+        updatedSegmentIds.addAll(refreshSegmentsForDataSource(dataSource, entry.getValue()));
+      }
+      catch (QueryInterruptedException e) {
+        // QueryInterruptedException also wraps ordinary query failures, not just interruption
+        // Don't emit failures for interrupted exceptions (shutdown signal, etc.)
+        if (e.getCause() instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+          throw e;
+        }
+        recordDataSourceRefreshFailure(dataSource, e);
+      }
+      catch (Exception e) {
+        recordDataSourceRefreshFailure(dataSource, e);
+      }
     }
 
     return updatedSegmentIds;
+  }
+
+  /**
+   * Records a refresh failure for one dataSource; it is skipped this cycle and retried later while the rest continue.
+   */
+  private void recordDataSourceRefreshFailure(String dataSource, Exception e)
+  {
+    log.warn(e, "Failed to refresh segment schema for dataSource[%s]; skipping it this cycle.", dataSource);
+    emitMetric(
+        Metric.REFRESH_FAILED,
+        1,
+        new ServiceMetricEvent.Builder().setDimension(DruidMetrics.DATASOURCE, dataSource)
+    );
   }
 
   private long recomputeIsRealtime(ImmutableSet<DruidServerMetadata> servers)

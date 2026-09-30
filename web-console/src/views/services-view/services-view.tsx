@@ -164,8 +164,8 @@ interface ServiceResultRow {
   readonly version: string;
   readonly build_revision: string;
   readonly labels: string | null;
-  readonly available_processors: number;
-  readonly total_memory: number;
+  readonly available_processors: NumberLike;
+  readonly total_memory: NumberLike;
 }
 
 interface CloneStatusInfo {
@@ -174,7 +174,7 @@ interface CloneStatusInfo {
   readonly state: string;
   readonly segmentLoadsRemaining: number;
   readonly segmentDropsRemaining: number;
-  readonly bytesToLoad: number;
+  readonly bytesToLoad: NumberLike;
 }
 
 interface ServerModeInfo {
@@ -261,7 +261,7 @@ function DetailCell({ original, workerInfoLookup }: DetailCellProps) {
       const workerInfo = workerInfoLookup[service];
       if (!workerInfo) return null;
 
-      if (workerInfo.worker.version === '') return <>Disabled</>;
+      if (workerInfo.worker.disabled || workerInfo.worker.version === '') return <>Disabled</>;
 
       const details: string[] = [];
       if (workerInfo.lastCompletedTaskTime) {
@@ -397,6 +397,7 @@ interface WorkerInfo {
     readonly scheme: string;
     readonly version: string;
     readonly category: string;
+    readonly disabled?: boolean;
   };
 }
 
@@ -484,7 +485,7 @@ ORDER BY
                 max_size: s.maxSize,
                 storage_size: s.maxSize,
                 effective_size: s.maxSize,
-                start_time: '1970:01:01T00:00:00Z',
+                start_time: '1970-01-01T00:00:00Z',
                 is_leader: 0,
                 version: '',
                 build_revision: '',
@@ -679,7 +680,9 @@ ORDER BY
               data={services}
               loading={servicesState.loading}
               noDataText={
-                servicesState.isEmpty() ? 'No services' : servicesState.getErrorMessage() || ''
+                servicesState.data?.services.length === 0
+                  ? 'No services'
+                  : servicesState.getErrorMessage() || ''
               }
               filterable
               filtered={filters.toFilters()}
@@ -807,7 +810,7 @@ ORDER BY
           Aggregated: ({ subRows }) => {
             const originalRows = subRows.map(r => r._original);
             if (!originalRows.some(r => r.service_type === 'historical')) return '';
-            const totalCurr = sum(originalRows, s => s.curr_size);
+            const totalCurr = sum(originalRows, s => Number(s.curr_size));
             return formatBytes(totalCurr);
           },
           Cell: ({ value, aggregated, original }) => {
@@ -827,7 +830,7 @@ ORDER BY
           Aggregated: ({ subRows }) => {
             const originalRows = subRows.map(r => r._original);
             if (!originalRows.some(r => r.service_type === 'historical')) return '';
-            const totalEffectiveSize = sum(originalRows, s => s.effective_size);
+            const totalEffectiveSize = sum(originalRows, s => Number(s.effective_size));
             return formatBytes(totalEffectiveSize);
           },
           Cell: ({ value, aggregated, original }) => {
@@ -985,7 +988,7 @@ ORDER BY
           Cell: ({ value }) => (value === null ? '' : formatInteger(value)),
           Aggregated: ({ subRows }) => {
             const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
-            const totalAvailableProcessors = sum(originalRows, s => s.available_processors);
+            const totalAvailableProcessors = sum(originalRows, s => Number(s.available_processors));
             return totalAvailableProcessors;
           },
         },
@@ -1002,7 +1005,7 @@ ORDER BY
           },
           Aggregated: ({ subRows }) => {
             const originalRows: ServiceResultRow[] = subRows.map(r => r._original);
-            const totalMemory = sum(originalRows, s => s.total_memory);
+            const totalMemory = sum(originalRows, s => Number(s.total_memory));
             return formatBytes(totalMemory, true);
           },
         },
@@ -1077,10 +1080,9 @@ ORDER BY
   ): BasicAction[] {
     const actions: BasicAction[] = [];
 
-    // Add worker-specific actions (enable/disable) if this is a worker
     if (workerInfo) {
       const { worker } = workerInfo;
-      const disabled = worker.version === '';
+      const disabled = worker.disabled || worker.version === '';
 
       if (disabled) {
         actions.push({

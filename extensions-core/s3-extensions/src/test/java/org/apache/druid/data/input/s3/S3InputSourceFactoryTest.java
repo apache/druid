@@ -22,8 +22,8 @@ package org.apache.druid.data.input.s3;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -53,6 +53,6 @@ public class S3InputSourceFactoryTest
         null,
         null
     );
-    Assert.assertTrue(s3Builder.create(fileUris) instanceof S3InputSource);
+    Assertions.assertTrue(s3Builder.create(fileUris) instanceof S3InputSource);
   }
 }

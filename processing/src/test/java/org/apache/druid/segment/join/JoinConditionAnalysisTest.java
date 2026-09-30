@@ -25,8 +25,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -41,19 +41,19 @@ public class JoinConditionAnalysisTest
     final String expression = "x == \"j.y\"";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertTrue(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertTrue(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(Pair.of("x", "y")),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
+    Assertions.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
   }
 
   @Test
@@ -62,19 +62,19 @@ public class JoinConditionAnalysisTest
     final String expression = "\"j.y\" == x";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertTrue(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertTrue(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(Pair.of("x", "y")),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
+    Assertions.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
   }
 
   @Test
@@ -83,19 +83,19 @@ public class JoinConditionAnalysisTest
     final String expression = "x + y == \"j.z\"";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertTrue(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertTrue(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(Pair.of("(+ x y)", "z")),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("z"));
+    Assertions.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("z"));
   }
 
   @Test
@@ -104,19 +104,19 @@ public class JoinConditionAnalysisTest
     final String expression = "\"j.x\" + \"j.y\" == z";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertFalse(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertFalse(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("(== (+ j.x j.y) z)"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
+    Assertions.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -125,19 +125,19 @@ public class JoinConditionAnalysisTest
     final String expression = "x + \"j.y\" == \"j.z\"";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertFalse(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertFalse(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("(== (+ x j.y) j.z)"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
+    Assertions.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -146,19 +146,19 @@ public class JoinConditionAnalysisTest
     final String expression = "1 + 1";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertTrue(analysis.canHashJoin());
-    Assert.assertTrue(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertTrue(analysis.canHashJoin());
+    Assertions.assertTrue(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("2"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
+    Assertions.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -167,19 +167,19 @@ public class JoinConditionAnalysisTest
     final String expression = "0";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertTrue(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertTrue(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertTrue(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertTrue(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("0"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
+    Assertions.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -188,19 +188,19 @@ public class JoinConditionAnalysisTest
     final String expression = "x == 1";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertFalse(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertFalse(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("(== x 1)"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
+    Assertions.assertTrue(analysis.getRightEquiConditionKeys().isEmpty());
   }
 
   @Test
@@ -209,19 +209,19 @@ public class JoinConditionAnalysisTest
     final String expression = "\"j.x\" == 1";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertTrue(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertTrue(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(Pair.of("1", "x")),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("x"));
+    Assertions.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("x"));
   }
 
   @Test
@@ -230,19 +230,19 @@ public class JoinConditionAnalysisTest
     final String expression = "(x == \"j.y\") && (x + y == \"j.z\") && (z == \"j.zz\")";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertTrue(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertTrue(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(Pair.of("x", "y"), Pair.of("(+ x y)", "z"), Pair.of("z", "zz")),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y", "z", "zz"));
+    Assertions.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y", "z", "zz"));
   }
 
   @Test
@@ -251,19 +251,19 @@ public class JoinConditionAnalysisTest
     final String expression = "(x == \"j.y\") && ((x + y == \"j.z\") || (z == \"j.zz\"))";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(expression, analysis.getOriginalExpression());
-    Assert.assertFalse(analysis.canHashJoin());
-    Assert.assertFalse(analysis.isAlwaysTrue());
-    Assert.assertFalse(analysis.isAlwaysFalse());
-    Assert.assertEquals(
+    Assertions.assertEquals(expression, analysis.getOriginalExpression());
+    Assertions.assertFalse(analysis.canHashJoin());
+    Assertions.assertFalse(analysis.isAlwaysTrue());
+    Assertions.assertFalse(analysis.isAlwaysFalse());
+    Assertions.assertEquals(
         ImmutableList.of(Pair.of("x", "y")),
         equalitiesToPairs(analysis.getEquiConditions())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("(|| (== (+ x y) j.z) (== z j.zz))"),
         exprsToStrings(analysis.getNonEquiConditions())
     );
-    Assert.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
+    Assertions.assertEquals(analysis.getRightEquiConditionKeys(), ImmutableSet.of("y"));
   }
 
   @Test
@@ -272,7 +272,7 @@ public class JoinConditionAnalysisTest
     final String expression = "(x == \"j.y\") && ((x + y == \"j.z\") || (z == \"j.zz\"))";
     final JoinConditionAnalysis analysis = analyze(expression);
 
-    Assert.assertEquals(ImmutableSet.of("x", "j.y", "y", "j.z", "z", "j.zz"), analysis.getRequiredColumns());
+    Assertions.assertEquals(ImmutableSet.of("x", "j.y", "y", "j.z", "z", "j.zz"), analysis.getRequiredColumns());
   }
 
   @Test

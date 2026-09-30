@@ -47,6 +47,7 @@ import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
 
 public class CostBalancerStrategy implements BalancerStrategy
@@ -318,6 +319,20 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
   /**
+   * Creates a function that computes the cost of placing the given segment on a
+   * server. Subclasses may override this method when the cost for one server
+   * depends on the full candidate set.
+   */
+  protected ToDoubleFunction<ServerHolder> makePlacementCostFunction(
+      final DataSegment proposalSegment,
+      final List<ServerHolder> serverHolders,
+      final SegmentAction action
+  )
+  {
+    return server -> computePlacementCost(proposalSegment, server);
+  }
+
+  /**
    * Orders the servers by increasing cost for placing the given segment.
    */
   private List<ServerHolder> orderServersByPlacementCost(
@@ -328,10 +343,12 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     final Stopwatch computeTime = Stopwatch.createStarted();
     final List<ListenableFuture<Pair<Double, ServerHolder>>> futures = new ArrayList<>();
+    final ToDoubleFunction<ServerHolder> placementCostFunction =
+        makePlacementCostFunction(segment, serverHolders, action);
     for (ServerHolder server : serverHolders) {
       futures.add(
           exec.submit(
-              () -> Pair.of(computePlacementCost(segment, server), server)
+              () -> Pair.of(placementCostFunction.applyAsDouble(server), server)
           )
       );
     }
@@ -405,4 +422,3 @@ public class CostBalancerStrategy implements BalancerStrategy
   }
 
 }
-

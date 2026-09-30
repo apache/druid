@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class K8sDruidNodeDiscoveryProviderTest
@@ -430,6 +431,61 @@ public class K8sDruidNodeDiscoveryProviderTest
     discoveryProvider.stop();
   }
 
+  @Test
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
+  public void testStopDoesNotWaitForErrorRetryWhenWatchIsInterrupted() throws Exception
+  {
+    final String labelSelector = "druidDiscoveryAnnouncement-cluster-identifier=druid-cluster,druidDiscoveryAnnouncement-router=true";
+
+    // Long enough that a single unguarded retry sleep outlasts the 15s stop() timeout on watchExecutor.
+    final long watcherErrorRetryWaitMS = 30_000;
+
+    final CountDownLatch watchBlocked = new CountDownLatch(1);
+
+    final K8sApiClient mockK8sApiClient = EasyMock.createMock(K8sApiClient.class);
+    EasyMock.expect(mockK8sApiClient.listPods(podInfo.getPodNamespace(), labelSelector, NodeRole.ROUTER)).andReturn(
+        new DiscoveryDruidNodeList(
+            "v1",
+            ImmutableMap.of(testNode1.getDruidNode().getHostAndPortToUse(), testNode1)
+        )
+    );
+    EasyMock.expect(mockK8sApiClient.watchPods(
+        podInfo.getPodNamespace(), labelSelector, "v1", NodeRole.ROUTER)).andReturn(
+        new BlockingWatchResult(watchBlocked)
+    );
+    EasyMock.replay(mockK8sApiClient);
+
+    final K8sDruidNodeDiscoveryProvider discoveryProvider = new K8sDruidNodeDiscoveryProvider(
+        podInfo,
+        discoveryConfig,
+        mockK8sApiClient,
+        watcherErrorRetryWaitMS
+    );
+    discoveryProvider.start();
+
+    final K8sDruidNodeDiscoveryProvider.NodeRoleWatcher nodeDiscovery =
+        discoveryProvider.getForNodeRole(NodeRole.ROUTER, false);
+    nodeDiscovery.start();
+
+    Assertions.assertTrue(
+        watchBlocked.await(30, TimeUnit.SECONDS),
+        "watch thread never reached hasNext()"
+    );
+
+    final long startNs = System.nanoTime();
+    discoveryProvider.stop();
+    final long stopMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNs);
+
+    Assertions.assertTrue(
+        stopMillis < 5_000,
+        StringUtils.format(
+            "stop() took [%,d] ms, expected it not to wait out watcherErrorRetryWaitMS[%,d]",
+            stopMillis,
+            watcherErrorRetryWaitMS
+        )
+    );
+  }
+
   private static class MockListener implements DruidNodeDiscovery.Listener
   {
     List<Event> events;
@@ -551,6 +607,44 @@ public class K8sDruidNodeDiscoveryProviderTest
                ", node=" + node +
                '}';
       }
+    }
+  }
+
+  /**
+   * A {@link WatchResult} that parks in {@link #hasNext()} the way an open k8s watch socket does, and surfaces the
+   * shutdown interrupt as a {@link RuntimeException}.
+   */
+  private static class BlockingWatchResult implements WatchResult
+  {
+    private final CountDownLatch blocked;
+
+    public BlockingWatchResult(CountDownLatch blocked)
+    {
+      this.blocked = blocked;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      blocked.countDown();
+      try {
+        Thread.sleep(Long.MAX_VALUE);
+        return false; // Not reached.
+      }
+      catch (InterruptedException ex) {
+        throw new RuntimeException(ex);
+      }
+    }
+
+    @Override
+    public Watch.Response<DiscoveryDruidNodeAndResourceVersion> next()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void close()
+    {
     }
   }
 

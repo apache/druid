@@ -23,10 +23,12 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.multibindings.Multibinder;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
+import org.apache.druid.sql.calcite.schema.SchemaProvider;
 
 /**
  * Utility class that provides bindings to extendable components in the SqlModule
@@ -68,7 +70,7 @@ public class SqlBindings
   }
 
   /**
-   * Returns a multiBinder that can modules can use to bind {@link NamedSchema} to be used by the SqlModule
+   * Binds a {@link NamedSchema} available to all users.
    */
   public static void addSchema(
       final Binder binder,
@@ -77,5 +79,17 @@ public class SqlBindings
   {
     binder.bind(clazz).in(Scopes.SINGLETON);
     Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().to(clazz);
+  }
+
+  /**
+   * Binds a {@link SchemaProvider} that provides user-specific schemas.
+   * All providers are bound as {@link LazySingleton}.
+   */
+  public static void addSchemaProvider(
+      final Binder binder,
+      final Class<? extends SchemaProvider> clazz
+  )
+  {
+    Multibinder.newSetBinder(binder, SchemaProvider.class).addBinding().to(clazz).in(LazySingleton.class);
   }
 }

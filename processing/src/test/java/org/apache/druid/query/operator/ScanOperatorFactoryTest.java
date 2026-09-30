@@ -39,8 +39,8 @@ import org.apache.druid.query.rowsandcols.semantic.TestRowsAndColumnsDecorator;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -129,8 +129,8 @@ public class ScanOperatorFactoryTest
                 final String asString = mapper.writeValueAsString(factory);
                 final ScanOperatorFactory deserialized = mapper.readValue(asString, ScanOperatorFactory.class);
 
-                Assert.assertEquals(msg, factory, deserialized);
-                Assert.assertEquals(msg, factory.hashCode(), deserialized.hashCode());
+                Assertions.assertEquals(factory, deserialized, msg);
+                Assertions.assertEquals(factory.hashCode(), deserialized.hashCode(), msg);
 
                 final ScanOperator wrapped = (ScanOperator) factory.wrap(new Operator()
                 {
@@ -160,16 +160,16 @@ public class ScanOperatorFactoryTest
                         TestRowsAndColumnsDecorator.DecoratedRowsAndColumns rac =
                             (TestRowsAndColumnsDecorator.DecoratedRowsAndColumns) inRac;
 
-                        Assert.assertEquals(msg, factory.getTimeRange(), rac.getTimeRange());
-                        Assert.assertEquals(msg, factory.getOffsetLimit(), rac.getOffsetLimit());
-                        Assert.assertEquals(msg, factory.getVirtualColumns(), rac.getVirtualColumns());
+                        Assertions.assertEquals(factory.getTimeRange(), rac.getTimeRange(), msg);
+                        Assertions.assertEquals(factory.getOffsetLimit(), rac.getOffsetLimit(), msg);
+                        Assertions.assertEquals(factory.getVirtualColumns(), rac.getVirtualColumns(), msg);
                         validateList(msg, factory.getOrdering(), rac.getOrdering());
                         validateList(msg, factory.getProjectedColumns(), rac.getProjectedColumns());
 
-                        Assert.assertEquals(
-                            msg,
+                        Assertions.assertEquals(
                             factory.getFilter() == null ? null : factory.getFilter().toFilter(),
-                            rac.getFilter()
+                            rac.getFilter(),
+                            msg
                         );
 
                         return Operator.Signal.GO;
@@ -197,9 +197,9 @@ public class ScanOperatorFactoryTest
   )
   {
     if (expectedList != null && expectedList.isEmpty()) {
-      Assert.assertNull(msg, actualList);
+      Assertions.assertNull(actualList, msg);
     } else {
-      Assert.assertEquals(msg, expectedList, actualList);
+      Assertions.assertEquals(expectedList, actualList, msg);
     }
   }
 

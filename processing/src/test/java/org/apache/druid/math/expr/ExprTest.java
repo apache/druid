@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -219,6 +220,22 @@ public class ExprTest
                   .withIgnoredFields("outputType", "value")
                   .withPrefabValues(ExpressionType.class, ExpressionType.DOUBLE, ExpressionType.STRING)
                   .verify();
+  }
+
+  @Test
+  public void testNowExprCacheKeyIsNotStable()
+  {
+    Expr now = Parser.parse("now()", ExprMacroTable.nil());
+    byte[] k1 = now.getCacheKey();
+    byte[] k2 = now.getCacheKey();
+    Assertions.assertFalse(Arrays.equals(k1, k2), "bare now() cache key must change across calls");
+
+    // Verify the same instability propagates when now() is nested in a parent expression.
+    Expr nested = Parser.parse("now() > 0", ExprMacroTable.nil());
+    Assertions.assertFalse(
+        Arrays.equals(nested.getCacheKey(), nested.getCacheKey()),
+        "Expr containing now() must produce an unstable cache key"
+    );
   }
 
   @Test

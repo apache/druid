@@ -234,7 +234,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
         icon={IconNames.CLIPBOARD}
         text={`Copy: ${prettyRef}`}
         onClick={() => {
-          copyAndAlert(String(ref), `${prettyRef}' copied to clipboard`);
+          copyAndAlert(String(ref), `'${prettyRef}' copied to clipboard`);
         }}
       />,
     );

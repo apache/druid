@@ -19,9 +19,8 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DoubleMaxAveragerFactoryTest
 {
@@ -29,6 +28,6 @@ public class DoubleMaxAveragerFactoryTest
   public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new DoubleMaxAveragerFactory("test", 5, 1, "field");
-    Assert.assertThat(fac.createAverager(), CoreMatchers.instanceOf(DoubleMaxAverager.class));
+    Assertions.assertInstanceOf(DoubleMaxAverager.class, fac.createAverager());
   }
 }

@@ -551,4 +551,34 @@ public class GeneratorBasicSchemas
   }
 
   public static final Map<String, GeneratorSchemaInfo> SCHEMA_MAP = SCHEMA_INFO_BUILDER.build();
+
+  /**
+   * Low-cardinality testbench for clustered segments. Every column is a single-valued, non-rollup, non-metric
+   * dimension (clustered base tables have no metrics and no rollup). The primary clustering column {@code clusterKey1}
+   * has its cardinality controlled by {@code clusteringCardinality} so benchmarks can sweep how clustering behaves as
+   * the number of value groups grows; {@code clusterKey2} is a second, fixed low-cardinality string available as an
+   * optional second clustering column. {@code dimSecondary} is a higher-cardinality dimension for group-by workloads,
+   * and {@code valueLong}/{@code valueDouble} are numeric measures to aggregate at query time.
+   */
+  public static GeneratorSchemaInfo makeClusteringSchemaInfo(int clusteringCardinality)
+  {
+    final List<GeneratorColumnSchema> columns = ImmutableList.of(
+        // primary clustering key, parameterized cardinality
+        GeneratorColumnSchema.makeDiscreteUniform("clusterKey1", ValueType.STRING, false, 1, null, 1, clusteringCardinality),
+        // secondary clustering key, fixed low cardinality
+        GeneratorColumnSchema.makeDiscreteUniform("clusterKey2", ValueType.STRING, false, 1, null, 1, 8),
+        // higher cardinality dimension for group-by
+        GeneratorColumnSchema.makeZipf("dimSecondary", ValueType.STRING, false, 1, null, 1, 1000, 1.0),
+        // numeric columns (dimensions, since clustered segments have no metrics)
+        GeneratorColumnSchema.makeZipf("valueLong", ValueType.LONG, false, 1, null, 0, 10000, 1.0),
+        GeneratorColumnSchema.makeZipf("valueDouble", ValueType.DOUBLE, false, 1, null, 0, 1000, 1.0)
+    );
+
+    return new GeneratorSchemaInfo(
+        columns,
+        Collections.emptyList(),
+        Intervals.of("2000-01-01/P1D"),
+        false
+    );
+  }
 }

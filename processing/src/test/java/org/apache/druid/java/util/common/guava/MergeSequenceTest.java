@@ -23,9 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,7 +51,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9));
 
     for (TestSequence<Integer> sequence : testSeqs) {
-      Assert.assertTrue(sequence.isClosed());
+      Assertions.assertTrue(sequence.isClosed());
     }
   }
 
@@ -71,7 +71,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9));
 
     for (TestSequence<Integer> sequence : testSeqs) {
-      Assert.assertTrue(sequence.isClosed());
+      Assertions.assertTrue(sequence.isClosed());
     }
   }
 
@@ -92,7 +92,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9));
 
     for (TestSequence<Integer> sequence : testSeqs) {
-      Assert.assertTrue(sequence.isClosed());
+      Assertions.assertTrue(sequence.isClosed());
     }
   }
 
@@ -113,7 +113,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9));
 
     for (TestSequence<Integer> sequence : testSeqs) {
-      Assert.assertTrue(sequence.isClosed());
+      Assertions.assertTrue(sequence.isClosed());
     }
   }
 
@@ -135,7 +135,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 8, 9));
 
     for (TestSequence<Integer> sequence : testSeqs) {
-      Assert.assertTrue(sequence.isClosed());
+      Assertions.assertTrue(sequence.isClosed());
     }
   }
 
@@ -155,7 +155,7 @@ public class MergeSequenceTest
     SequenceTestHelper.testAll(seq, Arrays.asList(1, 2, 3, 4, 5, 4, 6, 7, 8, 9));
 
     for (TestSequence<Integer> sequence : testSeqs) {
-      Assert.assertTrue(sequence.isClosed());
+      Assertions.assertTrue(sequence.isClosed());
     }
   }
 
@@ -204,26 +204,23 @@ public class MergeSequenceTest
             Sequences.simple(ImmutableList.of(bomb1, bomb2))
         );
 
-    try {
-      mergeSequence.toYielder(
-          null,
-          new YieldingAccumulator<Integer, Integer>()
-          {
-            @Override
-            public Integer accumulate(Integer accumulated, Integer in)
+    final Exception e1 = Assertions.assertThrows(Exception.class, () ->
+        mergeSequence.toYielder(
+            null,
+            new YieldingAccumulator<Integer, Integer>()
             {
-              return in;
+              @Override
+              public Integer accumulate(Integer accumulated, Integer in)
+              {
+                return in;
+              }
             }
-          }
-      );
-      Assert.fail("Expected exception");
-    }
-    catch (Exception e) {
-      Assert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("get")));
-    }
+        )
+    );
+    MatcherAssert.assertThat(e1.getMessage(), CoreMatchers.equalTo("get"));
 
-    Assert.assertEquals("Closes resources (1)", 1, bomb1.getCloseCount());
-    Assert.assertEquals("Closes resources (2)", 1, bomb2.getCloseCount());
+    Assertions.assertEquals(1, bomb1.getCloseCount(), "Closes resources (1)");
+    Assertions.assertEquals(1, bomb2.getCloseCount(), "Closes resources (2)");
   }
 
   @Test
@@ -240,30 +237,27 @@ public class MergeSequenceTest
             Sequences.simple(ImmutableList.of(bomb1, bomb2))
         );
 
-    try {
-      mergeSequence.toYielder(
-          null,
-          new YieldingAccumulator<Integer, Integer>()
-          {
-            @Override
-            public Integer accumulate(Integer accumulated, Integer in)
+    final Exception e2 = Assertions.assertThrows(Exception.class, () ->
+        mergeSequence.toYielder(
+            null,
+            new YieldingAccumulator<Integer, Integer>()
             {
-              if (in > 1) {
-                throw new RuntimeException("boom");
+              @Override
+              public Integer accumulate(Integer accumulated, Integer in)
+              {
+                if (in > 1) {
+                  throw new RuntimeException("boom");
+                }
+
+                return in;
               }
-
-              return in;
             }
-          }
-      );
-      Assert.fail("Expected exception");
-    }
-    catch (Exception e) {
-      Assert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("boom")));
-    }
+        )
+    );
+    MatcherAssert.assertThat(e2.getMessage(), CoreMatchers.equalTo("boom"));
 
-    Assert.assertEquals("Closes resources (1)", 1, bomb1.getCloseCount());
-    Assert.assertEquals("Closes resources (2)", 1, bomb2.getCloseCount());
+    Assertions.assertEquals(1, bomb1.getCloseCount(), "Closes resources (1)");
+    Assertions.assertEquals(1, bomb2.getCloseCount(), "Closes resources (2)");
   }
 
   @Test
@@ -278,28 +272,25 @@ public class MergeSequenceTest
             Sequences.simple(ImmutableList.of(Sequences.empty(), bomb))
         );
 
-    try {
-      mergeSequence.toYielder(
-          null,
-          new YieldingAccumulator<Integer, Integer>()
-          {
-            @Override
-            public Integer accumulate(Integer accumulated, Integer in)
+    final Exception e3 = Assertions.assertThrows(Exception.class, () ->
+        mergeSequence.toYielder(
+            null,
+            new YieldingAccumulator<Integer, Integer>()
             {
-              if (in > 1) {
-                throw new RuntimeException("boom");
+              @Override
+              public Integer accumulate(Integer accumulated, Integer in)
+              {
+                if (in > 1) {
+                  throw new RuntimeException("boom");
+                }
+
+                return in;
               }
-
-              return in;
             }
-          }
-      );
-      Assert.fail("Expected exception");
-    }
-    catch (Exception e) {
-      Assert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("boom")));
-    }
+        )
+    );
+    MatcherAssert.assertThat(e3.getMessage(), CoreMatchers.equalTo("boom"));
 
-    Assert.assertEquals("Closes resources", 1, bomb.getCloseCount());
+    Assertions.assertEquals(1, bomb.getCloseCount(), "Closes resources");
   }
 }

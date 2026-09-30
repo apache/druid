@@ -34,14 +34,19 @@ import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.joda.time.Interval;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 public class CatalogDataSourceCompactionConfigTest
 {
@@ -116,6 +121,7 @@ public class CatalogDataSourceCompactionConfigTest
         null,
         null,
         null,
+        null,
         METADATA_CATALOG
     );
 
@@ -135,6 +141,7 @@ public class CatalogDataSourceCompactionConfigTest
         null,
         null,
         null,
+        null,
         METADATA_CATALOG
     );
 
@@ -142,6 +149,37 @@ public class CatalogDataSourceCompactionConfigTest
         config,
         MAPPER.readValue(MAPPER.writeValueAsString(config), DataSourceCompactionConfig.class)
     );
+  }
+
+  @Test
+  public void testSerdeWithSkipIntervals() throws JsonProcessingException
+  {
+    final Period skipOffsetFromLatest = new Period("PT1H");
+    final List<Interval> skipIntervals = List.of(
+        Intervals.of("2024-01-01/2024-01-02"),
+        Intervals.of("2024-02-15/2024-02-16")
+    );
+
+    final CatalogDataSourceCompactionConfig config = new CatalogDataSourceCompactionConfig(
+        "foo",
+        null,
+        skipOffsetFromLatest,
+        skipIntervals,
+        null,
+        null,
+        null,
+        METADATA_CATALOG
+    );
+
+    final CatalogDataSourceCompactionConfig deserialized =
+        (CatalogDataSourceCompactionConfig) MAPPER.readValue(
+            MAPPER.writeValueAsString(config),
+            DataSourceCompactionConfig.class
+        );
+
+    Assertions.assertEquals(config, deserialized);
+    Assertions.assertEquals(skipOffsetFromLatest, deserialized.getSkipOffsetFromLatest());
+    Assertions.assertEquals(skipIntervals, deserialized.getSkipIntervals());
   }
 
   @Test

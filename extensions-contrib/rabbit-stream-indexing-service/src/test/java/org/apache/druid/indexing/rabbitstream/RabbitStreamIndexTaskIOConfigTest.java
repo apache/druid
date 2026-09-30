@@ -21,12 +21,15 @@ package org.apache.druid.indexing.rabbitstream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.IOConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Map;
 
 public class RabbitStreamIndexTaskIOConfigTest
 {
@@ -54,27 +57,52 @@ public class RabbitStreamIndexTaskIOConfigTest
         IOConfig.class
     );
 
-    Assert.assertNull(config.getTaskGroupId());
-    Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
+    Assertions.assertNull(config.getTaskGroupId());
+    Assertions.assertEquals("my-sequence-name", config.getBaseSequenceName());
 
-    Assert.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of("stream-0", 1L, "stream-1", 10L),
         config.getStartSequenceNumbers().getPartitionSequenceNumberMap()
     );
 
-    Assert.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of("stream-0", 15L, "stream-1", 200L),
         config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
 
-    Assert.assertTrue(config.isUseTransaction());
-    Assert.assertNull("minimumMessageTime", config.getMinimumMessageTime());
-    Assert.assertEquals(config.getUri(), "rabbitmq-stream://localhost:5552");
-    Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
+    Assertions.assertTrue(config.isUseTransaction());
+    Assertions.assertNull(config.getMinimumMessageTime(), "minimumMessageTime");
+    Assertions.assertEquals(config.getUri(), "rabbitmq-stream://localhost:5552");
+    Assertions.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
+  }
+
+  @Test
+  public void testRabbitStreamDataSourceMetadataWithBoundedConfig()
+  {
+    Map<String, Long> startOffsets = ImmutableMap.of("q0", 0L);
+    Map<String, Long> endOffsets = ImmutableMap.of("q0", 100L);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    SeekableStreamStartSequenceNumbers<String, Long> partitions =
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of("q0", 10L), Collections.emptySet());
+
+    RabbitStreamDataSourceMetadata metadata = new RabbitStreamDataSourceMetadata(partitions, boundedConfig);
+    Assertions.assertNotNull(metadata.getBoundedStreamConfig());
+    Assertions.assertEquals(boundedConfig, metadata.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testRabbitStreamDataSourceMetadataWithoutBoundedConfig()
+  {
+    SeekableStreamStartSequenceNumbers<String, Long> partitions =
+        new SeekableStreamStartSequenceNumbers<>("stream", ImmutableMap.of("q0", 10L), Collections.emptySet());
+
+    RabbitStreamDataSourceMetadata metadata = new RabbitStreamDataSourceMetadata(partitions);
+    Assertions.assertNull(metadata.getBoundedStreamConfig());
   }
 
 }

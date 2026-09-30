@@ -77,7 +77,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -112,12 +112,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     if (expected instanceof List && actual instanceof List) {
       List expectedList = (List) expected;
       List actualList = (List) actual;
-      Assert.assertEquals(path + " arrays length mismatch", expectedList.size(), actualList.size());
+      Assertions.assertEquals(expectedList.size(), actualList.size(), path + " arrays length mismatch");
       for (int i = 0; i < expectedList.size(); i++) {
         assertDeepEquals(path + "[" + i + "]", expectedList.get(i), actualList.get(i));
       }
     } else {
-      Assert.assertEquals(path, expected, actual);
+      Assertions.assertEquals(expected, actual, path);
     }
   }
 
@@ -1515,7 +1515,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()
             .dataSource(CalciteTests.DATASOURCE3)
             .intervals(querySegmentSpec(Filtration.eternity()))
-            .filters(expressionFilter("array_contains(array(1,null),array((\"dbl1\" > 1)))"))
+            .filters(expressionFilter("array_contains(array(1,null),array((\"dbl1\" > 1.0)))"))
             .columns("dim3")
             .columnTypes(ColumnType.STRING)
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -5141,7 +5141,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                .intervals(querySegmentSpec(Filtration.eternity()))
                                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                .filters(or(
-                                   range("m1", ColumnType.LONG, null, "10", false, false),
+                                   range("m1", ColumnType.FLOAT, null, "10.0", false, false),
                                    equality("j0.unnest", "b", ColumnType.STRING)
                                ))
                                .context(QUERY_CONTEXT_UNNEST)
@@ -5722,7 +5722,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .dataSource(UnnestDataSource.create(
                       FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
-                          range("m1", ColumnType.LONG, null, 10L, false, true)
+                          range("m1", ColumnType.FLOAT, null, 10.0, false, true)
                       ),
                       nestedExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       in("j0.unnest", ImmutableSet.of("a", "b"))
@@ -5924,8 +5924,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           and(
-                              range("m1", ColumnType.LONG, null, 10L, false, true),
-                              range("m2", ColumnType.LONG, null, 10L, false, true)
+                              range("m1", ColumnType.FLOAT, null, 10.0, false, true),
+                              range("m2", ColumnType.DOUBLE, null, 10.0, false, true)
                           )
                       ),
                       nestedExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
@@ -5964,7 +5964,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .filters(
                       or(
                           equality("j0.unnest", "b", ColumnType.STRING),
-                          range("m1", ColumnType.LONG, null, 2L, false, true)
+                          range("m1", ColumnType.FLOAT, null, 2.0, false, true)
                       )
                   )
                   .columns("j0.unnest")
@@ -6082,8 +6082,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                       FilteredDataSource.create(
                           new TableDataSource(CalciteTests.DATASOURCE3),
                           or(
-                              range("m1", ColumnType.LONG, null, 2L, false, true),
-                              range("m2", ColumnType.LONG, null, 2L, false, true)
+                              range("m1", ColumnType.FLOAT, null, 2.0, false, true),
+                              range("m2", ColumnType.DOUBLE, null, 2.0, false, true)
                           )
                       ),
                       nestedExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
@@ -6122,7 +6122,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .filters(
                       or(
                           in("j0.unnest", ImmutableSet.of("a", "aa")),
-                          range("m1", ColumnType.LONG, null, 2L, false, true)
+                          range("m1", ColumnType.FLOAT, null, 2.0, false, true)
                       )
                   )
                   .columns("j0.unnest")

@@ -95,6 +95,12 @@ public class NativeCompactionRunner implements CompactionRunner
       Map<QuerySegmentSpec, DataSchema> inputSchemas
   )
   {
+    if (compactionTask.getBaseTable() != null) {
+      return CompactionConfigValidationResult.failure(
+          "Compaction engine[native] does not support 'baseTable'; use the MSQ compaction engine."
+      );
+    }
+
     // Virtual columns in filter rules are not supported by native compaction
     if (compactionTask.getTransformSpec() != null
         && compactionTask.getTransformSpec().getVirtualColumns() != null

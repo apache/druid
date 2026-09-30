@@ -24,7 +24,7 @@ title: "Native queries"
 
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes the
  native query language. For information about how Druid SQL chooses which native query types to use when
  it runs a SQL query, refer to the [SQL documentation](sql-translation.md#query-types).

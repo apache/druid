@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
+import javax.annotation.Nullable;
+
 /**
  * Manager for addition/removal of segments to server load queues and the
  * corresponding success/failure callbacks.
@@ -51,12 +53,30 @@ public class SegmentLoadQueueManager
    */
   public boolean loadSegment(DataSegment segment, ServerHolder server, SegmentAction action)
   {
+    return loadSegment(segment, server, action, null);
+  }
+
+  /**
+   * Queues load of the segment on the given server, optionally carrying a partial-load profile that wraps the
+   * outbound load spec for the historical.
+   */
+  public boolean loadSegment(
+      DataSegment segment,
+      ServerHolder server,
+      SegmentAction action,
+      @Nullable PartialLoadProfile profile
+  )
+  {
     try {
-      if (!server.startOperation(action, segment)) {
+      if (!server.startOperation(action, segment, profile)) {
         return false;
       }
 
-      server.getPeon().loadSegment(segment, action, null);
+      if (profile == null) {
+        server.getPeon().loadSegment(segment, action, null);
+      } else {
+        server.getPeon().loadSegment(segment, action, profile, null);
+      }
       return true;
     }
     catch (Exception e) {
@@ -85,10 +105,15 @@ public class SegmentLoadQueueManager
     }
   }
 
+  /**
+   * Moves the segment from serverA to serverB, optionally carrying the partial-load profile that serverA holds it
+   * under so that serverB is asked for the same parts of the segment rather than the whole of it.
+   */
   public boolean moveSegment(
       DataSegment segment,
       ServerHolder serverA,
-      ServerHolder serverB
+      ServerHolder serverB,
+      @Nullable PartialLoadProfile profile
   )
   {
     final LoadQueuePeon peonA = serverA.getPeon();
@@ -97,7 +122,7 @@ public class SegmentLoadQueueManager
     if (!serverA.startOperation(SegmentAction.MOVE_FROM, segment)) {
       return false;
     }
-    if (!serverB.startOperation(SegmentAction.MOVE_TO, segment)) {
+    if (!serverB.startOperation(SegmentAction.MOVE_TO, segment, profile)) {
       serverA.cancelOperation(SegmentAction.MOVE_FROM, segment);
       return false;
     }
@@ -112,6 +137,7 @@ public class SegmentLoadQueueManager
       peonB.loadSegment(
           segment,
           SegmentAction.MOVE_TO,
+          profile,
           success -> {
             // Drop segment only if:
             // (1) segment load was successful on serverB

@@ -26,6 +26,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.guice.PeonProcessingModule;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
@@ -122,9 +123,9 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_REALTIME_TASK_PRIORITY);
+    return Tasks.DEFAULT_REALTIME_TASK_PRIORITY;
   }
 
   @Override
@@ -334,5 +335,14 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, ?> getRunner()
   {
     return runnerSupplier.get();
+  }
+
+  @Override
+  public PeonProcessingModule.Config getPeonProcessingModuleConfig()
+  {
+    return new PeonProcessingModule.Config()
+        .withProcessingBuffers()
+        .withProcessingThreads()
+        .withMergeBuffers();
   }
 }

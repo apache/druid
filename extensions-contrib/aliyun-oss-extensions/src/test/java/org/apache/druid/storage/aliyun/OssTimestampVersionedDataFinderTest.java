@@ -25,8 +25,8 @@ import com.aliyun.oss.model.OSSObjectSummary;
 import com.aliyun.oss.model.ObjectListing;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.Date;
@@ -75,7 +75,7 @@ public class OssTimestampVersionedDataFinderTest
 
     URI expected = URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, object1.getKey()));
 
-    Assert.assertEquals(expected, latest);
+    Assertions.assertEquals(expected, latest);
   }
 
   @Test
@@ -102,7 +102,7 @@ public class OssTimestampVersionedDataFinderTest
 
     EasyMock.verify(oss);
 
-    Assert.assertEquals(null, latest);
+    Assertions.assertEquals(null, latest);
   }
 
   @Test
@@ -139,7 +139,7 @@ public class OssTimestampVersionedDataFinderTest
 
     URI expected = URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, object0.getKey()));
 
-    Assert.assertEquals(expected, latest);
+    Assertions.assertEquals(expected, latest);
   }
 
   @Test
@@ -173,6 +173,6 @@ public class OssTimestampVersionedDataFinderTest
 
     URI expected = URI.create(StringUtils.format("%s://%s/%s", OssStorageDruidModule.SCHEME, bucket, object0.getKey()));
 
-    Assert.assertEquals(expected, latest);
+    Assertions.assertEquals(expected, latest);
   }
 }

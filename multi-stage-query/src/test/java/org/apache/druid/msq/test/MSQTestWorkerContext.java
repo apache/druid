@@ -48,12 +48,13 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.rowsandcols.serde.WireTransferableContext;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
-import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.IndexMergerV10;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.SegmentManager;
@@ -259,6 +260,12 @@ public class MSQTestWorkerContext implements WorkerContext
     }
 
     @Override
+    public VirtualStorageManager virtualStorageManager()
+    {
+      return injector.getInstance(VirtualStorageManager.class);
+    }
+
+    @Override
     public CoordinatorClient coordinatorClient()
     {
       return coordinatorClient;
@@ -309,12 +316,17 @@ public class MSQTestWorkerContext implements WorkerContext
     @Override
     public IndexMerger indexMerger()
     {
-      return new IndexMergerV9(
+      return new IndexMergerV10(
           mapper,
           indexIO(),
-          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-          true
+          OffHeapMemorySegmentWriteOutMediumFactory.instance()
       );
+    }
+
+    @Override
+    public void acquireProcessingBuffers(final int requestedSlices)
+    {
+      // No-op: this mock returns a fixed ProcessingBuffers regardless of slice count.
     }
 
     @Override

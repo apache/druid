@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/apache/druid/master/extensions-contrib/openlineage-emitter/src/main/resources/openlineage-schema/DruidQueryContextRunFacet.json",
+  "title": "DruidQueryContextRunFacet",
+  "description": "Druid-specific run facet capturing query context metadata.",
+  "type": "object",
+  "allOf": [
+    {"$ref": "https://openlineage.io/spec/2-0-2/OpenLineage.json#/definitions/RunFacet"}
+  ],
+  "properties": {
+    "queryType": {
+      "type": "string",
+      "description": "The Druid query type (e.g. 'groupBy', 'topN', 'scan', 'msq')."
+    },
+    "remoteAddress": {
+      "type": "string",
+      "description": "IP address of the client that submitted the query."
+    },
+    "identity": {
+      "type": "string",
+      "description": "Authenticated identity of the query submitter, if available."
+    },
+    "sqlQueryId": {
+      "type": "string",
+      "description": "For native sub-queries of SQL, the parent SQL query ID for correlation."
+    }
+  },
+  "required": ["queryType", "remoteAddress"]
+}

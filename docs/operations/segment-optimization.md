@@ -23,7 +23,7 @@ title: "Segment size optimization"
   -->
 
 
-In Apache Druid, it's important to optimize the segment size because
+In Apache&circledR; Druid, it's important to optimize the segment size because
 
   1. Druid stores data in segments. If you're using the [best-effort roll-up](../ingestion/rollup.md) mode,
   increasing the segment size might introduce further aggregation which reduces the dataSource size.

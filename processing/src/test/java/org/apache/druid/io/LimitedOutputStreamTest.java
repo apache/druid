@@ -20,9 +20,6 @@
 package org.apache.druid.io;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +41,7 @@ public class LimitedOutputStreamTest
           () -> stream.write('b')
       );
 
-      MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Limit[0] exceeded")));
+      Assertions.assertEquals("Limit[0] exceeded", e.getMessage());
     }
   }
 
@@ -62,7 +59,7 @@ public class LimitedOutputStreamTest
           () -> stream.write('d')
       );
 
-      MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Limit[3] exceeded")));
+      Assertions.assertEquals("Limit[3] exceeded", e.getMessage());
     }
   }
 
@@ -76,7 +73,7 @@ public class LimitedOutputStreamTest
       stream.write(new byte[]{'b'});
       stream.write(new byte[]{'c'}, 0, 1);
 
-      MatcherAssert.assertThat(stream.toByteArray(), CoreMatchers.equalTo(new byte[]{'a', 'b', 'c'}));
+      Assertions.assertArrayEquals(new byte[]{'a', 'b', 'c'}, stream.toByteArray());
     }
 
     try (final DataOutputStream dos = new DataOutputStream(new ByteArrayOutputStream());

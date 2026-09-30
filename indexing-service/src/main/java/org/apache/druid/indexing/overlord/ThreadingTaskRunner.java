@@ -46,6 +46,7 @@ import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -72,6 +73,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -84,8 +86,8 @@ import java.util.concurrent.TimeoutException;
  *   shutdown on the Task objects. Only one shutdown per-task can be running at a given time,
  *   so we allocate one control thread per worker slot.
  *
- * Note that separate task logs are not currently supported, all task log entries will be written to the Indexer
- * process log instead.
+ * By default, the log output of each task is routed to a separate per-task file via Log4j thread context. This
+ * behavior can be disabled by setting {@code druid.worker.useSeparateTaskLogFiles=false}.
  */
 public class ThreadingTaskRunner
     extends BaseRestorableTaskRunner<ThreadingTaskRunner.ThreadingTaskRunnerWorkItem>
@@ -191,7 +193,8 @@ public class ThreadingTaskRunner
 
                             final File taskFile = new File(taskDir, "task.json");
                             final File reportsFile = new File(attemptDir, "report.json");
-                            final File logFile = new File(taskDir, "log");
+                            final File logFile =
+                                workerConfig.isUseSeparateTaskLogFiles() ? new File(taskDir, "log") : null;
                             taskReportFileWriter.add(task.getId(), reportsFile);
 
                             // time to adjust process holders
@@ -224,18 +227,20 @@ public class ThreadingTaskRunner
                                                 .withTmpStorageBytesPerTask(storageSlot.getNumBytes()),
                                 task
                             );
-                            TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                            TaskRunnerUtils.notifyLocationChanged(listeners, task, taskLocation);
                             TaskRunnerUtils.notifyStatusChanged(
                                 listeners,
-                                task.getId(),
+                                task,
                                 TaskStatus.running(task.getId())
                             );
 
                             taskWorkItem.logFile = logFile;
                             taskWorkItem.setState(RunnerTaskState.RUNNING);
 
-                            LOGGER.info("Logging output of task[%s] to file[%s].", task.getId(), logFile);
-                            Appenderators.setTaskThreadContextForIndexers(task.getId(), logFile);
+                            if (logFile != null) {
+                              LOGGER.info("Logging output of task[%s] to file[%s].", task.getId(), logFile);
+                              Appenderators.setTaskThreadContextForIndexers(task.getId(), logFile);
+                            }
                             try {
                               taskStatus = task.run(toolbox);
                             }
@@ -255,13 +260,13 @@ public class ThreadingTaskRunner
                               if (reportsFile.exists()) {
                                 taskLogPusher.pushTaskReports(task.getId(), reportsFile);
                               }
-                              if (logFile.exists()) {
+                              if (logFile != null && logFile.exists()) {
                                 taskLogPusher.pushTaskLog(task.getId(), logFile);
                               }
                               Appenderators.clearTaskThreadContextForIndexers();
                             }
 
-                            TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
+                            TaskRunnerUtils.notifyStatusChanged(listeners, task, taskStatus);
                             return taskStatus;
                           }
                           catch (Throwable t) {
@@ -471,6 +476,20 @@ public class ThreadingTaskRunner
   {
     final ThreadingTaskRunnerWorkItem workItem = tasks.get(taskId);
     return workItem == null ? null : workItem.getState();
+  }
+
+  @Override
+  protected void notifyLocationChanged(
+      ThreadingTaskRunnerWorkItem item,
+      TaskRunnerListener listener,
+      Executor executor
+  )
+  {
+    TaskRunnerUtils.notifyLocationChanged(
+        List.of(Pair.of(listener, executor)),
+        item.getTask(),
+        item.getLocation()
+    );
   }
 
   private Collection<TaskRunnerWorkItem> getTasks(RunnerTaskState state)

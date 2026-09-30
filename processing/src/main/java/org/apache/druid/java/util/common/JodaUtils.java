@@ -52,7 +52,7 @@ public class JodaUtils
    * {@link Comparators#intervalsByStartThenEnd()}.
    *
    * @param intervals The Iterable object containing the intervals to condense
-   * @return The condensed intervals
+   * @return The condensed intervals, sorted by {@link Comparators#intervalsByStartThenEnd()}
    */
   public static List<Interval> condenseIntervals(Iterable<Interval> intervals)
   {
@@ -85,7 +85,7 @@ public class JodaUtils
    * @param sortedIntervals The iterator object containing the intervals to condense
    *
    * @return An iterator for the condensed intervals. By construction the condensed intervals are sorted
-   * in ascending order and contain no repeated elements. The iterator can contain nulls,
+   * by {@link Comparators#intervalsByStartThenEnd()} and contain no repeated elements. The iterator can contain nulls,
    * they will be skipped if it does.
    *
    * @throws IAE if an element is null or if sortedIntervals is not sorted in ascending order

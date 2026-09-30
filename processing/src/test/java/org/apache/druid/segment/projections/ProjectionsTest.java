@@ -263,6 +263,52 @@ class ProjectionsTest
   }
 
   @Test
+  void testSchemaFilterRejectedWhenQueryFilterCannotBeRewritten()
+  {
+    // The query VC v0 := upper(b) is equivalent to the projection's b_upper, so matchQueryVirtualColumns remaps
+    // v0 -> b_upper. The query's filter references v0 but can't rewrite its required columns, so it can't be remapped
+    // into the projection's column namespace: the match must be rejected (fall back to the base table) rather than
+    // throwing from rewriteRequiredColumns.
+    RowSignature baseTable = RowSignature.builder()
+                                         .addTimeColumn()
+                                         .add("a", ColumnType.LONG)
+                                         .add("b", ColumnType.STRING)
+                                         .add("c", ColumnType.LONG)
+                                         .build();
+    AggregateProjectionMetadata spec = new AggregateProjectionMetadata(
+        AggregateProjectionSpec.builder("some_projection")
+                               .filter(new EqualityFilter("b", ColumnType.STRING, "foo", null))
+                               .virtualColumns(
+                                   new ExpressionVirtualColumn("b_upper", "upper(b)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                               )
+                               .groupingColumns(new StringDimensionSchema("b_upper"), new LongDimensionSchema("a"))
+                               .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                               .build()
+                               .toMetadataSchema(),
+        12345
+    );
+    CursorBuildSpec query = CursorBuildSpec.builder()
+                                           .setVirtualColumns(
+                                               VirtualColumns.create(
+                                                   new ExpressionVirtualColumn("v0", "upper(b)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                                               )
+                                           )
+                                           .setFilter(new NoRewriteFilter("v0"))
+                                           .setPhysicalColumns(Set.of("b", "c"))
+                                           .setPreferredOrdering(List.of())
+                                           .build();
+
+    Assertions.assertNull(
+        Projections.matchAggregateProjection(
+            spec.getSchema(),
+            query,
+            Intervals.ETERNITY,
+            new RowSignatureChecker(baseTable)
+        )
+    );
+  }
+
+  @Test
   void testSchemaMatchFilterIncludedInProjection()
   {
     RowSignature baseTable = RowSignature.builder()
@@ -545,6 +591,44 @@ class ProjectionsTest
         new RowSignatureChecker(baseTable)
     );
     Assertions.assertEquals(expected, projectionMatch);
+  }
+
+  private static RowSignature sig(String name, ColumnType type)
+  {
+    return RowSignature.builder().add(name, type).build();
+  }
+
+  @Test
+  void testGetClusterGroupSegmentInternalFileName()
+  {
+    // Smoosh layout: __base$<id0>_<id1>...<idK>/<col>. The IDs encode the group's clustering identity via the
+    // summary's per-column dictionaries.
+    Assertions.assertEquals(
+        "__base$0/tenant",
+        Projections.getClusterGroupSegmentInternalFileName(List.of(0), "tenant")
+    );
+    Assertions.assertEquals(
+        "__base$5/__time",
+        Projections.getClusterGroupSegmentInternalFileName(List.of(5), "__time")
+    );
+    Assertions.assertEquals(
+        "__base$0_1_3/__time",
+        Projections.getClusterGroupSegmentInternalFileName(List.of(0, 1, 3), "__time")
+    );
+    Assertions.assertEquals("__base$42/", Projections.getClusterGroupSegmentInternalFilePrefix(List.of(42)));
+    Assertions.assertEquals("__base$1_2/", Projections.getClusterGroupSegmentInternalFilePrefix(List.of(1, 2)));
+  }
+
+  @Test
+  void testIsAllowedClusteringType()
+  {
+    Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.STRING));
+    Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.LONG));
+    Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.DOUBLE));
+    Assertions.assertTrue(Projections.isAllowedClusteringType(ColumnType.FLOAT));
+    Assertions.assertFalse(Projections.isAllowedClusteringType(null));
+    Assertions.assertFalse(Projections.isAllowedClusteringType(ColumnType.STRING_ARRAY));
+    Assertions.assertFalse(Projections.isAllowedClusteringType(ColumnType.UNKNOWN_COMPLEX));
   }
 
   private static class RowSignatureChecker implements Projections.PhysicalColumnChecker
