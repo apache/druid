@@ -34,6 +34,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.google.j2objc</groupId>
+            <artifactId>j2objc-annotations</artifactId>
+            <version>3.1</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>

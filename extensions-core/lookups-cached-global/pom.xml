@@ -134,17 +134,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.curator</groupId>
-      <artifactId>curator-test</artifactId>
-      <scope>test</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.javassist</groupId>
-          <artifactId>javassist</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>mx4j</groupId>
       <artifactId>mx4j-tools</artifactId>
       <version>3.0.1</version>
