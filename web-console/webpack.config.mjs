@@ -109,6 +109,8 @@ export default env => {
       hot: true,
       static: {
         directory: __dirname,
+        // Watching the whole directory (including node_modules) exhausts file handles, webpack still watches the sources
+        watch: false,
       },
       devMiddleware: {
         publicPath: '/public',
@@ -120,12 +122,14 @@ export default env => {
           target: druidUrl,
           secure: false,
           changeOrigin: true,
-          onProxyReq: (proxyReq, _req) => {
-            if (druidCookie) {
-              proxyReq.setHeader('Cookie', druidCookie);
-            }
-            // To debug use:
-            // console.log(`[proxy] ${req.method} ${req.url} -> ${proxyReq.path}`);
+          on: {
+            proxyReq: (proxyReq, _req) => {
+              if (druidCookie) {
+                proxyReq.setHeader('Cookie', druidCookie);
+              }
+              // To debug use:
+              // console.log(`[proxy] ${req.method} ${req.url} -> ${proxyReq.path}`);
+            },
           },
         },
       ],
@@ -169,6 +173,11 @@ export default env => {
               loader: 'sass-loader',
               options: {
                 sassOptions: {
+                  // Blueprint's SCSS (and ours, which builds on it) still uses @import and other constructs
+                  // deprecated in Dart Sass
+                  // TODO: Migrate to @use after upgrading to Blueprint v6
+                  quietDeps: true,
+                  silenceDeprecations: ['import'],
                   functions: {
                     // Blueprint's usage of SCSS is dependent on 'node-sass', but we use Dart
                     // Sass for broader compatibility across CPU architectures. Blueprint's build
