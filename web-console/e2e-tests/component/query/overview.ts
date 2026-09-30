@@ -68,14 +68,6 @@ export class QueryOverview {
       ),
 
       clickText(this.page, 'Cancel query'),
-      this.page.off(
-        'requestfinished',
-        request => request.url().includes('druid/v2') && request.method() === 'POST',
-      ),
-      this.page.off(
-        'requestfinished',
-        request => request.url().includes('druid/v2') && request.method() === 'DELETE',
-      ),
     ]);
 
     return resp.status();

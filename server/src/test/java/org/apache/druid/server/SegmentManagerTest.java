@@ -55,6 +55,7 @@ import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager.DataSourceState;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.test.utils.TestSegmentCacheManager;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
@@ -310,6 +311,43 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testFailedReloadDoesNotDropTheCachedSegment() throws SegmentLoadingException, IOException
+  {
+    final TestSegmentCacheManager failingCacheManager = new TestSegmentCacheManager();
+    failingCacheManager.failLoadsAfter(1);
+    final SegmentManager manager = new SegmentManager(failingCacheManager);
+    final DataSegment segment = SEGMENTS.get(0);
+
+    manager.loadSegment(segment);
+    Assertions.assertTrue(manager.isSegmentLoaded(segment));
+
+    Assertions.assertThrows(SegmentLoadingException.class, () -> manager.loadSegment(segment));
+
+    Assertions.assertTrue(manager.isSegmentLoaded(segment), "the replica stays in the timeline");
+    Assertions.assertFalse(
+        failingCacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId()),
+        "a failed reload must not drop the live replica's cached data"
+    );
+  }
+
+  @Test
+  public void testFailedFirstLoadLeavesCleanupToTheCaller()
+  {
+    final TestSegmentCacheManager failingCacheManager = new TestSegmentCacheManager();
+    failingCacheManager.failLoadsAfter(0);
+    final SegmentManager manager = new SegmentManager(failingCacheManager);
+    final DataSegment segment = SEGMENTS.get(0);
+
+    Assertions.assertThrows(SegmentLoadingException.class, () -> manager.loadSegment(segment));
+
+    Assertions.assertFalse(manager.isSegmentLoaded(segment), "a failed load adds nothing to the timeline");
+    Assertions.assertFalse(
+        failingCacheManager.getObservedSegmentsRemovedFromCache().contains(segment.getId()),
+        "and drops nothing either; SegmentLoadDropHandler.addSegment owns that decision"
+    );
+  }
+
+  @Test
   public void testLoadDuplicatedSegmentsInParallel()
       throws ExecutionException, InterruptedException
   {
@@ -461,7 +499,9 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     );
 
     final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad, AcquireMode.FULL);
-    AcquireSegmentResult result = action.getSegmentFuture().get();
+    // await but do not release or close: the un-released action keeps the delivered segment reference open so the
+    // entry remains cached for the getSegmentsBundle call below
+    AcquireSegmentResult result = action.await();
     Assertions.assertNotNull(result);
     Assertions.assertEquals(1L, result.getLoadSizeBytes());
     Assertions.assertTrue(result.getLoadTimeNanos() > 0);

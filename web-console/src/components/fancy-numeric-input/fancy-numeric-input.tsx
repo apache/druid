@@ -172,7 +172,7 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
         placeholder={placeholder}
         value={shownValue}
         onChange={e => {
-          const valueAsString = (e.target as HTMLInputElement).value;
+          const valueAsString = e.target.value;
           setShownValue(valueAsString);
 
           const shownNumber = shownToNumber(valueAsString);

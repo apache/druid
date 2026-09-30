@@ -25,8 +25,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SettableAsyncResourceTest
 {
@@ -215,6 +219,127 @@ public class SettableAsyncResourceTest
     resource.set("value", null);
     resource.close();
     Assertions.assertThrows(DruidException.class, resource::close);
+  }
+
+  @Test
+  public void testSetExceptionPassesTheCancellationTypeThrough()
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    final AsyncResourceCanceledException canceled = new AsyncResourceCanceledException("canceled upstream");
+
+    // Wrappers forward a closed source's cancellation to their own target verbatim, so this type is accepted like any
+    // other error rather than being reserved for close(). It then means "something upstream was closed before it was
+    // ready", which is still what tells RecoverAsyncResource apart from a load canceled under a waiting consumer.
+    resource.setException(canceled);
+
+    Assertions.assertTrue(resource.isReady());
+    Assertions.assertSame(canceled, Assertions.assertThrows(AsyncResourceCanceledException.class, resource::get));
+  }
+
+  @Test
+  public void testSetExceptionWithTheCancellationTypeIsDroppedAfterClose()
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.close();
+
+    // Wrappers propagate a closed source's cancellation to their own already-closed target on ordinary cancel paths,
+    // where it is dropped like any other late error.
+    resource.setException(new AsyncResourceCanceledException("propagated from a closed source"));
+    Assertions.assertThrows(AsyncResourceCanceledException.class, resource::get);
+  }
+
+  @Test
+  public void testCloseBeforeReadyCompletesAsCanceled()
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.close();
+
+    // Canceled acquisition is a completion: consumers gate their waiting on isReady(), and get() says what happened.
+    Assertions.assertTrue(resource.isReady());
+    Assertions.assertThrows(AsyncResourceCanceledException.class, resource::get);
+  }
+
+  @Test
+  public void testCloseAfterReadyIsNotReportedAsCancellation()
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.set("value", null);
+    resource.close();
+
+    // Using a resource you closed after it was ready is a coding error, not a cancellation.
+    Assertions.assertThrows(DruidException.class, resource::get);
+  }
+
+  @Test
+  public void testReadyCallbackFiredOnceWhenSetLosesRaceWithClose()
+  {
+    // close() before the resource is available fires the pending callbacks, so a waiting consumer learns acquisition
+    // was aborted. A producer's late set() that loses the race must not fire them a second time: close() drained them.
+    final AtomicInteger fired = new AtomicInteger();
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.addReadyCallback(fired::incrementAndGet);
+
+    resource.close();
+    Assertions.assertEquals(1, fired.get());
+
+    Assertions.assertFalse(resource.set("value", null));
+    Assertions.assertEquals(1, fired.get());
+  }
+
+  @Test
+  public void testReadyCallbackFiredOnceWhenSetExceptionLosesRaceWithClose()
+  {
+    final AtomicInteger fired = new AtomicInteger();
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.addReadyCallback(fired::incrementAndGet);
+
+    resource.close();
+    Assertions.assertEquals(1, fired.get());
+
+    // setException on a CLOSED resource is dropped (logged at debug) and must not re-fire the callback.
+    resource.setException(new IllegalStateException("late failure"));
+    Assertions.assertEquals(1, fired.get());
+  }
+
+  @Test
+  public void testCloseFiresCallbacksAfterRunningTheCanceler()
+  {
+    // Ordering matters: a woken consumer must observe a fully torn-down resource, not one still mid-abort.
+    final List<String> order = new ArrayList<>();
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.setCanceler(() -> order.add("canceler"));
+    resource.addReadyCallback(() -> order.add("callback"));
+
+    resource.close();
+    Assertions.assertEquals(List.of("canceler", "callback"), order);
+  }
+
+  @Test
+  public void testAwaitIsWokenByCloseAndThrowsCancellation() throws InterruptedException
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    final AtomicReference<Throwable> outcome = new AtomicReference<>();
+
+    // A bounded await, so a regression that stops waking the waiter fails with a TimeoutException instead of hanging.
+    final Thread waiter = new Thread(() -> {
+      try {
+        resource.await(30_000);
+      }
+      catch (Throwable t) {
+        outcome.set(t);
+      }
+    });
+    waiter.start();
+
+    // Wait until the waiter is parked on await()'s latch, so close() cannot land before its callback is registered.
+    final long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+    while (waiter.getState() != Thread.State.TIMED_WAITING && System.nanoTime() < deadlineNanos) {
+      Thread.onSpinWait();
+    }
+
+    resource.close();
+    waiter.join();
+    Assertions.assertInstanceOf(AsyncResourceCanceledException.class, outcome.get());
   }
 
   @Test

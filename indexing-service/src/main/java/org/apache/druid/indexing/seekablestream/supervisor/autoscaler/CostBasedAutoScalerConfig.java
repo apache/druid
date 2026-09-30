@@ -133,10 +133,11 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
       Preconditions.checkNotNull(taskCountMin, "taskCountMin is required when enableTaskAutoScaler is true");
+      Preconditions.checkArgument(taskCountMin >= 1, "taskCountMin must be at least 1");
       Preconditions.checkArgument(taskCountMax >= taskCountMin, "taskCountMax must be >= taskCountMin");
       Preconditions.checkArgument(
           taskCountStart == null || (taskCountStart >= taskCountMin && taskCountStart <= taskCountMax),
-          "taskCountMin <= taskCountStart <= taskCountMax"
+          "1 <= taskCountMin <= taskCountStart <= taskCountMax"
       );
       this.taskCountMax = taskCountMax;
       this.taskCountMin = taskCountMin;
@@ -174,6 +175,31 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
   public static Builder builder()
   {
     return new Builder();
+  }
+
+  /**
+   * Config used to simulate the cost function without running an actual supervisor.
+   */
+  public static CostBasedAutoScalerConfig forSimulation(
+      int taskCountMin,
+      int taskCountMax,
+      double optimalTaskIdleRatio,
+      @Nullable Double lagWeight,
+      @Nullable Double idleWeight
+  )
+  {
+    final Builder builder = builder()
+        .taskCountMin(taskCountMin)
+        .taskCountMax(taskCountMax)
+        .optimalTaskIdleRatio(optimalTaskIdleRatio)
+        .enableTaskAutoScaler(true);
+    if (lagWeight != null) {
+      builder.lagWeight(lagWeight);
+    }
+    if (idleWeight != null) {
+      builder.idleWeight(idleWeight);
+    }
+    return builder.build();
   }
 
   @Override

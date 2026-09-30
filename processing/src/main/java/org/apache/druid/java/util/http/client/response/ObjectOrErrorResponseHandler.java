@@ -19,9 +19,9 @@
 
 package org.apache.druid.java.util.http.client.response;
 
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.Either;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.nio.charset.StandardCharsets;
 
@@ -47,7 +47,7 @@ public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
       final TrafficCop trafficCop
   )
   {
-    if (response.getStatus().getCode() / 100 == 2) {
+    if (response.status().code() / 100 == 2) {
       final ClientResponse<IntermediateType> delegateResponse = okHandler.handleResponse(response, trafficCop);
 
       return new ClientResponse<>(
@@ -70,7 +70,7 @@ public class ObjectOrErrorResponseHandler<IntermediateType, FinalType>
   @Override
   public ClientResponse<Either<StringFullResponseHolder, IntermediateType>> handleChunk(
       final ClientResponse<Either<StringFullResponseHolder, IntermediateType>> clientResponse,
-      final HttpChunk chunk,
+      final HttpContent chunk,
       final long chunkNum
   )
   {

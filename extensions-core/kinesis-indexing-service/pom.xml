@@ -130,7 +130,7 @@
         <dependency>
             <groupId>software.amazon.kinesis</groupId>
             <artifactId>amazon-kinesis-client</artifactId>
-            <version>3.5.1</version>
+            <version>3.5.2</version>
             <exclusions>
                 <!-- Exclude transitive dependencies we don't need for deaggregation -->
                 <exclusion>

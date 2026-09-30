@@ -197,6 +197,19 @@ public abstract class SpecializedExpressionVirtualColumn implements VirtualColum
   }
 
   @Override
+  public boolean supportsOutputNameRewrite()
+  {
+    return true;
+  }
+
+  /**
+   * Declared abstract rather than inherited so that every specialization implements the rename that
+   * {@link #supportsOutputNameRewrite()} advertises on its behalf.
+   */
+  @Override
+  public abstract SpecializedExpressionVirtualColumn withOutputName(String outputName);
+
+  @Override
   public SelectableColumn toSelectableColumn(ColumnIndexSelector columnSelector)
   {
     return delegate.toSelectableColumn(columnSelector);

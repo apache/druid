@@ -2401,7 +2401,8 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setVirtualColumns(
-                                new NestedFieldVirtualColumn("arrayLongNulls", "$[1]", "v0", ColumnType.LONG)
+                                expressionVirtualColumn("v0", "(\"v1\" != 0)", ColumnType.LONG),
+                                new NestedFieldVirtualColumn("arrayLongNulls", "$[1]", "v1", ColumnType.LONG)
                             )
                             .setDimFilter(isNull("v0"))
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
