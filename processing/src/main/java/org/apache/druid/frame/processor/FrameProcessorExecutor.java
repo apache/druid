@@ -106,10 +106,12 @@ public class FrameProcessorExecutor
    * Then, it can be used with the {@link #cancel(String)} method to cancel all processors with that
    * same cancellationId.
    *
-   * This method takes ownership of the processor: it either runs the processor to completion, or cleans it up. The
-   * processor is not run at all when "cancellationId" has already been canceled by the time this method registers it,
-   * in which case the returned future is already resolved (canceled) and the processor has been cleaned up before this
-   * method returns. Callers must therefore tolerate a processor that never runs, and must not clean it up themselves.
+   * This method takes ownership of the processor: it either runs the processor to completion, or cleans it up. It
+   * does not run the processor at all when "cancellationId" is non-null and has already been canceled by the time
+   * this method registers it; the returned future is then already resolved (canceled) and the processor has been
+   * cleaned up before this method returns. Callers passing a cancellationId must therefore tolerate a processor that
+   * never runs, and no caller may clean the processor up itself. With a null cancellationId the processor always
+   * runs.
    *
    * Cleanup in that case runs inline on the calling thread: the processor's output channels are failed and
    * {@link FrameProcessor#cleanup()} is called, the same work {@link #cancel(String)} would have done. Cleanup may
