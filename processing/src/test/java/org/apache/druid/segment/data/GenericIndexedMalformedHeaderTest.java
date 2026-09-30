@@ -107,4 +107,38 @@ public class GenericIndexedMalformedHeaderTest
     Assertions.assertEquals(1, indexed.size());
     Assertions.assertEquals("hi", indexed.get(0));
   }
+
+  @Test
+  public void testSingleThreadedRightwardProbes()
+  {
+    GenericIndexed<String> indexed = GenericIndexed.fromIterable(
+        java.util.Arrays.asList("a", "b", "c"),
+        GenericIndexed.STRING_STRATEGY
+    );
+    GenericIndexed<String>.BufferIndexed bi = indexed.singleThreaded();
+
+    Assertions.assertDoesNotThrow(() -> bi.getByteBuffer(0));
+    // A rightward binary-search probe must not be rejected by the bounds check
+    // after an earlier probe narrowed the reused buffer's limit.
+    Assertions.assertDoesNotThrow(() -> bi.getByteBuffer(2));
+    Assertions.assertDoesNotThrow(() -> bi.getByteBuffer(1));
+  }
+
+  @Test
+  public void testSingleThreadedSuccessiveLookups()
+  {
+    GenericIndexed<String> indexed = GenericIndexed.fromIterable(
+        java.util.Arrays.asList("a", "b", "c"),
+        GenericIndexed.STRING_STRATEGY
+    );
+    GenericIndexed<String>.BufferIndexed bi = indexed.singleThreaded();
+
+    Assertions.assertDoesNotThrow(() -> bi.getByteBuffer(1));
+    final ByteBuffer second = bi.getByteBuffer(2);
+    Assertions.assertEquals(1, second.remaining());
+    Assertions.assertEquals((byte) 'c', second.get());
+    final ByteBuffer first = bi.getByteBuffer(0);
+    Assertions.assertEquals(1, first.remaining());
+    Assertions.assertEquals((byte) 'a', first.get());
+  }
 }

@@ -319,6 +319,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     public BufferIndexed singleThreaded()
     {
       final ByteBuffer copyBuffer = theBuffer.asReadOnlyBuffer();
+      final int bufferLimit = copyBuffer.limit();
       return new BufferIndexed()
       {
         @Nullable
@@ -338,7 +339,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
             startOffset = theBuffer.getInt(headerOffset + headerPosition) + Integer.BYTES;
             endOffset = theBuffer.getInt(headerOffset + headerPosition + Integer.BYTES);
           }
-          return bufferedIndexedGetByteBuffer(copyBuffer, valuesOffset + startOffset, valuesOffset + endOffset);
+          return bufferedIndexedGetByteBuffer(copyBuffer, valuesOffset + startOffset, valuesOffset + endOffset, bufferLimit);
         }
 
         @Override
@@ -423,8 +424,10 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     public BufferIndexed singleThreaded()
     {
       final ByteBuffer[] copyValueBuffers = new ByteBuffer[valueBuffers.length];
+      final int[] valueBufferLimits = new int[valueBuffers.length];
       for (int i = 0; i < valueBuffers.length; i++) {
         copyValueBuffers[i] = valueBuffers[i].asReadOnlyBuffer();
+        valueBufferLimits[i] = copyValueBuffers[i].limit();
       }
 
       return new BufferIndexed()
@@ -449,7 +452,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
             endOffset = headerBuffer.getInt(headerPosition + Integer.BYTES);
           }
           int fileNum = index >> logBaseTwoOfElementsPerValueFile;
-          return bufferedIndexedGetByteBuffer(copyValueBuffers[fileNum], startOffset, endOffset);
+          return bufferedIndexedGetByteBuffer(copyValueBuffers[fileNum], startOffset, endOffset, valueBufferLimits[fileNum]);
         }
 
         @Override
@@ -615,15 +618,15 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     }
 
     @Nullable
-    ByteBuffer bufferedIndexedGetByteBuffer(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
+    ByteBuffer bufferedIndexedGetByteBuffer(ByteBuffer copyValueBuffer, int startOffset, int endOffset, int bufferLimit)
     {
       int size = endOffset - startOffset;
-      if (startOffset < Integer.BYTES || endOffset < startOffset || endOffset > copyValueBuffer.limit()) {
+      if (startOffset < Integer.BYTES || endOffset < startOffset || endOffset > bufferLimit) {
         throw new IAE(
             "value offsets out of bounds: startOffset[%s], endOffset[%s], limit[%s]",
             startOffset,
             endOffset,
-            copyValueBuffer.limit()
+            bufferLimit
         );
       }
       if (size == 0 && (copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
