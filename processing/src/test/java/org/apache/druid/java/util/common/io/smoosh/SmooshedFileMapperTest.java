@@ -36,7 +36,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -212,6 +215,36 @@ public class SmooshedFileMapperTest
       File[] files = baseDir.listFiles();
       Assertions.assertNotNull(files);
       Assertions.assertEquals(1, files.length);
+    }
+  }
+
+  @Test
+  public void testInternalFilenames() throws Exception
+  {
+    File baseDir = temporaryFolder.newFolder("base");
+
+    try (FileSmoosher smoosher = new FileSmoosher(baseDir, 21)) {
+      for (String name : List.of("b", "c", "a", "d/e")) {
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", name.replace('/', '_')));
+        Files.write(StringUtils.toUtf8(name), tmpFile);
+        smoosher.add(name, tmpFile);
+      }
+    }
+
+    try (SmooshedFileMapper mapper = SmooshedFileMapper.load(baseDir)) {
+      final Set<String> filenames = mapper.getInternalFilenames();
+      Assertions.assertEquals(List.of("a", "b", "c", "d/e"), new ArrayList<>(filenames));
+      Assertions.assertEquals(4, filenames.size());
+      Assertions.assertTrue(filenames.contains("d/e"));
+      Assertions.assertFalse(filenames.contains("d"));
+      Assertions.assertFalse(filenames.contains(1));
+      Assertions.assertThrows(UnsupportedOperationException.class, () -> filenames.add("z"));
+      Assertions.assertThrows(UnsupportedOperationException.class, () -> filenames.remove("a"));
+
+      for (String name : filenames) {
+        Assertions.assertEquals(name, StringUtils.fromUtf8(mapper.mapFile(name)));
+      }
+      Assertions.assertNull(mapper.mapFile("d"));
     }
   }
 

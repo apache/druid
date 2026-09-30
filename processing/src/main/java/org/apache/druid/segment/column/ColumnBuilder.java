@@ -21,6 +21,8 @@ package org.apache.druid.segment.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.file.SegmentFileMapper;
@@ -34,6 +36,8 @@ import javax.annotation.Nullable;
  */
 public class ColumnBuilder
 {
+  private static final Interner<ColumnFormat> FORMAT_INTERNER = Interners.newWeakInterner();
+
   private final ColumnCapabilitiesImpl capabilitiesBuilder = ColumnCapabilitiesImpl.createDefault();
 
   @Nullable
@@ -154,11 +158,18 @@ public class ColumnBuilder
     return this;
   }
 
+  /**
+   * Builds the column holder. Its capabilities and format are interned, since many columns share them.
+   */
   public BaseColumnHolder build()
   {
     Preconditions.checkState(capabilitiesBuilder.getType() != null, "Type must be set.");
 
-    return new SimpleColumnHolder(capabilitiesBuilder, columnFormat, columnSupplier, indexSupplier);
+    final ColumnCapabilities capabilities = ImmutableColumnCapabilities.internedOf(capabilitiesBuilder);
+    final ColumnFormat format = FORMAT_INTERNER.intern(
+        columnFormat == null ? new CapabilitiesBasedFormat(capabilities) : columnFormat
+    );
+    return new SimpleColumnHolder(capabilities, format, columnSupplier, indexSupplier);
   }
 
   private void checkColumnSupplierNotSet()

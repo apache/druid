@@ -20,8 +20,11 @@
 package org.apache.druid.segment.file;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.data.CompressionStrategy;
 
 import java.io.IOException;
@@ -47,6 +50,13 @@ public class SegmentFileMetadataReader
    * Size of the fixed portion of the V10 header: version (1) + compression (1) + meta length (4)
    */
   public static final int HEADER_SIZE = 1 + 1 + Integer.BYTES;
+
+  /**
+   * Interns column descriptors of segments that are read, so that equal descriptors are shared by columns and
+   * segments. Only descriptors read from segment files are interned, since descriptors created for writing hold
+   * serializers, which loaded segments must not retain.
+   */
+  private static final Interner<ColumnDescriptor> DESCRIPTOR_INTERNER = Interners.newWeakInterner();
 
   /**
    * Result of reading the V10 header and metadata from a stream.
@@ -142,7 +152,8 @@ public class SegmentFileMetadataReader
       decompressor.decompress(inBuffer, compressedLength, outBuffer);
     }
 
-    final SegmentFileMetadata metadata = mapper.readValue(meta, SegmentFileMetadata.class);
+    final SegmentFileMetadata metadata = mapper.readValue(meta, SegmentFileMetadata.class)
+                                               .withInternedColumnDescriptors(DESCRIPTOR_INTERNER);
     return new Result(metadata, headerSize);
   }
 
