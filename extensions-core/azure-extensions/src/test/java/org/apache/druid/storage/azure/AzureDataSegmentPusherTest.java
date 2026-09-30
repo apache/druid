@@ -24,9 +24,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Files;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -47,6 +51,7 @@ import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -292,28 +297,54 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     AzureDataSegmentPusher pusher =
         new AzureDataSegmentPusher(azureStorage, azureAccountConfig, segmentConfigWithPrefix, NO_ZIP_CONFIG);
 
-    // version.bin = [0, 0, 0, 0x0A] → IndexIO.V10_VERSION, a single range-readable druid.segment
-    Files.write(new byte[]{0x0, 0x0, 0x0, 0x0A}, tempPath.resolve("version.bin").toFile());
+    // A real V10 segment rather than a hand-made file, so the layout under test is whatever IndexMergerV10 actually
+    // writes: one druid.segment whose leading byte is the version getVersionFromDir reads.
+    final File segmentDir = buildV10Segment(tempPath);
+    final File[] segmentFiles = segmentDir.listFiles();
+    assertNotNull(segmentFiles);
 
     final String expectedDir = PREFIX + "/" + pusher.getStorageDir(SEGMENT_TO_PUSH, false);
-    azureStorage.uploadBlockBlob(
-        EasyMock.anyObject(File.class),
-        EasyMock.eq(CONTAINER_NAME),
-        EasyMock.eq(expectedDir + "/version.bin"),
-        EasyMock.eq(MAX_TRIES)
-    );
-    EasyMock.expectLastCall();
+    final ImmutableList.Builder<String> listing = ImmutableList.builder();
+    for (final File file : segmentFiles) {
+      azureStorage.uploadBlockBlob(
+          EasyMock.anyObject(File.class),
+          EasyMock.eq(CONTAINER_NAME),
+          EasyMock.eq(expectedDir + "/" + file.getName()),
+          EasyMock.eq(MAX_TRIES)
+      );
+      EasyMock.expectLastCall();
+      listing.add(expectedDir + "/" + file.getName());
+    }
+    // everything under the path was written by this push, so there is nothing to clean up
     EasyMock.expect(azureStorage.listBlobs(CONTAINER_NAME, expectedDir + "/", null, MAX_TRIES))
-            .andReturn(ImmutableList.of(expectedDir + "/version.bin"));
+            .andReturn(listing.build());
 
     replayAll();
 
-    DataSegment segment = pusher.push(tempPath.toFile(), SEGMENT_TO_PUSH, false);
+    DataSegment segment = pusher.push(segmentDir, SEGMENT_TO_PUSH, false);
 
-    assertEquals(10, (int) segment.getBinaryVersion());
+    // a V10 segment is a single file, and that is what makes it range-readable
+    assertEquals(1, segmentFiles.length);
+    assertEquals(IndexIO.V10_FILE_NAME, segmentFiles[0].getName());
+    assertEquals(IndexIO.V10_VERSION, (int) segment.getBinaryVersion());
     assertEquals(Boolean.TRUE, segment.getLoadSpec().get("rangeable"));
 
     verifyAll();
+  }
+
+  private static File buildV10Segment(Path tempPath)
+  {
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tempPath.resolve("v10").toFile())
+                       .rows(ImmutableList.of(
+                           new MapBasedInputRow(
+                               DateTimes.of("2015-01-01"),
+                               ImmutableList.of("dim"),
+                               ImmutableMap.of("dim", "a")
+                           )
+                       ))
+                       .buildMMappedIndexFile();
   }
 
   @Test
