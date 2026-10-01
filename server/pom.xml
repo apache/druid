@@ -128,19 +128,16 @@
             <artifactId>jsr305</artifactId>
         </dependency>
         <dependency>
+            <!-- Not used directly by druid-server source; bundled here (in sync with the
+                 versions services/pom.xml declares for org.apache.druid.cli.PullDependencies)
+                 so the resolver connector/transport jars are present on the assembled
+                 distribution classpath. -->
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-connector-basic</artifactId>
-            <version>1.3.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
-            <artifactId>maven-resolver-transport-http</artifactId>
-            <version>1.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-resolver-provider</artifactId>
-            <version>3.6.0</version>
+            <artifactId>maven-resolver-transport-apache</artifactId>
         </dependency>
         <dependency>
             <groupId>com.amazonaws</groupId>
@@ -498,8 +495,7 @@
                 <configuration>
                     <usedDependencies>
                         <!-- These are needed for scope: compile -->
-                        <dependency>org.apache.maven:maven-resolver-provider</dependency>
-                        <dependency>org.apache.maven.resolver:maven-resolver-transport-http</dependency>
+                        <dependency>org.apache.maven.resolver:maven-resolver-transport-apache</dependency>
                         <dependency>org.apache.maven.resolver:maven-resolver-connector-basic</dependency>
                         <!-- These are needed for scope: runtime -->
                         <dependency>org.xerial.snappy:snappy-java</dependency>

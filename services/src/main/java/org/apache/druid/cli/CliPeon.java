@@ -57,6 +57,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleServer;
 import org.apache.druid.guice.NativeQueryEngineModule;
 import org.apache.druid.guice.PeonProcessingModule;
+import org.apache.druid.guice.PeonServerModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.ServerTypeConfig;
@@ -332,6 +333,7 @@ public class CliPeon extends GuiceRunnable
             return () -> tmpDir;
           }
         },
+        new PeonServerModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),

@@ -484,7 +484,7 @@ export function partition<T>(xs: T[], predicate: (x: T, i: number) => boolean): 
 }
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
-  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
+  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined');
 }
 
 export function filterMapOrReturn<T>(

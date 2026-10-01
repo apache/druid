@@ -247,10 +247,7 @@ public class DataSchema
   private static Granularity queryGranularityFromSpec(BaseTableProjectionSpec spec)
   {
     final VirtualColumn vc = spec.getVirtualColumns().getVirtualColumn(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME);
-    if (vc == null) {
-      return Granularities.NONE;
-    }
-    final Granularity granularity = Granularities.fromVirtualColumn(vc);
+    final Granularity granularity = Granularities.fromTimeVirtualColumn(vc);
     return granularity == null ? Granularities.NONE : granularity;
   }
 

@@ -492,7 +492,8 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
+    EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager, serverInventoryView);
 
     CoordinatorCustomDutyGroups emptyCustomDutyGroups = new CoordinatorCustomDutyGroups(ImmutableSet.of());
     coordinator = new DruidCoordinator(
@@ -539,7 +540,8 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
+    EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager, serverInventoryView);
     CoordinatorCustomDutyGroup group = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),
@@ -590,7 +592,8 @@ public class DruidCoordinatorTest
   {
     EasyMock.expect(segmentsMetadataManager.isPollingDatabasePeriodically())
             .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager, metadataRuleManager);
+    EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+    EasyMock.replay(segmentsMetadataManager, metadataRuleManager, serverInventoryView);
     CoordinatorCustomDutyGroup compactSegmentCustomGroup = new CoordinatorCustomDutyGroup(
         "group1",
         Duration.standardSeconds(1),

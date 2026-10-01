@@ -240,13 +240,13 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
           }
 
           @Override
-          public void locationChanged(final String taskId, final TaskLocation newLocation)
+          public void locationChanged(final Task task, final TaskLocation newLocation)
           {
-            submitNoticeToExec(new LocationNotice(taskId, newLocation));
+            submitNoticeToExec(new LocationNotice(task.getId(), newLocation));
           }
 
           @Override
-          public void statusChanged(final String taskId, final TaskStatus status)
+          public void statusChanged(final Task task, final TaskStatus status)
           {
             // do nothing
           }

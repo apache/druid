@@ -26,7 +26,6 @@ import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -43,10 +42,10 @@ public class InputStreamFullResponseHandlerTest
     ClientResponse<InputStreamFullResponseHolder> clientResp = responseHandler.handleResponse(response, null);
 
     // In Netty 4 the body arrives via HttpContent chunks after the initial HttpResponse.
-    DefaultHttpContent firstChunk = new DefaultHttpContent(Unpooled.wrappedBuffer("abcd".getBytes(StringUtils.UTF8_STRING)));
+    DefaultHttpContent firstChunk = new DefaultHttpContent(Unpooled.wrappedBuffer("abcd".getBytes(StandardCharsets.UTF_8)));
     clientResp = responseHandler.handleChunk(clientResp, firstChunk, 1);
 
-    DefaultHttpContent secondChunk = new DefaultHttpContent(Unpooled.wrappedBuffer("efg".getBytes(StringUtils.UTF8_STRING)));
+    DefaultHttpContent secondChunk = new DefaultHttpContent(Unpooled.wrappedBuffer("efg".getBytes(StandardCharsets.UTF_8)));
     clientResp = responseHandler.handleChunk(clientResp, secondChunk, 2);
 
     clientResp = responseHandler.done(clientResp);

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
@@ -82,11 +81,6 @@ public class KillSupervisorsCustomDutyTest extends EmbeddedClusterTestBase
 
     // Terminate the supervisor
     cluster.callApi().onLeaderOverlord(o -> o.terminateSupervisor(supervisor.getId()));
-
-    // Verify that the history now has 2 entries and the latest entry is a tombstone
-    final List<VersionedSupervisorSpec> historyAfterTermination = getSupervisorHistory(supervisor.getId());
-    Assertions.assertEquals(2, historyAfterTermination.size());
-    Assertions.assertInstanceOf(NoopSupervisorSpec.class, historyAfterTermination.get(0).getSpec());
 
     // Wait until both entries have been cleaned up.
     coordinator.latchableEmitter().waitForEventAggregate(

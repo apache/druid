@@ -253,6 +253,26 @@ public class DirectDruidClientTest
   }
 
   @Test
+  public void testCancelUrlEncodesQueryId()
+  {
+    final QueryPlus queryPlus = QueryPlus.wrap(getQueryPlus().getQuery().withId("some query/id#needing?encoding"));
+    final QueuedTestHttpClient queuedHttpClient = new QueuedTestHttpClient();
+    queuedHttpClient.enqueue(Futures.immediateCancelledFuture());
+
+    // Canceled query future causes the client to submit a cancel task, which issues the DELETE request.
+    makeDirectDruidClient(queuedHttpClient).run(queryPlus, responseContext);
+    blockingExecutorService.finishNextPendingTask();
+
+    final List<Request> requests = queuedHttpClient.getRequests();
+    Assertions.assertEquals(2, requests.size());
+    Assertions.assertEquals(HttpMethod.DELETE, requests.get(1).getMethod());
+    Assertions.assertEquals(
+        "http://" + hostName + "/druid/v2/some%20query%2Fid%23needing%3Fencoding",
+        requests.get(1).getUrl().toString()
+    );
+  }
+
+  @Test
   public void testQueryInterruptionExceptionLogMessage()
   {
     SettableFuture<Object> interruptionFuture = SettableFuture.create();
