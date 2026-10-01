@@ -179,7 +179,8 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
                   peonClient,
                   taskLogs,
                   smileMapper,
-                  effectiveConfig.getLogSaveTimeout().toStandardDuration().getMillis()
+                  effectiveConfig.getLogSaveTimeout().toStandardDuration().getMillis(),
+                  effectiveConfig.getAdvertisedPlaintextPort()
               ),
               emitter,
               sharedExecutor,
@@ -467,7 +468,8 @@ public class MultipleKubernetesTaskRunnerFactory implements TaskRunnerFactory<Ta
         this.runnerConfig.getTaskJoinTimeout(),
         this.runnerConfig.isUseK8sSharedInformers(),
         this.runnerConfig.getK8sSharedInformerResyncPeriod(),
-        this.runnerConfig.isAllowTaskPodTemplateSelection()
+        this.runnerConfig.isAllowTaskPodTemplateSelection(),
+        this.runnerConfig.getAdvertisedPlaintextPort()
     );
   }
 }

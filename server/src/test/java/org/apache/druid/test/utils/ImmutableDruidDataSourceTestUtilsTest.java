@@ -17,19 +17,30 @@
  * under the License.
  */
 
-package org.apache.druid.msq.input;
+package org.apache.druid.test.utils;
 
-import org.apache.druid.segment.RowCountInspector;
-import org.apache.druid.segment.Segment;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-public class LoadableSegmentUtils
+import java.util.Collections;
+
+public class ImmutableDruidDataSourceTestUtilsTest
 {
-  /**
-   * Gets the number of rows for a segment, using a {@link RowCountInspector}. Returns 0 when unknown.
-   */
-  public static int getSegmentRowCount(final Segment segment)
+  @Test
+  public void testListAssertEqualsRejectsNullActual()
   {
-    final RowCountInspector inspector = segment.as(RowCountInspector.class);
-    return inspector != null ? inspector.getNumRows() : 0;
+    Assertions.assertThrows(
+        AssertionError.class,
+        () -> ImmutableDruidDataSourceTestUtils.assertEquals(Collections.emptyList(), null)
+    );
+  }
+
+  @Test
+  public void testListAssertEqualsRejectsNullExpected()
+  {
+    Assertions.assertThrows(
+        AssertionError.class,
+        () -> ImmutableDruidDataSourceTestUtils.assertEquals(null, Collections.emptyList())
+    );
   }
 }
