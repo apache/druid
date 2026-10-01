@@ -66,6 +66,7 @@ import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -681,6 +682,14 @@ public class ProjectionSpecTranslator
     final Query<?> query = druidQuery.getQuery();
     if (query instanceof GroupByQuery) {
       final GroupByQuery groupBy = (GroupByQuery) query;
+      if (!CollectionUtils.isNullOrEmpty(groupBy.getSubtotalsSpec())) {
+        // Subtotal groupings produce rows of several different grouping shapes; a stored grouping has exactly one.
+        throw invalid(
+            projectionName,
+            "its body uses GROUPING SETS (or ROLLUP/CUBE), which a projection cannot store: each grouping is a"
+            + " different row shape. Store each grouping as its own projection instead"
+        );
+      }
       return new PlannedAggregation(
           groupBy.getDimensions(),
           groupBy.getAggregatorSpecs(),

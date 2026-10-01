@@ -1173,6 +1173,36 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   }
 
   /**
+   * Subtotal groupings produce rows of several different grouping shapes, while a stored grouping has exactly one, so
+   * GROUPING SETS (and ROLLUP/CUBE, which plan to the same form) are rejected rather than silently storing only the
+   * full grouping tuple. The guard is shared with aggregate projections, so both spellings are covered.
+   */
+  @Test
+  public void testGroupingSetsRejected()
+  {
+    final DruidException base = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, total BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time, SUM(total) AS total"
+            + " GROUP BY GROUPING SETS ((tenant, __time), (__time))))"
+        )
+    );
+    assertTrue(base.getMessage().contains("GROUPING SETS"), base.getMessage());
+
+    final DruidException projection = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, page VARCHAR, __time TIMESTAMP, cnt BIGINT,"
+            + " PROJECTION subtotals AS (SELECT tenant, page, SUM(cnt) AS total"
+            + " GROUP BY GROUPING SETS ((tenant, page), (tenant))))"
+        )
+    );
+    assertTrue(projection.getMessage().contains("GROUPING SETS"), projection.getMessage());
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
    * A rollup table's aggregators must combine their own output (the same aggregators serve ingestion and
    * re-aggregation of stored rows), so an aggregate that is not its own combining form is rejected: a count is stored
    * by summing a count column, not with {@code COUNT(*)}.
