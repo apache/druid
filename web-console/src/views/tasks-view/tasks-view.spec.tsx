@@ -16,15 +16,22 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
 import { TableFilters } from '../../utils/table-filters';
 
 import { TasksView } from './tasks-view';
 
+// Snapshot the table props and columns, not every rendered cell
+jest.mock(
+  '../../components/console-table/console-table',
+  () => jest.requireActual('../../test-utils/stub-component').consoleTableStub,
+);
+
 describe('TasksView', () => {
   it('matches snapshot', () => {
-    const taskView = shallow(
+    const { container } = render(
       <TasksView
         filters={TableFilters.empty()}
         onFiltersChange={() => {}}
@@ -35,6 +42,6 @@ describe('TasksView', () => {
         capabilities={Capabilities.FULL}
       />,
     );
-    expect(taskView).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

@@ -149,9 +149,9 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
           <Button
             className="open-query"
             text={openQueryLabel}
-            rightIcon={IconNames.ARROW_TOP_RIGHT}
+            endIcon={IconNames.ARROW_TOP_RIGHT}
             intent={Intent.PRIMARY}
-            minimal
+            variant="minimal"
             onClick={() => {
               onOpenQuery(queryString);
               onClose();

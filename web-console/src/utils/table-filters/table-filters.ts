@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import type { ColumnFilter } from '@tanstack/react-table';
 import { SqlExpression } from 'druid-query-toolkit';
-import type { Filter } from 'react-table';
 
 import { addOrUpdate, filterMap } from '../index';
 
@@ -34,7 +34,7 @@ export class TableFilters {
     return new TableFilters(filters);
   }
 
-  static fromFilters(filters: Filter[]): TableFilters {
+  static fromFilters(filters: ColumnFilter[]): TableFilters {
     return new TableFilters(filters.map(TableFilter.fromFilter));
   }
 
@@ -72,7 +72,7 @@ export class TableFilters {
       .join('&');
   }
 
-  toFilters(): Filter[] {
+  toFilters(): ColumnFilter[] {
     return this.filters.map(f => f.toFilter());
   }
 

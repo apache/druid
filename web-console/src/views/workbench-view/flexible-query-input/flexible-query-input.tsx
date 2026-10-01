@@ -19,10 +19,9 @@
 import { Intent, ResizeSensor } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Ace } from 'ace-builds';
-import ace from 'ace-builds';
+import { Range } from 'ace-builds';
 import classNames from 'classnames';
 import { dedupe } from 'druid-query-toolkit';
-import debounce from 'lodash.debounce';
 import React from 'react';
 import AceEditor from 'react-ace';
 
@@ -30,6 +29,7 @@ import { getHjsonCompletions } from '../../../ace-completions/hjson-completions'
 import { getSqlCompletions } from '../../../ace-completions/sql-completions';
 import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import { NATIVE_JSON_QUERY_COMPLETIONS } from '../../../druid-models';
+import { usePermanentCallback } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
 import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache';
 import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
@@ -40,7 +40,24 @@ import './flexible-query-input.scss';
 const V_PADDING = 10;
 const ACE_THEME = 'solarized_dark';
 
+/**
+ * The row of the sub query gutter marker (set with `session.setBreakpoint` in `markQueries`) that the event is on
+ */
+function getSubQueryMarkerRow(e: React.MouseEvent): number | undefined {
+  const marker = (e.target as Element).closest('.sub-query-gutter-marker');
+  if (!marker) return;
+  return findMap([...marker.classList], c => {
+    const m = /^query-(\d+)$/.exec(c);
+    return m ? Number(m[1]) : undefined;
+  });
+}
+
+export interface FlexibleQueryInputHandle {
+  goToPosition(rowColumn: RowColumn): void;
+}
+
 export interface FlexibleQueryInputProps {
+  ref?: React.Ref<FlexibleQueryInputHandle | undefined>;
   queryString: string;
   onQueryStringChange?: (newQueryString: string) => void;
   runQuerySlice?: (querySlice: QuerySlice) => void;
@@ -52,11 +69,9 @@ export interface FlexibleQueryInputProps {
   leaveBackground?: boolean;
 }
 
-export const FlexibleQueryInput = React.forwardRef<
-  { goToPosition: (rowColumn: RowColumn) => void } | undefined,
-  FlexibleQueryInputProps
->(function FlexibleQueryInput(props, ref) {
+export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
   const {
+    ref,
     queryString,
     onQueryStringChange,
     runQuerySlice,
@@ -70,9 +85,11 @@ export const FlexibleQueryInput = React.forwardRef<
 
   const availableSqlFunctions = useAvailableSqlFunctions();
   const [editorHeight, setEditorHeight] = React.useState(200);
-  const aceEditorRef = React.useRef<Ace.Editor | undefined>();
+  const aceEditorRef = React.useRef<Ace.Editor | undefined>(undefined);
   const lastFoundQueriesRef = React.useRef<QuerySlice[]>([]);
-  const highlightFoundQueryRef = React.useRef<{ row: number; marker: number } | undefined>();
+  const highlightFoundQueryRef = React.useRef<{ row: number; marker: number } | undefined>(
+    undefined,
+  );
 
   const findAllQueriesByLine = React.useCallback(() => {
     const found = dedupe(findAllSqlQueriesInText(queryString), ({ startRowColumn }) =>
@@ -103,18 +120,15 @@ export const FlexibleQueryInput = React.forwardRef<
     });
   }, [runQuerySlice, findAllQueriesByLine]);
 
-  const markQueriesDebounced = React.useMemo(
-    () => debounce(markQueries, 900, { trailing: true }),
-    [markQueries],
-  );
-
   React.useEffect(() => {
     markQueries();
   }, [markQueries]);
 
+  // Re-mark the queries once the query string has not changed for a bit
   React.useEffect(() => {
-    markQueriesDebounced();
-  }, [queryString, markQueriesDebounced]);
+    const timeout = setTimeout(markQueries, 900);
+    return () => clearTimeout(timeout);
+  }, [queryString, markQueries]);
 
   React.useEffect(() => {
     return () => {
@@ -163,12 +177,7 @@ export const FlexibleQueryInput = React.forwardRef<
   const handleContainerClick = React.useCallback(
     (e: React.MouseEvent) => {
       if (!runQuerySlice) return;
-      const classes = [...(e.target as any).classList];
-      if (!classes.includes('sub-query-gutter-marker')) return;
-      const row = findMap(classes, c => {
-        const m = /^query-(\d+)$/.exec(c);
-        return m ? Number(m[1]) : undefined;
-      });
+      const row = getSubQueryMarkerRow(e);
       if (typeof row === 'undefined') return;
 
       const slice = lastFoundQueriesRef.current.find(
@@ -196,12 +205,7 @@ export const FlexibleQueryInput = React.forwardRef<
       const aceEditor = aceEditorRef.current;
       if (!aceEditor) return;
 
-      const classes = [...(e.target as any).classList];
-      if (!classes.includes('sub-query-gutter-marker')) return;
-      const row = findMap(classes, c => {
-        const m = /^query-(\d+)$/.exec(c);
-        return m ? Number(m[1]) : undefined;
-      });
+      const row = getSubQueryMarkerRow(e);
       if (typeof row === 'undefined' || highlightFoundQueryRef.current?.row === row) return;
 
       const slice = lastFoundQueriesRef.current.find(
@@ -211,7 +215,7 @@ export const FlexibleQueryInput = React.forwardRef<
       const marker = aceEditor
         .getSession()
         .addMarker(
-          new ace.Range(
+          new Range(
             slice.startRowColumn.row,
             slice.startRowColumn.column,
             slice.endRowColumn.row,
@@ -236,43 +240,43 @@ export const FlexibleQueryInput = React.forwardRef<
 
   const jsonMode = queryString.trim().startsWith('{');
 
-  const getColumnMetadata = () => columnMetadata;
-  const cmp: Ace.Completer[] = [
-    {
-      getCompletions: (_state, session, pos, prefix, callback) => {
-        const allText = session.getValue();
-        const line = session.getLine(pos.row);
-        const charBeforePrefix = line[pos.column - prefix.length - 1];
-        if (allText.trim().startsWith('{')) {
-          const lines = allText.split('\n').slice(0, pos.row + 1);
-          const lastLineIndex = lines.length - 1;
-          lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
-          callback(
-            null,
-            getHjsonCompletions({
-              jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS,
-              textBefore: lines.join('\n'),
-              charBeforePrefix,
-              prefix,
-            }),
-          );
-        } else {
-          const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
-          callback(
-            null,
-            getSqlCompletions({
-              allText,
-              lineBeforePrefix,
-              charBeforePrefix,
-              prefix,
-              columnMetadata: getColumnMetadata(),
-              availableSqlFunctions,
-            }),
-          );
-        }
-      },
+  // Ace reads the completers once, when autocompletion is enabled, so they must not change. The callback always sees
+  // the latest props.
+  const getCompletions = usePermanentCallback<Ace.Completer['getCompletions']>(
+    (_editor, session, pos, prefix, callback) => {
+      const allText = session.getValue();
+      const line = session.getLine(pos.row);
+      const charBeforePrefix = line[pos.column - prefix.length - 1];
+      if (allText.trim().startsWith('{')) {
+        const lines = allText.split('\n').slice(0, pos.row + 1);
+        const lastLineIndex = lines.length - 1;
+        lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
+        callback(
+          null,
+          getHjsonCompletions({
+            jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS,
+            textBefore: lines.join('\n'),
+            charBeforePrefix,
+            prefix,
+          }),
+        );
+      } else {
+        const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
+        callback(
+          null,
+          getSqlCompletions({
+            allText,
+            lineBeforePrefix,
+            charBeforePrefix,
+            prefix,
+            columnMetadata,
+            availableSqlFunctions,
+          }),
+        );
+      }
     },
-  ];
+  );
+  const completers = React.useMemo<Ace.Completer[]>(() => [{ getCompletions }], [getCompletions]);
 
   return (
     <div className="flexible-query-input">
@@ -290,10 +294,9 @@ export const FlexibleQueryInput = React.forwardRef<
               'placeholder-padding',
               leaveBackground ? undefined : 'no-background',
             )}
-            // 'react-ace' types are incomplete. Completion options can accept completers array.
-            enableBasicAutocompletion={cmp as any}
-            enableLiveAutocompletion={cmp as any}
-            name="ace-editor"
+            editorProps={{ completers }}
+            enableBasicAutocompletion
+            enableLiveAutocompletion
             onChange={handleChange}
             focus
             fontSize={12}
@@ -304,12 +307,9 @@ export const FlexibleQueryInput = React.forwardRef<
             tabSize={2}
             value={queryString}
             readOnly={!onQueryStringChange}
-            editorProps={{
-              $blockScrolling: Infinity,
-            }}
             setOptions={{
               showLineNumbers: true,
-              newLineMode: 'unix' as any, // This type is specified incorrectly in AceEditor
+              newLineMode: 'unix',
             }}
             placeholder={placeholder || 'SELECT * FROM ...'}
             onLoad={handleAceLoad}
@@ -318,4 +318,4 @@ export const FlexibleQueryInput = React.forwardRef<
       </ResizeSensor>
     </div>
   );
-});
+}

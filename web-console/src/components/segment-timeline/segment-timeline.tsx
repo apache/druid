@@ -22,17 +22,16 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   ResizeSensor,
 } from '@blueprintjs/core';
 import type { NonNullDateRange } from '@blueprintjs/datetime';
-import { DateRangePicker3 } from '@blueprintjs/datetime2';
+import { DateRangePicker } from '@blueprintjs/datetime';
 import { IconNames } from '@blueprintjs/icons';
 import { Select } from '@blueprintjs/select';
 import { day, Duration, Timezone } from 'chronoshift';
 import { C, L, N, SqlExpression, SqlQuery } from 'druid-query-toolkit';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
@@ -87,9 +86,11 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
   const [dateRange, setDateRange] = useState<NonNullDateRange | undefined>();
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
 
-  useEffect(() => {
+  const [prevDatasource, setPrevDatasource] = useState(datasource);
+  if (datasource !== prevDatasource) {
+    setPrevDatasource(datasource);
     setShownDatasource(datasource);
-  }, [datasource]);
+  }
 
   const defaultDateRange = useMemo(() => {
     return getDateRange(DEFAULT_SHOWN_DURATION);
@@ -115,7 +116,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
   });
 
   const [initDatasourceDateRangeState] = useQueryManager<string | null, NonNullDateRange>({
-    query: dateRange ? undefined : shownDatasource ?? null,
+    query: dateRange ? undefined : (shownDatasource ?? null),
     processQuery: async (datasource, signal) => {
       let queriedStart: Date;
       let queriedEnd: Date;
@@ -229,8 +230,8 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
           >
             <Button
               text={`Datasource: ${shownDatasource ?? 'all'}`}
-              small
-              rightIcon={IconNames.CARET_DOWN}
+              size="small"
+              endIcon={IconNames.CARET_DOWN}
               intent={datasourcesState.isError() ? Intent.WARNING : undefined}
               data-tooltip={
                 datasourcesState.isError()
@@ -240,11 +241,15 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
             />
           </Select>
           {shownDatasource && (
-            <Button icon={IconNames.CROSS} small onClick={() => setShownDatasource(undefined)} />
+            <Button
+              icon={IconNames.CROSS}
+              size="small"
+              onClick={() => setShownDatasource(undefined)}
+            />
           )}
         </ButtonGroup>
-        <Popover
-          position={Position.BOTTOM_LEFT}
+        <PopoverNext
+          placement="bottom-start"
           content={
             <Menu>
               {INTERVAL_STATS.map(stat => (
@@ -257,13 +262,15 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
               ))}
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <Button
             text={`Show: ${getIntervalStatTitle(activeSegmentStat)}`}
-            small
-            rightIcon={IconNames.CARET_DOWN}
+            size="small"
+            endIcon={IconNames.CARET_DOWN}
           />
-        </Popover>
+        </PopoverNext>
         <div className="expander" />
         <ButtonGroup>
           <Button
@@ -271,21 +278,21 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
             data-tooltip={
               previousDateRange && `Previous time period\n${formatDateRange(previousDateRange)}`
             }
-            small
+            size="small"
             disabled={!previousDateRange}
             onClick={() => setDateRange(previousDateRange)}
           />
           <Button
             icon={IconNames.ZOOM_OUT}
             data-tooltip={zoomedOutDateRange && `Zoom out\n${formatDateRange(zoomedOutDateRange)}`}
-            small
+            size="small"
             disabled={!zoomedOutDateRange}
             onClick={() => setDateRange(zoomedOutDateRange)}
           />
           <Button
             icon={IconNames.CARET_RIGHT}
             data-tooltip={nextDateRange && `Next time period\n${formatDateRange(nextDateRange)}`}
-            small
+            size="small"
             disabled={!nextDateRange}
             onClick={() => setDateRange(nextDateRange)}
           />
@@ -299,16 +306,16 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
                 text={d.toString().replace('P', '')}
                 data-tooltip={`Show last ${d.getDescription()}\n${formatDateRange(dr)}`}
                 active={effectiveDateRange && dateRangesEqual(effectiveDateRange, dr)}
-                small
+                size="small"
                 onClick={() => setDateRange(dr)}
               />
             );
           })}
-          <Popover
+          <PopoverNext
             isOpen={showCustomDatePicker}
             onInteraction={setShowCustomDatePicker}
             content={
-              <DateRangePicker3
+              <DateRangePicker
                 defaultValue={utcToLocalDateRange(
                   effectiveDateRange || getDateRange(DEFAULT_SHOWN_DURATION),
                 )}
@@ -324,6 +331,8 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
                 shortcuts={false}
               />
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               icon={IconNames.CALENDAR}
@@ -333,9 +342,9 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
                   : `Loading datasource date range`
               }
               data-tooltip={showCustomDatePicker ? undefined : `Select a custom date range`}
-              small
+              size="small"
             />
-          </Popover>
+          </PopoverNext>
           <Button
             icon={IconNames.PIN}
             data-tooltip={
@@ -343,7 +352,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
             }
             active={Boolean(dateRange)}
             disabled={!effectiveDateRange}
-            small
+            size="small"
             onClick={() => setDateRange(dateRange ? undefined : effectiveDateRange)}
           />
         </ButtonGroup>

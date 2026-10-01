@@ -26,8 +26,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Column } from 'druid-query-toolkit';
@@ -262,9 +261,9 @@ export const MeasureMenu = function MeasureMenu(props: MeasureMenuProps) {
       {tab !== 'saved' && (
         <div className="button-bar">
           {onAddToSourceQueryAsMeasure && (
-            <Popover
+            <PopoverNext
               disabled={actionDisabled}
-              position={Position.BOTTOM_LEFT}
+              placement="bottom-start"
               content={
                 <Menu>
                   <MenuItem
@@ -279,9 +278,11 @@ export const MeasureMenu = function MeasureMenu(props: MeasureMenuProps) {
                   />
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
-              <Button icon={IconNames.TH_DERIVED} minimal disabled={actionDisabled} />
-            </Popover>
+              <Button icon={IconNames.TH_DERIVED} variant="minimal" disabled={actionDisabled} />
+            </PopoverNext>
           )}
           <div className="button-separator" />
           <Button text="Cancel" onClick={onClose} />

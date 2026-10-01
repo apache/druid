@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Popover, Tab, Tabs, TabsExpander, Tag } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  Dialog,
+  PopoverNext,
+  Tab,
+  Tabs,
+  TabsExpander,
+  Tag,
+} from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
@@ -109,16 +118,18 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
                         downloadFilename={`compaction-history-${datasource}-version-${historyEntry.auditTime}.json`}
                       />
                       {historyEntry.globalConfig && (
-                        <Popover
+                        <PopoverNext
                           className="global-info"
                           content={
                             <PopoverText>
                               <pre>{formatGlobalConfig(historyEntry.globalConfig)}</pre>
                             </PopoverText>
                           }
+                          lazy
+                          shouldReturnFocusOnClose={false}
                         >
                           <Button icon={IconNames.GLOBE} text="Global config" />
-                        </Popover>
+                        </PopoverNext>
                       )}
                     </>
                   }

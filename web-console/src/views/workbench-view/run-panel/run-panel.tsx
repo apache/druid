@@ -24,8 +24,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   Tag,
   useHotkeys,
 } from '@blueprintjs/core';
@@ -165,11 +164,10 @@ function optionVisible(
   }
 }
 
-export interface RunPanelProps
-  extends Pick<
-    MaxTasksButtonProps,
-    'maxTasksLabelFn' | 'fullClusterCapacityLabelFn' | 'maxTasksOptions'
-  > {
+export interface RunPanelProps extends Pick<
+  MaxTasksButtonProps,
+  'maxTasksLabelFn' | 'fullClusterCapacityLabelFn' | 'maxTasksOptions'
+> {
   query: WorkbenchQuery;
   onQueryChange(query: WorkbenchQuery): void;
   running: boolean;
@@ -335,8 +333,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       )}
       {onQueryChange && (
         <ButtonGroup>
-          <Popover
-            position={Position.BOTTOM_LEFT}
+          <PopoverNext
+            placement="bottom-start"
             content={
               <Menu>
                 {queryEngines.length > 1 && (
@@ -655,6 +653,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                 )}
               </Menu>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               text={`Engine: ${
@@ -662,10 +662,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                   ? enginesLabelFn(queryEngine).text
                   : `${autoEngineLabel.text} [${enginesLabelFn(effectiveEngine).text}]`
               }`}
-              rightIcon={IconNames.CARET_DOWN}
+              endIcon={IconNames.CARET_DOWN}
               intent={intent}
             />
-          </Popover>
+          </PopoverNext>
           {effectiveEngine === 'sql-msq-task' && (
             <MaxTasksButton
               clusterCapacity={clusterCapacity}
@@ -681,9 +681,14 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
         </ButtonGroup>
       )}
       {moreMenu && (
-        <Popover position={Position.BOTTOM_LEFT} content={moreMenu}>
-          <Button rightIcon={IconNames.MORE} data-tooltip="Engine specific tools" />
-        </Popover>
+        <PopoverNext
+          placement="bottom-start"
+          content={moreMenu}
+          lazy
+          shouldReturnFocusOnClose={false}
+        >
+          <Button endIcon={IconNames.MORE} data-tooltip="Engine specific tools" />
+        </PopoverNext>
       )}
       {editContextDialogOpen && (
         <EditContextDialog

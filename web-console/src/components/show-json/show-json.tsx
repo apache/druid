@@ -17,14 +17,13 @@
  */
 
 import { Button, ButtonGroup, Intent } from '@blueprintjs/core';
-import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import AceEditor from 'react-ace';
 
 import { useQueryManager } from '../../hooks';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
-import { downloadFile } from '../../utils';
+import { copyToClipboard, downloadFile } from '../../utils';
 import { Loader } from '../loader/loader';
 
 import './show-json.scss';
@@ -56,23 +55,23 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
           <Button
             disabled={jsonState.loading}
             text="Refresh"
-            minimal
+            variant="minimal"
             onClick={() => queryManager.rerunLastQuery()}
           />
           {downloadFilename && (
             <Button
               disabled={jsonState.loading}
               text="Download"
-              minimal
+              variant="minimal"
               onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
             />
           )}
           <Button
             text="Copy"
-            minimal
+            variant="minimal"
             disabled={jsonState.loading}
             onClick={() => {
-              copy(jsonValue, { format: 'text/plain' });
+              copyToClipboard(jsonValue);
               AppToaster.show({
                 message: 'JSON value copied to clipboard',
                 intent: Intent.SUCCESS,
@@ -82,7 +81,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
           <Button
             text="View raw"
             disabled={!jsonValue}
-            minimal
+            variant="minimal"
             onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
           />
         </ButtonGroup>
@@ -101,7 +100,6 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
             showPrintMargin={false}
             showGutter={false}
             value={!jsonState.error ? jsonValue : jsonState.getErrorMessage()}
-            style={{}}
           />
         )}
       </div>

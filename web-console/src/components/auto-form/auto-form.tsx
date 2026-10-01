@@ -343,7 +343,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         stepSize={1000}
         majorStepSize={1000000}
         fill
-        large={large}
+        size={large ? 'large' : undefined}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
       />
@@ -368,7 +368,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         onFinalize={onFinalize}
         placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
         suggestions={AutoForm.evaluateFunctor(field.suggestions, model, undefined)}
-        large={large}
+        size={large ? 'large' : undefined}
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
         multiline={AutoForm.evaluateFunctor(field.multiline, model, false)}
@@ -396,7 +396,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           { value: 'true', label: 'True', disabled },
         ]}
         intent={intent}
-        small={!large}
+        size={large ? undefined : 'small'}
       />
     );
   }
@@ -475,7 +475,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
         readOnly
         placeholder={AutoForm.evaluateFunctor(field.placeholder, model, '')}
-        rightElement={<Button icon={IconNames.EDIT} minimal onClick={onEdit} />}
+        rightElement={<Button icon={IconNames.EDIT} variant="minimal" onClick={onEdit} />}
         onClick={onEdit}
       />
     );
@@ -551,8 +551,8 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
       <FormGroup key="more-or-less">
         <Button
           text={showMore ? 'Show less' : 'Show more'}
-          rightIcon={showMore ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
-          minimal
+          endIcon={showMore ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
+          variant="minimal"
           onClick={() => {
             this.setState(({ showMore }) => ({ showMore: !showMore }));
           }}
