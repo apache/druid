@@ -8,75 +8,56 @@ exports[`SegmentTimeline matches snapshot 1`] = `
     class="control-bar"
   >
     <div
-      class="bp5-button-group"
+      class="bp6-button-group"
     >
       <div
         aria-controls="listbox-0"
         aria-disabled="false"
         aria-expanded="false"
         aria-haspopup="listbox"
-        class="bp5-popover-target"
-        role="combobox"
+        class="bp6-popover-target"
       >
         <button
-          class="bp5-button bp5-small"
+          class="bp6-button bp6-small"
           type="button"
         >
           <span
-            class="bp5-button-text"
+            class="bp6-button-text"
           >
             Datasource: all
           </span>
           <span
             aria-hidden="true"
-            class="bp5-icon bp5-icon-caret-down"
+            class="bp6-icon bp6-icon-caret-down"
           >
             <svg
               data-icon="caret-down"
-              height="16"
-              role="img"
-              viewBox="0 0 16 16"
-              width="16"
-            >
-              <path
-                d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-                fill-rule="evenodd"
-              />
-            </svg>
+            />
           </span>
         </button>
       </div>
     </div>
     <span
-      class="bp5-popover-target"
+      class="bp6-popover-target"
     >
       <button
         aria-expanded="false"
         aria-haspopup="menu"
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         type="button"
       >
         <span
-          class="bp5-button-text"
+          class="bp6-button-text"
         >
           Show: Size
         </span>
         <span
           aria-hidden="true"
-          class="bp5-icon bp5-icon-caret-down"
+          class="bp6-icon bp6-icon-caret-down"
         >
           <svg
             data-icon="caret-down"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
     </span>
@@ -84,223 +65,178 @@ exports[`SegmentTimeline matches snapshot 1`] = `
       class="expander"
     />
     <div
-      class="bp5-button-group"
+      class="bp6-button-group"
     >
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Previous time period
 2024-10-15 → 2024-11-01"
         type="button"
       >
         <span
           aria-hidden="true"
-          class="bp5-icon bp5-icon-caret-left"
+          class="bp6-icon bp6-icon-caret-left"
         >
           <svg
             data-icon="caret-left"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M9.5 4c-.13 0-.24.05-.33.13l-4 3.5c-.1.09-.17.22-.17.37s.07.28.17.37l4 3.5a.495.495 0 00.83-.37v-7c0-.28-.22-.5-.5-.5z"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Zoom out
 2024-10-15 → 2024-11-20"
         type="button"
       >
         <span
           aria-hidden="true"
-          class="bp5-icon bp5-icon-zoom-out"
+          class="bp6-icon bp6-icon-zoom-out"
         >
           <svg
             data-icon="zoom-out"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M3.99 5.99c-.55 0-1 .45-1 1s.45 1 1 1h6c.55 0 1-.45 1-1s-.45-1-1-1h-6zm11.56 7.44l-2.67-2.68a6.94 6.94 0 001.11-3.76c0-3.87-3.13-7-7-7s-7 3.13-7 7 3.13 7 7 7c1.39 0 2.68-.42 3.76-1.11l2.68 2.67a1.498 1.498 0 102.12-2.12zm-8.56-1.44c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Next time period
 2024-11-18 → 2024-12-05"
         type="button"
       >
         <span
           aria-hidden="true"
-          class="bp5-icon bp5-icon-caret-right"
+          class="bp6-icon bp6-icon-caret-right"
         >
           <svg
             data-icon="caret-right"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M11 8c0-.15-.07-.28-.17-.37l-4-3.5A.495.495 0 006 4.5v7a.495.495 0 00.83.37l4-3.5c.1-.09.17-.22.17-.37z"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
     </div>
     <div
-      class="bp5-button-group"
+      class="bp6-button-group"
     >
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Show last day
 2024-11-19 → 2024-11-20"
         type="button"
       >
         <span
-          class="bp5-button-text"
+          class="bp6-button-text"
         >
           1D
         </span>
       </button>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Show last week
 2024-11-13 → 2024-11-20"
         type="button"
       >
         <span
-          class="bp5-button-text"
+          class="bp6-button-text"
         >
           1W
         </span>
       </button>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Show last month
 2024-10-20 → 2024-11-20"
         type="button"
       >
         <span
-          class="bp5-button-text"
+          class="bp6-button-text"
         >
           1M
         </span>
       </button>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Show last 3 months
 2024-08-20 → 2024-11-20"
         type="button"
       >
         <span
-          class="bp5-button-text"
+          class="bp6-button-text"
         >
           3M
         </span>
       </button>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Show last year
 2023-11-20 → 2024-11-20"
         type="button"
       >
         <span
-          class="bp5-button-text"
+          class="bp6-button-text"
         >
           1Y
         </span>
       </button>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Show last 5 years
 2019-11-20 → 2024-11-20"
         type="button"
       >
         <span
-          class="bp5-button-text"
+          class="bp6-button-text"
         >
           5Y
         </span>
       </button>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Show last 10 years
 2014-11-20 → 2024-11-20"
         type="button"
       >
         <span
-          class="bp5-button-text"
+          class="bp6-button-text"
         >
           10Y
         </span>
       </button>
       <span
-        class="bp5-popover-target"
+        class="bp6-popover-target"
       >
         <button
           aria-expanded="false"
           aria-haspopup="menu"
-          class="bp5-button bp5-small"
+          class="bp6-button bp6-small"
           data-tooltip="Select a custom date range"
           type="button"
         >
           <span
             aria-hidden="true"
-            class="bp5-icon bp5-icon-calendar"
+            class="bp6-icon bp6-icon-calendar"
           >
             <svg
               data-icon="calendar"
-              height="16"
-              role="img"
-              viewBox="0 0 16 16"
-              width="16"
-            >
-              <path
-                d="M11 3c.6 0 1-.5 1-1V1c0-.6-.4-1-1-1s-1 .4-1 1v1c0 .5.4 1 1 1zm3-2h-1v1c0 1.1-.9 2-2 2s-2-.9-2-2V1H6v1c0 1.1-.9 2-2 2s-2-.9-2-2V1H1c-.6 0-1 .5-1 1v12c0 .6.4 1 1 1h13c.6 0 1-.4 1-1V2c0-.6-.5-1-1-1zM5 13H2v-3h3v3zm0-4H2V6h3v3zm4 4H6v-3h3v3zm0-4H6V6h3v3zm4 4h-3v-3h3v3zm0-4h-3V6h3v3zM4 3c.6 0 1-.5 1-1V1c0-.6-.4-1-1-1S3 .4 3 1v1c0 .5.4 1 1 1z"
-                fill-rule="evenodd"
-              />
-            </svg>
+            />
           </span>
           <span
-            class="bp5-button-text"
+            class="bp6-button-text"
           >
             2024-11-01 → 2024-11-18
           </span>
         </button>
       </span>
       <button
-        class="bp5-button bp5-small"
+        class="bp6-button bp6-small"
         data-tooltip="Auto determine date range to fit datasource"
         type="button"
       >
         <span
           aria-hidden="true"
-          class="bp5-icon bp5-icon-pin"
+          class="bp6-icon bp6-icon-pin"
         >
           <svg
             data-icon="pin"
-            height="16"
-            role="img"
-            viewBox="0 0 16 16"
-            width="16"
-          >
-            <path
-              d="M9.41.92c-.51.51-.41 1.5.15 2.56L4.34 7.54C2.8 6.48 1.45 6.05.92 6.58l3.54 3.54-3.54 4.95 4.95-3.54 3.54 3.54c.53-.53.1-1.88-.96-3.42l4.06-5.22c1.06.56 2.04.66 2.55.15L9.41.92z"
-              fill-rule="evenodd"
-            />
-          </svg>
+          />
         </span>
       </button>
     </div>

@@ -27,8 +27,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -255,8 +254,8 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   (searchMode === 'columns-only' ||
                     !tableName.toLowerCase().includes(lowerSearchString))),
               label: (
-                <Popover
-                  position={Position.RIGHT}
+                <PopoverNext
+                  placement="right"
                   content={
                     <Deferred
                       content={() => {
@@ -457,106 +456,108 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                       }}
                     />
                   }
+                  lazy
+                  shouldReturnFocusOnClose={false}
                 >
                   {tableName}
-                </Popover>
+                </PopoverNext>
               ),
-              childNodes: metadata.map(
-                (columnData): TreeNodeInfo => ({
-                  id: columnData.COLUMN_NAME,
-                  icon: (
-                    <Icon
-                      className={Classes.TREE_NODE_ICON}
-                      icon={dataTypeToIcon(columnData.DATA_TYPE)}
-                      aria-hidden
-                      tabIndex={-1}
-                      data-tooltip={columnData.DATA_TYPE}
-                    />
-                  ),
-                  label: (
-                    <Popover
-                      position={Position.RIGHT}
-                      autoFocus={false}
-                      content={
-                        <Deferred
-                          content={() => {
-                            const parsedQuery = props.getParsedQuery();
-                            return (
-                              <Menu>
-                                <MenuItem
-                                  icon={IconNames.FULLSCREEN}
-                                  text={`Show: ${columnData.COLUMN_NAME}`}
-                                  onClick={() => {
-                                    handleColumnShow({
-                                      columnSchema: schemaName,
-                                      columnTable: tableName,
-                                      columnName: columnData.COLUMN_NAME,
-                                      columnType: columnData.DATA_TYPE,
-                                      parsedQuery,
-                                      defaultWhere,
-                                      onQueryChange: onQueryChange,
-                                    });
-                                  }}
+              childNodes: metadata.map((columnData): TreeNodeInfo => ({
+                id: columnData.COLUMN_NAME,
+                icon: (
+                  <Icon
+                    className={Classes.TREE_NODE_ICON}
+                    icon={dataTypeToIcon(columnData.DATA_TYPE)}
+                    aria-hidden
+                    tabIndex={-1}
+                    data-tooltip={columnData.DATA_TYPE}
+                  />
+                ),
+                label: (
+                  <PopoverNext
+                    placement="right"
+                    autoFocus={false}
+                    content={
+                      <Deferred
+                        content={() => {
+                          const parsedQuery = props.getParsedQuery();
+                          return (
+                            <Menu>
+                              <MenuItem
+                                icon={IconNames.FULLSCREEN}
+                                text={`Show: ${columnData.COLUMN_NAME}`}
+                                onClick={() => {
+                                  handleColumnShow({
+                                    columnSchema: schemaName,
+                                    columnTable: tableName,
+                                    columnName: columnData.COLUMN_NAME,
+                                    columnType: columnData.DATA_TYPE,
+                                    parsedQuery,
+                                    defaultWhere,
+                                    onQueryChange: onQueryChange,
+                                  });
+                                }}
+                              />
+                              {parsedQuery &&
+                                oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT', 'DOUBLE') && (
+                                  <NumberMenuItems
+                                    table={tableName}
+                                    schema={schemaName}
+                                    columnName={columnData.COLUMN_NAME}
+                                    parsedQuery={parsedQuery}
+                                    onQueryChange={onQueryChange}
+                                  />
+                                )}
+                              {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
+                                <StringMenuItems
+                                  table={tableName}
+                                  schema={schemaName}
+                                  columnName={columnData.COLUMN_NAME}
+                                  parsedQuery={parsedQuery}
+                                  onQueryChange={onQueryChange}
                                 />
-                                {parsedQuery &&
-                                  oneOf(columnData.DATA_TYPE, 'BIGINT', 'FLOAT', 'DOUBLE') && (
-                                    <NumberMenuItems
-                                      table={tableName}
-                                      schema={schemaName}
-                                      columnName={columnData.COLUMN_NAME}
-                                      parsedQuery={parsedQuery}
-                                      onQueryChange={onQueryChange}
-                                    />
-                                  )}
-                                {parsedQuery && columnData.DATA_TYPE === 'VARCHAR' && (
-                                  <StringMenuItems
-                                    table={tableName}
-                                    schema={schemaName}
-                                    columnName={columnData.COLUMN_NAME}
-                                    parsedQuery={parsedQuery}
-                                    onQueryChange={onQueryChange}
-                                  />
-                                )}
-                                {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
-                                  <TimeMenuItems
-                                    table={tableName}
-                                    schema={schemaName}
-                                    columnName={columnData.COLUMN_NAME}
-                                    parsedQuery={parsedQuery}
-                                    onQueryChange={onQueryChange}
-                                  />
-                                )}
-                                {parsedQuery && columnData.DATA_TYPE.startsWith('COMPLEX<') && (
-                                  <ComplexMenuItems
-                                    table={tableName}
-                                    schema={schemaName}
-                                    columnName={columnData.COLUMN_NAME}
-                                    columnType={columnData.DATA_TYPE}
-                                    parsedQuery={parsedQuery}
-                                    onQueryChange={onQueryChange}
-                                  />
-                                )}
-                                <MenuItem
-                                  icon={IconNames.CLIPBOARD}
-                                  text={`Copy: ${columnData.COLUMN_NAME}`}
-                                  onClick={() => {
-                                    copyAndAlert(
-                                      columnData.COLUMN_NAME,
-                                      `${columnData.COLUMN_NAME} query copied to clipboard`,
-                                    );
-                                  }}
+                              )}
+                              {parsedQuery && columnData.DATA_TYPE === 'TIMESTAMP' && (
+                                <TimeMenuItems
+                                  table={tableName}
+                                  schema={schemaName}
+                                  columnName={columnData.COLUMN_NAME}
+                                  parsedQuery={parsedQuery}
+                                  onQueryChange={onQueryChange}
                                 />
-                              </Menu>
-                            );
-                          }}
-                        />
-                      }
-                    >
-                      {columnData.COLUMN_NAME}
-                    </Popover>
-                  ),
-                }),
-              ),
+                              )}
+                              {parsedQuery && columnData.DATA_TYPE.startsWith('COMPLEX<') && (
+                                <ComplexMenuItems
+                                  table={tableName}
+                                  schema={schemaName}
+                                  columnName={columnData.COLUMN_NAME}
+                                  columnType={columnData.DATA_TYPE}
+                                  parsedQuery={parsedQuery}
+                                  onQueryChange={onQueryChange}
+                                />
+                              )}
+                              <MenuItem
+                                icon={IconNames.CLIPBOARD}
+                                text={`Copy: ${columnData.COLUMN_NAME}`}
+                                onClick={() => {
+                                  copyAndAlert(
+                                    columnData.COLUMN_NAME,
+                                    `${columnData.COLUMN_NAME} query copied to clipboard`,
+                                  );
+                                }}
+                              />
+                            </Menu>
+                          );
+                        }}
+                      />
+                    }
+                    lazy
+                    shouldReturnFocusOnClose={false}
+                  >
+                    {columnData.COLUMN_NAME}
+                  </PopoverNext>
+                ),
+              })),
             }),
           ),
         }),
@@ -629,12 +630,12 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
           this.setState({ searchString: e.target.value.substring(0, 100) });
         }}
         rightElement={
-          <ButtonGroup minimal>
+          <ButtonGroup variant="minimal">
             {searchString !== '' && (
               <Button icon={IconNames.CROSS} onClick={() => this.setState({ searchString: '' })} />
             )}
-            <Popover
-              position="bottom-left"
+            <PopoverNext
+              placement="bottom-start"
               content={
                 <Menu>
                   <MenuDivider title="Search in" />
@@ -648,9 +649,11 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                   ))}
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <Button icon={IconNames.SETTINGS} data-tooltip="Search settings" />
-            </Popover>
+            </PopoverNext>
           </ButtonGroup>
         }
       />

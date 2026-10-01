@@ -40,14 +40,14 @@ describe('TableFilter', () => {
   });
 
   describe('toFilter', () => {
-    it('converts to react-table Filter format', () => {
+    it('converts to a column filter', () => {
       const filter = new TableFilter('datasource', '=', 'test');
       expect(filter.toFilter()).toEqual({ id: 'datasource', value: '=test' });
     });
   });
 
   describe('fromFilter', () => {
-    it('converts from react-table Filter format', () => {
+    it('converts from a column filter', () => {
       const filter = TableFilter.fromFilter({ id: 'datasource', value: '=test' });
       expect(filter.key).toBe('datasource');
       expect(filter.mode).toBe('=');

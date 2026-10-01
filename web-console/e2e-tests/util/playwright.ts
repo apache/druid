@@ -105,8 +105,7 @@ export async function setInput(
   input: playwright.ElementHandle<Element>,
   value: string,
 ): Promise<void> {
-  await input.fill('');
-  await input.type(value);
+  await input.fill(value);
 }
 
 function buttonSelector(text: string) {

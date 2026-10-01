@@ -584,8 +584,12 @@ export function arrangeWithPrefixSuffix(
 
 // ----------------------------
 
+export function copyToClipboard(text: string): void {
+  void copy(text, { format: 'text/plain', fallbackToPrompt: true });
+}
+
 export function copyAndAlert(copyString: string, alertMessage: string): void {
-  copy(copyString, { format: 'text/plain' });
+  copyToClipboard(copyString);
   AppToaster.show({
     message: alertMessage,
     intent: Intent.SUCCESS,

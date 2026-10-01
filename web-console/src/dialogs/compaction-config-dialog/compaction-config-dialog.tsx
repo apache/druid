@@ -160,7 +160,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
           <Button
             className="history-button"
             text="History"
-            minimal
+            variant="minimal"
             onClick={() => setShowHistory(true)}
           />
           {compactionConfig ? (

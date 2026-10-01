@@ -185,7 +185,7 @@ export function getSqlCompletions({
   columns,
   availableSqlFunctions,
   skipAggregates,
-}: GetSqlCompletionsOptions): Ace.Completion[] {
+}: GetSqlCompletionsOptions): Ace.ValueCompletion[] {
   // We are in a single line comment
   if (lineBeforePrefix.startsWith('--') || lineBeforePrefix.includes(' --')) {
     return [];
@@ -210,7 +210,7 @@ export function getSqlCompletions({
 
   const possibleReferences = getPossibleSqlReferences(allText, 100);
 
-  let completions: Ace.Completion[] = possibleReferences.map(value => ({
+  let completions: Ace.ValueCompletion[] = possibleReferences.map(value => ({
     value,
     score: 1,
     meta: 'local',
@@ -220,15 +220,13 @@ export function getSqlCompletions({
   if (!quote) {
     completions = completions.concat(
       (SQL_KEYWORD_FOLLOW_SUGGESTIONS[keywordBeforePrefix || ''] || SQL_KEYWORDS).map(v => ({
-        name: v,
         value: v,
         score: 10,
         meta: 'keyword',
       })),
-      SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 11, meta: 'constant' })),
+      SQL_CONSTANTS.map(v => ({ value: v, score: 11, meta: 'constant' })),
       Array.from(SQL_DATA_TYPES.entries()).map(([name, [runtime, description]]) => {
         return {
-          name,
           value: name,
           score: 31,
           meta: 'type',
@@ -247,7 +245,7 @@ export function getSqlCompletions({
       !SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_FUNCTION.includes(keywordBeforePrefix)
     ) {
       completions = completions.concat(
-        SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 20, meta: 'dynamic' })),
+        SQL_DYNAMICS.map(v => ({ value: v, score: 20, meta: 'dynamic' })),
       );
 
       // If availableSqlFunctions map is provided, use it; otherwise fall back to static SQL_FUNCTIONS
@@ -256,21 +254,15 @@ export function getSqlCompletions({
           Array.from(availableSqlFunctions.entries()).flatMap(([name, funcDef]) => {
             if (skipAggregates && funcDef.isAggregate) return [];
             const description = SQL_FUNCTIONS.get(name)?.[1];
-            return funcDef.args.map(args => {
-              return {
-                name,
-                value: funcDef.args.length > 1 ? `${name}(${args})` : name,
-                score: 30,
-                meta: funcDef.isAggregate ? 'aggregate' : 'function',
-                docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
-                docText: description,
-                completer: {
-                  insertMatch: (editor: any, data: any) => {
-                    editor.completer.insertMatch({ value: data.name });
-                  },
-                },
-              } as Ace.Completion;
-            });
+            return funcDef.args.map(args => ({
+              // Functions with several signatures are listed once per signature, but only the name is inserted
+              caption: funcDef.args.length > 1 ? `${name}(${args})` : undefined,
+              value: name,
+              score: 30,
+              meta: funcDef.isAggregate ? 'aggregate' : 'function',
+              docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
+              docText: description,
+            }));
           }),
         );
       } else {
@@ -278,18 +270,12 @@ export function getSqlCompletions({
           Array.from(SQL_FUNCTIONS.entries()).map(([name, argDesc]) => {
             const [args, description] = argDesc;
             return {
-              name,
               value: name,
               score: 30,
               meta: 'function',
               docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
               docText: description,
-              completer: {
-                insertMatch: (editor: any, data: any) => {
-                  editor.completer.insertMatch({ value: data.name });
-                },
-              },
-            } as Ace.Completion;
+            };
           }),
         );
       }

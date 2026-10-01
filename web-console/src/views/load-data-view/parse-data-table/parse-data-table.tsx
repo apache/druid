@@ -19,16 +19,17 @@
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
-import type { RowRenderProps } from 'react-table';
-import ReactTable from 'react-table';
 
-import { TableCell, TableCellUnparseable } from '../../../components';
-import type { FlattenField } from '../../../druid-models';
+import type { ConsoleTableCellInfo } from '../../../components';
 import {
+  ConsoleTable,
   DEFAULT_TABLE_CLASS_NAME,
   STANDARD_TABLE_PAGE_SIZE,
   STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../../react-table';
+  TableCell,
+  TableCellUnparseable,
+} from '../../../components';
+import type { FlattenField } from '../../../druid-models';
 import { caseInsensitiveContains, filterMap } from '../../../utils';
 import type { SampleEntry, SampleResponse } from '../../../utils/sampler';
 import { getHeaderNamesFromSampleResponse } from '../../../utils/sampler';
@@ -55,7 +56,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
   } = props;
 
   return (
-    <ReactTable
+    <ConsoleTable
       className={classNames('parse-data-table', DEFAULT_TABLE_CLASS_NAME)}
       data={sampleResponse.data}
       sortable={false}
@@ -87,7 +88,7 @@ export const ParseDataTable = React.memo(function ParseDataTable(props: ParseDat
             id: String(i),
             accessor: (row: SampleEntry) => row.parsed?.[columnName] ?? null,
             width: 140,
-            Cell: function ParseDataTableCell(row: RowRenderProps) {
+            Cell: function ParseDataTableCell(row: ConsoleTableCellInfo<any>) {
               if (row.original.unparseable) {
                 return <TableCellUnparseable />;
               }

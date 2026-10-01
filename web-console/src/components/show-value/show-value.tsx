@@ -37,12 +37,12 @@ export const ShowValue = React.memo(function ShowValue(props: ShowValueProps) {
         <div className="top-actions">
           <ButtonGroup className="right-buttons">
             {onDiffWithPrevious && (
-              <Button text="Diff with previous" minimal onClick={onDiffWithPrevious} />
+              <Button text="Diff with previous" variant="minimal" onClick={onDiffWithPrevious} />
             )}
             {downloadFilename && (
               <Button
                 text="Download"
-                minimal
+                variant="minimal"
                 onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
               />
             )}
