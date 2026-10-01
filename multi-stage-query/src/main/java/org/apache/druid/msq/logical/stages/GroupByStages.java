@@ -32,6 +32,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Finalization;
 import org.apache.druid.sql.calcite.aggregation.DimensionExpression;
+import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.DruidNodeStack;
 import org.apache.druid.sql.calcite.rel.Grouping;
 
@@ -87,16 +88,16 @@ public class GroupByStages
     }
   }
 
-  public static LogicalStage buildStages(ProjectStage projectStage, Grouping grouping)
+  public static LogicalStage buildStages(ProjectStage projectStage, Grouping grouping, PlannerContext plannerContext)
   {
-    GroupByQuery gby = makeGbyQuery(projectStage, grouping);
+    GroupByQuery gby = makeGbyQuery(projectStage, grouping, plannerContext);
     PreShuffleStage aggStage = new PreShuffleStage(projectStage, gby.withPostAggregatorSpecs(Collections.emptyList()));
     SortStage sortStage = new SortStage(aggStage, getKeyColumns(grouping.getDimensions()), null);
     PostShuffleStage finalAggStage = new PostShuffleStage(sortStage, gby, grouping.getOutputRowSignature());
     return finalAggStage;
   }
 
-  private static GroupByQuery makeGbyQuery(ProjectStage projectStage, Grouping grouping)
+  private static GroupByQuery makeGbyQuery(ProjectStage projectStage, Grouping grouping, PlannerContext plannerContext)
   {
     GroupByQuery.Builder builder = GroupByQuery.builder();
     builder.setDimensions(grouping.getDimensionSpecs());
@@ -107,6 +108,7 @@ public class GroupByStages
     builder.setVirtualColumns(projectStage.getVirtualColumns());
     builder.setPostAggregatorSpecs(grouping.getPostAggregators());
     builder.setDataSource(LogicalInputSpec.of(projectStage).getSourceDesc().dataSource);
+    builder.setContext(plannerContext.queryContextMap());
     return builder.build();
   }
 

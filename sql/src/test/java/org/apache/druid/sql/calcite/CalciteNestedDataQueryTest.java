@@ -548,6 +548,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTopNPath()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT "
         + "JSON_VALUE(nest, '$.x'), "
@@ -1120,6 +1125,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueArrays()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testBuilder()
         .sql(
             "SELECT "
@@ -1220,6 +1230,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestRootSingleTypeArrayLongNulls()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     testBuilder()
         .sql("SELECT longs FROM druid.arrays, UNNEST(arrayLongNulls) as u(longs)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -1280,6 +1293,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestRootSingleTypeArrayStringNulls()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     testBuilder()
         .sql("SELECT strings FROM druid.arrays, UNNEST(arrayStringNulls) as u(strings)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -1337,6 +1353,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestRootSingleTypeArrayDoubleNulls()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     testBuilder()
         .sql("SELECT doubles FROM druid.arrays, UNNEST(arrayDoubleNulls) as u(doubles)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -4920,6 +4939,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQuery()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT JSON_QUERY(nester, '$.n'), JSON_QUERY(nester, '$')\n"
         + "FROM druid.nested",
@@ -4972,6 +4996,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryAndJsonObject()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT JSON_OBJECT(KEY 'n' VALUE JSON_QUERY(nester, '$.n'), KEY 'x' VALUE JSON_VALUE(nest, '$.x'))\n"
         + "FROM druid.nested",
@@ -5022,6 +5051,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonMerging_lhsStringLiteral()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT "
         + "JSON_MERGE('{\"a\":\"x\"}',JSON_OBJECT(KEY 'x' VALUE JSON_VALUE(nest, '$.x')))\n"
@@ -5081,6 +5115,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonMerging_lhsJsonObject()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "JSON_MERGE(\n"
@@ -5140,6 +5179,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValue_onJsonObject_onJsonValue()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "JSON_VALUE(\n"
@@ -5234,6 +5278,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCompositionTyping()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT "
         + "JSON_VALUE((JSON_OBJECT(KEY 'x' VALUE JSON_VALUE(nest, '$.x' RETURNING BIGINT))), '$.x' RETURNING BIGINT)\n"
@@ -5290,6 +5339,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testToJsonAndParseJson()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     ExprMacroTable macroTable = queryFramework().macroTable();
     testQuery(
         "SELECT string, TRY_PARSE_JSON(TO_JSON_STRING(string)), PARSE_JSON('{\"foo\":1}'), PARSE_JSON(TO_JSON_STRING(nester))\n"
@@ -5392,6 +5446,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonPathNegativeIndex()
   {
+    // Cannot vectorize due to Scan with negative JSON path index.
+    cannotVectorize();
+
     testQuery(
         "SELECT JSON_VALUE(nester, '$.array[-1]'), JSON_QUERY(nester, '$.array[-1]'), JSON_KEYS(nester, '$.array[-1]') FROM druid.nested",
         ImmutableList.of(
@@ -5445,6 +5502,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonPathsNonJsonInput()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT JSON_PATHS(string), JSON_PATHS(1234), JSON_PATHS('1234'), JSON_PATHS(1.1), JSON_PATHS(null)\n"
         + "FROM druid.nested",
@@ -5484,6 +5546,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonKeysNonJsonInput()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT JSON_KEYS(string, '$'), JSON_KEYS(1234, '$'), JSON_KEYS('1234', '$'), JSON_KEYS(1.1, '$'), JSON_KEYS(null, '$')\n"
         + "FROM druid.nested",
@@ -5607,6 +5674,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectPathSelectorFilterVariantNull()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT "
         + "JSON_VALUE(nest, '$.x'), "
@@ -5771,7 +5843,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanStringNotNullCast()
   {
-    skipVectorize();
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     final List<Object[]> expectedResults = ImmutableList.of(
         new Object[]{10L},
         new Object[]{10L}
@@ -6243,9 +6319,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanAllTypesAuto()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Variant types are not supported by MSQ.
     msqIncompatible();
-    skipVectorize();
     testQuery(
         "SELECT * FROM druid.all_auto",
         ImmutableList.of(
@@ -6643,6 +6721,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterJsonIsNotNull()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT nest\n"
         + "FROM druid.nested WHERE nest IS NOT NULL",
@@ -6671,6 +6754,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterJsonIsNull()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT nest, nester\n"
         + "FROM druid.nested WHERE nest IS NULL",
@@ -6730,6 +6818,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumns()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     testBuilder()
         .sql(
             "select c,long,coalesce(c,long) as col "
@@ -6784,6 +6875,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumnsLater()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     // the first column in coalesce comes from the table
     // so a virtual expression is present for the coalesce
     testQuery(
@@ -6865,6 +6959,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryDynamicArg()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT JSON_PATHS(nester), JSON_QUERY(nester, ARRAY_OFFSET(JSON_PATHS(nester), 0))\n"
         + "FROM druid.nested",
@@ -6909,6 +7008,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrays()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     msqIncompatible();
     testBuilder()
         .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$') FROM druid.arrays")
@@ -6961,6 +7063,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrayNullArray()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Array complex JSON isn't supported
     msqIncompatible();
     testBuilder()
@@ -7001,6 +7106,9 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestJsonQueryArrays()
   {
+    // Cannot vectorize due to Scan on unnest.
+    cannotVectorize();
+
     testBuilder()
         .sql("SELECT objects FROM druid.arrays, UNNEST(JSON_QUERY_ARRAY(arrayObject, '$')) as u(objects)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -7179,7 +7287,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueNestedEmptyArray()
   {
-    skipVectorize();
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testBuilder()
         .sql("SELECT json_value(cObj, '$.z.d') FROM druid.all_auto")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -7225,7 +7337,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueNestedEmptyArrayReturning()
   {
-    skipVectorize();
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testBuilder()
         .sql("SELECT json_value(cObj, '$.z.d' returning varchar array) FROM druid.all_auto")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -7271,6 +7387,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNvlJsonValueDoubleMissingColumn()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE),\n"
@@ -7311,6 +7432,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNvlJsonValueDoubleSometimesMissing()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
@@ -7353,6 +7479,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNvlJsonValueDoubleSometimesMissingRangeFilter()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
@@ -7421,6 +7552,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNvlJsonValueDoubleSometimesMissingEqualityFilter()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
@@ -7865,7 +8001,8 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     "obj":{... "c": 12.3, ...},
     "obj":{... "c": null, ...},
      */
-    skipVectorize();
+    // Cannot vectorize due to realtime segment.
+    cannotVectorize();
     testQuery(
         "SELECT "
         + "SUM(JSON_VALUE(obj, '$.c')) "
@@ -7905,7 +8042,8 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     // would mean that the virtual column would need to plan as ARRAY<STRING> expected type instead of STRING
     // ... you might notice there are actually 5 non-null obj.c values, however json_value only returns primitive
     // values, so the object row is rightfully skipped
-    skipVectorize();
+    // Cannot vectorize due to realtime segment.
+    cannotVectorize();
     testQuery(
         "SELECT "
         + "COUNT(JSON_VALUE(obj, '$.c')) "
@@ -7948,7 +8086,8 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     "obj":{... "c": 12.3, ...},
     "obj":{... "c": null, ...},
      */
-    skipVectorize();
+    // Cannot vectorize due to realtime segment.
+    cannotVectorize();
     testQuery(
         "SELECT "
         + "COUNT(JSON_VALUE(obj, '$.c' RETURNING DOUBLE)) "
@@ -7991,7 +8130,8 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     "obj":{... "c": 12.3, ...},
     "obj":{... "c": null, ...},
      */
-    skipVectorize();
+    // Cannot vectorize due to realtime segment.
+    cannotVectorize();
     testQuery(
         "SELECT "
         + "COUNT(JSON_VALUE(obj, '$.c' RETURNING VARCHAR ARRAY)) "

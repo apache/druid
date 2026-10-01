@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 @JsonTypeName("scan")
@@ -75,7 +76,9 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
   public static ScanQueryStageProcessor makeScanStageProcessor(
       VirtualColumns virtualColumns,
       RowSignature signature,
-      DimFilter dimFilter)
+      DimFilter dimFilter,
+      Map<String, Object> context
+  )
   {
     Filtration filtration = Filtration.create(dimFilter).optimizeFilterOnly(signature);
     DimFilter newFilter = filtration.getDimFilter();
@@ -87,17 +90,23 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
         .virtualColumns(virtualColumns)
         .columns(signature.getColumnNames())
         .columnTypes(signature.getColumnTypes())
+        .context(context)
         .build();
     return new ScanQueryStageProcessor(scanQuery);
   }
 
-  public static ScanQueryStageProcessor makeSegmentMapFnProcessor(RowSignature signature, DataSource dataSource)
+  public static ScanQueryStageProcessor makeSegmentMapFnProcessor(
+      RowSignature signature,
+      DataSource dataSource,
+      Map<String, Object> context
+  )
   {
     ScanQuery scanQuery = Druids.newScanQueryBuilder()
         .dataSource(dataSource)
         .intervals(QuerySegmentSpec.ETERNITY)
         .columns(signature.getColumnNames())
         .columnTypes(signature.getColumnTypes())
+        .context(context)
         .build();
     return new ScanQueryStageProcessor(scanQuery);
   }

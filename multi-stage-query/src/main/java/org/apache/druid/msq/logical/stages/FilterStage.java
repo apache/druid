@@ -81,7 +81,7 @@ class FilterStage extends ReadStage
   public StageProcessor<?, ?> buildStageProcessor(StageMaker stageMaker)
   {
     VirtualColumns virtualColumns = virtualColumnRegistry.build(Collections.emptySet());
-    return StageMaker.makeScanStageProcessor(virtualColumns, signature, dimFilter);
+    return stageMaker.makeScanStageProcessor(virtualColumns, signature, dimFilter);
   }
 
   public DimFilter getDimFilter()

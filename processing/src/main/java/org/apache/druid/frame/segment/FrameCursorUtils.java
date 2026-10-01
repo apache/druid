@@ -23,6 +23,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -42,6 +43,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 public class FrameCursorUtils
 {
@@ -178,6 +180,27 @@ public class FrameCursorUtils
       if (!rowSignature.getColumnType(i).isPresent()) {
         throw new UnsupportedColumnTypeException(rowSignature.getColumnName(i), null);
       }
+    }
+  }
+
+  /**
+   * Throws a {@link DruidException} if a subquery's row signature has column names that cannot be written to frames.
+   * The error tells the user how to work around the problem.
+   */
+  public static void throwIfSubqueryColumnsHaveDisallowedNames(final RowSignature rowSignature)
+  {
+    final Set<String> disallowedFieldNames = FrameWriterUtils.findDisallowedFieldNames(rowSignature);
+    if (!disallowedFieldNames.isEmpty()) {
+      throw DruidException
+          .forPersona(DruidException.Persona.USER)
+          .ofCategory(DruidException.Category.UNSUPPORTED)
+          .build(
+              "Subquery's columns %s start with the reserved prefix [%s] and therefore cannot be written to frames. "
+              + "Either rename the columns, or disable byte based limiting by setting '%s' to 'disabled'",
+              disallowedFieldNames,
+              FrameWriterUtils.RESERVED_FIELD_PREFIX,
+              QueryContexts.MAX_SUBQUERY_BYTES_KEY
+          );
     }
   }
 }

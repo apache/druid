@@ -20,7 +20,6 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -37,14 +36,15 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * Test cases that ensure the correctness of {@link ScanResultValueFramesIterable} in presence of different signatures.
- * There are some more in {@link ScanQueryQueryToolChestTest} that verify the workings of the iterable in bigger picture.
+ * Test cases that ensure the correctness of {@link ScanResultValueFramesSequence} in presence of different signatures.
+ * There are some more in {@link ScanQueryQueryToolChestTest} that verify the workings of the sequence in bigger picture.
  */
-public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTest
+public class ScanResultValueFramesSequenceTest extends InitializedNullHandlingTest
 {
 
   private static final RowSignature SIGNATURE1 = RowSignature.builder()
@@ -73,8 +73,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   @Test
   public void testEmptySequence()
   {
-    ScanResultValueFramesIterable iterable = createIterable();
-    List<FrameSignaturePair> frames = Lists.newArrayList(iterable);
+    List<FrameSignaturePair> frames = createSequence().toList();
     Assertions.assertEquals(0, frames.size());
   }
 
@@ -82,32 +81,26 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   public void testAllEmptyScanResultValuesInSequence()
   {
 
-    List<FrameSignaturePair> frames1 = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(0)
-        )
-    );
+    List<FrameSignaturePair> frames1 = createSequence(
+        scanResultValue1(0)
+    ).toList();
     Assertions.assertEquals(0, frames1.size());
 
-    List<FrameSignaturePair> frames2 = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(0),
-            scanResultValue2(0),
-            scanResultValue1(0)
-        )
-    );
+    List<FrameSignaturePair> frames2 = createSequence(
+        scanResultValue1(0),
+        scanResultValue2(0),
+        scanResultValue1(0)
+    ).toList();
     Assertions.assertEquals(0, frames2.size());
   }
 
   @Test
   public void testBatchingWithHomogenousScanResultValues()
   {
-    List<FrameSignaturePair> frames = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(2),
-            scanResultValue1(2)
-        )
-    );
+    List<FrameSignaturePair> frames = createSequence(
+        scanResultValue1(2),
+        scanResultValue1(2)
+    ).toList();
     Assertions.assertEquals(1, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
@@ -124,44 +117,38 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   public void testBatchingWithHomogenousAndEmptyScanResultValues()
   {
     final List<FrameSignaturePair>[] framesList = new List[3];
-    framesList[0] = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(0),
-            scanResultValue1(0),
-            scanResultValue1(2),
-            scanResultValue1(0),
-            scanResultValue1(0),
-            scanResultValue1(0),
-            scanResultValue1(2),
-            scanResultValue1(0)
-        )
-    );
+    framesList[0] = createSequence(
+        scanResultValue1(0),
+        scanResultValue1(0),
+        scanResultValue1(2),
+        scanResultValue1(0),
+        scanResultValue1(0),
+        scanResultValue1(0),
+        scanResultValue1(2),
+        scanResultValue1(0)
+    ).toList();
 
-    framesList[1] = Lists.newArrayList(
-        createIterable(
-            scanResultValue2(0),
-            scanResultValue2(0),
-            scanResultValue1(2),
-            scanResultValue2(0),
-            scanResultValue2(0),
-            scanResultValue2(0),
-            scanResultValue1(2),
-            scanResultValue2(0)
-        )
-    );
+    framesList[1] = createSequence(
+        scanResultValue2(0),
+        scanResultValue2(0),
+        scanResultValue1(2),
+        scanResultValue2(0),
+        scanResultValue2(0),
+        scanResultValue2(0),
+        scanResultValue1(2),
+        scanResultValue2(0)
+    ).toList();
 
-    framesList[2] = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(0),
-            scanResultValue2(0),
-            scanResultValue1(2),
-            scanResultValue2(0),
-            scanResultValue2(0),
-            scanResultValue1(0),
-            scanResultValue1(2),
-            scanResultValue1(0)
-        )
-    );
+    framesList[2] = createSequence(
+        scanResultValue1(0),
+        scanResultValue2(0),
+        scanResultValue1(2),
+        scanResultValue2(0),
+        scanResultValue2(0),
+        scanResultValue1(0),
+        scanResultValue1(2),
+        scanResultValue1(0)
+    ).toList();
 
     for (List<FrameSignaturePair> frames : framesList) {
       Assertions.assertEquals(1, frames.size());
@@ -182,12 +169,10 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   @Test
   public void testBatchingWithHeterogenousScanResultValues()
   {
-    List<FrameSignaturePair> frames = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(2),
-            scanResultValue2(2)
-        )
-    );
+    List<FrameSignaturePair> frames = createSequence(
+        scanResultValue1(2),
+        scanResultValue2(2)
+    ).toList();
     Assertions.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
@@ -208,12 +193,10 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   @Test
   public void testBatchingWithHeterogenousScanResultValuesAndNullTypes()
   {
-    List<FrameSignaturePair> frames = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(2),
-            scanResultValue3(2)
-        )
-    );
+    List<FrameSignaturePair> frames = createSequence(
+        scanResultValue1(2),
+        scanResultValue3(2)
+    ).toList();
     Assertions.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
@@ -234,17 +217,15 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   @Test
   public void testBatchingWithHeterogenousAndEmptyScanResultValues()
   {
-    List<FrameSignaturePair> frames = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(0),
-            scanResultValue2(0),
-            scanResultValue1(2),
-            scanResultValue1(0),
-            scanResultValue2(2),
-            scanResultValue2(0),
-            scanResultValue2(0)
-        )
-    );
+    List<FrameSignaturePair> frames = createSequence(
+        scanResultValue1(0),
+        scanResultValue2(0),
+        scanResultValue1(2),
+        scanResultValue1(0),
+        scanResultValue2(2),
+        scanResultValue2(0),
+        scanResultValue2(0)
+    ).toList();
     Assertions.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
@@ -265,17 +246,15 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   @Test
   public void testBatchingWithHeterogenousAndEmptyScanResultValuesAndNullTypes()
   {
-    List<FrameSignaturePair> frames = Lists.newArrayList(
-        createIterable(
-            scanResultValue1(0),
-            scanResultValue2(0),
-            scanResultValue1(2),
-            scanResultValue1(0),
-            scanResultValue2(2),
-            scanResultValue2(0),
-            scanResultValue2(0)
-        )
-    );
+    List<FrameSignaturePair> frames = createSequence(
+        scanResultValue1(0),
+        scanResultValue2(0),
+        scanResultValue1(2),
+        scanResultValue1(0),
+        scanResultValue2(2),
+        scanResultValue2(0),
+        scanResultValue2(0)
+    ).toList();
     Assertions.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
@@ -296,17 +275,15 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   @Test
   public void testBatchingWithDifferentRowSignaturesButSameTrimmedRowSignature()
   {
-    List<FrameSignaturePair> frames = Lists.newArrayList(
-        createIterable(
-            scanResultValue3(0),
-            scanResultValue4(0),
-            scanResultValue3(2),
-            scanResultValue3(0),
-            scanResultValue4(2),
-            scanResultValue4(0),
-            scanResultValue3(0)
-        )
-    );
+    List<FrameSignaturePair> frames = createSequence(
+        scanResultValue3(0),
+        scanResultValue4(0),
+        scanResultValue3(2),
+        scanResultValue3(0),
+        scanResultValue4(2),
+        scanResultValue4(0),
+        scanResultValue3(0)
+    ).toList();
     Assertions.assertEquals(1, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
@@ -322,28 +299,57 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   @Test
   public void testExceptionThrownWithMissingType()
   {
-    Sequence<FrameSignaturePair> frames = Sequences.simple(createIterable(incompleteTypeScanResultValue(1)));
+    Sequence<FrameSignaturePair> frames = createSequence(incompleteTypeScanResultValue(1));
     Assertions.assertThrows(DruidException.class, frames::toList);
+  }
+
+  @Test
+  public void testResultsClosedAfterIterating()
+  {
+    final AtomicBoolean closed = new AtomicBoolean(false);
+    final List<FrameSignaturePair> frames = createSequence(
+        Sequences.simple(Collections.singletonList(scanResultValue1(2)))
+                 .withBaggage(() -> closed.set(true))
+    ).toList();
+
+    Assertions.assertEquals(1, frames.size());
+    Assertions.assertTrue(closed.get());
+  }
+
+  @Test
+  public void testResultsClosedAfterError()
+  {
+    final AtomicBoolean closed = new AtomicBoolean(false);
+    final Sequence<FrameSignaturePair> frames = createSequence(
+        Sequences.simple(Collections.singletonList(incompleteTypeScanResultValue(1)))
+                 .withBaggage(() -> closed.set(true))
+    );
+
+    Assertions.assertThrows(DruidException.class, frames::toList);
+    Assertions.assertTrue(closed.get());
   }
 
 
   @Test
   public void testSplitting()
   {
-    List<FrameSignaturePair> frames = Lists.newArrayList(
-        createIterable(
-            Collections.nCopies(100, scanResultValue1(2)).toArray(new ScanResultValue[0])
-        )
-    );
+    List<FrameSignaturePair> frames = createSequence(
+        Collections.nCopies(100, scanResultValue1(2)).toArray(new ScanResultValue[0])
+    ).toList();
     Assertions.assertEquals(5, frames.size());
   }
 
-  private static ScanResultValueFramesIterable createIterable(
+  private static ScanResultValueFramesSequence createSequence(
       ScanResultValue... scanResultValues
   )
   {
-    return new ScanResultValueFramesIterable(
-        Sequences.simple(Arrays.asList(scanResultValues)),
+    return createSequence(Sequences.simple(Arrays.asList(scanResultValues)));
+  }
+
+  private static ScanResultValueFramesSequence createSequence(final Sequence<ScanResultValue> scanResultValues)
+  {
+    return new ScanResultValueFramesSequence(
+        scanResultValues,
         new ArenaMemoryAllocatorFactory(1000),
         false,
         null,

@@ -552,6 +552,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTopNLimitWrapping()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     msqIncompatible();
     final Map<String, Object> context =
         QueryContexts.override(OUTER_LIMIT_CONTEXT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
@@ -584,6 +587,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTopNLimitWrappingOrderByAgg()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1, COUNT(*) FROM druid.foo GROUP BY 1 ORDER BY 2 DESC",
         OUTER_LIMIT_CONTEXT,
@@ -636,6 +644,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.DD_FORCE_LIMIT_PUSH_DOWN)
   @Test
   public void testGroupByWithForceLimitPushDown()
   {
@@ -695,6 +704,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDiv()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select cnt, m1, div(m1, 2), div(cnt+2, cnt+1) from foo",
         QUERY_CONTEXT_DEFAULT,
@@ -842,6 +856,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingOnStringSerializablePairLongString()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT COUNT(*) FROM (SELECT string_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
         ImmutableList.of(
@@ -873,6 +892,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingOnStringSerializablePairLongLong()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT COUNT(*) FROM (SELECT long_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
         ImmutableList.of(
@@ -904,6 +928,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingOnStringSerializablePairLongDouble()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT COUNT(*) FROM (SELECT double_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
         ImmutableList.of(
@@ -935,6 +964,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingOnStringSerializablePairLongFloat()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT COUNT(*) FROM (SELECT float_first_added FROM druid.wikipedia_first_last GROUP BY 1)",
         ImmutableList.of(
@@ -1398,6 +1432,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringLatestGroupByWithAlwaysFalseCondition()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         "SELECT LATEST(dim4, 10), dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN('something else')) GROUP BY dim2",
         ImmutableList.of(
@@ -1423,6 +1460,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringLatestByGroupByWithAlwaysFalseCondition()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         "SELECT LATEST_BY(dim4, __time, 10), dim2 FROM numfoo WHERE (dim1 = 'something' AND dim1 IN('something else')) GROUP BY dim2",
         ImmutableList.of(
@@ -1449,6 +1489,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveEarliestInSubquery()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT SUM(val1), SUM(val2), SUM(val3) FROM (SELECT dim2, EARLIEST(m1) AS val1, EARLIEST(cnt) AS val2, EARLIEST(m2) AS val3 FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -1495,6 +1540,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringLatestInSubquery()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, LATEST(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -1543,6 +1593,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringEarliestInSubquery()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, EARLIEST(dim1,10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -1600,6 +1655,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPrimitiveAnyInSubquery()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     // The grouping works like this
     // dim2 ->    m1   |   m2
     // a    -> [1,4]   | [1,4]
@@ -1710,6 +1770,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringAnyInSubquery()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT SUM(val) FROM (SELECT dim2, ANY_VALUE(dim1, 10) AS val FROM foo GROUP BY dim2)",
         ImmutableList.of(
@@ -1909,6 +1974,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestFloat()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     List<Object[]> expected = ImmutableList.of(
         new Object[]{"1", null},
         new Object[]{"abc", null},
@@ -1942,6 +2012,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestDouble()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     List<Object[]> expected = ImmutableList.of(
         new Object[]{"1", null},
         new Object[]{"abc", null},
@@ -1975,6 +2050,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByEarliestLong()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     List<Object[]> expected = ImmutableList.of(
         new Object[]{"1", null},
         new Object[]{"abc", null},
@@ -2008,6 +2088,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestFloat()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     msqIncompatible();
     List<Object[]> expected = ImmutableList.of(
         new Object[]{"1", null},
@@ -2043,6 +2126,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestDouble()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     msqIncompatible();
     List<Object[]> expected = ImmutableList.of(
         new Object[]{"1", null},
@@ -2077,6 +2163,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByLatestLong()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     msqIncompatible();
     List<Object[]> expected = ImmutableList.of(
         new Object[]{"1", null},
@@ -2111,6 +2200,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByAnyFloat()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     // Disabled test in MSQ with SQL-compatible mode till https://github.com/apache/druid/issues/13951 is resolved
     msqIncompatible();
 
@@ -2150,6 +2242,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByAnyDouble()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     // Disabled test in MSQ with SQL-compatible mode till https://github.com/apache/druid/issues/13951 is resolved
     msqIncompatible();
     List<Object[]> expected = ImmutableList.of(
@@ -2187,6 +2282,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByAnyLong()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     // Disabled test in MSQ with SQL-compatible mode till https://github.com/apache/druid/issues/13951 is resolved
     msqIncompatible();
 
@@ -2435,6 +2533,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDECODE_BASE64_UTF8()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT DECODE_BASE64_UTF8('aGVsbG8=') FROM druid.foo limit 1",
         ImmutableList.of(
@@ -2593,6 +2696,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHavingOnExactCountDistinct()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         PLANNER_CONFIG_NO_HLL,
         "SELECT dim2, COUNT(DISTINCT m1) FROM druid.foo GROUP BY dim2 HAVING COUNT(DISTINCT m1) > 1",
@@ -2652,6 +2760,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctWithFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     msqIncompatible();
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
 
@@ -2678,6 +2789,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctWithFilter2()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     cannotVectorizeUnlessFallback();
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
 
@@ -2937,6 +3053,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTopNWithSelectProjections()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  dim1,"
@@ -2971,6 +3092,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTopNWithSelectAndOrderByProjections()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  dim1,"
@@ -3011,7 +3137,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testUnionAllQueries()
   {
     msqIncompatible();
-    skipVectorize();
 
     testQuery(
         "SELECT COUNT(*) FROM foo UNION ALL SELECT SUM(cnt) FROM foo UNION ALL SELECT COUNT(*) FROM foo",
@@ -3206,6 +3331,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDecomposeCaseWhenThreeArg()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  dim1, dim2, CASE WHEN dim1 = 'abc' THEN dim1 ELSE dim2 END\n"
@@ -3246,6 +3376,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDecomposeCaseWhenTwoArg()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  dim1, dim2, CASE WHEN dim1 = 'def' THEN dim2 END\n"
@@ -3466,6 +3601,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctUsingSubqueryOnUnionAllTables()
   {
+    // Cannot vectorize due to GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -3514,6 +3654,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullDoubleTopN()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
     msqIncompatible();
     List<Object[]> expected = ImmutableList.of(
@@ -3547,6 +3690,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullFloatTopN()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
     msqIncompatible();
     List<Object[]> expected = ImmutableList.of(
@@ -3580,6 +3726,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullLongTopN()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     // Disabled test in MSQ till https://github.com/apache/druid/issues/13951 is resolved
     msqIncompatible();
     List<Object[]> expected = ImmutableList.of(
@@ -3613,6 +3762,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLongPredicateIsNull()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT l1 is null FROM druid.numfoo",
         ImmutableList.of(
@@ -3732,6 +3886,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullStringEquality()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.foo\n"
@@ -3928,6 +4085,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingWithNullInFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     msqIncompatible();
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 IN (NULL)",
@@ -3972,6 +4132,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingWithNotNullPlusNonNullInFilter()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 NOT IN (NULL, 'abc')",
         ImmutableList.of(
@@ -3996,6 +4159,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByNothingWithLiterallyFalseFilter()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     // Result of MAX(cnt) when nothing matches the filter.
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0",
@@ -4069,6 +4235,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByOneColumnWithLiterallyFalseFilter()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0 GROUP BY dim1",
         ImmutableList.of(
@@ -4775,6 +4944,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByWithSortOnPostAggregationDefault()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     // By default this query uses topN.
 
     testQuery(
@@ -5987,6 +6161,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarWithNotOfDegenerateFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     msqIncompatible();
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE dim2 = 'a' and not (dim1 > 'a' OR dim1 < 'b')",
@@ -6227,6 +6404,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLongIsUsableAsAnIdentifier()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     // LONG is added to nonReservedKeywordsToAdd, so it must remain usable unquoted as a column alias.
     testQuery(
         "SELECT dim1 AS long FROM druid.foo LIMIT 1",
@@ -6427,6 +6609,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByNullType()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         // Order on subquery, since the native engine doesn't currently support ordering when selecting directly
         // from a table.
@@ -6530,6 +6722,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeInIntervalBooleanNullable()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
             "SELECT TIME_IN_INTERVAL(TIME_PARSE('2000-01-10'), '2000-01-01/P1Y')",
             QUERY_CONTEXT_LOS_ANGELES,
@@ -7249,6 +7444,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinct()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     // When HLL is disabled, do exact count distinct through a nested query.
 
     testQuery(
@@ -7359,6 +7559,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctWithGroupingAndOtherAggregators()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     // When HLL is disabled, do exact count distinct through a nested query.
 
     testQuery(
@@ -7408,6 +7613,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin()
   {
+    // Cannot vectorize native Scan, or MSQ Scan and GROUP BY on row-based frames.
+    cannotVectorize();
+
     // When HLL is disabled, do multiple exact count distincts through joins of nested queries.
 
     testQuery(
@@ -7512,6 +7720,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeFilterOnSubquery()
   {
+    // Cannot vectorize native Scan, or MSQ Scan on row-based frames.
+    cannotVectorize();
+
     testQuery(
         "SELECT __time, m1 FROM (SELECT * FROM \"foo\" LIMIT 100)\n"
         + "WHERE TIME_IN_INTERVAL(__time, '2000/P1D') OR TIME_IN_INTERVAL(__time, '2001/P1D')",
@@ -7748,6 +7959,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNestedGroupBy()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "    FLOOR(__time to hour) AS __time,\n"
@@ -7816,6 +8032,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDoubleNestedGroupBy()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT MIN(min_cnt), COUNT(*) FROM (\n"
         + "  SELECT dim2, MIN(t1.cnt) min_cnt FROM (\n"
@@ -7869,6 +8090,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDoubleNestedGroupBy2()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT MAX(cnt) FROM (\n"
         + "  SELECT dim2, MAX(t1.cnt) cnt FROM (\n"
@@ -7909,6 +8135,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDoubleNestedGroupBy3()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT SUM(cnt), COUNT(*) FROM (\n"
         + "  SELECT dim2, SUM(t1.cnt) cnt FROM (\n"
@@ -8046,6 +8277,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctUsingSubquery()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -8174,6 +8410,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctUsingSubqueryWithWherePushDown()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  SUM(cnt),\n"
@@ -8252,6 +8493,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCompareExactAndApproximateCountDistinctUsingSubquery()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  COUNT(*) AS exact_count,\n"
@@ -8301,6 +8547,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHistogramUsingSubquery()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  CAST(thecnt AS VARCHAR),\n"
@@ -8340,6 +8591,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHistogramUsingSubqueryWithSort()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT\n"
         + "  CAST(thecnt AS VARCHAR),\n"
@@ -8888,9 +9144,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByLimitPushdownExtraction()
   {
-    // Skip vectorization because this can vectorize with decoupled planning, but cannot with regular planning.
-    skipVectorize();
-
     testQuery(
         "SELECT dim4, substring(dim5, 1, 1), count(*) FROM druid.numfoo WHERE dim4 = 'a' GROUP BY 1,2 LIMIT 2",
         ImmutableList.of(
@@ -11312,6 +11565,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByTimeFloorAndDimOnGroupByTimeFloorAndDim()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim2, time_floor(gran, 'P1M') gran, sum(s)\n"
         + "FROM (SELECT time_floor(__time, 'P1D') AS gran, dim2, sum(m1) as s FROM druid.foo GROUP BY 1, 2 HAVING sum(m1) > 1) AS x\n"
@@ -12296,6 +12554,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByAlongWithAliasOrderByTimeGroupByOneCol()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select __time as bug from druid.foo group by 1 order by 1 limit 1",
         QUERY_CONTEXT_LEXICOGRAPHIC_TOPN,
@@ -12464,6 +12727,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSortProjectAfterNestedGroupBy()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT "
         + "  cnt "
@@ -12573,6 +12841,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPostAggWithTopN()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT "
         + "  AVG(m2), "
@@ -12629,6 +12902,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConcat()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT CONCAT(dim1, '-', dim1, '_', dim1) as dimX FROM foo",
         ImmutableList.of(
@@ -12660,6 +12938,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConcat2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     // Tests flattening CONCAT, and tests reduction of concat('x', 'y') => 'xy'
     testQuery(
         "SELECT CONCAt(dim1, CONCAt(dim2,concat('x', 'y')), m2, 9999, dim1) as dimX FROM foo",
@@ -12754,6 +13037,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConcatDecomposeAlwaysFalseOrUnknown()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT CONCAT(dim1, 'x', dim2) as dimX\n"
         + "FROM foo\n"
@@ -12780,6 +13068,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConcatDecomposeAlwaysFalseOrUnknownNegated()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT CONCAT(dim1, 'x', dim2) as dimX\n"
         + "FROM foo\n"
@@ -12825,6 +13118,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConcatDecomposeIsNull()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1, dim2, CONCAT(dim1, 'x', dim2) as dimX\n"
         + "FROM foo\n"
@@ -12855,6 +13153,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testConcatDoubleBarsDecompose()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1 || LOWER('x') || dim2 || 'z' as dimX\n"
         + "FROM foo\n"
@@ -12883,6 +13186,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTextcat()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT textcat(dim1, dim1) as dimX FROM foo",
         ImmutableList.of(
@@ -12910,6 +13218,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTextcat2()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT textcat(dim1, CAST(m2 as VARCHAR)) as dimX FROM foo",
         ImmutableList.of(
@@ -12971,6 +13284,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRequireTimeConditionPositive2()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     // nested GROUP BY only requires time condition for inner most query
     testQuery(
         PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
@@ -13087,6 +13405,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRequireTimeConditionLogicalValuePositive()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
         "SELECT 2 + 2 AS a",
@@ -13171,6 +13492,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterFloatDimension()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1 FROM numfoo WHERE f1 = 0.1 LIMIT 1",
         ImmutableList.of(
@@ -13194,6 +13520,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterDoubleDimension()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1 FROM numfoo WHERE dbl1 = 1.7 LIMIT 1",
         ImmutableList.of(
@@ -13267,6 +13598,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterLongDimension()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1 FROM numfoo WHERE l1 = 7 LIMIT 1",
         ImmutableList.of(
@@ -13340,6 +13676,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRadiansAndDegrees()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT RADIANS(m1 * 15)/DEGREES(m2) FROM numfoo WHERE dim1 = '1'",
         ImmutableList.of(
@@ -13365,6 +13706,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimestampDiff()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT TIMESTAMPDIFF(DAY, TIMESTAMP '1999-01-01 00:00:00', __time), \n"
         + "TIMESTAMPDIFF(DAY, __time, DATE '2001-01-01'), \n"
@@ -13418,6 +13764,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimestampCeil()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT CEIL(TIMESTAMP '2000-01-01 00:00:00' TO DAY), \n"
         + "CEIL(TIMESTAMP '2000-01-01 01:00:00' TO DAY) \n"
@@ -13574,6 +13925,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testQueryContextOuterLimit()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     msqIncompatible();
     Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 4);
@@ -13708,6 +14062,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeStampAddZeroDayPeriod()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT TIMESTAMPADD(DAY, 0, \"__time\") FROM druid.foo",
 
@@ -13734,6 +14093,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeStampAddZeroMonthPeriod()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT TIMESTAMPADD(MONTH, 0, \"__time\") FROM druid.foo",
 
@@ -13764,6 +14128,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeStampAddZeroYearPeriod()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT TIMESTAMPADD(YEAR, 0, \"__time\") FROM druid.foo",
 
@@ -13798,6 +14167,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeStampAddConversion()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     final PeriodGranularity periodGranularity = new PeriodGranularity(new Period("P1M"), null, null);
 
     //
@@ -14001,6 +14375,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testRoundFunc()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT f1, round(f1) FROM druid.numfoo",
         ImmutableList.of(
@@ -14824,6 +15203,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testHumanReadableFormatFunction()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     // For the row where dim1 = '1', m1 = 4.0 and l1 is null
     testQuery(
         "SELECT m1, "
@@ -14928,6 +15312,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCommonVirtualExpressionWithDifferentValueType()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select\n"
         + " dim1,\n"
@@ -15072,6 +15461,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPlanWithInFilterLessThanInSubQueryThreshold()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     String query = "SELECT l1 FROM numfoo WHERE l1 IN (4842, 4844, 4845, 14905, 4853, 29064)";
 
     testQuery(
@@ -15181,6 +15575,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGreatestLeastTypes()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     cannotVectorizeUnlessFallback();
     String query = "SELECT\n"
                    + "__time,\n"
@@ -15323,6 +15722,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testComplexDecode()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     for (String complexDecode : Arrays.asList("COMPLEX_DECODE_BASE64", "DECODE_BASE64_COMPLEX")) {
       testQuery(
           StringUtils.format(
@@ -15431,6 +15835,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByAlongWithInternalScanQuery()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select __time as t, m1 from druid.foo where (m1 in (select distinct m1 from druid.foo)) order by 1 limit 1",
         ImmutableList.of(
@@ -15475,6 +15884,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByAlongWithInternalScanQueryNoDistinct()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select __time, m1 from druid.foo where (m1 in (select m1 from druid.foo)) order by __time DESC limit 1",
         ImmutableList.of(
@@ -15519,6 +15933,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterWithNVLAndNotIn()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select __time, dim1 from druid.foo where nvl(dim1, '') NOT IN ('a' , '')",
         ImmutableList.of(
@@ -15546,6 +15965,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterWithNVLAndInIsNotTrue()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select __time, dim1 from druid.foo where (nvl(dim1, '') IN ('a' , '')) IS NOT TRUE",
         ImmutableList.of(
@@ -15573,6 +15997,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterWithNvlishCaseAndNotIn()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select __time, dim1 from druid.foo where CASE WHEN dim1 IS NULL THEN '' ELSE dim1 END NOT IN ('a' , '')",
         ImmutableList.of(
@@ -15600,6 +16029,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterWithNvlishCase2AndNotIn()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "select __time, dim1 from druid.foo where CASE WHEN dim1 IS NOT NULL THEN dim1 ELSE '' END NOT IN ('a' , '')",
         ImmutableList.of(
@@ -15783,6 +16217,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInGroupByLimitOutGroupByOrderBy()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testBuilder()
         .sql(
             "with t AS (SELECT m2, COUNT(m1) as trend_score\n"
@@ -15857,6 +16301,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInGroupByOrderByLimitOutGroupByOrderByLimit()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     String sql = "with t AS (SELECT m2 as mo, COUNT(m1) as trend_score\n"
         + "FROM \"foo\"\n"
         + "GROUP BY 1\n"
@@ -15930,6 +16384,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanAndSortCanGetSchemaFromScanQuery()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     msqIncompatible();
     String sql = "select * from (select * from \"wikipedia\" limit 3) order by \"user\"";
     ImmutableList<Object[]> expectedResults = ImmutableList.of(
@@ -15948,6 +16405,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWindowingWithScanAndSort()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     msqIncompatible();
     String sql = "with t AS (\n"
         + "SELECT  \n"
@@ -16104,6 +16564,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanAndSortOnJoin()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     msqIncompatible();
     testBuilder()
         .sql("with "
@@ -16137,6 +16600,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWindowingOverJoin()
   {
+    // Cannot vectorize native TopN.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
+    // Cannot vectorize due to Scan on join.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testBuilder()
         .sql("with "
             + "main as "
@@ -16172,6 +16645,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCastCharToVarcharInFlattenConcat()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         "select 'A'||cast(col as char)||'B' from (values(1)) as t(col)",
         ImmutableList.of(
@@ -16254,6 +16730,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testIpv4ParseWithNullableType()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         "select ipv4_parse('1.2.3') from (values(1)) as t(col)",
         ImmutableList.of(
@@ -16278,6 +16757,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testIpv4ParseWithBigintOutput()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testQuery(
         "select ipv4_parse('192.168.0.1') from (values(1)) as t(col)",
         ImmutableList.of(
@@ -16374,6 +16856,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringOperationsNullableInference()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testBuilder()
         .sql(
               "SELECT ICONTAINS_STRING(dim3, 'a'), REGEXP_LIKE(dim3,'x'), SUBSTRING(dim3, 1, 1) " +
@@ -16494,6 +16981,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiStatementSetsContext()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     expectedContext.put("useApproximateCountDistinct", true);
     expectedContext.put("timeout", 9000.0);
@@ -16604,6 +17094,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSetUseApproximateCountDistinctFalse()
   {
+    // Cannot vectorize due to Scan and GROUP BY on row-based frames.
+    if (isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testBuilder().sql(
         "SET useApproximateCountDistinct = FALSE;\n"
         + "SELECT COUNT(DISTINCT dim2) FROM druid.foo"

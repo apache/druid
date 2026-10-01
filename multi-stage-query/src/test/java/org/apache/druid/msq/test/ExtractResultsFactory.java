@@ -66,7 +66,7 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
           List<Object[]> queryResults = results.results;
           if (queryResults == null) {
             extractedResults.add(results);
-            return;
+            continue;
           }
           // For a single run, only a single query results containing a single row must be fetched, since UNION is not
           // currently supported by MSQ
@@ -86,11 +86,19 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
                                                                               .get(MSQTaskReport.REPORT_KEY)
                                                                               .getPayload();
           if (payload.getStatus().getStatus().isFailure()) {
-            throw new ISE(
-                "Query task [%s] failed due to %s",
-                taskId,
-                payload.getStatus().getErrorReport().toString()
+            // Record the failure so QueryTestRunner.VerifyExpectedFailure can check it.
+            extractedResults.add(
+                new QueryTestRunner.QueryResults(
+                    results.queryContext,
+                    results.vectorizeOption,
+                    new ISE(
+                        "Query task [%s] failed due to %s",
+                        taskId,
+                        payload.getStatus().getErrorReport().toString()
+                    )
+                )
             );
+            continue;
           }
 
           if (!payload.getStatus().getStatus().isComplete()) {

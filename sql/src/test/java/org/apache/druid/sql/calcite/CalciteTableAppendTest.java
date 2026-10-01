@@ -34,6 +34,9 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   @Test
   public void testUnion()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testBuilder()
         .sql("select dim1,null as dim4 from foo union all select dim1,dim4 from numfoo")
         .expectedQueries(
@@ -79,6 +82,9 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   @Test
   public void testAppend2()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testBuilder()
         .sql("select dim1,dim4,dbl1,f1 from TABLE(APPEND('foo','numfoo')) u")
         .expectedQuery(
@@ -121,6 +127,9 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   @Test
   public void testAppendSameTableMultipleTimes()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testBuilder()
         .sql("select dim1,dim4,dbl1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
         .expectedQuery(
@@ -150,6 +159,9 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   @Test
   public void testAppendtSingleTableIsValid()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testBuilder()
         .sql("select dim1 from TABLE(APPEND('foo')) u")
         .expectedQuery(
@@ -180,6 +192,9 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   @Test
   public void testAppendCompatibleColumns()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // dim3 has different type (string/long) in foo/foo2
     testBuilder()
         .sql("select dim3 from TABLE(APPEND('foo','foo2')) u")
