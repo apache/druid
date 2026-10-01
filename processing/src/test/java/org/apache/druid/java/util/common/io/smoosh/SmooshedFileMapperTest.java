@@ -237,7 +237,7 @@ public class SmooshedFileMapperTest
       Assertions.assertEquals(4, filenames.size());
       Assertions.assertTrue(filenames.contains("d/e"));
       Assertions.assertFalse(filenames.contains("d"));
-      Assertions.assertFalse(filenames.contains(1));
+      Assertions.assertFalse(filenames.contains((Object) 1));
       Assertions.assertThrows(UnsupportedOperationException.class, () -> filenames.add("z"));
       Assertions.assertThrows(UnsupportedOperationException.class, () -> filenames.remove("a"));
 

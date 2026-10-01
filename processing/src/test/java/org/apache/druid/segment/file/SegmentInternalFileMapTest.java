@@ -57,7 +57,7 @@ public class SegmentInternalFileMapTest
 
     Assertions.assertEquals(B, files.get("__base/b"));
     Assertions.assertNull(files.get("__base"));
-    Assertions.assertNull(files.get(1));
+    Assertions.assertNull(files.get((Object) 1));
     Assertions.assertTrue(files.containsKey("c"));
     Assertions.assertFalse(files.containsKey("d"));
     Assertions.assertTrue(files.keySet().contains("c"));
