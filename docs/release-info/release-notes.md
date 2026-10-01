@@ -113,16 +113,6 @@ Dart now supports the runtime property `druid.msq.dart.worker.segmentLoadAheadCo
 
 [#19559](https://github.com/apache/druid/pull/19559)
 
-#### Partial segment loading
-
-[#19620](https://github.com/apache/druid/pull/19620)
-[#19535](https://github.com/apache/druid/pull/19535)
-
-#### Clustered segments
-
-[#19579](https://github.com/apache/druid/pull/19579)
-[#19597](https://github.com/apache/druid/pull/19597) [#19460](https://github.com/apache/druid/pull/19460)
-
 #### Improved Convert to SQL in web console
 
 The web console now supports converting streaming supervisors to SQL-based ingestion queries. This makes it easier for you to run a streaming task as a one-time batch ingestion.
