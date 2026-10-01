@@ -181,7 +181,7 @@ Supervisors no longer restart for all changes. Based on the type of change, one 
 
 - Druid persists the updated spec without a restart.
 - Druid restarts the supervisor, but running tasks aren't impacted.
-- Druid restarts the supervisor, terminates the current tasks and launches fresh tasks (default behaviour in older Druid versions).
+- Druid restarts the supervisor, terminates the current tasks and launches fresh tasks (default behavior in older Druid versions).
 
 For example, cosmetic changes to a supervisor spec no longer trigger a restart.
 
