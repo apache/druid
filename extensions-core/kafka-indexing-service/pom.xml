@@ -67,6 +67,18 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <!-- Provides the AWS_MSK_IAM SASL mechanism; its AWS SDK comes from druid-aws-common, so no transitives ship. -->
+    <dependency>
+      <groupId>software.amazon.msk</groupId>
+      <artifactId>aws-msk-iam-auth</artifactId>
+      <scope>runtime</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
