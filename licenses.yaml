@@ -307,7 +307,7 @@ notice: |
 
 name: AWS CRT
 license_category: binary
-module: extensions/druid-s3-extensions
+module: java-core
 license_name: Apache License version 2.0
 version: 0.48.4
 libraries:
