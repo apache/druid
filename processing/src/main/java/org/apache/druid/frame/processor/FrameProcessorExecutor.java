@@ -106,17 +106,9 @@ public class FrameProcessorExecutor
    * Then, it can be used with the {@link #cancel(String)} method to cancel all processors with that
    * same cancellationId.
    *
-   * This method takes ownership of the processor: it either runs the processor to completion, or cleans it up. It
-   * does not run the processor at all when "cancellationId" is non-null and has already been canceled by the time
-   * this method registers it; the returned future is then already resolved (canceled) and the processor has been
-   * cleaned up before this method returns. Callers passing a cancellationId must therefore tolerate a processor that
-   * never runs, and no caller may clean the processor up itself. With a null cancellationId the processor always
-   * runs.
-   *
-   * Cleanup in that case runs inline on the calling thread: the processor's output channels are failed and
-   * {@link FrameProcessor#cleanup()} is called, the same work {@link #cancel(String)} would have done. Cleanup may
-   * re-enter the caller's own code before this method returns, for example through the baggage of a processor wrapped
-   * by {@link FrameProcessors#withBaggage}.
+   * This method always cleans the processor up, whether or not it runs (callers must never clean it up themselves).
+   * The processor is not run at all if "cancellationId" has already been canceled, in which case the returned future
+   * comes back already canceled. With a null cancellationId the processor always runs.
    */
   public <T> ListenableFuture<T> runFully(final FrameProcessor<T> processor, @Nullable final String cancellationId)
   {
@@ -125,11 +117,7 @@ public class FrameProcessorExecutor
     final SettableFuture<T> finished = registerCancelableFuture(SettableFuture.create(), true, cancellationId);
 
     if (finished.isDone()) {
-      // "finished" is a fresh SettableFuture, and neither succeed() nor fail() exists yet, so there are exactly two
-      // ways it can already be resolved: registerCancelableFuture canceled it on the spot because cancellationId was
-      // not active, or cancellationId was active and a concurrent cancel() resolved it right after it was registered.
-      // Either way this processor was never registered under a cancellationId, so no cancel can have seen it and
-      // nothing else will clean it up - the same situation, and the same remedy, as the registration failure below.
+      // Canceled either before or just after registerCancelableFuture ran; clean up because nothing else can
       cancel(Collections.singleton(processor));
       return finished;
     }
@@ -470,16 +458,9 @@ public class FrameProcessorExecutor
     logProcessorStatusString(processor, finished.isDone(), null, null, null);
 
     if (!registerCancelableProcessor(processor, cancellationId)) {
-      // cancel(cancellationId) ran between registering "finished" above and this point, so it swept
-      // cancelableProcessors without ever seeing this processor. Registering now would leave an entry that no cancel
-      // will ever remove, and running the processor under it is worse than not running it at all: cancel() would not
-      // wait for this processor before returning, so cleanup of the caller's resources could proceed underneath a
-      // live processor, and nothing would ever call cleanup() on it (which for runAllFully also strands the Bouncer
-      // ticket held as its baggage, permanently reducing that Bouncer's capacity).
-      //
-      // Do what that cancel would have done had it seen us: fail the output channels and run cleanup. "finished" is
-      // canceled here rather than left to that cancel, which resolves return futures only AFTER waiting for every
-      // processor it did see to exit; without this, runFully could hand back a future that is not yet resolved.
+      // cancel(cancellationId) ran after "finished" was registered, so it already cleaned cancelableProcessors
+      // without seeing this one; clean up because nothing else can, and cancel "finished" because that cancel
+      // resolves return futures last (after waiting on the processors it did see)
       cancel(Collections.singleton(processor));
       finished.cancel(true);
       return finished;
@@ -489,14 +470,22 @@ public class FrameProcessorExecutor
       exec.execute(runnable);
     }
     catch (Throwable e) {
-      // Same orphan, different cause: the processor is registered but will never run, so no one else will clean it
-      // up or resolve "finished". Most likely a RejectedExecutionException from a shut-down pool.
+      // registered, but never going to run; clean up only if we took the processor out of cancelableProcessors
+      // ourselves (otherwise a concurrent cancel is doing the cleanup)
+      final boolean doCleanup;
+
       if (cancellationId != null) {
         synchronized (lock) {
-          cancelableProcessors.remove(cancellationId, processor);
+          doCleanup = cancelableProcessors.remove(cancellationId, processor);
         }
+      } else {
+        doCleanup = true;
       }
-      cancel(Collections.singleton(processor));
+
+      if (doCleanup) {
+        cancel(Collections.singleton(processor));
+      }
+
       finished.setException(e);
       throw e;
     }
@@ -717,14 +706,8 @@ public class FrameProcessorExecutor
   /**
    * Register a processor so {@link #cancel(String)} can find it.
    *
-   * Mirrors {@link #registerCancelableFuture}'s refusal to register against a cancellationId that is no longer
-   * active, except that the remediation is the caller's: a future can be canceled in place, whereas a processor has
-   * to be cleaned up, which must not happen while holding {@link #lock}.
-   *
-   * @return true if the processor was registered, or if there is no cancellationId to register it under. False if
-   * {@code cancellationId} has already been canceled, in which case the processor was NOT registered: no
-   * {@link #cancel(String)} can see it, so the caller must not run it, and owns failing its output channels and
-   * calling {@link FrameProcessor#cleanup()} on it.
+   * @return true if registered, or if there is no cancellationId to register under. False if {@code cancellationId}
+   * is already canceled, in which case the caller must not run the processor and owns cleaning it up.
    */
   private <T> boolean registerCancelableProcessor(
       final FrameProcessor<T> processor,
