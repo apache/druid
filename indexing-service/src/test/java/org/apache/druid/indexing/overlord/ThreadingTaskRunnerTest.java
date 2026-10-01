@@ -173,13 +173,13 @@ public class ThreadingTaskRunnerTest
           }
 
           @Override
-          public void locationChanged(String taskId, TaskLocation newLocation)
+          public void locationChanged(final Task task, final TaskLocation newLocation)
           {
             locations.add(newLocation);
           }
 
           @Override
-          public void statusChanged(String taskId, TaskStatus status)
+          public void statusChanged(final Task task, final TaskStatus status)
           {
           }
         },
