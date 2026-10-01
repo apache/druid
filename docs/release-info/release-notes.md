@@ -109,7 +109,7 @@ This feature is on by default and is controlled by the `backgroundFetchExternalF
 
 #### Segment prefetching for Dart
 
-Dart now supports the runtime property `druid.msq.dart.worker.segmentLoadAheadCount`, which controls the number of segments that Dart prefetches. If set greater than 0 for a worker, this setting becomes the default `segmentLoadAheadCount` value for the worker. If a query includes the `segmentLoadAheadCount` query context parameter, the query context takes precedence.
+Historicals with virtual storage enabled now support the runtime property `druid.msq.dart.worker.segmentLoadAheadCount`, which controls the number of segments that Dart prefetches. If set greater than 0 for a worker, this setting becomes the default `segmentLoadAheadCount` value for the worker. If a query includes the `segmentLoadAheadCount` query context parameter, the query context takes precedence.
 
 [#19559](https://github.com/apache/druid/pull/19559)
 
