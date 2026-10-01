@@ -258,7 +258,7 @@ MiddleManagers and Indexers now persist their enabled or disabled state across r
 
 [#19373](https://github.com/apache/druid/pull/19373)
 
-#### Kafka idle signal
+#### Use processing rate for cost-based auto-scaler
 
 Improved the cost-based auto scaler for Kafka. The `poll-idle ratio` only reflected the time spent polling, whether there is spare processing capacity. You can now configure the autoscaler to use a utilization ratio instead: 
 
