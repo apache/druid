@@ -131,6 +131,11 @@ Select the **Convert supervisor to SQL** option from the **...** menu in the Que
 
 [#19547](https://github.com/apache/druid/pull/19547)
 
+#### Deprecate legacy zstd frames
+
+Druid 38 will be the last major Druid release that supports reading from legacy v0.4-v0.7 zstd frames. Support will be removed for these frames in future releases for both batch and streaming ingestion.
+
+The primary reason for this deprecation is that the underlying library zstd-jni removes decoding for legacy frames in version 1.5.7-13 onwards.
 ## Functional area and related changes
 
 This section contains detailed release notes separated by areas.
