@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.expression.builtin;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -33,8 +34,11 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.PrefixFilteredVirtualColumn;
 import org.apache.druid.segment.virtual.RegexFilteredVirtualColumn;
@@ -48,6 +52,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -375,46 +380,137 @@ public class MultiValueStringOperatorConversions
       };
 
       Expr expr = plannerContext.parseExpression(druidExpressions.get(1).getExpression());
-      if (druidExpressions.get(0).isSimpleExtraction() && expr.isLiteral()) {
+      if (expr.isLiteral()) {
         Object[] lit = expr.eval(InputBindings.nilBindings()).asArray();
         if (lit == null || lit.length == 0) {
-          return null;
+          return druidExpressions.get(0).isSimpleExtraction()
+                 ? null
+                 : DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
         }
         HashSet<String> literals = Sets.newHashSetWithExpectedSize(lit.length);
         for (Object o : lit) {
           literals.add(Evals.asString(o));
         }
 
-        DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
-            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-            builder,
+        final DruidExpression druidExpression = toFilteredVirtualColumnExpression(
+            plannerContext,
+            rowSignature,
+            rexNode,
             druidExpressions,
-            (name, outputType, parser, self) -> new ListFilteredVirtualColumn(
-                name,
-                self.getArguments().get(0)
-                    .getSimpleExtraction()
-                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
-                literals,
-                isAllowList()
-            )
+            builder,
+            (name, delegate) -> new ListFilteredVirtualColumn(name, delegate, literals, isAllowList())
         );
-
-        // if the join expression VC registry is present, it means that this expression is part of a join condition
-        // and since that's the case, create virtual column here itself for optimized usage in join matching
-        if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
-          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
-                                                   .getOrCreateVirtualColumnForExpression(
-                                                       druidExpression,
-                                                       ColumnType.STRING
-                                                   );
-          return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
+        if (druidExpression != null) {
+          return druidExpression;
         }
-
-        return druidExpression;
       }
 
       return DruidExpression.ofExpression(ColumnType.STRING, builder, druidExpressions);
     }
+  }
+
+  /**
+   * Creates a {@link VirtualColumn} for a multi-value string filtering function given the {@link DimensionSpec} of the
+   * multi-value string to filter
+   */
+  @FunctionalInterface
+  private interface FilteredVirtualColumnCreator
+  {
+    VirtualColumn create(String name, DimensionSpec delegate);
+  }
+
+  /**
+   * Builds a {@link DruidExpression.NodeType#SPECIALIZED} expression for a multi-value string filtering function whose
+   * first argument is the multi-value string to filter, if the first argument can be used as the delegate
+   * {@link DimensionSpec} of a specialized filtering virtual column. Returns null if it cannot, in which case callers
+   * should fall back to a plain expression.
+   *
+   * @see #toFilterDelegate(PlannerContext, RowSignature, DruidExpression)
+   */
+  @Nullable
+  private static DruidExpression toFilteredVirtualColumnExpression(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      RexNode rexNode,
+      List<DruidExpression> druidExpressions,
+      DruidExpression.ExpressionGenerator builder,
+      FilteredVirtualColumnCreator virtualColumnCreator
+  )
+  {
+    final DruidExpression delegate = toFilterDelegate(plannerContext, rowSignature, druidExpressions.get(0));
+    if (delegate == null) {
+      return null;
+    }
+    final List<DruidExpression> arguments = new ArrayList<>(druidExpressions);
+    arguments.set(0, delegate);
+
+    final DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
+        Calcites.getColumnTypeForRelDataType(rexNode.getType()),
+        builder,
+        arguments,
+        (name, outputType, parser, self) -> {
+          final DruidExpression arg = self.getArguments().get(0);
+          if (!arg.isSimpleExtraction()) {
+            // the delegate expression was not lifted into its own virtual column by specialization, so we cannot
+            // reference it by name, fall back to a plain expression virtual column
+            return self.toExpressionVirtualColumn(name, outputType, parser);
+          }
+          return virtualColumnCreator.create(
+              name,
+              arg.getSimpleExtraction().toDimensionSpec(arg.getDirectColumn(), outputType)
+          );
+        }
+    );
+
+    // if the join expression VC registry is present, it means that this expression is part of a join condition
+    // and since that's the case, create virtual column here itself for optimized usage in join matching
+    if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
+      String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
+                                               .getOrCreateVirtualColumnForExpression(
+                                                   druidExpression,
+                                                   ColumnType.STRING
+                                               );
+      return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
+    }
+
+    return druidExpression;
+  }
+
+  /**
+   * Returns a {@link DruidExpression} suitable to use as the delegate {@link DimensionSpec} of a specialized multi-value
+   * string filtering virtual column, or null if there is no such expression.
+   *
+   * Simple extractions are used directly. Expressions of a single {@link ColumnType#STRING} input are marked
+   * {@link DruidExpression#asSpecialized()} so that they are lifted into their own {@link ExpressionVirtualColumn}
+   * which the filtering virtual column can use as its delegate. When the input column is dictionary encoded, the
+   * expression virtual column produces a dimension selector backed by the input column dictionary which defers
+   * expression evaluation until values are looked up, allowing the filtering virtual column to evaluate the expression
+   * once per dictionary value instead of for every row.
+   */
+  @Nullable
+  private static DruidExpression toFilterDelegate(
+      PlannerContext plannerContext,
+      RowSignature rowSignature,
+      DruidExpression arg
+  )
+  {
+    if (arg.isSimpleExtraction()) {
+      return arg;
+    }
+    if (arg.getType() == DruidExpression.NodeType.SPECIALIZED || !ColumnType.STRING.equals(arg.getDruidType())) {
+      return null;
+    }
+    final Expr.BindingAnalysis bindingAnalysis = plannerContext.parseExpression(arg.getExpression()).analyzeInputs();
+    if (bindingAnalysis.getRequiredBindings().size() != 1
+        || bindingAnalysis.hasInputArrays()
+        || bindingAnalysis.isOutputArray()) {
+      return null;
+    }
+    final String inputColumn = Iterables.getOnlyElement(bindingAnalysis.getRequiredBindings());
+    if (!rowSignature.getColumnType(inputColumn).map(ColumnType.STRING::equals).orElse(false)) {
+      return null;
+    }
+    return arg.asSpecialized();
   }
 
   public static class RegexFilter implements SqlOperatorConversion
@@ -465,30 +561,15 @@ public class MultiValueStringOperatorConversions
       }
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "filter((x) -> regexp_like(x, " + DruidExpression.stringLiteral(pattern) + "), " + args.get(0).getExpression() + ")";
-      if (druidExpressions.get(0).isSimpleExtraction()) {
-        DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
-            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-            builder,
-            druidExpressions,
-            (name, outputType, parser, self) -> new RegexFilteredVirtualColumn(
-                name,
-                self.getArguments().get(0)
-                    .getSimpleExtraction()
-                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
-                pattern
-            )
-        );
-
-        // If in a join context, create the VC immediately
-        if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
-          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
-                                                   .getOrCreateVirtualColumnForExpression(
-                                                       druidExpression,
-                                                       ColumnType.STRING
-                                                   );
-          return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
-        }
-
+      final DruidExpression druidExpression = toFilteredVirtualColumnExpression(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          druidExpressions,
+          builder,
+          (name, delegate) -> new RegexFilteredVirtualColumn(name, delegate, pattern)
+      );
+      if (druidExpression != null) {
         return druidExpression;
       }
 
@@ -550,30 +631,15 @@ public class MultiValueStringOperatorConversions
       final DruidExpression.ExpressionGenerator builder = (args) ->
           "filter((x) -> substring(x, 0, " + prefix.length() + ") == " + DruidExpression.stringLiteral(prefix) + ", " + args.get(0).getExpression() + ")";
 
-      if (druidExpressions.get(0).isSimpleExtraction()) {
-        DruidExpression druidExpression = DruidExpression.ofVirtualColumn(
-            Calcites.getColumnTypeForRelDataType(rexNode.getType()),
-            builder,
-            druidExpressions,
-            (name, outputType, parser, self) -> new PrefixFilteredVirtualColumn(
-                name,
-                self.getArguments().get(0)
-                    .getSimpleExtraction()
-                    .toDimensionSpec(druidExpressions.get(0).getDirectColumn(), outputType),
-                prefix
-            )
-        );
-
-        // If in a join context, create the VC immediately
-        if (plannerContext.getJoinExpressionVirtualColumnRegistry() != null) {
-          String virtualColumnName = plannerContext.getJoinExpressionVirtualColumnRegistry()
-                                                   .getOrCreateVirtualColumnForExpression(
-                                                       druidExpression,
-                                                       ColumnType.STRING
-                                                   );
-          return DruidExpression.ofColumn(ColumnType.STRING, virtualColumnName);
-        }
-
+      final DruidExpression druidExpression = toFilteredVirtualColumnExpression(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          druidExpressions,
+          builder,
+          (name, delegate) -> new PrefixFilteredVirtualColumn(name, delegate, prefix)
+      );
+      if (druidExpression != null) {
         return druidExpression;
       }
 

@@ -27,8 +27,11 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
+import org.apache.druid.segment.virtual.SingleStringInputDeferredEvaluationExpressionDimensionSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -107,6 +110,62 @@ public class ListFilteredDimensionSpecDimensionSelectorTest extends InitializedN
   public void testDenyListWhenNameLookupIsNotPossibleInAdvance()
   {
     testDenyList(false, true, false, PredicateFilteredDimensionSelector.class);
+  }
+
+  @Test
+  public void testAllowListWithDuplicateDictionaryValues()
+  {
+    RowSupplier rowSupplier = new RowSupplier();
+    DimensionSelector selector = ListFilteredDimensionSpec.filterAllowList(
+        ImmutableSet.of("val2"),
+        makeDuplicateValueSelector(rowSupplier)
+    );
+    Assertions.assertSame(ForwardingFilteredDimensionSelector.class, selector.getClass());
+    Assertions.assertNull(selector.idLookup());
+    Assertions.assertEquals(3, selector.getValueCardinality());
+
+    rowSupplier.set(data.get(0));
+    Assertions.assertEquals(0, selector.getRow().size());
+
+    rowSupplier.set(data.get(1));
+    Assertions.assertEquals(ImmutableList.of("val2", "val2", "val2"), selector.getObject());
+    Assertions.assertTrue(selector.makeValueMatcher("val2").matches(false));
+
+    rowSupplier.set(data.get(2));
+    Assertions.assertEquals(0, selector.getRow().size());
+    Assertions.assertFalse(selector.makeValueMatcher("val3").matches(false));
+  }
+
+  @Test
+  public void testDenyListWithDuplicateDictionaryValues()
+  {
+    RowSupplier rowSupplier = new RowSupplier();
+    DimensionSelector selector = ListFilteredDimensionSpec.filterDenyList(
+        ImmutableSet.of("val2"),
+        makeDuplicateValueSelector(rowSupplier)
+    );
+    Assertions.assertSame(ForwardingFilteredDimensionSelector.class, selector.getClass());
+    Assertions.assertNull(selector.idLookup());
+    Assertions.assertEquals(3, selector.getValueCardinality());
+
+    rowSupplier.set(data.get(0));
+    Assertions.assertEquals(ImmutableList.of("val1", "val1"), selector.getObject());
+
+    rowSupplier.set(data.get(1));
+    Assertions.assertEquals(0, selector.getRow().size());
+    Assertions.assertFalse(selector.makeValueMatcher("val2").matches(false));
+
+    rowSupplier.set(data.get(2));
+    Assertions.assertEquals("val3", selector.getObject());
+  }
+
+  private DimensionSelector makeDuplicateValueSelector(RowSupplier rowSupplier)
+  {
+    NonnullPair<Object2IntMap<String>, Int2ObjectMap<String>> dictionaries = createDictionaries(data);
+    return new SingleStringInputDeferredEvaluationExpressionDimensionSelector(
+        new StringDimensionSelectorForTest(rowSupplier, dictionaries.lhs, dictionaries.rhs, false, true, true),
+        Parser.parse("substring(\"foo\", 0, 4)", ExprMacroTable.nil())
+    );
   }
 
   private void testAllowList(

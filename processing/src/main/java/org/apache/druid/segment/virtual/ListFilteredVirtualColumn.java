@@ -142,17 +142,9 @@ public class ListFilteredVirtualColumn implements VirtualColumn
   )
   {
     if (allowList) {
-      return ListFilteredDimensionSpec.filterAllowList(
-          values,
-          factory.makeDimensionSelector(delegate),
-          delegate.getExtractionFn() != null
-      );
+      return ListFilteredDimensionSpec.filterAllowList(values, factory.makeDimensionSelector(delegate));
     } else {
-      return ListFilteredDimensionSpec.filterDenyList(
-          values,
-          factory.makeDimensionSelector(delegate),
-          delegate.getExtractionFn() != null
-      );
+      return ListFilteredDimensionSpec.filterDenyList(values, factory.makeDimensionSelector(delegate));
     }
   }
 
