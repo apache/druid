@@ -71,12 +71,6 @@ You can map a virtual tier name to a number of real Historical tiers with the `h
 
 [#19204](https://github.com/apache/druid/pull/19204) [#19667](https://github.com/apache/druid/pull/19667)
 
-#### New load rule types
-
-Adds a new family of retention rules, `loadPartialByPeriod`, `loadPartialByInterval`, `loadPartialForever`, laying the groundwork for partial loading of version 10 segment projections on Historicals. 
-
-[#19374](https://github.com/apache/druid/pull/19374)
-
 #### Realtime segments mode query context
 
 The `realtimeSegmentsOnly` query context parameter has been deprecated and replaced with `realtimeSegmentsMode`. 
