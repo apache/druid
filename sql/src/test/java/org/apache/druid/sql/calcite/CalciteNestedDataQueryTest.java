@@ -4595,6 +4595,11 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testReturningDecimalFilterFractionalLiteral()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT string, JSON_VALUE(nest, '$.mixed' RETURNING DECIMAL) "
         + "FROM druid.nested "

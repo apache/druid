@@ -13548,6 +13548,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterDoubleDimensionCastAsDecimal()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1 FROM numfoo WHERE CAST(dbl1 AS DECIMAL) = 1.7 LIMIT 1",
         ImmutableList.of(
@@ -13571,6 +13576,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceDoubleDimensionCastAsDecimal()
   {
+    // Cannot vectorize native Scan.
+    if (!isRunningMSQ()) {
+      cannotVectorize();
+    }
+
     testQuery(
         "SELECT dim1, COALESCE(CAST(dbl1 AS DECIMAL), 0.5) FROM numfoo",
         ImmutableList.of(
