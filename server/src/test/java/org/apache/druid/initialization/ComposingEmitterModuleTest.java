@@ -25,6 +25,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
@@ -32,11 +34,9 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.server.emitter.ComposingEmitterConfig;
 import org.apache.druid.server.emitter.ComposingEmitterModule;
 import org.easymock.EasyMock;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.Collections;
 import java.util.Properties;
 
@@ -47,7 +47,7 @@ public class ComposingEmitterModuleTest
   private final String testEmitterType = "http";
   private Emitter emitter;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     emitter = EasyMock.createMock(Emitter.class);

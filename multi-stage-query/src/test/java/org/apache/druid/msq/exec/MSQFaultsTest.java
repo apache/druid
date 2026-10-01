@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
@@ -54,8 +55,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
@@ -654,12 +653,7 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(
-                                 CoreMatchers.containsString(expectedError)
-                             )
-                         )
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(expectedError)
                      )
                      .verifyExecutionError();
   }
@@ -702,12 +696,7 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(
-                                 CoreMatchers.containsString(expectedError)
-                             )
-                         )
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(expectedError)
                      )
                      .verifyExecutionError();
   }

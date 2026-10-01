@@ -29,7 +29,7 @@ import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
 /**
- * Tests MSQ task-based SELECT queries that read external data via {@code EXTERN} from S3 (backed by MinIO).
+ * Tests MSQ task-based SELECT queries that read external data via {@code EXTERN} from S3 (backed by an S3-compatible testcontainer).
  */
 public class S3ExternQueryTest extends EmbeddedClusterTestBase
 {
@@ -72,7 +72,7 @@ public class S3ExternQueryTest extends EmbeddedClusterTestBase
    */
   private long totalUploadedBytes;
 
-  private final MinIOStorageResource storageResource = new MinIOStorageResource();
+  private final S3StorageResource storageResource = new S3StorageResource();
   private final EmbeddedOverlord overlord = new EmbeddedOverlord();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
@@ -177,7 +177,7 @@ public class S3ExternQueryTest extends EmbeddedClusterTestBase
   }
 
   /**
-   * Uploads {@link #PLAIN_FILE} (plain JSON) and {@link #GZ_FILE} (gzipped JSON) to the MinIO bucket.
+   * Uploads {@link #PLAIN_FILE} (plain JSON) and {@link #GZ_FILE} (gzipped JSON) to the S3 bucket.
    */
   private void uploadExternalFiles() throws IOException
   {

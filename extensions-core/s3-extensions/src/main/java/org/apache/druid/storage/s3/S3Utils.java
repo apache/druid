@@ -33,9 +33,12 @@ import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
+import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
@@ -70,6 +73,13 @@ public class S3Utils
    * Error for calling putObject with an entity over 5GB in size.
    */
   public static final String ERROR_ENTITY_TOO_LARGE = "EntityTooLarge";
+
+  /**
+   * Most keys S3 accepts in a single {@code DeleteObjects} request:
+   * <a href="https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html">DeleteObjects</a>. Unlike
+   * {@code max-keys} on a listing, which S3 silently caps, exceeding this fails the request.
+   */
+  public static final int MAX_MULTI_OBJECT_DELETE_SIZE = 1000;
 
   public static final Predicate<Throwable> S3RETRY = new Predicate<>()
   {
@@ -124,6 +134,28 @@ public class S3Utils
       }
     }
   };
+
+  /**
+   * Restores {@code Content-MD5} for required request checksums and disables optional request checksums on every given
+   * builder, for S3-compatible stores that reject the CRC32 checksums the SDK sends by default since 2.30.0.
+   * <p>
+   * Takes all the builders for one client set rather than one builder per call, so the sync and async clients cannot
+   * end up disagreeing about checksum behavior, and so the switch is logged once per client set.
+   */
+  public static void configureLegacyMd5(
+      final AWSClientConfig clientConfig,
+      final S3BaseClientBuilder<?, ?>... s3ClientBuilders
+  )
+  {
+    if (clientConfig.isEnableLegacyMd5()) {
+      log.info("Legacy MD5 compatibility mode is enabled for the S3 client.");
+      for (final S3BaseClientBuilder<?, ?> s3ClientBuilder : s3ClientBuilders) {
+        s3ClientBuilder
+            .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+            .addPlugin(LegacyMd5Plugin.create());
+      }
+    }
+  }
 
   /**
    * Retries S3 operations that fail intermittently (due to io-related exceptions, during obtaining credentials, etc).
@@ -335,7 +367,12 @@ public class S3Utils
   {
     log.debug("Deleting directory at bucket: [%s], path: [%s]", bucket, prefix);
 
-    final List<ObjectIdentifier> keysToDelete = new ArrayList<>(maxListingLength);
+    // A listing page and a multi-object delete do not have the same ceiling: S3 quietly returns only the first 1000
+    // keys when max-keys is larger, but rejects a DeleteObjects request carrying more than 1000 of them. Callers pass
+    // maxListingLength for the listing, so bound the delete batches separately instead of assuming the caller's
+    // listing size is small enough to be one.
+    final int deleteBatchSize = Math.min(maxListingLength, MAX_MULTI_OBJECT_DELETE_SIZE);
+    final List<ObjectIdentifier> keysToDelete = new ArrayList<>(deleteBatchSize);
     final Iterator<S3ObjectWithBucket> iterator = objectSummaryIterator(
         s3Client,
         ImmutableList.of(new CloudObjectLocation(bucket, prefix).toUri("s3")),
@@ -346,7 +383,7 @@ public class S3Utils
       final S3ObjectWithBucket nextObject = iterator.next();
       if (filter.apply(nextObject.getS3Object())) {
         keysToDelete.add(ObjectIdentifier.builder().key(nextObject.getKey()).build());
-        if (keysToDelete.size() == maxListingLength) {
+        if (keysToDelete.size() == deleteBatchSize) {
           deleteBucketKeys(s3Client, bucket, keysToDelete, maxRetries);
           keysToDelete.clear();
         }

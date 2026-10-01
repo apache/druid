@@ -137,6 +137,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.utils.JvmUtils;
@@ -149,7 +150,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -201,8 +202,8 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     this.taskStorageType = taskStorageType;
   }
 
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<>()
   {
@@ -228,11 +229,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   );
 
   private final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-
-  private File newTempFolder()
-  {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "tmp");
-  }
 
   private final String taskStorageType;
 
@@ -526,7 +522,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       DataSegmentPusher dataSegmentPusher,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       TestIndexerMetadataStorageCoordinator mdc
-  )
+  ) throws IOException
   {
     return setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, new TestAppenderatorsManager());
   }
@@ -536,7 +532,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       TestIndexerMetadataStorageCoordinator mdc,
       AppenderatorsManager appenderatorsManager
-  )
+  ) throws IOException
   {
     Preconditions.checkNotNull(queryRunnerFactoryConglomerate);
     Preconditions.checkNotNull(monitorScheduler);
@@ -555,7 +551,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         )
     );
     taskConfig = new TaskConfigBuilder()
-        .setBaseDir(newTempFolder().toString())
+        .setBaseDir(temporaryFolder.newFolder().toString())
         .setTmpStorageBytesPerTask(-1L)
         .build();
 
@@ -769,7 +765,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Test
   public void testKillUnusedSegmentsTask() throws Exception
   {
-    final File tmpSegmentDir = newTempFolder();
+    final File tmpSegmentDir = temporaryFolder.newFolder();
 
     List<DataSegment> expectedUnusedSegments = Lists.transform(
         ImmutableList.of(
@@ -867,7 +863,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Test
   public void testKillUnusedSegmentsTaskWithMaxSegmentsToKill() throws Exception
   {
-    final File tmpSegmentDir = newTempFolder();
+    final File tmpSegmentDir = temporaryFolder.newFolder();
 
     List<DataSegment> expectedUnusedSegments = Lists.transform(
         ImmutableList.of(

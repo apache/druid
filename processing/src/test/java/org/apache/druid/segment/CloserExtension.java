@@ -30,8 +30,8 @@ import java.io.Closeable;
 import java.io.IOException;
 
 /**
- * JUnit 5 counterpart to {@link CloserRule}. The rule remains available for tests that have not
- * migrated yet.
+ * JUnit 5 extension that closes resources registered with {@link #closeLater(Closeable)} after
+ * each test.
  */
 public class CloserExtension implements BeforeEachCallback, AfterEachCallback, TestExecutionExceptionHandler
 {

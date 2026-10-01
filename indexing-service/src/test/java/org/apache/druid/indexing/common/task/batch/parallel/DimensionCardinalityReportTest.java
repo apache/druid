@@ -28,14 +28,14 @@ import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.testing.junit.LoggerCaptureRule;
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -51,24 +51,18 @@ public class DimensionCardinalityReportTest
 
   private DimensionCardinalityReport target;
 
-  private final LoggerCaptureRule logger = new LoggerCaptureRule(ParallelIndexSupervisorTask.class);
+  @RegisterExtension
+  private final LoggerCaptureExtension logger = new LoggerCaptureExtension(ParallelIndexSupervisorTask.class);
 
 
   @BeforeEach
   public void setup()
   {
-    logger.before();
     Interval interval = Intervals.ETERNITY;
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     Map<Interval, byte[]> intervalToCardinality = Collections.singletonMap(interval, collector.toByteArray());
     String taskId = "abc";
     target = new DimensionCardinalityReport(taskId, intervalToCardinality);
-  }
-
-  @AfterEach
-  public void tearDown()
-  {
-    logger.after();
   }
 
   @Test

@@ -38,15 +38,15 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
-import org.apache.druid.segment.CloserRule;
+import org.apache.druid.segment.CloserExtension;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -55,15 +55,16 @@ import java.util.List;
 
 /**
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class IncrementalIndexTest extends InitializedNullHandlingTest
 {
   public final IncrementalIndexCreator indexCreator;
 
   private final String mode;
 
-  @Rule
-  public final CloserRule closer = new CloserRule(false);
+  @RegisterExtension
+  public final CloserExtension closer = new CloserExtension(false);
 
   public IncrementalIndexTest(
       String indexType,
@@ -105,7 +106,6 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
   }
 
-  @Parameterized.Parameters(name = "{index}: {0}, {1}")
   public static Collection<?> constructorFeeder()
   {
     return IncrementalIndexCreator.indexTypeCartesianProduct(
@@ -113,37 +113,41 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testDuplicateDimensions()
   {
-    IncrementalIndex index = indexCreator.createIndex();
-    index.add(
-        new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy", "joe"),
-            ImmutableMap.of("billy", "A", "joe", "B")
-        )
-    );
-    index.add(
-        new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy", "joe", "joe"),
-            ImmutableMap.of("billy", "A", "joe", "B")
-        )
-    );
+    Assertions.assertThrows(ISE.class, () -> {
+      final IncrementalIndex index = indexCreator.createIndex();
+      index.add(
+          new MapBasedInputRow(
+              System.currentTimeMillis() - 1,
+              Lists.newArrayList("billy", "joe"),
+              ImmutableMap.of("billy", "A", "joe", "B")
+          )
+      );
+      index.add(
+          new MapBasedInputRow(
+              System.currentTimeMillis() - 1,
+              Lists.newArrayList("billy", "joe", "joe"),
+              ImmutableMap.of("billy", "A", "joe", "B")
+          )
+      );
+    });
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testDuplicateDimensionsFirstOccurrence()
   {
-    IncrementalIndex index = indexCreator.createIndex();
-    index.add(
-        new MapBasedInputRow(
-            System.currentTimeMillis() - 1,
-            Lists.newArrayList("billy", "joe", "joe"),
-            ImmutableMap.of("billy", "A", "joe", "B")
-        )
-    );
+    Assertions.assertThrows(ISE.class, () -> {
+      final IncrementalIndex index = indexCreator.createIndex();
+      index.add(
+          new MapBasedInputRow(
+              System.currentTimeMillis() - 1,
+              Lists.newArrayList("billy", "joe", "joe"),
+              ImmutableMap.of("billy", "A", "joe", "B")
+          )
+      );
+    });
   }
 
   @Test
@@ -191,12 +195,12 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
-    Assert.assertEquals(
+    Assertions.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assertions.assertEquals(
         "{string=A, float=19.0, long=asdj, double=21.0}",
         result.getParseException().getInput()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Found unparseable columns in row: [{string=A, float=19.0, long=asdj, double=21.0}], exceptions: [Could not convert value [asdj] to long for dimension [long].]",
         result.getParseException().getMessage()
     );
@@ -213,12 +217,12 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
-    Assert.assertEquals(
+    Assertions.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assertions.assertEquals(
         "{string=A, float=aaa, long=20, double=21.0}",
         result.getParseException().getInput()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Found unparseable columns in row: [{string=A, float=aaa, long=20, double=21.0}], exceptions: [Could not convert value [aaa] to float for dimension [float].]",
         result.getParseException().getMessage()
     );
@@ -235,12 +239,12 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
-    Assert.assertEquals(
+    Assertions.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assertions.assertEquals(
         "{string=A, float=19.0, long=20, double=}",
         result.getParseException().getInput()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=}], exceptions: [Could not convert value [] to double for dimension [double].]",
         result.getParseException().getMessage()
     );
@@ -264,12 +268,12 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
-    Assert.assertEquals(
+    Assertions.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assertions.assertEquals(
         "{string=A, float=19.0, long=[10, 5], double=21.0}",
         result.getParseException().getInput()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Found unparseable columns in row: [{string=A, float=19.0, long=[10, 5], double=21.0}], exceptions: [Could not ingest value [[10, 5]] as long for dimension [long]. A long column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
@@ -286,12 +290,12 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
-    Assert.assertEquals(
+    Assertions.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assertions.assertEquals(
         "{string=A, float=[10.0, 5.0], long=20, double=21.0}",
         result.getParseException().getInput()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not ingest value [[10.0, 5.0]] as float for dimension [float]. A float column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
@@ -308,12 +312,12 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             )
         )
     );
-    Assert.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
-    Assert.assertEquals(
+    Assertions.assertEquals(UnparseableColumnsParseException.class, result.getParseException().getClass());
+    Assertions.assertEquals(
         "{string=A, float=19.0, long=20, double=[10.0, 5.0]}",
         result.getParseException().getInput()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=[10.0, 5.0]}], exceptions: [Could not ingest value [[10.0, 5.0]] as double for dimension [double]. A double column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
@@ -332,7 +336,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     index.add(row);
     index.add(row);
 
-    Assert.assertEquals("rollup".equals(mode) ? 1 : 3, index.numRows());
+    Assertions.assertEquals("rollup".equals(mode) ? 1 : 3, index.numRows());
   }
 
   @Test
@@ -372,7 +376,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                         .build()
         )
     );
-    Assert.assertNull(result.getParseException());
+    Assertions.assertNull(result.getParseException());
     result = index.add(
         new MapBasedInputRow(
             60_000, // next minute so non-rollup still orders iterator correctly
@@ -392,46 +396,46 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
                         .build()
         )
     );
-    Assert.assertNull(result.getParseException());
+    Assertions.assertNull(result.getParseException());
 
-    Assert.assertEquals(ColumnType.STRING, index.getColumnCapabilities("string").toColumnType());
-    Assert.assertEquals(ColumnType.FLOAT, index.getColumnCapabilities("float").toColumnType());
-    Assert.assertEquals(ColumnType.LONG, index.getColumnCapabilities("long").toColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE, index.getColumnCapabilities("double").toColumnType());
-    Assert.assertEquals(ColumnType.STRING, index.getColumnCapabilities("bool_string").toColumnType());
-    Assert.assertEquals(ColumnType.LONG, index.getColumnCapabilities("bool_long").toColumnType());
-    Assert.assertEquals(ColumnType.LONG, index.getColumnCapabilities("bool_auto").toColumnType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, index.getColumnCapabilities("array_string").toColumnType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, index.getColumnCapabilities("array_long").toColumnType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, index.getColumnCapabilities("array_double").toColumnType());
-    Assert.assertEquals(ColumnType.NESTED_DATA, index.getColumnCapabilities("nested").toColumnType());
+    Assertions.assertEquals(ColumnType.STRING, index.getColumnCapabilities("string").toColumnType());
+    Assertions.assertEquals(ColumnType.FLOAT, index.getColumnCapabilities("float").toColumnType());
+    Assertions.assertEquals(ColumnType.LONG, index.getColumnCapabilities("long").toColumnType());
+    Assertions.assertEquals(ColumnType.DOUBLE, index.getColumnCapabilities("double").toColumnType());
+    Assertions.assertEquals(ColumnType.STRING, index.getColumnCapabilities("bool_string").toColumnType());
+    Assertions.assertEquals(ColumnType.LONG, index.getColumnCapabilities("bool_long").toColumnType());
+    Assertions.assertEquals(ColumnType.LONG, index.getColumnCapabilities("bool_auto").toColumnType());
+    Assertions.assertEquals(ColumnType.STRING_ARRAY, index.getColumnCapabilities("array_string").toColumnType());
+    Assertions.assertEquals(ColumnType.LONG_ARRAY, index.getColumnCapabilities("array_long").toColumnType());
+    Assertions.assertEquals(ColumnType.DOUBLE_ARRAY, index.getColumnCapabilities("array_double").toColumnType());
+    Assertions.assertEquals(ColumnType.NESTED_DATA, index.getColumnCapabilities("nested").toColumnType());
 
 
     Iterator<Row> rowIterator = index.iterator();
     Row row = rowIterator.next();
-    Assert.assertEquals("a", row.getRaw("string"));
-    Assert.assertEquals(1.0f, row.getRaw("float"));
-    Assert.assertEquals(1L, row.getRaw("long"));
-    Assert.assertEquals(1.0, row.getRaw("double"));
-    Assert.assertEquals("true", row.getRaw("bool_string"));
-    Assert.assertEquals(1L, row.getRaw("bool_long"));
-    Assert.assertEquals(StructuredData.wrap(true), row.getRaw("bool_auto"));
-    Assert.assertEquals(StructuredData.wrap(new Object[]{"a", "b", "c"}), row.getRaw("array_string"));
-    Assert.assertEquals(StructuredData.wrap(new Object[]{1L, 2L, 3L}), row.getRaw("array_long"));
-    Assert.assertEquals(StructuredData.wrap(new Object[]{1.1, 2.2, 3.3}), row.getRaw("array_double"));
-    Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1, "y", ImmutableList.of("a", "b"))), row.getRaw("nested"));
+    Assertions.assertEquals("a", row.getRaw("string"));
+    Assertions.assertEquals(1.0f, row.getRaw("float"));
+    Assertions.assertEquals(1L, row.getRaw("long"));
+    Assertions.assertEquals(1.0, row.getRaw("double"));
+    Assertions.assertEquals("true", row.getRaw("bool_string"));
+    Assertions.assertEquals(1L, row.getRaw("bool_long"));
+    Assertions.assertEquals(StructuredData.wrap(true), row.getRaw("bool_auto"));
+    Assertions.assertEquals(StructuredData.wrap(new Object[]{"a", "b", "c"}), row.getRaw("array_string"));
+    Assertions.assertEquals(StructuredData.wrap(new Object[]{1L, 2L, 3L}), row.getRaw("array_long"));
+    Assertions.assertEquals(StructuredData.wrap(new Object[]{1.1, 2.2, 3.3}), row.getRaw("array_double"));
+    Assertions.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1, "y", ImmutableList.of("a", "b"))), row.getRaw("nested"));
 
     row = rowIterator.next();
-    Assert.assertEquals("b", row.getRaw("string"));
-    Assert.assertEquals(2.0f, row.getRaw("float"));
-    Assert.assertEquals(2L, row.getRaw("long"));
-    Assert.assertEquals(2.0, row.getRaw("double"));
-    Assert.assertEquals("false", row.getRaw("bool_string"));
-    Assert.assertEquals(0L, row.getRaw("bool_long"));
-    Assert.assertEquals(StructuredData.wrap(false), row.getRaw("bool_auto"));
-    Assert.assertEquals(StructuredData.wrap(new Object[]{"d", "e", "f"}), row.getRaw("array_string"));
-    Assert.assertEquals(StructuredData.wrap(new Object[]{4L, 5L, 6L}), row.getRaw("array_long"));
-    Assert.assertEquals(StructuredData.wrap(new Object[]{4.4, 5.5, 6.6}), row.getRaw("array_double"));
-    Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 2, "y", ImmutableList.of("c", "d"))), row.getRaw("nested"));
+    Assertions.assertEquals("b", row.getRaw("string"));
+    Assertions.assertEquals(2.0f, row.getRaw("float"));
+    Assertions.assertEquals(2L, row.getRaw("long"));
+    Assertions.assertEquals(2.0, row.getRaw("double"));
+    Assertions.assertEquals("false", row.getRaw("bool_string"));
+    Assertions.assertEquals(0L, row.getRaw("bool_long"));
+    Assertions.assertEquals(StructuredData.wrap(false), row.getRaw("bool_auto"));
+    Assertions.assertEquals(StructuredData.wrap(new Object[]{"d", "e", "f"}), row.getRaw("array_string"));
+    Assertions.assertEquals(StructuredData.wrap(new Object[]{4L, 5L, 6L}), row.getRaw("array_long"));
+    Assertions.assertEquals(StructuredData.wrap(new Object[]{4.4, 5.5, 6.6}), row.getRaw("array_double"));
+    Assertions.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 2, "y", ImmutableList.of("c", "d"))), row.getRaw("nested"));
   }
 }

@@ -26,10 +26,11 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,8 +43,8 @@ import java.util.UUID;
 
 public class LocalFileStorageConnectorTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File storageDir;
   private StorageConnector storageConnector;
@@ -51,7 +52,7 @@ public class LocalFileStorageConnectorTest
   @BeforeEach
   public void init() throws IOException
   {
-    storageDir = temporaryFolder;
+    storageDir = temporaryFolder.getRoot();
     storageConnector = new LocalFileStorageConnectorProvider(storageDir).createStorageConnector(null);
   }
 
@@ -121,7 +122,7 @@ public class LocalFileStorageConnectorTest
   @Test
   public void incorrectBasePath() throws IOException
   {
-    File file = File.createTempFile("test", ".tmp", temporaryFolder);
+    File file = temporaryFolder.newFile();
     StorageConnectorProvider storageConnectorProvider = new LocalFileStorageConnectorProvider(file);
     Assertions.assertThrows(IAE.class, () -> storageConnectorProvider.createStorageConnector(null));
   }

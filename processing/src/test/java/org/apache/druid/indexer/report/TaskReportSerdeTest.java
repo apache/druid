@@ -50,7 +50,7 @@ public class TaskReportSerdeTest
   private final ObjectMapper jsonMapper;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public TaskReportSerdeTest()
   {
@@ -273,6 +273,7 @@ public class TaskReportSerdeTest
             1000L,
             null,
             null,
+            null,
             null
         )
     );
@@ -311,7 +312,8 @@ public class TaskReportSerdeTest
             1000L,
             Collections.singletonMap("PartitionA", 5000L),
             5L,
-            10L
+            10L,
+            2L
         )
     );
   }

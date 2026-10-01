@@ -30,7 +30,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -68,7 +67,7 @@ class ClusterGroupTuplesTest
   @Test
   void testConstructorRejectsNullClusteringColumns()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(null, List.of(List.of("acme", "us-east-1")))
@@ -80,7 +79,7 @@ class ClusterGroupTuplesTest
   @Test
   void testConstructorRejectsEmptyClusteringColumns()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(RowSignature.empty(), List.of())
@@ -106,7 +105,7 @@ class ClusterGroupTuplesTest
   @Test
   void testConstructorRejectsTupleLengthMismatch()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(tenantRegion(), List.of(List.of("acme")))
@@ -119,7 +118,7 @@ class ClusterGroupTuplesTest
   @Test
   void testConstructorRejectsNullTuple()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(tenantRegion(), Arrays.asList(Arrays.asList("acme", "us-east-1"), null))
@@ -133,7 +132,7 @@ class ClusterGroupTuplesTest
   void testConstructorRejectsUntypedClusteringColumn()
   {
     final RowSignature untyped = RowSignature.builder().add("tenant", null).build();
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(untyped, List.of(List.of("acme")))
@@ -146,7 +145,7 @@ class ClusterGroupTuplesTest
   void testConstructorRejectsUnsupportedColumnType()
   {
     final RowSignature arraySig = RowSignature.builder().add("arr", ColumnType.STRING_ARRAY).build();
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(arraySig, List.of(List.of(List.of("a"))))
@@ -204,7 +203,7 @@ class ClusterGroupTuplesTest
   {
     // Coercion is intentionally narrow: only Number-family inputs are normalized. A String numeric value is rejected
     // rather than parsed, so operator typos don't silently broaden the matched set in future rule consumers.
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(tenantPriority(), List.of(List.of("acme", "42")))
@@ -227,7 +226,7 @@ class ClusterGroupTuplesTest
   void testCoercionStringRejectedForDouble()
   {
     final RowSignature sig = RowSignature.builder().add("v", ColumnType.DOUBLE).build();
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(sig, List.of(List.of("3.14")))
@@ -240,7 +239,7 @@ class ClusterGroupTuplesTest
   @Test
   void testCoercionBooleanRejectedForLong()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ClusterGroupTuples(tenantPriority(), List.of(List.of("acme", (Object) Boolean.TRUE)))

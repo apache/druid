@@ -81,7 +81,7 @@ public class WrappedImmutableRoaringBitmap implements ImmutableBitmap
   @Override
   public PeekableIntIterator peekableIterator()
   {
-    return bitmap.getIntIterator();
+    return new SeekableRoaringIntIterator(bitmap);
   }
 
   @Override

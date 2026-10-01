@@ -37,9 +37,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
 
 
@@ -66,7 +68,7 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
   {
     final CompressedBigDecimalModule module = new CompressedBigDecimalModule();
     CompressedBigDecimalModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(),
         config,
         tempFolder
@@ -92,16 +94,22 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
   @Test
   public void testIngestAndGroupByAllQuery() throws Exception
   {
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
-        this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
-        CompressedBigDecimalAggregatorTimeseriesTestBase.SCHEMA,
-        CompressedBigDecimalAggregatorTimeseriesTestBase.FORMAT,
-        cbdGroupByQueryConfig.getIngestionAggregators(),
-        0,
-        Granularities.NONE,
-        5,
-        cbdGroupByQueryConfig.getQuery()
-    );
+    final Sequence<ResultRow> seq;
+    try (final InputStream inputStream = Objects.requireNonNull(
+        CompressedBigDecimalAggregatorGroupByTestBase.class.getResourceAsStream("/bd_test_data.csv"),
+        "Missing resource /bd_test_data.csv"
+    )) {
+      seq = helper.createIndexAndRunQueryOnSegment(
+          inputStream,
+          CompressedBigDecimalAggregatorTimeseriesTestBase.SCHEMA,
+          CompressedBigDecimalAggregatorTimeseriesTestBase.FORMAT,
+          cbdGroupByQueryConfig.getIngestionAggregators(),
+          0,
+          Granularities.NONE,
+          5,
+          cbdGroupByQueryConfig.getQuery()
+      );
+    }
 
     List<ResultRow> results = seq.toList();
     Assertions.assertEquals(1, results.size());

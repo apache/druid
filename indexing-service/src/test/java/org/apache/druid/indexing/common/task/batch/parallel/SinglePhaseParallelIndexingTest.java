@@ -123,7 +123,7 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
   @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = createTempDir("data");
+    inputDir = temporaryFolder.newFolder("data");
     // set up data
     for (int i = 0; i < 5; i++) {
       try (final Writer writer =
@@ -498,7 +498,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 1L
             )
         ),
-        new RowIngestionMetersTotals(10, 335, 1, expectedThrownAwayByReason, 1)
+        new RowIngestionMetersTotals(10, 335, 1, expectedThrownAwayByReason, 1),
+        null
     );
     compareTaskReports(expectedReports, actualReports);
   }
@@ -564,7 +565,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       expectedReports = buildExpectedTaskReportParallel(
           task.getId(),
           expectedUnparseableEvents,
-          expectedTotals
+          expectedTotals,
+          null
       );
     }
 

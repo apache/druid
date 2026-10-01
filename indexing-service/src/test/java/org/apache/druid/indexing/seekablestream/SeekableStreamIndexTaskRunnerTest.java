@@ -60,6 +60,7 @@ import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
@@ -70,7 +71,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -103,8 +104,8 @@ public class SeekableStreamIndexTaskRunnerTest
 {
   private static final String DATA_SOURCE = "datasource";
 
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Mock
   private InputRow row;
@@ -763,8 +764,7 @@ public class SeekableStreamIndexTaskRunnerTest
   private File createTaskWorkDirectory()
   {
     try {
-      final File taskWorkDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
-      FileUtils.mkdirp(taskWorkDir);
+      final File taskWorkDir = temporaryFolder.newFolder();
       FileUtils.mkdirp(new File(taskWorkDir, "persist"));
       return taskWorkDir;
     }

@@ -20,8 +20,8 @@
 package org.apache.druid.guice;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -36,14 +36,14 @@ public final class JsonConfigTesterBaseTest
   @Test
   public void defaultTestPropertiesForSample()
   {
-    Assert.assertEquals("0", testProperties.getProperty("druid.test.prefix.primitiveInt"));
-    Assert.assertEquals("false", testProperties.getProperty("druid.test.prefix.primitiveBoolean"));
-    Assert.assertTrue(!testProperties.getProperty("druid.test.prefix.text").isEmpty());
-    Assert.assertEquals("[]", testProperties.getProperty("druid.test.prefix.list"));
-    Assert.assertEquals("[]", testProperties.getProperty("druid.test.prefix.set"));
-    Assert.assertEquals("{}", testProperties.getProperty("druid.test.prefix.map"));
+    Assertions.assertEquals("0", testProperties.getProperty("druid.test.prefix.primitiveInt"));
+    Assertions.assertEquals("false", testProperties.getProperty("druid.test.prefix.primitiveBoolean"));
+    Assertions.assertTrue(!testProperties.getProperty("druid.test.prefix.text").isEmpty());
+    Assertions.assertEquals("[]", testProperties.getProperty("druid.test.prefix.list"));
+    Assertions.assertEquals("[]", testProperties.getProperty("druid.test.prefix.set"));
+    Assertions.assertEquals("{}", testProperties.getProperty("druid.test.prefix.map"));
     for (Map.Entry entry : System.getProperties().entrySet()) {
-      Assert.assertEquals(entry.getValue(), testProperties.getProperty(String.valueOf(entry.getKey())));
+      Assertions.assertEquals(entry.getValue(), testProperties.getProperty(String.valueOf(entry.getKey())));
     }
   }
 
@@ -60,24 +60,24 @@ public final class JsonConfigTesterBaseTest
     configProvider.inject(testProperties, configurator);
     Sample results = configProvider.get();
 
-    Assert.assertEquals(1, results.getPrimitiveInt());
-    Assert.assertTrue(results.getPrimitiveBoolean());
-    Assert.assertEquals("foo", results.getText());
+    Assertions.assertEquals(1, results.getPrimitiveInt());
+    Assertions.assertTrue(results.getPrimitiveBoolean());
+    Assertions.assertEquals("foo", results.getText());
 
     List<String> list = results.getList();
-    Assert.assertEquals(2, list.size());
-    Assert.assertEquals("one", list.get(0));
-    Assert.assertEquals("two", list.get(1));
+    Assertions.assertEquals(2, list.size());
+    Assertions.assertEquals("one", list.get(0));
+    Assertions.assertEquals("two", list.get(1));
 
     Set<String> set = results.getSet();
-    Assert.assertEquals(2, set.size());
-    Assert.assertTrue(set.contains("three"));
-    Assert.assertTrue(set.contains("four"));
+    Assertions.assertEquals(2, set.size());
+    Assertions.assertTrue(set.contains("three"));
+    Assertions.assertTrue(set.contains("four"));
 
     Map<String, String> map = results.getMap();
-    Assert.assertEquals(2, map.size());
-    Assert.assertEquals("v1", map.get("k1"));
-    Assert.assertEquals("v2", map.get("k2"));
+    Assertions.assertEquals(2, map.size());
+    Assertions.assertEquals("v1", map.get("k1"));
+    Assertions.assertEquals("v2", map.get("k2"));
   }
 
   public static class Sample

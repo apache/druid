@@ -33,7 +33,6 @@ import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -227,7 +226,7 @@ public class PartialLoadRuleTest
   @Test
   void testConstructorRejectsNullMatcher()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new PeriodPartialLoadRule(new Period("P1D"), false, tier(1), null, null, null)

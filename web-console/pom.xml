@@ -42,8 +42,8 @@
     <maven.build.cache.cacheCompile>false</maven.build.cache.cacheCompile>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
-    <node.version>v20.9.0</node.version>
-    <npm.version>10.9.0</npm.version>
+    <node.version>v22.23.3</node.version>
+    <npm.version>10.9.9</npm.version>
   </properties>
 
   <build>
@@ -51,7 +51,7 @@
       <extension>
         <groupId>org.apache.maven.extensions</groupId>
         <artifactId>maven-build-cache-extension</artifactId>
-        <version>1.2.3</version>
+        <version>1.3.0</version>
       </extension>
     </extensions>
     <plugins>

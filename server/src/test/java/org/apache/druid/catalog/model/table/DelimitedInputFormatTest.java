@@ -30,7 +30,8 @@ import org.apache.druid.catalog.model.table.TableFunction.ParameterDefn;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,10 +39,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 public class DelimitedInputFormatTest extends BaseExternTableTest
 {
@@ -63,11 +60,11 @@ public class DelimitedInputFormatTest extends BaseExternTableTest
     InputFormatDefn defn = registry.inputFormatDefnFor(DelimitedInputFormat.TYPE_KEY);
     InputFormat inputFormat = defn.convertFromTable(new ResolvedExternalTable(resolved));
     DelimitedInputFormat delmited = (DelimitedInputFormat) inputFormat;
-    assertEquals(0, delmited.getSkipHeaderRows());
-    assertFalse(delmited.isFindColumnsFromHeader());
-    assertNull(delmited.getListDelimiter());
-    assertEquals("|", delmited.getDelimiter());
-    assertEquals(Collections.singletonList("a"), delmited.getColumns());
+    Assertions.assertEquals(0, delmited.getSkipHeaderRows());
+    Assertions.assertFalse(delmited.isFindColumnsFromHeader());
+    Assertions.assertNull(delmited.getListDelimiter());
+    Assertions.assertEquals("|", delmited.getDelimiter());
+    Assertions.assertEquals(Collections.singletonList("a"), delmited.getColumns());
   }
 
   @Test
@@ -87,11 +84,11 @@ public class DelimitedInputFormatTest extends BaseExternTableTest
     InputFormatDefn defn = registry.inputFormatDefnFor(DelimitedInputFormat.TYPE_KEY);
     InputFormat inputFormat = defn.convertFromTable(new ResolvedExternalTable(resolved));
     DelimitedInputFormat delmited = (DelimitedInputFormat) inputFormat;
-    assertEquals(1, delmited.getSkipHeaderRows());
-    assertFalse(delmited.isFindColumnsFromHeader());
-    assertEquals(";", delmited.getListDelimiter());
-    assertEquals("|", delmited.getDelimiter());
-    assertEquals(Arrays.asList("a", "b"), delmited.getColumns());
+    Assertions.assertEquals(1, delmited.getSkipHeaderRows());
+    Assertions.assertFalse(delmited.isFindColumnsFromHeader());
+    Assertions.assertEquals(";", delmited.getListDelimiter());
+    Assertions.assertEquals("|", delmited.getDelimiter());
+    Assertions.assertEquals(Arrays.asList("a", "b"), delmited.getColumns());
   }
 
   @Test
@@ -99,8 +96,8 @@ public class DelimitedInputFormatTest extends BaseExternTableTest
   {
     InputFormatDefn defn = registry.inputFormatDefnFor(DelimitedInputFormat.TYPE_KEY);
     List<ParameterDefn> params = defn.parameters();
-    assertEquals(3, params.size());
-    assertTrue(hasParam(params, DelimitedFormatDefn.DELIMITER_PARAMETER));
+    Assertions.assertEquals(3, params.size());
+    Assertions.assertTrue(hasParam(params, DelimitedFormatDefn.DELIMITER_PARAMETER));
   }
 
   @Test
@@ -114,10 +111,10 @@ public class DelimitedInputFormatTest extends BaseExternTableTest
     List<ColumnSpec> columns = Collections.singletonList(new ColumnSpec("a", null, null));
     InputFormat inputFormat = defn.convertFromArgs(args, columns, mapper);
     DelimitedInputFormat delmited = (DelimitedInputFormat) inputFormat;
-    assertEquals(1, delmited.getSkipHeaderRows());
-    assertFalse(delmited.isFindColumnsFromHeader());
-    assertEquals(";", delmited.getListDelimiter());
-    assertEquals("|", delmited.getDelimiter());
-    assertEquals(Collections.singletonList("a"), delmited.getColumns());
+    Assertions.assertEquals(1, delmited.getSkipHeaderRows());
+    Assertions.assertFalse(delmited.isFindColumnsFromHeader());
+    Assertions.assertEquals(";", delmited.getListDelimiter());
+    Assertions.assertEquals("|", delmited.getDelimiter());
+    Assertions.assertEquals(Collections.singletonList("a"), delmited.getColumns());
   }
 }

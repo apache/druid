@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
@@ -43,7 +44,7 @@ import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,8 +56,8 @@ import java.util.Set;
 
 public class LocalIntermediaryDataManagerAutoCleanupTest
 {
-  @TempDir
-  private File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private TaskConfig taskConfig;
   private OverlordClient overlordClient;
@@ -65,7 +66,9 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   public void setup() throws IOException
   {
     this.taskConfig = new TaskConfigBuilder()
-        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(newTempDir("shuffle"), null, null)))
+        .setShuffleDataLocations(
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder("shuffle"), null, null))
+        )
         .build();
     this.overlordClient = new NoopOverlordClient()
     {
@@ -147,17 +150,10 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   private File generateSegmentDir(String fileName) throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = newTempDir("segment");
+    final File segmentDir = temporaryFolder.newFolder("segment");
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
-  }
-
-  private File newTempDir(String name) throws IOException
-  {
-    final File directory = new File(tempDir, name);
-    org.apache.druid.java.util.common.FileUtils.mkdirp(directory);
-    return directory;
   }
 
   private DataSegment newSegment(Interval interval)

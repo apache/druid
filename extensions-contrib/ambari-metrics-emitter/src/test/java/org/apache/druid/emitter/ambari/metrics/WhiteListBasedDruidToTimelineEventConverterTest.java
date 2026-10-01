@@ -25,6 +25,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.hadoop.metrics2.sink.timeline.TimelineMetric;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -32,10 +33,16 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.util.Objects;
 
 public class WhiteListBasedDruidToTimelineEventConverterTest
 {
+  @TempDir
+  public File temporaryFolder;
+
   private static final String PREFIX = "druid";
   private static final String HOSTNAME = "testHost:8080";
   private static final String SERVICE_NAME = "historical";
@@ -92,14 +99,17 @@ public class WhiteListBasedDruidToTimelineEventConverterTest
   @Test
   public void testWhiteListedStringArrayDimension() throws IOException
   {
-    File mapFile = File.createTempFile("testing-" + System.nanoTime(), ".json");
-    mapFile.deleteOnExit();
+    final File mapFile = Files.createTempFile(temporaryFolder.toPath(), "whiteList-", ".json").toFile();
 
-    try (OutputStream outputStream = new FileOutputStream(mapFile)) {
-      IOUtils.copyLarge(
-          getClass().getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
-          outputStream
-      );
+    try (
+        final InputStream inputStream = Objects.requireNonNull(
+            WhiteListBasedDruidToTimelineEventConverterTest.class
+                .getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
+            "Missing test resource: /testWhiteListedStringArrayDimension.json"
+        );
+        final OutputStream outputStream = new FileOutputStream(mapFile)
+    ) {
+      IOUtils.copyLarge(inputStream, outputStream);
     }
 
     WhiteListBasedDruidToTimelineEventConverter converter = new WhiteListBasedDruidToTimelineEventConverter(

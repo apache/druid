@@ -34,6 +34,7 @@ import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
@@ -65,8 +66,10 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   @BeforeEach
   public void setUp()
   {
+    final AuthenticationResult authenticationResult = CalciteTests.SUPER_USER_AUTH_RESULT;
+
     qf = queryFramework();
-    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchemaProvider(
         CalciteTests.INJECTOR,
         qf.conglomerate(),
         qf.walker(),
@@ -75,12 +78,13 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
         new NoopDruidSchemaManager(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
         CatalogResolver.NULL_RESOLVER
-    );
+    ).createRootSchema(authenticationResult);
 
     informationSchema = new InformationSchema(
         rootSchema,
+        qf.operatorTable(),
         CalciteTests.TEST_AUTHORIZER_MAPPER,
-        qf.operatorTable()
+        authenticationResult
     );
   }
 
@@ -256,7 +260,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
       @Override
       public Object get(String authorizerName)
       {
-        return CalciteTests.SUPER_USER_AUTH_RESULT;
+        return null;
       }
     };
   }

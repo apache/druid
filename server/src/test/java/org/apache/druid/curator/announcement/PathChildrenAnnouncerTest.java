@@ -33,15 +33,17 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -51,7 +53,7 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
   private static final Logger log = new Logger(PathChildrenAnnouncerTest.class);
   private ExecutorService exec;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     setupServerAndCurator();
@@ -60,13 +62,14 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
     curator.blockUntilConnected();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     tearDownServerAndCurator();
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testSanity() throws Exception
   {
     PathChildrenAnnouncer announcer = new PathChildrenAnnouncer(curator, exec);
@@ -77,8 +80,8 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
     final String testPath2 = "/somewhere/test2";
     announcer.announce(testPath1, billy);
 
-    Assert.assertNull("/test1 does not exists", curator.checkExists().forPath(testPath1));
-    Assert.assertNull("/somewhere/test2 does not exists", curator.checkExists().forPath(testPath2));
+    Assertions.assertNull(curator.checkExists().forPath(testPath1), "/test1 does not exists");
+    Assertions.assertNull(curator.checkExists().forPath(testPath2), "/somewhere/test2 does not exists");
 
     announcer.start();
     while (!announcer.getAddedChildren().contains("/test1")) {
@@ -86,56 +89,57 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
     }
 
     try {
-      Assert.assertArrayEquals("/test1 has data", billy, curator.getData().decompressed().forPath(testPath1));
-      Assert.assertNull("/somewhere/test2 still does not exist", curator.checkExists().forPath(testPath2));
+      Assertions.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1), "/test1 has data");
+      Assertions.assertNull(curator.checkExists().forPath(testPath2), "/somewhere/test2 still does not exist");
 
       announcer.announce(testPath2, billy);
 
-      Assert.assertArrayEquals("/test1 still has data", billy, curator.getData().decompressed().forPath(testPath1));
-      Assert.assertArrayEquals(
-          "/somewhere/test2 has data",
+      Assertions.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1), "/test1 still has data");
+      Assertions.assertArrayEquals(
           billy,
-          curator.getData().decompressed().forPath(testPath2)
+          curator.getData().decompressed().forPath(testPath2),
+          "/somewhere/test2 has data"
       );
 
       final CountDownLatch latch = createCountdownLatchForPaths(testPath1);
 
       final CuratorOp deleteOp = curator.transactionOp().delete().forPath(testPath1);
       final Collection<CuratorTransactionResult> results = curator.transaction().forOperations(deleteOp);
-      Assert.assertEquals(1, results.size());
+      Assertions.assertEquals(1, results.size());
       final CuratorTransactionResult result = results.iterator().next();
-      Assert.assertEquals(Code.OK.intValue(), result.getError()); // assert delete
+      Assertions.assertEquals(Code.OK.intValue(), result.getError()); // assert delete
 
-      Assert.assertTrue("Wait for /test1 to be created", timing.forWaiting().awaitLatch(latch));
+      Assertions.assertTrue(timing.forWaiting().awaitLatch(latch), "Wait for /test1 to be created");
 
-      Assert.assertArrayEquals(
-          "expect /test1 data is restored",
+      Assertions.assertArrayEquals(
           billy,
-          curator.getData().decompressed().forPath(testPath1)
+          curator.getData().decompressed().forPath(testPath1),
+          "expect /test1 data is restored"
       );
-      Assert.assertArrayEquals(
-          "expect /somewhere/test2 is still there",
+      Assertions.assertArrayEquals(
           billy,
-          curator.getData().decompressed().forPath(testPath2)
+          curator.getData().decompressed().forPath(testPath2),
+          "expect /somewhere/test2 is still there"
       );
 
       announcer.unannounce(testPath1);
-      Assert.assertNull("expect /test1 unannounced", curator.checkExists().forPath(testPath1));
-      Assert.assertArrayEquals(
-          "expect /somewhere/test2 is still still there",
+      Assertions.assertNull(curator.checkExists().forPath(testPath1), "expect /test1 unannounced");
+      Assertions.assertArrayEquals(
           billy,
-          curator.getData().decompressed().forPath(testPath2)
+          curator.getData().decompressed().forPath(testPath2),
+          "expect /somewhere/test2 is still still there"
       );
     }
     finally {
       announcer.stop();
     }
 
-    Assert.assertNull("expect /test1 remains unannounced", curator.checkExists().forPath(testPath1));
-    Assert.assertNull("expect /somewhere/test2 unannounced", curator.checkExists().forPath(testPath2));
+    Assertions.assertNull(curator.checkExists().forPath(testPath1), "expect /test1 remains unannounced");
+    Assertions.assertNull(curator.checkExists().forPath(testPath2), "expect /somewhere/test2 unannounced");
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testSessionKilled() throws Exception
   {
     PathChildrenAnnouncer announcer = new PathChildrenAnnouncer(curator, exec);
@@ -151,17 +155,17 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
       announcer.announce(testPath1, billy);
       announcer.announce(testPath2, billy);
 
-      Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
-      Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
+      Assertions.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
+      Assertions.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
 
       final CountDownLatch latch = createCountdownLatchForPaths(paths);
 
       KillSession.kill(curator.getZookeeperClient().getZooKeeper(), server.getConnectString());
 
-      Assert.assertTrue(timing.forWaiting().awaitLatch(latch));
+      Assertions.assertTrue(timing.forWaiting().awaitLatch(latch));
 
-      Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
-      Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
+      Assertions.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath1));
+      Assertions.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
 
       announcer.stop();
 
@@ -169,8 +173,8 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
         Thread.sleep(100);
       }
 
-      Assert.assertNull(curator.checkExists().forPath(testPath1));
-      Assert.assertNull(curator.checkExists().forPath(testPath2));
+      Assertions.assertNull(curator.checkExists().forPath(testPath1));
+      Assertions.assertNull(curator.checkExists().forPath(testPath2));
     }
     finally {
       announcer.stop();
@@ -188,17 +192,17 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
 
     announcer.start();
     try {
-      Assert.assertNull(curator.checkExists().forPath(parent));
+      Assertions.assertNull(curator.checkExists().forPath(parent));
 
       awaitAnnounce(announcer, testPath, billy, true);
 
-      Assert.assertNotNull(curator.checkExists().forPath(parent));
+      Assertions.assertNotNull(curator.checkExists().forPath(parent));
     }
     finally {
       announcer.stop();
     }
 
-    Assert.assertNull(curator.checkExists().forPath(parent));
+    Assertions.assertNull(curator.checkExists().forPath(parent));
   }
 
   @Test
@@ -215,17 +219,17 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
 
     announcer.start();
     try {
-      Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
+      Assertions.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
 
       awaitAnnounce(announcer, testPath, billy, true);
 
-      Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
+      Assertions.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
     }
     finally {
       announcer.stop();
     }
 
-    Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
+    Assertions.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
   }
 
   @Test
@@ -239,17 +243,17 @@ public class PathChildrenAnnouncerTest extends CuratorTestBase
 
     announcer.start();
     try {
-      Assert.assertNull(curator.checkExists().forPath(parent));
+      Assertions.assertNull(curator.checkExists().forPath(parent));
 
       awaitAnnounce(announcer, testPath, billy, false);
 
-      Assert.assertNotNull(curator.checkExists().forPath(parent));
+      Assertions.assertNotNull(curator.checkExists().forPath(parent));
     }
     finally {
       announcer.stop();
     }
 
-    Assert.assertNotNull(curator.checkExists().forPath(parent));
+    Assertions.assertNotNull(curator.checkExists().forPath(parent));
   }
 
   private void awaitAnnounce(

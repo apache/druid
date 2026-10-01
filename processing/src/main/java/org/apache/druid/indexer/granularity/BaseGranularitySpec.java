@@ -21,6 +21,8 @@ package org.apache.druid.indexer.granularity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -84,19 +86,24 @@ public abstract class BaseGranularitySpec implements GranularitySpec
    */
   protected static class LookupIntervalBuckets
   {
-    private final Iterable<Interval> intervalIterable;
-    private final TreeSet<Interval> intervals;
+    private final Supplier<TreeSet<Interval>> intervals;
 
     /**
      * @param intervalIterable The intervals to materialize
      */
     public LookupIntervalBuckets(Iterable<Interval> intervalIterable)
     {
-      this.intervalIterable = intervalIterable;
       // The tree set will be materialized on demand (see below) to avoid client code
       // blowing up when constructing this data structure and when the
       // number of intervals is very large...
-      this.intervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+      // Memoization serializes initialization and safely publishes only the complete tree to concurrent readers.
+      this.intervals = Suppliers.memoize(() -> {
+        final TreeSet<Interval> materialized = new TreeSet<>(Comparators.intervalsByStartThenEnd());
+        if (intervalIterable != null) {
+          Iterators.addAll(materialized, intervalIterable.iterator());
+        }
+        return materialized;
+      });
     }
 
     /**
@@ -132,10 +139,7 @@ public abstract class BaseGranularitySpec implements GranularitySpec
      */
     public TreeSet<Interval> materializedIntervals()
     {
-      if (intervalIterable != null && intervalIterable.iterator().hasNext() && intervals.isEmpty()) {
-        Iterators.addAll(intervals, intervalIterable.iterator());
-      }
-      return intervals;
+      return intervals.get();
     }
   }
 }

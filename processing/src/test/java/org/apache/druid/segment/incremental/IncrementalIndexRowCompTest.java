@@ -24,13 +24,13 @@ import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.segment.CloserRule;
+import org.apache.druid.segment.CloserExtension;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -42,20 +42,20 @@ import java.util.Map;
 
 /**
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
 {
   public String indexType;
 
-  @Rule
-  public final CloserRule closer = new CloserRule(false);
+  @RegisterExtension
+  public final CloserExtension closer = new CloserExtension(false);
 
   public IncrementalIndexRowCompTest(String indexType)
   {
     this.indexType = indexType;
   }
 
-  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
     return IncrementalIndexCreator.getAppendableIndexTypes();
@@ -73,9 +73,9 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
     IncrementalIndex index = indexCreator.createIndex();
 
     // Expected ordering: __time
-    Assert.assertEquals(0, index.timePosition);
-    Assert.assertEquals(ImmutableList.of("__time"), index.getDimensionNames(true));
-    Assert.assertEquals(Collections.emptyList(), index.getDimensionNames(false));
+    Assertions.assertEquals(0, index.timePosition);
+    Assertions.assertEquals(ImmutableList.of("__time"), index.getDimensionNames(true));
+    Assertions.assertEquals(Collections.emptyList(), index.getDimensionNames(false));
 
     long time = System.currentTimeMillis();
     IncrementalIndexRow ir1 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B")).getIncrementalIndexRow();
@@ -88,25 +88,25 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
 
     Comparator<IncrementalIndexRow> comparator = index.dimsComparator();
 
-    Assert.assertEquals(0, comparator.compare(ir1, ir1));
-    Assert.assertEquals(0, comparator.compare(ir2, ir2));
-    Assert.assertEquals(0, comparator.compare(ir3, ir3));
+    Assertions.assertEquals(0, comparator.compare(ir1, ir1));
+    Assertions.assertEquals(0, comparator.compare(ir2, ir2));
+    Assertions.assertEquals(0, comparator.compare(ir3, ir3));
 
-    Assert.assertTrue(comparator.compare(ir1, ir2) > 0);
-    Assert.assertTrue(comparator.compare(ir2, ir1) < 0);
-    Assert.assertTrue(comparator.compare(ir2, ir3) > 0);
-    Assert.assertTrue(comparator.compare(ir3, ir2) < 0);
-    Assert.assertTrue(comparator.compare(ir1, ir3) > 0);
-    Assert.assertTrue(comparator.compare(ir3, ir1) < 0);
+    Assertions.assertTrue(comparator.compare(ir1, ir2) > 0);
+    Assertions.assertTrue(comparator.compare(ir2, ir1) < 0);
+    Assertions.assertTrue(comparator.compare(ir2, ir3) > 0);
+    Assertions.assertTrue(comparator.compare(ir3, ir2) < 0);
+    Assertions.assertTrue(comparator.compare(ir1, ir3) > 0);
+    Assertions.assertTrue(comparator.compare(ir3, ir1) < 0);
 
-    Assert.assertTrue(comparator.compare(ir6, ir1) > 0);
-    Assert.assertTrue(comparator.compare(ir6, ir2) > 0);
-    Assert.assertTrue(comparator.compare(ir6, ir3) > 0);
+    Assertions.assertTrue(comparator.compare(ir6, ir1) > 0);
+    Assertions.assertTrue(comparator.compare(ir6, ir2) > 0);
+    Assertions.assertTrue(comparator.compare(ir6, ir3) > 0);
 
-    Assert.assertTrue(comparator.compare(ir4, ir6) > 0);
-    Assert.assertTrue(comparator.compare(ir5, ir6) > 0);
-    Assert.assertTrue(comparator.compare(ir5, ir4) < 0);
-    Assert.assertTrue(comparator.compare(ir4, ir5) > 0);
+    Assertions.assertTrue(comparator.compare(ir4, ir6) > 0);
+    Assertions.assertTrue(comparator.compare(ir5, ir6) > 0);
+    Assertions.assertTrue(comparator.compare(ir5, ir4) < 0);
+    Assertions.assertTrue(comparator.compare(ir4, ir5) > 0);
   }
 
   @Test
@@ -136,9 +136,9 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
     IncrementalIndex index = indexCreator.createIndex();
 
     // Expected ordering: [joe, __time]
-    Assert.assertEquals(1, index.timePosition);
-    Assert.assertEquals(ImmutableList.of("joe", "__time"), index.getDimensionNames(true));
-    Assert.assertEquals(ImmutableList.of("joe"), index.getDimensionNames(false));
+    Assertions.assertEquals(1, index.timePosition);
+    Assertions.assertEquals(ImmutableList.of("joe", "__time"), index.getDimensionNames(true));
+    Assertions.assertEquals(ImmutableList.of("joe"), index.getDimensionNames(false));
 
     long time = System.currentTimeMillis();
     IncrementalIndexRow ir1 = index.toIncrementalIndexRow(toMapRow(time, "billy", "A", "joe", "B")).getIncrementalIndexRow();
@@ -151,25 +151,25 @@ public class IncrementalIndexRowCompTest extends InitializedNullHandlingTest
 
     Comparator<IncrementalIndexRow> comparator = index.dimsComparator();
 
-    Assert.assertEquals(0, comparator.compare(ir1, ir1));
-    Assert.assertEquals(0, comparator.compare(ir2, ir2));
-    Assert.assertEquals(0, comparator.compare(ir3, ir3));
+    Assertions.assertEquals(0, comparator.compare(ir1, ir1));
+    Assertions.assertEquals(0, comparator.compare(ir2, ir2));
+    Assertions.assertEquals(0, comparator.compare(ir3, ir3));
 
-    Assert.assertTrue(comparator.compare(ir1, ir2) > 0);
-    Assert.assertTrue(comparator.compare(ir2, ir1) < 0);
-    Assert.assertTrue(comparator.compare(ir2, ir3) > 0);
-    Assert.assertTrue(comparator.compare(ir3, ir2) < 0);
-    Assert.assertTrue(comparator.compare(ir1, ir3) > 0);
-    Assert.assertTrue(comparator.compare(ir3, ir1) < 0);
+    Assertions.assertTrue(comparator.compare(ir1, ir2) > 0);
+    Assertions.assertTrue(comparator.compare(ir2, ir1) < 0);
+    Assertions.assertTrue(comparator.compare(ir2, ir3) > 0);
+    Assertions.assertTrue(comparator.compare(ir3, ir2) < 0);
+    Assertions.assertTrue(comparator.compare(ir1, ir3) > 0);
+    Assertions.assertTrue(comparator.compare(ir3, ir1) < 0);
 
-    Assert.assertTrue(comparator.compare(ir6, ir1) < 0);
-    Assert.assertTrue(comparator.compare(ir6, ir2) < 0);
-    Assert.assertTrue(comparator.compare(ir6, ir3) > 0);
+    Assertions.assertTrue(comparator.compare(ir6, ir1) < 0);
+    Assertions.assertTrue(comparator.compare(ir6, ir2) < 0);
+    Assertions.assertTrue(comparator.compare(ir6, ir3) > 0);
 
-    Assert.assertTrue(comparator.compare(ir4, ir6) > 0);
-    Assert.assertTrue(comparator.compare(ir5, ir6) > 0);
-    Assert.assertTrue(comparator.compare(ir5, ir4) < 0);
-    Assert.assertTrue(comparator.compare(ir4, ir5) > 0);
+    Assertions.assertTrue(comparator.compare(ir4, ir6) > 0);
+    Assertions.assertTrue(comparator.compare(ir5, ir6) > 0);
+    Assertions.assertTrue(comparator.compare(ir5, ir4) < 0);
+    Assertions.assertTrue(comparator.compare(ir4, ir5) > 0);
   }
 
   private MapBasedInputRow toMapRow(long time, Object... dimAndVal)

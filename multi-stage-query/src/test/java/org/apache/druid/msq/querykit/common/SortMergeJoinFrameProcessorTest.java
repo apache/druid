@@ -51,16 +51,13 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.apache.druid.segment.join.JoinType;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,7 +66,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
 {
   private static final long MAX_BUFFERED_BYTES = 10_000_000;
@@ -77,8 +75,8 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
   private final int rowsPerInputFrame;
   private final int rowsPerOutputFrame;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public SortMergeJoinFrameProcessorTest(int rowsPerInputFrame, int rowsPerOutputFrame)
   {
@@ -86,7 +84,6 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
     this.rowsPerOutputFrame = rowsPerOutputFrame;
   }
 
-  @Parameterized.Parameters(name = "rowsPerInputFrame = {0}, rowsPerOutputFrame = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -1346,7 +1343,7 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
   public void testCountrySelfJoin_withMaxBufferedBytesLimit_fails() throws Exception
   {
     // Test is only valid when rowsPerInputFrame is low enough that we get multiple frames.
-    Assume.assumeThat(rowsPerInputFrame, Matchers.lessThanOrEqualTo(7));
+    Assumptions.assumeTrue(rowsPerInputFrame <= 7);
 
     final ReadableInput factChannel1 = buildFactInput(ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)));
     final ReadableInput factChannel2 = buildFactInput(ImmutableList.of(new KeyColumn("channel", KeyOrder.ASCENDING)));
@@ -1373,17 +1370,14 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
         1
     );
 
-    final RuntimeException e = Assert.assertThrows(
+    final RuntimeException e = Assertions.assertThrows(
         RuntimeException.class,
         () -> run(processor, outputChannel.readable(), joinSignature)
     );
 
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(e.getCause().getCause(), CoreMatchers.instanceOf(MSQException.class));
-    MatcherAssert.assertThat(
-        ((MSQException) e.getCause().getCause()).getFault(),
-        CoreMatchers.instanceOf(TooManyRowsWithSameKeyFault.class)
-    );
+    final RuntimeException cause = Assertions.assertInstanceOf(RuntimeException.class, e.getCause());
+    final MSQException msqException = Assertions.assertInstanceOf(MSQException.class, cause.getCause());
+    Assertions.assertInstanceOf(TooManyRowsWithSameKeyFault.class, msqException.getFault());
   }
 
   private void assertResult(
@@ -1410,7 +1404,7 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
     );
 
     final List<List<Object>> rows = rowsFromProcessor.toList();
-    Assert.assertEquals(Unit.instance(), FutureUtils.getUnchecked(retValFromProcessor, true));
+    Assertions.assertEquals(Unit.instance(), FutureUtils.getUnchecked(retValFromProcessor, true));
     return rows;
   }
 

@@ -21,7 +21,11 @@ package org.apache.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
-import org.apache.druid.java.util.common.FileUtils;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -35,21 +39,14 @@ import org.apache.druid.security.basic.authorization.entity.GroupMappingAndRoleM
 import org.apache.druid.security.basic.authorization.entity.UserAndRoleMap;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -60,8 +57,8 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
   private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
   private static final String AUTHORIZER_NAME = "test-basic-auth";
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   // Mocks
   private Injector injector;
@@ -84,7 +81,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     final int numRetries = 1;
     manager = new CoordinatorPollingBasicAuthorizerCacheManager(
         injector,
-        new BasicAuthCommonCacheConfig(0L, 1L, newFolder(temporaryFolder, "junit").getAbsolutePath(), numRetries),
+        new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         MAPPER,
         serviceClient
     );
@@ -117,20 +114,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     // Block the second user request so that it can be interrupted by stop()
     final CountDownLatch requestStarted = new CountDownLatch(1);
     final CountDownLatch requestInterrupted = new CountDownLatch(1);
-    expectHttpRequestAndAnswer(
-        "cachedSerializedUserMap",
-        () -> {
-          requestStarted.countDown();
-          try {
-            Thread.sleep(10_000);
-            return userResponseHolder;
-          }
-          catch (InterruptedException e) {
-            requestInterrupted.countDown();
-            throw e;
-          }
-        }
-    );
+    expectHttpRequestAndBlock("cachedSerializedUserMap", requestStarted, requestInterrupted);
 
     replayAll();
 
@@ -165,20 +149,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     // Block the second group request so that it can be interrupted by stop()
     final CountDownLatch requestStarted = new CountDownLatch(1);
     final CountDownLatch requestInterrupted = new CountDownLatch(1);
-    expectHttpRequestAndAnswer(
-        "cachedSerializedGroupMappingMap",
-        () -> {
-          requestStarted.countDown();
-          try {
-            Thread.sleep(10_000);
-            return groupResponseHolder;
-          }
-          catch (InterruptedException e) {
-            requestInterrupted.countDown();
-            throw e;
-          }
-        }
-    );
+    expectHttpRequestAndBlock("cachedSerializedGroupMappingMap", requestStarted, requestInterrupted);
 
     replayAll();
 
@@ -199,26 +170,27 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
         "/druid-ext/basic-security/authorization/db/%s/%s",
         AUTHORIZER_NAME, path
     );
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, fullPath),
-        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)
-        {
-          @Override
-          public ChannelBuffer getContent()
-          {
-            try {
-              return ChannelBuffers.wrappedBuffer(responseHolder.answer().getContent());
-            }
-            catch (Throwable e) {
-              throw new RuntimeException(e);
-            }
-          }
-        }
-    );
+    try {
+      final BytesFullResponseHolder holder = responseHolder.answer();
+      serviceClient.expectAndRespond(
+          new RequestBuilder(HttpMethod.GET, fullPath),
+          HttpResponseStatus.OK,
+          java.util.Collections.emptyMap(),
+          holder.getContent()
+      );
+    }
+    catch (Throwable e) {
+      throw new RuntimeException(e);
+    }
   }
 
-  private static File newFolder(File root, String... subDirs)
+  private void expectHttpRequestAndBlock(String path, CountDownLatch requestStarted, CountDownLatch requestInterrupted)
   {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
+    final String fullPath = StringUtils.format(
+        "/druid-ext/basic-security/authorization/db/%s/%s",
+        AUTHORIZER_NAME, path
+    );
+    serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, fullPath), requestStarted, requestInterrupted);
   }
+
 }

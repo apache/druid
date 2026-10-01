@@ -121,7 +121,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = createTempDir("data");
+    inputDir = temporaryFolder.newFolder("data");
     final Set<Interval> intervals = new HashSet<>();
     // set up data
     for (int i = 0; i < 10; i++) {
@@ -339,31 +339,30 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   private void assertHashedPartition(
       Set<DataSegment> publishedSegments,
       Map<Interval, Integer> expectedIntervalToNumSegments
-  )
+  ) throws IOException
   {
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     publishedSegments.forEach(
         segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
     );
     Assertions.assertEquals(new HashSet<>(inputIntervals), intervalToSegments.keySet());
-    final File tempSegmentDir = createTempDir();
+    final File tempSegmentDir = temporaryFolder.newFolder();
     for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
       Interval interval = entry.getKey();
       List<DataSegment> segmentsInInterval = entry.getValue();
       Assertions.assertEquals(expectedIntervalToNumSegments.get(interval).intValue(), segmentsInInterval.size());
       for (DataSegment segment : segmentsInInterval) {
-        HashBasedNumberedShardSpec shardSpec = null;
         if (segment.isTombstone()) {
           Assertions.assertSame(TombstoneShardSpec.class, segment.getShardSpec().getClass());
         } else {
           Assertions.assertSame(HashBasedNumberedShardSpec.class, segment.getShardSpec().getClass());
-          shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
-          Assertions.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
         }
         List<ScanResultValue> results = querySegment(segment, ImmutableList.of("dim1", "dim2"), tempSegmentDir);
         if (segment.isTombstone()) {
           Assertions.assertTrue(results.isEmpty());
         } else {
+          final HashBasedNumberedShardSpec shardSpec = (HashBasedNumberedShardSpec) segment.getShardSpec();
+          Assertions.assertEquals(HashPartitionFunction.MURMUR3_32_ABS, shardSpec.getPartitionFunction());
           final int hash = shardSpec.getPartitionFunction().hash(
               HashBasedNumberedShardSpec.serializeGroupKey(
                   getObjectMapper(),
@@ -390,7 +389,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
 
   private File newInputDirForReplace() throws IOException
   {
-    File inputDirectory = createTempDir("dataReplace");
+    File inputDirectory = temporaryFolder.newFolder("dataReplace");
     // set up data
     Set<Integer> fileIds = new HashSet<>();
     fileIds.add(3);

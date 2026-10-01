@@ -69,7 +69,7 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
     this.config = config;
     KllSketchModule.registerSerde();
     KllSketchModule module = new KllSketchModule();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(),
         config,
         tempFolder

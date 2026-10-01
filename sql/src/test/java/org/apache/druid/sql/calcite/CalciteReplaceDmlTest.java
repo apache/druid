@@ -85,7 +85,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -105,7 +105,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "
              + "SELECT * FROM foo PARTITIONED BY DAY")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -133,7 +133,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 05:30:00' AND __time < TIMESTAMP '2000-01-02 05:30:00' "
              + "SELECT * FROM foo PARTITIONED BY DAY")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -159,7 +159,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
              + "__time >= TIMESTAMP '2000-01-01' AND __time < TIMESTAMP '2000-05-01' "
              + "SELECT * FROM foo PARTITIONED BY MONTH")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -186,7 +186,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
              + "OR __time >= TIMESTAMP '2000-03-01' AND __time < TIMESTAMP '2000-04-01' "
              + "SELECT * FROM foo PARTITIONED BY MONTH")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -212,7 +212,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
              + "__time BETWEEN TIMESTAMP '2000-01-01' AND TIMESTAMP '2000-01-31 23:59:59.999' "
              + "SELECT * FROM foo PARTITIONED BY MONTH")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -339,7 +339,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM view.aview PARTITIONED BY ALL TIME")
         .expectTarget("dst", RowSignature.builder().add("dim1_firstchar", ColumnType.STRING).build())
-        .expectResources(viewRead("aview"), dataSourceWrite("dst"))
+        .expectResources(viewRead("aview"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -360,7 +360,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("REPLACE INTO druid.dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
         .expectTarget("dst", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -384,7 +384,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                                          .add("dim3", ColumnType.STRING)
                                          .build()
         )
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -495,7 +495,8 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM \"%s\" PARTITIONED BY ALL TIME", CalciteTests.FORBIDDEN_DATASOURCE)
-        .expectValidationError(ForbiddenException.class)
+        .expectValidationError(DruidExceptionMatcher.invalidSqlInput()
+                                                    .expectMessageContains("Object 'forbiddenDatasource' not found"))
         .verify();
   }
 
@@ -526,7 +527,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -552,7 +553,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql(
             "REPLACE INTO druid.dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo LIMIT 10 OFFSET 20 PARTITIONED BY DAY")
         .expectTarget("dst", targetRowSignature)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -587,7 +588,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .sql(
             "REPLACE INTO druid.dst OVERWRITE ALL SELECT __time, FLOOR(m1) as floor_m1, dim1 FROM foo PARTITIONED BY DAY CLUSTERED BY 2, dim1")
         .expectTarget("dst", targetRowSignature)
-        .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+        .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -642,7 +643,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
               partitionedByArgument
           ))
           .expectTarget("dst", targetRowSignature)
-          .expectResources(dataSourceRead("foo"), dataSourceWrite("dst"))
+          .expectResources(dataSourceRead("foo"), dataSourceRead("dst"), dataSourceWrite("dst"))
           .expectQuery(
               newScanQueryBuilder()
                   .dataSource("foo")
@@ -1021,7 +1022,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", RowSignature.builder().add("xy", ColumnType.STRING).add("z", ColumnType.LONG).build())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -1052,7 +1053,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                         .add("cnt", ColumnType.LONG)
                         .build()
         )
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             GroupByQuery.builder()
                         .setDataSource(externalDataSource)
@@ -1084,7 +1085,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                         .add("cnt", ColumnType.LONG)
                         .build()
         )
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             GroupByQuery.builder()
                         .setDataSource(externalDataSource)

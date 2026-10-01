@@ -20,14 +20,15 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.collect.ImmutableList;
-import junitparams.converters.Nullable;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,10 +42,11 @@ import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class FrontCodedIntArrayIndexedTest
 {
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
     return ImmutableList.of(new Object[]{ByteOrder.LITTLE_ENDIAN}, new Object[]{ByteOrder.BIG_ENDIAN});
@@ -87,10 +89,10 @@ public class FrontCodedIntArrayIndexedTest
       final int[] next = indexedIterator.next();
       assertSame(ctr, expectedNext, next);
       assertSame(ctr, expectedNext, codedIndexed.get(ctr));
-      Assert.assertEquals("row " + ctr, ctr, codedIndexed.indexOf(next));
+      Assertions.assertEquals(ctr, codedIndexed.indexOf(next), "row " + ctr);
       ctr++;
     }
-    Assert.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
+    Assertions.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
   }
 
 
@@ -120,10 +122,10 @@ public class FrontCodedIntArrayIndexedTest
       final int[] next = indexedIterator.next();
       assertSame(ctr, expectedNext, next);
       assertSame(ctr, expectedNext, codedIndexed.get(ctr));
-      Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+      Assertions.assertEquals(ctr, codedIndexed.indexOf(next));
       ctr++;
     }
-    Assert.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
+    Assertions.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
   }
 
   @Test
@@ -157,11 +159,11 @@ public class FrontCodedIntArrayIndexedTest
         final int[] next = indexedIterator.next();
         assertSame(ctr, expectedNext, next);
         assertSame(ctr, expectedNext, codedIndexed.get(ctr));
-        Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+        Assertions.assertEquals(ctr, codedIndexed.indexOf(next));
         ctr++;
       }
-      Assert.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
-      Assert.assertEquals(ctr, sizeBase + sizeAdjust);
+      Assertions.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
+      Assertions.assertEquals(ctr, sizeBase + sizeAdjust);
     }
   }
 
@@ -197,11 +199,11 @@ public class FrontCodedIntArrayIndexedTest
         final int[] next = indexedIterator.next();
         assertSame(ctr, expectedNext, next);
         assertSame(ctr, expectedNext, codedIndexed.get(ctr));
-        Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+        Assertions.assertEquals(ctr, codedIndexed.indexOf(next));
         ctr++;
       }
-      Assert.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
-      Assert.assertEquals(ctr, sizeBase + sizeAdjust + 1);
+      Assertions.assertEquals(expectedIterator.hasNext(), indexedIterator.hasNext());
+      Assertions.assertEquals(ctr, sizeBase + sizeAdjust + 1);
     }
   }
 
@@ -223,13 +225,13 @@ public class FrontCodedIntArrayIndexedTest
         buffer,
         buffer.order()
     ).get();
-    Assert.assertEquals(-1, codedIndexed.indexOf(new int[]{1}));
-    Assert.assertEquals(0, codedIndexed.indexOf(new int[]{1, 2}));
-    Assert.assertEquals(1, codedIndexed.indexOf(new int[]{1, 2, 1}));
-    Assert.assertEquals(-3, codedIndexed.indexOf(new int[]{1, 2, 2}));
-    Assert.assertEquals(4, codedIndexed.indexOf(new int[]{1, 3}));
-    Assert.assertEquals(-7, codedIndexed.indexOf(new int[]{1, 4, 4}));
-    Assert.assertEquals(-7, codedIndexed.indexOf(new int[]{9, 1, 1}));
+    Assertions.assertEquals(-1, codedIndexed.indexOf(new int[]{1}));
+    Assertions.assertEquals(0, codedIndexed.indexOf(new int[]{1, 2}));
+    Assertions.assertEquals(1, codedIndexed.indexOf(new int[]{1, 2, 1}));
+    Assertions.assertEquals(-3, codedIndexed.indexOf(new int[]{1, 2, 2}));
+    Assertions.assertEquals(4, codedIndexed.indexOf(new int[]{1, 3}));
+    Assertions.assertEquals(-7, codedIndexed.indexOf(new int[]{1, 4, 4}));
+    Assertions.assertEquals(-7, codedIndexed.indexOf(new int[]{9, 1, 1}));
   }
 
 
@@ -251,14 +253,14 @@ public class FrontCodedIntArrayIndexedTest
         buffer,
         buffer.order()
     ).get();
-    Assert.assertEquals(0, codedIndexed.indexOf(null));
-    Assert.assertEquals(-2, codedIndexed.indexOf(new int[]{1}));
-    Assert.assertEquals(1, codedIndexed.indexOf(new int[]{1, 2}));
-    Assert.assertEquals(2, codedIndexed.indexOf(new int[]{1, 2, 1}));
-    Assert.assertEquals(-4, codedIndexed.indexOf(new int[]{1, 2, 2}));
-    Assert.assertEquals(5, codedIndexed.indexOf(new int[]{1, 3}));
-    Assert.assertEquals(-8, codedIndexed.indexOf(new int[]{1, 4, 4}));
-    Assert.assertEquals(-8, codedIndexed.indexOf(new int[]{9, 1, 1}));
+    Assertions.assertEquals(0, codedIndexed.indexOf(null));
+    Assertions.assertEquals(-2, codedIndexed.indexOf(new int[]{1}));
+    Assertions.assertEquals(1, codedIndexed.indexOf(new int[]{1, 2}));
+    Assertions.assertEquals(2, codedIndexed.indexOf(new int[]{1, 2, 1}));
+    Assertions.assertEquals(-4, codedIndexed.indexOf(new int[]{1, 2, 2}));
+    Assertions.assertEquals(5, codedIndexed.indexOf(new int[]{1, 3}));
+    Assertions.assertEquals(-8, codedIndexed.indexOf(new int[]{1, 4, 4}));
+    Assertions.assertEquals(-8, codedIndexed.indexOf(new int[]{9, 1, 1}));
   }
 
 
@@ -275,17 +277,17 @@ public class FrontCodedIntArrayIndexedTest
         buffer.order()
     ).get();
 
-    Assert.assertNull(codedIndexed.get(0));
-    Assert.assertThrows(IllegalArgumentException.class, () -> codedIndexed.get(-1));
-    Assert.assertThrows(IllegalArgumentException.class, () -> codedIndexed.get(theList.size()));
+    Assertions.assertNull(codedIndexed.get(0));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> codedIndexed.get(-1));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> codedIndexed.get(theList.size()));
 
-    Assert.assertEquals(0, codedIndexed.indexOf(null));
-    Assert.assertEquals(-2, codedIndexed.indexOf(new int[]{1, 2, 3, 4}));
+    Assertions.assertEquals(0, codedIndexed.indexOf(null));
+    Assertions.assertEquals(-2, codedIndexed.indexOf(new int[]{1, 2, 3, 4}));
 
     Iterator<int[]> iterator = codedIndexed.iterator();
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertNull(iterator.next());
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
+    Assertions.assertNull(iterator.next());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -301,17 +303,17 @@ public class FrontCodedIntArrayIndexedTest
         buffer.order()
     ).get();
 
-    Assert.assertEquals(0, codedUtf8Indexed.size());
-    Throwable t = Assert.assertThrows(IAE.class, () -> codedUtf8Indexed.get(0));
-    Assert.assertEquals("Index[0] >= size[0]", t.getMessage());
-    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
-    Assert.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
+    Assertions.assertEquals(0, codedUtf8Indexed.size());
+    Throwable t = Assertions.assertThrows(IAE.class, () -> codedUtf8Indexed.get(0));
+    Assertions.assertEquals("Index[0] >= size[0]", t.getMessage());
+    Assertions.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(-1));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> codedUtf8Indexed.get(theList.size()));
 
-    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(null));
-    Assert.assertEquals(-1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
+    Assertions.assertEquals(-1, codedUtf8Indexed.indexOf(null));
+    Assertions.assertEquals(-1, codedUtf8Indexed.indexOf(StringUtils.toUtf8ByteBuffer("hello")));
 
     Iterator<ByteBuffer> utf8Iterator = codedUtf8Indexed.iterator();
-    Assert.assertFalse(utf8Iterator.hasNext());
+    Assertions.assertFalse(utf8Iterator.hasNext());
   }
 
   @Test
@@ -355,11 +357,11 @@ public class FrontCodedIntArrayIndexedTest
         final int[] next = iterator.next();
         assertSame(ctr, expectedNext, next);
         assertSame(ctr, expectedNext, codedIndexed.get(ctr));
-        Assert.assertEquals(ctr, codedIndexed.indexOf(next));
+        Assertions.assertEquals(ctr, codedIndexed.indexOf(next));
         ctr++;
       }
-      Assert.assertEquals(expectedIterator.hasNext(), iterator.hasNext());
-      Assert.assertEquals(ctr, numValues + 1);
+      Assertions.assertEquals(expectedIterator.hasNext(), iterator.hasNext());
+      Assertions.assertEquals(ctr, numValues + 1);
     }
   }
 
@@ -368,7 +370,7 @@ public class FrontCodedIntArrayIndexedTest
   {
     OnHeapMemorySegmentWriteOutMedium medium = new OnHeapMemorySegmentWriteOutMedium();
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> new FrontCodedIntArrayIndexedWriter(
             medium,
@@ -377,7 +379,7 @@ public class FrontCodedIntArrayIndexedTest
         )
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> new FrontCodedIntArrayIndexedWriter(
             medium,
@@ -386,7 +388,7 @@ public class FrontCodedIntArrayIndexedTest
         )
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> new FrontCodedIntArrayIndexedWriter(
             medium,
@@ -414,7 +416,7 @@ public class FrontCodedIntArrayIndexedTest
       assertSame(index, next, writer.get(index));
       index++;
     }
-    Assert.assertEquals(index, writer.getCardinality());
+    Assertions.assertEquals(index, writer.getCardinality());
 
     // check 'get' again so that we aren't always reading from current page
     index = 0;
@@ -448,7 +450,7 @@ public class FrontCodedIntArrayIndexedTest
     long size = writer.getSerializedSize();
     buffer.position(0);
     writer.writeTo(channel, null);
-    Assert.assertEquals(size, buffer.position());
+    Assertions.assertEquals(size, buffer.position());
     buffer.position(0);
     return size;
   }
@@ -456,12 +458,12 @@ public class FrontCodedIntArrayIndexedTest
   private static void assertSame(int index, @Nullable int[] expected, @Nullable int[] actual)
   {
     if (expected == null) {
-      Assert.assertNull("row " + index, actual);
+      Assertions.assertNull(actual, "row " + index);
     } else {
-      Assert.assertArrayEquals(
-          "row " + index + " expected: " + Arrays.toString(expected) + " actual: " + Arrays.toString(actual),
+      Assertions.assertArrayEquals(
           expected,
-          actual
+          actual,
+          "row " + index + " expected: " + Arrays.toString(expected) + " actual: " + Arrays.toString(actual)
       );
     }
   }

@@ -51,7 +51,6 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -73,6 +72,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -87,15 +87,14 @@ import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -111,11 +110,8 @@ import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
-  @org.junit.Rule
-  public final org.junit.rules.TemporaryFolder junit4TemporaryFolder = new org.junit.rules.TemporaryFolder();
-
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
@@ -148,16 +144,12 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   }
 
 
-  @Before
   @BeforeEach
   public void setUpIngestionTestBase() throws IOException
   {
-    if (temporaryFolder == null) {
-      temporaryFolder = junit4TemporaryFolder.getRoot();
-    }
     derbyConnectorRule.before();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    baseDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "base");
+    baseDir = temporaryFolder.newFolder("base");
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
@@ -196,7 +188,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     lockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
     lockbox.syncFromStorage();
     segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, getObjectMapper());
-    reportsFile = new File(temporaryFolder, "reports.json");
+    reportsFile = temporaryFolder.newFile("reports.json");
     dataSegmentKiller = new TestDataSegmentKiller();
     taskActionToolbox = createTaskActionToolbox();
 
@@ -204,7 +196,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     segmentMetadataCache.becomeLeader();
   }
 
-  @After
   @AfterEach
   public void tearDownIngestionTestBase()
   {
@@ -310,7 +301,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
         .taskActionClient(createActionClient(task))
-        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+        .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), new DeepStorageSegmentConfig()))
         .dataSegmentKiller(dataSegmentKiller)
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .jsonMapper(objectMapper)
@@ -481,7 +472,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         taskStorage.insert(task, TaskStatus.running(task.getId()));
         taskActionClient = createActionClient(task);
         taskReportsFile = new File(
-            temporaryFolder,
+            temporaryFolder.getRoot(),
             StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
         );
 
@@ -492,7 +483,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             .config(config)
             .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
             .taskActionClient(taskActionClient)
-            .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig()))
+            .segmentPusher(new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), new DeepStorageSegmentConfig()))
             .dataSegmentKiller(dataSegmentKiller)
             .joinableFactory(NoopJoinableFactory.INSTANCE)
             .jsonMapper(objectMapper)

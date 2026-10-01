@@ -30,51 +30,87 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * JUnit 5 extension that creates a temporary folder for each test and removes it afterward.
+ * JUnit 5 extension that creates a temporary folder and removes it after the configured scope.
  * Register it as follows:
  *
  * <pre>{@code
+ * // A directory shared by all tests in the class.
  * @RegisterExtension
- * public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+ * public static final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.classScoped();
+ *
+ * // A fresh directory for each test.
+ * @RegisterExtension
+ * public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
  * }</pre>
  */
 public class TemporaryFolderExtension implements BeforeAllCallback, BeforeEachCallback, AfterAllCallback, AfterEachCallback
 {
-  private final File parentDirectory;
-  private File root;
-
-  public TemporaryFolderExtension()
+  private enum Scope
   {
-    this(null);
+    CLASS,
+    TEST
   }
 
-  public TemporaryFolderExtension(final File parentDirectory)
+  private final File parentDirectory;
+  private final Scope scope;
+  private File root;
+
+  private TemporaryFolderExtension()
+  {
+    this(null, Scope.TEST);
+  }
+
+  private TemporaryFolderExtension(final File parentDirectory)
+  {
+    this(parentDirectory, Scope.TEST);
+  }
+
+  public static TemporaryFolderExtension classScoped()
+  {
+    return new TemporaryFolderExtension(null, Scope.CLASS);
+  }
+
+  public static TemporaryFolderExtension testCaseScoped()
+  {
+    return new TemporaryFolderExtension(null, Scope.TEST);
+  }
+
+  private TemporaryFolderExtension(final File parentDirectory, final Scope scope)
   {
     this.parentDirectory = parentDirectory;
+    this.scope = scope;
   }
 
   @Override
   public void beforeAll(final ExtensionContext context) throws IOException
   {
-    create();
+    if (scope == Scope.CLASS) {
+      create();
+    }
   }
 
   @Override
   public void beforeEach(final ExtensionContext context) throws IOException
   {
-    create();
+    if (scope == Scope.TEST) {
+      create();
+    }
   }
 
   @Override
   public void afterAll(final ExtensionContext context) throws IOException
   {
-    delete();
+    if (scope == Scope.CLASS) {
+      delete();
+    }
   }
 
   @Override
   public void afterEach(final ExtensionContext context) throws IOException
   {
-    delete();
+    if (scope == Scope.TEST) {
+      delete();
+    }
   }
 
   public void create() throws IOException

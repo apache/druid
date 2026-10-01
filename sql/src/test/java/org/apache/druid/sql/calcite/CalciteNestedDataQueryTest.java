@@ -2401,7 +2401,8 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                                 )
                             )
                             .setVirtualColumns(
-                                new NestedFieldVirtualColumn("arrayLongNulls", "$[1]", "v0", ColumnType.LONG)
+                                expressionVirtualColumn("v0", "(\"v1\" != 0)", ColumnType.LONG),
+                                new NestedFieldVirtualColumn("arrayLongNulls", "$[1]", "v1", ColumnType.LONG)
                             )
                             .setDimFilter(isNull("v0"))
                             .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -4318,8 +4319,6 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumPathMixed()
   {
-    // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
-    skipVectorize();
     testQuery(
         "SELECT "
         + "SUM(JSON_VALUE(nest, '$.mixed')) "
@@ -4346,8 +4345,6 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumPathMixedFilteredAggLong()
   {
-    // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
-    skipVectorize();
     // this one actually equals 2.1 because the filter is a long so double is cast and is 1 so both rows match
     testQuery(
         "SELECT "
@@ -4385,8 +4382,6 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSumPathMixedFilteredAggDouble()
   {
-    // throws a "Cannot make vector value selector for variant typed nested field [[LONG, DOUBLE]]"
-    skipVectorize();
     // with double matcher, only the one row matches since the long value cast is not picked up
     testQuery(
         "SELECT "
@@ -4574,6 +4569,34 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.DOUBLE)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testReturningDecimalFilterFractionalLiteral()
+  {
+    testQuery(
+        "SELECT string, JSON_VALUE(nest, '$.mixed' RETURNING DECIMAL) "
+        + "FROM druid.nested "
+        + "WHERE JSON_VALUE(nest, '$.mixed' RETURNING DECIMAL) = 1.1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(new NestedFieldVirtualColumn("nest", "$.mixed", "v0", ColumnType.DOUBLE))
+                .filters(equality("v0", 1.1, ColumnType.DOUBLE))
+                .columns("string", "v0")
+                .columnTypes(ColumnType.STRING, ColumnType.DOUBLE)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"ccc", 1.1}
+        ),
+        RowSignature.builder()
+                    .add("string", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.DOUBLE)
                     .build()
     );
   }

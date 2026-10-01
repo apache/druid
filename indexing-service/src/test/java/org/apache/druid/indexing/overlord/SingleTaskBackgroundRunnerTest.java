@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -61,13 +62,14 @@ import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -81,8 +83,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class SingleTaskBackgroundRunnerTest
 {
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private SingleTaskBackgroundRunner runner;
 
@@ -92,7 +94,7 @@ public class SingleTaskBackgroundRunnerTest
     final TestUtils utils = new TestUtils();
     final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBaseDir(File.createTempFile("base", null, temporaryFolder).toString())
+        .setBaseDir(temporaryFolder.newFile().toString())
         .setRestoreTasksOnRestart(true)
         .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();
@@ -155,6 +157,19 @@ public class SingleTaskBackgroundRunnerTest
   public void teardown()
   {
     runner.stop();
+  }
+
+  @Test
+  public void testTaskLocationUsesAdvertisedPlaintextPort()
+  {
+    final SingleTaskBackgroundRunner advertisedRunner = new SingleTaskBackgroundRunner(
+        EasyMock.createMock(TaskToolboxFactory.class),
+        new TaskConfigBuilder().build(),
+        new NoopServiceEmitter(),
+        new DruidNode("testServer", "testHost", false, 1000, null, null, true, false, null, 2000),
+        new ServerConfig()
+    );
+    Assertions.assertEquals(TaskLocation.create("testHost", 2000, -1), advertisedRunner.getTaskLocation("any"));
   }
 
   @Test
@@ -235,13 +250,13 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void locationChanged(String taskId, TaskLocation newLocation)
+          public void locationChanged(Task task, TaskLocation newLocation)
           {
             // do nothing
           }
 
           @Override
-          public void statusChanged(String taskId, TaskStatus status)
+          public void statusChanged(Task task, TaskStatus status)
           {
             statusHolder.set(status);
           }
@@ -298,13 +313,13 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void locationChanged(String taskId, TaskLocation newLocation)
+          public void locationChanged(Task task, TaskLocation newLocation)
           {
             // do nothing
           }
 
           @Override
-          public void statusChanged(String taskId, TaskStatus status)
+          public void statusChanged(Task task, TaskStatus status)
           {
             if (status.getStatusCode() == TaskState.RUNNING) {
               runLatch.countDown();

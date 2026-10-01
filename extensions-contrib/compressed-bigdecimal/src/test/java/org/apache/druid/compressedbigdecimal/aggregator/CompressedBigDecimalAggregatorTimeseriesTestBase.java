@@ -48,10 +48,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TimeZone;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -122,16 +127,22 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
       String expected
   ) throws Exception
   {
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
-        this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
-        SCHEMA,
-        FORMAT,
-        ingestionAggregators,
-        0,
-        Granularities.NONE,
-        5,
-        query
-    );
+    final Sequence seq;
+    try (final InputStream inputStream = Objects.requireNonNull(
+        CompressedBigDecimalAggregatorTimeseriesTestBase.class.getResourceAsStream("/bd_test_data.csv"),
+        "Missing resource /bd_test_data.csv"
+    )) {
+      seq = helper.createIndexAndRunQueryOnSegment(
+          inputStream,
+          SCHEMA,
+          FORMAT,
+          ingestionAggregators,
+          0,
+          Granularities.NONE,
+          5,
+          query
+      );
+    }
 
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
     Map<String, Object> event = result.getBaseObject();
@@ -163,7 +174,7 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
     final File segmentDir1 = new File(tempFolder, "segment1");
     FileUtils.mkdirp(segmentDir1);
     helper.createIndex(
-        new File(this.getClass().getResource("/" + "bd_test_data.csv").getFile()),
+        copyResourceToTemporaryFile("/bd_test_data.csv"),
         SCHEMA,
         FORMAT,
         ingestionAggregators,
@@ -175,7 +186,7 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
     final File segmentDir2 = new File(tempFolder, "segment2");
     FileUtils.mkdirp(segmentDir2);
     helper.createIndex(
-        new File(this.getClass().getResource("/" + "bd_test_zero_data.csv").getFile()),
+        copyResourceToTemporaryFile("/bd_test_zero_data.csv"),
         SCHEMA,
         FORMAT,
         ingestionAggregators,
@@ -201,5 +212,17 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
         new ArrayCompressedBigDecimal(new BigDecimal(expected)),
         event.get("cbdStringRevenue")
     );
+  }
+
+  private File copyResourceToTemporaryFile(final String resource) throws IOException
+  {
+    final File resourceFile = Files.createTempFile(tempFolder.toPath(), "compressed-bigdecimal-", ".csv").toFile();
+    try (final InputStream inputStream = Objects.requireNonNull(
+        CompressedBigDecimalAggregatorTimeseriesTestBase.class.getResourceAsStream(resource),
+        "Missing resource " + resource
+    )) {
+      Files.copy(inputStream, resourceFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+    }
+    return resourceFile;
   }
 }

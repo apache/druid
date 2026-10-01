@@ -72,7 +72,7 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     OldApiSketchModule sm = new OldApiSketchModule();
     sm.configure(null);
 
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         sm.getJacksonModules(),
         config,
         tempFolder

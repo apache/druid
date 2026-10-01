@@ -27,6 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskIdStatus;
@@ -53,7 +54,6 @@ import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;

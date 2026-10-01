@@ -40,6 +40,7 @@ import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
+import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,6 +49,7 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Map;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -234,8 +236,12 @@ public class BasicAuthTest extends BaseCalciteQueryTest
                                        .build();
 
     try (TestClient client = new TestClient(TestClient.DEFAULT_HOST, "regular", "pwd")) {
-      StatusRuntimeException e = assertThrows(StatusRuntimeException.class, () -> client.getQueryClient().submitQuery(request));
-      assertEquals(Status.PERMISSION_DENIED, e.getStatus());
+      QueryResponse response = client.getQueryClient().submitQuery(request);
+      assertEquals(QueryStatus.RUNTIME_ERROR, response.getStatus());
+      assertThat(
+          response.getErrorMessage(),
+          CoreMatchers.startsWith("Object 'forbiddenDatasource' not found")
+      );
     }
   }
 }

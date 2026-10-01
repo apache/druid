@@ -69,7 +69,7 @@ public class DoublesSketchAggregatorTest extends InitializedNullHandlingTest
     this.config = config;
     DoublesSketchModule.registerSerde();
     DoublesSketchModule module = new DoublesSketchModule();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(),
         config,
         tempFolder

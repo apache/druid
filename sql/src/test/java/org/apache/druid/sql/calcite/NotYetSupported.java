@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
@@ -95,7 +94,9 @@ public @interface NotYetSupported
     AGGREGATION_NOT_SUPPORT_TYPE(Scope.WINDOWING, DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
     ALLDATA_CSV(Scope.WINDOWING, DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(Scope.WINDOWING, DruidException.class, "Cannot apply '.' to arguments of type"),
-    VIEWS_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "Incorrect syntax near the keyword 'CREATE'"),
+    // CREATE starts a catalog DDL statement, so the parser now gets as far as the object being created before
+    // failing, rather than rejecting the CREATE keyword outright.
+    VIEWS_NOT_SUPPORTED(Scope.WINDOWING, DruidException.class, "Received an unexpected token \\[VIEW\\]"),
     RESULT_MISMATCH(Scope.WINDOWING, AssertionError.class, "(assertResulEquals|AssertionError: column content mismatch)"),
     LONG_CASTING(Scope.WINDOWING, AssertionError.class, "expected: java.lang.Long"),
     UNSUPPORTED_NULL_ORDERING(Scope.WINDOWING, DruidException.class, "(A|DE)SCENDING ordering with NULLS (LAST|FIRST)"),
@@ -188,7 +189,7 @@ public @interface NotYetSupported
           }
           // If the base test case is supposed to be ignored already, just skip
           // the further evaluation
-          if (e instanceof AssumptionViolatedException || e instanceof TestAbortedException) {
+          if (e instanceof TestAbortedException) {
             throw e;
           }
           if (e instanceof IncompleteExecutionException) {

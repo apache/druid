@@ -31,12 +31,14 @@ import org.apache.druid.segment.loading.CacheEntry;
 import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationSelectorStrategy;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.LongSupplier;
@@ -239,9 +241,23 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
     }
 
     if (loadingThreadPool.isAvailable()) {
-      return loadingThreadPool.submitCloseableAsyncResource(
-          () -> reserveAndPopulate(identifier, sizeSupplier, populator)
-      );
+      final SettableAsyncResource<CachedFile> resource = new SettableAsyncResource<>();
+      final Future<?> future = loadingThreadPool.getExecutorService().submit(() -> {
+        try {
+          final CachedFile populated = reserveAndPopulate(identifier, sizeSupplier, populator);
+          if (!resource.set(ResourceHolder.fromCloseable(populated))) {
+            CloseableUtils.closeAndSuppressExceptions(
+                populated,
+                e -> log.warn(e, "Failed to release abandoned cache entry for identifier[%s]", identifier)
+            );
+          }
+        }
+        catch (Throwable t) {
+          resource.setException(t);
+        }
+      });
+      resource.setCanceler(() -> future.cancel(true));
+      return resource;
     } else {
       final SettableAsyncResource<CachedFile> resource = new SettableAsyncResource<>();
       try {

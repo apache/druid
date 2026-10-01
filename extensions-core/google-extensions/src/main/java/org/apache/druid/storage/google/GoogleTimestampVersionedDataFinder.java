@@ -35,9 +35,9 @@ public class GoogleTimestampVersionedDataFinder extends GoogleDataSegmentPuller
   private static final long MAX_LISTING_KEYS = 1000;
 
   @Inject
-  public GoogleTimestampVersionedDataFinder(final GoogleStorage storage)
+  public GoogleTimestampVersionedDataFinder(final GoogleStorage storage, final GoogleInputDataConfig inputDataConfig)
   {
-    super(storage);
+    super(storage, inputDataConfig);
   }
 
   @Override

@@ -20,7 +20,8 @@
 package org.apache.druid.security.basic.authentication.db.cache;
 
 import com.google.inject.Injector;
-import org.apache.druid.java.util.common.FileUtils;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -30,20 +31,15 @@ import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
 import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -51,8 +47,8 @@ import java.util.concurrent.TimeUnit;
 
 public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void test_stop_interruptsPollingThread() throws InterruptedException, IOException
@@ -83,31 +79,14 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
     final CountDownLatch requestStarted = new CountDownLatch(1);
     final CountDownLatch requestInterrupted = new CountDownLatch(1);
 
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, path),
-        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK) {
-          @Override
-          public ChannelBuffer getContent()
-          {
-            requestStarted.countDown();
-            try {
-              Thread.sleep(10_000);
-              return null;
-            }
-            catch (InterruptedException e) {
-              requestInterrupted.countDown();
-              throw new RuntimeException(e);
-            }
-          }
-        }
-    );
+    serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, path), requestStarted, requestInterrupted);
 
     EasyMock.replay(injector);
 
     final int numRetries = 10;
     final CoordinatorPollingBasicAuthenticatorCacheManager manager = new CoordinatorPollingBasicAuthenticatorCacheManager(
         injector,
-        new BasicAuthCommonCacheConfig(0L, 1L, newFolder(temporaryFolder, "junit").getAbsolutePath(), numRetries),
+        new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
         TestHelper.JSON_MAPPER,
         serviceClient
     );
@@ -121,11 +100,6 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
     Assertions.assertTrue(requestInterrupted.await(5, TimeUnit.SECONDS));
 
     EasyMock.verify(injector);
-  }
-
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 
 }

@@ -28,10 +28,11 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -49,8 +50,8 @@ import java.util.zip.GZIPOutputStream;
  */
 public class OssDataSegmentPullerTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSimpleGetVersion() throws IOException
@@ -93,7 +94,7 @@ public class OssDataSegmentPullerTest
     final OSS ossClient = EasyMock.createStrictMock(OSS.class);
     final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
 
-    final File tmpFile = new File(temporaryFolder, "gzTest.gz");
+    final File tmpFile = new File(temporaryFolder.getRoot(), "gzTest.gz");
 
     try (final FileOutputStream fileOutputStream = new FileOutputStream(tmpFile);
          final OutputStream outputStream = new GZIPOutputStream(fileOutputStream)) {
@@ -113,7 +114,7 @@ public class OssDataSegmentPullerTest
     final ObjectMetadata objectMetadata = new ObjectMetadata();
     objectMetadata.setLastModified(new Date(1));
 
-    final File tmpDir = newFolder(temporaryFolder, "gzTestDir");
+    final File tmpDir = temporaryFolder.newFolder();
 
     try (final InputStream objectContent = new FileInputStream(tmpFile)) {
       object0.setObjectContent(objectContent);
@@ -152,7 +153,7 @@ public class OssDataSegmentPullerTest
     final OSS ossClient = EasyMock.createStrictMock(OSS.class);
     final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
 
-    final File tmpFile = new File(temporaryFolder, "gzTest.gz");
+    final File tmpFile = new File(temporaryFolder.getRoot(), "gzTest.gz");
 
     try (final FileOutputStream fileOutputStream = new FileOutputStream(tmpFile);
          final OutputStream outputStream = new GZIPOutputStream(fileOutputStream)) {
@@ -168,7 +169,7 @@ public class OssDataSegmentPullerTest
     final ObjectMetadata objectMetadata = new ObjectMetadata();
     objectMetadata.setLastModified(new Date(0));
 
-    File tmpDir = newFolder(temporaryFolder, "gzTestDir");
+    File tmpDir = temporaryFolder.newFolder();
 
     OSSException exception = new OSSException("OssDataSegmentPullerTest", "NoSuchKey", null, null, null, null, null);
     try (final InputStream objectContent = new FileInputStream(tmpFile)) {
@@ -204,14 +205,6 @@ public class OssDataSegmentPullerTest
       Assertions.assertTrue(expected.exists());
       Assertions.assertEquals(value.length, expected.length());
     }
-  }
-
-  private static File newFolder(File root, String... subDirs) throws IOException
-  {
-    final String subFolder = String.join("/", subDirs);
-    final File result = new File(root, subFolder);
-    FileUtils.mkdirp(result);
-    return result;
   }
 
 }

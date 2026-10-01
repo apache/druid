@@ -44,7 +44,7 @@ public interface ValueIndexes
    * @param valueType   type of the value to match, used to assist conversion from the match value type to the column
    *                    value type
    * @return            {@link ImmutableBitmap} corresponding to the rows which match the value, or null if an index
-   *                    connot be computed for the supplied value type
+   *                    cannot be computed for the supplied value type
    */
   @Nullable
   BitmapColumnIndex forValue(@Nonnull Object value, TypeSignature<ValueType> valueType);

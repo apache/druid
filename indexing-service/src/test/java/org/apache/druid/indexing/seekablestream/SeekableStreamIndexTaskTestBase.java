@@ -72,7 +72,6 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -115,6 +114,7 @@ import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.DeepStorageSegmentConfig;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -128,6 +128,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CompressionUtils;
 import org.apache.druid.utils.JvmUtils;
@@ -137,7 +138,7 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -162,8 +163,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
 {
   private static final Logger log = new Logger(SeekableStreamIndexTaskTestBase.class);
 
-  @TempDir
-  protected File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -560,7 +561,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       throws IOException
   {
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
-    directory = FileUtils.createTempDirInLocation(tempFolder.toPath(), null);
+    directory = temporaryFolder.newFolder();
     final TaskConfig taskConfig =
         new TaskConfigBuilder()
             .setBaseDir(new File(directory, "baseDir").getPath())
@@ -664,8 +665,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     };
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();
     dataSegmentPusherConfig.storageDirectory = getSegmentDirectory();
-    dataSegmentPusherConfig.zip = true;
-    final DataSegmentPusher dataSegmentPusher = new LocalDataSegmentPusher(dataSegmentPusherConfig);
+    final DataSegmentPusher dataSegmentPusher =
+        new LocalDataSegmentPusher(dataSegmentPusherConfig, new DeepStorageSegmentConfig(true));
 
     toolboxFactory = new TaskToolboxFactory(
         null,

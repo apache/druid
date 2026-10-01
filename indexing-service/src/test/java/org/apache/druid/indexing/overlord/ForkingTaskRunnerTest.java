@@ -51,11 +51,12 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.assertj.core.util.Lists;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
@@ -66,10 +67,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -77,23 +80,13 @@ public class ForkingTaskRunnerTest
 {
 
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  @TempDir
-  private File temporaryFolder;
-
-  private File newTempFolder()
-  {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "tmp");
-  }
-
-  private File newTempFile() throws IOException
-  {
-    return File.createTempFile("tmp", null, temporaryFolder);
-  }
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testGetJavaCommandPrefersRunJavaScriptWhenPresent() throws IOException
   {
-    final File workingDir = newTempFolder();
+    final File workingDir = temporaryFolder.newFolder();
     final File binDir = new File(workingDir, "bin");
     FileUtils.mkdirp(binDir);
     Assertions.assertTrue(new File(binDir, "run-java").createNewFile());
@@ -108,7 +101,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGetJavaCommandFallsBackToJavaWhenScriptAbsent() throws IOException
   {
-    final File workingDir = newTempFolder();
+    final File workingDir = temporaryFolder.newFolder();
     Assertions.assertEquals(
         "java",
         ForkingTaskRunner.getJavaCommand(null, workingDir)
@@ -124,7 +117,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGetJavaCommandRespectsExplicitOverride() throws IOException
   {
-    final File workingDir = newTempFolder();
+    final File workingDir = temporaryFolder.newFolder();
     final File binDir = new File(workingDir, "bin");
     FileUtils.mkdirp(binDir);
     Assertions.assertTrue(new File(binDir, "run-java").createNewFile());
@@ -318,7 +311,7 @@ public class ForkingTaskRunnerTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     Task task = NoopTask.create();
-    File file = newTempFolder();
+    File file = temporaryFolder.newFolder();
     TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
         .setBaseTaskDir(file.toString())
         .build();
@@ -376,7 +369,7 @@ public class ForkingTaskRunnerTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     Task task = NoopTask.create();
-    File file = newTempFolder();
+    File file = temporaryFolder.newFolder();
     TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
         .setBaseTaskDir(file.toString())
         .build();
@@ -425,7 +418,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGettingTheNextAttemptDir() throws IOException
   {
-    File file = newTempFolder();
+    File file = temporaryFolder.newFolder();
     TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
         .setBaseTaskDir(file.toString())
         .build();
@@ -448,7 +441,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGettingTheNextAttemptDirFailsIfAttemptDirectoryCannotBeCreated() throws IOException
   {
-    final File taskDir = newTempFile();
+    final File taskDir = temporaryFolder.newFile();
     final File attemptDir = new File(taskDir, "attempt");
 
     final ISE exception = Assertions.assertThrows(
@@ -463,7 +456,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGettingTheNextAttemptDirFailsIfAttemptCannotBeCreated() throws IOException
   {
-    final File taskDir = newTempFolder();
+    final File taskDir = temporaryFolder.newFolder();
     final File attemptDir = new File(taskDir, "attempt");
     FileUtils.mkdirp(attemptDir);
     final File attempt = new File(attemptDir, "1");
@@ -538,6 +531,70 @@ public class ForkingTaskRunnerTest
   }
 
   @Test
+  public void testChildNeverInheritsAdvertisedPlaintextPort() throws ExecutionException, InterruptedException
+  {
+    final Properties props = new Properties();
+    props.setProperty("druid.advertisedPlaintextPort", "9443");
+    props.setProperty("druid.indexer.fork.property.druid.advertisedPlaintextPort", "9444");
+    final Task task = new NoopTask(
+        null,
+        null,
+        null,
+        1L,
+        0L,
+        Map.of("druid.indexer.fork.property.druid.advertisedPlaintextPort", 9445)
+    );
+    final AtomicReference<List<String>> childCommand = new AtomicReference<>();
+    final TaskConfig taskConfig = makeDefaultTaskConfigBuilder().build();
+    final WorkerConfig workerConfig = new WorkerConfig();
+    final ForkingTaskRunner forkingTaskRunner = new ForkingTaskRunner(
+        new ForkingTaskRunnerConfig(),
+        taskConfig,
+        workerConfig,
+        props,
+        new NoopTaskLogs(),
+        OBJECT_MAPPER,
+        new DruidNode("middleManager", "host", false, 8091, null, null, true, false, null, 9443),
+        new StartupLoggingConfig(),
+        TaskStorageDirTracker.fromConfigs(workerConfig, taskConfig)
+    )
+    {
+      @Override
+      ProcessHolder runTaskProcess(List<String> command, File logFile, TaskLocation taskLocation)
+      {
+        childCommand.set(command);
+        return makeTestProcessHolder(logFile, taskLocation);
+      }
+
+      @Override
+      int waitForTaskProcessToComplete(Task task, ProcessHolder processHolder, File logFile, File reportsFile)
+      {
+        return 1;
+      }
+    };
+
+    forkingTaskRunner.setNumProcessorsPerTask();
+    forkingTaskRunner.run(task).get();
+
+    final List<String> advertisedArgs = childCommand.get()
+                                                    .stream()
+                                                    .filter(arg -> arg.startsWith("-Ddruid.advertisedPlaintextPort="))
+                                                    .collect(Collectors.toList());
+    Assertions.assertTrue(
+        advertisedArgs.containsAll(
+            List.of(
+                "-Ddruid.advertisedPlaintextPort=9443",
+                "-Ddruid.advertisedPlaintextPort=9444",
+                "-Ddruid.advertisedPlaintextPort=9445"
+            )
+        ),
+        advertisedArgs.toString()
+    );
+    // The JVM keeps the last -D value, so the forced -1 must come after every inherited or overridden value.
+    Assertions.assertEquals("-Ddruid.advertisedPlaintextPort=-1", advertisedArgs.get(advertisedArgs.size() - 1));
+  }
+
+  @Test
   public void testInvalidTaskContextJavaOptsArray() throws JsonProcessingException
   {
     final String taskContent = "{\n"
@@ -602,12 +659,13 @@ public class ForkingTaskRunnerTest
   public void testCannotRestoreTasks() throws Exception
   {
     TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .setGracefulShutdownTimeout(new Period("PT1S"))
         .build();
 
     TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromBaseDirs(
         ImmutableList.of(
-            newTempFolder().getAbsoluteFile(),
-            newTempFolder().getAbsoluteFile()
+            temporaryFolder.newFolder().getAbsoluteFile(),
+            temporaryFolder.newFolder().getAbsoluteFile()
         ),
         1,
         100_000_000_000_000_000L
@@ -633,8 +691,13 @@ public class ForkingTaskRunnerTest
 
     forkingTaskRunner.setNumProcessorsPerTask();
     Task task = NoopTask.create();
-    forkingTaskRunner.run(task);
-    Assertions.assertTrue(forkingTaskRunner.restore().isEmpty());
+    try {
+      forkingTaskRunner.run(task);
+      Assertions.assertTrue(forkingTaskRunner.restore().isEmpty());
+    }
+    finally {
+      forkingTaskRunner.stop();
+    }
   }
 
   @Test

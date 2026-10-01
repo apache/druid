@@ -28,6 +28,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 import com.google.common.util.concurrent.Futures;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.common.guava.DSuppliers;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -59,19 +62,18 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -101,10 +103,13 @@ import static org.easymock.EasyMock.isA;
  */
 public class HttpRemoteTaskRunnerTest
 {
+  private StubServiceEmitter emitter;
+
   @BeforeEach
   public void setup()
   {
-    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+    emitter = new StubServiceEmitter();
+    EmittingLogger.registerEmitter(emitter);
   }
 
   /*
@@ -451,9 +456,15 @@ public class HttpRemoteTaskRunnerTest
     TaskStorage taskStorageMock = EasyMock.createStrictMock(TaskStorage.class);
     EasyMock.expect(taskStorageMock.getStatus(task1.getId())).andReturn(Optional.absent());
     EasyMock.expect(taskStorageMock.getStatus(task2.getId())).andReturn(Optional.absent()).times(2);
+
     EasyMock.expect(taskStorageMock.getStatus(task3.getId())).andReturn(Optional.of(TaskStatus.running(task3.getId())));
+    EasyMock.expect(taskStorageMock.getTask(task3.getId())).andReturn(Optional.of(task3));
+
     EasyMock.expect(taskStorageMock.getStatus(task4.getId())).andReturn(Optional.of(TaskStatus.running(task4.getId())));
+    EasyMock.expect(taskStorageMock.getTask(task4.getId())).andReturn(Optional.of(task4));
+
     EasyMock.expect(taskStorageMock.getStatus(task5.getId())).andReturn(Optional.of(TaskStatus.success(task5.getId())));
+
     EasyMock.replay(taskStorageMock);
 
     HttpRemoteTaskRunner taskRunner = new HttpRemoteTaskRunner(
@@ -1396,7 +1407,9 @@ public class HttpRemoteTaskRunnerTest
 
     TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
     EasyMock.expect(taskStorage.getStatus(task1.getId())).andReturn(Optional.of(TaskStatus.running(task1.getId())));
+    EasyMock.expect(taskStorage.getTask(task1.getId())).andReturn(Optional.of(task1));
     EasyMock.expect(taskStorage.getStatus(task2.getId())).andReturn(Optional.of(TaskStatus.running(task2.getId())));
+    EasyMock.expect(taskStorage.getTask(task2.getId())).andReturn(Optional.of(task2));
     EasyMock.expect(taskStorage.getStatus(task3.getId())).andReturn(Optional.of(TaskStatus.success(task3.getId())));
     EasyMock.expect(taskStorage.getStatus(task4.getId())).andReturn(Optional.of(TaskStatus.success(task4.getId())));
     EasyMock.expect(taskStorage.getStatus(task5.getId())).andReturn(Optional.absent());
@@ -1466,6 +1479,54 @@ public class HttpRemoteTaskRunnerTest
             ImmutableList.of(task2.getId(), TaskStatus.success(task2.getId()))
         )
     );
+  }
+
+  @Test
+  public void test_taskAddedOrUpdated_taskNotFoundInStorage_raisesAlert_andShutsDownTask()
+  {
+    final Task task = NoopTask.create();
+
+    // Setup storage to return a task status but not the task payload
+    final TaskStatus statusInStorage = TaskStatus.running(task.getId());
+
+    final TaskStorage taskStorage = EasyMock.createMock(TaskStorage.class);
+    EasyMock.expect(taskStorage.getStatus(task.getId())).andReturn(Optional.of(statusInStorage));
+    EasyMock.expect(taskStorage.getTask(task.getId())).andReturn(Optional.absent());
+    EasyMock.replay(taskStorage);
+
+    final HttpRemoteTaskRunner taskRunner =
+        createTaskRunnerForTestTaskAddedOrUpdated(taskStorage, new ArrayList<>());
+
+    // Expect worker to get shutdown notification
+    final Worker worker = new Worker("http", "localhost", "127.0.0.1", 1, "v1", WorkerConfig.DEFAULT_CATEGORY);
+    final WorkerHolder workerHolder = EasyMock.createMock(WorkerHolder.class);
+    EasyMock.expect(workerHolder.getWorker()).andReturn(worker).anyTimes();
+    workerHolder.shutdownTask(task.getId());
+    EasyMock.replay(workerHolder);
+
+    Assertions.assertEquals(0, taskRunner.getKnownTasks().size());
+
+    // Send the announcement to the TaskRunner
+    final TaskAnnouncement announcement = TaskAnnouncement.create(
+        task,
+        TaskStatus.running(task.getId()),
+        TaskLocation.create("worker", 1, 2)
+    );
+    taskRunner.taskAddedOrUpdated(announcement, workerHolder);
+
+    // Verify that alert has been raised
+    final List<AlertEvent> alerts = emitter.getAlerts();
+    Assertions.assertEquals(1, alerts.size());
+    Assertions.assertEquals(
+        StringUtils.format(
+            "Could not fetch payload of task[%s] with status[%s]."
+            + " Ignoring notification[%s] from worker[%s].",
+            task.getId(), statusInStorage, announcement, worker.getHost()
+        ),
+        alerts.getFirst().getDescription()
+    );
+
+    EasyMock.verify(workerHolder, taskStorage);
   }
 
   @Test
@@ -1905,15 +1966,15 @@ public class HttpRemoteTaskRunnerTest
             }
 
             @Override
-            public void locationChanged(String taskId, TaskLocation newLocation)
+            public void locationChanged(Task task, TaskLocation newLocation)
             {
-              listenerNotificationsAccumulator.add(ImmutableList.of(taskId, newLocation));
+              listenerNotificationsAccumulator.add(ImmutableList.of(task.getId(), newLocation));
             }
 
             @Override
-            public void statusChanged(String taskId, TaskStatus status)
+            public void statusChanged(Task task, TaskStatus status)
             {
-              listenerNotificationsAccumulator.add(ImmutableList.of(taskId, status));
+              listenerNotificationsAccumulator.add(ImmutableList.of(task.getId(), status));
             }
           },
           Execs.directExecutor()

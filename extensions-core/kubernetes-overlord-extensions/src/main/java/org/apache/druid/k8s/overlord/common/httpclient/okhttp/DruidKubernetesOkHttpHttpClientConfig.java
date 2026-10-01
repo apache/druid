@@ -20,9 +20,9 @@
 package org.apache.druid.k8s.overlord.common.httpclient.okhttp;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
 
 public class DruidKubernetesOkHttpHttpClientConfig
 {

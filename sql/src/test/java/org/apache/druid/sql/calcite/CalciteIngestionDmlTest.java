@@ -276,6 +276,12 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       return this;
     }
 
+    public IngestionDmlTester plannerConfig(final PlannerConfig plannerConfig)
+    {
+      this.plannerConfig = plannerConfig;
+      return this;
+    }
+
     public IngestionDmlTester context(final Map<String, Object> context)
     {
       this.queryContext = context;

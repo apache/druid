@@ -24,9 +24,9 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.List;
@@ -58,7 +58,7 @@ public class DruidClusterTest
 
   private DruidCluster.Builder clusterBuilder;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     clusterBuilder = DruidCluster
@@ -83,18 +83,18 @@ public class DruidClusterTest
   public void testAdd()
   {
     DruidCluster cluster = clusterBuilder.build();
-    Assert.assertEquals(1, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
-    Assert.assertEquals(1, cluster.getRealtimes().size());
+    Assertions.assertEquals(1, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
+    Assertions.assertEquals(1, cluster.getRealtimes().size());
 
     clusterBuilder.add(NEW_REALTIME);
     cluster = clusterBuilder.build();
-    Assert.assertEquals(1, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
-    Assert.assertEquals(2, cluster.getRealtimes().size());
+    Assertions.assertEquals(1, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
+    Assertions.assertEquals(2, cluster.getRealtimes().size());
 
     clusterBuilder.add(NEW_HISTORICAL);
     cluster = clusterBuilder.build();
-    Assert.assertEquals(2, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
-    Assert.assertEquals(2, cluster.getRealtimes().size());
+    Assertions.assertEquals(2, cluster.getHistoricals().values().stream().mapToInt(Collection::size).sum());
+    Assertions.assertEquals(2, cluster.getRealtimes().size());
   }
 
   @Test
@@ -108,9 +108,9 @@ public class DruidClusterTest
     final Map<String, NavigableSet<ServerHolder>> expectedHistoricals = cluster.getHistoricals();
 
     final Collection<ServerHolder> allServers = cluster.getAllManagedServers();
-    Assert.assertEquals(4, allServers.size());
-    Assert.assertTrue(allServers.containsAll(cluster.getRealtimes()));
-    Assert.assertTrue(
+    Assertions.assertEquals(4, allServers.size());
+    Assertions.assertTrue(allServers.containsAll(cluster.getRealtimes()));
+    Assertions.assertTrue(
         allServers.containsAll(
             cluster.getHistoricals().values().stream()
                    .flatMap(Collection::stream)
@@ -118,15 +118,15 @@ public class DruidClusterTest
         )
     );
 
-    Assert.assertEquals(expectedHistoricals, cluster.getHistoricals());
-    Assert.assertEquals(expectedRealtimes, cluster.getRealtimes());
+    Assertions.assertEquals(expectedHistoricals, cluster.getHistoricals());
+    Assertions.assertEquals(expectedRealtimes, cluster.getRealtimes());
   }
 
   @Test
   public void testIsEmpty()
   {
     final DruidCluster emptyCluster = DruidCluster.EMPTY;
-    Assert.assertFalse(clusterBuilder.build().isEmpty());
-    Assert.assertTrue(emptyCluster.isEmpty());
+    Assertions.assertFalse(clusterBuilder.build().isEmpty());
+    Assertions.assertTrue(emptyCluster.isEmpty());
   }
 }

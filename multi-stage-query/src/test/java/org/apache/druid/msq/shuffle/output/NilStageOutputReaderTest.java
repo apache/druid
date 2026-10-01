@@ -25,12 +25,10 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,8 +41,8 @@ import java.util.concurrent.ExecutionException;
 
 public class NilStageOutputReaderTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final NilStageOutputReader reader = NilStageOutputReader.INSTANCE;
 
@@ -59,7 +57,7 @@ public class NilStageOutputReaderTest extends InitializedNullHandlingTest
     }
 
     try (final FrameFile frameFile = FrameFile.open(tmpFile, null)) {
-      Assert.assertEquals(0, frameFile.numFrames());
+      Assertions.assertEquals(0, frameFile.numFrames());
     }
   }
 
@@ -74,7 +72,7 @@ public class NilStageOutputReaderTest extends InitializedNullHandlingTest
       try (final InputStream in = reader.readRemotelyFrom(0).get()) {
         for (int i = 0; i < offset; i++) {
           final int r = in.read();
-          MatcherAssert.assertThat(r, Matchers.greaterThanOrEqualTo(0));
+          Assertions.assertTrue(r >= 0);
           out.write(r);
         }
       }
@@ -87,7 +85,7 @@ public class NilStageOutputReaderTest extends InitializedNullHandlingTest
 
     // Verify written file
     try (final FrameFile frameFile = FrameFile.open(tmpFile, null)) {
-      Assert.assertEquals(0, frameFile.numFrames());
+      Assertions.assertEquals(0, frameFile.numFrames());
     }
   }
 
@@ -97,7 +95,7 @@ public class NilStageOutputReaderTest extends InitializedNullHandlingTest
     final ListenableFuture<InputStream> future = reader.readRemotelyFrom(1000L);
 
     try (final InputStream inputStream = future.get()) {
-      Assert.assertEquals(-1, inputStream.read()); // expect EOF
+      Assertions.assertEquals(-1, inputStream.read()); // expect EOF
     }
   }
 
@@ -105,6 +103,6 @@ public class NilStageOutputReaderTest extends InitializedNullHandlingTest
   public void test_readLocally()
   {
     final ReadableFrameChannel channel = reader.readLocally();
-    Assert.assertSame(ReadableNilFrameChannel.INSTANCE, channel);
+    Assertions.assertSame(ReadableNilFrameChannel.INSTANCE, channel);
   }
 }

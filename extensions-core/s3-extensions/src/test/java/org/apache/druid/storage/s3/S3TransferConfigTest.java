@@ -19,12 +19,11 @@
 
 package org.apache.druid.storage.s3;
 
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.storage.s3.output.S3OutputConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import javax.validation.Validation;
-import javax.validation.Validator;
 
 public class S3TransferConfigTest
 {

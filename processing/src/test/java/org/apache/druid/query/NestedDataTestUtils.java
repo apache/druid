@@ -52,7 +52,6 @@ import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -144,104 +143,6 @@ public class NestedDataTestUtils
     JSON_MAPPER.registerModules(BuiltInTypesModule.getJacksonModulesList());
   }
 
-  /**
-   * Temporary compatibility bridge for the JUnit 4 {@link TemporaryFolder} and JUnit 5
-   * {@link TemporaryFolderExtension} APIs. The segment builders use this common surface while
-   * both test styles remain in use; remove it with the {@code TemporaryFolder} overloads once
-   * all callers have migrated to {@link TemporaryFolderExtension}.
-   */
-  private interface TempFolderOperations
-  {
-    File newFolder() throws IOException;
-
-    File newFolder(String... folderNames) throws IOException;
-
-    File newFile() throws IOException;
-
-    File newFile(String fileName) throws IOException;
-  }
-
-  private static TempFolderOperations tempFolderOperations(final TemporaryFolder tempFolder)
-  {
-    return new TempFolderOperations()
-    {
-      @Override
-      public File newFolder() throws IOException
-      {
-        return tempFolder.newFolder();
-      }
-
-      @Override
-      public File newFolder(final String... folderNames) throws IOException
-      {
-        return tempFolder.newFolder(folderNames);
-      }
-
-      @Override
-      public File newFile() throws IOException
-      {
-        return tempFolder.newFile();
-      }
-
-      @Override
-      public File newFile(final String fileName) throws IOException
-      {
-        return tempFolder.newFile(fileName);
-      }
-    };
-  }
-
-  private static TempFolderOperations tempFolderOperations(final TemporaryFolderExtension tempFolder)
-  {
-    return new TempFolderOperations()
-    {
-      @Override
-      public File newFolder() throws IOException
-      {
-        return tempFolder.newFolder();
-      }
-
-      @Override
-      public File newFolder(final String... folderNames) throws IOException
-      {
-        return tempFolder.newFolder(folderNames);
-      }
-
-      @Override
-      public File newFile() throws IOException
-      {
-        return tempFolder.newFile();
-      }
-
-      @Override
-      public File newFile(final String fileName) throws IOException
-      {
-        return tempFolder.newFile(fileName);
-      }
-    };
-  }
-
-  public static List<Segment> createSegmentsWithConcatenatedJsonInput(
-      TemporaryFolder tempFolder,
-      Closer closer,
-      String inputFile,
-      Granularity granularity,
-      boolean rollup,
-      int numCopies,
-      int numSegments
-  ) throws Exception
-  {
-    return createSegmentsWithConcatenatedJsonInput(
-        tempFolderOperations(tempFolder),
-        closer,
-        inputFile,
-        granularity,
-        rollup,
-        numCopies,
-        numSegments
-    );
-  }
-
   public static List<Segment> createSegmentsWithConcatenatedJsonInput(
       TemporaryFolderExtension tempFolder,
       Closer closer,
@@ -252,41 +153,20 @@ public class NestedDataTestUtils
       int numSegments
   ) throws Exception
   {
-    return createSegmentsWithConcatenatedJsonInput(
-        tempFolderOperations(tempFolder),
-        closer,
-        inputFile,
-        granularity,
-        rollup,
-        numCopies,
-        numSegments
-    );
-  }
-
-  private static List<Segment> createSegmentsWithConcatenatedJsonInput(
-      final TempFolderOperations tempFolder,
-      final Closer closer,
-      final String inputFile,
-      final Granularity granularity,
-      final boolean rollup,
-      final int numCopies,
-      final int numSegments
-  ) throws Exception
-  {
-    List<InputSource> inputFiles = Lists.newArrayListWithCapacity(numSegments);
+    final List<InputSource> inputFiles = Lists.newArrayListWithCapacity(numSegments);
     for (int i = 0; i < numSegments; i++) {
-      File file = selfConcatenateResourceFile(tempFolder, inputFile, numCopies);
+      final File file = selfConcatenateResourceFile(tempFolder, inputFile, numCopies);
       inputFiles.add(new LocalInputSource(file.getParentFile(), file.getName()));
     }
     return new ResourceFileSegmentBuilder(tempFolder, closer).inputSources(inputFiles)
-                                                 .granularity(granularity)
-                                                 .rollup(rollup)
-                                                 .build();
+                                                             .granularity(granularity)
+                                                             .rollup(rollup)
+                                                             .build();
   }
 
   public static class ResourceFileSegmentBuilder
   {
-    private final TempFolderOperations tempFolder;
+    private final TemporaryFolderExtension tempFolder;
     private final Closer closer;
 
     private List<InputSource> inputSources =
@@ -310,17 +190,7 @@ public class NestedDataTestUtils
      * <li>rollup is on by default</li>
      * <li>use the default index spec</li>
      */
-    public ResourceFileSegmentBuilder(TemporaryFolder tempFolder, Closer closer)
-    {
-      this(tempFolderOperations(tempFolder), closer);
-    }
-
     public ResourceFileSegmentBuilder(TemporaryFolderExtension tempFolder, Closer closer)
-    {
-      this(tempFolderOperations(tempFolder), closer);
-    }
-
-    private ResourceFileSegmentBuilder(TempFolderOperations tempFolder, Closer closer)
     {
       this.tempFolder = tempFolder;
       this.closer = closer;
@@ -427,39 +297,6 @@ public class NestedDataTestUtils
    */
   @Deprecated
   public static List<Segment> createSegments(
-      TemporaryFolder tempFolder,
-      Closer closer,
-      String input,
-      InputFormat inputFormat,
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      TransformSpec transformSpec,
-      AggregatorFactory[] aggregators,
-      Granularity queryGranularity,
-      boolean rollup,
-      IndexSpec indexSpec
-  ) throws Exception
-  {
-    return createSegments(
-        tempFolderOperations(tempFolder),
-        closer,
-        Collections.singletonList(ResourceInputSource.of(NestedDataTestUtils.class.getClassLoader(), input)),
-        inputFormat,
-        timestampSpec,
-        dimensionsSpec,
-        transformSpec,
-        aggregators,
-        queryGranularity,
-        rollup,
-        indexSpec
-    );
-  }
-
-  /**
-   * @deprecated Use {@link ResourceFileSegmentBuilder} instead.
-   */
-  @Deprecated
-  public static List<Segment> createSegments(
       TemporaryFolderExtension tempFolder,
       Closer closer,
       String input,
@@ -474,38 +311,9 @@ public class NestedDataTestUtils
   ) throws Exception
   {
     return createSegments(
-        tempFolderOperations(tempFolder),
+        tempFolder,
         closer,
         Collections.singletonList(ResourceInputSource.of(NestedDataTestUtils.class.getClassLoader(), input)),
-        inputFormat,
-        timestampSpec,
-        dimensionsSpec,
-        transformSpec,
-        aggregators,
-        queryGranularity,
-        rollup,
-        indexSpec
-    );
-  }
-
-  public static List<Segment> createSegments(
-      TemporaryFolder tempFolder,
-      Closer closer,
-      List<InputSource> inputs,
-      InputFormat inputFormat,
-      TimestampSpec timestampSpec,
-      DimensionsSpec dimensionsSpec,
-      TransformSpec transformSpec,
-      AggregatorFactory[] aggregators,
-      Granularity queryGranularity,
-      boolean rollup,
-      IndexSpec indexSpec
-  ) throws Exception
-  {
-    return createSegments(
-        tempFolderOperations(tempFolder),
-        closer,
-        inputs,
         inputFormat,
         timestampSpec,
         dimensionsSpec,
@@ -529,57 +337,28 @@ public class NestedDataTestUtils
       Granularity queryGranularity,
       boolean rollup,
       IndexSpec indexSpec
-  ) throws Exception
-  {
-    return createSegments(
-        tempFolderOperations(tempFolder),
-        closer,
-        inputs,
-        inputFormat,
-        timestampSpec,
-        dimensionsSpec,
-        transformSpec,
-        aggregators,
-        queryGranularity,
-        rollup,
-        indexSpec
-    );
-  }
-
-  private static List<Segment> createSegments(
-      final TempFolderOperations tempFolder,
-      final Closer closer,
-      final List<InputSource> inputs,
-      final InputFormat inputFormat,
-      final TimestampSpec timestampSpec,
-      final DimensionsSpec dimensionsSpec,
-      final TransformSpec transformSpec,
-      final AggregatorFactory[] aggregators,
-      final Granularity queryGranularity,
-      final boolean rollup,
-      final IndexSpec indexSpec
   ) throws Exception
   {
     final List<Segment> segments = Lists.newArrayListWithCapacity(inputs.size());
     for (InputSource inputSource : inputs) {
       final File segmentDir = tempFolder.newFolder();
-      IndexBuilder bob = IndexBuilder.create()
-                                     .tmpDir(segmentDir)
-                                     .schema(
-                                         IncrementalIndexSchema.builder()
-                                                               .withTimestampSpec(timestampSpec)
-                                                               .withDimensionsSpec(dimensionsSpec)
-                                                               .withMetrics(aggregators)
-                                                               .withQueryGranularity(queryGranularity)
-                                                               .withRollup(rollup)
-                                                               .withMinTimestamp(0)
-                                                               .build()
-                                     )
-                                     .indexSpec(indexSpec)
-                                     .inputSource(inputSource)
-                                     .inputFormat(inputFormat)
-                                     .transform(transformSpec)
-                                     .inputTmpDir(tempFolder.newFolder());
+      final IndexBuilder bob = IndexBuilder.create()
+                                            .tmpDir(segmentDir)
+                                            .schema(
+                                                IncrementalIndexSchema.builder()
+                                                                      .withTimestampSpec(timestampSpec)
+                                                                      .withDimensionsSpec(dimensionsSpec)
+                                                                      .withMetrics(aggregators)
+                                                                      .withQueryGranularity(queryGranularity)
+                                                                      .withRollup(rollup)
+                                                                      .withMinTimestamp(0)
+                                                                      .build()
+                                            )
+                                            .indexSpec(indexSpec)
+                                            .inputSource(inputSource)
+                                            .inputFormat(inputFormat)
+                                            .transform(transformSpec)
+                                            .inputTmpDir(tempFolder.newFolder());
       segments.add(
           new QueryableIndexSegment(
               closer.register(bob.buildMMappedIndex()),
@@ -595,38 +374,20 @@ public class NestedDataTestUtils
    * turn a small file into bigger file with a bunch of copies of itself
    */
   public static File selfConcatenateResourceFile(
-      TemporaryFolder tempFolder,
-      String inputFileName,
-      int numCopies
-  ) throws IOException
-  {
-    return selfConcatenateResourceFile(tempFolderOperations(tempFolder), inputFileName, numCopies);
-  }
-
-  public static File selfConcatenateResourceFile(
       TemporaryFolderExtension tempFolder,
       String inputFileName,
       int numCopies
   ) throws IOException
   {
-    return selfConcatenateResourceFile(tempFolderOperations(tempFolder), inputFileName, numCopies);
-  }
-
-  private static File selfConcatenateResourceFile(
-      final TempFolderOperations tempFolder,
-      final String inputFileName,
-      final int numCopies
-  ) throws IOException
-  {
-    List<InputStream> inputStreams = Lists.newArrayListWithCapacity(numCopies);
+    final List<InputStream> inputStreams = Lists.newArrayListWithCapacity(numCopies);
     for (int i = 0; i < numCopies; i++) {
-      InputStream stream = NestedDataTestUtils.class.getClassLoader().getResourceAsStream(inputFileName);
+      final InputStream stream = NestedDataTestUtils.class.getClassLoader().getResourceAsStream(inputFileName);
       inputStreams.add(stream);
       if (i + 1 < numCopies) {
         inputStreams.add(new ByteArrayInputStream(StringUtils.toUtf8("\n")));
       }
     }
-    File tmpFile = tempFolder.newFile();
+    final File tmpFile = tempFolder.newFile();
     try (
         SequenceInputStream inputDataStream = new SequenceInputStream(Collections.enumeration(inputStreams));
         OutputStream outStream = Files.newOutputStream(tmpFile.toPath())
@@ -641,16 +402,16 @@ public class NestedDataTestUtils
     return tmpFile;
   }
 
-  public static List<BiFunction<TemporaryFolder, Closer, List<Segment>>> getSegmentGenerators(
+  public static List<BiFunction<TemporaryFolderExtension, Closer, List<Segment>>> getSegmentGenerators(
       String jsonInputFile
   )
   {
-    final List<BiFunction<TemporaryFolder, Closer, List<Segment>>> segmentsGenerators =
+    final List<BiFunction<TemporaryFolderExtension, Closer, List<Segment>>> segmentsGenerators =
         new ArrayList<>();
     segmentsGenerators.add(new BiFunction<>()
     {
       @Override
-      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolderExtension tempFolder, Closer closer)
       {
         try {
           return ImmutableList.<Segment>builder()
@@ -672,7 +433,7 @@ public class NestedDataTestUtils
     segmentsGenerators.add(new BiFunction<>()
     {
       @Override
-      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolderExtension tempFolder, Closer closer)
       {
         try {
           return ImmutableList.of(
@@ -694,7 +455,7 @@ public class NestedDataTestUtils
     segmentsGenerators.add(new BiFunction<>()
     {
       @Override
-      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolderExtension tempFolder, Closer closer)
       {
         try {
           return ImmutableList.<Segment>builder()
@@ -716,7 +477,7 @@ public class NestedDataTestUtils
     segmentsGenerators.add(new BiFunction<>()
     {
       @Override
-      public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolderExtension tempFolder, Closer closer)
       {
         try {
           return Stream.of(

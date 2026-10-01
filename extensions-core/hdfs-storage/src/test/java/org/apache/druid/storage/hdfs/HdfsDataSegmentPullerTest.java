@@ -21,7 +21,6 @@ package org.apache.druid.storage.hdfs;
 
 import com.google.common.io.ByteStreams;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.utils.CompressionUtils;
@@ -61,17 +60,13 @@ public class HdfsDataSegmentPullerTest
   @BeforeAll
   public static void setupStatic() throws IOException
   {
-    hdfsTmpDir = File.createTempFile("hdfsHandlerTest", "dir");
-    if (!hdfsTmpDir.delete()) {
-      throw new IOE("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath());
-    }
+    hdfsTmpDir = FileUtils.createTempDir("hdfsHandlerTest");
     conf = new Configuration(true);
     fileSystem = new LocalFileSystem();
     fileSystem.initialize(hdfsTmpDir.toURI(), conf);
     fileSystem.setWorkingDirectory(new Path(hdfsTmpDir.toURI()));
 
-    final File tmpFile = File.createTempFile("hdfsHandlerTest", ".data");
-    tmpFile.delete();
+    final File tmpFile = new File(hdfsTmpDir, "input.data");
     try {
       Files.copy(new ByteArrayInputStream(pathByteContents), tmpFile.toPath());
       try (OutputStream stream = fileSystem.create(filePath)) {

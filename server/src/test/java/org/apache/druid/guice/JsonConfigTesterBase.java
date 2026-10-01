@@ -28,9 +28,9 @@ import com.google.inject.name.Names;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -109,7 +109,7 @@ public abstract class JsonConfigTesterBase<T>
           value = field.get(config).toString();
         }
 
-        Assert.assertEquals(propertyValues.get(propertyKey), value);
+        Assertions.assertEquals(propertyValues.get(propertyKey), value);
         ++assertions;
       }
     }
@@ -118,7 +118,7 @@ public abstract class JsonConfigTesterBase<T>
   protected JsonConfigurator configurator;
   protected JsonConfigProvider<T> configProvider;
 
-  @Before
+  @BeforeEach
   public void setup() throws IllegalAccessException
   {
     assertions = 0;
@@ -157,7 +157,7 @@ public abstract class JsonConfigTesterBase<T>
   {
     configProvider.inject(testProperties, configurator);
     validateEntries(configProvider.get());
-    Assert.assertEquals(propertyValues.size(), assertions);
+    Assertions.assertEquals(propertyValues.size(), assertions);
   }
 
 

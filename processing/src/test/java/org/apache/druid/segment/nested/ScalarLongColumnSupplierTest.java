@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -54,12 +53,13 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -80,8 +80,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
 {
   private static final String NO_MATCH = "no";
 
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   BitmapSerdeFactory bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
   DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapSerdeFactory.getBitmapFactory());
@@ -111,7 +111,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
   public void setup() throws IOException
   {
     final String fileNameBase = "test";
-    fileMapper = smooshify(fileNameBase, FileUtils.createTempDirInLocation(tempFolder.toPath(), "dir"), data);
+    fileMapper = smooshify(fileNameBase, temporaryFolder.newFolder(), data);
     baseBuffer = fileMapper.mapFile(fileNameBase);
   }
 
@@ -127,7 +127,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
       ScalarLongColumnSerializer serializer = new ScalarLongColumnSerializer(
           fileNameBase,
           NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault().getEffectiveSpec()),
-          writeOutMediumFactory.makeSegmentWriteOutMedium(FileUtils.createTempDirInLocation(tempFolder.toPath(), "dir")),
+          writeOutMediumFactory.makeSegmentWriteOutMedium(temporaryFolder.newFolder()),
           closer
       );
 
@@ -149,7 +149,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      serializer.openDictionaryWriter(FileUtils.createTempDirInLocation(tempFolder.toPath(), "dir"));
+      serializer.openDictionaryWriter(temporaryFolder.newFolder());
       serializer.serializeDictionaries(
           globalDictionarySortedCollector.getSortedStrings(),
           globalDictionarySortedCollector.getSortedLongs(),

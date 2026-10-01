@@ -173,14 +173,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInformationSchemaTables()
+  public void testInformationSchemaTables_regularUser()
   {
     msqIncompatible();
     testQuery(
-        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST\n"
-        + "FROM INFORMATION_SCHEMA.TABLES\n"
-        + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')\n"
-        + "ORDER BY TABLE_SCHEMA, TABLE_NAME",
+        PLANNER_CONFIG_DEFAULT,
+        """
+            SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')
+            ORDER BY TABLE_SCHEMA, TABLE_NAME""",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
                      .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
@@ -195,6 +198,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", TestDataSet.LARRY.getName(), "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.READ_ONLY_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.RESTRICTED_BROADCAST_DATASOURCE, "TABLE", "YES", "YES"})
                      .add(new Object[]{"druid", CalciteTests.RESTRICTED_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
@@ -219,13 +223,72 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
                      .build()
     );
+  }
 
+  @Test
+  public void testInformationSchemaTables_regularUser_noAuthorizeTableVisibility()
+  {
+    msqIncompatible();
+    testQuery(
+        PlannerConfig.builder().authorizeTableVisibility(false).build(),
+        """
+            SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')
+            ORDER BY TABLE_SCHEMA, TABLE_NAME""",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.<Object[]>builder()
+                     .add(new Object[]{"INFORMATION_SCHEMA", "COLUMNS", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"INFORMATION_SCHEMA", "ROUTINES", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"INFORMATION_SCHEMA", "SCHEMATA", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"INFORMATION_SCHEMA", "TABLES", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.ARRAYS_DATASOURCE, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.BROADCAST_DATASOURCE, "TABLE", "YES", "YES"})
+                     .add(new Object[]{"druid", CalciteTests.DATASOURCE1, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.DATASOURCE2, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.DATASOURCE4, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", TestDataSet.LARRY.getName(), "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.READ_ONLY_DATASOURCE, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.RESTRICTED_BROADCAST_DATASOURCE, "TABLE", "YES", "YES"})
+                     .add(new Object[]{"druid", CalciteTests.RESTRICTED_DATASOURCE, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.SOMEXDATASOURCE, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.USERVISITDATASOURCE, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.WIKIPEDIA, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.WIKIPEDIA_FIRST_LAST, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"lookup", "lookyloo", "TABLE", "YES", "YES"})
+                     .add(new Object[]{"lookup", "lookyloo-chain", "TABLE", "YES", "YES"})
+                     .add(new Object[]{"lookup", "lookyloo121", "TABLE", "YES", "YES"})
+                     .add(new Object[]{"sys", "segments", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"sys", "server_properties", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"sys", "server_segments", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"sys", "servers", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"sys", "supervisors", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"sys", "tasks", "SYSTEM_TABLE", "NO", "NO"})
+                     .add(new Object[]{"view", "aview", "VIEW", "NO", "NO"})
+                     .add(new Object[]{"view", "bview", "VIEW", "NO", "NO"})
+                     .add(new Object[]{"view", "cview", "VIEW", "NO", "NO"})
+                     .add(new Object[]{"view", "dview", "VIEW", "NO", "NO"})
+                     .add(new Object[]{"view", "invalidView", "VIEW", "NO", "NO"})
+                     .add(new Object[]{"view", "restrictedView", "VIEW", "NO", "NO"})
+                     .build()
+    );
+  }
+
+  @Test
+  public void testInformationSchemaTables_superUser()
+  {
+    msqIncompatible();
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        "SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST\n"
-        + "FROM INFORMATION_SCHEMA.TABLES\n"
-        + "WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')\n"
-        + "ORDER BY TABLE_SCHEMA, TABLE_NAME",
+        """
+            SELECT TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, IS_JOINABLE, IS_BROADCAST
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_TYPE IN ('SYSTEM_TABLE', 'TABLE', 'VIEW')
+            ORDER BY TABLE_SCHEMA, TABLE_NAME""",
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.<Object[]>builder()
@@ -242,6 +305,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                      .add(new Object[]{"druid", TestDataSet.LARRY.getName(), "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE5, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.DATASOURCE3, "TABLE", "NO", "NO"})
+                     .add(new Object[]{"druid", CalciteTests.READ_ONLY_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.RESTRICTED_BROADCAST_DATASOURCE, "TABLE", "YES", "YES"})
                      .add(new Object[]{"druid", CalciteTests.RESTRICTED_DATASOURCE, "TABLE", "NO", "NO"})
                      .add(new Object[]{"druid", CalciteTests.SOME_DATASOURCE, "TABLE", "NO", "NO"})
@@ -274,9 +338,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     msqIncompatible();
     testQuery(
-        "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
-        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
-        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'",
+        """
+            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'foo'""",
         ImmutableList.of(),
         ImmutableList.of(
             new Object[]{"__time", "TIMESTAMP", "NO"},
@@ -292,22 +357,47 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testInformationSchemaColumnsOnForbiddenTable()
+  public void testInformationSchemaColumnsOnForbiddenTable_regularUser()
   {
     msqIncompatible();
     testQuery(
-        "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
-        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
-        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'",
+        PLANNER_CONFIG_DEFAULT,
+        """
+            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'""",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of()
     );
+  }
 
+  @Test
+  public void testInformationSchemaColumnsOnForbiddenTable_regularUser_noAuthorizeTableVisibility()
+  {
+    msqIncompatible();
+    testQuery(
+        PlannerConfig.builder().authorizeTableVisibility(false).build(),
+        """
+            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'""",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testInformationSchemaColumnsOnForbiddenTable_superUser()
+  {
+    msqIncompatible();
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\n"
-        + "FROM INFORMATION_SCHEMA.COLUMNS\n"
-        + "WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'",
+        """
+            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = 'forbiddenDatasource'""",
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(),
         ImmutableList.of(
@@ -4146,6 +4236,15 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testTableNameIsCaseSensitive()
+  {
+    testQueryThrows(
+        "SELECT COUNT(*) FROM druid.Foo",
+        invalidSqlContains("'Foo' not found")
+    );
+  }
+
+  @Test
   public void testCountStar()
   {
     testQuery(
@@ -6103,6 +6202,51 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCountStarWithFilterOnCastAsLong()
+  {
+    // LONG is a non-reserved alias for BIGINT, so this must plan identically to
+    // testCountStarWithFilterOnCastedString() above.
+    testQuery(
+        "SELECT COUNT(*) FROM druid.foo WHERE CAST(dim1 AS long) = 2",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .filters(equality("dim1", 2L, ColumnType.LONG))
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
+  @Test
+  public void testLongIsUsableAsAnIdentifier()
+  {
+    // LONG is added to nonReservedKeywordsToAdd, so it must remain usable unquoted as a column alias.
+    testQuery(
+        "SELECT dim1 AS long FROM druid.foo LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE1)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1")
+                .columnTypes(ColumnType.STRING)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{""}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithTimeFilter()
   {
     testQuery(
@@ -6594,7 +6738,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     catch (DruidException e) {
       assertDruidException(
           e,
-          invalidSqlIs("Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]")
+          invalidSqlIs("Invalid TIMESTAMP value [z2000-01-01 00:00:00]")
       );
     }
     catch (Exception e) {
@@ -7458,7 +7602,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             )))
                                             .setSubtotalsSpec(ImmutableList.of(
                                                 ImmutableList.of("d0", "d1"),
-                                                ImmutableList.of("d0", "d2")
+                                                ImmutableList.of("d0", "d2"),
+                                                ImmutableList.of("d0")
                                             ))
                                             .setContext(withTimestampResultContext(
                                                 QUERY_CONTEXT_DEFAULT,
@@ -10034,9 +10179,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesDescending()
   {
-    // Cannot vectorize due to descending order.
-    cannotVectorize();
-
     testQuery(
         "SELECT gran, SUM(cnt) FROM (\n"
         + "  SELECT floor(__time TO month) AS gran,\n"
@@ -12391,9 +12533,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPostAggWithTimeseries()
   {
-    // Cannot vectorize due to descending order.
-    cannotVectorize();
-
     testQuery(
         "SELECT "
         + "  FLOOR(__time TO YEAR), "
@@ -13071,6 +13210,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"10.1"}
+        )
+    );
+  }
+
+  @Test
+  public void testFilterDoubleDimensionCastAsDecimal()
+  {
+    testQuery(
+        "SELECT dim1 FROM numfoo WHERE CAST(dbl1 AS DECIMAL) = 1.7 LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1")
+                .columnTypes(ColumnType.STRING)
+                .filters(equality("dbl1", 1.7, ColumnType.DOUBLE))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1"}
+        )
+    );
+  }
+
+  @Test
+  public void testCoalesceDoubleDimensionCastAsDecimal()
+  {
+    testQuery(
+        "SELECT dim1, COALESCE(CAST(dbl1 AS DECIMAL), 0.5) FROM numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "nvl(\"dbl1\",0.5)", ColumnType.DOUBLE))
+                .columns("dim1", "v0")
+                .columnTypes(ColumnType.STRING, ColumnType.DOUBLE)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 1.0},
+            new Object[]{"10.1", 1.7},
+            new Object[]{"2", 0.0},
+            new Object[]{"1", 0.5},
+            new Object[]{"def", 0.5},
+            new Object[]{"abc", 0.5}
         )
     );
   }
@@ -15579,7 +15768,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testUnSupportedAggInSelectWindow()
   {
     assertEquals(
-        "1.41.0",
+        "1.42.0",
         RelNode.class.getPackage().getImplementationVersion(),
         "Calcite version changed; check if CALCITE-6500 is fixed and update:\n * method DruidSqlValidator#validateWindowClause"
     );

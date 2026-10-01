@@ -107,7 +107,7 @@ public class SafeWritableMemoryTest
     memory.putDoubleArray(100L, double1, 0, 1);
     memory.putDoubleArray(100L + Double.BYTES, double1, 1, 3);
     memory.getDoubleArray(100L, double2, 0, 2);
-    memory.getDoubleArray(100L + (2 * Double.BYTES), double2, 2, 2);
+    memory.getDoubleArray(100L + (2L * Double.BYTES), double2, 2, 2);
     for (int i = 0; i < double1.length; i++) {
       Assertions.assertEquals(double1[i], double2[i], 0.0);
     }
@@ -117,7 +117,7 @@ public class SafeWritableMemoryTest
     memory.putFloatArray(100L, float1, 0, 1);
     memory.putFloatArray(100L + Float.BYTES, float1, 1, 3);
     memory.getFloatArray(100L, float2, 0, 2);
-    memory.getFloatArray(100L + (2 * Float.BYTES), float2, 2, 2);
+    memory.getFloatArray(100L + (2L * Float.BYTES), float2, 2, 2);
     for (int i = 0; i < float1.length; i++) {
       Assertions.assertEquals(float1[i], float2[i], 0.0);
     }
@@ -127,7 +127,7 @@ public class SafeWritableMemoryTest
     memory.putIntArray(100L, ints1, 0, 1);
     memory.putIntArray(100L + Integer.BYTES, ints1, 1, 3);
     memory.getIntArray(100L, ints2, 0, 2);
-    memory.getIntArray(100L + (2 * Integer.BYTES), ints2, 2, 2);
+    memory.getIntArray(100L + (2L * Integer.BYTES), ints2, 2, 2);
     Assertions.assertArrayEquals(ints1, ints2);
 
     final long[] longs1 = new long[]{1L, -2L, 3L, -14L};
@@ -135,7 +135,7 @@ public class SafeWritableMemoryTest
     memory.putLongArray(100L, longs1, 0, 1);
     memory.putLongArray(100L + Long.BYTES, longs1, 1, 3);
     memory.getLongArray(100L, longs2, 0, 2);
-    memory.getLongArray(100L + (2 * Long.BYTES), longs2, 2, 2);
+    memory.getLongArray(100L + (2L * Long.BYTES), longs2, 2, 2);
     Assertions.assertArrayEquals(longs1, longs2);
 
     final short[] shorts1 = new short[]{1, -2, 3, -14};
@@ -143,7 +143,7 @@ public class SafeWritableMemoryTest
     memory.putShortArray(100L, shorts1, 0, 1);
     memory.putShortArray(100L + Short.BYTES, shorts1, 1, 3);
     memory.getShortArray(100L, shorts2, 0, 2);
-    memory.getShortArray(100L + (2 * Short.BYTES), shorts2, 2, 2);
+    memory.getShortArray(100L + (2L * Short.BYTES), shorts2, 2, 2);
     Assertions.assertArrayEquals(shorts1, shorts2);
   }
 
@@ -153,15 +153,15 @@ public class SafeWritableMemoryTest
     final byte theByte = 0x01;
     final byte anotherByte = 0x02;
     final WritableMemory memory = getMemory();
-    final int halfWay = (int) (memory.getCapacity() / 2);
+    final long halfWay = memory.getCapacity() / 2;
 
     memory.fill(theByte);
-    for (int i = 0; i < memory.getCapacity(); i++) {
+    for (long i = 0; i < memory.getCapacity(); i++) {
       Assertions.assertEquals(theByte, memory.getByte(i));
     }
 
     memory.fill(halfWay, memory.getCapacity() - halfWay, anotherByte);
-    for (int i = 0; i < memory.getCapacity(); i++) {
+    for (long i = 0; i < memory.getCapacity(); i++) {
       if (i < halfWay) {
         Assertions.assertEquals(theByte, memory.getByte(i));
       } else {
@@ -170,7 +170,7 @@ public class SafeWritableMemoryTest
     }
 
     memory.clear(halfWay, memory.getCapacity() - halfWay);
-    for (int i = 0; i < memory.getCapacity(); i++) {
+    for (long i = 0; i < memory.getCapacity(); i++) {
       if (i < halfWay) {
         Assertions.assertEquals(theByte, memory.getByte(i));
       } else {
@@ -184,7 +184,7 @@ public class SafeWritableMemoryTest
     Assertions.assertEquals(anotherByte, memory.getByte(halfWay - 1));
 
     memory.clear();
-    for (int i = 0; i < memory.getCapacity(); i++) {
+    for (long i = 0; i < memory.getCapacity(); i++) {
       Assertions.assertEquals(0, memory.getByte(i));
     }
   }

@@ -25,9 +25,9 @@ import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.WorkerFailureListener;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.concurrent.TimeUnit;
@@ -37,7 +37,7 @@ public class MSQWorkerTaskLauncherTest
 
   MSQWorkerTaskLauncher target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     target = new MSQWorkerTaskLauncher(
@@ -58,7 +58,7 @@ public class MSQWorkerTaskLauncherTest
     target.reportFailedInactiveWorker(1);
     target.retryInactiveTasksIfNeeded(5);
 
-    Assert.assertEquals(target.getWorkersToRelaunch(), ImmutableSet.of(1));
+    Assertions.assertEquals(target.getWorkersToRelaunch(), ImmutableSet.of(1));
   }
 
   
@@ -67,7 +67,7 @@ public class MSQWorkerTaskLauncherTest
   {
     // Test that launchWorkersIfNeeded returns empty set when no workers fail
     var result = target.launchWorkersIfNeeded(0);
-    Assert.assertTrue(result.isEmpty());
+    Assertions.assertTrue(result.isEmpty());
   }
   
   @Test
@@ -75,7 +75,7 @@ public class MSQWorkerTaskLauncherTest
   {
     // Test that waitForWorkers returns empty set when no workers fail
     var result = target.waitForWorkers(ImmutableSet.of());
-    Assert.assertTrue(result.isEmpty());
+    Assertions.assertTrue(result.isEmpty());
   }
 
   private static WorkerFailureListener getWorkerFailureListener()

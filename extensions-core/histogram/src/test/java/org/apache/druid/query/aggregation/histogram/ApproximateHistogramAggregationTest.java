@@ -60,7 +60,7 @@ public class ApproximateHistogramAggregationTest extends InitializedNullHandling
   public void initApproximateHistogramAggregationTest(final GroupByQueryConfig config)
   {
     ApproximateHistogramDruidModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Lists.newArrayList(new ApproximateHistogramDruidModule().getJacksonModules()),
         config,
         tempFolder

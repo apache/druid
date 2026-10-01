@@ -55,6 +55,7 @@ import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -64,8 +65,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -125,22 +127,22 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  @TempDir
-  static File SHARED_TEMP_DIR;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
 
-  @TempDir
-  File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;
   private SegmentLocalCacheManager manager;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(SHARED_TEMP_DIR, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     DEEP_STORAGE_DIR = IndexBuilder.create()
                                    .useV10()
                                    .tmpDir(tmp)
@@ -190,15 +192,15 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    cacheRoot = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheRoot);
+    cacheRoot = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @AfterEach
   void tearDown()
   {
     if (manager != null) {
-      // Drop the segment to release rule-holds and unmount mmap'd bundle files before @TempDir tries to clean up
+      // Drop the segment to release rule-holds and unmount mmap'd bundle files before
+      // TemporaryFolderExtension cleans up.
       // the cache directory. Without this, on some platforms the temp-dir cleanup fails on still-mapped files.
       try {
         manager.drop(partialWrapperSegment(List.of(AGG_BUNDLE)));
@@ -754,6 +756,39 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   @Test
+  void testRangeReaderNullDoesNotDisturbANonPartialEntry() throws Exception
+  {
+    // A non-partial cache entry sits at this segment id and the coordinator asks for a rule this historical cannot
+    // honor. Giving up on the rule must leave that entry alone: it is not going to be replaced by a partial one, so
+    // there is nothing to clear out of the way, and discarding its cached data would buy nothing. Evicting it used
+    // to be attempted before the range-reader check, which both destroyed cache for nothing when the entry was
+    // unheld and failed the load outright when it was held, as it is here.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+
+    final DataSegment noRangeReader =
+        partialWrapperSegmentWithNullRangeReader(List.of(AGG_BUNDLE), "v1:cannot-honor");
+    // An on-demand acquire of a segment whose load spec cannot range-read registers a non-partial entry, held for
+    // as long as the action is open.
+    final AcquireSegmentAction inFlightQuery = manager.acquireSegment(noRangeReader, AcquireMode.PARTIAL);
+    try {
+      Assertions.assertNotNull(
+          location.getCacheEntry(id),
+          "precondition: an in-flight on-demand acquire holds a non-partial entry"
+      );
+
+      manager.load(noRangeReader);
+
+      Assertions.assertNotNull(location.getCacheEntry(id), "the non-partial entry is untouched");
+      Assertions.assertNull(manager.getRuleFingerprintForSegment(SEGMENT_ID), "and no rule is applied");
+    }
+    finally {
+      inFlightQuery.close();
+    }
+  }
+
+  @Test
   void testLoadFailureLeavesNoRuleApplied() throws Exception
   {
     // Wrapper referring to a non-existent projection — wrapper.getSelectedBundleNames throws before applyRule fires.
@@ -777,6 +812,117 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertNull(
         manager.getRuleFingerprintForSegment(SEGMENT_ID),
         "failed load must not leave a rule applied on the metadata entry"
+    );
+  }
+
+  @Test
+  void testFailedEagerDownloadRestoresThePriorRule() throws Exception
+  {
+    // A reload whose eager downloads fail must put the PRIOR rule back rather than clear the rule outright. The
+    // historical keeps serving the replica and keeps announcing the prior profile (the failed load never announces a
+    // new one), so the coordinator has to still find that profile's bundles pinned; clearing would leave the replica
+    // advertising a footprint it no longer holds, with every bundle of it evictable.
+    final StorageLoadingThreadPool loadingPool = StorageLoadingThreadPool.createFromConfig(
+        SegmentLoaderConfig.builder()
+                           .locations(List.of(new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null)))
+                           .virtualStorage(true)
+                           .virtualStoragePartialDownloadsEnabled(true)
+                           .build()
+    );
+    manager = makeManagerAtLocations(true, true, List.of(cacheRoot), loadingPool);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE), "v1:rule-original"));
+    final PartialSegmentMetadataCacheEntry meta = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertEquals("v1:rule-original", meta.getRuleFingerprint());
+    Assertions.assertTrue(meta.isBundleRuleHeld(AGG_BUNDLE));
+
+    // Stopping the loading pool makes every eager download for the new rule's bundle fail to even be submitted.
+    loadingPool.stop();
+
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> manager.load(partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), "v2:rule-updated"))
+    );
+
+    Assertions.assertEquals(
+        "v1:rule-original",
+        manager.getRuleFingerprintForSegment(SEGMENT_ID),
+        "a failed reload must restore the prior rule's fingerprint, not clear it"
+    );
+    Assertions.assertTrue(
+        meta.isBundleRuleHeld(AGG_BUNDLE),
+        "the prior rule's bundle must still be pinned after the failed reload"
+    );
+    Assertions.assertTrue(
+        location.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)),
+        "the prior rule's bundle must never have been unreserved during the attempt, so it was never evictable"
+    );
+    Assertions.assertFalse(
+        meta.isBundleRuleHeld(OTHER_AGG_BUNDLE),
+        "the attempted rule's bundle must not be left pinned"
+    );
+  }
+
+  @Test
+  void testRestartAfterFailedReloadReappliesThePriorRuleNotTheFailedOne() throws Exception
+  {
+    // The durable half of the rollback. A failed reload restores the prior rule in memory and the replica keeps
+    // announcing it, so the info file has to still describe that rule too. If it described the rule that just
+    // failed, a restart would reapply it from disk, and a second failure there takes the replica down entirely:
+    // SegmentManager.loadSegmentOnBootstrap drops on failure and the segment never gets announced.
+    final StorageLoadingThreadPool loadingPool = StorageLoadingThreadPool.createFromConfig(
+        SegmentLoaderConfig.builder()
+                           .locations(List.of(new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null)))
+                           .virtualStorage(true)
+                           .virtualStoragePartialDownloadsEnabled(true)
+                           .build()
+    );
+    final SegmentLocalCacheManager beforeRestart =
+        makeManagerAtLocations(true, true, List.of(cacheRoot), loadingPool);
+    try {
+      beforeRestart.load(partialWrapperSegment(List.of(AGG_BUNDLE), "v1:rule-original"));
+      Assertions.assertEquals("v1:rule-original", beforeRestart.getRuleFingerprintForSegment(SEGMENT_ID));
+
+      loadingPool.stop();
+      Assertions.assertThrows(
+          SegmentLoadingException.class,
+          () -> beforeRestart.load(partialWrapperSegment(List.of(OTHER_AGG_BUNDLE), "v2:rule-updated"))
+      );
+      Assertions.assertEquals(
+          "v1:rule-original",
+          beforeRestart.getRuleFingerprintForSegment(SEGMENT_ID),
+          "precondition: the failed reload rolled the in-memory rule back"
+      );
+    }
+    finally {
+      beforeRestart.shutdown();
+    }
+
+    // Restart over the same cache directory.
+    manager = makeManager(true, true);
+    final List<DataSegment> cached = manager.getCachedSegments();
+    final DataSegment rediscovered = cached.stream()
+                                           .filter(s -> s.getId().equals(SEGMENT_ID))
+                                           .findFirst()
+                                           .orElseThrow();
+    Assertions.assertEquals(
+        "v1:rule-original",
+        rediscovered.getLoadSpec().get("fingerprint"),
+        "the persisted load spec must describe the rule the replica is serving under, not the failed one"
+    );
+
+    manager.bootstrap(rediscovered, SegmentLazyLoadFailCallback.NOOP);
+    Assertions.assertEquals(
+        "v1:rule-original",
+        manager.getRuleFingerprintForSegment(SEGMENT_ID),
+        "bootstrap must reapply the prior rule, not the one that failed"
+    );
+    Assertions.assertTrue(
+        manager.getLocations().get(0).isWeakReserved(
+            new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)
+        ),
+        "and pin that rule's bundle"
     );
   }
 
@@ -812,8 +958,8 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
           "bootstrap must reapply the persisted PartialLoadSpec wrapper's fingerprint"
       );
       // Selected bundle + its base dependency are held after bootstrap restore (they were on disk and got
-      // restored by the metadata mount's PartialSegmentCacheBootstrap.restoreBundlesFromDisk, which register with
-      // the metadata; applyRule picks up their rule-holds from the linkedBundles state).
+      // restored by the metadata mount's own bundle restore, which registers them with the metadata; applyRule picks
+      // up their rule-holds from the linkedBundles state).
       final StorageLocation loc = restarted.getLocations().get(0);
       Assertions.assertTrue(
           loc.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)),
@@ -836,17 +982,22 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   {
     // Setup: writable first (so info_dir defaults there), read-only second, dummy reservation on writable so
     // LeastBytesUsed picks the read-only location first. mkdirp on read-only fails → release + continue to writable.
-    final File writable = new File(perTestTempDir, "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    final File readOnly = new File(perTestTempDir, "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(writable);
-    FileUtils.mkdirp(readOnly);
+    final File writable = temporaryFolder.newFolder(
+        "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
+    final File readOnly = temporaryFolder.newFolder(
+        "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     manager = makeManagerAtLocations(true, true, List.of(writable, readOnly));
 
     // Bump writable's usage so LeastBytesUsed picks readOnly first.
     final SegmentId dummy = SegmentId.of("dummy", Intervals.of("2020/2021"), "v", 0);
-    Assertions.assertTrue(
-        manager.getLocations().get(0).reserveWeak(stubCacheEntry(new SegmentCacheEntryIdentifier(dummy), 4096L))
-    );
+    final CacheEntry filler = stubCacheEntry(new SegmentCacheEntryIdentifier(dummy), 4096L);
+    final StorageLocation.ReservationHold<CacheEntry> fillerHold =
+        manager.getLocations().get(0).addWeakReservationHold(filler.getId(), () -> filler);
+    Assertions.assertNotNull(fillerHold);
+    filler.mount(manager.getLocations().get(0));
+    fillerHold.close();
     Assertions.assertTrue(readOnly.setReadOnly(), "test setup must be able to make readOnly location read-only");
     try {
       manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
@@ -932,6 +1083,20 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
       List<File> locationRoots
   )
   {
+    return makeManagerAtLocations(virtualStorage, partialDownloadsEnabled, locationRoots, null);
+  }
+
+  /**
+   * @param loadingPool the loading pool to use, or null to build one from the config. Pass one in to keep a handle on
+   *                    it, e.g. to {@link StorageLoadingThreadPool#stop()} it mid-test and make eager downloads fail.
+   */
+  private SegmentLocalCacheManager makeManagerAtLocations(
+      boolean virtualStorage,
+      boolean partialDownloadsEnabled,
+      List<File> locationRoots,
+      @Nullable StorageLoadingThreadPool loadingPool
+  )
+  {
     final List<StorageLocationConfig> locConfigs = locationRoots.stream()
         .map(root -> new StorageLocationConfig(root, 1024L * 1024L * 1024L, null))
         .toList();
@@ -944,7 +1109,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     return new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
-        StorageLoadingThreadPool.createFromConfig(loaderConfig),
+        loadingPool == null ? StorageLoadingThreadPool.createFromConfig(loaderConfig) : loadingPool,
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
         jsonMapper
@@ -1055,11 +1220,9 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   private DataSegment partialWrapperSegmentWithNullRangeReader(List<String> selectedProjections, String fingerprint)
       throws IOException
   {
-    final File noRangeReaderDir = new File(
-        perTestTempDir,
+    final File noRangeReaderDir = temporaryFolder.newFolder(
         "no_range_reader_" + fingerprint.replace(':', '_').replace('.', '_')
     );
-    FileUtils.mkdirp(noRangeReaderDir);
     final Map<String, Object> delegate = Map.of(
         "type", "local",
         "path", noRangeReaderDir.getAbsolutePath()

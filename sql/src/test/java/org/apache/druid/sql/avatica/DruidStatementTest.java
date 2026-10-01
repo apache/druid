@@ -44,7 +44,7 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
@@ -100,11 +100,15 @@ public class DruidStatementTest extends CalciteTestBase
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final DruidSchemaCatalogProvider rootSchemaProvider = CalciteTests.createMockRootSchemaProvider(
+        conglomerate,
+        walker,
+        plannerConfig,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+    );
     final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        rootSchemaProvider,
         operatorTable,
         macroTable,
         plannerConfig,
@@ -349,6 +353,86 @@ public class DruidStatementTest extends CalciteTestBase
       frame = statement.nextFrame(2, 10);
       Assertions.assertEquals(
           secondFrameResults(),
+          frame
+      );
+      Assertions.assertTrue(statement.isDone());
+    }
+  }
+
+  /**
+   * The row limit from {@code Statement.setMaxRows()} arrives as the
+   * {@code maxRowCount} argument of
+   * {@link DruidJdbcStatement#execute(SqlQueryPlus, long, String)} and must cap
+   * the result set even when the client asks for more rows than the limit.
+   */
+  @Test
+  public void testMaxRowCountDirect()
+  {
+    SqlQueryPlus queryPlus =
+        SqlQueryPlus.builder()
+                    .sql(SELECT_FROM_FOO)
+                    .auth(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+                    .buildJdbc();
+    try (final DruidJdbcStatement statement = jdbcStatement()) {
+      // The query returns six rows; the client only wants two.
+      statement.execute(queryPlus, 2, null);
+      Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 10);
+      Assertions.assertEquals(
+          Meta.Frame.create(
+              0,
+              true,
+              Lists.newArrayList(
+                  new Object[]{DateTimes.of("2000-01-01").getMillis(), 1L, "", "a", 1.0f},
+                  new Object[]{
+                      DateTimes.of("2000-01-02").getMillis(),
+                      1L,
+                      "10.1",
+                      null,
+                      2.0f
+                  }
+              )
+          ),
+          frame
+      );
+      Assertions.assertTrue(statement.isDone());
+    }
+  }
+
+  /**
+   * A row limit reached across two frames must still mark the last frame
+   * complete. Otherwise the client keeps fetching empty, not-done frames
+   * because the underlying query has rows the limit hides.
+   */
+  @Test
+  public void testMaxRowCountSplitOverTwoFramesDirect()
+  {
+    SqlQueryPlus queryPlus =
+        SqlQueryPlus.builder()
+                    .sql(SELECT_FROM_FOO)
+                    .auth(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+                    .buildJdbc();
+    try (final DruidJdbcStatement statement = jdbcStatement()) {
+      // The query returns six rows; the client only wants three.
+      statement.execute(queryPlus, 3, null);
+
+      // First frame, ask for 2 rows: below the limit, so more rows follow.
+      Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 2);
+      Assertions.assertEquals(
+          firstFrameResults(),
+          frame
+      );
+      Assertions.assertFalse(statement.isDone());
+
+      // Second frame, ask for more rows than remain under the limit.
+      frame = statement.nextFrame(2, 10);
+      Assertions.assertEquals(
+          Meta.Frame.create(
+              2,
+              true,
+              Collections.singletonList(
+                  new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f}
+              )
+          ),
           frame
       );
       Assertions.assertTrue(statement.isDone());

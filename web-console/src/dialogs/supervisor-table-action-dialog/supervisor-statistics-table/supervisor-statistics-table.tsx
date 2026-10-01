@@ -44,6 +44,13 @@ export function normalizeSupervisorStatisticsResults(
   );
 }
 
+function sortByProcessedBytes(
+  a: RowStatsCounter | undefined,
+  b: RowStatsCounter | undefined,
+): number {
+  return Number(a?.processedBytes || 0) - Number(b?.processedBytes || 0);
+}
+
 export interface SupervisorStatisticsTableProps {
   supervisorId: string;
   downloadFilename?: string;
@@ -111,6 +118,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
         className: 'padded',
         width: 200,
         accessor: 'rowStats.totals.buildSegments',
+        sortMethod: sortByProcessedBytes,
         Cell: c => renderCounters(c, false),
       },
     ];
@@ -130,6 +138,7 @@ export const SupervisorStatisticsTable = React.memo(function SupervisorStatistic
               className: 'padded',
               width: 200,
               accessor: `rowStats.movingAverages.buildSegments.${interval}`,
+              sortMethod: sortByProcessedBytes,
               Cell: c => renderCounters(c, true),
             };
           }),

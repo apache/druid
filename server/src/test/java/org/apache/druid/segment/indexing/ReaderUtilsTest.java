@@ -39,8 +39,8 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -64,7 +64,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     );
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, null);
-    Assert.assertEquals(ImmutableSet.of("A", "B", "C", "D"), actual);
+    Assertions.assertEquals(ImmutableSet.of("A", "B", "C", "D"), actual);
   }
 
   @Test
@@ -85,7 +85,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     };
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, aggregators, null);
-    Assert.assertEquals(ImmutableSet.of("A", "B", "C", "D", "E", "F"), actual);
+    Assertions.assertEquals(ImmutableSet.of("A", "B", "C", "D", "E", "F"), actual);
   }
 
   @Test
@@ -117,7 +117,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     );
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, transformSpec, new AggregatorFactory[]{}, null);
-    Assert.assertEquals(ImmutableSet.of("A", "B", "C", "D", "E", "F", "G"), actual);
+    Assertions.assertEquals(ImmutableSet.of("A", "B", "C", "D", "E", "F", "G"), actual);
   }
 
   @Test
@@ -156,7 +156,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     );
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, transformSpec, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(ImmutableSet.of("A", "B", "C", "D"), actual);
+    Assertions.assertEquals(ImmutableSet.of("A", "B", "C", "D"), actual);
   }
 
   @Test
@@ -190,7 +190,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     );
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, transformSpec, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(ImmutableSet.of("A", "B", "C", "D", "E", "F", "G", "H"), actual);
+    Assertions.assertEquals(ImmutableSet.of("A", "B", "C", "D", "E", "F", "G", "H"), actual);
   }
 
   @Test
@@ -220,7 +220,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(fullInputSchema, actual);
+    Assertions.assertEquals(fullInputSchema, actual);
   }
 
   @Test
@@ -250,7 +250,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(fullInputSchema, actual);
+    Assertions.assertEquals(fullInputSchema, actual);
   }
 
   @Test
@@ -280,7 +280,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(fullInputSchema, actual);
+    Assertions.assertEquals(fullInputSchema, actual);
   }
 
   @Test
@@ -310,7 +310,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(fullInputSchema, actual);
+    Assertions.assertEquals(fullInputSchema, actual);
   }
 
   @Test
@@ -328,7 +328,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(ImmutableSet.of("B", "C"), actual);
+    Assertions.assertEquals(ImmutableSet.of("B", "C"), actual);
   }
 
   @Test
@@ -338,7 +338,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     DimensionsSpec dimensionsSpec = DimensionsSpec.EMPTY;
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, null);
-    Assert.assertEquals(fullInputSchema, actual);
+    Assertions.assertEquals(fullInputSchema, actual);
   }
 
   @Test
@@ -351,7 +351,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(true, flattenExpr);
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(fullInputSchema, actual);
+    Assertions.assertEquals(fullInputSchema, actual);
   }
 
   @Test
@@ -364,7 +364,7 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     );
     JSONPathSpec flattenSpec = new JSONPathSpec(false, flattenExpr);
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, TransformSpec.NONE, new AggregatorFactory[]{}, flattenSpec);
-    Assert.assertEquals(ImmutableSet.of("A", "C"), actual);
+    Assertions.assertEquals(ImmutableSet.of("A", "C"), actual);
   }
 
   @Test
@@ -392,6 +392,6 @@ public class ReaderUtilsTest extends InitializedNullHandlingTest
     );
 
     Set<String> actual = ReaderUtils.getColumnsRequiredForIngestion(fullInputSchema, timestampSpec, dimensionsSpec, transformSpec, new AggregatorFactory[]{}, null);
-    Assert.assertEquals(ImmutableSet.of("A", "B", "C", "D", "E", "F", "G", "H"), actual);
+    Assertions.assertEquals(ImmutableSet.of("A", "B", "C", "D", "E", "F", "G", "H"), actual);
   }
 }

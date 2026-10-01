@@ -43,15 +43,14 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
-import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.Map;
@@ -61,10 +60,11 @@ import java.util.Set;
  * Unit tests to verify behaviour of {@link IndexerSQLMetadataStorageCoordinator}
  * on the Coordinator for read-only purposes.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "cacheMode = {0}")
+@MethodSource("testParameters")
 public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSqlMetadataStorageCoordinatorTestBase
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
       = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -78,7 +78,6 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
 
   private final SegmentMetadataCache.UsageMode cacheMode;
 
-  @Parameterized.Parameters(name = "cacheMode = {0}")
   public static Object[][] testParameters()
   {
     return new Object[][]{
@@ -93,7 +92,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
     this.cacheMode = cacheMode;
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     derbyConnector = derbyConnectorRule.getConnector();
@@ -133,7 +132,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     segmentMetadataCache.stopBeingLeader();
@@ -287,12 +286,12 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
   @Test
   public void test_retrieveSegmentForId_returnsSegment_ifPresent()
   {
-    Assert.assertNull(
+    Assertions.assertNull(
         readOnlyStorage.retrieveSegmentForId(defaultSegment.getId())
     );
 
     readWriteStorage.commitSegments(Set.of(defaultSegment), null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         defaultSegment,
         readOnlyStorage.retrieveSegmentForId(defaultSegment.getId())
     );
@@ -301,12 +300,12 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
   @Test
   public void test_retrieveUsedSegmentForId_returnsSegment_ifPresent()
   {
-    Assert.assertNull(
+    Assertions.assertNull(
         readOnlyStorage.retrieveUsedSegmentForId(defaultSegment.getId())
     );
 
     readWriteStorage.commitSegments(Set.of(defaultSegment), null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         defaultSegment,
         readOnlyStorage.retrieveUsedSegmentForId(defaultSegment.getId())
     );
@@ -315,22 +314,22 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
   @Test
   public void test_retrieveAllUsedSegments_returnsSegments_ifPresent()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(),
         readOnlyStorage.retrieveAllUsedSegments(defaultSegment.getDataSource(), Segments.INCLUDING_OVERSHADOWED)
     );
 
     readWriteStorage.commitSegments(Set.of(defaultSegment), null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.of(defaultSegment),
         readOnlyStorage.retrieveAllUsedSegments(defaultSegment.getDataSource(), Segments.INCLUDING_OVERSHADOWED)
     );
   }
 
-  private static void verifyThrowsDefensiveException(ThrowingRunnable runnable)
+  private static void verifyThrowsDefensiveException(Executable runnable)
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, runnable),
+    DruidExceptionMatcher.assertThat(
+        Assertions.assertThrows(DruidException.class, runnable),
         DruidExceptionMatcher.defensive().expectMessageIs(
             "Only Overlord can perform write transactions on segment metadata."
         )

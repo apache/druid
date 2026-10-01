@@ -22,8 +22,8 @@ package org.apache.druid.msq.util;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -40,7 +40,7 @@ public class MSQTaskQueryMakerUtilsTest
     MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(ImmutableList.of("b", "__time"), ImmutableSet.of("__time", "a", "b"));
 
     // These are not OK.
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> MSQTaskQueryMakerUtils.validateContextSortOrderColumnsExist(
             ImmutableList.of("c"),
@@ -108,7 +108,7 @@ public class MSQTaskQueryMakerUtilsTest
                   + "FROM ext\\n"
                   + "PARTITIONED BY DAY\"";
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
@@ -122,7 +122,7 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
@@ -136,7 +136,7 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql2)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
@@ -150,7 +150,7 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql3)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
@@ -164,7 +164,7 @@ public class MSQTaskQueryMakerUtilsTest
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(sql4)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "\"REPLACE INTO table "
         + "OVERWRITE ALL\\n"
         + "WITH ext AS "
