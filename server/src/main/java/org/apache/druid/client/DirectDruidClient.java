@@ -529,20 +529,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 @Override
                 public void close()
                 {
-                  final TrafficCop trafficCop;
-                  synchronized (done) {
-                    if (done.get()) {
-                      return;
-                    }
-                    // Stop buffering further chunks (see enqueue()) and drop anything already buffered so the
-                    // underlying Netty ChannelBuffers can be released.
-                    discard.set(true);
-                    queue.clear();
-                    trafficCop = trafficCopRef.get();
-                  }
-                  if (trafficCop == null) {
-                    return;
-                  }
+                  discard.set(true);
+                  queue.clear();
                   trafficCop.abort();
                 }
               },
