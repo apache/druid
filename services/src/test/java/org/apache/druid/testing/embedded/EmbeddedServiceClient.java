@@ -53,6 +53,7 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.http.ResultFormat;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -233,6 +234,15 @@ public class EmbeddedServiceClient
    */
   public String runSql(String sql, Object... args)
   {
+    return runSql(sql, null, args);
+  }
+
+  public String runSql(
+      final String sql,
+      @Nullable final Map<String, Object> context,
+      final Object... args
+  )
+  {
     try {
       return onAnyBroker(
           b -> b.submitSqlQuery(
@@ -242,7 +252,7 @@ public class EmbeddedServiceClient
                   false,
                   false,
                   false,
-                  null,
+                  context,
                   null
               )
           )

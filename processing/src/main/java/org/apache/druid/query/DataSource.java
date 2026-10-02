@@ -49,7 +49,8 @@ import java.util.stream.Collectors;
     @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable"),
     @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest"),
     @JsonSubTypes.Type(value = FilteredDataSource.class, name = "filter"),
-    @JsonSubTypes.Type(value = RestrictedDataSource.class, name = "restrict")
+    @JsonSubTypes.Type(value = RestrictedDataSource.class, name = "restrict"),
+    @JsonSubTypes.Type(value = SystemTableDataSource.class, name = "systemTable")
 })
 public interface DataSource extends Cacheable
 {

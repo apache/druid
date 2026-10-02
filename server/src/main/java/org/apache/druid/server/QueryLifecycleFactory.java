@@ -23,6 +23,7 @@ import com.google.inject.Inject;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -34,6 +35,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 @LazySingleton
 public class QueryLifecycleFactory
@@ -48,8 +50,36 @@ public class QueryLifecycleFactory
   private final AuthConfig authConfig;
   private final PolicyEnforcer policyEnforcer;
   private final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
+  private final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers;
 
   @Inject
+  public QueryLifecycleFactory(
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final QuerySegmentWalker texasRanger,
+      final GenericQueryMetricsFactory queryMetricsFactory,
+      final ServiceEmitter emitter,
+      final RequestLogger requestLogger,
+      final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
+      final AuthorizerMapper authorizerMapper,
+      final QueryConfigProvider queryConfigProvider,
+      final Map<Class<? extends DataSource>, DataSourceQueryHandler> dataSourceQueryHandlers,
+      @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
+  )
+  {
+    this.conglomerate = conglomerate;
+    this.texasRanger = texasRanger;
+    this.queryMetricsFactory = queryMetricsFactory;
+    this.emitter = emitter;
+    this.requestLogger = requestLogger;
+    this.authorizerMapper = authorizerMapper;
+    this.queryConfigProvider = queryConfigProvider;
+    this.dataSourceQueryHandlers = dataSourceQueryHandlers;
+    this.authConfig = authConfig;
+    this.policyEnforcer = policyEnforcer;
+    this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
+  }
+
   public QueryLifecycleFactory(
       final QueryRunnerFactoryConglomerate conglomerate,
       final QuerySegmentWalker texasRanger,
@@ -63,16 +93,19 @@ public class QueryLifecycleFactory
       @Nullable final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig
   )
   {
-    this.conglomerate = conglomerate;
-    this.texasRanger = texasRanger;
-    this.queryMetricsFactory = queryMetricsFactory;
-    this.emitter = emitter;
-    this.requestLogger = requestLogger;
-    this.authorizerMapper = authorizerMapper;
-    this.queryConfigProvider = queryConfigProvider;
-    this.authConfig = authConfig;
-    this.policyEnforcer = policyEnforcer;
-    this.brokerViewOfBrokerConfig = brokerViewOfBrokerConfig;
+    this(
+        conglomerate,
+        texasRanger,
+        queryMetricsFactory,
+        emitter,
+        requestLogger,
+        authConfig,
+        policyEnforcer,
+        authorizerMapper,
+        queryConfigProvider,
+        Map.of(),
+        brokerViewOfBrokerConfig
+    );
   }
 
   public QueryLifecycle factorize()
@@ -93,6 +126,7 @@ public class QueryLifecycleFactory
         authConfig,
         policyEnforcer,
         configSnapshot,
+        dataSourceQueryHandlers,
         System.currentTimeMillis(),
         System.nanoTime()
     );

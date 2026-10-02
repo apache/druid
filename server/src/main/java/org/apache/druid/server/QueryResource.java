@@ -86,6 +86,9 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String QUERY_ID_RESPONSE_HEADER = "X-Druid-Query-Id";
+  /** Selects where a native query sent through a forwarding service should execute. */
+  public static final String HEADER_NATIVE_QUERY_ROUTE = "X-Druid-Native-Query-Route";
+  public static final String NATIVE_QUERY_ROUTE_LOCAL = "local";
   public static final String ERROR_MESSAGE_TRAILER_HEADER = "X-Error-Message";
   public static final String RESPONSE_COMPLETE_TRAILER_HEADER = "X-Druid-Response-Complete";
   public static final String HEADER_ETAG = "ETag";
@@ -287,7 +290,7 @@ public class QueryResource implements QueryCountStatsProvider
     void incrementTimedOut();
   }
 
-  private Query<?> readQuery(
+  protected Query<?> readQuery(
       final HttpServletRequest req,
       final InputStream in,
       final ResourceIOReaderWriterFactory.ResourceIOReaderWriter ioReaderWriter
