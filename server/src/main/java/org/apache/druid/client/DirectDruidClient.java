@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileConstants;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -222,8 +221,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           }
         }
 
-        private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
-
         private QueryMetrics<? super Query<T>> queryMetrics;
         private long responseStartTimeNs;
 
@@ -257,7 +254,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           return !usingBackpressure || currentQueuedByteCount < maxQueuedBytes;
         }
 
-        private InputStream dequeue() throws InterruptedException
+        private InputStream dequeue(TrafficCop trafficCop) throws InterruptedException
         {
           final InputStreamHolder holder = queue.poll(checkQueryTimeout(), TimeUnit.MILLISECONDS);
           if (holder == null) {
@@ -266,8 +263,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
           final long currentQueuedByteCount = queuedByteCount.addAndGet(-holder.getLength());
           if (usingBackpressure && currentQueuedByteCount < maxQueuedBytes) {
-            long backPressureTime = Preconditions.checkNotNull(trafficCopRef.get(), "No TrafficCop, how can this be?")
-                                                 .resume(holder.getChunkNum());
+            long backPressureTime = trafficCop.resume(holder.getChunkNum());
             channelSuspendedTime.addAndGet(backPressureTime);
           }
 
@@ -424,7 +420,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
-          trafficCopRef.set(trafficCop);
           checkQueryTimeout();
           // Netty 4: the initial HttpResponse carries no body, so the status and Content-Type are recorded
           // here and the body itself is inspected on the first HttpContent chunk. The goal is to detect a
@@ -511,7 +506,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       }
 
                       try {
-                        return dequeue();
+                        return dequeue(trafficCop);
                       }
                       catch (InterruptedException e) {
                         Thread.currentThread().interrupt();

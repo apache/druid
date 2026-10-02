@@ -20,6 +20,7 @@
 package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 
 /**
  * Configuration of the client that other services use to call the Coordinator.
@@ -30,7 +31,8 @@ public class CoordinatorClientConfig
    * Attempts per request to the Coordinator, the first one included, before giving up on a retryable error.
    */
   @JsonProperty
-  private int maxAttempts = 6;
+  @Min(1)
+  private int maxAttempts = 15;
 
   public int getMaxAttempts()
   {

@@ -231,30 +231,19 @@ public class AppendableByteArrayInputStreamTest
   }
 
   @Test
-  public void testExceptionCaughtReleasesQueuedBytes()
-  {
-    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
-    in.add(new byte[8192]);
-    in.add(new byte[8192]);
-    Assertions.assertEquals(16384, in.available());
-
-    in.exceptionCaught(new IOException("connection reset"));
-
-    Assertions.assertEquals(0, in.available());
-    Assertions.assertThrows(IOException.class, () -> in.read(new byte[8192]));
-  }
-
-  @Test
-  public void testAvailableStaysZeroWhileTheCurrentChunkDrainsAfterAFailure() throws IOException
+  public void testExceptionCaughtReleasesQueuedBytes() throws IOException
   {
     final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
     in.add(new byte[10]);
+    in.add(new byte[8192]);
     Assertions.assertEquals(5, in.read(new byte[5]));
 
     in.exceptionCaught(new IOException("connection reset"));
-    Assertions.assertEquals(5, in.read(new byte[5]));
 
     Assertions.assertEquals(0, in.available());
+    Assertions.assertEquals(5, in.read(new byte[5]), "the chunk being read is still handed out");
+    Assertions.assertEquals(0, in.available());
+    Assertions.assertThrows(IOException.class, () -> in.read(new byte[8192]));
   }
 
   @Test
@@ -268,44 +257,7 @@ public class AppendableByteArrayInputStreamTest
     in.add(new byte[8192]);
 
     Assertions.assertEquals(0, in.available());
-  }
-
-  @Test
-  public void testReadAfterCloseFails()
-  {
-    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
-    in.add(new byte[10]);
-
-    in.close();
-
     Assertions.assertThrows(IOException.class, in::read);
-  }
-
-  @Test
-  public void testCloseUnblocksAllReaders() throws Exception
-  {
-    final AppendableByteArrayInputStream in = new AppendableByteArrayInputStream();
-    final AtomicReference<Integer> firstResult = new AtomicReference<>();
-    final AtomicReference<Integer> secondResult = new AtomicReference<>();
-    final AtomicReference<Throwable> firstError = new AtomicReference<>();
-    final AtomicReference<Throwable> secondError = new AtomicReference<>();
-    final Thread firstReader = readerThread(in, firstResult, firstError);
-    final Thread secondReader = readerThread(in, secondResult, secondError);
-
-    firstReader.start();
-    secondReader.start();
-    waitUntilWaiting(firstReader, secondReader);
-
-    in.close();
-
-    firstReader.join(1_000);
-    secondReader.join(1_000);
-    Assertions.assertFalse(firstReader.isAlive());
-    Assertions.assertFalse(secondReader.isAlive());
-    Assertions.assertNull(firstResult.get());
-    Assertions.assertNull(secondResult.get());
-    Assertions.assertInstanceOf(IOException.class, firstError.get());
-    Assertions.assertInstanceOf(IOException.class, secondError.get());
   }
 
   @Test

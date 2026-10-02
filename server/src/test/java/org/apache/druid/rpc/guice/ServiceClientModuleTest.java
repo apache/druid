@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.ProvisionException;
 import org.apache.druid.client.broker.Broker;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.Coordinator;
@@ -77,9 +78,14 @@ public class ServiceClientModuleTest
   @BeforeEach
   public void setUp()
   {
+    injector = makeInjector("4");
+  }
+
+  private Injector makeInjector(final String coordinatorMaxAttempts)
+  {
     final Properties properties = new Properties();
-    properties.setProperty("druid.client.coordinator.maxAttempts", "15");
-    injector = Guice.createInjector(
+    properties.setProperty("druid.client.coordinator.maxAttempts", coordinatorMaxAttempts);
+    return Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
             new ConfigModule(),
@@ -116,13 +122,20 @@ public class ServiceClientModuleTest
   }
 
   @Test
-  public void testCoordinatorClientConfigIsReadFromClientCoordinatorPrefix()
+  public void testCoordinatorClientConfigRejectsNonPositiveMaxAttempts()
   {
-    Assertions.assertEquals(15, injector.getInstance(CoordinatorClientConfig.class).getMaxAttempts());
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> makeInjector("0").getInstance(CoordinatorClientConfig.class)
+    );
+    Assertions.assertThrows(
+        ProvisionException.class,
+        () -> makeInjector("-1").getInstance(CoordinatorClientConfig.class)
+    );
   }
 
   @Test
-  public void testCoordinatorServiceClientMakesAtMostMaxAttempts()
+  public void testCoordinatorRetryPolicyUsesConfiguredMaxAttempts()
   {
     new ServiceClientModule().makeServiceClientForCoordinator(
         serviceClientFactory,
@@ -136,7 +149,7 @@ public class ServiceClientModuleTest
         ArgumentMatchers.eq(serviceLocator),
         retryPolicy.capture()
     );
-    Assertions.assertEquals(15, retryPolicy.getValue().maxAttempts());
+    Assertions.assertEquals(4, retryPolicy.getValue().maxAttempts());
   }
 
   @Test

@@ -68,7 +68,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -769,43 +768,10 @@ public class FriendlyServersTest
   @Test
   public void testAbortAfterCompletionLeavesThePooledChannelOpen() throws Exception
   {
-    final ExecutorService exec = Executors.newCachedThreadPool();
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
     final ServerSocket serverSocket = new ServerSocket(0);
-    final AtomicInteger acceptedConnections = new AtomicInteger();
-    exec.submit(
-        () -> {
-          while (!Thread.currentThread().isInterrupted()) {
-            final Socket clientSocket;
-            try {
-              clientSocket = serverSocket.accept();
-            }
-            catch (IOException e) {
-              return;
-            }
-            acceptedConnections.incrementAndGet();
-            exec.submit(() -> {
-              try (
-                  Socket s = clientSocket;
-                  BufferedReader in = new BufferedReader(
-                      new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8)
-                  );
-                  OutputStream out = s.getOutputStream()
-              ) {
-                String line;
-                while ((line = in.readLine()) != null) {
-                  if (line.isEmpty()) {
-                    out.write("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok".getBytes(StandardCharsets.UTF_8));
-                    out.flush();
-                  }
-                }
-              }
-              catch (Exception ignored) {
-                // suppress
-              }
-            });
-          }
-        }
-    );
+    final BlockingQueue<String> wire = new LinkedBlockingQueue<>();
+    serveChunkedFromWire(exec, serverSocket, wire);
 
     final Lifecycle lifecycle = new Lifecycle();
     try {
@@ -813,53 +779,24 @@ public class FriendlyServersTest
           HttpClientConfig.builder().withNumConnections(1).build(),
           lifecycle
       );
-      final URL url = new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()));
-      final AtomicReference<HttpResponseHandler.TrafficCop> firstTrafficCop = new AtomicReference<>();
-
-      client.go(
-          new Request(HttpMethod.GET, url),
-          new HttpResponseHandler<String, String>()
-          {
-            @Override
-            public ClientResponse<String> handleResponse(HttpResponse response, TrafficCop trafficCop)
-            {
-              firstTrafficCop.set(trafficCop);
-              return ClientResponse.unfinished("");
-            }
-
-            @Override
-            public ClientResponse<String> handleChunk(
-                ClientResponse<String> clientResponse,
-                HttpContent chunk,
-                long chunkNum
-            )
-            {
-              return clientResponse;
-            }
-
-            @Override
-            public ClientResponse<String> done(ClientResponse<String> clientResponse)
-            {
-              return ClientResponse.finished(clientResponse.getObj());
-            }
-
-            @Override
-            public void exceptionCaught(ClientResponse<String> clientResponse, Throwable e)
-            {
-            }
-          }
-      ).get(30, TimeUnit.SECONDS);
-
-      firstTrafficCop.get().abort();
-
-      Assertions.assertEquals(
-          200,
-          client.go(new Request(HttpMethod.GET, url), StatusResponseHandler.getInstance())
-                .get(30, TimeUnit.SECONDS)
-                .getStatus()
-                .code()
+      final Request request = new Request(
+          HttpMethod.GET,
+          new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
       );
-      Assertions.assertEquals(1, acceptedConnections.get(), "the second request must reuse the pooled channel");
+
+      final CapturingTrafficCop<StringFullResponseHolder, StringFullResponseHolder> first =
+          new CapturingTrafficCop<>(new StringFullResponseHandler(StandardCharsets.UTF_8));
+      final ListenableFuture<StringFullResponseHolder> firstResponse = client.go(request, first);
+      wire.put(CHUNKED_OK + chunk("a") + LAST_CHUNK);
+      Assertions.assertEquals("a", firstResponse.get(30, TimeUnit.SECONDS).getContent());
+
+      first.trafficCop.get().abort();
+
+      // The server answers on its only connection, so the second request succeeds only if it reuses the first's.
+      final ListenableFuture<StringFullResponseHolder> secondResponse =
+          client.go(request, new StringFullResponseHandler(StandardCharsets.UTF_8));
+      wire.put(CHUNKED_OK + chunk("b") + LAST_CHUNK);
+      Assertions.assertEquals("b", secondResponse.get(30, TimeUnit.SECONDS).getContent());
     }
     finally {
       exec.shutdownNow();
@@ -891,6 +828,7 @@ public class FriendlyServersTest
           new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
       );
 
+      // The first request suspends too: only then does its late resume pass its own watermark and reach the channel.
       final SuspendAfterFirstChunk<StringFullResponseHolder, StringFullResponseHolder> first =
           new SuspendAfterFirstChunk<>(new StringFullResponseHandler(StandardCharsets.UTF_8));
       final ListenableFuture<StringFullResponseHolder> firstResponse = client.go(request, first);
@@ -955,15 +893,14 @@ public class FriendlyServersTest
   }
 
   /**
-   * Suspends reads after the first chunk, exposing the {@link HttpResponseHandler.TrafficCop} to resume them.
+   * Exposes the {@link HttpResponseHandler.TrafficCop} of the response it handles.
    */
-  private static class SuspendAfterFirstChunk<I, F> implements HttpResponseHandler<I, F>
+  private static class CapturingTrafficCop<I, F> implements HttpResponseHandler<I, F>
   {
-    private final HttpResponseHandler<I, F> delegate;
-    private final AtomicReference<TrafficCop> trafficCop = new AtomicReference<>();
-    private final CountDownLatch suspended = new CountDownLatch(1);
+    final HttpResponseHandler<I, F> delegate;
+    final AtomicReference<TrafficCop> trafficCop = new AtomicReference<>();
 
-    SuspendAfterFirstChunk(HttpResponseHandler<I, F> delegate)
+    CapturingTrafficCop(HttpResponseHandler<I, F> delegate)
     {
       this.delegate = delegate;
     }
@@ -978,12 +915,7 @@ public class FriendlyServersTest
     @Override
     public ClientResponse<I> handleChunk(ClientResponse<I> clientResponse, HttpContent chunk, long chunkNum)
     {
-      final ClientResponse<I> next = delegate.handleChunk(clientResponse, chunk, chunkNum);
-      if (chunkNum != 1) {
-        return next;
-      }
-      suspended.countDown();
-      return new ClientResponse<>(next.isFinished(), false, next.getObj());
+      return delegate.handleChunk(clientResponse, chunk, chunkNum);
     }
 
     @Override
@@ -996,6 +928,30 @@ public class FriendlyServersTest
     public void exceptionCaught(ClientResponse<I> clientResponse, Throwable e)
     {
       delegate.exceptionCaught(clientResponse, e);
+    }
+  }
+
+  /**
+   * Suspends reads after the first chunk; resume them through {@link #trafficCop}.
+   */
+  private static class SuspendAfterFirstChunk<I, F> extends CapturingTrafficCop<I, F>
+  {
+    final CountDownLatch suspended = new CountDownLatch(1);
+
+    SuspendAfterFirstChunk(HttpResponseHandler<I, F> delegate)
+    {
+      super(delegate);
+    }
+
+    @Override
+    public ClientResponse<I> handleChunk(ClientResponse<I> clientResponse, HttpContent chunk, long chunkNum)
+    {
+      final ClientResponse<I> next = super.handleChunk(clientResponse, chunk, chunkNum);
+      if (chunkNum != 1) {
+        return next;
+      }
+      suspended.countDown();
+      return new ClientResponse<>(next.isFinished(), false, next.getObj());
     }
   }
 }

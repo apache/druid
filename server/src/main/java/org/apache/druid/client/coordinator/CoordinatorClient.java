@@ -138,7 +138,7 @@ public interface CoordinatorClient
   /**
    * Returns an iterator over the metadata segments of multiple datasources in the cluster, fetching them in one go.
    * <p>
-   * The holder owns the response the iterator reads from: close it once done, including when iteration stops early.
+   * The caller is responsible for closing the holder.
    * <p>
    * API: {@code GET /druid/coordinator/v1/metadata/segments?includeOvershadowedStatus}
    *

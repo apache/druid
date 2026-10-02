@@ -706,7 +706,7 @@ All Druid components can communicate with each other over HTTP.
 |`druid.global.http.connectTimeout`|Connect timeout for the HTTP client used for most direct RPC between Druid services. This covers, among other things, Overlord-to-task and supervisor-to-task calls in the indexing service, Coordinator lookup management, dynamic config sync between services, MSQ tasks reading from data servers, and general Coordinator/Overlord/Broker service clients. Does not affect Broker-to-Historical query dispatch (see `druid.broker.http.connectTimeout`) or request forwarding (see `clientConnectTimeout`).|`PT10S`|
 |`druid.global.http.allocator`|Netty memory allocator used by the direct-RPC HTTP client. Accepts `adaptive` (adaptive between `pooled` and `unpooled` based on load), `pooled`, or `unpooled`.|`adaptive`|
 |`druid.global.http.poolImplementation`|How the connection pool tracks demand, never exceeding `numConnections` either way. With `adaptive`, a request discards every stale or broken connection it walks past and opens a new one only once none is left, so the pool falls back to the number of connections the traffic actually needs. With `retaining`, the pool holds on to every connection it has opened, replacing a stale or broken one by a fresh one, one for one, so it stays at its high-water mark.|`adaptive`|
-|`druid.client.coordinator.maxAttempts`|Maximum number of attempts, including the first one, that a service makes for a request to the Coordinator before giving up on a retryable error.|`6`|
+|`druid.client.coordinator.maxAttempts`|Maximum number of attempts, including the first one, that a service makes for a request to the Coordinator before giving up on a retryable error. Must be at least 1.|`15`|
 
 ### Common endpoints configuration
 

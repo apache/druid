@@ -77,10 +77,6 @@ public class AppendableByteArrayInputStream extends InputStream
     }
   }
 
-  /**
-   * Discards the buffered bytes and every chunk added from now on, so a response nobody reads is not held while the
-   * rest of it arrives. Reads fail once closed.
-   */
   @Override
   public void close()
   {

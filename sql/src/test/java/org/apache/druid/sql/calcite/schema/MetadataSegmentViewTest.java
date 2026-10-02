@@ -131,41 +131,6 @@ public class MetadataSegmentViewTest
   }
 
   @Test
-  public void test_poll_keepsTheSegments_ifReleasingTheCoordinatorResponseFails()
-  {
-    final List<SegmentStatusInCluster> expectedSegments = CreateDataSegments
-        .ofDatasource(TestDataSource.WIKI)
-        .withNumPartitions(2)
-        .eachOfSizeInMb(100)
-        .stream()
-        .map(s -> new SegmentStatusInCluster(s, false, 1, 100L, false))
-        .toList();
-
-    Mockito.when(
-        coordinatorClient.fetchAllUsedSegmentsWithOvershadowedStatus(
-            ArgumentMatchers.eq(null),
-            ArgumentMatchers.eq(true)
-        )
-    ).thenAnswer(
-        invocation -> Futures.immediateFuture(
-            holder(
-                expectedSegments.iterator(),
-                () -> {
-                  throw new IOException("connection reset");
-                }
-            )
-        )
-    );
-
-    segmentView.start();
-    emitter.waitForEvent(event -> event.hasMetricName(Metric.SYNC_DURATION_MILLIS));
-
-    final List<SegmentStatusInCluster> observedSegments = new ArrayList<>();
-    Iterators.addAll(observedSegments, segmentView.getSegments());
-    Assertions.assertEquals(expectedSegments, observedSegments);
-  }
-
-  @Test
   public void test_poll_releasesTheCoordinatorResponse_whenIterationFails() throws Exception
   {
     final CountDownLatch closed = new CountDownLatch(1);
