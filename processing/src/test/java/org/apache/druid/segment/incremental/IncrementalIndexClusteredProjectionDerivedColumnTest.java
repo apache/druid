@@ -28,7 +28,9 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
+import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
@@ -36,59 +38,52 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * A clustered base table whose {@code region} clustering column is <em>derived</em> from a nested {@code extra_attrs}
- * column (absent from the raw row), carrying an aggregate projection that groups on that same {@code region}. Asserts
- * the projection groups on the derived value the clustering path produced, rather than a null that would collapse the
- * distinct (tenant, region) groups into one.
+ * A clustered base table whose {@code region} and {@code zone_id} clustering columns are <em>derived</em> from a nested
+ * {@code extra_attrs} column (absent from the raw row), carrying an aggregate projection that references a derived
+ * column through its grouping columns, filter, or aggregators. Asserts each of those reads the derived value the
+ * clustering path produced rather than null.
  */
 class IncrementalIndexClusteredProjectionDerivedColumnTest extends InitializedNullHandlingTest
 {
   private static final long T0 = DateTimes.of("2026-01-01T00:00:00").getMillis();
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "millis", null);
 
-  private static MapBasedInputRow row(long ts, String tenant, String region, long x)
+  private static MapBasedInputRow row(long ts, String tenant, String region, long zoneId, long x)
   {
     final Map<String, Object> event = new LinkedHashMap<>();
     event.put("ts", ts);
     event.put("tenant", tenant);
     // `region` is not present as a top-level field; it is derived from the nested extra_attrs column.
-    event.put("extra_attrs", Map.of("region", region));
+    event.put("extra_attrs", Map.of("region", region, "zone_id", zoneId));
     event.put("x", x);
     return new MapBasedInputRow(ts, List.of("tenant", "x"), event);
   }
 
-  private static OnheapIncrementalIndex clusteredWithDerivedColumnProjection()
+  private static OnheapIncrementalIndex clusteredWithDerivedColumnProjection(AggregateProjectionSpec projectionSpec)
   {
-    // Clustered by tenant + a `region` derived from the nested extra_attrs column, and carrying a projection that
-    // groups on that derived `region`.
+    // Clustered by tenant + a `region` and `zone_id` derived from the nested extra_attrs column.
     final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
         .virtualColumns(VirtualColumns.create(
-            new NestedFieldVirtualColumn("extra_attrs", "$.region", "region", ColumnType.STRING)
+            new NestedFieldVirtualColumn("extra_attrs", "$.region", "region", ColumnType.STRING),
+            new NestedFieldVirtualColumn("extra_attrs", "$.zone_id", "zone_id", ColumnType.LONG)
         ))
         .columns(
             new StringDimensionSchema("tenant"),
             new StringDimensionSchema("region"),   // clustering column derived from extra_attrs
+            new LongDimensionSchema("zone_id"),    // clustering column derived from extra_attrs
             AutoTypeColumnSchema.of("extra_attrs"),
             new LongDimensionSchema("x"),
             new LongDimensionSchema("__time")
         )
-        .clusteringColumns("tenant", "region")
+        .clusteringColumns("tenant", "region", "zone_id")
         .build();
-
-    final AggregateProjectionSpec projectionSpec =
-        AggregateProjectionSpec.builder("proj")
-                               .groupingColumns(
-                                   new StringDimensionSchema("tenant"),
-                                   new StringDimensionSchema("region")
-                               )
-                               .aggregators(new LongSumAggregatorFactory("sum_x", "x"))
-                               .build();
 
     final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
         .withMinTimestamp(T0)
@@ -104,16 +99,24 @@ class IncrementalIndexClusteredProjectionDerivedColumnTest extends InitializedNu
         .setIndexSchema(schema)
         .setMaxRowCount(10_000)
         .build();
-    index.add(row(T0, "acme", "us-east-1", 10));
-    index.add(row(T0 + 1, "acme", "us-west-2", 5));
-    index.add(row(T0 + 2, "globex", "eu-west-1", 7));
+    index.add(row(T0, "acme", "us-east-1", 1, 10));
+    index.add(row(T0 + 1, "acme", "us-west-2", 2, 5));
+    index.add(row(T0 + 2, "globex", "eu-west-1", 3, 7));
     return index;
   }
 
   @Test
   void testProjectionGroupsOnDerivedClusteringColumn()
   {
-    try (OnheapIncrementalIndex index = clusteredWithDerivedColumnProjection()) {
+    final AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder("proj")
+                               .groupingColumns(
+                                   new StringDimensionSchema("tenant"),
+                                   new StringDimensionSchema("region")
+                               )
+                               .aggregators(new LongSumAggregatorFactory("sum_x", "x"))
+                               .build();
+    try (OnheapIncrementalIndex index = clusteredWithDerivedColumnProjection(projectionSpec)) {
       // The projection's `region` grouping column is derived from extra_attrs; it must carry the derived value the
       // clustering path produces, not null, so the three distinct (tenant, region) groups form.
       Assertions.assertEquals(
@@ -125,5 +128,51 @@ class IncrementalIndexClusteredProjectionDerivedColumnTest extends InitializedNu
           ClusteredProjectionTestUtils.projectionGroupingTuples(index, "proj")
       );
     }
+  }
+
+  @Test
+  void testProjectionFilterOnDerivedClusteringColumn()
+  {
+    final AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder("proj")
+                               .filter(new EqualityFilter("region", ColumnType.STRING, "us-east-1", null))
+                               .groupingColumns(new StringDimensionSchema("tenant"))
+                               .aggregators(new LongSumAggregatorFactory("sum_x", "x"))
+                               .build();
+    try (OnheapIncrementalIndex index = clusteredWithDerivedColumnProjection(projectionSpec)) {
+      // The filter must match on the derived `region`; reading null would drop every row from the projection.
+      Assertions.assertEquals(Map.of("acme", 10L), projectionSumsByTenant(index, "proj"));
+    }
+  }
+
+  @Test
+  void testProjectionAggregatorOnDerivedClusteringColumn()
+  {
+    final AggregateProjectionSpec projectionSpec =
+        AggregateProjectionSpec.builder("proj")
+                               .groupingColumns(new StringDimensionSchema("tenant"))
+                               .aggregators(new LongSumAggregatorFactory("sum_zone_id", "zone_id"))
+                               .build();
+    try (OnheapIncrementalIndex index = clusteredWithDerivedColumnProjection(projectionSpec)) {
+      // The aggregator must sum the derived `zone_id`; reading null would leave every sum null.
+      Assertions.assertEquals(Map.of("acme", 3L, "globex", 3L), projectionSumsByTenant(index, "proj"));
+    }
+  }
+
+  /**
+   * Reads a projection grouped on {@code tenant} alone with a single long-sum aggregator, as tenant -> sum. The raw
+   * indexer type mirrors {@link ClusteredProjectionTestUtils#projectionGroupingTuples}.
+   */
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private static Map<String, Long> projectionSumsByTenant(OnheapIncrementalIndex index, String projectionName)
+  {
+    final IncrementalIndexRowSelector projection = index.getProjection(projectionName);
+    final DimensionIndexer tenantIndexer = projection.getDimensions().get(0).getIndexer();
+    final Map<String, Long> sums = new HashMap<>();
+    for (IncrementalIndexRow row : projection.getFacts().keySet()) {
+      final String tenant = (String) tenantIndexer.convertUnsortedEncodedKeyComponentToActualList(row.getDims()[0]);
+      sums.put(tenant, projection.getMetricLongValue(row.getRowIndex(), 0));
+    }
+    return sums;
   }
 }

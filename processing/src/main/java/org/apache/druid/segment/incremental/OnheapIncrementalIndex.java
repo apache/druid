@@ -25,6 +25,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -296,10 +297,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex
             totalSizeInBytes
         );
 
+    // Projections read filter, aggregator, and virtual-column inputs from the row, so in clustered mode they get a view
+    // that also resolves derived clustering columns.
+    final InputRow projectionRow = clusteringValues == null || projections.isEmpty()
+                                   ? inputRowHolder.getRow()
+                                   : clusteredBaseTable.withDerivedClusteringValues(
+                                       inputRowHolder.getRow(),
+                                       clusteringValues
+                                   );
+
     // add to projections first so if one is chosen by queries the data will always be ahead of the base table since
     // rows are not added atomically to all facts holders at once
     for (OnHeapAggregateProjection projection : projections.values()) {
-      projection.addToFacts(key, inputRowHolder.getRow(), parseExceptionMessages, totalSizeInBytes);
+      projection.addToFacts(key, projectionRow, parseExceptionMessages, totalSizeInBytes);
     }
 
     if (clusteredBaseTable != null) {
