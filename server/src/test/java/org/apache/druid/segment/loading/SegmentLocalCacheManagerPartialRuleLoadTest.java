@@ -927,6 +927,96 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   @Test
+  void testGetCachedSegmentsConvertsACompleteLayoutToPartial() throws Exception
+  {
+    // A historical that cached this segment before partial downloads were enabled has a complete layout on disk.
+    // getCachedSegments must rewrite it as a partial layout, so the warm bytes are reused and no complete entry is
+    // left for a later partial-load rule to have to evict.
+    final SegmentLocalCacheManager beforePartials = makeManager(true, false);
+    final DataSegment plain = plainSegment();
+    try {
+      final AcquireSegmentAction action = beforePartials.acquireSegment(plain, AcquireMode.FULL);
+      try {
+        Assertions.assertNotNull(action.getSegmentFuture().get(), "precondition: the full download must succeed");
+      }
+      finally {
+        action.close();
+      }
+      beforePartials.storeInfoFile(plain);
+    }
+    finally {
+      beforePartials.shutdown();
+    }
+
+    final File segmentDir = new File(cacheRoot, SEGMENT_ID.toString());
+    Assertions.assertFalse(
+        PartialSegmentFileMapperV10.isPartialSegmentLayout(segmentDir, IndexIO.V10_FILE_NAME),
+        "precondition: the on-disk layout is complete, not partial"
+    );
+
+    // Restart with partial downloads enabled.
+    manager = makeManager(true, true);
+    final List<DataSegment> cached = manager.getCachedSegments();
+
+    Assertions.assertTrue(
+        cached.stream().anyMatch(s -> s.getId().equals(SEGMENT_ID)),
+        "the converted segment must still be rediscovered from its info file"
+    );
+    Assertions.assertTrue(
+        PartialSegmentFileMapperV10.isPartialSegmentLayout(segmentDir, IndexIO.V10_FILE_NAME),
+        "the complete layout must have been converted to a partial one"
+    );
+
+    // The converted layout must be usable: bootstrap it, then apply a rule the way the coordinator would. The rule
+    // application is the case this conversion exists for, and it must not have to evict anything.
+    manager.bootstrap(plain, SegmentLazyLoadFailCallback.NOOP);
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+    Assertions.assertEquals(
+        FINGERPRINT,
+        manager.getRuleFingerprintForSegment(SEGMENT_ID),
+        "a rule must apply to the converted layout"
+    );
+    Assertions.assertTrue(
+        manager.getLocations().get(0).isWeakReserved(
+            new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)
+        ),
+        "and pin its selected bundle"
+    );
+  }
+
+  @Test
+  void testGetCachedSegmentsLeavesACompleteLayoutAloneWhenPartialsAreDisabled() throws Exception
+  {
+    // The conversion is gated on partial downloads being enabled; with them off the complete layout is what serves
+    // the segment, so it has to stay put.
+    final SegmentLocalCacheManager beforePartials = makeManager(true, false);
+    final DataSegment plain = plainSegment();
+    try {
+      final AcquireSegmentAction action = beforePartials.acquireSegment(plain, AcquireMode.FULL);
+      try {
+        Assertions.assertNotNull(action.getSegmentFuture().get());
+      }
+      finally {
+        action.close();
+      }
+      beforePartials.storeInfoFile(plain);
+    }
+    finally {
+      beforePartials.shutdown();
+    }
+
+    manager = makeManager(true, false);
+    manager.getCachedSegments();
+
+    final File segmentDir = new File(cacheRoot, SEGMENT_ID.toString());
+    Assertions.assertFalse(
+        PartialSegmentFileMapperV10.isPartialSegmentLayout(segmentDir, IndexIO.V10_FILE_NAME),
+        "a complete layout must survive when partial downloads are disabled"
+    );
+    Assertions.assertTrue(new File(segmentDir, IndexIO.V10_FILE_NAME).exists(), "and keep its segment file");
+  }
+
+  @Test
   void testBootstrapReinstallsRuleHoldsFromPersistedInfoFile() throws Exception
   {
     // on historical restart, getCachedSegments+bootstrap must reapply the rule using the persisted DataSegment's
