@@ -27,7 +27,9 @@ import com.google.common.io.Files;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.file.SegmentFileMapper;
+import org.apache.druid.segment.file.SegmentFileMetadata;
 
+import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -118,6 +120,14 @@ public class SmooshedFileMapper implements SegmentFileMapper
   public Set<String> getInternalFilenames()
   {
     return internalFiles.keySet();
+  }
+
+  @Nullable
+  @Override
+  public SegmentFileMetadata getSegmentFileMetadata()
+  {
+    // legacy smoosh files have no container/bundle structure to report.
+    return null;
   }
 
   @Override

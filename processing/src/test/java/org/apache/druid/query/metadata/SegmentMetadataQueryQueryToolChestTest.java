@@ -674,6 +674,55 @@ public class SegmentMetadataQueryQueryToolChestTest
     Assertions.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testContainers(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .container("__base", 100)
+        .container("channel_sum", 50)
+        .build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
+        .container("__base", 200)
+        .container("channel_sum", 75)
+        .build();
+
+    // merging sums sizes per bundle name, rather than concatenating each segment's raw container list.
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .container("__base", 300)
+        .container("channel_sum", 125)
+        .build();
+    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+  }
+
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testContainersOneSided(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
+        .container("__base", 100)
+        .build();
+    final SegmentAnalysis analysis2NoContainers = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
+
+    // a segment with no container info contributes nothing, rather than nulling out the whole merged result.
+    final SegmentAnalysis expected = new SegmentAnalysis.Builder(
+        "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
+        .container("__base", 100)
+        .build();
+    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2NoContainers, aggregatorMergeStrategy));
+  }
+
+  @EnumSource(AggregatorMergeStrategy.class)
+  @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
+  public void testContainersBothNull(AggregatorMergeStrategy aggregatorMergeStrategy)
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
+    final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
+
+    Assert.assertNull(mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy).getContainers());
+  }
+
   private static SegmentAnalysis mergeWithStrategy(
       SegmentAnalysis analysis1,
       SegmentAnalysis analysis2,

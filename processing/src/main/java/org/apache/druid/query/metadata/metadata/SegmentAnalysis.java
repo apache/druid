@@ -28,6 +28,7 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,9 +61,31 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   private final TimestampSpec timestampSpec;
   private final Granularity queryGranularity;
   private final Boolean rollup;
+  private final List<ContainerAnalysis> containers;
+
+  /**
+   * Retained for binary compatibility with code compiled against the pre-{@link ContainerAnalysis} constructor.
+   * New callers should use {@link Builder}.
+   */
+  @Deprecated
+  public SegmentAnalysis(
+      String id,
+      List<Interval> interval,
+      LinkedHashMap<String, ColumnAnalysis> columns,
+      long size,
+      long numRows,
+      Map<String, AggregatorFactory> aggregators,
+      Map<String, AggregateProjectionMetadata> projections,
+      TimestampSpec timestampSpec,
+      Granularity queryGranularity,
+      Boolean rollup
+  )
+  {
+    this(id, interval, columns, size, numRows, aggregators, projections, timestampSpec, queryGranularity, rollup, null);
+  }
 
   @JsonCreator
-  public SegmentAnalysis(
+  SegmentAnalysis(
       @JsonProperty("id") String id,
       @JsonProperty("intervals") List<Interval> interval,
       @JsonProperty("columns") LinkedHashMap<String, ColumnAnalysis> columns,
@@ -72,7 +95,8 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       @JsonProperty("projections") Map<String, AggregateProjectionMetadata> projections,
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("queryGranularity") Granularity queryGranularity,
-      @JsonProperty("rollup") Boolean rollup
+      @JsonProperty("rollup") Boolean rollup,
+      @JsonProperty("containers") List<ContainerAnalysis> containers
   )
   {
     this.id = id;
@@ -85,6 +109,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     this.timestampSpec = timestampSpec;
     this.queryGranularity = queryGranularity;
     this.rollup = rollup;
+    this.containers = containers;
   }
 
   @JsonProperty
@@ -147,6 +172,12 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     return projections;
   }
 
+  @JsonProperty
+  public List<ContainerAnalysis> getContainers()
+  {
+    return containers;
+  }
+
   @Override
   public String toString()
   {
@@ -161,6 +192,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
+           ", containers=" + containers +
            '}';
   }
 
@@ -186,7 +218,8 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            Objects.equals(aggregators, that.aggregators) &&
            Objects.equals(projections, that.projections) &&
            Objects.equals(timestampSpec, that.timestampSpec) &&
-           Objects.equals(queryGranularity, that.queryGranularity);
+           Objects.equals(queryGranularity, that.queryGranularity) &&
+           Objects.equals(containers, that.containers);
   }
 
   /**
@@ -206,7 +239,8 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
         projections,
         timestampSpec,
         queryGranularity,
-        rollup
+        rollup,
+        containers
     );
   }
 
@@ -217,19 +251,26 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   }
 
   /**
-   * Helper class to build {@link SegmentAnalysis} objects.
+   * Helper class to build {@link SegmentAnalysis} objects. Supports both incremental, single-entry building (handy
+   * for tests) and bulk setters that take an already-computed map/list (handy for production call sites that
+   * already have the whole thing on hand).
    */
   public static class Builder
   {
     private final String segmentId;
-    private final LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
-    private final Map<String, AggregatorFactory> aggregators = new LinkedHashMap<>();
-    private final Map<String, AggregateProjectionMetadata> projections = new LinkedHashMap<>();
+    private LinkedHashMap<String, ColumnAnalysis> columns = new LinkedHashMap<>();
+    private Map<String, AggregatorFactory> aggregators = new LinkedHashMap<>();
+    private Map<String, AggregateProjectionMetadata> projections = new LinkedHashMap<>();
+    private List<ContainerAnalysis> containers = new ArrayList<>();
 
     private List<Interval> intervals = null;
-    private Optional<Integer> size = Optional.empty();
-    private Optional<Integer> numRows = Optional.empty();
+    private Optional<Long> size = Optional.empty();
+    private Optional<Long> numRows = Optional.empty();
     private Optional<Boolean> rollup = Optional.empty();
+    @Nullable
+    private TimestampSpec timestampSpec = null;
+    @Nullable
+    private Granularity queryGranularity = null;
 
     public Builder(String segmentId)
     {
@@ -241,7 +282,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       this.segmentId = segmentId.toString();
     }
 
-    public Builder size(int size)
+    public Builder size(long size)
     {
       if (this.size.isEmpty()) {
         this.size = Optional.of(size);
@@ -251,7 +292,16 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
-    public Builder numRows(int numRows)
+    /**
+     * Retained for binary compatibility with code compiled against the pre-{@link ContainerAnalysis} signature.
+     */
+    @Deprecated
+    public Builder size(int size)
+    {
+      return size((long) size);
+    }
+
+    public Builder numRows(long numRows)
     {
       if (this.numRows.isEmpty()) {
         this.numRows = Optional.of(numRows);
@@ -261,14 +311,35 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
-    public Builder rollup(boolean rollup)
+    /**
+     * Retained for binary compatibility with code compiled against the pre-{@link ContainerAnalysis} signature.
+     */
+    @Deprecated
+    public Builder numRows(int numRows)
     {
+      return numRows((long) numRows);
+    }
+
+    public Builder rollup(@Nullable Boolean rollup)
+    {
+      if (rollup == null) {
+        return this;
+      }
       if (this.rollup.isEmpty()) {
         this.rollup = Optional.of(rollup);
       } else {
         throw new IllegalStateException("Rollup is already set: " + this.rollup.get());
       }
       return this;
+    }
+
+    /**
+     * Retained for binary compatibility with code compiled against the pre-{@link ContainerAnalysis} signature.
+     */
+    @Deprecated
+    public Builder rollup(boolean rollup)
+    {
+      return rollup(Boolean.valueOf(rollup));
     }
 
     public Builder interval(Interval interval)
@@ -280,9 +351,21 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
+    public Builder intervals(@Nullable List<Interval> intervals)
+    {
+      this.intervals = intervals == null ? null : new ArrayList<>(intervals);
+      return this;
+    }
+
     public Builder column(String columnName, ColumnAnalysis columnAnalysis)
     {
       this.columns.put(columnName, columnAnalysis);
+      return this;
+    }
+
+    public Builder columns(@Nullable LinkedHashMap<String, ColumnAnalysis> columns)
+    {
+      this.columns = columns == null ? new LinkedHashMap<>() : new LinkedHashMap<>(columns);
       return this;
     }
 
@@ -292,9 +375,45 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       return this;
     }
 
+    public Builder aggregators(@Nullable Map<String, AggregatorFactory> aggregators)
+    {
+      this.aggregators = aggregators == null ? new LinkedHashMap<>() : new LinkedHashMap<>(aggregators);
+      return this;
+    }
+
     public Builder projection(String name, AggregateProjectionMetadata projection)
     {
       this.projections.put(name, projection);
+      return this;
+    }
+
+    public Builder projections(@Nullable Map<String, AggregateProjectionMetadata> projections)
+    {
+      this.projections = projections == null ? new LinkedHashMap<>() : new LinkedHashMap<>(projections);
+      return this;
+    }
+
+    public Builder container(String bundle, long size)
+    {
+      this.containers.add(new ContainerAnalysis(bundle, size));
+      return this;
+    }
+
+    public Builder containers(@Nullable List<ContainerAnalysis> containers)
+    {
+      this.containers = containers == null ? new ArrayList<>() : new ArrayList<>(containers);
+      return this;
+    }
+
+    public Builder timestampSpec(@Nullable TimestampSpec timestampSpec)
+    {
+      this.timestampSpec = timestampSpec;
+      return this;
+    }
+
+    public Builder queryGranularity(@Nullable Granularity queryGranularity)
+    {
+      this.queryGranularity = queryGranularity;
       return this;
     }
 
@@ -304,14 +423,30 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
           segmentId,
           intervals,
           columns,
-          size.orElse(0),
-          numRows.orElse(0),
+          size.orElse(0L),
+          numRows.orElse(0L),
           aggregators.isEmpty() ? null : aggregators,
           projections.isEmpty() ? null : projections,
-          null,
-          null,
-          rollup.orElse(null)
+          timestampSpec,
+          queryGranularity,
+          rollup.orElse(null),
+          containers.isEmpty() ? null : containers
       );
     }
+  }
+
+  /**
+   * On-disk byte size of a single segment file container (a V10 file format bundle), reported by
+   * {@link SegmentMetadataQuery.AnalysisType#CONTAINERSIZE}. One entry per physical container; a bundle (e.g. a
+   * projection name) may have more than one container if its contents exceeded the writer's max container size.
+   *
+   * @param bundle owning bundle name (e.g. the base table or a projection's name)
+   * @param size   on-disk byte size of this container
+   */
+  public record ContainerAnalysis(
+      @JsonProperty("bundle") String bundle,
+      @JsonProperty("size") long size
+  )
+  {
   }
 }
