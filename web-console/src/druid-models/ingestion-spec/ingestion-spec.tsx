@@ -590,7 +590,7 @@ export interface IoConfig {
   appendToExisting?: boolean;
   topic?: string;
   topicPattern?: string;
-  partitionIds?: number[];
+  partitionIds?: (number | string)[];
   consumerProperties?: any;
   replicas?: number;
   taskCount?: number;
@@ -1331,6 +1331,16 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
   throw new Error(`unknown input type ${ingestionComboType}`);
 }
 
+// The server reads partition IDs as Java ints, accepting JSON integers and integer strings such as "1".
+const MAX_KAFKA_PARTITION_ID = 2147483647;
+
+function isValidKafkaPartitionId(id: unknown): boolean {
+  if (typeof id === 'number')
+    return Number.isInteger(id) && id >= 0 && id <= MAX_KAFKA_PARTITION_ID;
+  if (typeof id === 'string') return /^\+?\d+$/.test(id) && Number(id) <= MAX_KAFKA_PARTITION_ID;
+  return false;
+}
+
 export function issueWithIoConfig(
   ioConfig: IoConfig | undefined,
   ignoreInputFormat = false,
@@ -1352,9 +1362,9 @@ export function issueWithIoConfig(
         if (
           !Array.isArray(ioConfig.partitionIds) ||
           !ioConfig.partitionIds.length ||
-          ioConfig.partitionIds.some(id => !Number.isInteger(id) || id < 0)
+          !ioConfig.partitionIds.every(isValidKafkaPartitionId)
         ) {
-          return 'partitionIds must be a nonempty array of nonnegative integers';
+          return `partitionIds must be a nonempty array of integers between 0 and ${MAX_KAFKA_PARTITION_ID}`;
         }
       }
       break;

@@ -37,8 +37,20 @@ describe('ingestion-spec', () => {
   it('validates Kafka partition selection without contacting Kafka', () => {
     const ioConfig = { type: 'kafka', topic: 'events' };
     expect(issueWithIoConfig(ioConfig, true)).toBeUndefined();
-    expect(issueWithIoConfig({ ...ioConfig, partitionIds: [0, 2] }, true)).toBeUndefined();
-    for (const partitionIds of [[], [-1], [0.5], [NaN]]) {
+    for (const partitionIds of [[0, 2], ['1', '2'], [2147483647], ['2147483647']]) {
+      expect(issueWithIoConfig({ ...ioConfig, partitionIds }, true)).toBeUndefined();
+    }
+    for (const partitionIds of [
+      [],
+      [-1],
+      [0.5],
+      [NaN],
+      [2147483648],
+      ['2147483648'],
+      ['abc'],
+      ['-1'],
+      ['1.5'],
+    ]) {
       expect(issueWithIoConfig({ ...ioConfig, partitionIds }, true)).toBeDefined();
     }
     expect(
