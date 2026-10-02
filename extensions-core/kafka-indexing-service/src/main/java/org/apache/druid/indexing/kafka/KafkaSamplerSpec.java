@@ -74,7 +74,8 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
           objectMapper,
           kafkaSupervisorIOConfig.getConfigOverrides(),
           kafkaSupervisorIOConfig.isMultiTopic(),
-          null
+          null,
+          kafkaSupervisorIOConfig.getPartitionIds()
       );
     }
     finally {

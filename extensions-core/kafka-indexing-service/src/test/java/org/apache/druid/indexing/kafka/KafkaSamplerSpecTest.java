@@ -59,6 +59,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -121,6 +122,30 @@ public class KafkaSamplerSpecTest extends InitializedNullHandlingTest
   public static void tearDownClass()
   {
     kafkaServer.close();
+  }
+
+  @Test
+  public void testSampleOnlySelectedPartition()
+  {
+    final String topic = TOPIC + "_selected";
+    insertData(List.of(
+        new ProducerRecord<>(topic, 0, null, jb("2008", "excluded", "y", "10", "20.0", "1.0")),
+        new ProducerRecord<>(topic, 1, null, jb("2008", "selected", "y", "10", "20.0", "1.0"))
+    ));
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(DATA_SCHEMA)
+        .withIoConfig(io -> io.withJsonInputFormat().withConsumerProperties(kafkaServer.consumerProperties())
+                             .withUseEarliestSequenceNumber(true).withPartitionIds(Set.of(1)))
+        .build(DATASOURCE, topic);
+    final SamplerResponse response = new KafkaSamplerSpec(
+        spec,
+        new SamplerConfig(1, 5_000, null, null),
+        new InputSourceSampler(OBJECT_MAPPER),
+        OBJECT_MAPPER
+    ).sample();
+
+    Assertions.assertEquals(1, response.getNumRowsIndexed());
+    Assertions.assertEquals("selected", response.getData().get(0).getParsed().get("dim1"));
   }
 
   @Test

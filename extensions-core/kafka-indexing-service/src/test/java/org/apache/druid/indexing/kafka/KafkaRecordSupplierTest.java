@@ -39,6 +39,8 @@ import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.TestHelper;
+import org.apache.kafka.clients.admin.Admin;
+import org.apache.kafka.clients.admin.NewPartitions;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -309,6 +311,44 @@ public class KafkaRecordSupplierTest
         partitions
     );
     Assertions.assertEquals(0, diff.size(), diff.toString());
+  }
+
+  @Test
+  public void testGetPartitionIdsWithSelectionIgnoresUnselectedPartitions() throws Exception
+  {
+    // The topic has partitions 0 and 1.
+    insertData();
+    final KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, null, Set.of(PARTITION_1.partition()));
+
+    Assertions.assertEquals(Set.of(PARTITION_1), recordSupplier.getPartitionIds(TOPIC));
+
+    // A partition added later that is outside the selection is still ignored.
+    increasePartitions(TOPIC, 4);
+
+    Assertions.assertEquals(Set.of(PARTITION_1), recordSupplier.getPartitionIds(TOPIC));
+    recordSupplier.close();
+  }
+
+  @Test
+  public void testGetPartitionIdsFailsWhenSelectedPartitionIsMissing() throws Exception
+  {
+    // The topic has partitions 0 and 1 only.
+    insertData();
+    final KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, null, Set.of(0, 3));
+
+    final StreamException error = Assertions.assertThrows(StreamException.class, () -> recordSupplier.getPartitionIds(TOPIC));
+    Assertions.assertTrue(error.getMessage().contains("[3]"), error.getMessage());
+
+    // Discovery recovers once the missing partition exists.
+    increasePartitions(TOPIC, 4);
+
+    Assertions.assertEquals(
+        Set.of(PARTITION_0, new KafkaTopicPartition(false, null, 3)),
+        recordSupplier.getPartitionIds(TOPIC)
+    );
+    recordSupplier.close();
   }
 
   @Test
@@ -814,6 +854,13 @@ public class KafkaRecordSupplierTest
     for (MetricName metricName : metrics.keySet()) {
       Assertions.assertEquals("overrideConfigTest", metricName.tags().get("client-id"));
       break;
+    }
+  }
+
+  private static void increasePartitions(String topic, int totalPartitions) throws Exception
+  {
+    try (Admin admin = KAFKA_SERVER.newAdminClient()) {
+      admin.createPartitions(Map.of(topic, NewPartitions.increaseTo(totalPartitions))).all().get();
     }
   }
 

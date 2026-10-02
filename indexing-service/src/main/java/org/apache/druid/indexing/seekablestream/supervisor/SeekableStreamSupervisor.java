@@ -1364,9 +1364,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     });
   }
 
+  protected void validatePartitionReset(@Nullable DataSourceMetadata metadata)
+  {
+    // Stream implementations may restrict which partitions can be reset.
+  }
+
   @Override
   public void reset(@Nullable final DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     log.info("Posting ResetNotice with datasource metadata [%s]", dataSourceMetadata);
     addNotice(new ResetNotice(dataSourceMetadata));
   }
@@ -1381,6 +1387,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @Override
   public void resetOffsets(@Nonnull DataSourceMetadata resetDataSourceMetadata)
   {
+    validatePartitionReset(resetDataSourceMetadata);
     if (resetDataSourceMetadata == null) {
       throw InvalidInput.exception("Reset dataSourceMetadata is required for resetOffsets.");
     }
@@ -2135,6 +2142,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @VisibleForTesting
   public void resetInternal(DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     if (dataSourceMetadata == null) {
       // Reset everything
       boolean result = indexerMetadataStorageCoordinator.deleteDataSourceMetadata(supervisorId);
@@ -2260,6 +2268,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   public void resetOffsetsInternal(@Nonnull final DataSourceMetadata dataSourceMetadata)
   {
+    validatePartitionReset(dataSourceMetadata);
     log.info("Reset offsets for supervisor[%s] for dataSource[%s] with metadata[%s]", supervisorId, dataSource, dataSourceMetadata);
 
     @SuppressWarnings("unchecked")
@@ -3087,6 +3096,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
+  /** Whether a task's partitions match what its group now owns; if not, the task is replaced. Default: always true. */
+  protected boolean isTaskPartitionSetCurrent(int taskGroupId, Set<PartitionIdType> taskPartitions)
+  {
+    return true;
+  }
+
   /**
    * Determines whether a given task was created by the current version of the supervisor.
    * Uses the Task object mapped to this taskId in the {@code activeTaskMap}.
@@ -3115,6 +3130,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     @SuppressWarnings("unchecked")
     SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task =
         (SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType>) genericTask;
+
+    if (!isTaskPartitionSetCurrent(
+        taskGroupId,
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet()
+    )) {
+      return false;
+    }
 
     // We recompute the sequence name hash for the supervisor's own configuration and compare this to the hash created
     // by rehashing the task's sequence name using the most up-to-date class definitions of tuning config and
@@ -4223,6 +4245,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Integer groupId = taskGroupEntry.getKey();
       TaskGroup taskGroup = taskGroupEntry.getValue();
 
+      if (!isTaskPartitionSetCurrent(groupId, taskGroup.startingSequences.keySet())) {
+        futures.add(stopTasksInGroup(taskGroup, "Task group partition selection has changed"));
+        iTaskGroups.remove();
+        continue;
+      }
+
       // Iterate the list of known tasks in this group and:
       //   1) Kill any tasks which are not "current" (have the partitions, starting sequences, and minimumMessageTime
       //      & maximumMessageTime (if applicable) in [activelyReadingTaskGroups])
@@ -4281,7 +4309,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (!stateManager.isAtLeastOneSuccessfulRun()) {
       // Set previous sequences to the current offsets in metadata store
       previousSequencesFromStream.clear();
-      previousSequencesFromStream.putAll(getOffsetsFromMetadataStorage());
+      previousSequencesFromStream.putAll(getOffsetsFromMetadataStorageForCurrentPartitions());
 
       // Force update partition lag since the reporting thread might not have run yet
       updatePartitionLagFromStream();
@@ -4315,6 +4343,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
       }
     }
+  }
+
+  /** Returns stored offsets for the current partition selection without changing saved metadata. */
+  public Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorageForCurrentPartitions()
+  {
+    return getOffsetsFromMetadataStorage();
   }
 
   private long computeTotalLag()
