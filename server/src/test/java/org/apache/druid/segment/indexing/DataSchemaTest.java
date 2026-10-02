@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.RollupTableProjectionSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TableProjectionSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -967,6 +968,47 @@ class DataSchemaTest extends InitializedNullHandlingTest
     Assertions.assertEquals(Granularities.DAY, effectiveGranularity.getSegmentGranularity());
     Assertions.assertEquals(Granularities.HOUR, effectiveGranularity.getQueryGranularity());
     Assertions.assertFalse(effectiveGranularity.isRollup());
+  }
+
+  /**
+   * The rollup layout is the plain shape plus aggregators, so what it adds at this level is: aggregators delegate
+   * through {@link DataSchema#getAggregators()}, and the recombined granularity carries {@code rollup=true} from the
+   * spec's layout type (where the plain layout recombines with {@code rollup=false}).
+   */
+  @Test
+  void testBaseTableModeWithRollupTableProjectionSpec() throws IOException
+  {
+    final RollupTableProjectionSpec spec = RollupTableProjectionSpec.builder()
+        .groupingColumns(
+            new StringDimensionSchema("page"),
+            new LongDimensionSchema("__time")
+        )
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
+        .build()
+        .withQueryGranularity(Granularities.HOUR);
+    final DataSchema original = DataSchema.builder()
+                                          .withDataSource("datasource")
+                                          .withTimestamp(TIMESTAMP_SPEC)
+                                          .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
+                                          .withBaseTable(spec)
+                                          .build();
+
+    final String serialized = jsonMapper.writeValueAsString(original);
+    final JsonNode root = jsonMapper.readTree(serialized);
+    Assertions.assertEquals("rollupTable", root.get("baseTable").get("type").asText());
+    Assertions.assertFalse(root.has("metricsSpec"));
+    final DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
+    Assertions.assertEquals(original, deserialized);
+    Assertions.assertEquals(spec, deserialized.getBaseTable());
+
+    Assertions.assertArrayEquals(
+        new AggregatorFactory[]{new LongSumAggregatorFactory("total", "total")},
+        original.getAggregators()
+    );
+    final GranularitySpec effectiveGranularity = original.getGranularitySpec();
+    Assertions.assertEquals(Granularities.DAY, effectiveGranularity.getSegmentGranularity());
+    Assertions.assertEquals(Granularities.HOUR, effectiveGranularity.getQueryGranularity());
+    Assertions.assertTrue(effectiveGranularity.isRollup());
   }
 
   @Test
