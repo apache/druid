@@ -1007,6 +1007,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllEstimateAsVirtualColumn()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1),"
@@ -1058,6 +1061,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllEstimateAsVirtualColumnWithRound()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim3, FALSE), HLL_SKETCH_ESTIMATE(hllsketch_dim3, TRUE)"
@@ -1175,6 +1181,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllEstimateAsVirtualColumnWithTopN()
   {
+    // Cannot vectorize native TopN.
+    cannotVectorize();
+
     testQuery(
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), COUNT(*)"
@@ -1204,6 +1213,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllWithOrderedWindowing()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testBuilder()
         .sql(
             "SELECT dim1,coalesce(cast(l1 as integer),-999),"
@@ -1227,6 +1239,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testResultCacheWithWindowing()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     for (int i = 0; i < 2; i++) {
       testBuilder()
           .sql(

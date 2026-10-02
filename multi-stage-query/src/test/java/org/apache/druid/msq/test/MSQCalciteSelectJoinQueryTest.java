@@ -103,7 +103,7 @@ public class MSQCalciteSelectJoinQueryTest
           .addCustomRunner(
               new ExtractResultsFactory(
                   () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-          .skipVectorize(true);
+          .cannotVectorize(isCannotVectorizeExpected());
     }
   }
 }

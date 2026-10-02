@@ -85,7 +85,6 @@ public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQuery
                     QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
                     QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
                 )
-                .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, decoupledExtension)
                 .put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm().toString())
                 .put(QueryContexts.ENABLE_DEBUG, true)
                 .build()
@@ -93,16 +92,6 @@ public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQuery
   }
 
   protected abstract JoinAlgorithm joinAlgorithm();
-
-  @Override
-  protected void cannotVectorize()
-  {
-  }
-
-  @Override
-  protected void cannotVectorizeUnlessFallback()
-  {
-  }
 
   @Override
   protected void msqIncompatible()

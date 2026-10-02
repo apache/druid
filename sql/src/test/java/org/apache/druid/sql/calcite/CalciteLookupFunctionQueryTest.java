@@ -298,6 +298,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterImpossibleLookupOfConcat()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // No keys in the lookup table begin with 'key:', so this is always false.
     testQuery(
         buildFilterTestSql("LOOKUP('key:' || dim1, 'lookyloo') = 'xabc'"),
@@ -332,6 +335,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterEqualsAlwaysFalse()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         buildFilterTestSql("LOOKUP(dim1, 'lookyloo') = 'nonexistent'"),
         QUERY_CONTEXT,
@@ -1182,6 +1188,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilterCoalesceDifferentLiteralAlwaysFalse()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         buildFilterTestSql("COALESCE(LOOKUP(dim1, 'lookyloo'), 'xyzzy') = 'nonexistent'"),
         QUERY_CONTEXT,
@@ -1475,6 +1484,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLookupOnValueThatIsNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     List<Object[]> expected = ImmutableList.<Object[]>builder().add(
         new Object[]{null, null},
         new Object[]{null, null}
@@ -1503,6 +1515,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testLookupOnValueThatIsNotDistinctFromNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     List<Object[]> expected = ImmutableList.<Object[]>builder().add(
         new Object[]{null, null},
         new Object[]{null, null}

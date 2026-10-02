@@ -49,7 +49,7 @@ public class CalciteNestedDataQueryMSQTest extends CalciteNestedDataQueryTest
   {
     return new QueryTestBuilder(new CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-        .skipVectorize(true)
+        .cannotVectorize(isCannotVectorizeExpected())
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 

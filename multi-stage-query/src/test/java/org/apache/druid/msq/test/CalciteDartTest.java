@@ -45,13 +45,16 @@ public class CalciteDartTest extends BaseCalciteQueryTest
                 .put(QueryContexts.ENABLE_DEBUG, true)
                 .build()
         )
-        .skipVectorize(true)
+        .cannotVectorize(isCannotVectorizeExpected())
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 
   @Test
   public void testSelect1()
   {
+    // Cannot vectorize due to Scan on inline data.
+    cannotVectorize();
+
     testBuilder()
         .sql("SELECT 1")
         .expectedResults(ImmutableList.of(new Object[] {1}))

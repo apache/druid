@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.quidem.DruidQTestInfo;
@@ -107,9 +106,6 @@ public class DecoupledExtension implements BeforeEachCallback
       }
     };
 
-    boolean cannotVectorize = baseTest.cannotVectorize
-        || (!ExpressionProcessing.allowVectorizeFallback() && baseTest.cannotVectorizeUnlessFallback);
-    return builder.cannotVectorize(cannotVectorize)
-        .skipVectorize(baseTest.skipVectorize);
+    return builder.cannotVectorize(baseTest.isCannotVectorizeExpected());
   }
 }

@@ -82,6 +82,9 @@ public class TopNQueryEngine
       @Nullable final TopNQueryMetrics queryMetrics
   )
   {
+    // There is no vectorized TopN engine, so this throws if vectorization is forced.
+    query.context().getVectorize().shouldVectorize(false);
+
     final CursorFactory cursorFactory = segment.as(CursorFactory.class);
     if (cursorFactory == null) {
       throw new SegmentMissingException(

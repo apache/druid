@@ -59,6 +59,9 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantParamGetsConstant()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT 1 + ?",
         ImmutableList.of(
@@ -85,6 +88,9 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testParamsGetOptimizedIntoConstant()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT 1 + ?, dim1 FROM foo LIMIT ?",
         ImmutableList.of(
@@ -235,6 +241,9 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testParamsInSelectExpressionAndLimit()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT SUBSTRING(dim2, ?, ?) FROM druid.foo LIMIT ?",
         ImmutableList.of(
@@ -635,6 +644,9 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWrongTypeParameter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"

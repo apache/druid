@@ -330,9 +330,6 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainHttpFn()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query =
         "EXPLAIN PLAN FOR\n" +
         "INSERT INTO dst SELECT x, y, z\n" +
