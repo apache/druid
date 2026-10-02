@@ -2630,6 +2630,7 @@ SRE
 reachability
 ownership_mismatch
 giveup
+retryable
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram

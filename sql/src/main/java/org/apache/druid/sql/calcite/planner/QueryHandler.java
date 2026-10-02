@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -59,6 +60,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.guava.BaseSequence;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
@@ -333,43 +336,46 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           planner.getTypeFactory(),
           plannerContext.getParameters()
       );
-      final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> {
-        final Enumerable<?> enumerable = theRel.bind(dataContext);
-        final Enumerator<?> enumerator = enumerable.enumerator();
-        return QueryResponse.withEmptyContext(
-            Sequences.withBaggage(new BaseSequence<>(
-                new BaseSequence.IteratorMaker<Object[], QueryHandler.EnumeratorIterator<Object[]>>()
-                {
-                  @Override
-                  public QueryHandler.EnumeratorIterator<Object[]> make()
-                  {
-                    return new QueryHandler.EnumeratorIterator<>(new Iterator<>()
-                    {
-                      @Override
-                      public boolean hasNext()
-                      {
-                        return enumerator.moveNext();
-                      }
-
-                      @Override
-                      public Object[] next()
-                      {
-                        return (Object[]) enumerator.current();
-                      }
-                    });
-                  }
-
-                  @Override
-                  public void cleanup(QueryHandler.EnumeratorIterator<Object[]> iterFromMake)
-                  {
-
-                  }
-                }
-            ), enumerator::close)
-        );
-      };
+      final Supplier<QueryResponse<Object[]>> resultsSupplier =
+          () -> QueryResponse.withEmptyContext(enumerate(theRel.bind(dataContext)));
       return new PlannerResult(resultsSupplier, rootQueryRel.validatedRowType);
     }
+  }
+
+  /**
+   * Rows of a bound {@link BindableRel}; closing the sequence releases everything the binding holds.
+   */
+  @VisibleForTesting
+  static Sequence<Object[]> enumerate(final Enumerable<?> enumerable)
+  {
+    final Sequence<Object[]> rows = new BaseSequence<>(
+        new BaseSequence.IteratorMaker<Object[], EnumeratorIterator>()
+        {
+          @Override
+          public EnumeratorIterator make()
+          {
+            return new EnumeratorIterator(enumerable.enumerator());
+          }
+
+          @Override
+          public void cleanup(EnumeratorIterator iterFromMake)
+          {
+            iterFromMake.enumerator.close();
+          }
+        }
+    );
+
+    if (!(enumerable instanceof AutoCloseable closeable)) {
+      return rows;
+    }
+    return Sequences.wrap(rows, new SequenceWrapper()
+    {
+      @Override
+      public void after(boolean isDone, Throwable thrown) throws Exception
+      {
+        closeable.close();
+      }
+    });
   }
 
   /**
@@ -750,25 +756,25 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     }
   }
 
-  private static class EnumeratorIterator<T> implements Iterator<T>
+  private static class EnumeratorIterator implements Iterator<Object[]>
   {
-    private final Iterator<T> it;
+    private final Enumerator<?> enumerator;
 
-    EnumeratorIterator(Iterator<T> it)
+    EnumeratorIterator(Enumerator<?> enumerator)
     {
-      this.it = it;
+      this.enumerator = enumerator;
     }
 
     @Override
     public boolean hasNext()
     {
-      return it.hasNext();
+      return enumerator.moveNext();
     }
 
     @Override
-    public T next()
+    public Object[] next()
     {
-      return it.next();
+      return (Object[]) enumerator.current();
     }
   }
 }
