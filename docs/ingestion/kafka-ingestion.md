@@ -121,6 +121,7 @@ For configuration properties shared across all streaming ingestion methods, refe
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
 |`topic`|String|The Kafka topic to read from. Note that once this value is established for a supervisor, updating it is not supported. To ingest data from multiple topic, use `topicPattern`. |Yes if `topicPattern` isn't set.||
+|`partitionIds`|Array of integers|Optional nonempty set of nonnegative partition IDs for a single `topic`. Omit or set to null to read all partitions. Cannot be combined with `topicPattern` or `boundedStreamConfig`. See [Ingest selected partitions](#ingest-selected-partitions).|No|null|
 |`topicPattern`|String|Multiple Kafka topics to read from, passed as a regex pattern. See [Ingest from multiple topics](#ingest-from-multiple-topics) for more information.|Yes if `topic` isn't set.||
 |`consumerProperties`|String, Object|A map of properties to pass to the Kafka consumer. See [Consumer properties](#consumer-properties) for details.|Yes. At the minimum, you must set the `bootstrap.servers` property to establish the initial connection to the Kafka cluster.||
 |`pollTimeout`|Long|The length of time to wait for the Kafka consumer to poll records, in milliseconds.|No|100|
@@ -487,6 +488,46 @@ For configuration properties shared across all streaming ingestion methods, refe
 |--------|----|-----------|--------|-------|
 |`numPersistThreads`|Integer|The number of threads to use to create and persist incremental segments on the disk. Higher ingestion data throughput results in a larger number of incremental segments, causing significant CPU time to be spent on the creation of the incremental segments on the disk. For datasources with number of columns running into hundreds or thousands, creation of the incremental segments may take up significant time, in the order of multiple seconds. In both of these scenarios, ingestion can stall or pause frequently, causing it to fall behind. You can use additional threads to parallelize the segment creation without blocking ingestion as long as there are sufficient CPU resources available.|No|1|
 |`streamingPartitionsSpec`|Object|Configures query-time segment pruning for streaming-ingested segments. A typed object with an optional `type` (defaults to `dim_value_set`), `partitionDimensions` (List of String), the dimensions whose observed values each segment records so the broker can skip segments that can't match a query filter, and an optional `maxValuesPerDimension` (Integer) cap on the distinct values recorded per dimension per segment. See [Streaming partitions spec](#streaming-partitions-spec) for details.|No|null|
+
+## Ingest selected partitions
+
+Set `partitionIds` in the supervisor's `ioConfig` to consume only specific partitions:
+
+```json
+{
+  "type": "kafka",
+  "topic": "events",
+  "partitionIds": [0, 2, 5],
+  "consumerProperties": {"bootstrap.servers": "localhost:9092"},
+  "useEarliestOffset": true
+}
+```
+
+This fragment can be used to investigate production data in a separate diagnostic supervisor and datasource without ingesting the entire topic again.
+The diagnostic supervisor maintains its own offsets.
+Selected partitions are not necessarily a representative sample, and selecting partitions does not limit their throughput.
+Additional ingestion still consumes Kafka and Druid resources.
+
+Druid validates IDs against Kafka `partitionsFor(topic)` metadata during discovery, including discovery for sampling and monitoring.
+Spec parsing does not contact Kafka.
+Missing IDs produce a supervisor error and are retried; a new supervisor does not start with only part of its selection.
+Empty lists, negative IDs, and null elements are invalid.
+Duplicate IDs are normalized and list order does not matter.
+
+New topic partitions outside the selection are ignored.
+Omit `partitionIds` or set it to null to restore discovery of all partitions.
+Selected partitions are assigned to task groups by their position in the sorted selection: `[0, 3, 6]` with three tasks uses three groups.
+
+Submitting a supervisor spec that changes or removes `partitionIds` requests managed readers to finish and publish, then restarts the supervisor with the updated selection.
+Supervisors with an explicit selection also replace incompatible adopted readers on restart.
+Narrowing `partitionIds` does not delete previously ingested rows from partitions removed from the selection.
+Already publishing tasks may finish; the update does not provide an instantaneous cutoff.
+Retained and re-added partitions resume from saved offsets when available.
+Otherwise, the existing `useEarliestOffset` behavior applies.
+
+Scoped reset requests reject IDs outside the selection.
+If an excluded partition's saved offset has expired and automatic offset reset is disabled, first re-add the partition, then issue a scoped reset after the unavailable-offset error, or set an explicitly chosen available offset using `resetOffsets`.
+A full supervisor reset still clears all saved offsets, including those of excluded partitions.
 
 ## Deployment notes on Kafka partitions and Druid segments
 

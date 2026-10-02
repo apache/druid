@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -34,6 +35,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
@@ -69,6 +71,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner.St
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -181,6 +184,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   private String topic;
   private String topicPattern;
   private boolean multiTopic;
+  private Set<Integer> selectedPartitionIds;
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private StubServiceEmitter serviceEmitter;
   private SupervisorStateManagerConfig supervisorConfig;
@@ -242,6 +246,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     topic = getTopic();
     topicPattern = getTopicPattern();
     topicPostfix++;
+    selectedPartitionIds = null;
     multiTopic = false; // assign to true in test if you wish to test multi-topic
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new StubServiceEmitter("KafkaSupervisorTest", "localhost");
@@ -520,6 +525,99 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(Integer.valueOf(10), taskList.get(0).getServerPriority());
     Assertions.assertEquals(Integer.valueOf(20), taskList.get(1).getServerPriority());
     Assertions.assertEquals(Integer.valueOf(20), taskList.get(2).getServerPriority());
+  }
+
+  @Test
+  public void testSelectedPartitionAssignmentAndLag() throws Exception
+  {
+    selectedPartitionIds = Set.of(0, 2);
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
+    addSomeEvents(1);
+    final Capture<KafkaIndexTask> captured = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(null).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.capture(captured))).andReturn(true).times(2);
+    replayAll();
+    supervisor.start();
+    // A previous generation had only partition 0. Rebuild the group, not just its tasks.
+    supervisor.addTaskGroupToActivelyReadingTaskGroup(
+        0,
+        singlePartitionMap(topic, 0, 0L),
+        null,
+        null,
+        Set.of(),
+        Set.of(),
+        null
+    );
+    supervisor.runInternal();
+    final Set<KafkaTopicPartition> selected = singlePartitionMap(topic, 0, 0L, 2, 0L).keySet();
+
+    Assertions.assertEquals(
+        Set.of(Set.of(new KafkaTopicPartition(false, topic, 0)), Set.of(new KafkaTopicPartition(false, topic, 2))),
+        captured.getValues().stream()
+                .map(task -> task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet())
+                .collect(Collectors.toSet())
+    );
+    captured.getValues().forEach(task -> Assertions.assertEquals(
+        task.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().keySet(),
+        task.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().keySet()
+    ));
+
+    Assertions.assertEquals(2, supervisor.getPartitionCount());
+    supervisor.updatePartitionLagFromStream();
+
+    Assertions.assertEquals(selected, supervisor.getPartitionRecordLag().keySet());
+    verifyAll();
+  }
+
+  @Test
+  public void testSparseSelectedPartitionGrouping()
+  {
+    selectedPartitionIds = Set.of(0, 3, 6);
+    supervisor = getTestableSupervisor(1, 3, true, "PT1H", null, null);
+
+    Assertions.assertEquals(0, supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 0)));
+    Assertions.assertEquals(1, supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 3)));
+    Assertions.assertEquals(2, supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 6)));
+    // Older tasks may still contain excluded partitions while being replaced.
+    Assertions.assertEquals(1, supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 7)));
+  }
+
+  @Test
+  public void testOffsetsFromMetadataStorageForCurrentPartitionsIgnoreUnselected()
+  {
+    selectedPartitionIds = Set.of(0);
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    final Map<KafkaTopicPartition, Long> storedOffsets = singlePartitionMap(topic, 0, 10L, 1, 20L);
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, storedOffsets))
+    ).times(2);
+    replayAll();
+
+    Assertions.assertEquals(singlePartitionMap(topic, 0, 10L), supervisor.getOffsetsFromMetadataStorageForCurrentPartitions());
+    Assertions.assertEquals(storedOffsets, supervisor.getOffsetsFromMetadataStorage());
+    verifyAll();
+  }
+
+  @Test
+  public void testMissingSelectedPartitionBlocksStartup() throws Exception
+  {
+    selectedPartitionIds = Set.of(0, 99);
+    supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
+    addSomeEvents(1);
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    replayAll();
+    supervisor.start();
+    supervisor.runInternal();
+    supervisor.runInternal();
+
+    Assertions.assertTrue(supervisor.getPartitionGroups().isEmpty());
+    Assertions.assertFalse(supervisor.getStateManager().isAtLeastOneSuccessfulRun());
+    Assertions.assertTrue(supervisor.getStateManager().getExceptionEvents().toString().contains("99"));
+    Assertions.assertThrows(StreamException.class, () -> supervisor.getPartitionCount());
+    verifyAll();
   }
 
   @Test
@@ -2878,8 +2976,6 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
-    verifyAll();
-
     Thread.sleep(100);
     supervisor.updateCurrentAndLatestOffsets();
     supervisor.runInternal();
@@ -2893,6 +2989,42 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
 
     Assertions.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+  }
+
+  @Test
+  public void testSelectedSupervisorIsIdleWithExcludedStoredOffsets() throws Exception
+  {
+    selectedPartitionIds = Set.of(0);
+    supervisor = getTestableSupervisorForIdleBehaviour(
+        1,
+        2,
+        true,
+        "PT10S",
+        null,
+        null,
+        false,
+        new IdleConfig(true, 200L)
+    );
+    addSomeEvents(1);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    // Saved offsets include partitions 1 and 2, which are outside the selection.
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 0, 2L, 1, 2L, 2, 2L))
+        )
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    replayAll();
+    supervisor.start();
+    supervisor.updateCurrentAndLatestOffsets();
+
+    supervisor.runInternal();
+
+    Assertions.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
+    verifyAll();
   }
 
   @Test
@@ -4809,6 +4941,153 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testRestartAdoptsReaderAfterTopicGainsPartitions() throws Exception
+  {
+    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    addSomeEvents(1);
+    // The task predates partition 1; restart must adopt it without discarding its uncommitted work.
+    final Map<KafkaTopicPartition, Long> originalOffsets = singlePartitionMap(topic, 0, 0L, 2, 0L);
+    final KafkaIndexTask existingTask = createKafkaIndexTask(
+        "existing",
+        DATASOURCE,
+        0,
+        new SeekableStreamStartSequenceNumbers<>(topic, originalOffsets, Set.of()),
+        new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
+        null,
+        null,
+        supervisor.getTuningConfig()
+    );
+    final TreeMap<Integer, Map<KafkaTopicPartition, Long>> checkpoints = new TreeMap<>();
+    checkpoints.put(0, originalOffsets);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of("existing", existingTask)).anyTimes();
+    EasyMock.expect(taskStorage.getStatus("existing")).andReturn(Optional.of(TaskStatus.running("existing"))).anyTimes();
+    EasyMock.expect(taskStorage.getTask("existing")).andReturn(Optional.of(existingTask)).anyTimes();
+    EasyMock.expect(taskClient.getStatusAsync("existing")).andReturn(Futures.immediateFuture(Status.READING));
+    EasyMock.expect(taskClient.getStartTimeAsync("existing")).andReturn(Futures.immediateFuture(DateTimes.nowUtc()));
+    EasyMock.expect(taskClient.getCheckpointsAsync(EasyMock.eq("existing"), EasyMock.anyBoolean()))
+            .andReturn(Futures.immediateFuture(checkpoints));
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE))
+            .andReturn(new KafkaDataSourceMetadata(null)).anyTimes();
+    replayAll();
+    supervisor.start();
+    supervisor.runInternal();
+    verifyAll();
+
+    Assertions.assertTrue(supervisor.getStateManager().isAtLeastOneSuccessfulRun());
+    Assertions.assertEquals(3, supervisor.getPartitionGroups().get(0).size());
+    Assertions.assertEquals(1, supervisor.getActiveTaskGroupsCount());
+    // Strict mocks reject stop/pause/publish calls and replacement submissions in the initial restart cycle.
+  }
+
+  @Test
+  public void testSelectedPartitionTaskCompatibility()
+  {
+    selectedPartitionIds = Set.of(0, 2);
+    final KafkaSupervisor selected = createSupervisor(
+        1,
+        2,
+        true,
+        "PT1H",
+        null,
+        null,
+        false,
+        kafkaHost,
+        dataSchema,
+        tuningConfigBuilder().build()
+    );
+    final Set<KafkaTopicPartition> expected = singlePartitionMap(topic, 0, 0L, 2, 0L).keySet();
+    selected.getPartitionGroups().put(0, expected);
+
+    Assertions.assertTrue(selected.isTaskPartitionSetCurrent(0, expected));
+    // A task reading fewer, more, or a different group's partitions is not current.
+    Assertions.assertFalse(selected.isTaskPartitionSetCurrent(0, singlePartitionMap(topic, 0, 0L).keySet()));
+    Assertions.assertFalse(selected.isTaskPartitionSetCurrent(0, singlePartitionMap(topic, 0, 0L, 2, 0L, 4, 0L).keySet()));
+    Assertions.assertFalse(selected.isTaskPartitionSetCurrent(1, expected));
+  }
+
+  @Test
+  public void testSelectedPartitionResetValidation()
+  {
+    selectedPartitionIds = Set.of(0, 2);
+    final KafkaSupervisor selected = createSupervisor(
+        1,
+        2,
+        true,
+        "PT1H",
+        null,
+        null,
+        false,
+        kafkaHost,
+        dataSchema,
+        tuningConfigBuilder().build()
+    );
+    final Set<KafkaTopicPartition> expected = singlePartitionMap(topic, 0, 0L, 2, 0L).keySet();
+    selected.getPartitionGroups().put(0, expected);
+    final KafkaDataSourceMetadata excluded = new KafkaDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 0, 0L, 4, 0L))
+    );
+
+    assertResetRejected(selected, excluded);
+    Assertions.assertEquals(expected, selected.getPartitionGroups().get(0));
+
+    // Offsets for selected partitions only, and a full reset (null), are accepted.
+    selected.validatePartitionReset(new KafkaDataSourceMetadata(
+        new SeekableStreamEndSequenceNumbers<>(topic, singlePartitionMap(topic, 0, 0L))
+    ));
+    selected.validatePartitionReset(null);
+  }
+
+  @Test
+  public void testSelectedPartitionResetRejectsTopicQualifiedJsonKeys() throws Exception
+  {
+    selectedPartitionIds = Set.of(0);
+    final KafkaSupervisor selected = createSupervisor(
+        1,
+        1,
+        true,
+        "PT1H",
+        null,
+        null,
+        false,
+        kafkaHost,
+        dataSchema,
+        tuningConfigBuilder().build()
+    );
+    final Set<KafkaTopicPartition> expected = singlePartitionMap(topic, 0, 0L).keySet();
+    selected.getPartitionGroups().put(0, expected);
+    final ObjectMapper resetMapper = OBJECT_MAPPER.copy();
+    resetMapper.registerSubtypes(new NamedType(KafkaDataSourceMetadata.class, "kafka"));
+    EasyMock.replay(indexerMetadataStorageCoordinator, taskMaster, taskQueue);
+    for (final String key : List.of("other-topic:0", topic + ":0", ":0")) {
+      final KafkaDataSourceMetadata metadata = resetMapper.readValue(
+          StringUtils.format(
+              "{\"type\":\"kafka\",\"partitions\":{\"type\":\"end\",\"stream\":\"%s\","
+              + "\"partitionSequenceNumberMap\":{\"0\":5,\"%s\":10}}}",
+              topic,
+              key
+          ),
+          KafkaDataSourceMetadata.class
+      );
+
+      assertResetRejected(selected, metadata);
+      Assertions.assertEquals(expected, selected.getPartitionGroups().get(0));
+    }
+    // No interactions with storage or tasks are permitted, including for mixed-key requests.
+    EasyMock.verify(indexerMetadataStorageCoordinator, taskMaster, taskQueue);
+  }
+
+  /** Every reset entry point must reject the request before touching metadata storage or the task queue. */
+  private static void assertResetRejected(KafkaSupervisor selected, KafkaDataSourceMetadata metadata)
+  {
+    Assertions.assertThrows(DruidException.class, () -> selected.reset(metadata));
+    Assertions.assertThrows(DruidException.class, () -> selected.resetOffsets(metadata));
+    Assertions.assertThrows(DruidException.class, () -> selected.resetInternal(metadata));
+    Assertions.assertThrows(DruidException.class, () -> selected.resetOffsetsInternal(metadata));
+  }
+
+  @Test
   public void testIsTaskCurrent()
   {
     DateTime minMessageTime = DateTimes.nowUtc();
@@ -5825,6 +6104,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("bootstrap.servers", kafkaHost);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
         .withTopic(multiTopic ? null : topic)
+        .withPartitionIds(selectedPartitionIds)
         .withTopicPattern(multiTopic ? topicPattern : null)
         .withInputFormat(INPUT_FORMAT)
         .withReplicas(replicas)
@@ -5999,6 +6279,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     consumerProperties.put("isolation.level", "read_committed");
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig = new KafkaIOConfigBuilder()
         .withTopic(topic)
+        .withPartitionIds(selectedPartitionIds)
         .withInputFormat(INPUT_FORMAT)
         .withReplicas(replicas)
         .withTaskCount(taskCount)
@@ -6303,7 +6584,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
       return new KafkaRecordSupplier(
           new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject),
           getIoConfig().isMultiTopic(),
-          null
+          null,
+          getIoConfig().getPartitionIds()
       );
     }
 

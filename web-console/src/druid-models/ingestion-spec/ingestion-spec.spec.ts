@@ -23,15 +23,48 @@ import {
   adjustId,
   cleanSpec,
   DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
+  getIoConfigFormFields,
   guessColumnTypeFromInput,
   guessColumnTypeFromSampleResponse,
   guessKafkaInputFormat,
   guessSimpleInputFormat,
+  issueWithIoConfig,
   updateSchemaWithSample,
   upgradeSpec,
 } from './ingestion-spec';
 
 describe('ingestion-spec', () => {
+  it('validates Kafka partition selection without contacting Kafka', () => {
+    const ioConfig = { type: 'kafka', topic: 'events' };
+    expect(issueWithIoConfig(ioConfig, true)).toBeUndefined();
+    expect(issueWithIoConfig({ ...ioConfig, partitionIds: [0, 2] }, true)).toBeUndefined();
+    for (const partitionIds of [[], [-1], [0.5], [NaN]]) {
+      expect(issueWithIoConfig({ ...ioConfig, partitionIds }, true)).toBeDefined();
+    }
+    expect(
+      issueWithIoConfig({ ...ioConfig, topicPattern: 'events.*', partitionIds: [0] }, true),
+    ).toBeDefined();
+  });
+
+  it('accepts comma-separated Kafka partition IDs in the form', () => {
+    const partitionIdsField = getIoConfigFormFields('kafka').find(
+      field => field.name === 'partitionIds',
+    );
+
+    expect(partitionIdsField?.type).toBe('string-array');
+    expect(partitionIdsField?.placeholder).toBe('Optional; comma-separated, e.g. 0, 2');
+    expect(partitionIdsField?.valueAdjustment?.(['1', '2', '3'])).toEqual([1, 2, 3]);
+    expect(partitionIdsField?.valueAdjustment?.([])).toBeUndefined();
+    expect(partitionIdsField?.valueAdjustment?.(undefined)).toBeUndefined();
+
+    const hideInMore = partitionIdsField?.hideInMore;
+    expect(typeof hideInMore).toBe('function');
+    if (typeof hideInMore === 'function') {
+      expect(hideInMore({})).toBe(true);
+      expect(hideInMore({ partitionIds: [1] })).toBe(false);
+    }
+  });
+
   it('upgrades / downgrades task spec 1', () => {
     const oldTaskSpec = {
       type: 'index_parallel',

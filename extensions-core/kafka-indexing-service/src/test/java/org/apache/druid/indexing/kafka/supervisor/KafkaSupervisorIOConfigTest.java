@@ -24,13 +24,16 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSortedSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.KafkaRecordSupplier;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateAction;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
@@ -39,6 +42,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScaler
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
@@ -48,6 +52,7 @@ import org.junit.jupiter.api.function.Executable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import static org.easymock.EasyMock.createMock;
 
@@ -59,6 +64,160 @@ public class KafkaSupervisorIOConfigTest
   {
     mapper = new DefaultObjectMapper();
     mapper.registerModules(new KafkaIndexTaskModule().getJacksonModules());
+  }
+
+  @Test
+  public void testPartitionSelectionSerdeAndUpdate() throws Exception
+  {
+    // Duplicates and ordering are normalized into a sorted set.
+    final KafkaSupervisorIOConfig config = mapper.readValue(
+        "{\"topic\":\"events\",\"consumerProperties\":{\"bootstrap.servers\":\"localhost:9092\"},"
+        + "\"partitionIds\":[5,0,2,0]}",
+        KafkaSupervisorIOConfig.class
+    );
+    Assertions.assertEquals(Set.of(0, 2, 5), config.getPartitionIds());
+
+    // Serialized in sorted order; survives builder copy and JSON round trip; the selection is immutable.
+    Assertions.assertEquals("[0,2,5]", mapper.writeValueAsString(config.getPartitionIds()));
+    Assertions.assertEquals(config, config.toBuilder().build());
+    Assertions.assertEquals(config, mapper.readValue(mapper.writeValueAsString(config), KafkaSupervisorIOConfig.class));
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> config.getPartitionIds().add(7));
+
+    // A different selection makes the config unequal.
+    final KafkaSupervisorIOConfig changed = config.toBuilder().withPartitionIds(Set.of(0, 2)).build();
+    Assertions.assertNotEquals(config, changed);
+
+    // Changing the selection restarts the supervisor and its tasks.
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(schema -> schema.withTimestamp(new TimestampSpec("timestamp", "auto", null)))
+        .withIoConfig(io -> io.copyFrom(config))
+        .build("diagnostic", "events");
+    Assertions.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        spec.getActionOnUpdateTo(spec.toBuilder().ioConfig(changed).build())
+    );
+
+    // Removing the selection (back to all partitions) also restarts the supervisor and its tasks.
+    final KafkaSupervisorSpec allPartitions = spec.toBuilder()
+        .ioConfig(config.toBuilder().withPartitionIds(null).build()).build();
+    Assertions.assertNull(allPartitions.getSpec().getIOConfig().getPartitionIds());
+    Assertions.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        spec.getActionOnUpdateTo(allPartitions)
+    );
+  }
+
+  @Test
+  public void testLegacyConstructorDefaultsToAllPartitions()
+  {
+    final KafkaSupervisorIOConfig config = new KafkaSupervisorIOConfig(
+        "events",
+        null,
+        null,
+        null,
+        null,
+        null,
+        Map.of("bootstrap.servers", "localhost:9092"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    );
+
+    Assertions.assertNull(config.getPartitionIds());
+    Assertions.assertFalse(mapper.valueToTree(config).has("partitionIds"));
+    Assertions.assertEquals(config, config.toBuilder().build());
+  }
+
+  @Test
+  public void testPartitionSelectionSurvivesAutoscalerUpdates() throws Exception
+  {
+    final LagBasedAutoScalerConfig autoscaler = mapper.readValue(
+        "{\"enableTaskAutoScaler\":true,\"taskCountMin\":1,\"taskCountMax\":4}",
+        LagBasedAutoScalerConfig.class
+    );
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withDataSchema(schema -> schema.withTimestamp(TimestampSpec.DEFAULT))
+        .withIoConfig(io -> io.withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
+                             .withPartitionIds(Set.of(0, 2)).withAutoScalerConfig(autoscaler))
+        .build("diagnostic", "events");
+    final KafkaSupervisorSpec scaled = spec.toBuilder().taskCount(2).build();
+
+    Assertions.assertEquals(Set.of(0, 2), scaled.getSpec().getIOConfig().getPartitionIds());
+    Assertions.assertEquals(SupervisorSpecUpdateAction.NONE, spec.getActionOnUpdateTo(scaled));
+    final KafkaSupervisorSpec narrowed = scaled.toBuilder()
+        .ioConfig(scaled.getSpec().getIOConfig().toBuilder().withPartitionIds(Set.of(0)).build()).build();
+
+    Assertions.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        spec.getActionOnUpdateTo(narrowed)
+    );
+    Assertions.assertEquals(Set.of(0), narrowed.getSpec().getIOConfig().getPartitionIds());
+  }
+
+  @Test
+  public void testInvalidPartitionIds()
+  {
+    for (final String ids : new String[]{"[]", "[-1]", "[null]", "[0.5]", "[1.0]", "[\"abc\"]", "[true]", "[2147483648]"}) {
+      Assertions.assertThrows(
+          JsonMappingException.class,
+          () -> mapper.readValue(
+              StringUtils.format(
+                  """
+                  {
+                    "topic": "events",
+                    "consumerProperties": {"bootstrap.servers": "localhost:9092"},
+                    "partitionIds": %s
+                  }
+                  """,
+                  ids
+              ),
+              KafkaSupervisorIOConfig.class
+          )
+      );
+    }
+  }
+
+  @Test
+  public void testPartitionIdsRequireSingleTopicWithoutBoundedStream()
+  {
+    final String expectedMessage =
+        "partitionIds requires a single topic and cannot be combined with boundedStreamConfig";
+
+    // Rejected with topicPattern, which reads multiple topics.
+    final DruidException withTopicPattern = Assertions.assertThrows(
+        DruidException.class,
+        () -> new KafkaIOConfigBuilder()
+            .withTopicPattern("events.*")
+            .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
+            .withPartitionIds(Set.of(0))
+            .build()
+    );
+    Assertions.assertEquals(expectedMessage, withTopicPattern.getMessage());
+
+    // Rejected with boundedStreamConfig.
+    final DruidException withBoundedStream = Assertions.assertThrows(
+        DruidException.class,
+        () -> new KafkaIOConfigBuilder()
+            .withTopic("events")
+            .withConsumerProperties(Map.of("bootstrap.servers", "localhost:9092"))
+            .withPartitionIds(Set.of(0))
+            .withBoundedStreamConfig(new BoundedStreamConfig(Map.of(0, 0L), Map.of(0, 10L)))
+            .build()
+    );
+    Assertions.assertEquals(expectedMessage, withBoundedStream.getMessage());
   }
 
   @Test
@@ -81,6 +240,7 @@ public class KafkaSupervisorIOConfigTest
 
     Assertions.assertEquals("my-topic", config.getTopic());
     Assertions.assertNull(config.getTopicPattern());
+    Assertions.assertNull(config.getPartitionIds());
     Assertions.assertEquals(1, (int) config.getReplicas());
     Assertions.assertEquals(1, (int) config.getTaskCount());
     Assertions.assertNull(config.getStopTaskCount());
@@ -352,6 +512,7 @@ public class KafkaSupervisorIOConfigTest
         null,
         false,
         null,
+        null,
         null
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
@@ -388,6 +549,7 @@ public class KafkaSupervisorIOConfigTest
         null,
         null,
         false,
+        null,
         null,
         null
     );
@@ -454,6 +616,7 @@ public class KafkaSupervisorIOConfigTest
         null,
         false,
         null,
+        null,
         null
     );
   }
@@ -490,6 +653,7 @@ public class KafkaSupervisorIOConfigTest
         mapper.convertValue(idleConfig, IdleConfig.class),
         null,
         false,
+        null,
         null,
         null
     );
@@ -616,7 +780,8 @@ public class KafkaSupervisorIOConfigTest
         null,
         false,
         null,
-        boundedConfig
+        boundedConfig,
+        null
     );
 
     String json = mapper.writeValueAsString(original);
@@ -682,6 +847,7 @@ public class KafkaSupervisorIOConfigTest
                   .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
                   .suppress(Warning.NONFINAL_FIELDS)
                   .withPrefabValues(Optional.class, Optional.of("a"), Optional.of("b"))
+                  .withPrefabValues(ImmutableSortedSet.class, ImmutableSortedSet.of(0), ImmutableSortedSet.of(1))
                   .withPrefabValues(InputFormat.class, createMock(InputFormat.class), createMock(InputFormat.class))
                   .withPrefabValues(AutoScalerConfig.class, createMock(AutoScalerConfig.class), createMock(AutoScalerConfig.class))
                   .withPrefabValues(LagAggregator.class, createMock(LagAggregator.class), createMock(LagAggregator.class))
