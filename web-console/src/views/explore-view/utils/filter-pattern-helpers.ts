@@ -18,7 +18,6 @@
 
 import type { Timezone } from 'chronoshift';
 import { Duration } from 'chronoshift';
-import { isDate } from 'date-fns';
 import type { Column, FilterPattern, SqlExpression } from 'druid-query-toolkit';
 import {
   filterPatternsToExpression,
@@ -80,7 +79,7 @@ export function formatPatternWithoutNegation(pattern: FilterPattern, timezone: T
       return `${pattern.column}: ${pattern.values
         .map(v => {
           if (v === '') return 'empty';
-          if (isDate(v)) return prettyFormatIsoDateWithMsIfNeeded(v as Date);
+          if (v instanceof Date) return prettyFormatIsoDateWithMsIfNeeded(v);
           return String(v);
         })
         .join(', ')}`;

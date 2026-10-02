@@ -150,6 +150,25 @@ public class VSizeColumnarInts implements ColumnarInts, Comparable<VSizeColumnar
     return retVal;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof VSizeColumnarInts)) {
+      return false;
+    }
+    final VSizeColumnarInts that = (VSizeColumnarInts) o;
+    return numBytes == that.numBytes && buffer.equals(that.buffer);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 31 * numBytes + buffer.hashCode();
+  }
+
   public int getNumBytes()
   {
     return numBytes;

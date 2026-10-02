@@ -73,6 +73,74 @@ Besides text formats, Druid also supports binary formats such as [Orc](#orc) and
 Druid supports custom text data formats and can use the Regex input format to parse them. However, be aware doing this to
 parse data is less efficient than writing a native Java `InputFormat` extension, or using an external stream processor. We welcome contributions of new input formats.
 
+## Regex engine configuration
+
+The `regex` input format supports configurable regex engines using the runtime property:
+
+```properties
+druid.regex.engine=JAVA
+```
+
+Supported values:
+
+| Value    | Description                                                              |
+|----------|--------------------------------------------------------------------------|
+| `JAVA`   | Uses Java's built-in `java.util.regex.Pattern` engine.                   |
+| `RE2J`   | Uses `Google's RE2/J` regex engine with linear-time matching guarantees. |
+
+Default value:
+
+```properties
+druid.regex.engine=JAVA
+```
+
+### RE2/J engine
+
+Setting:
+
+```properties
+druid.regex.engine=RE2J
+```
+
+enables the RE2/J regex engine for ingestion task `regex` input formats.
+
+RE2/J helps protect against catastrophic backtracking and Regular Expression Denial of Service (ReDoS) attacks by guaranteeing linear-time regex evaluation.
+
+### Compatibility differences
+
+RE2/J does not support all Java regex features.
+
+Unsupported or partially supported features include:
+- back references
+- look behind assertions
+- some advanced backtracking behavior
+
+Patterns using unsupported constructs will fail during regex compilation.
+
+### Example of catastrophic backtracking
+
+The following Java regex may cause catastrophic backtracking:
+
+```regex
+^(.*a){20}$
+```
+
+against input such as:
+
+```text
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaX
+```
+
+Using `RE2J` avoids this issue.
+
+### Performance considerations
+
+- `JAVA` may support more advanced regex syntax and behavior.
+- `RE2J` provides safer and more predictable runtime characteristics.
+- For trusted internal ingestion specs, `JAVA` may be preferred for compatibility.
+- For externally supplied regex patterns, `RE2J` is recommended.
+
+
 ## Input format
 
 You can use the `inputFormat` field to specify the data format for your input data.

@@ -24,16 +24,16 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.server.initialization.jetty.JettyBindings;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.Set;
@@ -48,9 +48,9 @@ public class CliCoordinatorTest
     final Injector injector = makeCoordinatorInjector(new Properties());
 
     final Set<JettyBindings.QosFilterHolder> qosFilters = getQosFilterHolders(injector);
-    Assert.assertTrue(
-        "Coordinator QoS filter should be bound when maxConcurrentRequests defaults to a positive value",
-        hasCoordinatorQosFilter(qosFilters)
+    Assertions.assertTrue(
+        hasCoordinatorQosFilter(qosFilters),
+        "Coordinator QoS filter should be bound when maxConcurrentRequests defaults to a positive value"
     );
   }
 
@@ -62,9 +62,9 @@ public class CliCoordinatorTest
     final Injector injector = makeCoordinatorInjector(properties);
 
     final Set<JettyBindings.QosFilterHolder> qosFilters = getQosFilterHolders(injector);
-    Assert.assertFalse(
-        "Coordinator QoS filter should not be bound when maxConcurrentRequests is set to a non-positive value",
-        hasCoordinatorQosFilter(qosFilters)
+    Assertions.assertFalse(
+        hasCoordinatorQosFilter(qosFilters),
+        "Coordinator QoS filter should not be bound when maxConcurrentRequests is set to a non-positive value"
     );
   }
 
@@ -81,13 +81,13 @@ public class CliCoordinatorTest
 
 
     final Set<String> excludedPaths = Set.of(coordinatorQosFilter.getExcludedPaths());
-    Assert.assertTrue(
-        "isLeader should be exempt from QoS filtering",
-        excludedPaths.contains("/druid/coordinator/v1/isLeader")
+    Assertions.assertTrue(
+        excludedPaths.contains("/druid/coordinator/v1/isLeader"),
+        "isLeader should be exempt from QoS filtering"
     );
-    Assert.assertTrue(
-        "leader should be exempt from QoS filtering",
-        excludedPaths.contains("/druid/coordinator/v1/leader")
+    Assertions.assertTrue(
+        excludedPaths.contains("/druid/coordinator/v1/leader"),
+        "leader should be exempt from QoS filtering"
     );
   }
 

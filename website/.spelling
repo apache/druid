@@ -67,6 +67,7 @@ CentralizedDatasourceSchema
 Ceph
 circledR
 CloudWatch
+ClusterRole
 ColumnDescriptor
 Corretto
 CLI
@@ -74,6 +75,7 @@ CUME_DIST
 DDL
 DENSE_RANK
 DML
+DN
 DNS
 DRUIDVERSION
 DataSketches
@@ -103,6 +105,7 @@ DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
+EKS
 EMR
 EMRFS
 ETL
@@ -117,6 +120,7 @@ Float.POSITIVE_INFINITY
 Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
+GKE
 GPG
 GoogleCloudStorageInputSource
 GSSAPI
@@ -148,6 +152,7 @@ ISO8601
 IndexSpec
 IndexTask
 InfluxDB
+InnoDB
 InputFormat
 InputSource
 InputSources
@@ -162,6 +167,7 @@ JDK7
 JDK8
 JKS
 jks
+JNDI
 JMX
 JRE
 JS
@@ -176,6 +182,7 @@ Joda
 JsonProperty
 Jupyter
 JupyterLab
+KIP-392
 KMS
 Kerberized
 Kerberos
@@ -202,16 +209,19 @@ Marquez
 MiddleManager
 MiddleManagers
 Montréal
+MSK
 MSQ
 Murmur3
 MVCC
 MV_TO_ARRAY
+Netty
 NFS
 NodeCache
 OCF
 OIDC
 OLAP
 OOMs
+OPA
 OpenJDK
 OpenLDAP
 openlineage
@@ -231,6 +241,7 @@ ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
 ROUTINE_TYPE
+RPC
 Rackspace
 Redis
 residualFilterMode
@@ -416,6 +427,7 @@ kbps
 kerberos
 keystore
 keytool
+kubelet
 keytab
 kubeconfig
 kubernetes
@@ -524,6 +536,7 @@ processFromRaw
 programmatically
 proto
 proxied
+proxying
 proxyConfig
 python2
 python3
@@ -534,9 +547,11 @@ quantile
 quantiles
 queryable
 quickstart
+RE2
 realtime
 rebalance
 redis
+ReDoS
 regexes
 reimported
 reindex
@@ -2404,6 +2419,7 @@ druid-orc-extensions
 druid-parquet-extensions
 druid-protobuf-extensions
 druid-ranger-security
+druid-opa-authorizer
 druid-s3-extensions
 druid-ec2-extensions
 druid-aws-rds-extensions
@@ -2657,3 +2673,19 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+checksum
+
+- ../docs/development/extensions-contrib/druid-opa-authorizer.md
+Rego
+alice
+christy
+dylan
+eve
+opaUri
+rego
+
+- ../docs/querying/sql-jdbc.md
+getters
+savepoints
+Scrollable
+updatable

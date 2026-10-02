@@ -82,10 +82,35 @@
           <artifactId>sdk-core</artifactId>
           <version>${aws.sdk.v2.version}</version>
         </dependency>
+        <!-- Retry strategies configured by AWSClientConfig -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>retries-spi</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>retries</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+        </dependency>
         <!-- WebIdentityTokenProvider requires runtime dependency on sts -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Keep S3 classes on the shared classpath to avoid loading separate copies in the different extensions. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Keep CRT classes on the shared classpath too: s3 brings crt-core here which relies on the aws-crt-client. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>aws-crt-client</artifactId>
             <version>${aws.sdk.v2.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -96,16 +121,6 @@
 
         <!-- Tests -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
@@ -113,6 +128,11 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-params</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

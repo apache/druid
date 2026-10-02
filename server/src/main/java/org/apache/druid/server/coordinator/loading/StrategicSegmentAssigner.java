@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -180,26 +181,33 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   /**
    * Moves the given segment from serverA to serverB.
+   * <p>
+   * If the segment on serverA is a partial load, the partial loadprofile is used to create the request to load
+   * the segment on serverB, ensuring that an equivalent partial load is loaded on serverB.
    */
   private boolean moveSegment(DataSegment segment, ServerHolder serverA, ServerHolder serverB)
   {
     final String tier = serverA.getServer().getTier();
+
+    final PartialLoadProfile profile = serverA.getProjectedProfile(segment);
+    final PartialLoadProfile request = profile == null ? null : profile.asCloneRequest();
+
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
-      if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
+      if (serverA.cancelLoad(segment)) {
         int loadedCountOnTier = replicaCountMap.get(segment.getId(), tier)
                                                .loadedNotDropping();
         if (loadedCountOnTier >= 1) {
-          return replicateSegment(segment, serverB, null);
+          return replicateSegment(segment, serverB, request);
         } else {
-          return loadSegment(segment, serverB, null);
+          return loadSegment(segment, serverB, request);
         }
       }
 
       // Could not cancel load, let the segment load on serverA and count it as unmoved
       return false;
     } else if (serverA.isServingSegment(segment)) {
-      return loadQueueManager.moveSegment(segment, serverA, serverB);
+      return loadQueueManager.moveSegment(segment, serverA, serverB, request);
     } else {
       return false;
     }
@@ -337,24 +345,28 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
    * <h3>Algorithm</h3>
    * <ol>
    *   <li><b>Classify.</b> Build {@link PartialSegmentStatusInTier} for this tier; every server falls into at most
-   *       one of: matching-loaded, stale-loaded (optionally also eligible-for-additive-reload),
-   *       matching-in-flight, stale-in-flight, eligible-for-fresh-load, or unclassified (drop/move pending; see
-   *       {@link PartialSegmentStatusInTier#classify} for why). Matching means the announced fingerprint equals
-   *       this request's fingerprint; stale is anything else, including a non-profile regular full-load replica.</li>
-   *   <li><b>Compute matching count:</b> matching-loaded + matching-in-flight − pending-move-drop.</li>
+   *       one of: matching-loaded, stale-loaded (optionally also eligible-for-in-place-reload),
+   *       matching-in-flight, stale-in-flight, eligible-for-fresh-load, or unclassified (drop or move source
+   *       pending; see {@link PartialSegmentStatusInTier#classify} for why). Matching means the announced
+   *       fingerprint equals this request's fingerprint; stale is anything else, including a non-profile regular
+   *       full-load replica. A balancer move counts once, at its destination.</li>
+   *   <li><b>Compute matching count:</b> matching-loaded + matching-in-flight. Unlike
+   *       {@link #updateReplicasInTier}, no {@link SegmentReplicaCount#moveCompletedPendingDrop()} correction is
+   *       needed, because the classification never counts both endpoints of a move.</li>
    *   <li><b>If matching count is short of {@code requiredReplicas}</b> (deficit):
    *     <ol type="a">
-   *       <li>Cancel stale-in-flight loads to free their slots. Canceled servers become same-run fresh-load
-   *           destinations.</li>
-   *       <li>Queue fresh partial-load requests up to the deficit. Destination preference order, applied in
+   *       <li>Cancel stale-in-flight loads to free their slots. Canceled servers become same-run load destinations.
+   *           </li>
+   *       <li>Queue matching partial-load requests up to the deficit. Destination preference order, applied in
    *           {@link #loadPartialReplicas}:
    *           <ol>
-   *             <li>Empty servers (clean slate, no in-place mutation needed).</li>
-   *             <li>Servers whose stale-in-flight load we just canceled in (a), their slot is now free.</li>
-   *             <li>Stale-loaded servers eligible for additive reload (the historical fills in the missing parts in
-   *                 place). This is the fallback path that mitigates the "no spare server" stuck state.
+   *             <li>Stale-loaded servers eligible for an in-place reload: the historical swaps the rule on the cache
+   *                 entry it already has, so only the delta the new fingerprint adds is downloaded, the replica
+   *                 keeps serving throughout, and the stale replica retires itself instead of needing a drop.
    *                 Same-run dedup is enforced by {@link ServerHolder#startOperation}, which rejects a second
    *                 queue attempt on a server whose segment is already queued.</li>
+   *             <li>Empty servers, and servers whose stale-in-flight load we just canceled in (a), ordered by the
+   *                 balancer strategy. These download the whole request from deep storage.</li>
    *           </ol>
    *       </li>
    *     </ol>
@@ -365,7 +377,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
    *       already meets the requirement. This preserves availability across the swap: stale replicas keep serving
    *       until matching replicas have completed loading and announced, then get dropped. The
    *       {@code maxReplicasToDrop} budget caps how many drops we queue per coordinator run to avoid drop
-   *       storms.</li>
+   *       storms. A stale replica this run just queued an in-place reload on is never dropped here even though the
+   *       classification snapshot still lists it as stale-loaded: reloads are only queued under a deficit, and a
+   *       deficit means matching-loaded is below the requirement, which is exactly what this gate tests.</li>
    * </ol>
    *
    * <h3>Returns</h3>
@@ -382,7 +396,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   {
     final SegmentReplicaCount replicaCountOnTier = replicaCountMap.get(segment.getId(), tier);
     final int movingReplicas = replicaCountOnTier.moving();
-    final int moveCompletedPendingDrop = Math.max(0, replicaCountOnTier.moveCompletedPendingDrop());
 
     final PartialSegmentStatusInTier status = new PartialSegmentStatusInTier(
         segment,
@@ -391,8 +404,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     );
 
     final int matchingProjected = status.getMatchingLoaded().size()
-                                  + status.getMatchingInFlight().size()
-                                  - moveCompletedPendingDrop;
+                                  + status.getMatchingInFlight().size();
     final boolean shouldCancelMoves = requiredReplicas == 0 && movingReplicas > 0;
 
     // If everything's already in shape and no stale work, fast-exit.
@@ -480,10 +492,30 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   }
 
   /**
-   * Queues fresh partial-load requests on up to {@code numToLoad} eligible servers. Preference order: empty
-   * (fresh-load) servers first; then servers whose stale-fingerprint in-flight loads were just canceled (their slot
-   * is now free); then stale-loaded servers (additive reload; the historical fills missing parts in place). The last
-   * fallback is what mitigates the "tier saturated with stale" stuck state.
+   * Queues matching partial-load requests on up to {@code numToLoad} eligible servers, preferring in-place reloads
+   * over fresh loads.
+   * <p>
+   * A stale-loaded server already holds the segment's metadata plus whatever the previous rule pinned, and the
+   * historical honors a partial-load request there by swapping the rule on that cache entry: only the delta the new
+   * fingerprint adds comes off deep storage, the replica keeps serving throughout, and the replica it replaces is
+   * itself, so no follow-up drop is needed.
+   * <p>
+   * The fresh-load candidates are the classifier's empty servers together with the {@code canceledStaleServers} that
+   * are left empty by the cancellation. {@link ServerHolder#cancelOperation} clears the queued action and restores the
+   * projected size, so those can take a fresh load; {@link #serversToLoadSegment} orders them by the balancer strategy
+   * (or round robin).
+   * <p>
+   * A reload the historical <em>fails</em> is retried in place on later runs rather than handed to a fresh server: the
+   * failure is asynchronous, so this run only ever learns that the request was queued, and the replica stays serving
+   * under its previous profile either way (see
+   * {@link org.apache.druid.server.coordination.SegmentLoadDropHandler#addSegment}), so the tier is never short a
+   * copy while it retries. Repeated failure does not need a fallback to break out of, because the way for one to
+   * persist is a historical too full to pin the new bundles, and that resolves itself: disk-usage balancing moves
+   * segments off the fullest server in the tier
+   * ({@code SegmentToMoveCalculator.computeSegmentsToMoveToBalanceDiskUsage}) until the reload fits, and a tier with
+   * nowhere left to move to is a cluster-wide capacity problem stalling far more than this one segment. Every failed
+   * attempt is alerted by the historical and logged by {@code HttpLoadQueuePeon.onRequestFailed}, so a retry loop
+   * that is not making progress is visible rather than silent.
    */
   private int loadPartialReplicas(
       int numToLoad,
@@ -501,25 +533,71 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    final List<ServerHolder> destinations = new ArrayList<>(
-        status.getEligibleForFreshLoad().size()
-        + canceledStaleServers.size()
-        + status.getEligibleForAdditiveReload().size()
-    );
-    destinations.addAll(status.getEligibleForFreshLoad());
-    destinations.addAll(canceledStaleServers);
-    destinations.addAll(status.getEligibleForAdditiveReload());
+    // The classifier's lists are already the complete candidate sets when nothing was canceled.
+    final List<ServerHolder> inPlaceDestinations;
+    final List<ServerHolder> freshCandidates;
+    if (canceledStaleServers.isEmpty()) {
+      inPlaceDestinations = status.getEligibleForInPlaceReload();
+      freshCandidates = status.getEligibleForFreshLoad();
+    } else {
+      inPlaceDestinations = new ArrayList<>(status.getEligibleForInPlaceReload());
+      freshCandidates = new ArrayList<>(status.getEligibleForFreshLoad());
+      for (ServerHolder server : canceledStaleServers) {
+        if (server.isServingSegment(segment) && PartialSegmentStatusInTier.canReloadInPlace(server)) {
+          inPlaceDestinations.add(server);
+        } else {
+          freshCandidates.add(server);
+        }
+      }
+    }
 
-    if (destinations.isEmpty()) {
+    int numLoadsQueued = queuePartialLoads(
+        numToLoad,
+        segment,
+        inPlaceDestinations.iterator(),
+        isAlreadyLoadedOnTier,
+        profile
+    );
+    if (numLoadsQueued >= numToLoad) {
+      return numLoadsQueued;
+    }
+
+    // Built only once the in-place reloads have fallen short: RoundRobinServerSelector advances its per-tier cursor
+    // past ineligible servers as soon as the iterator is constructed, so an unused one still perturbs placement.
+    final Iterator<ServerHolder> freshDestinations = serversToLoadSegment(segment, tier, freshCandidates);
+    if (inPlaceDestinations.isEmpty() && !freshDestinations.hasNext()) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No eligible server", segment, tier);
       return 0;
     }
 
+    return numLoadsQueued + queuePartialLoads(
+        numToLoad - numLoadsQueued,
+        segment,
+        freshDestinations,
+        isAlreadyLoadedOnTier,
+        profile
+    );
+  }
+
+  /**
+   * Queues a partial-load request carrying {@code profile} on up to {@code numToLoad} of the given destinations,
+   * stopping as soon as the deficit is covered. Servers that refuse the queue attempt (throttled, or a peon error)
+   * don't count towards {@code numToLoad}, so the next destination is tried in their place.
+   * <p>
+   * {@code destinations} is consumed lazily, {@link #serversToLoadSegment} returns iterators whose traversal has
+   * placement side effects.
+   */
+  private int queuePartialLoads(
+      int numToLoad,
+      DataSegment segment,
+      Iterator<ServerHolder> destinations,
+      boolean isAlreadyLoadedOnTier,
+      PartialLoadProfile profile
+  )
+  {
     int numLoadsQueued = 0;
-    for (ServerHolder server : destinations) {
-      if (numLoadsQueued >= numToLoad) {
-        break;
-      }
+    while (numLoadsQueued < numToLoad && destinations.hasNext()) {
+      final ServerHolder server = destinations.next();
       final boolean queuedSuccessfully = isAlreadyLoadedOnTier
                                          ? replicateSegment(segment, server, profile)
                                          : loadSegment(segment, server, profile);
@@ -528,6 +606,30 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       }
     }
     return numLoadsQueued;
+  }
+
+  /**
+   * Orders {@code eligibleServers} into the sequence a load should try them in: round robin across the tier when
+   * round-robin assignment is enabled, else by the balancer strategy.
+   * <p>
+   * The round-robin branch ignores {@code eligibleServers} and derives its candidates from the tier, keeping those
+   * that pass {@link ServerHolder#canLoadSegment} at the moment each one is taken. Callers pass their complete
+   * eligible set: the two branches otherwise disagree on which servers a load may target, and an empty
+   * {@code eligibleServers} does not imply an empty iterator.
+   * <p>
+   * Consume the result lazily. {@link RoundRobinServerSelector} advances a per-tier cursor on every element taken, so
+   * draining the iterator for a segment that needs one replica advances the cursor a full lap and hands the next
+   * segment the same starting server.
+   */
+  private Iterator<ServerHolder> serversToLoadSegment(
+      DataSegment segment,
+      String tier,
+      List<ServerHolder> eligibleServers
+  )
+  {
+    return useRoundRobinAssignment
+           ? serverSelector.getServersInTierToLoadSegment(tier, segment)
+           : strategy.findServersToLoadSegment(segment, eligibleServers);
   }
 
   /**
@@ -550,9 +652,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       if (canceledOut.size() >= numToCancel) {
         break;
       }
-      // Try LOAD then REPLICATE; the queued action depends on whether this was a primary or a replica.
-      if (server.cancelOperation(SegmentAction.LOAD, segment)
-          || server.cancelOperation(SegmentAction.REPLICATE, segment)) {
+      // Try to cancel the load operation
+      // (either LOAD or REPLICATE, depending on whether this was a primary or a replica).
+      if (server.cancelLoad(segment)) {
         canceledOut.add(server);
       }
     }
@@ -608,8 +710,23 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final int movingReplicas = replicaCountOnTier.moving();
     final boolean shouldCancelMoves = requiredReplicas == 0 && movingReplicas > 0;
 
+    // A replica serving under a partial-load profile is pinned by a partial-load rule, but we got here through the
+    // regular full-load path, so that rule no longer applies: the datasource's partial-load rule was replaced or
+    // shadowed by a higher-priority load rule, or its matcher stopped resolving and fell through to FULL_LOAD. That
+    // replica needs an in-place reload carrying the plain unwrapped load spec so the historical releases its rule
+    // holds. When the tier wants no replicas at all we skip it, the drops below are already on their way and dropping
+    // clears the rule on the historical.
+    final int replicasToRevert = requiredReplicas > 0 ? replicaCountOnTier.loadedWithPartialProfile() : 0;
+
+    final boolean shouldPrioritizeLoadOfUnavailableSegment =
+        replicaCountOnTier.loadedNotDropping() < 1
+        && replicaCountOnTier.replicating() >= 1;
+
     // Check if there is any action required on this tier
-    if (projectedReplicas == requiredReplicas && !shouldCancelMoves) {
+    if (projectedReplicas == requiredReplicas
+        && !shouldCancelMoves
+        && !shouldPrioritizeLoadOfUnavailableSegment
+        && replicasToRevert <= 0) {
       return 0;
     }
 
@@ -638,27 +755,93 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     // Cancel loads and queue drops if the projected count exceeds the requirement
+    int dropsQueuedOnTier = 0;
     if (projectedReplicas > requiredReplicas) {
       int replicaSurplus = projectedReplicas - requiredReplicas;
       int canceledLoads =
-          cancelOperations(SegmentAction.LOAD, replicaSurplus, segment, segmentStatus);
+          cancelOperations(SegmentAction.REPLICATE, replicaSurplus, segment, segmentStatus);
+      canceledLoads +=
+          cancelOperations(SegmentAction.LOAD, replicaSurplus - canceledLoads, segment, segmentStatus);
 
       int numReplicasToDrop = Math.min(replicaSurplus - canceledLoads, maxReplicasToDrop);
       if (numReplicasToDrop > 0) {
-        int dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
+        dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
         incrementStat(Stats.Segments.DROPPED, segment, tier, dropsQueuedOnTier);
-        return dropsQueuedOnTier;
       }
     }
 
-    return 0;
+    // If segment is unavailable, prioritize load by changing REPLICATE actions to LOAD
+    if (shouldPrioritizeLoadOfUnavailableSegment) {
+      for (ServerHolder server : segmentStatus.getServersPerforming(SegmentAction.REPLICATE)) {
+        prioritizeLoadOfUnavailableSegment(segment, server, null);
+      }
+    }
+
+    // Release partial-load rules that no longer apply. Done last so the load/drop decisions above claim their
+    // servers first: a replica that just picked up an action is no longer `isServingSegment`, so it is skipped here
+    // and reverted on a later run if it is still around.
+    if (replicasToRevert > 0) {
+      final int reverted = revertPartialProfileReplicas(segment, tier);
+      if (reverted > 0) {
+        incrementStat(Stats.Segments.PARTIAL_RULE_REVERTED, segment, tier, reverted);
+      }
+    }
+
+
+
+    return dropsQueuedOnTier;
+  }
+
+  /**
+   * Queues an in-place reload on every server in {@code tier} that serves {@code segment} under a
+   * {@link PartialLoadProfile}. The request carries the plain unwrapped {@code segment}, which is what tells the
+   * historical to release its rule holds rather than apply or swap one.
+   * <p>
+   * The replica count is deliberately left alone: these servers <em>are</em> serving, so they still satisfy the
+   * rule's replication requirement and must not be double-counted as a deficit. This only refreshes what they hold.
+   * <p>
+   * Servers are skipped when:
+   * <ul>
+   *   <li>they have any queued action, via {@link ServerHolder#isServingSegment}, which covers both the load/drop
+   *       decisions made earlier in this run and operations left over from a previous one;</li>
+   *   <li>their load queue is already at the configured {@code maxSegmentsInNodeLoadingQueue} budget for this run.</li>
+   *   <li>they are decommissioning, since their replicas are on the way out and reloading them is wasted work.</li>
+   * </ul>
+   * The last two are {@link PartialSegmentStatusInTier#canReloadInPlace}, shared with the partial-load reconciler's
+   * in-place reload.
+   */
+  private int revertPartialProfileReplicas(DataSegment segment, String tier)
+  {
+    int numReverted = 0;
+    for (ServerHolder server : cluster.getManagedHistoricalsByTier(tier)) {
+      if (revertPartialProfileReplica(segment, server)) {
+        ++numReverted;
+      }
+    }
+    return numReverted;
+  }
+
+  /**
+   * Queues the in-place reload described by {@link #revertPartialProfileReplicas} on a single server, if that server
+   * is holding {@code segment} under a partial-load rule and has room in its load queue. Returns whether a reload was
+   * queued.
+   */
+  private boolean revertPartialProfileReplica(DataSegment segment, ServerHolder server)
+  {
+    return server.isServingSegment(segment)
+           && PartialSegmentStatusInTier.canReloadInPlace(server)
+           && server.getServer().getPartialLoadProfile(segment.getId()) != null
+           && loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD, null);
   }
 
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
   {
     final RowKey rowKey = tierRowKey(tier);
+    final long requiredStorage = segment.getSize() * requiredReplicas;
     stats.updateMax(Stats.Tier.REPLICATION_FACTOR, rowKey, requiredReplicas);
-    stats.add(Stats.Tier.REQUIRED_CAPACITY, rowKey, segment.getSize() * requiredReplicas);
+    stats.add(Stats.Tier.REQUIRED_STORAGE, rowKey, requiredStorage);
+    // Deprecated alias of tier/storage/required, emitted until the deprecation period is over
+    stats.add(Stats.Tier.REQUIRED_CAPACITY, rowKey, requiredStorage);
   }
 
   /**
@@ -690,11 +873,17 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       // Drop from decommissioning servers and load on active servers
       int numDropsQueued = 0;
       int numLoadsQueued = 0;
+      int numRevertsQueued = 0;
       if (server.isDecommissioning()) {
         numDropsQueued += dropBroadcastSegment(segment, server) ? 1 : 0;
       } else {
         tierToRequiredReplicas.addTo(tier, 1);
         numLoadsQueued += loadBroadcastSegment(segment, server) ? 1 : 0;
+        // A broadcast rule wants the whole segment on every target, so a replica still pinned by a partial-load rule
+        // has to be reloaded unwrapped, exactly as on the replication path. loadBroadcastSegment cannot do this
+        // itself: it returns early for a server that is already serving, which is precisely the case here. The two
+        // are mutually exclusive, since a server that just had a genuine load queued is no longer `isServingSegment`.
+        numRevertsQueued += revertPartialProfileReplica(segment, server) ? 1 : 0;
       }
 
       if (numLoadsQueued > 0) {
@@ -702,6 +891,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       }
       if (numDropsQueued > 0) {
         incrementStat(Stats.Segments.DROPPED, segment, tier, numDropsQueued);
+      }
+      if (numRevertsQueued > 0) {
+        incrementStat(Stats.Segments.PARTIAL_RULE_REVERTED, segment, tier, numRevertsQueued);
       }
     }
 
@@ -761,7 +953,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private boolean dropBroadcastSegment(DataSegment segment, ServerHolder server)
   {
     if (server.isLoadingSegment(segment)) {
-      return server.cancelOperation(SegmentAction.LOAD, segment);
+      return server.cancelLoad(segment);
     } else if (server.isServingSegment(segment)) {
       return loadQueueManager.dropSegment(segment, server);
     } else {
@@ -807,7 +999,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // Drop as many replicas as possible from decommissioning servers
     int remainingNumToDrop = numToDrop;
     int numDropsQueued =
-        dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator(), tier);
+        dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator());
 
     // Drop replicas from active servers if required
     if (numToDrop > numDropsQueued) {
@@ -816,7 +1008,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
           (useRoundRobinAssignment || eligibleLiveServers.size() <= remainingNumToDrop)
           ? eligibleLiveServers.iterator()
           : strategy.findServersToDropSegment(segment, new ArrayList<>(eligibleLiveServers));
-      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator, tier);
+      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator);
     }
 
     return numDropsQueued;
@@ -829,8 +1021,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private int dropReplicasFromServers(
       int numToDrop,
       DataSegment segment,
-      Iterator<ServerHolder> serverIterator,
-      String tier
+      Iterator<ServerHolder> serverIterator
   )
   {
     int numDropsQueued = 0;
@@ -873,10 +1064,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       return 0;
     }
 
-    final Iterator<ServerHolder> serverIterator =
-        useRoundRobinAssignment
-        ? serverSelector.getServersInTierToLoadSegment(tier, segment)
-        : strategy.findServersToLoadSegment(segment, eligibleServers);
+    final Iterator<ServerHolder> serverIterator = serversToLoadSegment(segment, tier, eligibleServers);
     if (!serverIterator.hasNext()) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "No strategic server", segment, tier);
       return 0;
@@ -892,6 +1080,31 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     return numLoadsQueued;
+  }
+
+  /**
+   * Tries to increase the load priority of the given unavailable segment (by
+   * changing the action from {@link SegmentAction#REPLICATE} to {@link SegmentAction#LOAD})
+   * if it is already present in the queue of the server.
+   *
+   * @return true only if the priority was increased successfully.
+   */
+  private boolean prioritizeLoadOfUnavailableSegment(
+      DataSegment segment,
+      ServerHolder server,
+      @Nullable PartialLoadProfile profile
+  )
+  {
+    return server.getActionOnSegment(segment) == SegmentAction.REPLICATE
+           && Objects.equals(fingerprintOf(profile), fingerprintOf(server.getProjectedProfile(segment)))
+           && server.cancelOperation(SegmentAction.REPLICATE, segment)
+           && loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD, profile);
+  }
+
+  @Nullable
+  private static String fingerprintOf(@Nullable PartialLoadProfile profile)
+  {
+    return profile == null ? null : profile.fingerprint();
   }
 
   private boolean loadSegment(DataSegment segment, ServerHolder server, @Nullable PartialLoadProfile profile)

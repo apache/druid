@@ -19,13 +19,18 @@
 import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { F, L } from 'druid-query-toolkit';
-import type { ECharts } from 'echarts';
+import type { ECElementEvent, ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
-import { formatEmpty } from '../../../../utils';
+import {
+  bigIntsToNumbers,
+  ECHARTS_BACKGROUND_COLOR,
+  ECHARTS_COLORS,
+  formatEmpty,
+} from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
 import { ModuleRepository } from '../../module-repository/module-repository';
@@ -106,8 +111,8 @@ ModuleRepository.registerModule<BarChartParameterValues>({
       stage,
       runSqlQuery,
     } = props;
-    const containerRef = useRef<HTMLDivElement>();
-    const chartRef = useRef<ECharts>();
+    const containerRef = useRef<HTMLDivElement | undefined>(undefined);
+    const chartRef = useRef<ECharts | undefined>(undefined);
     const [highlight, setHighlight] = useState<BarChartHighlight | undefined>();
 
     const { splitColumn, timeBucket, measure, measureToSort, limit } = parameterValues;
@@ -151,7 +156,8 @@ ModuleRepository.registerModule<BarChartParameterValues>({
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
       processQuery: async (query, signal) => {
-        return (await runSqlQuery(query, signal)).toObjectArray();
+        // Only 'met' is coerced, 'dim' is a dimension value that must keep its exact value
+        return bigIntsToNumbers((await runSqlQuery(query, signal)).toObjectArray(), ['met']);
       },
     });
 
@@ -159,6 +165,8 @@ ModuleRepository.registerModule<BarChartParameterValues>({
       const myChart = echarts.init(container, 'dark');
 
       myChart.setOption({
+        color: ECHARTS_COLORS,
+        backgroundColor: ECHARTS_BACKGROUND_COLOR,
         tooltip: {},
         dataset: {
           sourceHeader: false,
@@ -192,10 +200,52 @@ ModuleRepository.registerModule<BarChartParameterValues>({
       };
     }, []);
 
-    useEffect(() => {
+    // Called by ECharts, so it has to see the latest where clause and split column, not the ones from when the data loaded
+    const handleSeriesClick = useEffectEvent((p: ECElementEvent) => {
       const myChart = chartRef.current;
-      const data = sourceDataState.data;
-      if (!myChart || !data) return;
+      if (!myChart) return;
+
+      const label = p.name;
+      const { dim, met } = p.data as any;
+
+      const [x, y] = myChart.convertToPixel({ seriesIndex: 0 }, [dim, met]);
+
+      setHighlight({
+        title: formatEmpty(label),
+        x: x,
+        y: y - 20,
+        dim,
+        met,
+        text: (
+          <div className="button-bar">
+            {label !== OVERALL_LABEL && (
+              <Button
+                text="Zoom in"
+                intent={Intent.PRIMARY}
+                size="small"
+                onClick={() => {
+                  if (splitColumn) {
+                    setWhere(updateFilterClause(where, splitColumn.expression.equal(label)));
+                  }
+                  setHighlight(undefined);
+                }}
+              />
+            )}
+            <Button
+              text="Close"
+              size="small"
+              onClick={() => {
+                setHighlight(undefined);
+              }}
+            />
+          </div>
+        ),
+      });
+    });
+
+    const updateChart = useEffectEvent((data: any[]) => {
+      const myChart = chartRef.current;
+      if (!myChart) return;
 
       myChart.off('click');
 
@@ -205,48 +255,16 @@ ModuleRepository.registerModule<BarChartParameterValues>({
         },
       });
 
-      myChart.on('click', 'series', p => {
-        const label = p.name;
-        const { dim, met } = p.data as any;
-
-        const [x, y] = myChart.convertToPixel({ seriesIndex: 0 }, [dim, met]);
-
-        setHighlight({
-          title: formatEmpty(label),
-          x: x,
-          y: y - 20,
-          dim,
-          met,
-          text: (
-            <div className="button-bar">
-              {label !== OVERALL_LABEL && (
-                <Button
-                  text="Zoom in"
-                  intent={Intent.PRIMARY}
-                  small
-                  onClick={() => {
-                    if (splitColumn) {
-                      setWhere(updateFilterClause(where, splitColumn.expression.equal(label)));
-                    }
-                    setHighlight(undefined);
-                  }}
-                />
-              )}
-              <Button
-                text="Close"
-                small
-                onClick={() => {
-                  setHighlight(undefined);
-                }}
-              />
-            </div>
-          ),
-        });
-      });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sourceDataState.data]);
+      myChart.on('click', 'series', p => handleSeriesClick(p));
+    });
 
     useEffect(() => {
+      const data = sourceDataState.data;
+      if (!data) return;
+      updateChart(data);
+    }, [sourceDataState.data]);
+
+    const handleStageChange = useEffectEvent(() => {
       const myChart = chartRef.current;
       if (!myChart) return;
       myChart.resize();
@@ -262,6 +280,10 @@ ModuleRepository.registerModule<BarChartParameterValues>({
           y: y - 20,
         });
       }
+    });
+
+    useEffect(() => {
+      handleStageChange();
     }, [stage]);
 
     const errorMessage = sourceDataState.getErrorMessage();

@@ -93,6 +93,18 @@ public record PartialLoadProfile(
     return intern(new PartialLoadProfile(wrappedLoadSpec, fingerprint, loadedBytes));
   }
 
+  /**
+   * This profile in request form, for asking another server for the same partial load that produced it: a clone
+   * catching up with its source, or a move handing a replica to its destination. The wrapped load spec and the
+   * fingerprint identify the request and carry over as they are; {@code loadedBytes} is dropped, because a profile read
+   * back off a server carries the footprint that server realized, which belongs to that server's announcement rather
+   * than to a request. Returns {@code this} when the profile is already a request.
+   */
+  public PartialLoadProfile asCloneRequest()
+  {
+    return loadedBytes == null ? this : forRequest(wrappedLoadSpec, fingerprint);
+  }
+
   private static PartialLoadProfile intern(PartialLoadProfile profile)
   {
     return INTERNER.intern(profile);

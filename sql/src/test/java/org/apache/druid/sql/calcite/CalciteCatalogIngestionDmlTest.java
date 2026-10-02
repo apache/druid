@@ -33,7 +33,9 @@ import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.InlineInputSource;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
@@ -402,6 +404,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                                         ColumnType.STRING,
                                         ExprMacroTable.nil()
                                     )
+                                ),
+                                // customizes the segment-creation schema of 'dim1'; invisible to the planner, since
+                                // the declared column list remains the logical schema
+                                ImmutableList.of(
+                                    new StringDimensionSchema("dim1", DimensionSchema.MultiValueHandling.ARRAY, false)
                                 )
                             )
                         ),
@@ -461,7 +468,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "SELECT * FROM foo")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("hourDs", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
+        .expectResources(dataSourceRead("hourDs"), dataSourceWrite("hourDs"), dataSourceRead("foo"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -487,7 +494,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "PARTITIONED BY day")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("hourDs", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceWrite("hourDs"), dataSourceRead("foo"))
+        .expectResources(dataSourceRead("hourDs"), dataSourceWrite("hourDs"), dataSourceRead("foo"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -532,7 +539,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "PARTITIONED BY day")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("noPartitonedBy", FOO_TABLE_SIGNATURE)
-        .expectResources(dataSourceWrite("noPartitonedBy"), dataSourceRead("foo"))
+        .expectResources(dataSourceRead("noPartitonedBy"), dataSourceWrite("noPartitonedBy"), dataSourceRead("foo"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource("foo")
@@ -586,7 +593,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("foo", signature)
-        .expectResources(dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -643,7 +650,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("tableWithClustering", signature)
-        .expectResources(dataSourceWrite("tableWithClustering"), Externals.externalRead("EXTERNAL"))
+        .expectResources(
+            dataSourceRead("tableWithClustering"),
+            dataSourceWrite("tableWithClustering"),
+            Externals.externalRead("EXTERNAL")
+        )
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -704,7 +715,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "CLUSTERED BY dim1")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("tableWithClustering", signature)
-        .expectResources(dataSourceWrite("tableWithClustering"), Externals.externalRead("EXTERNAL"))
+        .expectResources(
+            dataSourceRead("tableWithClustering"),
+            dataSourceWrite("tableWithClustering"),
+            Externals.externalRead("EXTERNAL")
+        )
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -768,7 +783,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "CLUSTERED BY dim3")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("tableWithClustering", signature)
-        .expectResources(dataSourceWrite("tableWithClustering"), Externals.externalRead("EXTERNAL"))
+        .expectResources(
+            dataSourceRead("tableWithClustering"),
+            dataSourceWrite("tableWithClustering"),
+            Externals.externalRead("EXTERNAL")
+        )
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -941,7 +960,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("foo", signature)
-        .expectResources(dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
         .expectQuery(
             GroupByQuery.builder()
                 .setDataSource(externalDataSource)
@@ -954,9 +973,9 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     dimensions(
                         new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
                         new DefaultDimensionSpec("b", "d1", ColumnType.STRING),
-                        new DefaultDimensionSpec("c", "d3", ColumnType.LONG),
-                        new DefaultDimensionSpec("d", "d4", ColumnType.LONG),
-                        new DefaultDimensionSpec("e", "d5", ColumnType.STRING)
+                        new DefaultDimensionSpec("c", "d2", ColumnType.LONG),
+                        new DefaultDimensionSpec("d", "d3", ColumnType.LONG),
+                        new DefaultDimensionSpec("e", "d4", ColumnType.STRING)
                     )
                 )
                 .setAggregatorSpecs(
@@ -976,7 +995,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .setPostAggregatorSpecs(
                     expressionPostAgg("p0", "1", ColumnType.LONG),
-                    expressionPostAgg("p1", "CAST(\"d3\", 'DOUBLE')", ColumnType.DOUBLE)
+                    expressionPostAgg("p1", "CAST(\"d2\", 'DOUBLE')", ColumnType.DOUBLE)
                 )
                 .setContext(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
@@ -1053,7 +1072,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("fooSealed", signature)
-        .expectResources(dataSourceWrite("fooSealed"), Externals.externalRead("EXTERNAL"))
+        .expectResources(dataSourceRead("fooSealed"), dataSourceWrite("fooSealed"), Externals.externalRead("EXTERNAL"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -1109,7 +1128,11 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("tableWithBaseTable", signature)
-        .expectResources(dataSourceWrite("tableWithBaseTable"), Externals.externalRead("EXTERNAL"))
+        .expectResources(
+            dataSourceRead("tableWithBaseTable"),
+            dataSourceWrite("tableWithBaseTable"),
+            Externals.externalRead("EXTERNAL")
+        )
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -1227,7 +1250,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("foo", signature)
-        .expectResources(dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -1295,7 +1318,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
         )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("foo", signature)
-        .expectResources(dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
+        .expectResources(dataSourceRead("foo"), dataSourceWrite("foo"), Externals.externalRead("EXTERNAL"))
         .expectQuery(
             GroupByQuery.builder()
                 .setDataSource(externalDataSource)
@@ -1308,9 +1331,9 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     dimensions(
                         new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
                         new DefaultDimensionSpec("b", "d1", ColumnType.STRING),
-                        new DefaultDimensionSpec("c", "d3", ColumnType.LONG),
-                        new DefaultDimensionSpec("d", "d4", ColumnType.LONG),
-                        new DefaultDimensionSpec("e", "d5", ColumnType.STRING)
+                        new DefaultDimensionSpec("c", "d2", ColumnType.LONG),
+                        new DefaultDimensionSpec("d", "d3", ColumnType.LONG),
+                        new DefaultDimensionSpec("e", "d4", ColumnType.STRING)
                     )
                 )
                 .setAggregatorSpecs(
@@ -1330,7 +1353,7 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 )
                 .setPostAggregatorSpecs(
                     expressionPostAgg("p0", "1", ColumnType.LONG),
-                    expressionPostAgg("p1", "CAST(\"d3\", 'DOUBLE')", ColumnType.DOUBLE)
+                    expressionPostAgg("p1", "CAST(\"d2\", 'DOUBLE')", ColumnType.DOUBLE)
                 )
                 .setContext(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()

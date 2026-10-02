@@ -27,16 +27,17 @@ import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
+import org.apache.druid.client.CacheUtil;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import redis.clients.jedis.JedisPool;
 
 import java.io.IOException;
@@ -64,18 +65,28 @@ public class RedisStandaloneCacheTest extends CacheTestBase<RedisStandaloneCache
     }
   };
 
-  @Before
-  public void setUp() throws IOException
+  @BeforeEach
+  public void initializeCache() throws IOException
   {
     server = RedisServer.newRedisServer().start();
     JedisPool pool = new JedisPool(server.getHost(), server.getBindPort());
     cache = new RedisStandaloneCache(pool, cacheConfig);
   }
 
-  @After
-  public void tearDown() throws IOException
+  @AfterEach
+  public void closeCache() throws IOException
   {
     server.stop();
+  }
+
+  @Override
+  @Test
+  public void testKeyContainingNegativeBytes()
+  {
+    byte[] value = new byte[] {1, 0, -10, -55, 111};
+    Cache.NamedKey key = CacheUtil.computeResultLevelCacheKey(new byte[] {1, 0, -10, 0});
+    cache.put(key, value);
+    Assertions.assertArrayEquals(value, cache.get(key));
   }
 
   @Test
@@ -103,7 +114,7 @@ public class RedisStandaloneCacheTest extends CacheTestBase<RedisStandaloneCache
     lifecycle.start();
     try {
       Cache cache = injector.getInstance(Cache.class);
-      Assert.assertEquals(RedisStandaloneCache.class, cache.getClass());
+      Assertions.assertEquals(RedisStandaloneCache.class, cache.getClass());
     }
     finally {
       lifecycle.stop();
@@ -128,37 +139,37 @@ public class RedisStandaloneCacheTest extends CacheTestBase<RedisStandaloneCache
         )
     );
     final CacheProvider cacheProvider = injector.getInstance(CacheProvider.class);
-    Assert.assertNotNull(cacheProvider);
-    Assert.assertEquals(RedisCacheProvider.class, cacheProvider.getClass());
+    Assertions.assertNotNull(cacheProvider);
+    Assertions.assertEquals(RedisCacheProvider.class, cacheProvider.getClass());
   }
 
   @Test
   public void testSanity()
   {
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HI)));
+    Assertions.assertNull(cache.get(new Cache.NamedKey("a", HI)));
     put(cache, "a", HI, 0);
-    Assert.assertEquals(0, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+    Assertions.assertEquals(0, get(cache, "a", HI));
+    Assertions.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 1);
-    Assert.assertEquals(0, get(cache, "a", HI));
-    Assert.assertEquals(1, get(cache, "the", HI));
+    Assertions.assertEquals(0, get(cache, "a", HI));
+    Assertions.assertEquals(1, get(cache, "the", HI));
 
     put(cache, "the", HO, 10);
-    Assert.assertEquals(0, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
-    Assert.assertEquals(1, get(cache, "the", HI));
-    Assert.assertEquals(10, get(cache, "the", HO));
+    Assertions.assertEquals(0, get(cache, "a", HI));
+    Assertions.assertNull(cache.get(new Cache.NamedKey("a", HO)));
+    Assertions.assertEquals(1, get(cache, "the", HI));
+    Assertions.assertEquals(10, get(cache, "the", HO));
 
     cache.close("the");
-    Assert.assertEquals(0, get(cache, "a", HI));
-    Assert.assertNull(cache.get(new Cache.NamedKey("a", HO)));
+    Assertions.assertEquals(0, get(cache, "a", HI));
+    Assertions.assertNull(cache.get(new Cache.NamedKey("a", HO)));
   }
 
   @Test
   public void testGetBulk()
   {
-    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+    Assertions.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     put(cache, "the", HI, 1);
     put(cache, "the", HO, 10);
@@ -175,9 +186,9 @@ public class RedisStandaloneCacheTest extends CacheTestBase<RedisStandaloneCache
         )
     );
 
-    Assert.assertEquals(1, Ints.fromByteArray(result.get(key1)));
-    Assert.assertEquals(10, Ints.fromByteArray(result.get(key2)));
-    Assert.assertEquals(null, result.get(key3));
+    Assertions.assertEquals(1, Ints.fromByteArray(result.get(key1)));
+    Assertions.assertEquals(10, Ints.fromByteArray(result.get(key2)));
+    Assertions.assertEquals(null, result.get(key3));
   }
 
   public void put(Cache cache, String namespace, byte[] key, Integer value)
@@ -207,4 +218,3 @@ class RedisCacheProviderWithConfig extends RedisCacheProvider
     return RedisCacheFactory.create(config);
   }
 }
-

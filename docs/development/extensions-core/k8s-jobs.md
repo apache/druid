@@ -844,6 +844,14 @@ Set the `podTemplateSelectionKey` key in a task's context to pick a configured p
 
 This is gated by the runtime property `druid.indexer.runner.allowTaskPodTemplateSelection`, which defaults to `false`. If the key doesn't match any configured template, the task fails to launch.
 
+##### Pod template metrics dimension
+
+Every metric emitted by a task pod carries a `podTemplate` dimension naming the pod template the pod runs under, alongside the existing `taskType`, `dataSource`, `taskId`, and `groupId` dimensions. Use it to group metrics by task type and pod template, for example to see which task types run on which templates.
+
+The dimension reflects the template actually applied to the pod, whichever selection strategy or context override chose it. Druid passes the name to the pod through the `DRUID_POD_TEMPLATE` environment variable, sourced from the pod's own `task.jobTemplate` annotation; you don't need to declare it in your pod templates.
+
+The dimension requires `druid-kubernetes-overlord-extensions` in the task pod's `druid.extensions.loadList`. Task pods that have no pod template, such as those launched by another task adapter, omit the dimension.
+
 #### Running Task Pods in Another Namespace
 
 It is possible to run task pods in a different namespace from the rest of your Druid cluster.
@@ -1025,6 +1033,7 @@ the Overlord pod from `druid.indexer.runner.overlordNamespace` or `druid.indexer
 | `druid.indexer.runner.logSaveTimeout` | `Duration` | The peon executing the ingestion task makes a best effort to persist the pod logs from `k8s` to persistent task log storage. The timeout ensures that `k8s` connection issues do not cause the pod to hang indefinitely thereby blocking Overlord operations. If the timeout occurs before the logs are saved, those logs will not be available in Druid. | `PT300S` | NO |
 | `druid.indexer.runner.useK8sSharedInformers` | `boolean` | Whether to use shared informers to watch for pod/job changes. This is more efficient on the Kubernetes API server, but may use more memory in the Overlord. | `false` | No |
 | `druid.indexer.runner.k8sSharedInformerResyncPeriod` | `Duration` | When using shared informers, controls how frequently the informers resync with the Kubernetes API server. This prevents change events from being missed, keeping the informer cache clean and accurate. | `PT300S` | No |
+| `druid.indexer.runner.advertisedPlaintextPort` | `Integer` | Plaintext port reported in task locations, if other services must reach task pods on a port other than the one the peon listens on, for example when a sidecar proxy in the task pod listens in front of the peon. Task pods aren't reached through service discovery, so `druid.advertisedPlaintextPort` doesn't apply to them. Unset or non-positive values use the peon's own port. | `8100` | No |
 | `druid.indexer.runner.clusterSelector.type` | `String` (`roundrobin`, `random`, `leastTask`) | Only applicable when `druid.indexer.runner.type` is `multik8s`. Strategy used to select which enabled Kubernetes cluster receives the next task. | `roundrobin` | No |
 | `druid.indexer.runner.clusters[N].name` | `String` | Only applicable when `druid.indexer.runner.type` is `multik8s`. Human-readable name for cluster `N`. When set, Druid adds this value to task context tags as `k8s_cluster`. | `null` | No |
 | `druid.indexer.runner.clusters[N].taskNamespace` | `String` | Only applicable when `druid.indexer.runner.type` is `multik8s`. Kubernetes namespace where task pods and jobs run for cluster `N`. | - | Yes |

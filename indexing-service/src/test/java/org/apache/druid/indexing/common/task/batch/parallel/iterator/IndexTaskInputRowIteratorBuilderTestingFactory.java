@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -155,7 +155,7 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
       HandlingInputRowIterator iterator = iteratorBuilder.build();
 
       InputRow nextInputRow = iterator.next();
-      Assert.assertEquals(expectedNextInputRow, nextInputRow);
+      Assertions.assertEquals(expectedNextInputRow, nextInputRow);
 
       return handlerInvocationHistory;
     }

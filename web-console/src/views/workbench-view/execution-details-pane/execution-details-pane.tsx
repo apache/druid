@@ -41,14 +41,7 @@ import { ResultTablePane } from '../result-table-pane/result-table-pane';
 import './execution-details-pane.scss';
 
 export type ExecutionDetailsTab =
-  | 'general'
-  | 'sql'
-  | 'native'
-  | 'result'
-  | 'pages'
-  | 'error'
-  | 'warnings'
-  | 'segmentStatus';
+  'general' | 'sql' | 'native' | 'result' | 'pages' | 'error' | 'warnings' | 'segmentStatus';
 
 interface ExecutionDetailsPaneProps {
   execution: Execution;

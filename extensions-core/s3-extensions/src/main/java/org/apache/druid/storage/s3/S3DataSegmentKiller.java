@@ -49,9 +49,6 @@ public class S3DataSegmentKiller implements DataSegmentKiller
 {
   private static final Logger log = new Logger(S3DataSegmentKiller.class);
 
-  // AWS has max limit of 1000 objects that can be requested to be deleted at a time.
-  private static final int MAX_MULTI_OBJECT_DELETE_SIZE = 1000;
-
   private static final int NUM_RETRIES = 3;
 
   /**
@@ -152,7 +149,7 @@ public class S3DataSegmentKiller implements DataSegmentKiller
   )
   {
     boolean hadException = false;
-    for (List<ObjectIdentifier> chunkOfKeys : Lists.partition(keysToDelete, MAX_MULTI_OBJECT_DELETE_SIZE)) {
+    for (List<ObjectIdentifier> chunkOfKeys : Lists.partition(keysToDelete, S3Utils.MAX_MULTI_OBJECT_DELETE_SIZE)) {
       try {
         log.info("Deleting %d segment files from S3 bucket[%s]", chunkOfKeys.size(), s3Bucket);
         S3Utils.deleteBucketKeys(s3Client, s3Bucket, chunkOfKeys, NUM_RETRIES);

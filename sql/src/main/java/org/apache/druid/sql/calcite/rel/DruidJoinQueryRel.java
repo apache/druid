@@ -259,10 +259,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   {
     return partialQuery.build(
         DUMMY_DATA_SOURCE,
-        RowSignatures.fromRelDataType(
-            joinRel.getRowType().getFieldNames(),
-            joinRel.getRowType()
-        ),
+        RowSignatures.fromRelDataTypeWithUniqueFields(joinRel.getRowType()),
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false,

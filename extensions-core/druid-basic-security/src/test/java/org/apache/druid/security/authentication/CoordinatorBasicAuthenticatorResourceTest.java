@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.security.basic.BasicAuthCommonCacheConfig;
@@ -42,15 +43,14 @@ import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -58,18 +58,15 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class CoordinatorBasicAuthenticatorResourceTest
 {
   private static final String AUTHENTICATOR_NAME = "test";
   private static final String AUTHENTICATOR_NAME2 = "test2";
   private static final String AUTHENTICATOR_NAME_LDAP = "testLdap";
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final JUnit5TestDerbyConnector DERBY_CONNECTOR_RULE = new JUnit5TestDerbyConnector();
 
   @Mock
   private AuthValidator authValidator;
@@ -81,7 +78,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
   private HttpServletRequest req;
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
@@ -94,8 +91,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
     EasyMock.replay(req);
 
     objectMapper = new ObjectMapper(new SmileFactory());
-    TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    TestDerbyConnector connector = DERBY_CONNECTOR_RULE.getConnector();
+    MetadataStorageTablesConfig tablesConfig = DERBY_CONNECTOR_RULE.metadataTablesConfigSupplier().get();
     connector.createConfigTable();
 
     ObjectMapper objectMapper = new ObjectMapper(new SmileFactory());
@@ -167,7 +164,7 @@ public class CoordinatorBasicAuthenticatorResourceTest
     storageUpdater.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     storageUpdater.stop();
@@ -180,8 +177,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
   public void testInvalidAuthenticator()
   {
     Response response = resource.getAllUsers(mockHttpRequestNoAudit(), "invalidName");
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         errorMapWithMsg("Basic authenticator with name [invalidName] does not exist."),
         response.getEntity()
     );
@@ -191,8 +188,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
   public void testGetAllUsers()
   {
     Response response = resource.getAllUsers(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME), response.getEntity());
 
     resource.createUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid");
     resource.createUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid2");
@@ -207,32 +204,32 @@ public class CoordinatorBasicAuthenticatorResourceTest
     );
 
     response = resource.getAllUsers(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(expectedUsers, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(expectedUsers, response.getEntity());
 
     // Verify cached user map is also getting updated
     response = resource.getCachedSerializedUserMap(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertTrue(response.getEntity() instanceof byte[]);
     Map<String, BasicAuthenticatorUser> cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
-    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
-    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
-    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
-    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
-    Assert.assertNotNull(cachedUserMap.get("druid"));
-    Assert.assertEquals(cachedUserMap.get("druid").getName(), "druid");
-    Assert.assertNotNull(cachedUserMap.get("druid2"));
-    Assert.assertEquals(cachedUserMap.get("druid2").getName(), "druid2");
-    Assert.assertNotNull(cachedUserMap.get("druid3"));
-    Assert.assertEquals(cachedUserMap.get("druid3").getName(), "druid3");
+    Assertions.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
+    Assertions.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assertions.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
+    Assertions.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assertions.assertNotNull(cachedUserMap.get("druid"));
+    Assertions.assertEquals(cachedUserMap.get("druid").getName(), "druid");
+    Assertions.assertNotNull(cachedUserMap.get("druid2"));
+    Assertions.assertEquals(cachedUserMap.get("druid2").getName(), "druid2");
+    Assertions.assertNotNull(cachedUserMap.get("druid3"));
+    Assertions.assertEquals(cachedUserMap.get("druid3").getName(), "druid3");
   }
 
   @Test
   public void testGetAllUsersSeparateDatabaseTables()
   {
     Response response = resource.getAllUsers(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableSet.of(BasicAuthUtils.ADMIN_NAME, BasicAuthUtils.INTERNAL_USER_NAME), response.getEntity());
 
     resource.createUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid");
     resource.createUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid2");
@@ -259,83 +256,83 @@ public class CoordinatorBasicAuthenticatorResourceTest
     );
 
     response = resource.getAllUsers(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(expectedUsers, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(expectedUsers, response.getEntity());
 
     // Verify cached user map for AUTHENTICATOR_NAME authenticator is also getting updated
     response = resource.getCachedSerializedUserMap(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertTrue(response.getEntity() instanceof byte[]);
 
     Map<String, BasicAuthenticatorUser> cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
-    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
-    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
-    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
-    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
-    Assert.assertNotNull(cachedUserMap.get("druid"));
-    Assert.assertEquals(cachedUserMap.get("druid").getName(), "druid");
-    Assert.assertNotNull(cachedUserMap.get("druid2"));
-    Assert.assertEquals(cachedUserMap.get("druid2").getName(), "druid2");
-    Assert.assertNotNull(cachedUserMap.get("druid3"));
-    Assert.assertEquals(cachedUserMap.get("druid3").getName(), "druid3");
+    Assertions.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
+    Assertions.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assertions.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
+    Assertions.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assertions.assertNotNull(cachedUserMap.get("druid"));
+    Assertions.assertEquals(cachedUserMap.get("druid").getName(), "druid");
+    Assertions.assertNotNull(cachedUserMap.get("druid2"));
+    Assertions.assertEquals(cachedUserMap.get("druid2").getName(), "druid2");
+    Assertions.assertNotNull(cachedUserMap.get("druid3"));
+    Assertions.assertEquals(cachedUserMap.get("druid3").getName(), "druid3");
 
     response = resource.getAllUsers(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME2);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(expectedUsers2, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(expectedUsers2, response.getEntity());
 
     // Verify cached user map for each AUTHENTICATOR_NAME2 is also getting updated
     response = resource.getCachedSerializedUserMap(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME2);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertTrue(response.getEntity() instanceof byte[]);
 
     cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
-    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
-    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
-    Assert.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
-    Assert.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
-    Assert.assertNotNull(cachedUserMap.get("druid4"));
-    Assert.assertEquals(cachedUserMap.get("druid4").getName(), "druid4");
-    Assert.assertNotNull(cachedUserMap.get("druid5"));
-    Assert.assertEquals(cachedUserMap.get("druid5").getName(), "druid5");
-    Assert.assertNotNull(cachedUserMap.get("druid6"));
-    Assert.assertEquals(cachedUserMap.get("druid6").getName(), "druid6");
+    Assertions.assertNotNull(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME));
+    Assertions.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assertions.assertNotNull(cachedUserMap.get(BasicAuthUtils.INTERNAL_USER_NAME));
+    Assertions.assertEquals(cachedUserMap.get(BasicAuthUtils.ADMIN_NAME).getName(), BasicAuthUtils.ADMIN_NAME);
+    Assertions.assertNotNull(cachedUserMap.get("druid4"));
+    Assertions.assertEquals(cachedUserMap.get("druid4").getName(), "druid4");
+    Assertions.assertNotNull(cachedUserMap.get("druid5"));
+    Assertions.assertEquals(cachedUserMap.get("druid5").getName(), "druid5");
+    Assertions.assertNotNull(cachedUserMap.get("druid6"));
+    Assertions.assertEquals(cachedUserMap.get("druid6").getName(), "druid6");
   }
 
   @Test
   public void testCreateDeleteUser()
   {
     Response response = resource.createUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     response = resource.getUser(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     BasicAuthenticatorUser expectedUser = new BasicAuthenticatorUser("druid", null);
-    Assert.assertEquals(expectedUser, response.getEntity());
+    Assertions.assertEquals(expectedUser, response.getEntity());
 
     response = resource.deleteUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     response = resource.getCachedSerializedUserMap(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertTrue(response.getEntity() instanceof byte[]);
     Map<String, BasicAuthenticatorUser> cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
-    Assert.assertNotNull(cachedUserMap);
-    Assert.assertNull(cachedUserMap.get("druid"));
+    Assertions.assertNotNull(cachedUserMap);
+    Assertions.assertNull(cachedUserMap.get("druid"));
 
     response = resource.deleteUser(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
 
     response = resource.getUser(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
   }
 
   @Test
   public void testUserCredentials()
   {
     Response response = resource.createUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     response = resource.updateUserCredentials(
         mockHttpRequest(),
@@ -343,57 +340,57 @@ public class CoordinatorBasicAuthenticatorResourceTest
         "druid",
         new BasicAuthenticatorCredentialUpdate("helloworld", null)
     );
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     response = resource.getUser(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     BasicAuthenticatorUser actualUser = (BasicAuthenticatorUser) response.getEntity();
-    Assert.assertEquals("druid", actualUser.getName());
+    Assertions.assertEquals("druid", actualUser.getName());
     BasicAuthenticatorCredentials credentials = actualUser.getCredentials();
 
     byte[] salt = credentials.getSalt();
     byte[] hash = credentials.getHash();
     int iterations = credentials.getIterations();
-    Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
-    Assert.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
-    Assert.assertEquals(BasicAuthUtils.DEFAULT_KEY_ITERATIONS, iterations);
+    Assertions.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
+    Assertions.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
+    Assertions.assertEquals(BasicAuthUtils.DEFAULT_KEY_ITERATIONS, iterations);
 
     byte[] recalculatedHash = PasswordHashGenerator.computePasswordHash(
         "helloworld".toCharArray(),
         salt,
         iterations
     );
-    Assert.assertArrayEquals(recalculatedHash, hash);
+    Assertions.assertArrayEquals(recalculatedHash, hash);
 
     response = resource.getCachedSerializedUserMap(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof byte[]);
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertTrue(response.getEntity() instanceof byte[]);
     Map<String, BasicAuthenticatorUser> cachedUserMap = BasicAuthUtils.deserializeAuthenticatorUserMap(objectMapper, (byte[]) response.getEntity());
-    Assert.assertNotNull(cachedUserMap);
-    Assert.assertNotNull(cachedUserMap.get("druid"));
-    Assert.assertEquals("druid", cachedUserMap.get("druid").getName());
+    Assertions.assertNotNull(cachedUserMap);
+    Assertions.assertNotNull(cachedUserMap.get("druid"));
+    Assertions.assertEquals("druid", cachedUserMap.get("druid").getName());
     BasicAuthenticatorCredentials cachedUserCredentials = cachedUserMap.get("druid").getCredentials();
 
     salt = cachedUserCredentials.getSalt();
     hash = cachedUserCredentials.getHash();
     iterations = cachedUserCredentials.getIterations();
-    Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
-    Assert.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
-    Assert.assertEquals(BasicAuthUtils.DEFAULT_KEY_ITERATIONS, iterations);
+    Assertions.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
+    Assertions.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
+    Assertions.assertEquals(BasicAuthUtils.DEFAULT_KEY_ITERATIONS, iterations);
 
     recalculatedHash = PasswordHashGenerator.computePasswordHash(
         "helloworld".toCharArray(),
         salt,
         iterations
     );
-    Assert.assertArrayEquals(recalculatedHash, hash);
+    Assertions.assertArrayEquals(recalculatedHash, hash);
 
     response = resource.deleteUser(mockHttpRequest(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     response = resource.getUser(mockHttpRequestNoAudit(), AUTHENTICATOR_NAME, "druid");
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
 
     response = resource.updateUserCredentials(
         mockHttpRequestNoAudit(),
@@ -401,8 +398,8 @@ public class CoordinatorBasicAuthenticatorResourceTest
         "druid",
         new BasicAuthenticatorCredentialUpdate("helloworld", null)
     );
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(errorMapWithMsg("User [druid] does not exist."), response.getEntity());
   }
 
   private HttpServletRequest mockHttpRequestNoAudit()

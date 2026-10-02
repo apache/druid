@@ -30,7 +30,6 @@ import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -76,7 +75,7 @@ public class QueryErrorTest extends QueryTestBase
   @Test
   public void testSqlParseException()
   {
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.runSql("FROM foo_bar")
@@ -89,7 +88,7 @@ public class QueryErrorTest extends QueryTestBase
   @Test
   public void testSqlValidationException()
   {
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.runSql("SELECT * FROM foo_bar")
@@ -102,7 +101,7 @@ public class QueryErrorTest extends QueryTestBase
   @Test
   public void testQueryTimeout()
   {
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -113,7 +112,7 @@ public class QueryErrorTest extends QueryTestBase
                         .expectMessageContains("504")
     );
 
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -128,7 +127,7 @@ public class QueryErrorTest extends QueryTestBase
   @Test
   public void testQueryCapacityExceeded()
   {
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -139,7 +138,7 @@ public class QueryErrorTest extends QueryTestBase
                         .expectMessageContains("429")
     );
 
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -154,7 +153,7 @@ public class QueryErrorTest extends QueryTestBase
   @Test
   public void testQueryUnsupported()
   {
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -165,7 +164,7 @@ public class QueryErrorTest extends QueryTestBase
                         .expectMessageContains("501")
     );
 
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -181,7 +180,7 @@ public class QueryErrorTest extends QueryTestBase
   public void testQueryResourceLimitExceeded()
   {
     // SQL
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -193,7 +192,7 @@ public class QueryErrorTest extends QueryTestBase
     );
 
     // Native
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -208,7 +207,7 @@ public class QueryErrorTest extends QueryTestBase
   @Test
   public void testQueryFailure()
   {
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -219,7 +218,7 @@ public class QueryErrorTest extends QueryTestBase
                         .expectMessageContains("500")
     );
 
-    MatcherAssert.assertThat(
+    assertException(
         Assertions.assertThrows(
             Exception.class,
             () -> cluster.callApi().onAnyBroker(
@@ -238,6 +237,11 @@ public class QueryErrorTest extends QueryTestBase
     context.put(QueryContexts.USE_CACHE_KEY, false);
     context.put(key, true);
     return context;
+  }
+
+  private static void assertException(final Throwable actual, final ExceptionMatcher expected)
+  {
+    expected.assertThat(actual);
   }
 
   /**

@@ -228,6 +228,9 @@ public class BloomFilterExpressions
                 matches = filter.testLong(longVal);
               }
               break;
+            case ARRAY:
+            case COMPLEX:
+              break;
           }
 
           return ExprEval.ofLongBoolean(matches);
@@ -292,6 +295,9 @@ public class BloomFilterExpressions
               } else {
                 matches = filter.testLong(longVal);
               }
+              break;
+            case ARRAY:
+            case COMPLEX:
               break;
           }
 

@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.storage.StorageConnector;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.List;
@@ -44,10 +44,10 @@ public class GoogleExportStorageProviderTest
     GoogleExportStorageProvider googleExportStorageProvider = new GoogleExportStorageProvider("bucket-name", "validPath1");
     googleExportStorageProvider.googleExportConfig = new GoogleExportConfig("tempLocalDir", null, null, validPrefixes);
     StorageConnector storageConnector = googleExportStorageProvider.createStorageConnector(tempDir);
-    Assert.assertNotNull(storageConnector);
-    Assert.assertTrue(storageConnector instanceof GoogleStorageConnector);
+    Assertions.assertNotNull(storageConnector);
+    Assertions.assertTrue(storageConnector instanceof GoogleStorageConnector);
 
-    Assert.assertEquals("gs://bucket-name/validPath1", googleExportStorageProvider.getBasePath());
+    Assertions.assertEquals("gs://bucket-name/validPath1", googleExportStorageProvider.getBasePath());
   }
 
   @Test
@@ -61,15 +61,15 @@ public class GoogleExportStorageProviderTest
     GoogleExportStorageProvider.validatePrefix(ImmutableList.of("gs://bucket-name"), "bucket-name", "validPath");
     GoogleExportStorageProvider.validatePrefix(validPrefixes, "bucket-name", "validPath1/../validPath2/");
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> GoogleExportStorageProvider.validatePrefix(validPrefixes, "incorrect-bucket", "validPath1/")
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> GoogleExportStorageProvider.validatePrefix(validPrefixes, "bucket-name", "invalidPath1")
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> GoogleExportStorageProvider.validatePrefix(validPrefixes, "bucket-name", "validPath123")
     );

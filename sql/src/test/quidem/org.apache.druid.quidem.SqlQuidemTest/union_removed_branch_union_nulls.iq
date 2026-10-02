@@ -28,8 +28,7 @@ LogicalUnion(all=[true])
   LogicalValues(tuples=[[{ null, null }]])
 
 !convertedPlan
-DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logical])
-  DruidValues(tuples=[[{ null, null }]])
+DruidValues(tuples=[[{ null, null }]])
 
 !druidPlan
 {
@@ -37,21 +36,15 @@ DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logica
   "dataSource" : {
     "type" : "inline",
     "columnNames" : [ "EXPR$0", "EXPR$1" ],
-    "columnTypes" : [ "STRING", "STRING" ],
+    "columnTypes" : [ "LONG", "STRING" ],
     "rows" : [ [ null, null ] ]
   },
   "intervals" : {
     "type" : "intervals",
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
-  "virtualColumns" : [ {
-    "type" : "expression",
-    "name" : "v0",
-    "expression" : "CAST(\"EXPR$0\", 'LONG')",
-    "outputType" : "LONG"
-  } ],
   "resultFormat" : "compactedList",
-  "columns" : [ "v0", "EXPR$1" ],
+  "columns" : [ "EXPR$0", "EXPR$1" ],
   "columnTypes" : [ "LONG", "STRING" ],
   "granularity" : {
     "type" : "all"

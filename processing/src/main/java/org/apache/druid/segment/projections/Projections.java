@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -40,6 +41,7 @@ import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -790,6 +792,19 @@ public class Projections
       }
     }
     return remap;
+  }
+
+  /**
+   * Whether a clustered read should serve a globally {@code __time}-ordered cursor for {@code spec}. True when the
+   * query requests {@code __time} ordering AND each cluster group is individually {@code __time}-sorted, i.e.
+   * {@code __time} is the first non-clustering column.
+   */
+  public static boolean useTimeOrderedCursors(CursorBuildSpec spec, ClusteredValueGroupsBaseTableSchema summary)
+  {
+    if (Cursors.getTimeOrdering(spec.getPreferredOrdering()) == Order.NONE) {
+      return false;
+    }
+    return Cursors.getTimeOrdering(summary.getGroupOrdering()) == Order.ASCENDING;
   }
 
   /**

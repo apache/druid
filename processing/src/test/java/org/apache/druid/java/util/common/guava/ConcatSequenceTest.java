@@ -216,17 +216,16 @@ public class ConcatSequenceTest
                   return Sequences.simple(
                       new Iterable<>()
                       {
-                        private Iterator<Integer> baseIter = input.iterator();
-
                         @Override
                         public Iterator<Integer> iterator()
                         {
+                          final Iterator<Integer> baseIter = input.iterator();
                           return new Iterator<>()
                           {
                             @Override
                             public boolean hasNext()
                             {
-                              boolean result = baseIter.hasNext();
+                              final boolean result = baseIter.hasNext();
                               if (!result) {
                                 lastSeqFullyRead.set(true);
                               }

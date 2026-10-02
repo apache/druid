@@ -22,9 +22,9 @@ FROM $DRUID_RELEASE
 
 WORKDIR /opt/druid/extensions/mysql-metadata-storage
 
-ARG MARIA_URL=https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/2.7.3/mariadb-java-client-2.7.3.jar
-ARG MARIA_JAR=mariadb-java-client-2.7.3.jar
-ARG MARIA_SHA=4a2edc05bd882ad19371d2615c2635dccf8d74f0
+ARG MARIA_URL=https://repo1.maven.org/maven2/org/mariadb/jdbc/mariadb-java-client/3.5.10/mariadb-java-client-3.5.10.jar
+ARG MARIA_JAR=mariadb-java-client-3.5.10.jar
+ARG MARIA_SHA=c6a687f7ccb65394103cd516e0583e61e6d92c24
 
 RUN wget -q ${MARIA_URL} \
  && echo "${MARIA_SHA}  ${MARIA_JAR}" | sha1sum -c \

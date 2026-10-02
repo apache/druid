@@ -57,10 +57,12 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.ManageLifecycleServer;
 import org.apache.druid.guice.PeonProcessingModule;
+import org.apache.druid.guice.PeonServerModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
@@ -217,6 +219,7 @@ public class CliPeon extends GuiceRunnable
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new IndexingServiceTaskLogsModule(properties),
+        new RegexEngineModule(),
         new Module()
         {
           @SuppressForbidden(reason = "System#out, System#err")
@@ -340,6 +343,7 @@ public class CliPeon extends GuiceRunnable
           }
         },
         new QueryablePeonModule(),
+        new PeonServerModule(),
         new IndexingServiceInputSourceModule(),
         new IndexingServiceTuningConfigModule(),
         new InputSourceModule(),

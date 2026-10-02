@@ -98,7 +98,9 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
         )
     );
 
-    InputRow retVal = new InputRow()
+    // Rows are ordered by timestamp, while equality retains the wrapped row's identity semantics.
+    // codeql[java/inconsistent-compareto-and-equals]
+    final InputRow retVal = new InputRow()
     {
       @Override
       public List<String> getDimensions()

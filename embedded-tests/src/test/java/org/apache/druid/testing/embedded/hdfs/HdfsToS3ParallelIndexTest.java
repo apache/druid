@@ -22,15 +22,15 @@ package org.apache.druid.testing.embedded.hdfs;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
+import org.apache.druid.testing.embedded.s3.S3StorageResource;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Embedded parallel index test that reads input data from HDFS (in-process MiniDFSCluster)
- * and stores segments in S3 (MinIO testcontainer).
+ * and stores segments in S3 (an S3-compatible testcontainer).
  *
- * <p>The MinIO resource is registered after the HDFS resource so that the S3 deep-storage
+ * <p>The S3 resource is registered after the HDFS resource so that the S3 deep-storage
  * configuration ({@code druid.storage.type=s3}) is applied last. The HDFS input-source
  * connection properties ({@code hadoop.fs.defaultFS}) remain active and are used by the
  * indexer to read data from HDFS.
@@ -39,9 +39,9 @@ public class HdfsToS3ParallelIndexTest extends AbstractHdfsInputSourceParallelIn
 {
   private static final Logger LOG = new Logger(HdfsToS3ParallelIndexTest.class);
 
-  /** HDFS is the input source only — deep storage is S3/MinIO. */
+  /** HDFS is the input source only — deep storage is S3. */
   private final HdfsStorageResource hdfsResource = new HdfsStorageResource(false);
-  private final MinIOStorageResource minIOResource = new MinIOStorageResource();
+  private final S3StorageResource s3Resource = new S3StorageResource();
 
   @Override
   protected HdfsStorageResource getHdfsResource()
@@ -56,9 +56,9 @@ public class HdfsToS3ParallelIndexTest extends AbstractHdfsInputSourceParallelIn
     // can read from HDFS. configureAsDeepStorage=false means it does NOT set druid.storage.type.
     cluster.addResource(hdfsResource);
 
-    // MinIO resource: configures S3/MinIO as deep storage (druid.storage.type=s3, etc.).
+    // S3 resource: configures S3 as deep storage (druid.storage.type=s3, etc.).
     // Adding it after the HDFS resource ensures the S3 deep-storage settings win.
-    cluster.addResource(minIOResource);
+    cluster.addResource(s3Resource);
   }
 
   @ParameterizedTest

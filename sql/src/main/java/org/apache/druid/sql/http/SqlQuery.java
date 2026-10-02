@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.api.container.ContainerException;
 import com.sun.jersey.api.core.HttpContext;
-import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -49,7 +48,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 /**
  * See {@link ClientSqlQuery} for the equivalent POJO class used on the client side to interact with the Broker.
@@ -58,16 +56,6 @@ import java.util.stream.Collectors;
  */
 public class SqlQuery
 {
-  public static List<TypedValue> getParameterList(List<SqlParameter> parameters)
-  {
-    return parameters.stream()
-                     // null params are not good!
-                     // we pass them to the planner, so that it can generate a proper error message.
-                     // see SqlParameterizerShuttle and RelParameterizerShuttle.
-                     .map(p -> p == null ? null : p.getTypedValue())
-                     .collect(Collectors.toList());
-  }
-
   private final String query;
   private final ResultFormat resultFormat;
   private final boolean header;
@@ -165,11 +153,6 @@ public class SqlQuery
   public List<SqlParameter> getParameters()
   {
     return parameters;
-  }
-
-  public List<TypedValue> getParameterList()
-  {
-    return getParameterList(parameters);
   }
 
   @Override

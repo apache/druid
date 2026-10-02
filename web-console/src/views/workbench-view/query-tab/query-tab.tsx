@@ -20,7 +20,7 @@ import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import type { JSX } from 'react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane, SplitterLayout } from '../../../components';
@@ -72,16 +72,15 @@ function handleSecondaryPaneSizeChange(secondaryPaneSize: number) {
   localStorageSetJson(LocalStorageKeys.WORKBENCH_PANE_SIZE, secondaryPaneSize);
 }
 
-export interface QueryTabProps
-  extends Pick<
-    RunPanelProps,
-    | 'maxTasksMenuHeader'
-    | 'enginesLabelFn'
-    | 'maxTasksLabelFn'
-    | 'fullClusterCapacityLabelFn'
-    | 'maxTasksOptions'
-    | 'hiddenOptions'
-  > {
+export interface QueryTabProps extends Pick<
+  RunPanelProps,
+  | 'maxTasksMenuHeader'
+  | 'enginesLabelFn'
+  | 'maxTasksLabelFn'
+  | 'fullClusterCapacityLabelFn'
+  | 'maxTasksOptions'
+  | 'hiddenOptions'
+> {
   query: WorkbenchQuery;
   id: string;
   mandatoryQueryContext: QueryContext | undefined;
@@ -124,7 +123,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
   // Store the cancellation function for natively run queries allowing us to trigger it only when the user explicitly clicks "cancel" (vs changing tab)
-  const nativeQueryCancelFnRef = useRef<() => void>();
+  const nativeQueryCancelFnRef = useRef<(() => void) | undefined>(undefined);
 
   const handleQueryStringChange = usePermanentCallback((queryString: string) => {
     if (query.isEmptyQuery() && queryString.split('=====').length > 2) {
@@ -363,22 +362,29 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     swallowBackgroundError: Api.isNetworkError,
   });
 
-  useEffect(() => {
+  const storeExecutionState = useEffectEvent(() => {
     if (!executionState.data && !executionState.error) return;
     WorkbenchRunningPromises.deletePromise(id);
     ExecutionStateCache.storeState(id, executionState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [executionState.data, executionState.error]);
+  });
 
   useEffect(() => {
+    storeExecutionState();
+  }, [executionState.data, executionState.error]);
+
+  const incrementWorkCount = useEffectEvent(() => {
     const effectiveEngine = query.getEffectiveEngine();
     if (effectiveEngine === 'sql-msq-task') {
       WORK_STATE_STORE.getState().incrementMsqTask();
     } else if (effectiveEngine === 'sql-msq-dart') {
       WORK_STATE_STORE.getState().incrementMsqDart();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [executionState.loading, Boolean(executionState.intermediate)]);
+  });
+
+  const hasIntermediate = Boolean(executionState.intermediate);
+  useEffect(() => {
+    incrementWorkCount();
+  }, [executionState.loading, hasIntermediate]);
 
   const execution = executionState.data;
 
@@ -396,12 +402,12 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     metadataStateStore,
     useCallback(state => state.increment, []),
   );
+  const isSuccessfulIngest = Boolean(execution?.isSuccessfulIngest());
   useEffect(() => {
-    if (execution?.isSuccessfulIngest()) {
+    if (isSuccessfulIngest) {
       incrementMetadataVersion();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Boolean(execution?.isSuccessfulIngest())]);
+  }, [isSuccessfulIngest, incrementMetadataVersion]);
 
   function moveToPosition(position: RowColumn) {
     const currentQueryInput = queryInputRef.current;

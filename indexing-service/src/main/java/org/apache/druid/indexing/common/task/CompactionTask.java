@@ -36,7 +36,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
@@ -89,7 +88,6 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.ReferenceCountedObjectProvider;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -99,6 +97,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
@@ -110,6 +109,7 @@ import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
@@ -125,6 +125,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -470,9 +471,9 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_MERGE_TASK_PRIORITY);
+    return Tasks.DEFAULT_MERGE_TASK_PRIORITY;
   }
 
   @Override
@@ -493,7 +494,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       throws IOException
   {
     return ImmutableList.copyOf(
-        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), intervals))
+        taskActionClient.submit(new RetrieveUsedSegmentsAction(getDataSource(), intervals, SegmentDetail.none()))
     );
   }
 
@@ -931,9 +932,17 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     try {
       final AcquireSegmentAction acquireAction =
           closer.register(segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL));
-      final ReferenceCountedObjectProvider<Segment> segmentProvider =
-          FutureUtils.getUnchecked(acquireAction.getSegmentFuture(), true).getReferenceProvider();
-      final Segment segment = segmentProvider.acquireReference().map(closer::register).get();
+      acquireAction.await();
+      final AcquireSegmentResult result = closer.register(acquireAction.release());
+      final Segment segment = result.getSegment().orElseThrow(
+          () -> DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build(
+                                  "Could not load segment[%s] to compact; it is no longer available in the cache or "
+                                  + "deep storage",
+                                  dataSegment.getId()
+                              )
+      );
       return new ResourceHolder<>()
       {
         @Override
@@ -950,6 +959,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       };
     }
     catch (Exception e) {
+      // await() clears the interrupt flag when it throws InterruptedException; restore it so the task's unwind and
+      // any downstream blocking work still observe the interrupt
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
       throw CloseableUtils.closeAndWrapInCatch(e, closer);
     }
   }
@@ -1385,7 +1399,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     {
       return new ArrayList<>(
           actionClient.submit(
-              new RetrieveUsedSegmentsAction(dataSource, ImmutableList.of(interval))
+              new RetrieveUsedSegmentsAction(
+                  dataSource,
+                  ImmutableList.of(interval),
+                  EnumSet.of(SegmentDetail.LOAD_SPEC)
+              )
           )
       );
     }

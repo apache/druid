@@ -36,10 +36,9 @@ import org.apache.druid.query.topn.TopNQueryRunnerTest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -47,35 +46,25 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
 public class ApproximateHistogramTopNQueryTest extends InitializedNullHandlingTest
 {
   private static final Closer RESOURCE_CLOSER = Closer.create();
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws IOException
   {
     RESOURCE_CLOSER.close();
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     // Don't test with non-time-ordered segments, because results vary too much due to order-dependence.
     return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners(false));
   }
 
-  private final QueryRunner runner;
-
-  public ApproximateHistogramTopNQueryTest(
-      QueryRunner runner
-  )
-  {
-    this.runner = runner;
-  }
-
-  @Test
-  public void testTopNWithApproximateHistogramAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTopNWithApproximateHistogramAgg(QueryRunner runner)
   {
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
         "apphisto",

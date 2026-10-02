@@ -97,11 +97,12 @@ import org.easymock.IAnswer;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -116,8 +117,11 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KinesisSupervisorTest extends EasyMockSupport
 {
@@ -161,13 +165,13 @@ public class KinesisSupervisorTest extends EasyMockSupport
     this.numThreads = 1;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     dataSchema = getDataSchema(DATASOURCE);
   }
 
-  @Before
+  @BeforeEach
   public void setupTest()
   {
     taskStorage = createMock(TaskStorage.class);
@@ -221,7 +225,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisorConfig = new SupervisorStateManagerConfig();
   }
 
-  @After
+  @AfterEach
   public void tearDownTest()
   {
     supervisor = null;
@@ -264,31 +268,31 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     KinesisIndexTask task = captured.getValue();
-    Assert.assertEquals(dataSchema, task.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
+    Assertions.assertEquals(dataSchema, task.getDataSchema());
+    Assertions.assertEquals(tuningConfig.convertToTaskTuningConfig(), task.getTuningConfig());
 
     KinesisIndexTaskIOConfig taskConfig = task.getIOConfig();
-    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
-    Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
-    Assert.assertNull("minimumMessageTime", taskConfig.getMinimumMessageTime());
-    Assert.assertNull("maximumMessageTime", taskConfig.getMaximumMessageTime());
+    Assertions.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+    Assertions.assertTrue(taskConfig.isUseTransaction(), "isUseTransaction");
+    Assertions.assertNull(taskConfig.getMinimumMessageTime(), "minimumMessageTime");
+    Assertions.assertNull(taskConfig.getMaximumMessageTime(), "maximumMessageTime");
 
-    Assert.assertEquals(STREAM, taskConfig.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals(STREAM, taskConfig.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals(
         "0",
         taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "0",
         taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
 
-    Assert.assertEquals(STREAM, taskConfig.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals(STREAM, taskConfig.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         taskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
@@ -357,14 +361,14 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     supervisor.start();
     int taskCountBeforeScale = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountBeforeScale);
+    Assertions.assertEquals(1, taskCountBeforeScale);
     autoscaler.start();
 
     supervisor.runInternal();
     verifyAll();
     Thread.sleep(1 * 1000);
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountAfterScale);
+    Assertions.assertEquals(2, taskCountAfterScale);
     autoscaler.stop();
   }
 
@@ -429,19 +433,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
     replayAll();
 
     int taskCountInit = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountInit);
+    Assertions.assertEquals(2, taskCountInit);
     supervisor.getIoConfig().setTaskCount(2);
 
     supervisor.start();
     int taskCountBeforeScale = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountBeforeScale);
+    Assertions.assertEquals(2, taskCountBeforeScale);
     autoscaler.start();
 
     supervisor.runInternal();
     verifyAll();
     Thread.sleep(1 * 1000);
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountAfterScale);
+    Assertions.assertEquals(1, taskCountAfterScale);
     autoscaler.stop();
   }
 
@@ -493,12 +497,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     KinesisRecordSupplier supplier = (KinesisRecordSupplier) supervisor.setupRecordSupplier();
-    Assert.assertNotNull(supplier);
-    Assert.assertEquals(0, supplier.bufferSize());
-    Assert.assertEquals(Collections.emptySet(), supplier.getAssignment());
+    Assertions.assertNotNull(supplier);
+    Assertions.assertEquals(0, supplier.bufferSize());
+    Assertions.assertEquals(Collections.emptySet(), supplier.getAssignment());
     // background fetch should not be enabled for supervisor supplier
     supplier.start();
-    Assert.assertFalse(supplier.isBackgroundFetchRunning());
+    Assertions.assertFalse(supplier.isBackgroundFetchRunning());
   }
 
   @Test
@@ -521,7 +525,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         .build();
 
     AutoScalerConfig autoscalerConfigNull = kinesisSupervisorIOConfigWithNullAutoScalerConfig.getAutoScalerConfig();
-    Assert.assertNull(autoscalerConfigNull);
+    Assertions.assertNull(autoscalerConfigNull);
 
     // create KinesisSupervisorIOConfig with autoScalerConfig Empty
     KinesisSupervisorIOConfig kinesisSupervisorIOConfigWithEmptyAutoScalerConfig = new KinesisIOConfigBuilder()
@@ -541,10 +545,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         .build();
 
     AutoScalerConfig autoscalerConfig = kinesisSupervisorIOConfigWithEmptyAutoScalerConfig.getAutoScalerConfig();
-    Assert.assertNotNull(autoscalerConfig);
-    Assert.assertTrue(autoscalerConfig instanceof LagBasedAutoScalerConfig);
-    Assert.assertFalse(autoscalerConfig.getEnableTaskAutoScaler());
-    Assert.assertTrue(autoscalerConfig.toString().contains("autoScalerConfig"));
+    Assertions.assertNotNull(autoscalerConfig);
+    Assertions.assertTrue(autoscalerConfig instanceof LagBasedAutoScalerConfig);
+    Assertions.assertFalse(autoscalerConfig.getEnableTaskAutoScaler());
+    Assertions.assertTrue(autoscalerConfig.toString().contains("autoScalerConfig"));
   }
 
   @Test
@@ -584,25 +588,25 @@ public class KinesisSupervisorTest extends EasyMockSupport
     List<KinesisIndexTask> tasks = captured.getValues();
     tasks.sort(Comparator.comparing(KinesisIndexTask::getId));
     KinesisIndexTask task1 = tasks.get(0);
-    Assert.assertEquals(1, task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
-    Assert.assertEquals(1, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
+    Assertions.assertEquals(1, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
+    Assertions.assertEquals(
         "0",
         task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
 
     KinesisIndexTask task2 = tasks.get(1);
-    Assert.assertEquals(1, task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
-    Assert.assertEquals(1, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
+    Assertions.assertEquals(1, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
+    Assertions.assertEquals(
         "0",
         task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
@@ -644,41 +648,41 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     KinesisIndexTask task1 = captured.getValues().get(0);
-    Assert.assertEquals(2, task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
-    Assert.assertEquals(2, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(2, task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
+    Assertions.assertEquals(2, task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
+    Assertions.assertEquals(
         "0",
         task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "0",
         task1.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         task1.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
 
     KinesisIndexTask task2 = captured.getValues().get(1);
-    Assert.assertEquals(2, task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
-    Assert.assertEquals(2, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(2, task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
+    Assertions.assertEquals(2, task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().size());
+    Assertions.assertEquals(
         "0",
         task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "0",
         task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         task2.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
@@ -723,15 +727,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
     KinesisIndexTask task1 = captured.getValues().get(0);
     KinesisIndexTask task2 = captured.getValues().get(1);
 
-    Assert.assertTrue(
-        "minimumMessageTime",
-        task1.getIOConfig().getMinimumMessageTime().plusMinutes(59).isBeforeNow()
+    Assertions.assertTrue(
+        task1.getIOConfig().getMinimumMessageTime().plusMinutes(59).isBeforeNow(),
+        "minimumMessageTime"
     );
-    Assert.assertTrue(
-        "minimumMessageTime",
-        task1.getIOConfig().getMinimumMessageTime().plusMinutes(61).isAfterNow()
+    Assertions.assertTrue(
+        task1.getIOConfig().getMinimumMessageTime().plusMinutes(61).isAfterNow(),
+        "minimumMessageTime"
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         task1.getIOConfig().getMinimumMessageTime(),
         task2.getIOConfig().getMinimumMessageTime()
     );
@@ -775,15 +779,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
     KinesisIndexTask task1 = captured.getValues().get(0);
     KinesisIndexTask task2 = captured.getValues().get(1);
 
-    Assert.assertTrue(
-        "maximumMessageTime",
-        task1.getIOConfig().getMaximumMessageTime().minusMinutes(59 + 60).isAfterNow()
+    Assertions.assertTrue(
+        task1.getIOConfig().getMaximumMessageTime().minusMinutes(59 + 60).isAfterNow(),
+        "maximumMessageTime"
     );
-    Assert.assertTrue(
-        "maximumMessageTime",
-        task1.getIOConfig().getMaximumMessageTime().minusMinutes(61 + 60).isBeforeNow()
+    Assertions.assertTrue(
+        task1.getIOConfig().getMaximumMessageTime().minusMinutes(61 + 60).isBeforeNow(),
+        "maximumMessageTime"
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         task1.getIOConfig().getMaximumMessageTime(),
         task2.getIOConfig().getMaximumMessageTime()
     );
@@ -841,12 +845,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     KinesisIndexTask task = captured.getValue();
     KinesisIndexTaskIOConfig taskConfig = task.getIOConfig();
-    Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
-    Assert.assertEquals(
+    Assertions.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+    Assertions.assertEquals(
         "2",
         taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "1",
         taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
@@ -899,13 +903,13 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "org.apache.druid.java.util.common.ISE",
         supervisor.getStateManager().getExceptionEvents().get(0).getExceptionClass()
     );
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
-    Assert.assertTrue(alert.getDescription().startsWith("Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]"));
+    Assertions.assertTrue(alert.getDescription().startsWith("Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]"));
   }
 
   @Test
@@ -1191,8 +1195,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    Assert.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
-    Assert.assertEquals(
+    Assertions.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
+    Assertions.assertEquals(
         iHaveFailed.getIOConfig().getBaseSequenceName(),
         ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getBaseSequenceName()
     );
@@ -1279,7 +1283,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     // check that replica tasks are created with the same minimumMessageTime as tasks inherited from another supervisor
-    Assert.assertEquals(now, ((KinesisIndexTask) captured.getValue()).getIOConfig().getMinimumMessageTime());
+    Assertions.assertEquals(now, ((KinesisIndexTask) captured.getValue()).getIOConfig().getMinimumMessageTime());
 
     // test that a task failing causes a new task to be re-queued with the same parameters
     String runningTaskId = captured.getValue().getId();
@@ -1319,19 +1323,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.runInternal();
     verifyAll();
 
-    Assert.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
-    Assert.assertEquals(
+    Assertions.assertNotEquals(iHaveFailed.getId(), aNewTaskCapture.getValue().getId());
+    Assertions.assertEquals(
         iHaveFailed.getIOConfig().getBaseSequenceName(),
         ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getBaseSequenceName()
     );
 
     // check that failed tasks are recreated with the same minimumMessageTime as the task it replaced, even if that
     // task came from another supervisor
-    Assert.assertEquals(
+    Assertions.assertEquals(
         now,
         ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMinimumMessageTime()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         maxi,
         ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime()
     );
@@ -1458,7 +1462,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     // make sure we killed the right task (sequenceName for replicas are the same)
-    Assert.assertTrue(shutdownTaskIdCapture.getValue().contains(iAmSuccess.getIOConfig().getBaseSequenceName()));
+    Assertions.assertTrue(shutdownTaskIdCapture.getValue().contains(iAmSuccess.getIOConfig().getBaseSequenceName()));
   }
 
   @Test
@@ -1572,20 +1576,20 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     for (Task task : secondTasks.getValues()) {
       KinesisIndexTask kinesisIndexTask = (KinesisIndexTask) task;
-      Assert.assertEquals(dataSchema, kinesisIndexTask.getDataSchema());
-      Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), kinesisIndexTask.getTuningConfig());
+      Assertions.assertEquals(dataSchema, kinesisIndexTask.getDataSchema());
+      Assertions.assertEquals(tuningConfig.convertToTaskTuningConfig(), kinesisIndexTask.getTuningConfig());
 
       KinesisIndexTaskIOConfig taskConfig = kinesisIndexTask.getIOConfig();
-      Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
-      Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
+      Assertions.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
+      Assertions.assertTrue(taskConfig.isUseTransaction(), "isUseTransaction");
 
-      Assert.assertEquals(STREAM, taskConfig.getStartSequenceNumbers().getStream());
-      Assert.assertEquals(
+      Assertions.assertEquals(STREAM, taskConfig.getStartSequenceNumbers().getStream());
+      Assertions.assertEquals(
           "3",
           taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
       );
       // start sequenceNumbers should be exclusive for the second batch of tasks
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableSet.of(SHARD_ID1),
           ((KinesisIndexTask) task).getIOConfig().getStartSequenceNumbers().getExclusivePartitions()
       );
@@ -1694,30 +1698,30 @@ public class KinesisSupervisorTest extends EasyMockSupport
     SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
-    Assert.assertEquals(DATASOURCE, report.getId());
+    Assertions.assertEquals(DATASOURCE, report.getId());
 
     KinesisSupervisorReportPayload payload = report.getPayload();
 
-    Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, payload.getDurationSeconds());
-    Assert.assertEquals(2, payload.getPartitions());
-    Assert.assertEquals(1, payload.getReplicas());
-    Assert.assertEquals(STREAM, payload.getStream());
-    Assert.assertEquals(0, payload.getActiveTasks().size());
-    Assert.assertEquals(1, payload.getPublishingTasks().size());
-    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
-    Assert.assertEquals(0, payload.getRecentErrors().size());
+    Assertions.assertEquals(DATASOURCE, payload.getDataSource());
+    Assertions.assertEquals(3600L, payload.getDurationSeconds());
+    Assertions.assertEquals(2, payload.getPartitions());
+    Assertions.assertEquals(1, payload.getReplicas());
+    Assertions.assertEquals(STREAM, payload.getStream());
+    Assertions.assertEquals(0, payload.getActiveTasks().size());
+    Assertions.assertEquals(1, payload.getPublishingTasks().size());
+    Assertions.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
+    Assertions.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
-    Assert.assertEquals("id1", publishingReport.getId());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals("id1", publishingReport.getId());
+    Assertions.assertEquals(ImmutableMap.of(
         SHARD_ID1,
         "0",
         SHARD_ID0,
         "0"
     ), publishingReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals(ImmutableMap.of(
         SHARD_ID1,
         "2",
         SHARD_ID0,
@@ -1725,31 +1729,31 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ), publishingReport.getCurrentOffsets());
 
     KinesisIndexTask capturedTask = captured.getValue();
-    Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
+    Assertions.assertEquals(dataSchema, capturedTask.getDataSchema());
+    Assertions.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
     KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
-    Assert.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
-    Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
-    Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
+    Assertions.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
+    Assertions.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
+    Assertions.assertTrue(capturedTaskConfig.isUseTransaction(), "isUseTransaction");
 
     // check that the new task was created with starting sequences matching where the publishing task finished
-    Assert.assertEquals(STREAM, capturedTaskConfig.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals(STREAM, capturedTaskConfig.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals(
         "2",
         capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "1",
         capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
 
-    Assert.assertEquals(STREAM, capturedTaskConfig.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals(STREAM, capturedTaskConfig.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
@@ -1844,30 +1848,30 @@ public class KinesisSupervisorTest extends EasyMockSupport
     SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
-    Assert.assertEquals(DATASOURCE, report.getId());
+    Assertions.assertEquals(DATASOURCE, report.getId());
 
     KinesisSupervisorReportPayload payload = report.getPayload();
 
-    Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, payload.getDurationSeconds());
-    Assert.assertEquals(2, payload.getPartitions());
-    Assert.assertEquals(1, payload.getReplicas());
-    Assert.assertEquals(STREAM, payload.getStream());
-    Assert.assertEquals(0, payload.getActiveTasks().size());
-    Assert.assertEquals(1, payload.getPublishingTasks().size());
-    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
-    Assert.assertEquals(0, payload.getRecentErrors().size());
+    Assertions.assertEquals(DATASOURCE, payload.getDataSource());
+    Assertions.assertEquals(3600L, payload.getDurationSeconds());
+    Assertions.assertEquals(2, payload.getPartitions());
+    Assertions.assertEquals(1, payload.getReplicas());
+    Assertions.assertEquals(STREAM, payload.getStream());
+    Assertions.assertEquals(0, payload.getActiveTasks().size());
+    Assertions.assertEquals(1, payload.getPublishingTasks().size());
+    Assertions.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
+    Assertions.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
-    Assert.assertEquals("id1", publishingReport.getId());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals("id1", publishingReport.getId());
+    Assertions.assertEquals(ImmutableMap.of(
         SHARD_ID1,
         "0",
         SHARD_ID0,
         "0"
     ), publishingReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals(ImmutableMap.of(
         SHARD_ID1,
         "2",
         SHARD_ID0,
@@ -1875,31 +1879,31 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ), publishingReport.getCurrentOffsets());
 
     KinesisIndexTask capturedTask = captured.getValue();
-    Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
-    Assert.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
+    Assertions.assertEquals(dataSchema, capturedTask.getDataSchema());
+    Assertions.assertEquals(tuningConfig.convertToTaskTuningConfig(), capturedTask.getTuningConfig());
 
     KinesisIndexTaskIOConfig capturedTaskConfig = capturedTask.getIOConfig();
-    Assert.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
-    Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
-    Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
+    Assertions.assertEquals("awsEndpoint", capturedTaskConfig.getEndpoint());
+    Assertions.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
+    Assertions.assertTrue(capturedTaskConfig.isUseTransaction(), "isUseTransaction");
 
     // check that the new task was created with starting sequences matching where the publishing task finished
-    Assert.assertEquals(STREAM, capturedTaskConfig.getStartSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals(STREAM, capturedTaskConfig.getStartSequenceNumbers().getStream());
+    Assertions.assertEquals(
         "2",
         capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "1",
         capturedTaskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
 
-    Assert.assertEquals(STREAM, capturedTaskConfig.getEndSequenceNumbers().getStream());
-    Assert.assertEquals(
+    Assertions.assertEquals(STREAM, capturedTaskConfig.getEndSequenceNumbers().getStream());
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         KinesisSequenceNumber.NO_END_SEQUENCE_NUMBER,
         capturedTaskConfig.getEndSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
     );
@@ -2041,47 +2045,47 @@ public class KinesisSupervisorTest extends EasyMockSupport
     SupervisorReport<KinesisSupervisorReportPayload> report = supervisor.getStatus();
     verifyAll();
 
-    Assert.assertEquals(DATASOURCE, report.getId());
+    Assertions.assertEquals(DATASOURCE, report.getId());
 
     KinesisSupervisorReportPayload payload = report.getPayload();
 
-    Assert.assertEquals(DATASOURCE, payload.getDataSource());
-    Assert.assertEquals(3600L, payload.getDurationSeconds());
-    Assert.assertEquals(2, payload.getPartitions());
-    Assert.assertEquals(1, payload.getReplicas());
-    Assert.assertEquals(STREAM, payload.getStream());
-    Assert.assertEquals(1, payload.getActiveTasks().size());
-    Assert.assertEquals(1, payload.getPublishingTasks().size());
-    Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
-    Assert.assertEquals(0, payload.getRecentErrors().size());
+    Assertions.assertEquals(DATASOURCE, payload.getDataSource());
+    Assertions.assertEquals(3600L, payload.getDurationSeconds());
+    Assertions.assertEquals(2, payload.getPartitions());
+    Assertions.assertEquals(1, payload.getReplicas());
+    Assertions.assertEquals(STREAM, payload.getStream());
+    Assertions.assertEquals(1, payload.getActiveTasks().size());
+    Assertions.assertEquals(1, payload.getPublishingTasks().size());
+    Assertions.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
+    Assertions.assertEquals(0, payload.getRecentErrors().size());
 
     TaskReportData activeReport = payload.getActiveTasks().get(0);
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);
 
-    Assert.assertEquals("id2", activeReport.getId());
-    Assert.assertEquals(startTime, activeReport.getStartTime());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals("id2", activeReport.getId());
+    Assertions.assertEquals(startTime, activeReport.getStartTime());
+    Assertions.assertEquals(ImmutableMap.of(
         SHARD_ID1,
         "2",
         SHARD_ID0,
         "1"
     ), activeReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals(ImmutableMap.of(
         SHARD_ID1,
         "12",
         SHARD_ID0,
         "1"
     ), activeReport.getCurrentOffsets());
-    Assert.assertEquals(timeLag, activeReport.getLagMillis());
+    Assertions.assertEquals(timeLag, activeReport.getLagMillis());
 
-    Assert.assertEquals("id1", publishingReport.getId());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals("id1", publishingReport.getId());
+    Assertions.assertEquals(ImmutableMap.of(
         SHARD_ID1,
         "0",
         SHARD_ID0,
         "0"
     ), publishingReport.getStartingOffsets());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals(ImmutableMap.of(
         SHARD_ID1,
         "2",
         SHARD_ID0,
@@ -2269,11 +2273,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     for (Task task : captured.getValues()) {
       KinesisIndexTaskIOConfig taskConfig = ((KinesisIndexTask) task).getIOConfig();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "0",
           taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
       );
-      Assert.assertNull(
+      Assertions.assertNull(
           taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID0)
       );
     }
@@ -2395,18 +2399,20 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     for (Task task : captured.getValues()) {
       KinesisIndexTaskIOConfig taskConfig = ((KinesisIndexTask) task).getIOConfig();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "0",
           taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().get(SHARD_ID1)
       );
     }
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testStopNotStarted()
   {
-    supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
-    supervisor.stop(false);
+    assertThrows(IllegalStateException.class, () -> {
+      supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+      supervisor.stop(false);
+    });
   }
 
   @Test
@@ -2712,12 +2718,12 @@ public class KinesisSupervisorTest extends EasyMockSupport
     catch (NullPointerException npe) {
       // Expected as there will be an attempt to EasyMock.reset partitionGroups sequences to NOT_SET
       // however there would be no entries in the map as we have not put nay data in kafka
-      Assert.assertNull(npe.getCause());
+      Assertions.assertNull(npe.getCause());
     }
     verifyAll();
 
-    Assert.assertEquals(captureDataSource.getValue(), DATASOURCE);
-    Assert.assertEquals(captureDataSourceMetadata.getValue(), expectedMetadata);
+    Assertions.assertEquals(captureDataSource.getValue(), DATASOURCE);
+    Assertions.assertEquals(captureDataSourceMetadata.getValue(), expectedMetadata);
   }
 
   @Test
@@ -2851,7 +2857,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     AlertEvent alert = serviceEmitter.getAlerts().get(0);
-    Assert.assertTrue(alert.getDescription().startsWith("Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]"));
+    Assertions.assertTrue(alert.getDescription().startsWith("Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]"));
   }
 
   @Test
@@ -3173,7 +3179,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
   }
 
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCheckpointForInactiveTaskGroup() throws InterruptedException
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1S", null, null, false);
@@ -3327,10 +3334,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertTrue(serviceEmitter.getAlerts().isEmpty());
+    Assertions.assertTrue(serviceEmitter.getAlerts().isEmpty());
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCheckpointForUnknownTaskGroup()
       throws InterruptedException
   {
@@ -3457,11 +3465,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
     }
 
     final AlertEvent alert = serviceEmitter.getAlerts().get(0);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Supervisor[testDS] for datasource[testDS] failed to handle notice",
         alert.getDescription()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot find taskGroup [0] among all activelyReadingTaskGroups [{}]",
         alert.getDataMap().get(AlertBuilder.EXCEPTION_MESSAGE_KEY)
     );
@@ -3485,7 +3493,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     ).anyTimes();
     // this asserts that taskQueue.add does not in fact get called because supervisor should be suspended
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andAnswer((IAnswer) () -> {
-      Assert.fail();
+      Assertions.fail();
       return null;
     }).anyTimes();
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
@@ -3740,10 +3748,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     verifyAll();
 
-    Assert.assertEquals(2, stats.size());
-    Assert.assertEquals(ImmutableSet.of("0", "1"), stats.keySet());
-    Assert.assertEquals(ImmutableMap.of("task1", ImmutableMap.of("prop1", "val1")), stats.get("0"));
-    Assert.assertEquals(ImmutableMap.of("task2", ImmutableMap.of("prop2", "val2")), stats.get("1"));
+    Assertions.assertEquals(2, stats.size());
+    Assertions.assertEquals(ImmutableSet.of("0", "1"), stats.keySet());
+    Assertions.assertEquals(ImmutableMap.of("task1", ImmutableMap.of("prop1", "val1")), stats.get("0"));
+    Assertions.assertEquals(ImmutableMap.of("task2", ImmutableMap.of("prop2", "val2")), stats.get("1"));
   }
 
   @Test
@@ -4072,10 +4080,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     replayAll();
 
-    Assert.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
-    Assert.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
+    Assertions.assertTrue(supervisor.isTaskCurrent(42, "id1", taskMap));
+    Assertions.assertFalse(supervisor.isTaskCurrent(42, "id2", taskMap));
+    Assertions.assertFalse(supervisor.isTaskCurrent(42, "id3", taskMap));
+    Assertions.assertFalse(supervisor.isTaskCurrent(42, "id4", taskMap));
     verifyAll();
   }
 
@@ -4132,7 +4140,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         task1.getDataSchema(),
         task1.getTuningConfig()
     );
-    Assert.assertNotNull(sequenceTask1);
+    Assertions.assertNotNull(sequenceTask1);
 
     final String sequenceTask2 = supervisor.generateSequenceName(
         task2.getIOConfig().getStartSequenceNumbers().getPartitionSequenceNumberMap(),
@@ -4141,10 +4149,10 @@ public class KinesisSupervisorTest extends EasyMockSupport
         task2.getDataSchema(),
         task2.getTuningConfig()
     );
-    Assert.assertNotNull(sequenceTask2);
+    Assertions.assertNotNull(sequenceTask2);
 
-    Assert.assertNotEquals(task1.getId(), task2.getId());
-    Assert.assertEquals(sequenceTask1, sequenceTask2);
+    Assertions.assertNotEquals(task1.getId(), task2.getId());
+    Assertions.assertEquals(sequenceTask1, sequenceTask2);
 
     verifyAll();
   }
@@ -4188,7 +4196,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singleton(
             new ResourceAction(
                 new Resource(KinesisSupervisorSpec.SUPERVISOR_TYPE, ResourceType.EXTERNAL),
@@ -4431,15 +4439,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
             )
         );
 
-    Assert.assertEquals(2, postSplitTasks.size());
+    Assertions.assertEquals(2, postSplitTasks.size());
     KinesisIndexTaskIOConfig group0Config = ((KinesisIndexTask) postSplitTasks.get(0)).getIOConfig();
     KinesisIndexTaskIOConfig group1Config = ((KinesisIndexTask) postSplitTasks.get(1)).getIOConfig();
-    Assert.assertEquals((Integer) 0, group0Config.getTaskGroupId());
-    Assert.assertEquals((Integer) 1, group1Config.getTaskGroupId());
-    Assert.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
-    Assert.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
-    Assert.assertEquals(group1ExpectedStartSequenceNumbers, group1Config.getStartSequenceNumbers());
-    Assert.assertEquals(group1ExpectedEndSequenceNumbers, group1Config.getEndSequenceNumbers());
+    Assertions.assertEquals((Integer) 0, group0Config.getTaskGroupId());
+    Assertions.assertEquals((Integer) 1, group1Config.getTaskGroupId());
+    Assertions.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
+    Assertions.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
+    Assertions.assertEquals(group1ExpectedStartSequenceNumbers, group1Config.getStartSequenceNumbers());
+    Assertions.assertEquals(group1ExpectedEndSequenceNumbers, group1Config.getEndSequenceNumbers());
 
     return postSplitTasks;
   }
@@ -4620,21 +4628,21 @@ public class KinesisSupervisorTest extends EasyMockSupport
             )
         );
 
-    Assert.assertEquals(2, postSplitTasks.size());
+    Assertions.assertEquals(2, postSplitTasks.size());
     KinesisIndexTaskIOConfig group0Config = ((KinesisIndexTask) postSplitTasks.get(0)).getIOConfig();
     KinesisIndexTaskIOConfig group1Config = ((KinesisIndexTask) postSplitTasks.get(1)).getIOConfig();
-    Assert.assertEquals((Integer) 0, group0Config.getTaskGroupId());
-    Assert.assertEquals((Integer) 1, group1Config.getTaskGroupId());
-    Assert.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
-    Assert.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
-    Assert.assertEquals(group1ExpectedStartSequenceNumbers, group1Config.getStartSequenceNumbers());
-    Assert.assertEquals(group1ExpectedEndSequenceNumbers, group1Config.getEndSequenceNumbers());
+    Assertions.assertEquals((Integer) 0, group0Config.getTaskGroupId());
+    Assertions.assertEquals((Integer) 1, group1Config.getTaskGroupId());
+    Assertions.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
+    Assertions.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
+    Assertions.assertEquals(group1ExpectedStartSequenceNumbers, group1Config.getStartSequenceNumbers());
+    Assertions.assertEquals(group1ExpectedEndSequenceNumbers, group1Config.getEndSequenceNumbers());
 
     Map<Integer, Set<String>> expectedPartitionGroups = ImmutableMap.of(
         0, ImmutableSet.of(SHARD_ID1),
         1, ImmutableSet.of(SHARD_ID2)
     );
-    Assert.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
+    Assertions.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
 
     ConcurrentHashMap<String, String> expectedPartitionOffsets = new ConcurrentHashMap<>(
         ImmutableMap.of(
@@ -4643,7 +4651,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             SHARD_ID0, "-1"
         )
     );
-    Assert.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
+    Assertions.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
 
   }
 
@@ -4666,19 +4674,19 @@ public class KinesisSupervisorTest extends EasyMockSupport
     EasyMock.expect(kinesisTaskMatch.getSupervisorId()).andReturn("supervisorId");
     EasyMock.replay(kinesisTaskMatch);
 
-    Assert.assertTrue(supervisor.doesTaskMatchSupervisor(kinesisTaskMatch));
+    Assertions.assertTrue(supervisor.doesTaskMatchSupervisor(kinesisTaskMatch));
 
     KinesisIndexTask kinesisTaskNoMatch = createMock(KinesisIndexTask.class);
     EasyMock.expect(kinesisTaskNoMatch.getSupervisorId()).andReturn(dataSchema.getDataSource());
     EasyMock.replay(kinesisTaskNoMatch);
 
-    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(kinesisTaskNoMatch));
+    Assertions.assertFalse(supervisor.doesTaskMatchSupervisor(kinesisTaskNoMatch));
 
     SeekableStreamIndexTask differentTaskType = createMock(SeekableStreamIndexTask.class);
     EasyMock.expect(differentTaskType.getSupervisorId()).andReturn("supervisorId");
     EasyMock.replay(differentTaskType);
 
-    Assert.assertFalse(supervisor.doesTaskMatchSupervisor(differentTaskType));
+    Assertions.assertFalse(supervisor.doesTaskMatchSupervisor(differentTaskType));
   }
 
   @Test
@@ -4705,7 +4713,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         .withBoundedStreamConfig(new BoundedStreamConfig(startOffsets, endOffsets))
         .build();
 
-    Assert.assertTrue(kinesisSupervisorIOConfig.isBounded());
+    Assertions.assertTrue(kinesisSupervisorIOConfig.isBounded());
 
     final KinesisIndexTaskClientFactory taskClientFactory = new KinesisIndexTaskClientFactory(null, null);
     final KinesisSupervisorSpec spec = new KinesisSupervisorSpec(
@@ -4740,23 +4748,23 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     // Test type conversion methods
     String shardId = supervisor.createPartitionIdFromString("shardId-000000000000");
-    Assert.assertEquals("shardId-000000000000", shardId);
+    Assertions.assertEquals("shardId-000000000000", shardId);
 
     String offset = supervisor.createSequenceOffsetFromObject("49590338271490256608559692538361571095921575989136588898");
-    Assert.assertEquals("49590338271490256608559692538361571095921575989136588898", offset);
+    Assertions.assertEquals("49590338271490256608559692538361571095921575989136588898", offset);
 
     offset = supervisor.createSequenceOffsetFromObject(100);
-    Assert.assertEquals("100", offset);
+    Assertions.assertEquals("100", offset);
 
-    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(
+    Assertions.assertTrue(supervisor.isOffsetAtOrBeyond(
         "49590338271512257353759162668991891722121171891717232706",
         "49590338271490256608559692538361571095921575989136588898"
     ));
-    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(
+    Assertions.assertTrue(supervisor.isOffsetAtOrBeyond(
         "49590338271490256608559692538361571095921575989136588898",
         "49590338271490256608559692538361571095921575989136588898"
     ));
-    Assert.assertFalse(supervisor.isOffsetAtOrBeyond(
+    Assertions.assertFalse(supervisor.isOffsetAtOrBeyond(
         "49590338271490256608559692538361571095921575989136588898",
         "49590338271512257353759162668991891722121171891717232706"
     ));
@@ -4769,7 +4777,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     // Special markers like EOS are treated as max sequence numbers by KinesisSequenceNumber,
     // so they are considered at or beyond any numeric offset.
-    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(KinesisSequenceNumber.END_OF_SHARD_MARKER, "12345"));
+    Assertions.assertTrue(supervisor.isOffsetAtOrBeyond(KinesisSequenceNumber.END_OF_SHARD_MARKER, "12345"));
   }
 
   @Test
@@ -4825,7 +4833,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     );
 
     // Kinesis uses inclusive end offsets
-    Assert.assertFalse("Kinesis should have inclusive end offsets", supervisor.isEndOffsetExclusive());
+    Assertions.assertFalse(supervisor.isEndOffsetExclusive(), "Kinesis should have inclusive end offsets");
 
     // Verify that start == end is treated correctly based on offset semantics
     // For inclusive offsets: start == end means ONE record (not empty)
@@ -4834,7 +4842,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     String end = singleOffset;
 
     // start >= end is true (they're equal)
-    Assert.assertTrue(supervisor.isOffsetAtOrBeyond(start, end));
+    Assertions.assertTrue(supervisor.isOffsetAtOrBeyond(start, end));
 
     // But for Kinesis (inclusive), this is NOT an empty range
     // The empty range check should be: isOffsetAtOrBeyond(start, end) && !start.equals(end)
@@ -4843,9 +4851,9 @@ public class KinesisSupervisorTest extends EasyMockSupport
     boolean isEqual = start.equals(end);
     boolean shouldBeEmpty = isAtOrBeyond && !isEqual;
 
-    Assert.assertFalse(
-        "For Kinesis with inclusive end offsets, start == end should NOT be considered an empty range",
-        shouldBeEmpty
+    Assertions.assertFalse(
+        shouldBeEmpty,
+        "For Kinesis with inclusive end offsets, start == end should NOT be considered an empty range"
     );
   }
 
@@ -5074,11 +5082,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
             )
         );
 
-    Assert.assertEquals(1, postMergeTasks.size());
+    Assertions.assertEquals(1, postMergeTasks.size());
     KinesisIndexTaskIOConfig group0Config = ((KinesisIndexTask) postMergeTasks.get(0)).getIOConfig();
-    Assert.assertEquals((Integer) 0, group0Config.getTaskGroupId());
-    Assert.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
-    Assert.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
+    Assertions.assertEquals((Integer) 0, group0Config.getTaskGroupId());
+    Assertions.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
+    Assertions.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
 
     return postMergeTasks;
   }
@@ -5228,11 +5236,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
             )
         );
 
-    Assert.assertEquals(1, postSplitTasks.size());
+    Assertions.assertEquals(1, postSplitTasks.size());
     KinesisIndexTaskIOConfig group0Config = ((KinesisIndexTask) postSplitTasks.get(0)).getIOConfig();
-    Assert.assertEquals((Integer) 0, group0Config.getTaskGroupId());
-    Assert.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
-    Assert.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
+    Assertions.assertEquals((Integer) 0, group0Config.getTaskGroupId());
+    Assertions.assertEquals(group0ExpectedStartSequenceNumbers, group0Config.getStartSequenceNumbers());
+    Assertions.assertEquals(group0ExpectedEndSequenceNumbers, group0Config.getEndSequenceNumbers());
 
     Map<Integer, Set<String>> expectedPartitionGroups = ImmutableMap.of(
         0, ImmutableSet.of(SHARD_ID2),
@@ -5245,8 +5253,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             SHARD_ID0, "-1"
         )
     );
-    Assert.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
-    Assert.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
+    Assertions.assertEquals(expectedPartitionGroups, supervisor.getPartitionGroups());
+    Assertions.assertEquals(expectedPartitionOffsets, supervisor.getPartitionOffsets());
   }
 
   private TestableKinesisSupervisor getTestableSupervisor(
@@ -5312,8 +5320,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
           ScheduledExecutorService connectExec
       )
       {
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
-        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
+        Assertions.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assertions.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
         return taskClient;
       }
     };
@@ -5448,8 +5456,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
           ScheduledExecutorService connectExec
       )
       {
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
-        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
+        Assertions.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assertions.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
         return taskClient;
       }
     };
@@ -5527,8 +5535,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
           ScheduledExecutorService connectExec
       )
       {
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
-        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
+        Assertions.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assertions.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
         return taskClient;
       }
     };
@@ -5608,8 +5616,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
           ScheduledExecutorService connectExec
       )
       {
-        Assert.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
-        Assert.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
+        Assertions.assertEquals(TEST_HTTP_TIMEOUT.toStandardDuration(), tuningConfig.getHttpTimeout());
+        Assertions.assertEquals(TEST_CHAT_RETRIES, (long) tuningConfig.getChatRetries());
         return taskClient;
       }
     };

@@ -62,7 +62,7 @@ public class MSQDataSketchesTest extends MSQTestBase
                             new HllSketchBuildAggregatorFactory("a0", "m1", 12, "HLL_4", null, false, true)
                         )
                     )
-                    .setHavingSpec(having(expressionFilter(("(hll_sketch_estimate(\"a0\") > 1)"))))
+                    .setHavingSpec(having(expressionFilter(("(hll_sketch_estimate(\"a0\") > 1.0)"))))
                     .setContext(DEFAULT_MSQ_CONTEXT)
                     .build();
 

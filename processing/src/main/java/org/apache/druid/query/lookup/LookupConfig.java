@@ -21,10 +21,10 @@ package org.apache.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.validation.constraints.Min;
 import java.util.Objects;
 
 public class LookupConfig

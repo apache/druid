@@ -19,17 +19,17 @@
 
 package org.apache.druid.segment.column;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.data.ConstantColumnarInts;
 import org.apache.druid.segment.data.ConstantUtf8Indexed;
+import org.apache.druid.segment.index.ConstantColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * Fabricates in-memory {@link BaseColumnHolder}s for columns whose value is constant across every row, without any
@@ -45,11 +45,11 @@ public final class ConstantColumns
   }
 
   /**
-   * Add a constant column (via {@link #makeConstantColumnHolder}) to {@code target} for each column in
+   * Pass a constant column (via {@link #makeConstantColumnHolder}) to {@code target} for each column in
    * {@code clusteringColumns}, using the group-constant value at the matching position of {@code clusteringValues}.
    */
   public static void addConstantClusteringColumns(
-      Map<String, Supplier<BaseColumnHolder>> target,
+      BiConsumer<String, BaseColumnHolder> target,
       RowSignature clusteringColumns,
       Object[] clusteringValues,
       int numRows,
@@ -70,7 +70,7 @@ public final class ConstantColumns
                                                          columnName
                                                      ));
       final BaseColumnHolder holder = makeConstantColumnHolder(columnType, clusteringValues[i], numRows, bitmapFactory);
-      target.put(columnName, Suppliers.ofInstance(holder));
+      target.accept(columnName, holder);
     }
   }
 
@@ -84,7 +84,8 @@ public final class ConstantColumns
     final ColumnBuilder builder = new ColumnBuilder()
         .setType(type)
         .setHasMultipleValues(false)
-        .setHasNulls(value == null);
+        .setHasNulls(value == null)
+        .setIndexSupplier(new ConstantColumnIndexSupplier(type, value, numRows, bitmapFactory), true, false);
 
     if (type.is(ValueType.STRING)) {
       final ByteBuffer utf8 = value == null ? null : StringUtils.toUtf8ByteBuffer((String) value);

@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -91,9 +91,9 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
      */
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
-    Assert.assertEquals("1.0", rows.get(1).getDimension("fixed_len_dec").get(0));
-    Assert.assertEquals(new BigDecimal("1.0"), rows.get(1).getMetric("metric1"));
+    Assertions.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
+    Assertions.assertEquals("1.0", rows.get(1).getDimension("fixed_len_dec").get(0));
+    Assertions.assertEquals(new BigDecimal("1.0"), rows.get(1).getMetric("metric1"));
 
     reader = createReader(
         file,
@@ -104,7 +104,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"fixed_len_dec\" : 1.0\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
   }
 
   @Test
@@ -158,9 +158,9 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
      */
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
-    Assert.assertEquals("1.00", rows.get(1).getDimension("i32_dec").get(0));
-    Assert.assertEquals(BigDecimal.valueOf(100L, 2), rows.get(1).getMetric("metric1"));
+    Assertions.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
+    Assertions.assertEquals("1.00", rows.get(1).getDimension("i32_dec").get(0));
+    Assertions.assertEquals(BigDecimal.valueOf(100L, 2), rows.get(1).getMetric("metric1"));
 
     reader = createReader(
         file,
@@ -171,7 +171,7 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"i32_dec\" : 1.00\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
   }
 
   @Test
@@ -225,9 +225,9 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
      */
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
-    Assert.assertEquals("1.00", rows.get(1).getDimension("i64_dec").get(0));
-    Assert.assertEquals(BigDecimal.valueOf(100L, 2), rows.get(1).getMetric("metric1"));
+    Assertions.assertEquals("2018-09-01T00:00:00.000Z", rows.get(1).getTimestamp().toString());
+    Assertions.assertEquals("1.00", rows.get(1).getDimension("i64_dec").get(0));
+    Assertions.assertEquals(BigDecimal.valueOf(100L, 2), rows.get(1).getMetric("metric1"));
 
     reader = createReader(
         file,
@@ -238,6 +238,6 @@ public class DecimalParquetReaderTest extends BaseParquetReaderTest
     final String expectedJson = "{\n"
                                 + "  \"i64_dec\" : 1.00\n"
                                 + "}";
-    Assert.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
+    Assertions.assertEquals(expectedJson, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(1).getRawValues()));
   }
 }

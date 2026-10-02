@@ -19,10 +19,8 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.SegmentId;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -35,11 +33,5 @@ public final class MetadataAction
   public interface DeleteSegments
   {
     int markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds);
-  }
-
-  @FunctionalInterface
-  public interface GetDatasourceRules
-  {
-    List<Rule> getRulesWithDefault(String dataSource);
   }
 }

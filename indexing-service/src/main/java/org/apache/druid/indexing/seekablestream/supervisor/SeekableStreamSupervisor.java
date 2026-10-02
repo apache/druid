@@ -40,6 +40,7 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.guava.FutureUtils;
@@ -110,7 +111,6 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -1657,7 +1657,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       boolean includeOffsets
   )
   {
-    int numPartitions = partitionGroups.values().stream().mapToInt(Set::size).sum();
+    final int numPartitions = getKnownPartitionCount();
 
     final SeekableStreamSupervisorReportPayload<PartitionIdType, SequenceOffsetType> payload = createReportPayload(
         numPartitions,
@@ -1924,9 +1924,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     }
 
-    SeekableStreamIndexTaskTuningConfig ss = spec.getSpec().getTuningConfig().convertToTaskTuningConfig();
-    SeekableStreamSupervisorIOConfig oo = spec.getSpec().getIOConfig();
-
     // store a limited number of parse exceptions, keeping the most recent ones
     int parseErrorLimit = spec.getSpec().getTuningConfig().convertToTaskTuningConfig().getMaxSavedParseExceptions() *
                           spec.getSpec().getIOConfig().getTaskCount();
@@ -2102,13 +2099,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             }
 
             @Override
-            public void locationChanged(final String taskId, final TaskLocation newLocation)
+            public void locationChanged(final Task task, final TaskLocation newLocation)
             {
               // do nothing
             }
 
             @Override
-            public void statusChanged(String taskId, TaskStatus status)
+            public void statusChanged(Task task, TaskStatus status)
             {
               addNotice(new RunNotice());
             }
@@ -2462,6 +2459,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   getStatusAndPossiblyEndOffsets(taskId),
                   new Function<>()
                   {
+                    @Nullable
                     @Override
                     public Boolean apply(Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>> pair)
                     {
@@ -3197,6 +3195,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
+  /**
+   * The number of partitions as last fetched from the underlying stream.
+   * This method differs from {@link #getPartitionCount()} as it does not
+   * refetch the current partition count from the stream, thus avoiding the
+   * need for locks or a network call.
+   */
+  public int getKnownPartitionCount()
+  {
+    return partitionIds.size();
+  }
+
+  /**
+   * Fetches the current partition count from the underlying stream using the
+   * {@link #recordSupplier}.
+   */
   public int getPartitionCount()
   {
     recordSupplierLock.lock();
@@ -4476,6 +4489,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
 
       if (ioConfig.getReplicas() > taskGroup.tasks.size()) {
+        // In bounded mode, do not top up replicas for a task group that has already reached its end offsets.
+        // Otherwise, as completed replicas exit, this loop keeps recreating replacement replicas whose start
+        // offsets are already at the bounded end, producing an endless churn of tasks that complete instantly.
+        // This mirrors the completion guard on the task-group recreation path in this method. The bounded-end
+        // check (a metadata-store lookup) is intentionally kept inside this branch so it only runs when a top-up
+        // would otherwise happen, not for every active group on every run.
+        if (ioConfig.isBounded() && hasTaskGroupReachedBoundedEnd(groupId)) {
+          log.info(
+              "Bounded taskGroup[%d] has reached end offsets, skipping replica top-up",
+              groupId
+          );
+          continue;
+        }
         log.info(
             "Number of tasks[%d] does not match configured numReplicas[%d] in taskGroup[%d], creating more tasks.",
             taskGroup.tasks.size(), ioConfig.getReplicas(), groupId
@@ -5409,11 +5435,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     StreamPartition<PartitionIdType> streamPartition = StreamPartition.of(ioConfig.getStream(), partition);
     OrderedSequenceNumber<SequenceOffsetType> sequenceNumber = makeSequenceNumber(offsetFromMetadata);
     recordSupplierLock.lock();
-    if (!recordSupplier.getAssignment().contains(streamPartition)) {
-      // this shouldn't happen, but in case it does...
-      throw new IllegalStateException("Record supplier does not match current known partitions");
-    }
     try {
+      if (!recordSupplier.getAssignment().contains(streamPartition)) {
+        // this shouldn't happen, but in case it does...
+        throw new IllegalStateException("Record supplier does not match current known partitions");
+      }
       return recordSupplier.isOffsetAvailable(streamPartition, sequenceNumber);
     }
     finally {

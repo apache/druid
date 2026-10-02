@@ -21,8 +21,8 @@ package org.apache.druid.spectator.histogram;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,14 +42,14 @@ public class NullableOffsetsHeaderTest
     header.writeNull();
     header.writeNull();
 
-    Assert.assertEquals("Size should be count of entries", 3, header.size());
+    Assertions.assertEquals(3, header.size(), "Size should be count of entries");
 
     header = serde(header);
-    Assert.assertEquals("Size should be count of entries", 3, header.size());
+    Assertions.assertEquals(3, header.size(), "Size should be count of entries");
 
-    Assert.assertNull("Should return null for null entries by index", header.get(0));
-    Assert.assertNull("Should return null for null entries by index", header.get(1));
-    Assert.assertNull("Should return null for null entries by index", header.get(2));
+    Assertions.assertNull(header.get(0), "Should return null for null entries by index");
+    Assertions.assertNull(header.get(1), "Should return null for null entries by index");
+    Assertions.assertNull(header.get(2), "Should return null for null entries by index");
   }
 
   @Test
@@ -59,18 +59,18 @@ public class NullableOffsetsHeaderTest
     header.writeOffset(123);
     header.writeOffset(456);
 
-    Assert.assertEquals("Size should be count of entries", 2, header.size());
+    Assertions.assertEquals(2, header.size(), "Size should be count of entries");
 
     header = serde(header);
-    Assert.assertEquals("Size should be count of entries", 2, header.size());
+    Assertions.assertEquals(2, header.size(), "Size should be count of entries");
 
-    Assert.assertNotNull("Should flag nulls by index", header.get(0));
-    Assert.assertNotNull("Should flag nulls by index", header.get(1));
+    Assertions.assertNotNull(header.get(0), "Should flag nulls by index");
+    Assertions.assertNotNull(header.get(1), "Should flag nulls by index");
 
-    Assert.assertEquals("Should return value for entries by index", 0, header.get(0).getStart());
-    Assert.assertEquals("Should return value for entries by index", 123, header.get(0).getEnd());
-    Assert.assertEquals("Should return value for entries by index", 123, header.get(1).getStart());
-    Assert.assertEquals("Should return value for entries by index", 456, header.get(1).getEnd());
+    Assertions.assertEquals(0, header.get(0).getStart(), "Should return value for entries by index");
+    Assertions.assertEquals(123, header.get(0).getEnd(), "Should return value for entries by index");
+    Assertions.assertEquals(123, header.get(1).getStart(), "Should return value for entries by index");
+    Assertions.assertEquals(456, header.get(1).getEnd(), "Should return value for entries by index");
   }
 
   @Test
@@ -84,24 +84,24 @@ public class NullableOffsetsHeaderTest
     header.writeOffset(789);
     header.writeNull();
 
-    Assert.assertEquals("Size should be count of entries", 6, header.size());
+    Assertions.assertEquals(6, header.size(), "Size should be count of entries");
 
     header = serde(header);
-    Assert.assertEquals("Size should be count of entries", 6, header.size());
+    Assertions.assertEquals(6, header.size(), "Size should be count of entries");
 
-    Assert.assertNotNull("Should flag nulls by index", header.get(0));
-    Assert.assertNull("Should flag nulls by index", header.get(1));
-    Assert.assertNull("Should flag nulls by index", header.get(2));
-    Assert.assertNotNull("Should flag nulls by index", header.get(3));
-    Assert.assertNotNull("Should flag nulls by index", header.get(4));
-    Assert.assertNull("Should flag nulls by index", header.get(5));
+    Assertions.assertNotNull(header.get(0), "Should flag nulls by index");
+    Assertions.assertNull(header.get(1), "Should flag nulls by index");
+    Assertions.assertNull(header.get(2), "Should flag nulls by index");
+    Assertions.assertNotNull(header.get(3), "Should flag nulls by index");
+    Assertions.assertNotNull(header.get(4), "Should flag nulls by index");
+    Assertions.assertNull(header.get(5), "Should flag nulls by index");
 
-    Assert.assertEquals("Should return value for entries by index", 0, header.get(0).getStart());
-    Assert.assertEquals("Should return value for entries by index", 123, header.get(0).getEnd());
-    Assert.assertEquals("Should return value for entries by index", 123, header.get(3).getStart());
-    Assert.assertEquals("Should return value for entries by index", 456, header.get(3).getEnd());
-    Assert.assertEquals("Should return value for entries by index", 456, header.get(4).getStart());
-    Assert.assertEquals("Should return value for entries by index", 789, header.get(4).getEnd());
+    Assertions.assertEquals(0, header.get(0).getStart(), "Should return value for entries by index");
+    Assertions.assertEquals(123, header.get(0).getEnd(), "Should return value for entries by index");
+    Assertions.assertEquals(123, header.get(3).getStart(), "Should return value for entries by index");
+    Assertions.assertEquals(456, header.get(3).getEnd(), "Should return value for entries by index");
+    Assertions.assertEquals(456, header.get(4).getStart(), "Should return value for entries by index");
+    Assertions.assertEquals(789, header.get(4).getEnd(), "Should return value for entries by index");
   }
 
   @Test
@@ -117,22 +117,22 @@ public class NullableOffsetsHeaderTest
 
     header = serde(header);
 
-    Assert.assertNull("Should return null for 6", header.get(6));
+    Assertions.assertNull(header.get(6), "Should return null for 6");
 
-    Assert.assertNull("Should return null for 5", header.get(5));
+    Assertions.assertNull(header.get(5), "Should return null for 5");
 
-    Assert.assertEquals("Offset at 4", 789, header.get(4).getEnd());
-    Assert.assertEquals("Offset prior to 4", 456, header.get(4).getStart());
+    Assertions.assertEquals(789, header.get(4).getEnd(), "Offset at 4");
+    Assertions.assertEquals(456, header.get(4).getStart(), "Offset prior to 4");
 
-    Assert.assertEquals("Offset at 3", 456, header.get(3).getEnd());
-    Assert.assertEquals("Offset prior to 3", 123, header.get(3).getStart());
+    Assertions.assertEquals(456, header.get(3).getEnd(), "Offset at 3");
+    Assertions.assertEquals(123, header.get(3).getStart(), "Offset prior to 3");
 
-    Assert.assertNull("Should return null for 2", header.get(2));
+    Assertions.assertNull(header.get(2), "Should return null for 2");
 
-    Assert.assertNull("Should return null for 1", header.get(1));
+    Assertions.assertNull(header.get(1), "Should return null for 1");
 
-    Assert.assertEquals("Offset at 0", 123, header.get(0).getEnd());
-    Assert.assertEquals("Offset prior to 0", 0, header.get(0).getStart());
+    Assertions.assertEquals(123, header.get(0).getEnd(), "Offset at 0");
+    Assertions.assertEquals(0, header.get(0).getStart(), "Offset prior to 0");
   }
 
   @Test
@@ -147,13 +147,13 @@ public class NullableOffsetsHeaderTest
 
     header = serde(header);
 
-    Assert.assertEquals("Offset at 1", 123, header.get(1).getEnd());
-    Assert.assertEquals("Offset prior to 1", 0, header.get(1).getStart());
+    Assertions.assertEquals(123, header.get(1).getEnd(), "Offset at 1");
+    Assertions.assertEquals(0, header.get(1).getStart(), "Offset prior to 1");
 
-    Assert.assertNull("Nulls for anything not set", header.get(0));
-    Assert.assertNull("Nulls for anything not set", header.get(-1));
-    Assert.assertNull("Nulls for anything not set", header.get(3));
-    Assert.assertNull("Nulls for anything not set", header.get(100));
+    Assertions.assertNull(header.get(0), "Nulls for anything not set");
+    Assertions.assertNull(header.get(-1), "Nulls for anything not set");
+    Assertions.assertNull(header.get(3), "Nulls for anything not set");
+    Assertions.assertNull(header.get(100), "Nulls for anything not set");
   }
 
   @Test
@@ -169,7 +169,7 @@ public class NullableOffsetsHeaderTest
 
     // Length + BitmapLength + Bitmap + Offsets
     //      4 +            4 +      1 +      12 = 21 bytes
-    Assert.assertEquals("Serialized size should be minimal", 21, header.getSerializedSize());
+    Assertions.assertEquals(21, header.getSerializedSize(), "Serialized size should be minimal");
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final WritableByteChannel channel = Channels.newChannel(baos);
@@ -177,16 +177,16 @@ public class NullableOffsetsHeaderTest
     channel.close();
 
     final ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
-    Assert.assertEquals(
-        "Reported size and actual size should match",
+    Assertions.assertEquals(
         header.getSerializedSize(),
-        byteBuffer.remaining()
+        byteBuffer.remaining(),
+        "Reported size and actual size should match"
     );
 
     NullableOffsetsHeader deserialized = NullableOffsetsHeader.read(byteBuffer);
-    Assert.assertEquals(0, byteBuffer.remaining());
+    Assertions.assertEquals(0, byteBuffer.remaining());
 
-    Assert.assertEquals("Deserialized should match pre-serialized size", header.size(), deserialized.size());
+    Assertions.assertEquals(header.size(), deserialized.size(), "Deserialized should match pre-serialized size");
 
     // Nulls should return the previous offset
     List<NullableOffsetsHeader.Offset> expected = Arrays.asList(
@@ -199,7 +199,7 @@ public class NullableOffsetsHeaderTest
     );
 
     for (int i = 0; i < header.size(); i++) {
-      Assert.assertEquals("Deserialized should match pre-serialized values", expected.get(i), deserialized.get(i));
+      Assertions.assertEquals(expected.get(i), deserialized.get(i), "Deserialized should match pre-serialized values");
     }
   }
 
@@ -213,7 +213,7 @@ public class NullableOffsetsHeaderTest
 
     // Length + BitmapLength + Bitmap + Offsets
     //      4 +            4 +      0 +       0 = 8 bytes
-    Assert.assertEquals("Serialized size should be minimal", 8, header.getSerializedSize());
+    Assertions.assertEquals(8, header.getSerializedSize(), "Serialized size should be minimal");
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final WritableByteChannel channel = Channels.newChannel(baos);
@@ -221,19 +221,19 @@ public class NullableOffsetsHeaderTest
     channel.close();
 
     final ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
-    Assert.assertEquals(
-        "Reported size and actual size should match",
+    Assertions.assertEquals(
         header.getSerializedSize(),
-        byteBuffer.remaining()
+        byteBuffer.remaining(),
+        "Reported size and actual size should match"
     );
 
     NullableOffsetsHeader deserialized = NullableOffsetsHeader.read(byteBuffer);
-    Assert.assertEquals(0, byteBuffer.remaining());
+    Assertions.assertEquals(0, byteBuffer.remaining());
 
-    Assert.assertEquals("Deserialized should match pre-serialized size", header.size(), deserialized.size());
+    Assertions.assertEquals(header.size(), deserialized.size(), "Deserialized should match pre-serialized size");
 
     for (int i = 0; i < header.size(); i++) {
-      Assert.assertNull("Deserialized should be null", deserialized.get(i));
+      Assertions.assertNull(deserialized.get(i), "Deserialized should be null");
     }
   }
 
@@ -248,7 +248,7 @@ public class NullableOffsetsHeaderTest
     // Length + BitmapLength + Bitmap + Offsets
     //      4 +            4 +      0 +   40000 = 40008 bytes
     // Bitmap is omitted if all values are set
-    Assert.assertEquals("Serialized size should be minimal", 40008, header.getSerializedSize());
+    Assertions.assertEquals(40008, header.getSerializedSize(), "Serialized size should be minimal");
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final WritableByteChannel channel = Channels.newChannel(baos);
@@ -256,20 +256,20 @@ public class NullableOffsetsHeaderTest
     channel.close();
 
     final ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
-    Assert.assertEquals(
-        "Reported size and actual size should match",
+    Assertions.assertEquals(
         header.getSerializedSize(),
-        byteBuffer.remaining()
+        byteBuffer.remaining(),
+        "Reported size and actual size should match"
     );
 
     NullableOffsetsHeader deserialized = NullableOffsetsHeader.read(byteBuffer);
-    Assert.assertEquals(0, byteBuffer.remaining());
+    Assertions.assertEquals(0, byteBuffer.remaining());
 
-    Assert.assertEquals("Deserialized should match pre-serialized size", header.size(), deserialized.size());
+    Assertions.assertEquals(header.size(), deserialized.size(), "Deserialized should match pre-serialized size");
 
     for (int i = 0; i < header.size(); i++) {
-      Assert.assertNotNull("Deserialized should be set " + i, deserialized.get(i));
-      Assert.assertEquals("Deserialized should match pre-serialized nulls " + i, i + 1, deserialized.get(i).getEnd());
+      Assertions.assertNotNull(deserialized.get(i), "Deserialized should be set " + i);
+      Assertions.assertEquals(i + 1, deserialized.get(i).getEnd(), "Deserialized should match pre-serialized nulls " + i);
     }
   }
 
@@ -279,13 +279,13 @@ public class NullableOffsetsHeaderTest
     // Should return the exact index of the offset to read, or negative if not present
     List<Integer> expectedOffsetIndexes = ImmutableList.of(15, 21, 30, 31);
     NullableOffsetsHeader header = createHeaderWithIndexesSet(expectedOffsetIndexes);
-    Assert.assertEquals("Size should be count of entries", 32, header.size());
+    Assertions.assertEquals(32, header.size(), "Size should be count of entries");
     header = serde(header);
 
     for (int i = 0; i < header.size(); i++) {
       int offsetIndex = header.getOffsetIndex(i);
       int expected = expectedOffsetIndexes.indexOf(i);
-      Assert.assertEquals("Offset " + i, expected, offsetIndex);
+      Assertions.assertEquals(expected, offsetIndex, "Offset " + i);
     }
   }
 
@@ -295,13 +295,13 @@ public class NullableOffsetsHeaderTest
     // Should return the exact index of the offset to read, or negative if not present
     List<Integer> expectedOffsetIndexes = ImmutableList.of(15, 21, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 70, 100);
     NullableOffsetsHeader header = createHeaderWithIndexesSet(expectedOffsetIndexes);
-    Assert.assertEquals("Size should be count of entries", 101, header.size());
+    Assertions.assertEquals(101, header.size(), "Size should be count of entries");
     header = serde(header);
 
     for (int i = 0; i < header.size(); i++) {
       int offsetIndex = header.getOffsetIndex(i);
       int expected = expectedOffsetIndexes.indexOf(i);
-      Assert.assertEquals("Offset " + i, expected, offsetIndex);
+      Assertions.assertEquals(expected, offsetIndex, "Offset " + i);
     }
   }
 
@@ -315,12 +315,12 @@ public class NullableOffsetsHeaderTest
     for (int i = 0; i < size; i++) {
       header.writeOffset(i + 1);
     }
-    Assert.assertEquals("Size should be count of entries", size, header.size());
+    Assertions.assertEquals(size, header.size(), "Size should be count of entries");
     header = serde(header);
 
     for (int i = 0; i < size; i++) {
       int offsetIndex = header.getOffsetIndex(i);
-      Assert.assertEquals("Offset " + i, i, offsetIndex);
+      Assertions.assertEquals(i, offsetIndex, "Offset " + i);
     }
   }
 
@@ -334,12 +334,12 @@ public class NullableOffsetsHeaderTest
     for (int i = 0; i < size; i++) {
       header.writeNull();
     }
-    Assert.assertEquals("Size should be count of entries", size, header.size());
+    Assertions.assertEquals(size, header.size(), "Size should be count of entries");
     header = serde(header);
 
     for (int i = 0; i < size; i++) {
       int offsetIndex = header.getOffsetIndex(i);
-      Assert.assertEquals("Offset " + i, -1, offsetIndex);
+      Assertions.assertEquals(-1, offsetIndex, "Offset " + i);
     }
   }
 
@@ -348,25 +348,25 @@ public class NullableOffsetsHeaderTest
   {
     List<Integer> expectedOffsetIndexes = ImmutableList.of(0, 1, 2, 3, 4, 256, 257);
     NullableOffsetsHeader header = createHeaderWithIndexesSet(expectedOffsetIndexes);
-    Assert.assertEquals("Size should be count of entries", 258, header.size());
+    Assertions.assertEquals(258, header.size(), "Size should be count of entries");
     header = serde(header);
-    Assert.assertEquals("Size should be count of entries", 258, header.size());
-    Assert.assertEquals("Cardinality should be count of non-nulls", expectedOffsetIndexes.size(), header.getCardinality());
+    Assertions.assertEquals(258, header.size(), "Size should be count of entries");
+    Assertions.assertEquals(expectedOffsetIndexes.size(), header.getCardinality(), "Cardinality should be count of non-nulls");
 
     for (int i = 0; i < header.size(); i++) {
       int offsetIndex = header.getOffsetIndex(i);
       int expectedOffset = expectedOffsetIndexes.indexOf(i);
-      Assert.assertEquals("Offset " + i, expectedOffset, offsetIndex);
+      Assertions.assertEquals(expectedOffset, offsetIndex, "Offset " + i);
 
       NullableOffsetsHeader.Offset offset = header.get(i);
       if (expectedOffset < 0) {
-        Assert.assertNull("Null Offset " + i, offset);
+        Assertions.assertNull(offset, "Null Offset " + i);
       } else {
         int expectedOffsetStart = expectedOffset;
         int expectedOffsetEnd = expectedOffset + 1;
-        Assert.assertEquals("Offset Start " + i, expectedOffsetStart, offset.getStart());
-        Assert.assertEquals("Offset End " + i, expectedOffsetEnd, offset.getEnd());
-        Assert.assertEquals("Offset Length " + i, 1, offset.getLength());
+        Assertions.assertEquals(expectedOffsetStart, offset.getStart(), "Offset Start " + i);
+        Assertions.assertEquals(expectedOffsetEnd, offset.getEnd(), "Offset End " + i);
+        Assertions.assertEquals(1, offset.getLength(), "Offset Length " + i);
       }
     }
   }
@@ -378,29 +378,29 @@ public class NullableOffsetsHeaderTest
       int boundary = ((int) Math.pow(2, x)) - 1;
       List<Integer> expectedOffsetIndexes = ImmutableList.of(boundary - 1);
       NullableOffsetsHeader header = createHeaderWithIndexesSet(expectedOffsetIndexes);
-      Assert.assertEquals("Size should be count of entries", boundary, header.size());
+      Assertions.assertEquals(boundary, header.size(), "Size should be count of entries");
       header = serde(header);
-      Assert.assertEquals("Size should be count of entries", boundary, header.size());
-      Assert.assertEquals(
-          "Cardinality should be count of non-nulls",
+      Assertions.assertEquals(boundary, header.size(), "Size should be count of entries");
+      Assertions.assertEquals(
           expectedOffsetIndexes.size(),
-          header.getCardinality()
+          header.getCardinality(),
+          "Cardinality should be count of non-nulls"
       );
 
       for (int i = 0; i < header.size(); i++) {
         int offsetIndex = header.getOffsetIndex(i);
         int expectedOffset = expectedOffsetIndexes.indexOf(i);
-        Assert.assertEquals("Offset " + i, expectedOffset, offsetIndex);
+        Assertions.assertEquals(expectedOffset, offsetIndex, "Offset " + i);
 
         NullableOffsetsHeader.Offset offset = header.get(i);
         if (expectedOffset < 0) {
-          Assert.assertNull("Null Offset " + i, offset);
+          Assertions.assertNull(offset, "Null Offset " + i);
         } else {
           int expectedOffsetStart = expectedOffset;
           int expectedOffsetEnd = expectedOffset + 1;
-          Assert.assertEquals("Offset Start " + i, expectedOffsetStart, offset.getStart());
-          Assert.assertEquals("Offset End " + i, expectedOffsetEnd, offset.getEnd());
-          Assert.assertEquals("Offset Length " + i, 1, offset.getLength());
+          Assertions.assertEquals(expectedOffsetStart, offset.getStart(), "Offset Start " + i);
+          Assertions.assertEquals(expectedOffsetEnd, offset.getEnd(), "Offset End " + i);
+          Assertions.assertEquals(1, offset.getLength(), "Offset Length " + i);
         }
       }
     }

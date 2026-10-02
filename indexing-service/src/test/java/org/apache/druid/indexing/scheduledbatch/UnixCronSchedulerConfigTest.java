@@ -22,17 +22,15 @@ package org.apache.druid.indexing.scheduledbatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class UnixCronSchedulerConfigTest
 {
@@ -109,14 +107,16 @@ public class UnixCronSchedulerConfigTest
   @Test
   public void testInvalidUnixCronExpression()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> new UnixCronSchedulerConfig("0 15 10 * * ? *")
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Unix schedule[0 15 10 * * ? *] is invalid: [Cron expression contains 7 parts but we expect one of [5]]"
-        )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> new UnixCronSchedulerConfig("0 15 10 * * ? *")
+    );
+    assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    assertEquals("invalidInput", exception.getErrorCode());
+    assertEquals(
+        "Unix schedule[0 15 10 * * ? *] is invalid: [Cron expression contains 7 parts but we expect one of [5]]",
+        exception.getMessage()
     );
   }
 }

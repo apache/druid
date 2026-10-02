@@ -36,6 +36,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.AcquireMode;
@@ -71,12 +72,21 @@ public class SegmentManager
 
   private final SegmentCacheManager cacheManager;
 
+  private final SegmentTimelineConfig segmentTimelineConfig;
+
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
-  @Inject
   public SegmentManager(SegmentCacheManager cacheManager)
   {
+    this(cacheManager, new SegmentTimelineConfig(false));
+  }
+
+
+  @Inject
+  public SegmentManager(SegmentCacheManager cacheManager, SegmentTimelineConfig segmentTimelineConfig)
+  {
     this.cacheManager = cacheManager;
+    this.segmentTimelineConfig = segmentTimelineConfig;
   }
 
   @VisibleForTesting
@@ -132,6 +142,27 @@ public class SegmentManager
   }
 
   /**
+   * Whether this server is already serving {@code dataSegment}, i.e. it is in its datasource's timeline and so is
+   * queryable right now. A load request for such a segment is a reload rather than a new load, which is how a
+   * partial-load rule is applied, swapped, or released, see {@code StrategicSegmentAssigner}.
+   * <p>
+   * This is a lock-free read of the timeline, unlike the {@code compute} that {@link #loadSegment} mutates it under,
+   * so it answers for the instant it is called and nothing more.
+   */
+  public boolean isSegmentLoaded(final DataSegment dataSegment)
+  {
+    final DataSourceState dataSourceState = dataSources.get(dataSegment.getDataSource());
+    if (dataSourceState == null) {
+      return false;
+    }
+    return dataSourceState.getTimeline().findChunk(
+        dataSegment.getInterval(),
+        dataSegment.getVersion(),
+        dataSegment.getShardSpec().getPartitionNum()
+    ) != null;
+  }
+
+  /**
    * Given a list of {@link DataSegmentAndDescriptor} produce a {@link LeafSegmentsBundle} which partitions segments
    * into cached, loadable, or missing segments. This gives callers the flexibilty to decide to perform operations
    * on segments which are already cached prior to or alongside the operation to load any segments which are not already
@@ -167,13 +198,7 @@ public class SegmentManager
         if (ref.isPresent()) {
           try {
             final Optional<Segment> mapped = segmentMapFunction.apply(ref).map(safetyNet::register);
-            segmentReferences.add(
-                new SegmentReference(
-                    segment.getDescriptor(),
-                    mapped,
-                    null
-                )
-            );
+            segmentReferences.add(new SegmentReference(segment.getDescriptor(), mapped));
           }
           catch (Throwable t) {
             // If applying the mapFn failed, attach the base segment to the closer and rethrow
@@ -216,13 +241,12 @@ public class SegmentManager
   }
 
   /**
-   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either
-   * return immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage
-   * if not. The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
-   * <p>
-   * Calling this method is treated as an intent to acquire and use the segment via resolving the future, and cache
-   * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
-   * after resolving the future to acquire the reference to the actual {@link Segment} object.
+   * Returns an {@link AcquireSegmentAction}: an async handle that becomes ready immediately if the {@link Segment}
+   * is in the cache, or after fetching the segment from deep storage if not (the load starts immediately). Callers
+   * wait for readiness and then {@link AcquireSegmentAction#release()} the result, closing the delivered
+   * {@link Segment} when finished doing segment things (its close releases the reference plus any cache holds placed
+   * for the acquisition); closing the action without releasing cancels an in-flight load or discards a delivered
+   * result. See {@link AcquireSegmentAction} for the full consumer protocol.
    * <p>
    * With {@link AcquireMode#PARTIAL} the action resolves to a partial-load capable segment (when the segment supports
    * range reads), and callers must use async methods like
@@ -310,19 +334,16 @@ public class SegmentManager
    *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
    *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
    *         partial-load announcements carry accurate {@code loadedBytes}.
+   * <b>Failure cleanup belongs to the caller.</b> This method deliberately discards nothing when the load fails,
+   * because it cannot tell on its own whether the state it would discard is half-materialized leftovers from this
+   * attempt or a live replica.
+   *
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
   public DataSegment loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
-    final DataSegment loaded;
-    try {
-      loaded = cacheManager.load(dataSegment);
-    }
-    catch (SegmentLoadingException e) {
-      cacheManager.drop(dataSegment);
-      throw e;
-    }
+    final DataSegment loaded = cacheManager.load(dataSegment);
     // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
     // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
@@ -339,7 +360,7 @@ public class SegmentManager
     dataSources.compute(
         dataSegment.getDataSource(),
         (k, v) -> {
-          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
+          final DataSourceState dataSourceState = v == null ? new DataSourceState(segmentTimelineConfig) : v;
           final VersionedIntervalTimeline<String, DataSegment> loadedIntervals =
               dataSourceState.getTimeline();
           final PartitionChunk<DataSegment> entry = loadedIntervals.findChunk(
@@ -516,14 +537,18 @@ public class SegmentManager
    */
   public static class DataSourceState
   {
-    private final VersionedIntervalTimeline<String, DataSegment> timeline =
-        new VersionedIntervalTimeline<>(Ordering.natural());
+    private final VersionedIntervalTimeline<String, DataSegment> timeline;
 
     private final ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tablesLookup = new ConcurrentHashMap<>();
     private long totalSegmentSize;
     private long numSegments;
     private long rowCount;
     private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
+
+    public DataSourceState(SegmentTimelineConfig segmentTimelineConfig)
+    {
+      timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false, segmentTimelineConfig.isFastIntervalSearch());
+    }
 
     private void addSegment(DataSegment segment, long numOfRows)
     {

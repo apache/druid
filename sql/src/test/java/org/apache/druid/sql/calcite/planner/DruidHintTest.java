@@ -20,19 +20,19 @@
 package org.apache.druid.sql.calcite.planner;
 
 import org.apache.druid.query.JoinAlgorithm;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DruidHintTest
 {
   @Test
   public void testFromString()
   {
-    Assert.assertEquals(DruidHint.DruidJoinHint.fromString("sort_merge").id(), DruidHint.DruidJoinHint.SortMergeJoinHint.SORT_MERGE_JOIN);
-    Assert.assertEquals(DruidHint.DruidJoinHint.fromString("broadcast").id(), DruidHint.DruidJoinHint.BroadcastJoinHint.BROADCAST_JOIN);
-    Assert.assertNull(DruidHint.DruidJoinHint.fromString("hash"));
+    Assertions.assertEquals(DruidHint.DruidJoinHint.fromString("sort_merge").id(), DruidHint.DruidJoinHint.SortMergeJoinHint.SORT_MERGE_JOIN);
+    Assertions.assertEquals(DruidHint.DruidJoinHint.fromString("broadcast").id(), DruidHint.DruidJoinHint.BroadcastJoinHint.BROADCAST_JOIN);
+    Assertions.assertNull(DruidHint.DruidJoinHint.fromString("hash"));
 
-    Assert.assertEquals(DruidHint.DruidJoinHint.fromString("sort_merge").asJoinAlgorithm(), JoinAlgorithm.SORT_MERGE);
-    Assert.assertEquals(DruidHint.DruidJoinHint.fromString("broadcast").asJoinAlgorithm(), JoinAlgorithm.BROADCAST);
+    Assertions.assertEquals(DruidHint.DruidJoinHint.fromString("sort_merge").asJoinAlgorithm(), JoinAlgorithm.SORT_MERGE);
+    Assertions.assertEquals(DruidHint.DruidJoinHint.fromString("broadcast").asJoinAlgorithm(), JoinAlgorithm.BROADCAST);
   }
 }

@@ -31,8 +31,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 
@@ -81,9 +79,7 @@ public class DimensionSchemaUtils
       // for complex types that are not COMPLEX<json>, we still want to use the handler since 'auto' typing
       // only works for the 'standard' built-in types
       if (queryType != null && queryType.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(queryType)) {
-        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(queryType);
-        return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
-                                    .getDimensionSchema(capabilities);
+        return DimensionHandlerUtils.getComplexDimensionSchema(column, queryType);
       }
 
       if (queryType != null && (queryType.isPrimitive() || queryType.isPrimitiveArray())) {
@@ -111,9 +107,7 @@ public class DimensionSchemaUtils
       } else if (dimensionType.getType() == ValueType.ARRAY) {
         return new AutoTypeColumnSchema(column, dimensionType, null);
       } else {
-        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(dimensionType);
-        return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
-                                    .getDimensionSchema(capabilities);
+        return DimensionHandlerUtils.getComplexDimensionSchema(column, dimensionType);
       }
     }
   }

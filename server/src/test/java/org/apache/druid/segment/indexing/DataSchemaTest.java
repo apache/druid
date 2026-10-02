@@ -35,6 +35,7 @@ import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionS
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.data.input.impl.TableProjectionSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -55,8 +56,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -64,6 +64,7 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -518,7 +519,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         );
       }
       catch (ValueInstantiationException e) {
-        MatcherAssert.assertThat(
+        DruidExceptionMatcher.assertThat(
             entry.getKey(),
             e.getCause(),
             DruidExceptionMatcher.invalidInput().expectMessageIs(
@@ -843,6 +844,34 @@ class DataSchemaTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testLegacyModeEffectiveBaseTableSpecAppendsAdditionalColumns()
+  {
+    final BaseTableProjectionSpec effective = DataSchema.builder()
+                                                       .withDataSource("datasource")
+                                                       .withTimestamp(TIMESTAMP_SPEC)
+                                                       .withDimensions(new StringDimensionSchema("tenant"))
+                                                       .withAggregators(new CountAggregatorFactory("rows"))
+                                                       .withGranularity(ARBITRARY_GRANULARITY)
+                                                       .build()
+                                                       .getEffectiveBaseTableSpec();
+
+    Assertions.assertSame(effective, effective.withAdditionalColumns(null));
+    Assertions.assertSame(effective, effective.withAdditionalColumns(Collections.emptyList()));
+
+    final BaseTableProjectionSpec appended =
+        effective.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("region")));
+    Assertions.assertEquals(
+        ImmutableList.of(new StringDimensionSchema("tenant"), new StringDimensionSchema("region")),
+        appended.getDimensionsSpec().getDimensions()
+    );
+    Assertions.assertArrayEquals(effective.getMetrics(), appended.getMetrics());
+    Assertions.assertEquals(
+        ARBITRARY_GRANULARITY,
+        ((AdaptedBaseTableProjectionSpec) appended).getGranularitySpec()
+    );
+  }
+
+  @Test
   void testLegacyModeJsonRoundTripOmitsBaseTable() throws IOException
   {
     final DataSchema original = DataSchema.builder()
@@ -897,6 +926,47 @@ class DataSchemaTest extends InitializedNullHandlingTest
     final DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
     Assertions.assertEquals(original, deserialized);
     Assertions.assertEquals(spec, deserialized.getBaseTable());
+  }
+
+  /**
+   * The generic baseTable-mode machinery is covered above with the clustered spec; this covers what is specific to a
+   * plain {@link TableProjectionSpec}: it rides the same {@code baseTable} property (JSON type {@code table}), and it
+   * lowers into the standard ingest inputs — a dimensionsSpec with the explicit {@code __time} position and
+   * {@code forceSegmentSortByTime=false}, no metrics, and a recombined granularity with rollup off and query
+   * granularity read from the spec's carrier virtual column.
+   */
+  @Test
+  void testBaseTableModeWithTableProjectionSpec() throws IOException
+  {
+    final TableProjectionSpec spec = TableProjectionSpec.builder()
+        .columns(
+            new StringDimensionSchema("page"),
+            new LongDimensionSchema("__time"),
+            new LongDimensionSchema("cnt")
+        )
+        .build()
+        .withQueryGranularity(Granularities.HOUR);
+    final DataSchema original = DataSchema.builder()
+                                          .withDataSource("datasource")
+                                          .withTimestamp(TIMESTAMP_SPEC)
+                                          .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
+                                          .withBaseTable(spec)
+                                          .build();
+
+    final String serialized = jsonMapper.writeValueAsString(original);
+    final JsonNode root = jsonMapper.readTree(serialized);
+    Assertions.assertEquals("table", root.get("baseTable").get("type").asText());
+    final DataSchema deserialized = jsonMapper.readValue(serialized, DataSchema.class);
+    Assertions.assertEquals(original, deserialized);
+    Assertions.assertEquals(spec, deserialized.getBaseTable());
+
+    Assertions.assertEquals(spec.getDimensionsSpec(), original.getDimensionsSpec());
+    Assertions.assertFalse(original.getDimensionsSpec().isForceSegmentSortByTime());
+    Assertions.assertEquals(0, original.getAggregators().length);
+    final GranularitySpec effectiveGranularity = original.getGranularitySpec();
+    Assertions.assertEquals(Granularities.DAY, effectiveGranularity.getSegmentGranularity());
+    Assertions.assertEquals(Granularities.HOUR, effectiveGranularity.getQueryGranularity());
+    Assertions.assertFalse(effectiveGranularity.isRollup());
   }
 
   @Test
@@ -978,8 +1048,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
                        .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
                        .build()
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("segmentGranularitySpec"));
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("baseTable"));
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("segmentGranularitySpec");
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("baseTable");
   }
 
   @Test
@@ -1004,8 +1074,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
                        .withBaseTable(spec)
                        .build()
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("granularitySpec"));
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("baseTable"));
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("granularitySpec");
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("baseTable");
   }
 
   @Test
@@ -1101,6 +1171,6 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> schema.withDimensionsSpec(DimensionsSpec.builder().build())
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("dimensionsSpec"));
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("dimensionsSpec");
   }
 }

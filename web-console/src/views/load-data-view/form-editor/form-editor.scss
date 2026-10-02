@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
+@use '../../../variables' as *;
 
 .form-editor {
   background: rgba($gray3, 0.15);

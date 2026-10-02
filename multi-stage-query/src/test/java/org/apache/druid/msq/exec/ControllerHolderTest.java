@@ -35,12 +35,13 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.test.NoopQueryListener;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -54,7 +55,7 @@ public class ControllerHolderTest
   private static final Logger log = new Logger(ControllerHolderTest.class);
   private ControllerThreadPool controllerThreadPool;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     controllerThreadPool = new ControllerThreadPool(
@@ -65,7 +66,7 @@ public class ControllerHolderTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws InterruptedException
   {
     final ListeningExecutorService exec = controllerThreadPool.getRunExecutorService();
@@ -118,8 +119,8 @@ public class ControllerHolderTest
       // ignore
     }
 
-    Assert.assertTrue("Controller should have been interrupted", wasInterrupted.get());
-    Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
+    Assertions.assertTrue(wasInterrupted.get(), "Controller should have been interrupted");
+    Assertions.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
   }
 
   @Test
@@ -160,7 +161,7 @@ public class ControllerHolderTest
     holder.cancel(CancellationReason.USER_REQUEST, null);
     controllerFinished.await();
 
-    Assert.assertTrue("stop() should have been called as failsafe", stopCalled.get());
+    Assertions.assertTrue(stopCalled.get(), "stop() should have been called as failsafe");
   }
 
   @Test
@@ -202,7 +203,7 @@ public class ControllerHolderTest
     holder.cancel(CancellationReason.UNKNOWN, cause);
     controllerFinished.await();
 
-    Assert.assertSame("stop() should have received the cause", cause, stopCause.get());
+    Assertions.assertSame(cause, stopCause.get(), "stop() should have received the cause");
   }
 
   @Test
@@ -221,7 +222,7 @@ public class ControllerHolderTest
     final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
     future.get(5, TimeUnit.SECONDS);
 
-    Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
+    Assertions.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
   }
 
   @Test
@@ -242,13 +243,13 @@ public class ControllerHolderTest
 
     // Cancel before run
     holder.cancel(CancellationReason.USER_REQUEST, null);
-    Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
+    Assertions.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
 
     // Run should complete quickly without running the controller
     final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
     future.get(5, TimeUnit.SECONDS);
 
-    Assert.assertFalse("Controller should not have run", controllerRan.get());
+    Assertions.assertFalse(controllerRan.get(), "Controller should not have run");
   }
 
   @Test
@@ -285,7 +286,7 @@ public class ControllerHolderTest
     holder.cancel(CancellationReason.USER_REQUEST, null);
     controllerFinished.await();
 
-    Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
+    Assertions.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
   }
 
   @Test
@@ -304,11 +305,11 @@ public class ControllerHolderTest
     final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
     future.get(5, TimeUnit.SECONDS);
 
-    Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
+    Assertions.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
 
     // Cancel after completion — should be a no-op
     holder.cancel(CancellationReason.USER_REQUEST, null);
-    Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
+    Assertions.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
   }
 
   @Test
@@ -335,7 +336,7 @@ public class ControllerHolderTest
     );
     future.get(5, TimeUnit.SECONDS);
 
-    Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
+    Assertions.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
   }
 
   @Test
@@ -371,8 +372,8 @@ public class ControllerHolderTest
     final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), registry, controllerThreadPool);
     future.get(5, TimeUnit.SECONDS);
 
-    Assert.assertTrue("Should have been registered", registered.get());
-    Assert.assertTrue("Should have been deregistered", deregistered.get());
+    Assertions.assertTrue(registered.get(), "Should have been registered");
+    Assertions.assertTrue(deregistered.get(), "Should have been deregistered");
   }
 
   @Test
@@ -405,7 +406,7 @@ public class ControllerHolderTest
     final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
     future.get(30, TimeUnit.SECONDS);
 
-    Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
+    Assertions.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
   }
 
   private static MSQTaskReportPayload makeSuccessReport()

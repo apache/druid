@@ -27,9 +27,9 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.TaskLookup;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -37,7 +37,7 @@ public class HeapMemoryTaskStorageTest
 {
   private HeapMemoryTaskStorage storage;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     storage = new HeapMemoryTaskStorage(new TaskStorageConfig(Period.days(1)));
@@ -52,12 +52,12 @@ public class HeapMemoryTaskStorageTest
     storage.insert(task2, TaskStatus.running(task2.getId()));
 
     storage.removeTasksOlderThan(DateTimes.of("2000").getMillis());
-    Assert.assertNotNull(storage.getTaskInfo(task1.getId()));
-    Assert.assertNotNull(storage.getTaskInfo(task2.getId()));
+    Assertions.assertNotNull(storage.getTaskInfo(task1.getId()));
+    Assertions.assertNotNull(storage.getTaskInfo(task2.getId()));
 
     storage.removeTasksOlderThan(DateTimes.of("3000").getMillis());
-    Assert.assertNull(storage.getTaskInfo(task1.getId()));
-    Assert.assertNotNull(storage.getTaskInfo(task2.getId()));
+    Assertions.assertNull(storage.getTaskInfo(task1.getId()));
+    Assertions.assertNotNull(storage.getTaskInfo(task2.getId()));
   }
 
   @Test
@@ -79,8 +79,8 @@ public class HeapMemoryTaskStorageTest
         null
     );
 
-    Assert.assertEquals(1, taskInfosActive.size());
-    Assert.assertEquals(task2.getId(), taskInfosActive.get(0).getTask().getId());
+    Assertions.assertEquals(1, taskInfosActive.size());
+    Assertions.assertEquals(task2.getId(), taskInfosActive.get(0).getTask().getId());
 
     // Complete statuses
     final List<TaskInfo> taskInfosComplete = storage.getTaskInfos(
@@ -91,7 +91,7 @@ public class HeapMemoryTaskStorageTest
         null
     );
 
-    Assert.assertEquals(1, taskInfosComplete.size());
-    Assert.assertEquals(task1.getId(), taskInfosComplete.get(0).getTask().getId());
+    Assertions.assertEquals(1, taskInfosComplete.size());
+    Assertions.assertEquals(task1.getId(), taskInfosComplete.get(0).getTask().getId());
   }
 }

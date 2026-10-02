@@ -31,14 +31,7 @@ class PermitLimitedSegmentRangeReaderTest
   private static StorageLoadingThreadPool oneThreadPool()
   {
     return StorageLoadingThreadPool.createFromConfig(
-        new SegmentLoaderConfig()
-        {
-          @Override
-          public int getVirtualStorageLoadThreads()
-          {
-            return 1;
-          }
-        }.setVirtualStorage(true)
+        SegmentLoaderConfig.builder().virtualStorageLoadThreads(1).virtualStorage(true).build()
     );
   }
 

@@ -22,31 +22,19 @@ package org.apache.druid.segment.incremental;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.apache.druid.testing.junit.LoggerCaptureRule;
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
 import org.apache.logging.log4j.core.LogEvent;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.List;
 import java.util.stream.IntStream;
 
 public class ParseExceptionHandlerTest
 {
-  private final LoggerCaptureRule logger = new LoggerCaptureRule(ParseExceptionHandler.class);
-
-  @BeforeEach
-  public void setUp() throws Throwable
-  {
-    logger.before();
-  }
-
-  @AfterEach
-  public void tearDown()
-  {
-    logger.after();
-  }
+  @RegisterExtension
+  private final LoggerCaptureExtension logger = new LoggerCaptureExtension(ParseExceptionHandler.class);
 
   @Test
   public void testMetricWhenAllConfigurationsAreTurnedOff()
@@ -79,9 +67,9 @@ public class ParseExceptionHandlerTest
     );
     parseExceptionHandler.handle(parseException);
 
-    List<LogEvent> logEvents = logger.getLogEvents();
+    final List<LogEvent> logEvents = logger.getLogEvents();
     Assertions.assertEquals(1, logEvents.size());
-    String logMessage = logEvents.get(0).getMessage().getFormattedMessage();
+    final String logMessage = logEvents.get(0).getMessage().getFormattedMessage();
     Assertions.assertTrue(logMessage.contains("Encountered parse exception"));
   }
 

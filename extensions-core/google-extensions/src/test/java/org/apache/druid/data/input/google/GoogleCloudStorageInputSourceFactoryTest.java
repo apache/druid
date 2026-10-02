@@ -28,13 +28,15 @@ import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageDruidModule;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class GoogleCloudStorageInputSourceFactoryTest
 {
@@ -66,7 +68,7 @@ public class GoogleCloudStorageInputSourceFactoryTest
     );
 
     final SplittableInputSource inputSource = factory.create(paths);
-    Assert.assertTrue(inputSource instanceof GoogleCloudStorageInputSource);
+    Assertions.assertTrue(inputSource instanceof GoogleCloudStorageInputSource);
   }
 
   @Test
@@ -83,11 +85,11 @@ public class GoogleCloudStorageInputSourceFactoryTest
     );
 
     final GoogleCloudStorageInputSource inputSource = (GoogleCloudStorageInputSource) factory.create(paths);
-    Assert.assertNotNull(inputSource.getUris());
-    Assert.assertEquals(3, inputSource.getUris().size());
-    Assert.assertEquals(URI.create("gs://foo/bar/file.csv"), inputSource.getUris().get(0));
-    Assert.assertEquals(URI.create("gs://bar/foo/file2.csv"), inputSource.getUris().get(1));
-    Assert.assertEquals(URI.create("gs://baz/qux/file3.txt"), inputSource.getUris().get(2));
+    Assertions.assertNotNull(inputSource.getUris());
+    Assertions.assertEquals(3, inputSource.getUris().size());
+    Assertions.assertEquals(URI.create("gs://foo/bar/file.csv"), inputSource.getUris().get(0));
+    Assertions.assertEquals(URI.create("gs://bar/foo/file2.csv"), inputSource.getUris().get(1));
+    Assertions.assertEquals(URI.create("gs://baz/qux/file3.txt"), inputSource.getUris().get(2));
   }
 
   @Test
@@ -101,19 +103,21 @@ public class GoogleCloudStorageInputSourceFactoryTest
 
     final GoogleCloudStorageInputSource inputSource = (GoogleCloudStorageInputSource) factory.create(paths);
     final URI uri = inputSource.getUris().get(0);
-    Assert.assertEquals("gs", uri.getScheme());
-    Assert.assertEquals("bucket", uri.getHost());
-    Assert.assertEquals("/path/to/file.csv", uri.getPath());
+    Assertions.assertEquals("gs", uri.getScheme());
+    Assertions.assertEquals("bucket", uri.getHost());
+    Assertions.assertEquals("/path/to/file.csv", uri.getPath());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testCreateWithEmptyListThrows()
   {
-    final GoogleCloudStorageInputSourceFactory factory = new GoogleCloudStorageInputSourceFactory(
-        STORAGE,
-        INPUT_DATA_CONFIG
-    );
-    factory.create(Collections.emptyList());
+    assertThrows(IllegalArgumentException.class, () -> {
+      final GoogleCloudStorageInputSourceFactory factory = new GoogleCloudStorageInputSourceFactory(
+          STORAGE,
+          INPUT_DATA_CONFIG
+      );
+      factory.create(Collections.emptyList());
+    });
   }
 
   @Test
@@ -127,7 +131,7 @@ public class GoogleCloudStorageInputSourceFactoryTest
 
     final GoogleCloudStorageInputSource inputSource = (GoogleCloudStorageInputSource) factory.create(paths);
     final URI uri = inputSource.getUris().get(0);
-    Assert.assertEquals("gs://bucket/path%20with%20spaces/file.csv", uri.toString());
+    Assertions.assertEquals("gs://bucket/path%20with%20spaces/file.csv", uri.toString());
   }
 
   @Test
@@ -137,7 +141,7 @@ public class GoogleCloudStorageInputSourceFactoryTest
 
     final String json = "{\"type\": \"google\"}";
     final InputSourceFactory factory = mapper.readValue(json, InputSourceFactory.class);
-    Assert.assertTrue(factory instanceof GoogleCloudStorageInputSourceFactory);
+    Assertions.assertTrue(factory instanceof GoogleCloudStorageInputSourceFactory);
   }
 
   @Test
@@ -151,12 +155,12 @@ public class GoogleCloudStorageInputSourceFactoryTest
     );
 
     final String json = mapper.writeValueAsString(original);
-    Assert.assertTrue(json.contains("\"type\":\"google\""));
+    Assertions.assertTrue(json.contains("\"type\":\"google\""));
 
     final GoogleCloudStorageInputSourceFactory deserialized = mapper.readValue(
         json,
         GoogleCloudStorageInputSourceFactory.class
     );
-    Assert.assertNotNull(deserialized);
+    Assertions.assertNotNull(deserialized);
   }
 }

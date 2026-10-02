@@ -46,8 +46,8 @@ import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -93,7 +93,7 @@ public class GroupByFrameCombinerTest extends InitializedNullHandlingTest
         1 // one row per frame
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             ImmutableList.of("a", 100L, 11L),
             ImmutableList.of("b", 200L, 22L),
@@ -123,11 +123,11 @@ public class GroupByFrameCombinerTest extends InitializedNullHandlingTest
 
     final List<List<Object>> rows = runMergerWithCombiner(channelData, 1);
 
-    Assert.assertEquals(numKeys, rows.size());
+    Assertions.assertEquals(numKeys, rows.size());
     for (int k = 0; k < numKeys; k++) {
-      Assert.assertEquals(StringUtils.format("key_%02d", k), rows.get(k).get(0));
-      Assert.assertEquals((long) k, rows.get(k).get(1));
-      Assert.assertEquals((long) numChannels, rows.get(k).get(2));
+      Assertions.assertEquals(StringUtils.format("key_%02d", k), rows.get(k).get(0));
+      Assertions.assertEquals((long) k, rows.get(k).get(1));
+      Assertions.assertEquals((long) numChannels, rows.get(k).get(2));
     }
   }
 
@@ -157,7 +157,7 @@ public class GroupByFrameCombinerTest extends InitializedNullHandlingTest
         3 // multiple rows per frame
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             ImmutableList.of("a", 1L, 130L),
             ImmutableList.of("b", 2L, 530L),

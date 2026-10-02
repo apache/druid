@@ -113,11 +113,11 @@ import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.apache.druid.utils.Streams;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -136,7 +136,8 @@ import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "partitionsSpec:{0}, engine:{2}")
+@MethodSource("constructorFeeder")
 public class CompactSegmentsTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
@@ -149,7 +150,6 @@ public class CompactSegmentsTest
   private static final int TOTAL_INTERVAL_PER_DATASOURCE = 11;
   private static final int MAXIMUM_CAPACITY_WITH_AUTO_SCALE = 10;
 
-  @Parameterized.Parameters(name = "partitionsSpec:{0}, engine:{2}")
   public static Collection<Object[]> constructorFeeder()
   {
     final MutableInt nextRangePartitionBoundary = new MutableInt(0);
@@ -211,7 +211,7 @@ public class CompactSegmentsTest
     this.engine = engine;
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     allSegments.clear();
@@ -283,8 +283,8 @@ public class CompactSegmentsTest
     String compactSegmentString = JSON_MAPPER.writeValueAsString(compactSegments);
     CompactSegments serdeCompactSegments = JSON_MAPPER.readValue(compactSegmentString, CompactSegments.class);
 
-    Assert.assertNotNull(serdeCompactSegments);
-    Assert.assertSame(overlordClient, serdeCompactSegments.getOverlordClient());
+    Assertions.assertNotNull(serdeCompactSegments);
+    Assertions.assertSame(overlordClient, serdeCompactSegments.getOverlordClient());
   }
 
   @Test
@@ -378,14 +378,14 @@ public class CompactSegmentsTest
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
-    Assert.assertEquals(0, autoCompactionSnapshots.size());
+    Assertions.assertEquals(0, autoCompactionSnapshots.size());
 
     for (int compactionRunCount = 0; compactionRunCount < 11; compactionRunCount++) {
       doCompactionAndAssertCompactSegmentStatistics(compactSegments, compactionRunCount);
     }
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
     final CoordinatorRunStats stats = doCompactSegments(compactSegments);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
@@ -431,11 +431,11 @@ public class CompactSegmentsTest
     // Run auto compaction without any dataSource in the compaction config
     // Snapshot should be empty
     doCompactSegments(compactSegments, new ArrayList<>());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
-    Assert.assertTrue(compactSegments.getAutoCompactionSnapshot().isEmpty());
+    Assertions.assertTrue(compactSegments.getAutoCompactionSnapshot().isEmpty());
 
     assertLastSegmentNotCompacted(compactSegments);
   }
@@ -490,13 +490,13 @@ public class CompactSegmentsTest
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
-    Assert.assertEquals(0, autoCompactionSnapshots.size());
+    Assertions.assertEquals(0, autoCompactionSnapshots.size());
 
     // 3 intervals, 120 byte, 12 segments already compacted before the run
     for (int compactionRunCount = 0; compactionRunCount < 8; compactionRunCount++) {
       // Do a cycle of auto compaction which creates one compaction task
       final CoordinatorRunStats stats = doCompactSegments(compactSegments);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           1,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
@@ -522,7 +522,7 @@ public class CompactSegmentsTest
 
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
     final CoordinatorRunStats stats = doCompactSegments(compactSegments);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
@@ -552,14 +552,14 @@ public class CompactSegmentsTest
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
-    Assert.assertEquals(0, autoCompactionSnapshots.size());
+    Assertions.assertEquals(0, autoCompactionSnapshots.size());
 
     for (int compactionRunCount = 0; compactionRunCount < 11; compactionRunCount++) {
       doCompactionAndAssertCompactSegmentStatistics(compactSegments, compactionRunCount);
     }
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
     final CoordinatorRunStats stats = doCompactSegments(compactSegments);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
@@ -604,10 +604,10 @@ public class CompactSegmentsTest
       );
     }
 
-    Assert.assertEquals(2, compactSegments.getAutoCompactionSnapshot().size());
-    Assert.assertTrue(compactSegments.getAutoCompactionSnapshot().containsKey(DATA_SOURCE_PREFIX + 1));
-    Assert.assertTrue(compactSegments.getAutoCompactionSnapshot().containsKey(DATA_SOURCE_PREFIX + 2));
-    Assert.assertFalse(compactSegments.getAutoCompactionSnapshot().containsKey(DATA_SOURCE_PREFIX + 0));
+    Assertions.assertEquals(2, compactSegments.getAutoCompactionSnapshot().size());
+    Assertions.assertTrue(compactSegments.getAutoCompactionSnapshot().containsKey(DATA_SOURCE_PREFIX + 1));
+    Assertions.assertTrue(compactSegments.getAutoCompactionSnapshot().containsKey(DATA_SOURCE_PREFIX + 2));
+    Assertions.assertFalse(compactSegments.getAutoCompactionSnapshot().containsKey(DATA_SOURCE_PREFIX + 0));
   }
 
   @Test
@@ -644,13 +644,13 @@ public class CompactSegmentsTest
 
     // Before any compaction, we do not have any snapshot of compactions
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
-    Assert.assertEquals(0, autoCompactionSnapshots.size());
+    Assertions.assertEquals(0, autoCompactionSnapshots.size());
 
     // 3 intervals, 1200 byte (each segment is 100 bytes), 12 segments will be skipped by auto compaction
     for (int compactionRunCount = 0; compactionRunCount < 8; compactionRunCount++) {
       // Do a cycle of auto compaction which creates one compaction task
       final CoordinatorRunStats stats = doCompactSegments(compactSegments);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           1,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
@@ -674,7 +674,7 @@ public class CompactSegmentsTest
 
     // Test that stats does not change (and is still correct) when auto compaction runs with everything is fully compacted
     final CoordinatorRunStats stats = doCompactSegments(compactSegments);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
@@ -702,54 +702,52 @@ public class CompactSegmentsTest
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
 
     final CoordinatorRunStats stats = doCompactSegments(compactSegments, 3);
-    Assert.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
-    Assert.assertEquals(3, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assertions.assertEquals(3, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assertions.assertEquals(3, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
     // slots, there are 3 submitted tasks for native whereas 1 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
-      Assert.assertEquals(3, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+      Assertions.assertEquals(3, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     } else {
-      Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+      Assertions.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     }
   }
 
   @Test
   public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlotsOverMaxSlot()
   {
-    int maxCompactionSlot = 3;
-    Assert.assertTrue(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
+    final int maxCompactionSlot = 3;
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
-    Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
-    Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assertions.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assertions.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 3 available
     // slots, there are 3 submitted tasks for native whereas 1 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
-      Assert.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+      Assertions.assertEquals(maxCompactionSlot, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     } else {
-      Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+      Assertions.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     }
   }
 
   @Test
   public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlotsUnderMaxSlot()
   {
-    int maxCompactionSlot = 100;
-    Assert.assertFalse(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
+    final int maxCompactionSlot = 100;
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
         doCompactSegments(compactSegments, createCompactionConfigs(), maxCompactionSlot);
-    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
-    Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assertions.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assertions.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.MAX_SLOTS));
     // Native takes up 1 task slot by default whereas MSQ takes up all available upto 5. Since there are 10 available
     // slots, there are 10 submitted tasks for native whereas 2 for MSQ.
     if (engine == CompactionEngine.NATIVE) {
-      Assert.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+      Assertions.assertEquals(MAXIMUM_CAPACITY_WITH_AUTO_SCALE, stats.get(Stats.Compaction.SUBMITTED_TASKS));
     } else {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           MAXIMUM_CAPACITY_WITH_AUTO_SCALE / ClientMSQContext.MAX_TASK_SLOTS_FOR_MSQ_COMPACTION_TASK,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
@@ -778,13 +776,13 @@ public class CompactSegmentsTest
 
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Intervals.of("2017-01-09T12:00:00.000Z/2017-01-10T00:00:00.000Z"),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
-    Assert.assertNull(taskPayload.getGranularitySpec().getSegmentGranularity());
-    Assert.assertNull(taskPayload.getGranularitySpec().getQueryGranularity());
-    Assert.assertNull(taskPayload.getGranularitySpec().isRollup());
+    Assertions.assertNull(taskPayload.getGranularitySpec().getSegmentGranularity());
+    Assertions.assertNull(taskPayload.getGranularitySpec().getQueryGranularity());
+    Assertions.assertNull(taskPayload.getGranularitySpec().isRollup());
   }
 
   @Test
@@ -808,7 +806,7 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertTrue(taskPayload.getIoConfig().isDropExisting());
+    Assertions.assertTrue(taskPayload.getIoConfig().isDropExisting());
   }
 
   @Test
@@ -832,9 +830,9 @@ public class CompactSegmentsTest
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
     if (CompactionEngine.NATIVE.equals(engine)) {
-      Assert.assertEquals(BatchIOConfig.DEFAULT_DROP_EXISTING, taskPayload.getIoConfig().isDropExisting());
+      Assertions.assertEquals(BatchIOConfig.DEFAULT_DROP_EXISTING, taskPayload.getIoConfig().isDropExisting());
     } else {
-      Assert.assertTrue(taskPayload.getIoConfig().isDropExisting());
+      Assertions.assertTrue(taskPayload.getIoConfig().isDropExisting());
     }
   }
 
@@ -865,14 +863,14 @@ public class CompactSegmentsTest
 
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
-    Assert.assertEquals(
+    Assertions.assertEquals(
         CompactionCandidate.getCompactionInterval(datasourceToSegments.get(dataSource), Granularities.YEAR),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
         new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
-    Assert.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
+    Assertions.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
   }
 
   @Test
@@ -900,7 +898,7 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo")),
         taskPayload.getDimensionsSpec().getDimensions()
     );
@@ -926,7 +924,7 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertNull(taskPayload.getDimensionsSpec());
+    Assertions.assertNull(taskPayload.getDimensionsSpec());
   }
 
   @Test
@@ -968,7 +966,7 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         projections,
         taskPayload.getProjections()
     );
@@ -1005,7 +1003,7 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         baseTable,
         taskPayload.getBaseTable()
     );
@@ -1053,6 +1051,7 @@ public class CompactSegmentsTest
             dataSource,
             engine,
             new Period("PT0H"),
+            null,
             0,
             null,
             500L,
@@ -1061,7 +1060,7 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(projectionSpec),
         taskPayload.getProjections()
     );
@@ -1097,14 +1096,14 @@ public class CompactSegmentsTest
 
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
-    Assert.assertEquals(
+    Assertions.assertEquals(
         CompactionCandidate.getCompactionInterval(datasourceToSegments.get(dataSource), Granularities.YEAR),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
         new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, true);
-    Assert.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
+    Assertions.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
   }
 
   @Test
@@ -1197,14 +1196,14 @@ public class CompactSegmentsTest
 
     // All segments is compact at the same time since we changed the segment granularity to YEAR and all segment
     // are within the same year
-    Assert.assertEquals(
+    Assertions.assertEquals(
         CompactionCandidate.getCompactionInterval(datasourceToSegments.get(dataSource), Granularities.YEAR),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
         new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
-    Assert.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
+    Assertions.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
   }
 
   @Test
@@ -1225,12 +1224,12 @@ public class CompactSegmentsTest
         compactSegments,
         ImmutableList.of(compactionConfig)
     );
-    Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
-    Assert.assertEquals(1, overlordClient.submittedCompactionTasks.size());
+    Assertions.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+    Assertions.assertEquals(1, overlordClient.submittedCompactionTasks.size());
 
     ClientCompactionTaskQuery submittedTask = overlordClient.submittedCompactionTasks.get(0);
-    Assert.assertEquals(submittedTask.getDataSource(), dataSource);
-    Assert.assertEquals(
+    Assertions.assertEquals(submittedTask.getDataSource(), dataSource);
+    Assertions.assertEquals(
         Intervals.of("2017-01-09/P1D"),
         submittedTask.getIoConfig().getInputSpec().getInterval()
     );
@@ -1241,13 +1240,13 @@ public class CompactSegmentsTest
         compactSegments,
         ImmutableList.of(compactionConfig)
     );
-    Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
-    Assert.assertEquals(2, overlordClient.submittedCompactionTasks.size());
+    Assertions.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+    Assertions.assertEquals(2, overlordClient.submittedCompactionTasks.size());
 
     // Verify that the latest interval is compacted again
     submittedTask = overlordClient.submittedCompactionTasks.get(1);
-    Assert.assertEquals(submittedTask.getDataSource(), dataSource);
-    Assert.assertEquals(
+    Assertions.assertEquals(submittedTask.getDataSource(), dataSource);
+    Assertions.assertEquals(
         Intervals.of("2017-01-09/P1D"),
         submittedTask.getIoConfig().getInputSpec().getInterval()
     );
@@ -1265,9 +1264,9 @@ public class CompactSegmentsTest
     } else {
       stats = doCompactSegments(compactSegments, createcompactionConfigsForMSQ(2), 4);
     }
-    Assert.assertEquals(4, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
-    Assert.assertEquals(4, stats.get(Stats.Compaction.MAX_SLOTS));
-    Assert.assertEquals(2, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+    Assertions.assertEquals(4, stats.get(Stats.Compaction.AVAILABLE_SLOTS));
+    Assertions.assertEquals(4, stats.get(Stats.Compaction.MAX_SLOTS));
+    Assertions.assertEquals(2, stats.get(Stats.Compaction.SUBMITTED_TASKS));
   }
 
   @Test
@@ -1297,12 +1296,12 @@ public class CompactSegmentsTest
     CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
         doCompactSegments(compactSegments, createcompactionConfigsForNative(2), 4);
-    Assert.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
-    Assert.assertEquals(1, overlordClient.submittedCompactionTasks.size());
+    Assertions.assertEquals(1, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+    Assertions.assertEquals(1, overlordClient.submittedCompactionTasks.size());
 
     final ClientCompactionTaskQuery compactionTask = overlordClient.submittedCompactionTasks.get(0);
-    Assert.assertEquals(datasource0, compactionTask.getDataSource());
-    Assert.assertEquals(
+    Assertions.assertEquals(datasource0, compactionTask.getDataSource());
+    Assertions.assertEquals(
         Intervals.of("2017-01-01T00:00:00/2017-01-01T12:00:00"),
         compactionTask.getIoConfig().getInputSpec().getInterval()
     );
@@ -1334,8 +1333,8 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertNotNull(taskPayload.getTransformSpec());
-    Assert.assertEquals(new SelectorDimFilter("dim1", "foo", null), taskPayload.getTransformSpec().getFilter());
+    Assertions.assertNotNull(taskPayload.getTransformSpec());
+    Assertions.assertEquals(new SelectorDimFilter("dim1", "foo", null), taskPayload.getTransformSpec().getFilter());
   }
 
   @Test
@@ -1358,8 +1357,8 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertNull(taskPayload.getTransformSpec());
-    Assert.assertNull(taskPayload.getMetricsSpec());
+    Assertions.assertNull(taskPayload.getTransformSpec());
+    Assertions.assertNull(taskPayload.getMetricsSpec());
   }
 
   @Test
@@ -1385,8 +1384,8 @@ public class CompactSegmentsTest
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
     AggregatorFactory[] actual = taskPayload.getMetricsSpec();
-    Assert.assertNotNull(actual);
-    Assert.assertArrayEquals(aggregatorFactories, actual);
+    Assertions.assertNotNull(actual);
+    Assertions.assertArrayEquals(aggregatorFactories, actual);
   }
 
   @Test
@@ -1439,14 +1438,14 @@ public class CompactSegmentsTest
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         CompactionCandidate.getCompactionInterval(segments, Granularities.DAY),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
         new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null);
-    Assert.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
+    Assertions.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
   }
 
   @Test
@@ -1506,14 +1505,14 @@ public class CompactSegmentsTest
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         CompactionCandidate.getCompactionInterval(segments, Granularities.YEAR),
         taskPayload.getIoConfig().getInputSpec().getInterval()
     );
 
     ClientCompactionTaskGranularitySpec expectedGranularitySpec =
         new ClientCompactionTaskGranularitySpec(Granularities.YEAR, null, null);
-    Assert.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
+    Assertions.assertEquals(expectedGranularitySpec, taskPayload.getGranularitySpec());
   }
 
   @Test
@@ -1537,9 +1536,9 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertNotNull(taskPayload.getTuningConfig());
-    Assert.assertNotNull(taskPayload.getTuningConfig().getAppendableIndexSpec());
-    Assert.assertTrue(((OnheapIncrementalIndex.Spec) taskPayload.getTuningConfig()
+    Assertions.assertNotNull(taskPayload.getTuningConfig());
+    Assertions.assertNotNull(taskPayload.getTuningConfig().getAppendableIndexSpec());
+    Assertions.assertTrue(((OnheapIncrementalIndex.Spec) taskPayload.getTuningConfig()
                                                                 .getAppendableIndexSpec()).isPreserveExistingMetrics());
   }
 
@@ -1563,9 +1562,9 @@ public class CompactSegmentsTest
     );
     doCompactSegments(compactSegments, compactionConfigs);
     ClientCompactionTaskQuery taskPayload = (ClientCompactionTaskQuery) payloadCaptor.getValue();
-    Assert.assertNotNull(taskPayload.getTuningConfig());
-    Assert.assertNotNull(taskPayload.getTuningConfig().getAppendableIndexSpec());
-    Assert.assertFalse(((OnheapIncrementalIndex.Spec) taskPayload.getTuningConfig()
+    Assertions.assertNotNull(taskPayload.getTuningConfig());
+    Assertions.assertNotNull(taskPayload.getTuningConfig().getAppendableIndexSpec());
+    Assertions.assertFalse(((OnheapIncrementalIndex.Spec) taskPayload.getTuningConfig()
                                                                  .getAppendableIndexSpec()).isPreserveExistingMetrics());
   }
 
@@ -1586,17 +1585,17 @@ public class CompactSegmentsTest
   {
     Map<String, AutoCompactionSnapshot> autoCompactionSnapshots = compactSegments.getAutoCompactionSnapshot();
     AutoCompactionSnapshot snapshot = autoCompactionSnapshots.get(dataSourceName);
-    Assert.assertEquals(dataSourceName, snapshot.getDataSource());
-    Assert.assertEquals(scheduleStatus, snapshot.getScheduleStatus());
-    Assert.assertEquals(expectedByteCountAwaitingCompaction, snapshot.getBytesAwaitingCompaction());
-    Assert.assertEquals(expectedByteCountCompressed, snapshot.getBytesCompacted());
-    Assert.assertEquals(expectedByteCountSkipped, snapshot.getBytesSkipped());
-    Assert.assertEquals(expectedIntervalCountAwaitingCompaction, snapshot.getIntervalCountAwaitingCompaction());
-    Assert.assertEquals(expectedIntervalCountCompressed, snapshot.getIntervalCountCompacted());
-    Assert.assertEquals(expectedIntervalCountSkipped, snapshot.getIntervalCountSkipped());
-    Assert.assertEquals(expectedSegmentCountAwaitingCompaction, snapshot.getSegmentCountAwaitingCompaction());
-    Assert.assertEquals(expectedSegmentCountCompressed, snapshot.getSegmentCountCompacted());
-    Assert.assertEquals(expectedSegmentCountSkipped, snapshot.getSegmentCountSkipped());
+    Assertions.assertEquals(dataSourceName, snapshot.getDataSource());
+    Assertions.assertEquals(scheduleStatus, snapshot.getScheduleStatus());
+    Assertions.assertEquals(expectedByteCountAwaitingCompaction, snapshot.getBytesAwaitingCompaction());
+    Assertions.assertEquals(expectedByteCountCompressed, snapshot.getBytesCompacted());
+    Assertions.assertEquals(expectedByteCountSkipped, snapshot.getBytesSkipped());
+    Assertions.assertEquals(expectedIntervalCountAwaitingCompaction, snapshot.getIntervalCountAwaitingCompaction());
+    Assertions.assertEquals(expectedIntervalCountCompressed, snapshot.getIntervalCountCompacted());
+    Assertions.assertEquals(expectedIntervalCountSkipped, snapshot.getIntervalCountSkipped());
+    Assertions.assertEquals(expectedSegmentCountAwaitingCompaction, snapshot.getSegmentCountAwaitingCompaction());
+    Assertions.assertEquals(expectedSegmentCountCompressed, snapshot.getSegmentCountCompacted());
+    Assertions.assertEquals(expectedSegmentCountSkipped, snapshot.getSegmentCountSkipped());
   }
 
   private void doCompactionAndAssertCompactSegmentStatistics(CompactSegments compactSegments, int compactionRunCount)
@@ -1604,7 +1603,7 @@ public class CompactSegmentsTest
     for (int dataSourceIndex = 0; dataSourceIndex < 3; dataSourceIndex++) {
       // One compaction task triggered
       final CoordinatorRunStats stats = doCompactSegments(compactSegments);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           1,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
@@ -1737,7 +1736,7 @@ public class CompactSegmentsTest
 
     for (int i = 0; i < 3; i++) {
       final CoordinatorRunStats stats = doCompactSegments(compactSegments);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           expectedCompactTaskCount,
           stats.get(Stats.Compaction.SUBMITTED_TASKS)
       );
@@ -1756,9 +1755,9 @@ public class CompactSegmentsTest
       );
 
       if (expectedRemainingSegments > 0) {
-        Assert.assertEquals(i + 1, numDatasources.get());
+        Assertions.assertEquals(i + 1, numDatasources.get());
       } else {
-        Assert.assertEquals(2 - i, numDatasources.get());
+        Assertions.assertEquals(2 - i, numDatasources.get());
       }
     }
 
@@ -1767,13 +1766,13 @@ public class CompactSegmentsTest
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       List<TimelineObjectHolder<String, DataSegment>> holders = dataSourceToTimeline.get(dataSource).lookup(expectedInterval);
-      Assert.assertEquals(1, holders.size());
+      Assertions.assertEquals(1, holders.size());
       List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holders.get(0).getObject());
-      Assert.assertEquals(2, chunks.size());
+      Assertions.assertEquals(2, chunks.size());
       final String expectedVersion = expectedVersionSupplier.get();
       for (PartitionChunk<DataSegment> chunk : chunks) {
-        Assert.assertEquals(expectedInterval, chunk.getObject().getInterval());
-        Assert.assertEquals(expectedVersion, chunk.getObject().getVersion());
+        Assertions.assertEquals(expectedInterval, chunk.getObject().getInterval());
+        Assertions.assertEquals(expectedVersion, chunk.getObject().getVersion());
       }
     }
   }
@@ -1787,14 +1786,14 @@ public class CompactSegmentsTest
       final String dataSource = DATA_SOURCE_PREFIX + i;
       final Interval interval = Intervals.of(StringUtils.format("2017-01-09T12:00:00/2017-01-10"));
       List<TimelineObjectHolder<String, DataSegment>> holders = dataSourceToTimeline.get(dataSource).lookup(interval);
-      Assert.assertEquals(1, holders.size());
+      Assertions.assertEquals(1, holders.size());
       for (TimelineObjectHolder<String, DataSegment> holder : holders) {
         List<PartitionChunk<DataSegment>> chunks = Lists.newArrayList(holder.getObject());
-        Assert.assertEquals(4, chunks.size());
+        Assertions.assertEquals(4, chunks.size());
         for (PartitionChunk<DataSegment> chunk : chunks) {
           DataSegment segment = chunk.getObject();
-          Assert.assertEquals(interval, segment.getInterval());
-          Assert.assertEquals("version", segment.getVersion());
+          Assertions.assertEquals(interval, segment.getInterval());
+          Assertions.assertEquals("version", segment.getVersion());
         }
       }
     }
@@ -1804,7 +1803,7 @@ public class CompactSegmentsTest
     addMoreData(dataSource, 9);
 
     CoordinatorRunStats stats = doCompactSegments(compactSegments);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
@@ -1812,7 +1811,7 @@ public class CompactSegmentsTest
     addMoreData(dataSource, 10);
 
     stats = doCompactSegments(compactSegments);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1,
         stats.get(Stats.Compaction.SUBMITTED_TASKS)
     );
@@ -2053,7 +2052,7 @@ public class CompactSegmentsTest
     @Test
     public void testIsParalleModeNullTuningConfigReturnFalse()
     {
-      Assert.assertFalse(CompactionSlotManager.isParallelMode(null));
+      Assertions.assertFalse(CompactionSlotManager.isParallelMode(null));
     }
 
     @Test
@@ -2061,7 +2060,7 @@ public class CompactSegmentsTest
     {
       ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(null);
-      Assert.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
+      Assertions.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
     }
 
     @Test
@@ -2071,13 +2070,13 @@ public class CompactSegmentsTest
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(null);
-      Assert.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
+      Assertions.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
-      Assert.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
+      Assertions.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
-      Assert.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
+      Assertions.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
     }
 
     @Test
@@ -2087,13 +2086,13 @@ public class CompactSegmentsTest
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(SingleDimensionPartitionsSpec.class));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(null);
-      Assert.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
+      Assertions.assertFalse(CompactionSlotManager.isParallelMode(tuningConfig));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
-      Assert.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
+      Assertions.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
 
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
-      Assert.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
+      Assertions.assertTrue(CompactionSlotManager.isParallelMode(tuningConfig));
     }
 
     @Test
@@ -2102,7 +2101,7 @@ public class CompactSegmentsTest
       ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(2);
-      Assert.assertEquals(3, CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
+      Assertions.assertEquals(3, CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
     }
 
     @Test
@@ -2111,7 +2110,7 @@ public class CompactSegmentsTest
       ClientCompactionTaskQueryTuningConfig tuningConfig = Mockito.mock(ClientCompactionTaskQueryTuningConfig.class);
       Mockito.when(tuningConfig.getPartitionsSpec()).thenReturn(Mockito.mock(PartitionsSpec.class));
       Mockito.when(tuningConfig.getMaxNumConcurrentSubTasks()).thenReturn(1);
-      Assert.assertEquals(1, CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
+      Assertions.assertEquals(1, CompactionSlotManager.getMaxTaskSlotsForNativeCompactionTask(tuningConfig));
     }
   }
 

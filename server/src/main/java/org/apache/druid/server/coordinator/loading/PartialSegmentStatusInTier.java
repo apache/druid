@@ -41,13 +41,16 @@ import java.util.Objects;
  * fingerprint equals the requested fingerprint; rule is satisfied for that replica) vs "stale" (any other state,
  * including a non-profile regular full-load replica).
  * <p>
- * As a last resort, when a stale replica has nowhere better to be replaced, this classifies the same server as a
- * target for an "additive-historical" in-place replace: a partial-load request arriving at a server that's already
- * (stale-)loaded fills in the missing parts in place rather than re-downloading from scratch. That's what makes
- * {@link #getEligibleForAdditiveReload()} a safe fallback destination when the tier has no spare capacity. This
- * option is the least preferred because the contract of an additive reload is to load only what is now needed and
- * missing; it does not drop anything that is no longer needed, so the server can end up holding a larger amount of
- * data than the current rule strictly requires.
+ * A stale replica is also classified as a target for an in-place reload: a partial-load request arriving at a server
+ * that is already (stale-)loaded is honored by swapping the rule on the cache entry it already has, so only the delta
+ * the new fingerprint adds has to come off deep storage. That makes {@link #getEligibleForInPlaceReload()} the
+ * <em>preferred</em> destination for a matching deficit as it downloads strictly less than a fresh load elsewhere,
+ * the replica keeps serving throughout, and no follow-up drop is needed to retire the replica it replaces.
+ * <p>
+ * What makes this safe is that the historical pins a rule with cache holds rather than accumulating. Applying a rule
+ * releases the holds on every bundle the new fingerprint does not select, so a reloaded server ends up pinned by
+ * exactly the new rule; whatever the previous rule left on disk is ordinary evictable cache, reclaimed under pressure
+ * like any other unheld data, and it is not part of the footprint the server announces back.
  */
 public class PartialSegmentStatusInTier
 {
@@ -56,7 +59,7 @@ public class PartialSegmentStatusInTier
   private final List<ServerHolder> matchingInFlight = new ArrayList<>();
   private final List<ServerHolder> staleInFlight = new ArrayList<>();
   private final List<ServerHolder> eligibleForFreshLoad = new ArrayList<>();
-  private final List<ServerHolder> eligibleForAdditiveReload = new ArrayList<>();
+  private final List<ServerHolder> eligibleForInPlaceReload = new ArrayList<>();
 
   public PartialSegmentStatusInTier(
       DataSegment segment,
@@ -80,8 +83,8 @@ public class PartialSegmentStatusInTier
 
   /**
    * Servers that have the segment loaded but with a non-matching profile (different fingerprint, or no profile at all,
-   * i.e. a regular full-load replica seen against a partial rule). Eligible for additive reload (the historical
-   * fills in the missing parts in place) and for being dropped once enough matching replicas exist.
+   * i.e. a regular full-load replica seen against a partial rule). Eligible for an in-place reload onto the new
+   * fingerprint, and for being dropped once enough matching replicas exist.
    */
   public List<ServerHolder> getStaleLoaded()
   {
@@ -89,8 +92,8 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Servers with an in-flight load whose profile fingerprint matches the request. Counts toward projected matching
-   * replicas, the load is on its way to satisfying the rule.
+   * Servers with an in-flight load, or an incoming balancer move, whose profile fingerprint matches the request.
+   * Counts toward projected matching replicas, the load is on its way to satisfying the rule.
    */
   public List<ServerHolder> getMatchingInFlight()
   {
@@ -98,9 +101,10 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Servers with an in-flight load whose profile fingerprint differs from the request (e.g., the rule changed
-   * mid-flight, or an in-flight regular full-load against a partial rule). Cancel-and-replace targets when there is a
-   * matching deficit.
+   * Servers with an in-flight load, or an incoming balancer move, whose profile fingerprint differs from the request
+   * (e.g., the rule changed mid-flight, or an in-flight regular full-load against a partial rule). Cancel-and-replace
+   * targets when there is a matching deficit; an incoming move refuses the cancellation and is instead reconciled
+   * once it lands and reclassifies as stale-loaded.
    */
   public List<ServerHolder> getStaleInFlight()
   {
@@ -118,27 +122,35 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Stale-loaded servers that can take an additive reload request; kept as a subset of {@link #getStaleLoaded()}
-   * filtered for decommissioning / load-queue-full, so the algorithm can target them as a fallback destination when
-   * no fresh-load slots are available. See {@code StrategicSegmentAssigner.updateReplicasInTierPartial}.
+   * Stale-loaded servers that can take an in-place reload request: the subset of {@link #getStaleLoaded()} that passes
+   * {@link #canReloadInPlace}. The preferred destination for a matching deficit, ahead of
+   * {@link #getEligibleForFreshLoad()}. See {@link StrategicSegmentAssigner#updateReplicasInTierPartial}.
    */
-  public List<ServerHolder> getEligibleForAdditiveReload()
+  public List<ServerHolder> getEligibleForInPlaceReload()
   {
-    return eligibleForAdditiveReload;
+    return eligibleForInPlaceReload;
   }
 
   /**
    * Mechanical classification of one server against the request fingerprint. Branches are mutually exclusive in
    * order: <b>loaded</b> ({@link ServerHolder#isServingSegment}: matching / stale, with stale optionally also added
-   * to {@link #eligibleForAdditiveReload}), <b>in-flight LOAD/REPLICATE</b> (matching / stale based on the peon's
-   * queued profile), <b>empty-and-loadable</b> ({@link #eligibleForFreshLoad}).
+   * to {@link #eligibleForInPlaceReload}), <b>in-flight LOAD/REPLICATE/MOVE_TO</b> (matching / stale based on the
+   * peon's queued profile), <b>empty-and-loadable</b> ({@link #eligibleForFreshLoad}).
    * <p>
-   * Servers with a queued {@link SegmentAction#DROP}, {@link SegmentAction#MOVE_TO}, or
-   * {@link SegmentAction#MOVE_FROM} fall through all branches by design, they're already accounted for in
+   * A balancer move is counted at its destination: the {@link SegmentAction#MOVE_TO} carries the profile cloned from
+   * the source, so it classifies by fingerprint like any other in-flight load, and once it lands the destination
+   * classifies as loaded. The source ({@link SegmentAction#MOVE_FROM}) is deliberately left unclassified, so that the
+   * two endpoints of a move count as the single replica they will settle into, in both phases of the move and
+   * whether the moving replica is matching or stale. Counting the move at the source instead would require the
+   * {@link SegmentReplicaCount#moveCompletedPendingDrop()} correction the full-load path uses, which cannot be
+   * applied to a fingerprint-partitioned count: it does not know whether the move it is netting out was of a
+   * matching or a stale replica.
+   * <p>
+   * Servers with a queued {@link SegmentAction#DROP} fall through all branches as well, they're accounted for in
    * {@link SegmentReplicaCount} totals and {@link StrategicSegmentAssigner}'s cross-tier drop budget.
-   * The {@code isLoaded} branch is in particular gated by {@link ServerHolder#isServingSegment}, which requires
-   * <em>no</em> action queued, so stale-loaded servers added to {@link #eligibleForAdditiveReload} are guaranteed
-   * to be action-free at snapshot time.
+   * The {@code isLoaded} branch is gated by {@link ServerHolder#isServingSegment}, which requires <em>no</em> action
+   * queued, so stale-loaded servers added to {@link #eligibleForInPlaceReload} are guaranteed to be action-free at
+   * snapshot time.
    */
   private void classify(ServerHolder server, DataSegment segment, String requestedFingerprint)
   {
@@ -151,11 +163,13 @@ public class PartialSegmentStatusInTier
         matchingLoaded.add(server);
       } else {
         staleLoaded.add(server);
-        if (canReloadAdditively(server)) {
-          eligibleForAdditiveReload.add(server);
+        if (canReloadInPlace(server)) {
+          eligibleForInPlaceReload.add(server);
         }
       }
-    } else if (action == SegmentAction.LOAD || action == SegmentAction.REPLICATE) {
+    } else if (action == SegmentAction.LOAD
+               || action == SegmentAction.REPLICATE
+               || action == SegmentAction.MOVE_TO) {
       final PartialLoadProfile inFlight = server.getInFlightProfile(segment);
       if (inFlight != null && Objects.equals(inFlight.fingerprint(), requestedFingerprint)) {
         matchingInFlight.add(server);
@@ -168,18 +182,21 @@ public class PartialSegmentStatusInTier
   }
 
   /**
-   * Filters a stale-loaded server for additive-reload eligibility: not decommissioning, and not over its per-run
-   * load-queue budget. The "no other action queued" requirement that you'd otherwise expect to find here is
-   * already satisfied implicitly, this is only called from the {@code isLoaded} branch of {@link #classify}, which
-   * requires {@link ServerHolder#isServingSegment} = true (loaded AND no queued action). Same-run dedup against
-   * subsequent re-queueing on the same server is enforced at {@link ServerHolder#startOperation}, not here.
+   * Whether a server that already serves the segment can take an in-place reload of it: not decommissioning, and not
+   * over its per-run load-queue budget. Callers are responsible for establishing that the server actually serves the
+   * segment with no other action queued ({@link ServerHolder#isServingSegment}); {@link #classify} gets that from the
+   * {@code isLoaded} branch it calls this from. Same-run dedup against subsequent re-queueing on the same server is
+   * enforced at {@link ServerHolder#startOperation}, not here.
    * <p>
-   * Disk space is not checked: the additive reload's marginal cost is at most
-   * {@code segment.size − alreadyLoadedSize}, and a strict full-size disk check would over-conservatively block
-   * reloads on near-full servers that already host the stale replica. If the historical is too full to add the
-   * missing parts, the load fails at the historical and reports as failed; the reconciler retries next run.
+   * {@link ServerHolder#canLoadSegment} is not usable in its place because it requires the server to <em>not</em>
+   * already have the segment, which is precisely the case being handled here.
+   * <p>
+   * Disk space is not checked: the reload's marginal cost is at most {@code segment.size − alreadyLoadedSize}, and a
+   * strict full-size disk check would over-conservatively block reloads on near-full servers that already host the
+   * stale replica. If the historical is too full to add the missing parts, the load fails at the historical and
+   * reports as failed; the reconciler retries next run.
    */
-  private static boolean canReloadAdditively(ServerHolder server)
+  public static boolean canReloadInPlace(ServerHolder server)
   {
     return !server.isDecommissioning() && !server.isLoadQueueFull();
   }

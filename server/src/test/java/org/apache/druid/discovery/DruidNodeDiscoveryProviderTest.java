@@ -24,8 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.ServerType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -81,11 +81,11 @@ public class DruidNodeDiscoveryProviderTest
         }
     );
 
-    Assert.assertTrue(dataNodes.isEmpty());
-    Assert.assertTrue(dataNodes.isEmpty());
-    Assert.assertTrue(dataNodeDiscovery.getAllNodes().isEmpty());
-    Assert.assertTrue(lookupNodes.isEmpty());
-    Assert.assertTrue(lookupNodeDiscovery.getAllNodes().isEmpty());
+    Assertions.assertTrue(dataNodes.isEmpty());
+    Assertions.assertTrue(dataNodes.isEmpty());
+    Assertions.assertTrue(dataNodeDiscovery.getAllNodes().isEmpty());
+    Assertions.assertTrue(lookupNodes.isEmpty());
+    Assertions.assertTrue(lookupNodeDiscovery.getAllNodes().isEmpty());
 
     DiscoveryDruidNode node1 = new DiscoveryDruidNode(
         new DruidNode("s1", "h1", false, 8080, null, true, false),
@@ -161,11 +161,11 @@ public class DruidNodeDiscoveryProviderTest
     provider.add(node7Clone);
     provider.add(node8);
 
-    Assert.assertEquals(ImmutableSet.of(node1, node2, node4, node5), ImmutableSet.copyOf(dataNodeDiscovery.getAllNodes()));
-    Assert.assertEquals(ImmutableSet.of(node1, node2, node4, node5), dataNodes);
+    Assertions.assertEquals(ImmutableSet.of(node1, node2, node4, node5), ImmutableSet.copyOf(dataNodeDiscovery.getAllNodes()));
+    Assertions.assertEquals(ImmutableSet.of(node1, node2, node4, node5), dataNodes);
 
-    Assert.assertEquals(ImmutableSet.of(node1, node3, node4, node6, node7), ImmutableSet.copyOf(lookupNodeDiscovery.getAllNodes()));
-    Assert.assertEquals(ImmutableSet.of(node1, node3, node4, node6, node7), lookupNodes);
+    Assertions.assertEquals(ImmutableSet.of(node1, node3, node4, node6, node7), ImmutableSet.copyOf(lookupNodeDiscovery.getAllNodes()));
+    Assertions.assertEquals(ImmutableSet.of(node1, node3, node4, node6, node7), lookupNodes);
 
     provider.remove(node8);
     provider.remove(node7Clone);
@@ -173,11 +173,11 @@ public class DruidNodeDiscoveryProviderTest
     provider.remove(node5);
     provider.remove(node4);
 
-    Assert.assertEquals(ImmutableSet.of(node1, node2), ImmutableSet.copyOf(dataNodeDiscovery.getAllNodes()));
-    Assert.assertEquals(ImmutableSet.of(node1, node2), dataNodes);
+    Assertions.assertEquals(ImmutableSet.of(node1, node2), ImmutableSet.copyOf(dataNodeDiscovery.getAllNodes()));
+    Assertions.assertEquals(ImmutableSet.of(node1, node2), dataNodes);
 
-    Assert.assertEquals(ImmutableSet.of(node1, node3), ImmutableSet.copyOf(lookupNodeDiscovery.getAllNodes()));
-    Assert.assertEquals(ImmutableSet.of(node1, node3), lookupNodes);
+    Assertions.assertEquals(ImmutableSet.of(node1, node3), ImmutableSet.copyOf(lookupNodeDiscovery.getAllNodes()));
+    Assertions.assertEquals(ImmutableSet.of(node1, node3), lookupNodes);
   }
 
   @Test

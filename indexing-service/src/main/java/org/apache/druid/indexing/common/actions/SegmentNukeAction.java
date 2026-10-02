@@ -39,8 +39,10 @@ import java.util.stream.Collectors;
 
 /**
  * Permanently deletes unused segments from the metadata store.
+ * {@link #perform(Task, TaskActionToolbox)} returns the number of segments
+ * deleted from the metadata store, but older versions return a null value.
  */
-public class SegmentNukeAction implements TaskAction<Void>
+public class SegmentNukeAction implements TaskAction<Integer>
 {
   private static final Logger log = new Logger(SegmentNukeAction.class);
 
@@ -61,19 +63,20 @@ public class SegmentNukeAction implements TaskAction<Void>
   }
 
   @Override
-  public TypeReference<Void> getReturnTypeReference()
+  public TypeReference<Integer> getReturnTypeReference()
   {
     return new TypeReference<>() {};
   }
 
   @Override
-  public Void perform(Task task, TaskActionToolbox toolbox)
+  public Integer perform(Task task, TaskActionToolbox toolbox)
   {
     TaskLocks.checkLockCoversSegments(task, toolbox.getTaskLockbox(), segments);
 
+    final int numDeletedSegments;
     try {
       final Set<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toSet());
-      int numDeletedSegments = toolbox.getTaskLockbox().doInCriticalSection(
+      numDeletedSegments = toolbox.getTaskLockbox().doInCriticalSection(
           task,
           intervals,
           CriticalAction.<Integer>builder().onValidLocks(
@@ -106,7 +109,7 @@ public class SegmentNukeAction implements TaskAction<Void>
       toolbox.getEmitter().emit(metricBuilder.setMetric("segment/nuked/bytes", segment.getSize()));
     }
 
-    return null;
+    return numDeletedSegments;
   }
 
   @Override

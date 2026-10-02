@@ -36,9 +36,10 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorSizeInspector;
 import org.apache.druid.segment.vector.VectorValueSelector;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -78,7 +79,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
   @Override
   public boolean canVectorize(ColumnInspector inspector)
   {
-    Assert.assertNotNull(inspector);
+    Assertions.assertNotNull(inspector);
     return canVectorize;
   }
 
@@ -106,7 +107,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
-    Assert.assertEquals(outputName, dimensionSpec.getOutputName());
+    Assertions.assertEquals(outputName, dimensionSpec.getOutputName());
     return new SingleValueDimensionVectorSelector()
     {
       private final VectorSizeInspector inspector = factory.getReadableVectorInspector();
@@ -165,7 +166,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
-    Assert.assertEquals(outputName, dimensionSpec.getOutputName());
+    Assertions.assertEquals(outputName, dimensionSpec.getOutputName());
     final IndexedInts[] rowVector = new IndexedInts[factory.getReadableVectorInspector().getMaxVectorSize()];
     Arrays.fill(rowVector, new ArrayBasedIndexedInts(new int[]{0, 0}));
     return new MultiValueDimensionVectorSelector()
@@ -224,7 +225,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
-    Assert.assertEquals(outputName, columnName);
+    Assertions.assertEquals(outputName, columnName);
     final long[] longs = new long[factory.getReadableVectorInspector().getMaxVectorSize()];
     final double[] doubles = new double[factory.getReadableVectorInspector().getMaxVectorSize()];
     final float[] floats = new float[factory.getReadableVectorInspector().getMaxVectorSize()];
@@ -278,7 +279,7 @@ public class AlwaysTwoVectorizedVirtualColumn implements VirtualColumn
       VectorColumnSelectorFactory factory
   )
   {
-    Assert.assertEquals(outputName, columnName);
+    Assertions.assertEquals(outputName, columnName);
     final Object[] objects = new Object[factory.getReadableVectorInspector().getMaxVectorSize()];
     if (capabilities.hasMultipleValues().isTrue()) {
       Arrays.fill(objects, ImmutableList.of("2", "2"));

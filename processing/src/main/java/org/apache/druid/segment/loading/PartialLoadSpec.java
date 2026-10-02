@@ -24,14 +24,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
 import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Base for {@link LoadSpec} wrappers that carry partial-load metadata (a fingerprint identifying the request the
@@ -65,31 +68,46 @@ public abstract class PartialLoadSpec implements LoadSpec
   public static final String TYPE_PREFIX = "partial";
 
   /**
+   * Wire field carrying the Jackson type discriminator. Named here (rather than only inline) because code that
+   * inspects or rewrites raw {@link Map}-form load specs needs to agree with the {@code @JsonTypeInfo} property name
+   * on {@link LoadSpec}.
+   */
+  public static final String TYPE_FIELD = "type";
+
+  /**
+   * Wire field carrying the raw inner load spec, provided by {@link #getDelegate()}.
+   */
+  public static final String DELEGATE_FIELD = "delegate";
+
+  /**
+   * Wire field carrying the partial-load request fingerprint, provided by {@link #getFingerprint()}.
+   */
+  public static final String FINGERPRINT_FIELD = "fingerprint";
+
+  /**
    * Returns {@code true} if {@code loadSpec} matches the shape of the {@link PartialLoadSpec} subtype.
-   * Convention-based detection (no subtype allowlist): the {@code type} field must be a {@link String} starting with
-   * {@link #TYPE_PREFIX}, the {@code fingerprint} field must be a {@link String}, and the {@code delegate} field
-   * must be a {@link Map}. These properties are enforced by this base class's {@code @JsonProperty} getters, so any
-   * subtype satisfies them automatically.
+   * Convention-based detection (no subtype allowlist): the {@link #TYPE_FIELD} field must be a {@link String}
+   * starting with {@link #TYPE_PREFIX}, the {@link #FINGERPRINT_FIELD} field must be a {@link String}, and the
+   * {@link #DELEGATE_FIELD} field must be a {@link Map}. These properties are enforced by this base class's
+   * {@code @JsonProperty} getters, so any subtype satisfies them automatically.
    */
   public static boolean detectPartialLoadSpec(@Nullable Map<String, Object> loadSpec)
   {
-    return loadSpec != null
-           && loadSpec.get("type") instanceof String typeString
-           && typeString.startsWith(TYPE_PREFIX)
-           && loadSpec.get("fingerprint") instanceof String
-           && loadSpec.get("delegate") instanceof Map;
+    return hasPartialTypePrefix(loadSpec)
+           && loadSpec.get(FINGERPRINT_FIELD) instanceof String
+           && loadSpec.get(DELEGATE_FIELD) instanceof Map;
   }
 
   /**
-   * Returns {@code true} if {@code loadSpec}'s {@code type} field claims partial-load semantics (starts with
+   * Returns {@code true} if {@code loadSpec}'s {@link #TYPE_FIELD} field claims partial-load semantics (starts with
    * {@link #TYPE_PREFIX}), regardless of whether the remaining wire form is well-formed. Useful when callers want
-   * to distinguish "not a partial-load wrapper" from "claims to be partial but the {@code fingerprint} or
-   * {@code delegate} fields are missing or malformed" — the latter typically indicates a bug worth logging.
+   * to distinguish "not a partial-load wrapper" from "claims to be partial but the {@link #FINGERPRINT_FIELD} or
+   * {@link #DELEGATE_FIELD} fields are missing or malformed" — the latter typically indicates a bug worth logging.
    */
   public static boolean hasPartialTypePrefix(@Nullable Map<String, Object> loadSpec)
   {
     return loadSpec != null
-           && loadSpec.get("type") instanceof String typeString
+           && loadSpec.get(TYPE_FIELD) instanceof String typeString
            && typeString.startsWith(TYPE_PREFIX);
   }
 
@@ -152,4 +170,16 @@ public abstract class PartialLoadSpec implements LoadSpec
    * bootstrap re-discovers the segment).
    */
   public abstract List<String> getSelectedBundleNames(DataSegment segment, SegmentFileMetadata metadata);
+
+  /**
+   * The distinct bundle names carried by {@code metadata}, in container order.
+   */
+  protected static Set<String> presentBundleNames(SegmentFileMetadata metadata)
+  {
+    final Set<String> names = new LinkedHashSet<>();
+    for (SegmentFileContainerMetadata container : metadata.getContainers()) {
+      names.add(container.getBundle());
+    }
+    return names;
+  }
 }

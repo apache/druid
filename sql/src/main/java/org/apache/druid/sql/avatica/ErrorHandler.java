@@ -87,9 +87,10 @@ class ErrorHandler
       return new RuntimeException(errorResponseTransformStrategy.transformIfNeeded((SanitizableException) error.getCause()));
     }
     if (error instanceof DruidException) {
+      final DruidException druidError = (DruidException) error;
       String errorId = UUID.randomUUID().toString();
-      Optional<Exception> transformedException = errorResponseTransformStrategy.maybeTransform(
-          (DruidException) error,
+      Optional<DruidException> transformedException = errorResponseTransformStrategy.maybeTransform(
+          druidError,
           Optional.of(errorId)
       );
 
@@ -97,7 +98,7 @@ class ErrorHandler
         // Log the exception here itself, since the error has been transformed.
         log.error(error, StringUtils.format("External Error ID: [%s]", errorId));
       }
-      QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(transformedException.orElse((Exception) error));
+      QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(transformedException.orElse(druidError));
       return (QueryException) errorResponseTransformStrategy.transformIfNeeded(wrappedError);
     }
     QueryInterruptedException wrappedError = QueryInterruptedException.wrapIfNeeded(error);

@@ -21,8 +21,8 @@ package org.apache.druid.indexing.overlord.duty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -49,10 +49,10 @@ public class TaskLogAutoCleanerConfigTest
         ), TaskLogAutoCleanerConfig.class
     );
 
-    Assert.assertTrue(config.isEnabled());
-    Assert.assertEquals(10, config.getInitialDelay());
-    Assert.assertEquals(40, config.getDelay());
-    Assert.assertEquals(30, config.getDurationToRetain());
+    Assertions.assertTrue(config.isEnabled());
+    Assertions.assertEquals(10, config.getInitialDelay());
+    Assertions.assertEquals(40, config.getDelay());
+    Assertions.assertEquals(30, config.getDurationToRetain());
   }
 
   @Test
@@ -71,9 +71,9 @@ public class TaskLogAutoCleanerConfigTest
         ), TaskLogAutoCleanerConfig.class
     );
 
-    Assert.assertFalse(config.isEnabled());
-    Assert.assertTrue(config.getInitialDelay() >= 60000 && config.getInitialDelay() <= 300000);
-    Assert.assertEquals(6 * 60 * 60 * 1000, config.getDelay());
-    Assert.assertEquals(Long.MAX_VALUE, config.getDurationToRetain());
+    Assertions.assertFalse(config.isEnabled());
+    Assertions.assertTrue(config.getInitialDelay() >= 60000 && config.getInitialDelay() <= 300000);
+    Assertions.assertEquals(6 * 60 * 60 * 1000, config.getDelay());
+    Assertions.assertEquals(Long.MAX_VALUE, config.getDurationToRetain());
   }
 }

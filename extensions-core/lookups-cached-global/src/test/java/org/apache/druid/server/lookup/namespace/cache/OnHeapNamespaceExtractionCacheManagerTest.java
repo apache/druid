@@ -31,8 +31,8 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionModule;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -42,7 +42,7 @@ public class OnHeapNamespaceExtractionCacheManagerTest
   public void testInjection()
   {
     final NamespaceExtractionCacheManager manager = getCacheManager();
-    Assert.assertEquals(OnHeapNamespaceExtractionCacheManager.class, manager.getClass());
+    Assertions.assertEquals(OnHeapNamespaceExtractionCacheManager.class, manager.getClass());
   }
 
   @Test
@@ -52,7 +52,7 @@ public class OnHeapNamespaceExtractionCacheManagerTest
     CacheHandler handler = manager.allocateCache();
     handler.getCache().put("some key", "some value");
     CacheHandler immutableHandler = manager.attachCache(handler);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> immutableHandler.getCache().put("other key", "other value")
     );
@@ -64,7 +64,7 @@ public class OnHeapNamespaceExtractionCacheManagerTest
     NamespaceExtractionCacheManager manager = getCacheManager();
     CacheHandler handler = manager.createCache();
     handler.getCache().put("some key", "some value");
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ISE.class,
         () -> manager.attachCache(handler)
     );

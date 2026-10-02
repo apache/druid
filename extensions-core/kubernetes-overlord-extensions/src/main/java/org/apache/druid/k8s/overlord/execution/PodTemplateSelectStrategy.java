@@ -23,10 +23,10 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Supplier;
 import io.fabric8.kubernetes.api.model.PodTemplate;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateWithName;
 
-import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 /**

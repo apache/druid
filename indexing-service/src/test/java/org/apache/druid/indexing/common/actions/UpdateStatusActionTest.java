@@ -25,8 +25,8 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -95,6 +95,6 @@ public class UpdateStatusActionTest
   {
     UpdateStatusAction one = new UpdateStatusAction("", TaskStatus.failure(ID, "error"));
     UpdateStatusAction two = new UpdateStatusAction("", TaskStatus.failure(ID, "error"));
-    Assert.assertEquals(one, two);
+    Assertions.assertEquals(one, two);
   }
 }

@@ -57,7 +57,7 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -561,12 +561,12 @@ public class SpectatorHistogramSqlAggregatorTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, List.of(), List.of());
-      Assert.fail("Expected DruidException but query succeeded");
+      Assertions.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-      Assert.assertTrue(e.getMessage().contains("must be a numeric literal"));
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("must be a numeric literal"));
     }
   }
 }

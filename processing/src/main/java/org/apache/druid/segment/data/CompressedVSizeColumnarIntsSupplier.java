@@ -69,6 +69,12 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
         sizePer == (1 << Integer.numberOfTrailingZeros(sizePer)),
         "Number of entries per chunk must be a power of 2"
     );
+    Preconditions.checkArgument(
+        numBytes >= 1 && numBytes <= Integer.BYTES,
+        "Invalid numBytes[%s] in CompressedVSizeColumnarIntsSupplier. Must be in range[1, %s]",
+        numBytes,
+        Integer.BYTES
+    );
 
     this.totalSize = totalSize;
     this.sizePer = sizePer;

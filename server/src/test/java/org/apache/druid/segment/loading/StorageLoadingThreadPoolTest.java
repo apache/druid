@@ -28,46 +28,32 @@ class StorageLoadingThreadPoolTest
 {
   private static SegmentLoaderConfig oneVirtualThreadConfig()
   {
-    return new SegmentLoaderConfig()
-    {
-      @Override
-      public int getVirtualStorageLoadThreads()
-      {
-        return 1;
-      }
-    }.setVirtualStorage(true);
+    return SegmentLoaderConfig.builder().virtualStorageLoadThreads(1).virtualStorage(true).build();
   }
 
   private static SegmentLoaderConfig fixedThreadConfig()
   {
-    return new SegmentLoaderConfig()
-    {
-      @Override
-      public int getVirtualStorageLoadThreads()
-      {
-        return 2;
-      }
-
-      @Override
-      public boolean isVirtualStorageUseVirtualThreads()
-      {
-        return false;
-      }
-    }.setVirtualStorage(true);
+    return SegmentLoaderConfig.builder()
+                              .virtualStorageLoadThreads(2)
+                              .virtualStorageUseVirtualThreads(false)
+                              .virtualStorage(true)
+                              .build();
   }
 
   @Test
   void testCreateFromConfigIsUnavailableWhenNotVirtualStorage()
   {
-    Assertions.assertFalse(StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig()).isAvailable());
+    Assertions.assertFalse(
+        StorageLoadingThreadPool.createFromConfig(SegmentLoaderConfig.builder().build()).isAvailable()
+    );
   }
 
   @Test
   void testCreateFromConfigIsAvailableWhenVirtualStorage()
   {
-    // The shared ephemeral pool is built this way: createFromConfig(config.withVirtualStorage(true)).
+    // The shared ephemeral pool is built this way: createFromConfig(config.toEphemeralVirtualStorage()).
     final StorageLoadingThreadPool pool =
-        StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().withVirtualStorage(true));
+        StorageLoadingThreadPool.createFromConfig(SegmentLoaderConfig.builder().build().toEphemeralVirtualStorage());
     try {
       Assertions.assertTrue(pool.isAvailable());
       Assertions.assertNotNull(pool.getExecutorService());
@@ -80,14 +66,8 @@ class StorageLoadingThreadPoolTest
   @Test
   void testCreateFromConfigRejectsNonPositiveThreadCountInVirtualStorage()
   {
-    final SegmentLoaderConfig config = new SegmentLoaderConfig()
-    {
-      @Override
-      public int getVirtualStorageLoadThreads()
-      {
-        return 0;
-      }
-    }.setVirtualStorage(true);
+    final SegmentLoaderConfig config =
+        SegmentLoaderConfig.builder().virtualStorageLoadThreads(0).virtualStorage(true).build();
     Assertions.assertThrows(DruidException.class, () -> StorageLoadingThreadPool.createFromConfig(config));
   }
 

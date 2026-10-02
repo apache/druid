@@ -41,6 +41,7 @@ public class CostMetrics
 
   public CostMetrics(
       double avgPartitionLag,
+      double aggregateLag,
       int currentTaskCount,
       int partitionCount,
       double pollIdleRatio,
@@ -55,7 +56,7 @@ public class CostMetrics
     this.pollIdleRatio = pollIdleRatio;
     this.taskDurationSeconds = taskDurationSeconds;
     this.avgProcessingRate = avgProcessingRate;
-    this.aggregateLag = avgPartitionLag * partitionCount;
+    this.aggregateLag = aggregateLag;
     this.maxObservedRate = maxObservedRate;
   }
 
@@ -89,7 +90,6 @@ public class CostMetrics
 
   /**
    * Returns the aggregated lag across all partitions.
-   * Pre-computed as avgPartitionLag * partitionCount.
    */
   public double getAggregateLag()
   {
@@ -142,6 +142,7 @@ public class CostMetrics
     }
     CostMetrics that = (CostMetrics) o;
     return Double.compare(that.avgPartitionLag, avgPartitionLag) == 0
+           && Double.compare(that.aggregateLag, aggregateLag) == 0
            && currentTaskCount == that.currentTaskCount
            && partitionCount == that.partitionCount
            && Double.compare(that.pollIdleRatio, pollIdleRatio) == 0
@@ -155,6 +156,7 @@ public class CostMetrics
   {
     return Objects.hash(
         avgPartitionLag,
+        aggregateLag,
         currentTaskCount,
         partitionCount,
         pollIdleRatio,
@@ -169,6 +171,7 @@ public class CostMetrics
   {
     return "CostMetrics{" +
            "avgPartitionLag=" + avgPartitionLag +
+           ", aggregateLag=" + aggregateLag +
            ", currentTaskCount=" + currentTaskCount +
            ", partitionCount=" + partitionCount +
            ", pollIdleRatio=" + pollIdleRatio +

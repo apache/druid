@@ -107,11 +107,10 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -449,8 +448,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   }
 
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final List<InputRow> rows;
 
@@ -488,7 +487,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     this.optimize = optimize;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     BuiltInTypesModule.registerHandlersAndSerde();
@@ -502,7 +501,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     CursorStuff cursorStuff = adaptersForClass.get(testName);
     if (cursorStuff == null) {
       Pair<CursorFactory, Closeable> pair = finisher.apply(
-          indexBuilder.tmpDir(temporaryFolder.newFolder()).rows(rows)
+          indexBuilder.tmpDir(temporaryFolder.getRoot()).rows(rows)
       );
       cursorStuff = new CursorStuff(
           pair.lhs,
@@ -530,12 +529,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
       adapterCache.get().put(className, null);
     }
-  }
-
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> constructorFeeder()
-  {
-    return makeConstructors();
   }
 
   public static Collection<Object[]> makeConstructors()
@@ -1187,11 +1180,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         && !(cursorFactory instanceof ColumnarFrameCursorFactory);
 
     if (isAutoSchema()) {
-      Throwable t = Assert.assertThrows(
+      Throwable t = Assertions.assertThrows(
           Throwable.class,
           () -> assertFilterMatches(filter, expectedRows, testVectorized)
       );
-      Assert.assertTrue(t.getMessage().contains("ARRAY"));
+      Assertions.assertTrue(t.getMessage().contains("ARRAY"));
     } else {
       assertFilterMatches(filter, expectedRows, testVectorized);
       // test double inverted
@@ -1235,52 +1228,52 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final boolean testVectorized
   )
   {
-    Assert.assertEquals(
-        "Cursor: " + filter,
+    Assertions.assertEquals(
         expectedRows,
-        selectColumnValuesMatchingFilter(filter, "dim0")
+        selectColumnValuesMatchingFilter(filter, "dim0"),
+        "Cursor: " + filter
     );
 
-    Assert.assertEquals(
-        "Cursor with postFiltering: " + filter,
+    Assertions.assertEquals(
         expectedRows,
-        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0")
+        selectColumnValuesMatchingFilterUsingPostFiltering(filter, "dim0"),
+        "Cursor with postFiltering: " + filter
     );
 
-    Assert.assertEquals(
-        "Filtered aggregator: " + filter,
+    Assertions.assertEquals(
         expectedRows.size(),
-        selectCountUsingFilteredAggregator(filter)
+        selectCountUsingFilteredAggregator(filter),
+        "Filtered aggregator: " + filter
     );
 
-    Assert.assertEquals(
-        "RowBasedColumnSelectorFactory: " + filter,
+    Assertions.assertEquals(
         expectedRows,
-        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0")
+        selectColumnValuesMatchingFilterUsingRowBasedColumnSelectorFactory(filter, "dim0"),
+        "RowBasedColumnSelectorFactory: " + filter
     );
 
     if (testVectorized) {
-      Assert.assertEquals(
-          "Cursor (vectorized): " + filter,
+      Assertions.assertEquals(
           expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0")
+          selectColumnValuesMatchingFilterUsingVectorCursor(filter, "dim0"),
+          "Cursor (vectorized): " + filter
       );
 
-      Assert.assertEquals(
-          "Cursor Virtual Column (vectorized): " + filter,
+      Assertions.assertEquals(
           expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0")
+          selectColumnValuesMatchingFilterUsingVectorVirtualColumnCursor(filter, "vdim0", "dim0"),
+          "Cursor Virtual Column (vectorized): " + filter
       );
 
-      Assert.assertEquals(
-          "Cursor with postFiltering (vectorized): " + filter,
+      Assertions.assertEquals(
           expectedRows,
-          selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0")
+          selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(filter, "dim0"),
+          "Cursor with postFiltering (vectorized): " + filter
       );
-      Assert.assertEquals(
-          "Filtered aggregator (vectorized): " + filter,
+      Assertions.assertEquals(
           expectedRows.size(),
-          selectCountUsingVectorizedFilteredAggregator(filter)
+          selectCountUsingVectorizedFilteredAggregator(filter),
+          "Filtered aggregator (vectorized): " + filter
       );
     } else if (!(cursorFactory instanceof ColumnarFrameCursorFactory)) {
       final List<VirtualColumn> relevant = new ArrayList<>();
@@ -1299,7 +1292,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                   .setFilter(makePostFilter(filter))
                                                   .build();
       try (CursorHolder holder = cursorFactory.makeCursorHolder(spec)) {
-        Assert.assertFalse(holder.canVectorize());
+        Assertions.assertFalse(holder.canVectorize());
       }
     }
   }

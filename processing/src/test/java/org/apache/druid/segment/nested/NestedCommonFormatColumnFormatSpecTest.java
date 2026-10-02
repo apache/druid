@@ -211,4 +211,18 @@ public class NestedCommonFormatColumnFormatSpecTest
   {
     EqualsVerifier.forClass(NestedCommonFormatColumnFormatSpec.class).usingGetClass().verify();
   }
+
+  @Test
+  public void testColumnFormatEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(NestedCommonFormatColumn.Format.class).usingGetClass().verify();
+    Assertions.assertEquals(
+        new NestedDataComplexTypeSerde.NestedColumnFormatV4(),
+        new NestedDataComplexTypeSerde.NestedColumnFormatV4()
+    );
+    Assertions.assertEquals(
+        new NestedDataComplexTypeSerde.NestedColumnFormatV4().hashCode(),
+        new NestedDataComplexTypeSerde.NestedColumnFormatV4().hashCode()
+    );
+  }
 }

@@ -35,8 +35,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.LogicalSegment;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -114,7 +114,7 @@ public class TimeBoundaryQueryQueryToolChestTest
         )
     );
 
-    Assert.assertEquals(6, segments.size());
+    Assertions.assertEquals(6, segments.size());
 
     List<LogicalSegment> expected = Arrays.asList(
         createLogicalSegment(Intervals.of("2013-01-01/P1D")),
@@ -126,7 +126,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     );
 
     for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
+      Assertions.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
     }
   }
 
@@ -151,11 +151,11 @@ public class TimeBoundaryQueryQueryToolChestTest
         createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018"))
     );
 
-    Assert.assertEquals(expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size());
 
     for (int i = 0; i < actual.size(); i++) {
-      Assert.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
-      Assert.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
+      Assertions.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
+      Assertions.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
     }
   }
 
@@ -175,7 +175,7 @@ public class TimeBoundaryQueryQueryToolChestTest
         )
     );
 
-    Assert.assertEquals(3, segments.size());
+    Assertions.assertEquals(3, segments.size());
 
     List<LogicalSegment> expected = Arrays.asList(
         createLogicalSegment(Intervals.of("2013-01-03T01/PT1H")),
@@ -184,7 +184,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     );
 
     for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
+      Assertions.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
     }
   }
 
@@ -208,11 +208,11 @@ public class TimeBoundaryQueryQueryToolChestTest
         createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018"))
     );
 
-    Assert.assertEquals(expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size());
 
     for (int i = 0; i < actual.size(); i++) {
-      Assert.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
-      Assert.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
+      Assertions.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
+      Assertions.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
     }
   }
 
@@ -236,11 +236,11 @@ public class TimeBoundaryQueryQueryToolChestTest
         createLogicalSegment(Intervals.of("2017-08-02/2018"), Intervals.of("2017/2018"))
     );
 
-    Assert.assertEquals(expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size());
 
     for (int i = 0; i < actual.size(); i++) {
-      Assert.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
-      Assert.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
+      Assertions.assertEquals(expected.get(i).getInterval(), actual.get(i).getInterval());
+      Assertions.assertEquals(expected.get(i).getTrueInterval(), actual.get(i).getTrueInterval());
     }
   }
 
@@ -260,7 +260,7 @@ public class TimeBoundaryQueryQueryToolChestTest
         )
     );
 
-    Assert.assertEquals(3, segments.size());
+    Assertions.assertEquals(3, segments.size());
 
     List<LogicalSegment> expected = Arrays.asList(
         createLogicalSegment(Intervals.of("2013-01-01/P1D")),
@@ -269,7 +269,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     );
 
     for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
+      Assertions.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
     }
   }
 
@@ -289,16 +289,19 @@ public class TimeBoundaryQueryQueryToolChestTest
         )
     );
 
-    Assert.assertEquals(7, segments.size());
+    Assertions.assertEquals(7, segments.size());
   }
 
-  @Test(expected = UOE.class)
+  @Test
   public void testResultArraySignature()
   {
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
                                                 .build();
-    new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery);
+    Assertions.assertThrows(
+        UOE.class,
+        () -> new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery)
+    );
   }
 
   @Test
@@ -312,7 +315,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     RowSignature rowSignature = new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery);
     RowSignature.Builder expectedRowSignatureBuilder = RowSignature.builder();
     expectedRowSignatureBuilder.add("foo", ColumnType.LONG);
-    Assert.assertEquals(expectedRowSignatureBuilder.build(), rowSignature);
+    Assertions.assertEquals(expectedRowSignatureBuilder.build(), rowSignature);
   }
 
   @Test
@@ -326,7 +329,7 @@ public class TimeBoundaryQueryQueryToolChestTest
     RowSignature rowSignature = new TimeBoundaryQueryQueryToolChest().resultArraySignature(timeBoundaryQuery);
     RowSignature.Builder expectedRowSignatureBuilder = RowSignature.builder();
     expectedRowSignatureBuilder.add("foo", ColumnType.LONG);
-    Assert.assertEquals(expectedRowSignatureBuilder.build(), rowSignature);
+    Assertions.assertEquals(expectedRowSignatureBuilder.build(), rowSignature);
   }
 
   @Test
@@ -364,6 +367,6 @@ public class TimeBoundaryQueryQueryToolChestTest
 
     Result<TimeBoundaryResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result, fromCacheResult);
+    Assertions.assertEquals(result, fromCacheResult);
   }
 }

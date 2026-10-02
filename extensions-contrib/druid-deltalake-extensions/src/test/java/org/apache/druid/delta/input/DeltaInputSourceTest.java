@@ -24,6 +24,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
+import org.apache.druid.delta.DeltaAssertions;
 import org.apache.druid.delta.filter.DeltaAndFilter;
 import org.apache.druid.delta.filter.DeltaEqualsFilter;
 import org.apache.druid.delta.filter.DeltaFilter;
@@ -33,15 +34,14 @@ import org.apache.druid.delta.filter.DeltaLessThanOrEqualsFilter;
 import org.apache.druid.delta.filter.DeltaNotFilter;
 import org.apache.druid.delta.filter.DeltaOrFilter;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -53,16 +53,15 @@ import java.util.stream.Collectors;
 
 public class DeltaInputSourceTest
 {
-  @Before
+  @BeforeEach
   public void setUp()
   {
     System.setProperty("user.timezone", "UTC");
   }
 
-  @RunWith(Parameterized.class)
-  public static class TablePathParameterTests
+  @Nested
+  public class TablePathParameterTests
   {
-    @Parameterized.Parameters
     public static Object[][] data()
     {
       return new Object[][]{
@@ -128,64 +127,66 @@ public class DeltaInputSourceTest
           }
       };
     }
-
-    @Parameterized.Parameter(0)
-    public String deltaTablePath;
-    @Parameterized.Parameter(1)
-    public InputRowSchema schema;
-    @Parameterized.Parameter(2)
-    public Long snapshotVersion;
-    @Parameterized.Parameter(3)
-    public List<Map<String, Object>> expectedRows;
-
-    @Test
-    public void testSampleDeltaTable() throws IOException
+    @MethodSource("data")
+    @ParameterizedTest
+    public void testSampleDeltaTable(
+        String deltaTablePath,
+        InputRowSchema schema,
+        Long snapshotVersion,
+        List<Map<String, Object>> expectedRows
+    ) throws IOException
     {
       final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshotVersion);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
 
       List<InputRowListPlusRawValues> actualSampledRows = sampleAllRows(inputSourceReader);
-      Assert.assertEquals(expectedRows.size(), actualSampledRows.size());
+      Assertions.assertEquals(expectedRows.size(), actualSampledRows.size());
 
       for (int idx = 0; idx < expectedRows.size(); idx++) {
         Map<String, Object> expectedRow = expectedRows.get(idx);
         InputRowListPlusRawValues actualSampledRow = actualSampledRows.get(idx);
-        Assert.assertNull(actualSampledRow.getParseException());
+        Assertions.assertNull(actualSampledRow.getParseException());
 
         Map<String, Object> actualSampledRawVals = actualSampledRow.getRawValues();
-        Assert.assertNotNull(actualSampledRawVals);
-        Assert.assertNotNull(actualSampledRow.getRawValuesList());
-        Assert.assertEquals(1, actualSampledRow.getRawValuesList().size());
+        Assertions.assertNotNull(actualSampledRawVals);
+        Assertions.assertNotNull(actualSampledRow.getRawValuesList());
+        Assertions.assertEquals(1, actualSampledRow.getRawValuesList().size());
 
         for (String key : expectedRow.keySet()) {
           if (!schema.getColumnsFilter().apply(key)) {
-            Assert.assertNull(actualSampledRawVals.get(key));
+            Assertions.assertNull(actualSampledRawVals.get(key));
           } else {
             if (schema.getTimestampSpec().getTimestampColumn().equals(key)) {
               final long expectedMillis = (Long) expectedRow.get(key);
-              Assert.assertEquals(expectedMillis, actualSampledRawVals.get(key));
+              Assertions.assertEquals(expectedMillis, actualSampledRawVals.get(key));
             } else {
-              Assert.assertEquals(expectedRow.get(key), actualSampledRawVals.get(key));
+              Assertions.assertEquals(expectedRow.get(key), actualSampledRawVals.get(key));
             }
           }
         }
       }
     }
 
-    @Test
-    public void testReadDeltaTable() throws IOException
+    @MethodSource("data")
+    @ParameterizedTest
+    public void testReadDeltaTable(
+        String deltaTablePath,
+        InputRowSchema schema,
+        Long snapshotVersion,
+        List<Map<String, Object>> expectedRows
+    ) throws IOException
     {
       final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, null, snapshotVersion);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
       final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
       validateRows(expectedRows, actualReadRows, schema);
     }
+
   }
 
-  @RunWith(Parameterized.class)
-  public static class FilterParameterTests
+  @Nested
+  public class FilterParameterTests
   {
-    @Parameterized.Parameters
     public static Object[][] data()
     {
       return new Object[][]{
@@ -295,43 +296,40 @@ public class DeltaInputSourceTest
       };
     }
 
-    @Parameterized.Parameter(0)
-    public String deltaTablePath;
-    @Parameterized.Parameter(1)
-    public DeltaFilter filter;
-    @Parameterized.Parameter(2)
-    public InputRowSchema schema;
-    @Parameterized.Parameter(3)
-    public List<Map<String, Object>> expectedRows;
-
-    @Test
-    public void testSampleDeltaTable() throws IOException
+    @MethodSource("data")
+    @ParameterizedTest
+    public void testSampleDeltaTable(
+        String deltaTablePath,
+        DeltaFilter filter,
+        InputRowSchema schema,
+        List<Map<String, Object>> expectedRows
+    ) throws IOException
     {
       final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, filter, null);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
 
       List<InputRowListPlusRawValues> actualSampledRows = sampleAllRows(inputSourceReader);
-      Assert.assertEquals(expectedRows.size(), actualSampledRows.size());
+      Assertions.assertEquals(expectedRows.size(), actualSampledRows.size());
 
       for (int idx = 0; idx < expectedRows.size(); idx++) {
         Map<String, Object> expectedRow = expectedRows.get(idx);
         InputRowListPlusRawValues actualSampledRow = actualSampledRows.get(idx);
-        Assert.assertNull(actualSampledRow.getParseException());
+        Assertions.assertNull(actualSampledRow.getParseException());
 
         Map<String, Object> actualSampledRawVals = actualSampledRow.getRawValues();
-        Assert.assertNotNull(actualSampledRawVals);
-        Assert.assertNotNull(actualSampledRow.getRawValuesList());
-        Assert.assertEquals(1, actualSampledRow.getRawValuesList().size());
+        Assertions.assertNotNull(actualSampledRawVals);
+        Assertions.assertNotNull(actualSampledRow.getRawValuesList());
+        Assertions.assertEquals(1, actualSampledRow.getRawValuesList().size());
 
         for (String key : expectedRow.keySet()) {
           if (!schema.getColumnsFilter().apply(key)) {
-            Assert.assertNull(actualSampledRawVals.get(key));
+            Assertions.assertNull(actualSampledRawVals.get(key));
           } else {
             if (schema.getTimestampSpec().getTimestampColumn().equals(key)) {
               final long expectedMillis = (Long) expectedRow.get(key);
-              Assert.assertEquals(expectedMillis, actualSampledRawVals.get(key));
+              Assertions.assertEquals(expectedMillis, actualSampledRawVals.get(key));
             } else {
-              Assert.assertEquals(expectedRow.get(key), actualSampledRawVals.get(key));
+              Assertions.assertEquals(expectedRow.get(key), actualSampledRawVals.get(key));
             }
           }
         }
@@ -346,29 +344,35 @@ public class DeltaInputSourceTest
       return rows.stream().filter(filter).collect(Collectors.toList());
     }
 
-    @Test
-    public void testReadDeltaTable() throws IOException
+    @MethodSource("data")
+    @ParameterizedTest
+    public void testReadDeltaTable(
+        String deltaTablePath,
+        DeltaFilter filter,
+        InputRowSchema schema,
+        List<Map<String, Object>> expectedRows
+    ) throws IOException
     {
       final DeltaInputSource deltaInputSource = new DeltaInputSource(deltaTablePath, null, filter, null);
       final InputSourceReader inputSourceReader = deltaInputSource.reader(schema, null, null);
       final List<InputRow> actualReadRows = readAllRows(inputSourceReader);
       validateRows(expectedRows, actualReadRows, schema);
     }
+
   }
 
-  public static class InvalidInputTests
+  @Nested
+  public class InvalidInputTests
   {
     @Test
     public void testNullTable()
     {
-      MatcherAssert.assertThat(
-          Assert.assertThrows(
+      DeltaAssertions.assertInvalidInput(
+          Assertions.assertThrows(
               DruidException.class,
               () -> new DeltaInputSource(null, null, null, null)
           ),
-          DruidExceptionMatcher.invalidInput().expectMessageIs(
-              "tablePath cannot be null."
-          )
+          "tablePath cannot be null."
       );
     }
 
@@ -377,14 +381,12 @@ public class DeltaInputSourceTest
     {
       final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null, null);
 
-      MatcherAssert.assertThat(
-          Assert.assertThrows(
+      DeltaAssertions.assertInvalidInput(
+          Assertions.assertThrows(
               DruidException.class,
               () -> deltaInputSource.createSplits(null, null)
           ),
-          DruidExceptionMatcher.invalidInput().expectMessageIs(
-              "tablePath[non-existent-table] not found."
-          )
+          "tablePath[non-existent-table] not found."
       );
     }
 
@@ -393,14 +395,12 @@ public class DeltaInputSourceTest
     {
       final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null, null);
 
-      MatcherAssert.assertThat(
-          Assert.assertThrows(
+      DeltaAssertions.assertInvalidInput(
+          Assertions.assertThrows(
               DruidException.class,
               () -> deltaInputSource.reader(null, null, null)
           ),
-          DruidExceptionMatcher.invalidInput().expectMessageIs(
-              "tablePath[non-existent-table] not found."
-          )
+          "tablePath[non-existent-table] not found."
       );
     }
 
@@ -414,7 +414,7 @@ public class DeltaInputSourceTest
           100L
       );
 
-      Assert.assertThrows(
+      Assertions.assertThrows(
           KernelException.class,
           () -> deltaInputSource.reader(null, null, null)
       );
@@ -453,7 +453,8 @@ public class DeltaInputSourceTest
    * Without the fix: 1024 x 2 = 2048 rows.
    * With the fix:    4000 rows.
    */
-  public static class BatchDrainRegressionTests
+  @Nested
+  public class BatchDrainRegressionTests
   {
     @Test
     public void testAllRowsReturnedWhenFileExceedsOneBatch() throws IOException
@@ -470,11 +471,11 @@ public class DeltaInputSourceTest
           null
       );
       final List<InputRow> rows = readAllRows(inputSourceReader);
-      Assert.assertEquals(
-          "Expected all rows to be read. "
-          + "If this fails with " + (1024 * 2) + " rows, the per-file batch drain bug (GH-18606) has regressed.",
+      Assertions.assertEquals(
           LargeRowGroupDeltaTable.EXPECTED_ROW_COUNT,
-          rows.size()
+          rows.size(),
+          "Expected all rows to be read. "
+          + "If this fails with " + (1024 * 2) + " rows, the per-file batch drain bug (GH-18606) has regressed."
       );
     }
   }
@@ -485,21 +486,21 @@ public class DeltaInputSourceTest
       final InputRowSchema schema
   )
   {
-    Assert.assertEquals(expectedRows.size(), actualReadRows.size());
+    Assertions.assertEquals(expectedRows.size(), actualReadRows.size());
 
     for (int idx = 0; idx < expectedRows.size(); idx++) {
       final Map<String, Object> expectedRow = expectedRows.get(idx);
       final InputRow actualInputRow = actualReadRows.get(idx);
       for (String key : expectedRow.keySet()) {
         if (!schema.getColumnsFilter().apply(key)) {
-          Assert.assertNull(actualInputRow.getRaw(key));
+          Assertions.assertNull(actualInputRow.getRaw(key));
         } else {
           if (schema.getTimestampSpec().getTimestampColumn().equals(key)) {
             final long expectedMillis = (Long) expectedRow.get(key) * 1000;
-            Assert.assertEquals(expectedMillis, actualInputRow.getTimestampFromEpoch());
-            Assert.assertEquals(DateTimes.utc(expectedMillis), actualInputRow.getTimestamp());
+            Assertions.assertEquals(expectedMillis, actualInputRow.getTimestampFromEpoch());
+            Assertions.assertEquals(DateTimes.utc(expectedMillis), actualInputRow.getTimestamp());
           } else {
-            Assert.assertEquals(expectedRow.get(key), actualInputRow.getRaw(key));
+            Assertions.assertEquals(expectedRow.get(key), actualInputRow.getRaw(key));
           }
         }
       }

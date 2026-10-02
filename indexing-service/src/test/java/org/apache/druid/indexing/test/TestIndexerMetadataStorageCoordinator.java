@@ -38,6 +38,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.simulate.TestSegmentsMetadataManager;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
@@ -73,6 +74,16 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit)
   {
     return List.of();
+  }
+
+  @Override
+  public Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  )
+  {
+    return Map.of();
   }
 
   @Override

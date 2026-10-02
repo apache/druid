@@ -521,7 +521,7 @@ public class StreamAppenderator implements Appenderator
           tuningConfig.getIndexSpec(),
           Collections.emptyList()
       );
-      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
+      bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed());
 
       // Add sink prior to announcing it, to ensure it is immediately queryable.
       addSink(identifier, retVal);
@@ -1526,7 +1526,7 @@ public class StreamAppenderator implements Appenderator
       // i.e. those that haven't been persisted for *InMemory counters, or pushed to deep storage for the total counter.
       rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
       bytesCurrentlyInMemory.addAndGet(-sink.getBytesInMemory());
-      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed(sink));
+      bytesCurrentlyInMemory.addAndGet(-calculateSinkMemoryInUsed());
       for (FireHydrant hydrant : sink) {
         // Decrement memory used by all Memory Mapped Hydrant
         if (!hydrant.equals(sink.getCurrHydrant())) {
@@ -1801,7 +1801,7 @@ public class StreamAppenderator implements Appenderator
     return total;
   }
 
-  private int calculateSinkMemoryInUsed(Sink sink)
+  private int calculateSinkMemoryInUsed()
   {
     if (skipBytesInMemoryOverheadCheck) {
       return 0;

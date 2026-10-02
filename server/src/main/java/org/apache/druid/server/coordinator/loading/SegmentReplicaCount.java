@@ -30,6 +30,7 @@ public class SegmentReplicaCount
 
   private int loaded;
   private int loadedNonHistorical;
+  private int loadedWithPartialProfile;
 
   private int loading;
   private int dropping;
@@ -37,11 +38,26 @@ public class SegmentReplicaCount
   private int movingFrom;
 
   /**
+   * Subset of {@link #loading}.
+   */
+  private int replicating;
+
+  /**
    * Increments number of replicas loaded on historical servers.
    */
   void incrementLoaded()
   {
     ++loaded;
+  }
+
+  /**
+   * Increments number of replicas loaded on historical servers, additionally counting this replica as one that
+   * announced a {@link PartialLoadProfile}, i.e. it is pinned on its historical by a partial-load rule.
+   */
+  void incrementLoadedWithPartialProfile()
+  {
+    ++loaded;
+    ++loadedWithPartialProfile;
   }
 
   /**
@@ -60,6 +76,7 @@ public class SegmentReplicaCount
   {
     switch (action) {
       case REPLICATE:
+        ++replicating;
       case LOAD:
         ++loading;
         break;
@@ -112,6 +129,15 @@ public class SegmentReplicaCount
     return loading;
   }
 
+  /**
+   * Number of replicas that are currently being loaded in the tier with action
+   * REPLICATE. Always less than or equal to {@link #loading()}.
+   */
+  int replicating()
+  {
+    return replicating;
+  }
+
   int moving()
   {
     return movingTo;
@@ -143,6 +169,17 @@ public class SegmentReplicaCount
   int loadedNotDropping()
   {
     return loaded - dropping;
+  }
+
+  /**
+   * Number of loaded replicas that announced a {@link PartialLoadProfile}. Under a partial-load rule this is only
+   * bookkeeping, that rule's own reconciler classifies replicas by fingerprint. Under a regular load rule a non-zero
+   * value means those historicals are still pinned by a partial-load rule that no longer applies; see
+   * {@link StrategicSegmentAssigner#updateReplicasInTier}.
+   */
+  int loadedWithPartialProfile()
+  {
+    return loadedWithPartialProfile;
   }
 
   /**
@@ -183,10 +220,12 @@ public class SegmentReplicaCount
 
     this.loaded += other.loaded;
     this.loadedNonHistorical += other.loadedNonHistorical;
+    this.loadedWithPartialProfile += other.loadedWithPartialProfile;
 
     this.loading += other.loading;
     this.dropping += other.dropping;
     this.movingTo += other.movingTo;
     this.movingFrom += other.movingFrom;
+    this.replicating += other.replicating;
   }
 }

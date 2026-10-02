@@ -37,7 +37,6 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -47,6 +46,11 @@ public class SegmentCacheManagerFactory
 {
   private final IndexIO indexIO;
   private final ObjectMapper jsonMapper;
+  /**
+   * The injected {@code druid.segmentCache} config. Per-task caches are derived from it (see {@link #manufacturate})
+   * so operator-tuned virtual-storage settings.
+   */
+  private final SegmentLoaderConfig segmentLoaderConfig;
   /**
    * Resolved lazily (only on the {@code virtualStorage=true} path of {@link #manufacturate}) so that injecting this
    * factory into a component that only builds non-virtual caches (e.g. {@code DruidInputSource}) does not force the
@@ -59,11 +63,13 @@ public class SegmentCacheManagerFactory
   public SegmentCacheManagerFactory(
       IndexIO indexIO,
       @Json ObjectMapper mapper,
+      SegmentLoaderConfig segmentLoaderConfig,
       @EphemeralStorageLoading Provider<StorageLoadingThreadPool> loadingThreadPoolProvider
   )
   {
     this.indexIO = indexIO;
     this.jsonMapper = mapper;
+    this.segmentLoaderConfig = segmentLoaderConfig;
     this.loadingThreadPoolProvider = loadingThreadPoolProvider;
   }
 
@@ -75,10 +81,12 @@ public class SegmentCacheManagerFactory
    */
   public static SegmentCacheManagerFactory createWithOwnedPool(IndexIO indexIO, ObjectMapper mapper)
   {
+    final SegmentLoaderConfig defaults = SegmentLoaderConfig.builder().build();
     return new SegmentCacheManagerFactory(
         indexIO,
         mapper,
-        Providers.of(StorageLoadingThreadPool.createFromConfig(new SegmentLoaderConfig().setVirtualStorage(true)))
+        defaults,
+        Providers.of(StorageLoadingThreadPool.createFromConfig(defaults.toEphemeralVirtualStorage()))
     );
   }
 
@@ -88,24 +96,41 @@ public class SegmentCacheManagerFactory
    * {@link EphemeralStorageLoading} loading pool (shared across all per-task caches and stopped by the lifecycle)
    * rather than creating its own.
    *
-   * @param storageDir     storage location
-   * @param maxSize        size limit, or null for no limit
-   * @param virtualStorage whether to configure the cache manager in ephemeral virtual storage mode. In this mode,
-   *                       loading is triggered by {@link SegmentCacheManager#acquireSegment(DataSegment, AcquireMode)},
-   *                       and segment files are deleted as soon as all holds are closed.
+   * @param storageDir              storage location
+   * @param maxSize                 size limit, or null for no limit
+   * @param virtualStorage          whether to configure the cache manager in ephemeral virtual storage mode. In this
+   *                                mode, loading is triggered by
+   *                                {@link SegmentCacheManager#acquireSegment(DataSegment, AcquireMode)}, and segment
+   *                                files are deleted as soon as all holds are closed.
+   * @param partialDownloadsEnabled when true (and {@code virtualStorage} is true), partial-eligible segments are read
+   *                                via on-demand column downloads rather than downloaded in full up front. Has no
+   *                                effect when {@code virtualStorage} is false.
    */
-  public SegmentCacheManager manufacturate(File storageDir, Long maxSize, boolean virtualStorage)
+  public SegmentCacheManager manufacturate(
+      File storageDir,
+      Long maxSize,
+      boolean virtualStorage,
+      boolean partialDownloadsEnabled
+  )
   {
     final StorageLocationConfig locationConfig = new StorageLocationConfig(
         storageDir,
         maxSize != null ? maxSize : Long.MAX_VALUE,
         null
     );
+    // For virtual storage, derive an ephemeral virtual-storage cache config from the injected node config: this keeps
+    // its virtual-storage tuning while dropping the classic on-disk-cache settings that don't apply. A non-virtual
+    // (eager) per-task cache needs none of that tuning and must NOT inherit the node's transient settings, so it
+    // starts from fresh defaults instead. Both then get the per-task location and mode flags.
+    final SegmentLoaderConfig.Builder loaderConfigBuilder =
+        virtualStorage ? segmentLoaderConfig.toEphemeralVirtualStorage().toBuilder() : SegmentLoaderConfig.builder();
     final SegmentLoaderConfig loaderConfig =
-        new SegmentLoaderConfig()
-            .setLocations(Collections.singletonList(locationConfig))
-            .setVirtualStorage(virtualStorage)
-            .setVirtualStorageIsEphemeral(virtualStorage);
+        loaderConfigBuilder
+            .locations(locationConfig)
+            .virtualStorage(virtualStorage)
+            .virtualStorageIsEphemeral(virtualStorage)
+            .virtualStoragePartialDownloadsEnabled(partialDownloadsEnabled)
+            .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     return new SegmentLocalCacheManager(
         storageLocations,

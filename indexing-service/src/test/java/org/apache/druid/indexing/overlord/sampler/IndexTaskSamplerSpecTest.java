@@ -37,10 +37,8 @@ import org.apache.druid.server.security.ResourceType;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,9 +49,6 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   private final InputSourceSampler inputSourceSampler = createMock(InputSourceSampler.class);
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   public IndexTaskSamplerSpecTest()
   {
@@ -116,17 +111,17 @@ public class IndexTaskSamplerSpecTest extends EasyMockSupport
     verifyAll();
 
     InputSource inputSource = capturedInputSource.getValue();
-    Assert.assertEquals(new File("/tmp"), ((LocalInputSource) inputSource).getBaseDir());
-    Assert.assertEquals("wikiticker-2015-09-12-sampled.json", ((LocalInputSource) inputSource).getFilter());
+    Assertions.assertEquals(new File("/tmp"), ((LocalInputSource) inputSource).getBaseDir());
+    Assertions.assertEquals("wikiticker-2015-09-12-sampled.json", ((LocalInputSource) inputSource).getFilter());
 
     DataSchema dataSchema = capturedDataSchema.getValue();
-    Assert.assertEquals("sampler", dataSchema.getDataSource());
-    Assert.assertEquals(JsonInputFormat.class, capturedInputFormat.getValue().getClass());
+    Assertions.assertEquals("sampler", dataSchema.getDataSource());
+    Assertions.assertEquals(JsonInputFormat.class, capturedInputFormat.getValue().getClass());
 
     SamplerConfig samplerConfig = capturedSamplerConfig.getValue();
-    Assert.assertEquals(123, samplerConfig.getNumRows());
-    Assert.assertEquals(2345, samplerConfig.getTimeoutMs());
-    Assert.assertEquals(
+    Assertions.assertEquals(123, samplerConfig.getNumRows());
+    Assertions.assertEquals(2345, samplerConfig.getTimeoutMs());
+    Assertions.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
                 LocalInputSource.TYPE_KEY,

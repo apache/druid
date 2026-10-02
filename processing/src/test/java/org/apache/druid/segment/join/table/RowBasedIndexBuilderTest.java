@@ -22,8 +22,8 @@ package org.apache.druid.segment.join.table;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import org.apache.druid.segment.column.ColumnType;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +41,7 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, Matchers.instanceOf(MapIndex.class));
     Assertions.assertEquals(ColumnType.STRING, index.keyType());
     Assertions.assertTrue(index.areKeysUnique(false));
     Assertions.assertTrue(index.areKeysUnique(true));
@@ -70,7 +70,7 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, Matchers.instanceOf(MapIndex.class));
     Assertions.assertEquals(ColumnType.STRING, index.keyType());
     Assertions.assertTrue(index.areKeysUnique(false));
     Assertions.assertTrue(index.areKeysUnique(true));
@@ -100,7 +100,7 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, Matchers.instanceOf(MapIndex.class));
     Assertions.assertEquals(ColumnType.STRING, index.keyType());
     Assertions.assertTrue(index.areKeysUnique(false));
     Assertions.assertFalse(index.areKeysUnique(true));
@@ -130,7 +130,7 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, Matchers.instanceOf(MapIndex.class));
     Assertions.assertEquals(ColumnType.STRING, index.keyType());
     Assertions.assertFalse(index.areKeysUnique(false));
     Assertions.assertFalse(index.areKeysUnique(true));
@@ -157,7 +157,7 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(UniqueLongArrayIndex.class));
+    MatcherAssert.assertThat(index, Matchers.instanceOf(UniqueLongArrayIndex.class));
     Assertions.assertEquals(ColumnType.LONG, index.keyType());
     Assertions.assertTrue(index.areKeysUnique(false));
 
@@ -185,7 +185,7 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, Matchers.instanceOf(MapIndex.class));
     Assertions.assertEquals(ColumnType.LONG, index.keyType());
     Assertions.assertTrue(index.areKeysUnique(false));
     Assertions.assertTrue(index.areKeysUnique(true));
@@ -213,7 +213,7 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, Matchers.instanceOf(MapIndex.class));
     Assertions.assertEquals(ColumnType.LONG, index.keyType());
     Assertions.assertTrue(index.areKeysUnique(false));
 
@@ -241,7 +241,7 @@ public class RowBasedIndexBuilderTest
 
     final IndexedTable.Index index = builder.build();
 
-    MatcherAssert.assertThat(index, CoreMatchers.instanceOf(MapIndex.class));
+    MatcherAssert.assertThat(index, Matchers.instanceOf(MapIndex.class));
     Assertions.assertEquals(ColumnType.LONG, index.keyType());
     Assertions.assertFalse(index.areKeysUnique(false));
 

@@ -657,14 +657,16 @@ public class ConciseSet extends AbstractIntSet implements Serializable
         if (!otherItr.isLiteral) {
           int minCount = Math.min(thisItr.count, otherItr.count);
           res.appendFill(minCount, operator.combineLiterals(thisItr.word, otherItr.word));
-          //noinspection NonShortCircuitBooleanExpression
+          // Both iterators must advance before testing whether either is exhausted.
+          // codeql[java/non-short-circuit-evaluation]
           if (!thisItr.prepareNext(minCount) | /* NOT || */ !otherItr.prepareNext(minCount)) {
             break;
           }
         } else {
           res.appendLiteral(operator.combineLiterals(thisItr.toLiteral(), otherItr.word));
           thisItr.word--;
-          //noinspection NonShortCircuitBooleanExpression
+          // Both iterators must advance before testing whether either is exhausted.
+          // codeql[java/non-short-circuit-evaluation]
           if (!thisItr.prepareNext(1) | /* do NOT use "||" */ !otherItr.prepareNext()) {
             break;
           }
@@ -672,13 +674,15 @@ public class ConciseSet extends AbstractIntSet implements Serializable
       } else if (!otherItr.isLiteral) {
         res.appendLiteral(operator.combineLiterals(thisItr.word, otherItr.toLiteral()));
         otherItr.word--;
-        //noinspection NonShortCircuitBooleanExpression
+        // Both iterators must advance before testing whether either is exhausted.
+        // codeql[java/non-short-circuit-evaluation]
         if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext(1)) {
           break;
         }
       } else {
         res.appendLiteral(operator.combineLiterals(thisItr.word, otherItr.word));
-        //noinspection NonShortCircuitBooleanExpression
+        // Both iterators must advance before testing whether either is exhausted.
+        // codeql[java/non-short-circuit-evaluation]
         if (!thisItr.prepareNext() | /* do NOT use  "||" */ !otherItr.prepareNext()) {
           break;
         }

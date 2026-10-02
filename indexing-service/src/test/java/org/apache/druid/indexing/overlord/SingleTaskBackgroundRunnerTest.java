@@ -35,6 +35,7 @@ import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -61,15 +62,14 @@ import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -83,12 +83,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class SingleTaskBackgroundRunnerTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private SingleTaskBackgroundRunner runner;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     final TestUtils utils = new TestUtils();
@@ -153,17 +153,30 @@ public class SingleTaskBackgroundRunnerTest
     );
   }
 
-  @After
+  @AfterEach
   public void teardown()
   {
     runner.stop();
   }
 
   @Test
+  public void testTaskLocationUsesAdvertisedPlaintextPort()
+  {
+    final SingleTaskBackgroundRunner advertisedRunner = new SingleTaskBackgroundRunner(
+        EasyMock.createMock(TaskToolboxFactory.class),
+        new TaskConfigBuilder().build(),
+        new NoopServiceEmitter(),
+        new DruidNode("testServer", "testHost", false, 1000, null, null, true, false, null, 2000),
+        new ServerConfig()
+    );
+    Assertions.assertEquals(TaskLocation.create("testHost", 2000, -1), advertisedRunner.getTaskLocation("any"));
+  }
+
+  @Test
   public void testRun() throws ExecutionException, InterruptedException
   {
     NoopTask task = new NoopTask(null, null, null, 500L, 0, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskState.SUCCESS,
         runner.run(task).get().getStatusCode()
     );
@@ -181,7 +194,7 @@ public class SingleTaskBackgroundRunnerTest
             .build()
             .getRunner(runner);
 
-    Assert.assertThat(queryRunner, CoreMatchers.instanceOf(SetAndVerifyContextQueryRunner.class));
+    Assertions.assertInstanceOf(SetAndVerifyContextQueryRunner.class, queryRunner);
   }
 
   @Test
@@ -200,11 +213,11 @@ public class SingleTaskBackgroundRunnerTest
         }
     );
     runner.stop();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskState.FAILED,
         future.get(1000, TimeUnit.MILLISECONDS).getStatusCode()
     );
-    Assert.assertTrue(methodCallHolder.get());
+    Assertions.assertTrue(methodCallHolder.get());
   }
 
   @Test
@@ -215,11 +228,11 @@ public class SingleTaskBackgroundRunnerTest
         new RestorableTask(holder)
     );
     runner.stop();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskState.SUCCESS,
         future.get(1000, TimeUnit.MILLISECONDS).getStatusCode()
     );
-    Assert.assertTrue(holder.get());
+    Assertions.assertTrue(holder.get());
   }
 
   @Test
@@ -237,13 +250,13 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void locationChanged(String taskId, TaskLocation newLocation)
+          public void locationChanged(Task task, TaskLocation newLocation)
           {
             // do nothing
           }
 
           @Override
-          public void statusChanged(String taskId, TaskStatus status)
+          public void statusChanged(Task task, TaskStatus status)
           {
             statusHolder.set(status);
           }
@@ -274,8 +287,8 @@ public class SingleTaskBackgroundRunnerTest
         }
     );
     runner.stop();
-    Assert.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
-    Assert.assertEquals(
+    Assertions.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
+    Assertions.assertEquals(
         "Failed to stop gracefully with exception. See task logs for more details.",
         statusHolder.get().getErrorMsg()
     );
@@ -300,13 +313,13 @@ public class SingleTaskBackgroundRunnerTest
           }
 
           @Override
-          public void locationChanged(String taskId, TaskLocation newLocation)
+          public void locationChanged(Task task, TaskLocation newLocation)
           {
             // do nothing
           }
 
           @Override
-          public void statusChanged(String taskId, TaskStatus status)
+          public void statusChanged(Task task, TaskStatus status)
           {
             if (status.getStatusCode() == TaskState.RUNNING) {
               runLatch.countDown();
@@ -335,10 +348,10 @@ public class SingleTaskBackgroundRunnerTest
         }
     );
 
-    Assert.assertTrue(runLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(runLatch.await(1, TimeUnit.SECONDS));
     runner.stop();
 
-    Assert.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
 
     // Do not verify the failure error message as there is a race condition
     // where the error message may either originate from NoopTask or the runner

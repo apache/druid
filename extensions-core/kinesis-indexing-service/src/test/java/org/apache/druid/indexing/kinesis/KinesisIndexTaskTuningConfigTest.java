@@ -29,12 +29,9 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,9 +46,6 @@ public class KinesisIndexTaskTuningConfigTest
     mapper = new DefaultObjectMapper();
     mapper.registerModules(new KinesisIndexingServiceModule().getJacksonModules());
   }
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testSerdeWithDefaults() throws Exception
@@ -68,24 +62,24 @@ public class KinesisIndexTaskTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNull(config.getBasePersistDirectory());
-    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(150000, config.getMaxRowsInMemory());
-    Assert.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(0, config.getMaxPendingPersists());
-    Assert.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
-    Assert.assertFalse(config.isReportParseExceptions());
-    Assert.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
-    Assert.assertNull(config.getRecordBufferSizeBytesConfigured());
-    Assert.assertEquals(100_000_000, config.getRecordBufferSizeBytesOrDefault(2_000_000_000));
-    Assert.assertEquals(100_000_000, config.getRecordBufferSizeBytesOrDefault(1_000_000_000));
-    Assert.assertEquals(10_000_000, config.getRecordBufferSizeBytesOrDefault(100_000_000));
-    Assert.assertEquals(5000, config.getRecordBufferOfferTimeout());
-    Assert.assertEquals(5000, config.getRecordBufferFullWait());
-    Assert.assertNull(config.getFetchThreads());
-    Assert.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
-    Assert.assertFalse(config.isResetOffsetAutomatically());
+    Assertions.assertNull(config.getBasePersistDirectory());
+    Assertions.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
+    Assertions.assertEquals(150000, config.getMaxRowsInMemory());
+    Assertions.assertEquals(5_000_000, config.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
+    Assertions.assertEquals(0, config.getMaxPendingPersists());
+    Assertions.assertEquals(IndexSpec.getDefault(), config.getIndexSpec());
+    Assertions.assertFalse(config.isReportParseExceptions());
+    Assertions.assertEquals(Duration.ofMinutes(15).toMillis(), config.getHandoffConditionTimeout());
+    Assertions.assertNull(config.getRecordBufferSizeBytesConfigured());
+    Assertions.assertEquals(100_000_000, config.getRecordBufferSizeBytesOrDefault(2_000_000_000));
+    Assertions.assertEquals(100_000_000, config.getRecordBufferSizeBytesOrDefault(1_000_000_000));
+    Assertions.assertEquals(10_000_000, config.getRecordBufferSizeBytesOrDefault(100_000_000));
+    Assertions.assertEquals(5000, config.getRecordBufferOfferTimeout());
+    Assertions.assertEquals(5000, config.getRecordBufferFullWait());
+    Assertions.assertNull(config.getFetchThreads());
+    Assertions.assertFalse(config.isSkipSequenceNumberAvailabilityCheck());
+    Assertions.assertFalse(config.isResetOffsetAutomatically());
   }
 
   @Test
@@ -119,22 +113,22 @@ public class KinesisIndexTaskTuningConfigTest
         TuningConfig.class
     );
 
-    Assert.assertNull(config.getBasePersistDirectory());
-    Assert.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
-    Assert.assertEquals(100, config.getMaxRowsInMemory());
-    Assert.assertEquals(100, config.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(100, config.getMaxPendingPersists());
-    Assert.assertTrue(config.isReportParseExceptions());
-    Assert.assertEquals(100, config.getHandoffConditionTimeout());
-    Assert.assertEquals(1000, (int) config.getRecordBufferSizeBytesConfigured());
-    Assert.assertEquals(1000, config.getRecordBufferSizeBytesOrDefault(1_000_000_000));
-    Assert.assertEquals(500, config.getRecordBufferOfferTimeout());
-    Assert.assertEquals(500, config.getRecordBufferFullWait());
-    Assert.assertEquals(2, (int) config.getFetchThreads());
-    Assert.assertTrue(config.isSkipSequenceNumberAvailabilityCheck());
-    Assert.assertFalse(config.isResetOffsetAutomatically());
-    Assert.assertEquals(-1, config.getMaxColumnsToMerge());
+    Assertions.assertNull(config.getBasePersistDirectory());
+    Assertions.assertEquals(new OnheapIncrementalIndex.Spec(), config.getAppendableIndexSpec());
+    Assertions.assertEquals(100, config.getMaxRowsInMemory());
+    Assertions.assertEquals(100, config.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
+    Assertions.assertEquals(100, config.getMaxPendingPersists());
+    Assertions.assertTrue(config.isReportParseExceptions());
+    Assertions.assertEquals(100, config.getHandoffConditionTimeout());
+    Assertions.assertEquals(1000, (int) config.getRecordBufferSizeBytesConfigured());
+    Assertions.assertEquals(1000, config.getRecordBufferSizeBytesOrDefault(1_000_000_000));
+    Assertions.assertEquals(500, config.getRecordBufferOfferTimeout());
+    Assertions.assertEquals(500, config.getRecordBufferFullWait());
+    Assertions.assertEquals(2, (int) config.getFetchThreads());
+    Assertions.assertTrue(config.isSkipSequenceNumberAvailabilityCheck());
+    Assertions.assertFalse(config.isResetOffsetAutomatically());
+    Assertions.assertEquals(-1, config.getMaxColumnsToMerge());
 
   }
 
@@ -176,31 +170,31 @@ public class KinesisIndexTaskTuningConfigTest
     TestModifiedKinesisIndexTaskTuningConfig deserialized =
         mapper.readValue(serialized, TestModifiedKinesisIndexTaskTuningConfig.class);
 
-    Assert.assertEquals(null, deserialized.getExtra());
-    Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
-    Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
-    Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
-    Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
-    Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
-    Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
-    Assert.assertNull(deserialized.getBasePersistDirectory());
-    Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
-    Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
-    Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
-    Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
-    Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
-    Assert.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
-    Assert.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
-    Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
-    Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
-    Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
-    Assert.assertEquals(base.getRecordBufferFullWait(), deserialized.getRecordBufferFullWait());
-    Assert.assertEquals(base.getRecordBufferOfferTimeout(), deserialized.getRecordBufferOfferTimeout());
-    Assert.assertEquals(base.getRecordBufferSizeConfigured(), deserialized.getRecordBufferSizeConfigured());
-    Assert.assertEquals(base.getRecordBufferSizeBytesConfigured(), deserialized.getRecordBufferSizeBytesConfigured());
-    Assert.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
-    Assert.assertEquals(base.getMaxBytesPerPollConfigured(), deserialized.getMaxBytesPerPollConfigured());
-    Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assertions.assertEquals(null, deserialized.getExtra());
+    Assertions.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
+    Assertions.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
+    Assertions.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
+    Assertions.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
+    Assertions.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
+    Assertions.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
+    Assertions.assertNull(deserialized.getBasePersistDirectory());
+    Assertions.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
+    Assertions.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
+    Assertions.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
+    Assertions.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
+    Assertions.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
+    Assertions.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
+    Assertions.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
+    Assertions.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
+    Assertions.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
+    Assertions.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
+    Assertions.assertEquals(base.getRecordBufferFullWait(), deserialized.getRecordBufferFullWait());
+    Assertions.assertEquals(base.getRecordBufferOfferTimeout(), deserialized.getRecordBufferOfferTimeout());
+    Assertions.assertEquals(base.getRecordBufferSizeConfigured(), deserialized.getRecordBufferSizeConfigured());
+    Assertions.assertEquals(base.getRecordBufferSizeBytesConfigured(), deserialized.getRecordBufferSizeBytesConfigured());
+    Assertions.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
+    Assertions.assertEquals(base.getMaxBytesPerPollConfigured(), deserialized.getMaxBytesPerPollConfigured());
+    Assertions.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
   }
 
   @Test
@@ -241,28 +235,28 @@ public class KinesisIndexTaskTuningConfigTest
     KinesisIndexTaskTuningConfig deserialized =
         mapper.readValue(serialized, KinesisIndexTaskTuningConfig.class);
 
-    Assert.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
-    Assert.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
-    Assert.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
-    Assert.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
-    Assert.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
-    Assert.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
-    Assert.assertNull(deserialized.getBasePersistDirectory());
-    Assert.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
-    Assert.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
-    Assert.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
-    Assert.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
-    Assert.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
-    Assert.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
-    Assert.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
-    Assert.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
-    Assert.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
-    Assert.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
-    Assert.assertEquals(base.getRecordBufferFullWait(), deserialized.getRecordBufferFullWait());
-    Assert.assertEquals(base.getRecordBufferOfferTimeout(), deserialized.getRecordBufferOfferTimeout());
-    Assert.assertEquals(base.getRecordBufferSizeBytesConfigured(), deserialized.getRecordBufferSizeBytesConfigured());
-    Assert.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
-    Assert.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
+    Assertions.assertEquals(base.getAppendableIndexSpec(), deserialized.getAppendableIndexSpec());
+    Assertions.assertEquals(base.getMaxRowsInMemory(), deserialized.getMaxRowsInMemory());
+    Assertions.assertEquals(base.getMaxBytesInMemory(), deserialized.getMaxBytesInMemory());
+    Assertions.assertEquals(base.getMaxRowsPerSegment(), deserialized.getMaxRowsPerSegment());
+    Assertions.assertEquals(base.getMaxTotalRows(), deserialized.getMaxTotalRows());
+    Assertions.assertEquals(base.getIntermediatePersistPeriod(), deserialized.getIntermediatePersistPeriod());
+    Assertions.assertNull(deserialized.getBasePersistDirectory());
+    Assertions.assertEquals(base.getMaxPendingPersists(), deserialized.getMaxPendingPersists());
+    Assertions.assertEquals(base.getIndexSpec(), deserialized.getIndexSpec());
+    Assertions.assertEquals(base.isReportParseExceptions(), deserialized.isReportParseExceptions());
+    Assertions.assertEquals(base.getHandoffConditionTimeout(), deserialized.getHandoffConditionTimeout());
+    Assertions.assertEquals(base.isResetOffsetAutomatically(), deserialized.isResetOffsetAutomatically());
+    Assertions.assertEquals(base.getSegmentWriteOutMediumFactory(), deserialized.getSegmentWriteOutMediumFactory());
+    Assertions.assertEquals(base.getIntermediateHandoffPeriod(), deserialized.getIntermediateHandoffPeriod());
+    Assertions.assertEquals(base.isLogParseExceptions(), deserialized.isLogParseExceptions());
+    Assertions.assertEquals(base.getMaxParseExceptions(), deserialized.getMaxParseExceptions());
+    Assertions.assertEquals(base.getMaxSavedParseExceptions(), deserialized.getMaxSavedParseExceptions());
+    Assertions.assertEquals(base.getRecordBufferFullWait(), deserialized.getRecordBufferFullWait());
+    Assertions.assertEquals(base.getRecordBufferOfferTimeout(), deserialized.getRecordBufferOfferTimeout());
+    Assertions.assertEquals(base.getRecordBufferSizeBytesConfigured(), deserialized.getRecordBufferSizeBytesConfigured());
+    Assertions.assertEquals(base.getMaxRecordsPerPollConfigured(), deserialized.getMaxRecordsPerPollConfigured());
+    Assertions.assertEquals(base.getMaxColumnsToMerge(), deserialized.getMaxColumnsToMerge());
   }
 
   @Test
@@ -285,11 +279,16 @@ public class KinesisIndexTaskTuningConfigTest
                      + "  \"fetchThreads\": 2\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-    exception.expectMessage(CoreMatchers.containsString(
-        "resetOffsetAutomatically cannot be used if skipSequenceNumberAvailabilityCheck=true"));
-    mapper.readValue(jsonStr, TuningConfig.class);
+    JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(jsonStr, TuningConfig.class)
+    );
+    Assertions.assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "resetOffsetAutomatically cannot be used if skipSequenceNumberAvailabilityCheck=true"
+        )
+    );
   }
 
   @Test
@@ -333,26 +332,26 @@ public class KinesisIndexTaskTuningConfigTest
     );
     KinesisIndexTaskTuningConfig copy = original.convertToTaskTuningConfig();
 
-    Assert.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
-    Assert.assertEquals(1, copy.getMaxRowsInMemory());
-    Assert.assertEquals(3, copy.getMaxBytesInMemory());
-    Assert.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
-    Assert.assertEquals(100L, (long) copy.getMaxTotalRows());
-    Assert.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
-    Assert.assertNull(copy.getBasePersistDirectory());
-    Assert.assertEquals(4, copy.getMaxPendingPersists());
-    Assert.assertEquals(IndexSpec.getDefault(), copy.getIndexSpec());
-    Assert.assertTrue(copy.isReportParseExceptions());
-    Assert.assertEquals(5L, copy.getHandoffConditionTimeout());
-    Assert.assertEquals(1000, (int) copy.getRecordBufferSizeBytesConfigured());
-    Assert.assertEquals(500, copy.getRecordBufferOfferTimeout());
-    Assert.assertEquals(500, copy.getRecordBufferFullWait());
-    Assert.assertEquals(2, (int) copy.getFetchThreads());
-    Assert.assertFalse(copy.isSkipSequenceNumberAvailabilityCheck());
-    Assert.assertTrue(copy.isResetOffsetAutomatically());
-    Assert.assertEquals(10, (int) copy.getMaxRecordsPerPollConfigured());
-    Assert.assertEquals(new Period().withDays(Integer.MAX_VALUE), copy.getIntermediateHandoffPeriod());
-    Assert.assertEquals(-1, copy.getMaxColumnsToMerge());
+    Assertions.assertEquals(original.getAppendableIndexSpec(), copy.getAppendableIndexSpec());
+    Assertions.assertEquals(1, copy.getMaxRowsInMemory());
+    Assertions.assertEquals(3, copy.getMaxBytesInMemory());
+    Assertions.assertEquals(2, copy.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(100L, (long) copy.getMaxTotalRows());
+    Assertions.assertEquals(new Period("PT3S"), copy.getIntermediatePersistPeriod());
+    Assertions.assertNull(copy.getBasePersistDirectory());
+    Assertions.assertEquals(4, copy.getMaxPendingPersists());
+    Assertions.assertEquals(IndexSpec.getDefault(), copy.getIndexSpec());
+    Assertions.assertTrue(copy.isReportParseExceptions());
+    Assertions.assertEquals(5L, copy.getHandoffConditionTimeout());
+    Assertions.assertEquals(1000, (int) copy.getRecordBufferSizeBytesConfigured());
+    Assertions.assertEquals(500, copy.getRecordBufferOfferTimeout());
+    Assertions.assertEquals(500, copy.getRecordBufferFullWait());
+    Assertions.assertEquals(2, (int) copy.getFetchThreads());
+    Assertions.assertFalse(copy.isSkipSequenceNumberAvailabilityCheck());
+    Assertions.assertTrue(copy.isResetOffsetAutomatically());
+    Assertions.assertEquals(10, (int) copy.getMaxRecordsPerPollConfigured());
+    Assertions.assertEquals(new Period().withDays(Integer.MAX_VALUE), copy.getIntermediateHandoffPeriod());
+    Assertions.assertEquals(-1, copy.getMaxColumnsToMerge());
   }
 
   @Test

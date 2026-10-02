@@ -23,19 +23,22 @@ import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import type { ReactNode } from 'react';
 import React from 'react';
-import type { SortingRule } from 'react-table';
-import ReactTable from 'react-table';
 
 import {
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
   ActionCell,
+  BooleanFilterInput,
   BracedText,
+  type ColumnSort,
+  ConsoleTable,
   MoreButton,
   RefreshButton,
   SegmentTimeline,
   SplitterLayout,
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
   TableClickableCell,
   TableColumnSelector,
   type TableColumnSelectorColumn,
@@ -48,11 +51,6 @@ import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dial
 import type { QueryContext, QueryWithContext, ShardSpec } from '../../druid-models';
 import { computeSegmentTimeSpan, getConsoleViewIcon, getDatasourceColor } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
-import {
-  BooleanFilterInput,
-  STANDARD_TABLE_PAGE_SIZE,
-  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
-} from '../../react-table';
 import { Api } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike, TableState } from '../../utils';
 import {
@@ -216,7 +214,7 @@ interface SegmentQueryResultRow {
   version: string;
   shard_spec: ShardSpec;
   partition_num: number;
-  size: number;
+  size: NumberLike;
   num_rows: NumberLike;
   avg_row_size: NumberLike;
   num_replicas: number;
@@ -251,7 +249,7 @@ export interface SegmentsViewState {
   showSegmentTimeline?: { capabilities: Capabilities; datasource?: string };
   page: number;
   pageSize: number;
-  sorted: SortingRule[];
+  sorted: ColumnSort[];
 
   terminateSegmentId?: string;
   terminateDatasourceId?: string;
@@ -630,12 +628,12 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       filters.toArray().some(filter => filter.key === 'datasource' && filter.mode === '=');
 
     return (
-      <ReactTable
+      <ConsoleTable
         data={segments}
         pages={count >= 0 ? Math.ceil(count / pageSize) : 10000000}
         loading={segmentsState.loading}
         noDataText={
-          segmentsState.isEmpty()
+          segmentsState.data?.segments.length === 0
             ? `No segments${filters.toArray().length ? ' matching filter' : ''}`
             : segmentsState.getErrorMessage() || ''
         }
@@ -1169,8 +1167,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 return (
                   <Button
                     text="Apply filter to table"
-                    small
-                    rightIcon={IconNames.ARROW_DOWN}
+                    size="small"
+                    endIcon={IconNames.ARROW_DOWN}
                     onClick={() => {
                       let filters = TableFilters.empty();
                       if (start) {

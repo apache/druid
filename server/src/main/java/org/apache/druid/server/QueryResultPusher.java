@@ -228,7 +228,10 @@ public abstract class QueryResultPusher
     return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)));
   }
 
-  private void incrementQueryCounterForException(final DruidException e)
+  static void incrementQueryCounterForException(
+      final QueryResource.QueryMetricCounter counter,
+      final DruidException e
+  )
   {
     switch (e.getCategory()) {
       case INVALID_INPUT:
@@ -246,12 +249,17 @@ public abstract class QueryResultPusher
       case TIMEOUT:
         counter.incrementTimedOut();
         break;
+      case CONFLICT:
+      case FORBIDDEN:
+      case NOT_FOUND:
+      case SERVICE_UNAVAILABLE:
+        break;
     }
   }
 
   private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
   {
-    incrementQueryCounterForException(e);
+    incrementQueryCounterForException(counter, e);
 
     if (resultsWriter != null) {
       final long bytesWritten = accumulator != null ? accumulator.getNumBytesSent() : 0;

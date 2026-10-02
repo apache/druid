@@ -41,11 +41,9 @@ import org.apache.druid.timeline.partition.DimensionRangeBucketShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -90,10 +88,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
   private SegmentAllocator target;
   private SequenceNameFunction sequenceNameFunction;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     TaskToolbox toolbox = createToolbox(
@@ -123,11 +118,14 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     Interval interval = INTERVAL_EMPTY;
     InputRow row = createInputRow(interval, PARTITION9);
 
-    exception.expect(IllegalStateException.class);
-    exception.expectMessage("Failed to get shardSpec");
-
-    String sequenceName = sequenceNameFunction.getSequenceName(interval, row);
-    allocate(row, sequenceName);
+    final IllegalStateException exception = Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> {
+          final String sequenceName = sequenceNameFunction.getSequenceName(interval, row);
+          allocate(row, sequenceName);
+        }
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Failed to get shardSpec"));
   }
 
   @Test
@@ -164,7 +162,7 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     InputRow row = createInputRow(interval, PARTITION9);
     String sequenceName = sequenceNameFunction.getSequenceName(interval, row);
     String expectedSequenceName = StringUtils.format("%s_%s_%d", TASKID, interval, 1);
-    Assert.assertEquals(expectedSequenceName, sequenceName);
+    Assertions.assertEquals(expectedSequenceName, sequenceName);
   }
 
   @SuppressWarnings("SameParameterValue")
@@ -206,15 +204,15 @@ public class RangePartitionCachingLocalSegmentAllocatorTest
     String sequenceName = sequenceNameFunction.getSequenceName(interval, row);
     SegmentIdWithShardSpec segmentIdWithShardSpec = allocate(row, sequenceName);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentId.of(DATASOURCE, interval, INTERVAL_TO_VERSION.get(interval), bucketId),
         segmentIdWithShardSpec.asSegmentId()
     );
     DimensionRangeBucketShardSpec shardSpec = (DimensionRangeBucketShardSpec) segmentIdWithShardSpec.getShardSpec();
-    Assert.assertEquals(PARTITION_DIMENSIONS, shardSpec.getDimensions());
-    Assert.assertEquals(bucketId, shardSpec.getBucketId());
-    Assert.assertEquals(partitionStart, shardSpec.getStart());
-    Assert.assertEquals(partitionEnd, shardSpec.getEnd());
+    Assertions.assertEquals(PARTITION_DIMENSIONS, shardSpec.getDimensions());
+    Assertions.assertEquals(bucketId, shardSpec.getBucketId());
+    Assertions.assertEquals(partitionStart, shardSpec.getStart());
+    Assertions.assertEquals(partitionEnd, shardSpec.getEnd());
   }
 
   private SegmentIdWithShardSpec allocate(InputRow row, String sequenceName)

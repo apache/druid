@@ -81,6 +81,27 @@ public class AuthorizationUtils
   }
 
   /**
+   * Performs authorization check on a single resource-action based on an {@link AuthenticationResult}.
+   *
+   * @param authenticationResult Authentication result representing identity of requester
+   * @param resourceAction   A resource identifier and the action to be taken the resource.
+   * @param authorizerMapper The singleton AuthorizerMapper instance
+   * @return AuthorizationResult containing allow/deny access to the resource action, along with policy restrictions.
+   */
+  public static AuthorizationResult authorizeResourceAction(
+      final AuthenticationResult authenticationResult,
+      final ResourceAction resourceAction,
+      final AuthorizerMapper authorizerMapper
+  )
+  {
+    return authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(resourceAction),
+        authorizerMapper
+    );
+  }
+
+  /**
    * Verifies that the user has unrestricted access to perform the required
    * action on the given datasource.
    *

@@ -20,8 +20,8 @@
 package org.apache.druid.compressedbigdecimal.aggregator;
 
 import org.apache.druid.query.aggregation.Aggregator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public abstract class CompressedBigDecimalAggregatorTestBase
 {
@@ -30,6 +30,6 @@ public abstract class CompressedBigDecimalAggregatorTestBase
 
   protected void testNoDataHelper(Aggregator aggregator, Object expectedValue)
   {
-    Assert.assertEquals(expectedValue, aggregator.get());
+    Assertions.assertEquals(expectedValue, aggregator.get());
   }
 }

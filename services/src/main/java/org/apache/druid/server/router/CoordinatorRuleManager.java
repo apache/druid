@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
@@ -34,10 +35,9 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import java.util.ArrayList;
@@ -132,12 +132,12 @@ public class CoordinatorRuleManager
       Throwable rootCause = Throwables.getRootCause(e);
       if (rootCause instanceof HttpResponseException) {
         final HttpResponseException httpException = (HttpResponseException) rootCause;
-        final HttpResponse response = httpException.getResponse().getResponse();
-        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+        final StringFullResponseHolder responseHolder = httpException.getResponse();
+        if (!responseHolder.getStatus().equals(HttpResponseStatus.OK)) {
           throw new ISE(
               "Error while polling rules, status[%s] content[%s]",
-              response.getStatus(),
-              response.getContent()
+              responseHolder.getStatus(),
+              responseHolder.getContent()
           );
         }
       }

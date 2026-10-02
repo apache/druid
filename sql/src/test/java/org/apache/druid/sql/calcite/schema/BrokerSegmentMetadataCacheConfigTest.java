@@ -27,8 +27,8 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.sql.calcite.planner.CalcitePlannerModule;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -49,10 +49,10 @@ public class BrokerSegmentMetadataCacheConfigTest
     final Properties properties = new Properties();
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final BrokerSegmentMetadataCacheConfig config = provider.get();
-    Assert.assertTrue(config.isAwaitInitializationOnStart());
-    Assert.assertTrue(config.isMetadataSegmentCacheEnable());
-    Assert.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
-    Assert.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
+    Assertions.assertTrue(config.isAwaitInitializationOnStart());
+    Assertions.assertTrue(config.isMetadataSegmentCacheEnable());
+    Assertions.assertEquals(Period.minutes(1), config.getMetadataRefreshPeriod());
+    Assertions.assertEquals(new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy(), config.getMetadataColumnTypeMergePolicy());
   }
 
   @Test
@@ -73,10 +73,10 @@ public class BrokerSegmentMetadataCacheConfigTest
     properties.setProperty(CONFIG_BASE + ".metadataSegmentCacheEnable", "false");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final BrokerSegmentMetadataCacheConfig config = provider.get();
-    Assert.assertFalse(config.isAwaitInitializationOnStart());
-    Assert.assertFalse(config.isMetadataSegmentCacheEnable());
-    Assert.assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
-    Assert.assertEquals(
+    Assertions.assertFalse(config.isAwaitInitializationOnStart());
+    Assertions.assertFalse(config.isMetadataSegmentCacheEnable());
+    Assertions.assertEquals(Period.minutes(2), config.getMetadataRefreshPeriod());
+    Assertions.assertEquals(
         new AbstractSegmentMetadataCache.FirstTypeMergePolicy(),
         config.getMetadataColumnTypeMergePolicy()
     );

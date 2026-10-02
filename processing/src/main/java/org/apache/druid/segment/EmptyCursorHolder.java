@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -42,16 +43,39 @@ import java.util.List;
  * A {@link CursorHolder} that yields no rows. Its cursors are always done, but its selector factories hand out harmless
  * nil selectors and {@link #canVectorize()} reports true.
  * <p>
- * Useful wherever a segment can be proven to match no rows without scanning it.
+ * Useful wherever a segment can be proven to match no rows without scanning it. Use {@link #forSpec(CursorBuildSpec)}
+ * to produce an empty cursor matching the preferred ordering of the {@link CursorBuildSpec}.
  */
 public final class EmptyCursorHolder implements CursorHolder
 {
-  public static final EmptyCursorHolder INSTANCE = new EmptyCursorHolder();
+  private static final EmptyCursorHolder NO_ORDER = new EmptyCursorHolder(Collections.emptyList());
+  private static final EmptyCursorHolder TIME_ASCENDING = new EmptyCursorHolder(Cursors.ascendingTimeOrder());
+  private static final EmptyCursorHolder TIME_DESCENDING = new EmptyCursorHolder(Cursors.descendingTimeOrder());
 
   private static final ColumnSelectorFactory NIL_SELECTOR_FACTORY = new AllNullColumnSelectorFactory();
 
-  private EmptyCursorHolder()
+  /**
+   * An empty holder that advertises the spec's preferred ordering. A cursor with no rows trivially satisfies any
+   * ordering, so it can honestly claim whatever the query asked for. The two {@code __time} directions reuse cached
+   * singletons (the common case); any other non-empty preferred ordering gets a fresh instance, and an empty preferred
+   * ordering yields the unordered shared instance.
+   */
+  public static EmptyCursorHolder forSpec(CursorBuildSpec spec)
   {
+    final List<OrderBy> preferredOrdering = spec.getPreferredOrdering();
+    final Order timeOrder = Cursors.getTimeOrdering(preferredOrdering);
+    return switch (timeOrder) {
+      case ASCENDING -> TIME_ASCENDING;
+      case DESCENDING -> TIME_DESCENDING;
+      default -> preferredOrdering.isEmpty() ? NO_ORDER : new EmptyCursorHolder(preferredOrdering);
+    };
+  }
+
+  private final List<OrderBy> ordering;
+
+  private EmptyCursorHolder(List<OrderBy> ordering)
+  {
+    this.ordering = ordering;
   }
 
   @Override
@@ -211,6 +235,6 @@ public final class EmptyCursorHolder implements CursorHolder
   @Override
   public List<OrderBy> getOrdering()
   {
-    return Collections.emptyList();
+    return ordering;
   }
 }

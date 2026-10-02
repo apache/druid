@@ -20,21 +20,29 @@
 package org.apache.druid.segment.projections;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.RowIdSupplier;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
 
@@ -45,20 +53,31 @@ import java.util.function.LongSupplier;
  * inner selector <em>per group</em> for each requested column and, on every access, dispatches to whichever group is
  * currently winning the merge (which changes per <em>row</em>).
  *
+ * <p>Clustering columns are handled directly rather than dispatched as they are constant within a group, so this
+ * factory returns the winning group's clustering value as a per-group constant. Non-clustering columns dispatch to the
+ * winning group's selector. A clustering column whose name is also a query virtual column's output is NOT served as the
+ * constant: it dispatches to the winning group (whose factory resolves the virtual column), so a shadowing VC observes
+ * the computed value rather than the constant. Names remapped away (a query VC equivalent to a materialized column)
+ * never reach this factory: the enclosing {@code RemapColumnSelectorFactory} rewrites them to their materialized
+ * target first.
+ *
  * <p>Because the merge interleaves groups row-by-row, per-group-local dictionary ids are never stable across the
- * merged stream, so {@link #getColumnCapabilities} strips dictionary encoding for every column (forcing value-based
- * grouping, correct across groups) exactly as {@link ClusteringColumnSelectorFactory} does for non-clustering columns.
- * The row id is minted from the merge's output-row counter rather than any delegate's, since the merge emits exactly
- * one output row per advance.
+ * merged stream, so {@link #getColumnCapabilities} advertises non-dictionary-encoded for every column (forcing
+ * value-based grouping, correct across groups) exactly as {@link ClusteringColumnSelectorFactory} does. The row id is
+ * set from the merge's output-row counter rather than any delegate's, since the merge emits exactly one output row
+ * per advance.
  */
 public class MergingColumnSelectorFactory implements ColumnSelectorFactory
 {
   // Per-group factories, indexed by group. Entries may be null for groups whose cursor was null/absent; such groups
   // never win the merge, so their slots are never dispatched to.
   private final ColumnSelectorFactory[] groupFactories;
+  private final RowSignature clusteringColumns;
+  private final List<Object[]> clusteringValuesByGroup;
+  private final VirtualColumns queryVirtualColumns;
   // Index of the group currently winning the merge (the row being exposed). Valid while the cursor is not done.
   private final IntSupplier currentGroup;
-  // First non-null group factory; a valid stand-in for every group's capabilities (see getColumnCapabilities).
+  // First non-null group factory; a valid stand-in for every group's non-clustering capabilities (schema-homogeneous).
   @Nullable
   private final ColumnSelectorFactory representative;
   // Row id minted from the merge's output-row counter (one per emitted row), forwarded to callers for caching.
@@ -66,14 +85,32 @@ public class MergingColumnSelectorFactory implements ColumnSelectorFactory
 
   public MergingColumnSelectorFactory(
       ColumnSelectorFactory[] groupFactories,
+      RowSignature clusteringColumns,
+      List<Object[]> clusteringValuesByGroup,
+      VirtualColumns queryVirtualColumns,
       IntSupplier currentGroup,
       LongSupplier currentRowId
   )
   {
     this.groupFactories = groupFactories;
+    this.clusteringColumns = clusteringColumns;
+    this.clusteringValuesByGroup = clusteringValuesByGroup;
+    this.queryVirtualColumns = queryVirtualColumns;
     this.currentGroup = currentGroup;
     this.representative = firstNonNull(groupFactories);
     this.rowIdSupplier = currentRowId::getAsLong;
+  }
+
+  /**
+   * Index of {@code name} in the clustering columns when it should be served as this group's clustering constant, or
+   * {@code -1} otherwise. A clustering column shadowed by a query virtual column of the same output name is NOT served
+   * as the constant (returns {@code -1}); it dispatches to the winning group so the computed value wins. Mirrors
+   * {@link ClusteringColumnSelectorFactory}'s {@code servesClusteringConstant}.
+   */
+  private int clusteringConstantIndex(String name)
+  {
+    final int idx = clusteringColumns.indexOf(name);
+    return idx >= 0 && !queryVirtualColumns.exists(name) ? idx : -1;
   }
 
   @Nullable
@@ -109,9 +146,17 @@ public class MergingColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
+    final int clusteringIdx = clusteringConstantIndex(dimensionSpec.getDimension());
     final DimensionSelector[] perGroup = new DimensionSelector[groupFactories.length];
     for (int i = 0; i < groupFactories.length; i++) {
-      if (groupFactories[i] != null) {
+      if (clusteringIdx >= 0) {
+        // Clustering column: the winning group's constant value, decorated with any extraction fn.
+        final Object value = clusteringValuesByGroup.get(i)[clusteringIdx];
+        perGroup[i] = DimensionSelector.constant(
+            value == null ? null : String.valueOf(value),
+            dimensionSpec.getExtractionFn()
+        );
+      } else if (groupFactories[i] != null) {
         perGroup[i] = groupFactories[i].makeDimensionSelector(dimensionSpec);
       }
     }
@@ -121,19 +166,93 @@ public class MergingColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnValueSelector makeColumnValueSelector(String columnName)
   {
+    final int clusteringIdx = clusteringConstantIndex(columnName);
     final ColumnValueSelector[] perGroup = new ColumnValueSelector[groupFactories.length];
-    for (int i = 0; i < groupFactories.length; i++) {
-      if (groupFactories[i] != null) {
-        perGroup[i] = groupFactories[i].makeColumnValueSelector(columnName);
+    if (clusteringIdx >= 0) {
+      // Clustering column: the winning group's constant value, as a typed value selector.
+      final ExpressionType type =
+          ExpressionType.fromColumnTypeStrict(clusteringColumns.getColumnType(clusteringIdx).orElseThrow());
+      for (int i = 0; i < groupFactories.length; i++) {
+        perGroup[i] = constantClusteringValueSelector(type, clusteringValuesByGroup.get(i)[clusteringIdx]);
+      }
+    } else {
+      for (int i = 0; i < groupFactories.length; i++) {
+        if (groupFactories[i] != null) {
+          perGroup[i] = groupFactories[i].makeColumnValueSelector(columnName);
+        }
       }
     }
     return new MergingColumnValueSelector(perGroup, columnName);
+  }
+
+  /**
+   * A constant {@link ColumnValueSelector} for a clustering column's per-group value, unwrapping the {@link ExprEval}
+   * so {@code getObject()} yields the raw typed value (matching an ordinary column selector).
+   */
+  private static ColumnValueSelector<?> constantClusteringValueSelector(ExpressionType type, @Nullable Object value)
+  {
+    final ConstantExprEvalSelector eval = new ConstantExprEvalSelector(ExprEval.ofType(type, value));
+    return new ColumnValueSelector<>()
+    {
+      @Override
+      public double getDouble()
+      {
+        return eval.getDouble();
+      }
+
+      @Override
+      public float getFloat()
+      {
+        return eval.getFloat();
+      }
+
+      @Override
+      public long getLong()
+      {
+        return eval.getLong();
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        return eval.isNull();
+      }
+
+      @Nullable
+      @Override
+      public Object getObject()
+      {
+        return eval.getObject().value();
+      }
+
+      @Override
+      public Class<?> classOfObject()
+      {
+        return Object.class;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        eval.inspectRuntimeShape(inspector);
+      }
+    };
   }
 
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
+    final int clusteringIdx = clusteringConstantIndex(column);
+    if (clusteringIdx >= 0) {
+      // Clustering columns are exposed as per-group constants; report simple type-based capabilities (never
+      // dictionary-encoded across the merge), exactly as ClusteringColumnSelectorFactory does.
+      final ColumnType type = clusteringColumns.getColumnType(clusteringIdx).orElseThrow();
+      if (type.is(ValueType.STRING)) {
+        return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
+      }
+      return ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(type);
+    }
     if (representative == null) {
       return null;
     }

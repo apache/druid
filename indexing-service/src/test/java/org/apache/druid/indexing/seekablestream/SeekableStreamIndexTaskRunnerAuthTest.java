@@ -50,10 +50,9 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -80,10 +79,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
    */
   private TestSeekableStreamIndexTaskRunner taskRunner;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setUp()
   {
     // Create an AuthorizerMapper that only allows access to a Datasource resource
@@ -230,8 +226,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     // Verify that no other user can access
     HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_READ, "POST");
     replay(blockedRequest);
-    expectedException.expect(ForbiddenException.class);
-    method.accept(blockedRequest);
+    Assertions.assertThrows(ForbiddenException.class, () -> method.accept(blockedRequest));
   }
 
   private void verifyOnlyDatasourceReadUserCanAccess(
@@ -246,8 +241,7 @@ public class SeekableStreamIndexTaskRunnerAuthTest
     // Verify that no other user can access
     HttpServletRequest blockedRequest = createRequest(Users.DATASOURCE_WRITE, "GET");
     replay(blockedRequest);
-    expectedException.expect(ForbiddenException.class);
-    method.accept(blockedRequest);
+    Assertions.assertThrows(ForbiddenException.class, () -> method.accept(blockedRequest));
   }
 
   private HttpServletRequest createRequest(String username, String method)

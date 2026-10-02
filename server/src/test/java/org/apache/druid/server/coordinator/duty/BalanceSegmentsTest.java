@@ -40,10 +40,10 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Set;
@@ -69,7 +69,7 @@ public class BalanceSegmentsTest
   private DruidServer server3;
   private DruidServer server4;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     loadQueueManager = new SegmentLoadQueueManager(null, null);
@@ -97,7 +97,7 @@ public class BalanceSegmentsTest
     broadcastDatasources = Collections.singleton("datasourceBroadcast");
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     balancerStrategyExecutor.shutdownNow();
@@ -118,7 +118,7 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
     long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
                       + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
-    Assert.assertEquals(2L, totalMoved);
+    Assertions.assertEquals(2L, totalMoved);
   }
 
   @Test
@@ -138,9 +138,9 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
 
     // Verify that either segment3 or segment4 is chosen for move
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", segment3.getDataSource()));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.MOVED, "normal", segment3.getDataSource()));
     DataSegment movingSegment = holder3.getPeon().getSegmentsToLoad().iterator().next();
-    Assert.assertEquals(segment3.getDataSource(), movingSegment.getDataSource());
+    Assertions.assertEquals(segment3.getDataSource(), movingSegment.getDataSource());
   }
 
   @Test
@@ -164,8 +164,8 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
     long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
                       + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
-    Assert.assertEquals(2L, totalMoved);
-    Assert.assertEquals(2, serverHolder2.getPeon().getSegmentsToLoad().size());
+    Assertions.assertEquals(2L, totalMoved);
+    Assertions.assertEquals(2, serverHolder2.getPeon().getSegmentsToLoad().size());
   }
 
   /**
@@ -184,7 +184,7 @@ public class BalanceSegmentsTest
             .build();
 
     CoordinatorRunStats stats = runBalancer(params);
-    Assert.assertFalse(stats.hasStat(Stats.Segments.MOVED));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.MOVED));
   }
 
   @Test
@@ -204,8 +204,8 @@ public class BalanceSegmentsTest
         .build();
 
     runBalancer(params);
-    Assert.assertEquals(0, decommissioningServer.getPeon().getSegmentsToLoad().size());
-    Assert.assertEquals(3, activeServer.getPeon().getSegmentsToLoad().size());
+    Assertions.assertEquals(0, decommissioningServer.getPeon().getSegmentsToLoad().size());
+    Assertions.assertEquals(3, activeServer.getPeon().getSegmentsToLoad().size());
   }
 
   @Test
@@ -228,7 +228,7 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
 
     // max to move is 5, all segments on server 1, but only expect to move 1 to server 2 since max node load queue is 1
-    Assert.assertEquals(maxSegmentsInQueue, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
+    Assertions.assertEquals(maxSegmentsInQueue, stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1"));
   }
 
   @Test
@@ -241,7 +241,7 @@ public class BalanceSegmentsTest
     ).build();
 
     CoordinatorRunStats stats = runBalancer(params);
-    Assert.assertTrue(stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1") > 0);
+    Assertions.assertTrue(stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1") > 0);
   }
 
   @Test
@@ -256,7 +256,7 @@ public class BalanceSegmentsTest
     ).build();
 
     CoordinatorRunStats stats = runBalancer(params);
-    Assert.assertTrue(stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1") > 0);
+    Assertions.assertTrue(stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1") > 0);
   }
 
   @Test
@@ -282,8 +282,8 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
     long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
                       + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
-    Assert.assertEquals(1L, totalMoved);
-    Assert.assertEquals(1, holder3.getPeon().getSegmentsToLoad().size());
+    Assertions.assertEquals(1L, totalMoved);
+    Assertions.assertEquals(1, holder3.getPeon().getSegmentsToLoad().size());
   }
 
   @Test
@@ -307,14 +307,14 @@ public class BalanceSegmentsTest
     CoordinatorRunStats stats = runBalancer(params);
     long totalMoved = stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource1")
                       + stats.getSegmentStat(Stats.Segments.MOVED, "normal", "datasource2");
-    Assert.assertEquals(2L, totalMoved);
+    Assertions.assertEquals(2L, totalMoved);
   }
 
   private CoordinatorRunStats runBalancer(DruidCoordinatorRuntimeParams params)
   {
     params = new BalanceSegments(Duration.standardMinutes(1)).run(params);
     if (params == null) {
-      Assert.fail("BalanceSegments duty returned null params");
+      Assertions.fail("BalanceSegments duty returned null params");
       return new CoordinatorRunStats();
     } else {
       return params.getCoordinatorStats();

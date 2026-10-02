@@ -30,11 +30,13 @@ import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.DefaultPasswordProvider;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.net.URI;
@@ -42,7 +44,6 @@ import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Map;
 
-import static org.junit.Assert.assertThrows;
 
 public class ExternalTableTest extends BaseExternTableTest
 {
@@ -56,7 +57,7 @@ public class ExternalTableTest extends BaseExternTableTest
     // Empty table: not valid
     TableMetadata table = TableBuilder.external("foo").build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -67,7 +68,7 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputSource(ImmutableMap.of())
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -78,7 +79,7 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputSource(ImmutableMap.of("type", "unknown"))
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -102,7 +103,7 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputFormat(ImmutableMap.of())
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -114,7 +115,7 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputFormat(ImmutableMap.of("type", "unknown"))
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -132,13 +133,35 @@ public class ExternalTableTest extends BaseExternTableTest
     resolved.validate();
   }
 
+  @Test
+  public void testValidateUnrecognizedColumnType()
+  {
+    // A declared column type must parse to a Druid type: an unrecognized type would otherwise silently become
+    // STRING when the columns are converted to the input row signature.
+    CsvInputFormat format = new CsvInputFormat(
+        Collections.singletonList("a"), ";", false, false, 0, null);
+    for (String badType : new String[]{"FOO", "COMPLEX<json"}) {
+      TableMetadata table = TableBuilder.external("foo")
+          .inputSource(toMap(new InlineInputSource("a\n")))
+          .inputFormat(formatToMap(format))
+          .column("a", badType)
+          .build();
+      ResolvedTable resolved = registry.resolve(table.spec());
+      DruidException e = Assertions.assertThrows(DruidException.class, () -> resolved.validate());
+      Assertions.assertTrue(
+          e.getMessage().contains("Column [a] has an unrecognized type [" + badType + "]"),
+          "expected unrecognized-type error for [" + badType + "] but got: " + e.getMessage()
+      );
+    }
+  }
+
   /**
    * Test case for multiple of the {@code ext.md} examples. To use this, enable the
    * test, run it, then copy the JSON from the console. The examples pull out bits
    * and pieces in multiple places.
    */
   @Test
-  @Ignore
+  @Disabled
   public void wikipediaDocExample()
   {
     JsonInputFormat format = new JsonInputFormat(null, null, true, true, false);
@@ -162,7 +185,7 @@ public class ExternalTableTest extends BaseExternTableTest
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void httpDocExample() throws URISyntaxException
   {
     HttpInputSource inputSource = new HttpInputSource(
@@ -188,7 +211,7 @@ public class ExternalTableTest extends BaseExternTableTest
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void httpConnDocExample() throws URISyntaxException
   {
     HttpInputSource inputSource = new HttpInputSource(
@@ -207,7 +230,7 @@ public class ExternalTableTest extends BaseExternTableTest
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void localDocExample()
   {
     Map<String, Object> sourceMap = ImmutableMap.of(

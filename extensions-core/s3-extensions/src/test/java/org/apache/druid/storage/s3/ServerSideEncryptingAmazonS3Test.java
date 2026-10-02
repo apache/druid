@@ -19,14 +19,16 @@
 
 package org.apache.druid.storage.s3;
 
+import org.apache.druid.common.aws.AWSClientConfig;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.retries.api.RetryStrategy;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Grant;
@@ -41,19 +43,22 @@ import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 
 public class ServerSideEncryptingAmazonS3Test
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private S3Client mockS3Client;
   private ServerSideEncryption mockServerSideEncryption;
   private S3TransferConfig mockTransferConfig;
 
-  @Before
+
+  @BeforeEach
   public void setup()
   {
     mockS3Client = EasyMock.createMock(S3Client.class);
@@ -80,15 +85,15 @@ public class ServerSideEncryptingAmazonS3Test
     transferManagerField.setAccessible(true);
     Object transferManager = transferManagerField.get(s3);
 
-    Assert.assertNull("TransferManager should be null when no async client provided", transferManager);
-    Assert.assertNotNull(s3);
-    Assert.assertEquals(mockS3Client, s3.getS3Client());
+    Assertions.assertNull(transferManager, "TransferManager should be null when no async client provided");
+    Assertions.assertNotNull(s3);
+    Assertions.assertEquals(mockS3Client, s3.getS3Client());
   }
 
   @Test
   public void testUpload() throws IOException
   {
-    File testFile = temporaryFolder.newFile("test-upload.txt");
+    File testFile = File.createTempFile("test-upload", ".txt", temporaryFolder);
 
     PutObjectResponse mockResponse = PutObjectResponse.builder().build();
 
@@ -121,7 +126,7 @@ public class ServerSideEncryptingAmazonS3Test
   @Test
   public void testUpload_WithGrantFullControlHeaderFormatted() throws IOException
   {
-    final File testFile = temporaryFolder.newFile("test-upload-acl.txt");
+    final File testFile = File.createTempFile("test-upload-acl", ".txt", temporaryFolder);
     PutObjectResponse mockResponse = PutObjectResponse.builder().build();
 
     // Set up transfer config to return false for useTransferManager
@@ -149,7 +154,7 @@ public class ServerSideEncryptingAmazonS3Test
     );
     s3.upload("bucket", "key", testFile, grant);
 
-    Assert.assertEquals("id=\"canonical-id\"", requestCapture.getValue().grantFullControl());
+    Assertions.assertEquals("id=\"canonical-id\"", requestCapture.getValue().grantFullControl());
     EasyMock.verify(mockServerSideEncryption);
     EasyMock.verify(mockS3Client);
   }
@@ -157,7 +162,7 @@ public class ServerSideEncryptingAmazonS3Test
   @Test
   public void testPutObjectWithFile() throws IOException
   {
-    File testFile = temporaryFolder.newFile("test-put-object.txt");
+    File testFile = File.createTempFile("test-put-object", ".txt", temporaryFolder);
 
     PutObjectResponse mockResponse = PutObjectResponse.builder().build();
 
@@ -182,7 +187,7 @@ public class ServerSideEncryptingAmazonS3Test
     );
     PutObjectResponse response = s3.putObject("bucket", "key", testFile);
 
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
     EasyMock.verify(mockServerSideEncryption);
     EasyMock.verify(mockS3Client);
   }
@@ -208,8 +213,11 @@ public class ServerSideEncryptingAmazonS3Test
     transferManagerField.setAccessible(true);
     Object transferManager = transferManagerField.get(s3);
 
-    Assert.assertNotNull("TransferManager should be created when async client is provided", transferManager);
-    Assert.assertTrue("TransferManager should be S3TransferManager instance", transferManager instanceof S3TransferManager);
+    Assertions.assertNotNull(transferManager, "TransferManager should be created when async client is provided");
+    Assertions.assertTrue(
+        transferManager instanceof S3TransferManager,
+        "TransferManager should be S3TransferManager instance"
+    );
   }
 
   @Test
@@ -233,14 +241,12 @@ public class ServerSideEncryptingAmazonS3Test
     transferManagerField.setAccessible(true);
     Object transferManager = transferManagerField.get(s3);
 
-    Assert.assertNull("TransferManager should be null when disabled", transferManager);
+    Assertions.assertNull(transferManager, "TransferManager should be null when disabled");
   }
 
   @Test
-  public void testBuilder() throws IOException
+  public void testBuilder()
   {
-    File testFile = temporaryFolder.newFile("test-builder.txt");
-
     S3Client builtClient = EasyMock.createMock(S3Client.class);
     EasyMock.replay(builtClient);
 
@@ -250,8 +256,37 @@ public class ServerSideEncryptingAmazonS3Test
 
     ServerSideEncryptingAmazonS3 s3 = builder.build();
 
-    Assert.assertNotNull(s3);
-    Assert.assertEquals(builtClient, s3.getS3Client());
+    Assertions.assertNotNull(s3);
+    Assertions.assertEquals(builtClient, s3.getS3Client());
+  }
+
+  @Test
+  public void testEachClientGetsItsOwnRetryStrategy()
+  {
+    final List<RetryStrategy> issued = new ArrayList<>();
+    final AWSClientConfig clientConfig = new AWSClientConfig()
+    {
+      @Override
+      public RetryStrategy getRetryStrategy()
+      {
+        final RetryStrategy strategy = super.getRetryStrategy();
+        issued.add(strategy);
+        return strategy;
+      }
+    };
+
+    ServerSideEncryptingAmazonS3.builder(
+        AnonymousCredentialsProvider.create(),
+        new S3StorageConfig(new NoopServerSideEncryption(), new S3TransferConfig()),
+        null,
+        null,
+        clientConfig,
+        null,
+        null
+    );
+
+    Assertions.assertEquals(2, issued.size(), "one strategy per client, sync and async");
+    Assertions.assertNotSame(issued.get(0), issued.get(1));
   }
 
   @Test
@@ -273,21 +308,21 @@ public class ServerSideEncryptingAmazonS3Test
 
     ServerSideEncryptingAmazonS3 s3 = builder.build();
 
-    Assert.assertNotNull(s3);
-    Assert.assertEquals(builtClient, s3.getS3Client());
+    Assertions.assertNotNull(s3);
+    Assertions.assertEquals(builtClient, s3.getS3Client());
 
     // Verify transfer manager was created
     Field transferManagerField = ServerSideEncryptingAmazonS3.class.getDeclaredField("transferManager");
     transferManagerField.setAccessible(true);
     Object transferManager = transferManagerField.get(s3);
 
-    Assert.assertNotNull("TransferManager should be created with async client", transferManager);
+    Assertions.assertNotNull(transferManager, "TransferManager should be created with async client");
   }
 
   @Test
   public void testUpload_UsesTransferManagerWhenAvailable() throws IOException, NoSuchFieldException, IllegalAccessException
   {
-    File testFile = temporaryFolder.newFile("test-async-upload.txt");
+    File testFile = File.createTempFile("test-async-upload", ".txt", temporaryFolder);
 
     // Set up transfer config to return true for useTransferManager
     EasyMock.expect(mockTransferConfig.isUseTransferManager()).andReturn(true).anyTimes();
@@ -343,15 +378,15 @@ public class ServerSideEncryptingAmazonS3Test
 
     // Verify the upload request has correct bucket and key
     UploadFileRequest capturedRequest = uploadRequestCapture.getValue();
-    Assert.assertEquals("test-bucket", capturedRequest.putObjectRequest().bucket());
-    Assert.assertEquals("test-key", capturedRequest.putObjectRequest().key());
-    Assert.assertEquals(testFile.toPath(), capturedRequest.source());
+    Assertions.assertEquals("test-bucket", capturedRequest.putObjectRequest().bucket());
+    Assertions.assertEquals("test-key", capturedRequest.putObjectRequest().key());
+    Assertions.assertEquals(testFile.toPath(), capturedRequest.source());
   }
 
   @Test
   public void testUpload_UsesTransferManagerWithAclGrant() throws IOException, NoSuchFieldException, IllegalAccessException
   {
-    File testFile = temporaryFolder.newFile("test-async-upload-acl.txt");
+    File testFile = File.createTempFile("test-async-upload-acl", ".txt", temporaryFolder);
 
     // Set up transfer config
     EasyMock.expect(mockTransferConfig.isUseTransferManager()).andReturn(true).anyTimes();
@@ -403,6 +438,6 @@ public class ServerSideEncryptingAmazonS3Test
 
     // Verify the ACL grant was applied
     UploadFileRequest capturedRequest = uploadRequestCapture.getValue();
-    Assert.assertEquals("id=\"test-canonical-id\"", capturedRequest.putObjectRequest().grantFullControl());
+    Assertions.assertEquals("id=\"test-canonical-id\"", capturedRequest.putObjectRequest().grantFullControl());
   }
 }

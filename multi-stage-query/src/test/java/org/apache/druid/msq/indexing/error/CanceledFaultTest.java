@@ -21,8 +21,8 @@ package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CanceledFaultTest
 {
@@ -33,7 +33,7 @@ public class CanceledFaultTest
   {
     String serde = "{\"errorCode\":\"Canceled\",\"errorMessage\":\"Query canceled by user or by task shutdown.\"}";
     CanceledFault fault = jsonMapper.readValue(serde, CanceledFault.class);
-    Assert.assertEquals(CanceledFault.unknown(), fault);
+    Assertions.assertEquals(CanceledFault.unknown(), fault);
   }
 
   @Test
@@ -41,6 +41,6 @@ public class CanceledFaultTest
   {
     String serde = "{\"errorCode\":\"Canceled\",\"reason\":\"FUTURE_REASON\",\"errorMessage\":\"Query canceled due to [mysterious future reason].\"}";
     CanceledFault fault = jsonMapper.readValue(serde, CanceledFault.class);
-    Assert.assertEquals(CanceledFault.unknown(), fault);
+    Assertions.assertEquals(CanceledFault.unknown(), fault);
   }
 }

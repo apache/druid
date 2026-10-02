@@ -22,8 +22,8 @@ package org.apache.druid.rpc;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 
@@ -54,12 +54,12 @@ public class FixedServiceLocatorTest
   @Test
   public void test_constructor_rejectsNull()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new FixedServiceLocator((ServiceLocation) null)
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         NullPointerException.class,
         () -> new FixedServiceLocator((ServiceLocations) null)
     );
@@ -71,7 +71,7 @@ public class FixedServiceLocatorTest
     FixedServiceLocator serviceLocator =
         new FixedServiceLocator(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ServiceLocations.forLocation(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1)),
         serviceLocator.locate().get()
     );
@@ -85,7 +85,7 @@ public class FixedServiceLocatorTest
 
     serviceLocator.close();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ServiceLocations.closed(),
         serviceLocator.locate().get()
     );
@@ -102,6 +102,6 @@ public class FixedServiceLocatorTest
     );
 
     FixedServiceLocator serviceLocator = new FixedServiceLocator(locations);
-    Assert.assertEquals(locations, serviceLocator.locate().get());
+    Assertions.assertEquals(locations, serviceLocator.locate().get());
   }
 }

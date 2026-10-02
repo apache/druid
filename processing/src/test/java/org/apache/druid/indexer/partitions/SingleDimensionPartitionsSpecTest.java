@@ -21,10 +21,8 @@ package org.apache.druid.indexer.partitions;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -44,15 +42,12 @@ public class SingleDimensionPartitionsSpecTest
   );
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   @Test
   public void serde()
   {
     String json = serialize(SPEC);
     SingleDimensionPartitionsSpec spec = deserialize(json);
-    Assert.assertEquals(SPEC, spec);
+    Assertions.assertEquals(SPEC, spec);
   }
 
   @Test
@@ -66,7 +61,7 @@ public class SingleDimensionPartitionsSpecTest
                         + ",\"assumeGrouped\":" + ASSUME_GROUPED
                         + "}";
     SingleDimensionPartitionsSpec spec = deserialize(serialized);
-    Assert.assertEquals(SPEC, spec);
+    Assertions.assertEquals(SPEC, spec);
   }
 
   @Test
@@ -85,7 +80,7 @@ public class SingleDimensionPartitionsSpecTest
       deserialize(json);
     }
     catch (RuntimeException e) {
-      Assert.assertTrue(e.getMessage().contains(
+      Assertions.assertTrue(e.getMessage().contains(
           "UnrecognizedPropertyException: Unrecognized field \"partitionDimensions\""
       ));
     }
@@ -113,11 +108,11 @@ public class SingleDimensionPartitionsSpecTest
   {
     Map<String, Object> jsonMap = spec.getSerializableObject();
 
-    Assert.assertEquals(4, jsonMap.size());
-    Assert.assertTrue(jsonMap.containsKey(PartitionsSpec.MAX_ROWS_PER_SEGMENT));
-    Assert.assertTrue(jsonMap.containsKey(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT));
-    Assert.assertTrue(jsonMap.containsKey(DimensionBasedPartitionsSpec.ASSUME_GROUPED));
-    Assert.assertTrue(jsonMap.containsKey("partitionDimension"));
+    Assertions.assertEquals(4, jsonMap.size());
+    Assertions.assertTrue(jsonMap.containsKey(PartitionsSpec.MAX_ROWS_PER_SEGMENT));
+    Assertions.assertTrue(jsonMap.containsKey(DimensionBasedPartitionsSpec.TARGET_ROWS_PER_SEGMENT));
+    Assertions.assertTrue(jsonMap.containsKey(DimensionBasedPartitionsSpec.ASSUME_GROUPED));
+    Assertions.assertTrue(jsonMap.containsKey("partitionDimension"));
   }
 
   @Test
@@ -223,7 +218,7 @@ public class SingleDimensionPartitionsSpecTest
     SingleDimensionPartitionsSpec spec = new Tester()
         .targetRowsPerSegment(123)
         .build();
-    Assert.assertEquals(184, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(184, spec.getMaxRowsPerSegment().intValue());
   }
 
   @Test
@@ -232,7 +227,7 @@ public class SingleDimensionPartitionsSpecTest
     SingleDimensionPartitionsSpec spec = new Tester()
         .targetPartitionSize(123)
         .build();
-    Assert.assertEquals(Integer.valueOf(184), spec.getMaxRowsPerSegment());
+    Assertions.assertEquals(Integer.valueOf(184), spec.getMaxRowsPerSegment());
   }
 
   @Test
@@ -241,7 +236,7 @@ public class SingleDimensionPartitionsSpecTest
     SingleDimensionPartitionsSpec spec = new Tester()
         .maxRowsPerSegment(123)
         .build();
-    Assert.assertEquals(123, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(123, spec.getMaxRowsPerSegment().intValue());
   }
 
   @Test
@@ -250,7 +245,7 @@ public class SingleDimensionPartitionsSpecTest
     SingleDimensionPartitionsSpec spec = new Tester()
         .maxPartitionSize(123)
         .build();
-    Assert.assertEquals(123, spec.getMaxRowsPerSegment().intValue());
+    Assertions.assertEquals(123, spec.getMaxRowsPerSegment().intValue());
   }
 
   @Test
@@ -260,7 +255,7 @@ public class SingleDimensionPartitionsSpecTest
         .targetPartitionSize(1)
         .partitionDimension(null)
         .build();
-    Assert.assertEquals(Collections.emptyList(), spec.getPartitionDimensions());
+    Assertions.assertEquals(Collections.emptyList(), spec.getPartitionDimensions());
   }
 
   @Test
@@ -271,7 +266,7 @@ public class SingleDimensionPartitionsSpecTest
         .targetPartitionSize(1)
         .partitionDimension(partitionDimension)
         .build();
-    Assert.assertEquals(Collections.singletonList(partitionDimension), spec.getPartitionDimensions());
+    Assertions.assertEquals(Collections.singletonList(partitionDimension), spec.getPartitionDimensions());
 
   }
 
@@ -295,7 +290,7 @@ public class SingleDimensionPartitionsSpecTest
     }
   }
 
-  private class Tester
+  private static class Tester
   {
     private Integer targetRowsPerSegment;
     private Integer maxRowsPerSegment;
@@ -335,9 +330,11 @@ public class SingleDimensionPartitionsSpecTest
 
     void testIllegalArgumentException(String exceptionExpectedMessage)
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage(exceptionExpectedMessage);
-      build();
+      IllegalArgumentException ex = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          this::build
+      );
+      Assertions.assertTrue(ex.getMessage().contains(exceptionExpectedMessage));
     }
 
     SingleDimensionPartitionsSpec build()

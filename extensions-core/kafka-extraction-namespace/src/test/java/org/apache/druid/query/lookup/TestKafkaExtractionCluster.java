@@ -40,23 +40,26 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.testcontainers.kafka.KafkaContainer;
 
 import javax.annotation.Nonnull;
+
+import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.assertThrows;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  *
@@ -67,8 +70,8 @@ public class TestKafkaExtractionCluster
   private static final String TOPIC_NAME = "testTopic";
   private static final Map<String, String> KAFKA_PROPERTIES = new HashMap<>();
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private final Closer closer = Closer.create();
 
@@ -88,7 +91,7 @@ public class TestKafkaExtractionCluster
                     StringUtils.toUtf8("abcdefg")));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     kafkaServer = new KafkaContainer(KAFKA_IMAGE);
@@ -134,8 +137,8 @@ public class TestKafkaExtractionCluster
         mapper.writeValueAsString(kafkaLookupExtractorFactory),
         LookupExtractorFactory.class
     );
-    Assert.assertEquals(kafkaLookupExtractorFactory.getKafkaTopic(), factory.getKafkaTopic());
-    Assert.assertEquals(kafkaLookupExtractorFactory.getKafkaProperties(), factory.getKafkaProperties());
+    Assertions.assertEquals(kafkaLookupExtractorFactory.getKafkaTopic(), factory.getKafkaTopic());
+    Assertions.assertEquals(kafkaLookupExtractorFactory.getKafkaProperties(), factory.getKafkaProperties());
     factory.start();
     closer.register(() -> factory.close());
     log.info("--------------------------- started rename manager ---------------------------");
@@ -158,7 +161,7 @@ public class TestKafkaExtractionCluster
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     closer.close();
@@ -201,7 +204,7 @@ public class TestKafkaExtractionCluster
         TOPIC_NAME,
         properties
     );
-    MatcherAssert.assertThat(
+    assertThat(
         assertThrows(KafkaException.class, factory::getConsumer),
         CoreMatchers.instanceOf(KafkaException.class)
     );
@@ -213,13 +216,14 @@ public class TestKafkaExtractionCluster
         TOPIC_NAME,
         properties
     );
-    MatcherAssert.assertThat(
+    assertThat(
         assertThrows(KafkaException.class, factory::getConsumer),
         CoreMatchers.instanceOf(KafkaException.class)
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testSimpleLookup() throws Exception
   {
     try (final Producer<byte[], byte[]> producer = new KafkaProducer(makeProducerProperties())) {
@@ -259,15 +263,16 @@ public class TestKafkaExtractionCluster
       }
 
       log.info("-------------------------     Checking baz bat     -------------------------------");
-      Assert.assertEquals("bat", factory.get().apply("baz"));
-      Assert.assertEquals(
+      Assertions.assertEquals("bat", factory.get().apply("baz"));
+      Assertions.assertEquals(
           Collections.singletonList("baz"),
           Lists.newArrayList(factory.get().unapplyAll(Collections.singleton("bat")))
       );
     }
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testLookupWithTombstone() throws Exception
   {
     try (final Producer<byte[], byte[]> producer = new KafkaProducer(makeProducerProperties())) {
@@ -311,7 +316,8 @@ public class TestKafkaExtractionCluster
     }
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testLookupWithInitTombstone() throws Exception
   {
     try (final Producer<byte[], byte[]> producer = new KafkaProducer(makeProducerProperties())) {
@@ -356,7 +362,7 @@ public class TestKafkaExtractionCluster
       }
     }
 
-    Assert.assertEquals("update check", expected, extractor.apply(key));
+    Assertions.assertEquals(expected, extractor.apply(key), "update check");
   }
 
   private void assertReverseUpdated(
@@ -371,6 +377,6 @@ public class TestKafkaExtractionCluster
       Thread.sleep(100);
     }
 
-    Assert.assertEquals("update check", expected, Lists.newArrayList(extractor.unapplyAll(Collections.singleton(key))));
+    Assertions.assertEquals(expected, Lists.newArrayList(extractor.unapplyAll(Collections.singleton(key))), "update check");
   }
 }

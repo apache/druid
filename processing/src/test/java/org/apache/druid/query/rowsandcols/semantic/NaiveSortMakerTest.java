@@ -26,12 +26,22 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.function.Function;
+import java.util.stream.Stream;
 
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class NaiveSortMakerTest extends SemanticTestBase
 {
+  public static Stream<Object[]> constructorFeeder()
+  {
+    return SemanticTestBase.parameterFeed();
+  }
+
   public NaiveSortMakerTest(
       String name,
       Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn

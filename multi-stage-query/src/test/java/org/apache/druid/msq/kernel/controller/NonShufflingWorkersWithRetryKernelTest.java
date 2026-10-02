@@ -21,8 +21,8 @@ package org.apache.druid.msq.kernel.controller;
 
 
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 
@@ -36,11 +36,11 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(2);
     controllerQueryKernelTester.init();
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
                       && controllerQueryKernelTester.createAndGetNewStageNumbers().contains(0));
-    Assert.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size() == 0);
+    Assertions.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size() == 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.NEW);
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
                       && controllerQueryKernelTester.createAndGetNewStageNumbers().contains(0));
   }
 
@@ -113,12 +113,12 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
     controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
 
 
   }
@@ -143,12 +143,12 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
     controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
   }
 
   @Test
@@ -158,8 +158,8 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.RESULTS_READY);
     controllerQueryKernelTester.init();
 
-    Assert.assertEquals(0, controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size());
-    Assert.assertEquals(0, controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size());
+    Assertions.assertEquals(0, controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size());
+    Assertions.assertEquals(0, controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size());
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
   }
@@ -172,8 +172,8 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.setupStage(0, ControllerStagePhase.FINISHED);
     controllerQueryKernelTester.init();
 
-    Assert.assertEquals(0, controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size());
-    Assert.assertEquals(0, controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size());
+    Assertions.assertEquals(0, controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size());
+    Assertions.assertEquals(0, controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size());
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.FINISHED);
 
@@ -186,12 +186,12 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     ControllerQueryKernelTester controllerQueryKernelTester = getSimpleQueryDefinition(3);
     controllerQueryKernelTester.init();
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
                       && controllerQueryKernelTester.createAndGetNewStageNumbers().contains(0));
-    Assert.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size() == 0);
-    Assert.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size() == 0);
+    Assertions.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(0, RETRIABLE_FAULT).size() == 0);
+    Assertions.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size() == 0);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.NEW);
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1
                       && controllerQueryKernelTester.createAndGetNewStageNumbers().contains(0));
   }
 
@@ -274,12 +274,12 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 1);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
     controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
 
 
   }
@@ -300,19 +300,19 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(0, 0);
     controllerQueryKernelTester.failWorkerAndAssertWorkOrderes(2, 0);
     // should be no op
-    Assert.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size() == 0);
+    Assertions.assertTrue(controllerQueryKernelTester.getRetriableWorkOrdersAndChangeState(1, RETRIABLE_FAULT).size() == 0);
 
 
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RETRYING);
     controllerQueryKernelTester.sendWorkOrdersForWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.READING_INPUT);
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 0);
 
     controllerQueryKernelTester.setResultsCompleteForStageAndWorkers(0, 0, 2);
     controllerQueryKernelTester.assertStagePhase(0, ControllerStagePhase.RESULTS_READY);
 
-    Assert.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
+    Assertions.assertTrue(controllerQueryKernelTester.createAndGetNewStageNumbers().size() == 1);
   }
 
 

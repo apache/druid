@@ -685,6 +685,8 @@ public class SegmentFileBuilderV10 implements SegmentFileBuilder
       this.file = file;
       this.bundle = bundle;
       this.maxSize = maxSize;
+      // The closer owns this stream for the lifetime of the writer and releases it in close().
+      // codeql[java/output-resource-leak]
       final FileOutputStream outStream = closer.register(new FileOutputStream(file));
       this.channel = closer.register(outStream.getChannel());
     }
