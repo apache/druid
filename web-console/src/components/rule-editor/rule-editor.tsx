@@ -130,7 +130,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
 
     return (
       <FormGroup>
-        <Button onClick={addTier} minimal icon={IconNames.PLUS} disabled={disabled}>
+        <Button onClick={addTier} variant="minimal" icon={IconNames.PLUS} disabled={disabled}>
           Add historical tier replication
         </Button>
       </FormGroup>
@@ -142,16 +142,16 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       <div className="title">
         <Button
           className="left"
-          minimal
-          rightIcon={isOpen ? IconNames.CARET_DOWN : IconNames.CARET_RIGHT}
+          variant="minimal"
+          endIcon={isOpen ? IconNames.CARET_DOWN : IconNames.CARET_RIGHT}
           onClick={() => setIsOpen(!isOpen)}
         >
           {RuleUtil.ruleToString(rule)}
         </Button>
         <div className="spacer" />
-        {moveUp && <Button minimal icon={IconNames.ARROW_UP} onClick={moveUp} />}
-        {moveDown && <Button minimal icon={IconNames.ARROW_DOWN} onClick={moveDown} />}
-        {onDelete && <Button minimal icon={IconNames.TRASH} onClick={onDelete} />}
+        {moveUp && <Button variant="minimal" icon={IconNames.ARROW_UP} onClick={moveUp} />}
+        {moveDown && <Button variant="minimal" icon={IconNames.ARROW_DOWN} onClick={moveDown} />}
+        {onDelete && <Button variant="minimal" icon={IconNames.TRASH} onClick={onDelete} />}
       </div>
 
       <Collapse isOpen={isOpen}>

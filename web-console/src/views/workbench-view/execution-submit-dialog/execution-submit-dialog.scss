@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
+@use '../../../variables' as *;
 
 .execution-submit-dialog {
   &.#{$bp-ns}-dialog {

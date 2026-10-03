@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
+import { render } from '@testing-library/react';
+
 import { DEFAULT_SERVER_QUERY_CONTEXT } from '../../../druid-models';
-import { shallow } from '../../../utils/shallow-renderer';
 
 import { MaxTasksButton } from './max-tasks-button';
 
 describe('MaxTasksButton', () => {
   it('matches snapshot', () => {
-    const comp = shallow(
+    const { container } = render(
       <MaxTasksButton
         clusterCapacity={6}
         queryContext={{}}
@@ -32,6 +33,6 @@ describe('MaxTasksButton', () => {
       />,
     );
 
-    expect(comp).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });
