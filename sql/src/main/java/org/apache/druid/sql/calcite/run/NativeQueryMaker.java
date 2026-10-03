@@ -27,7 +27,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -39,7 +38,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.planning.ExecutionVertex;
+import org.apache.druid.query.planning.RequireTimeConditionAnalyzer;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycle;
@@ -85,8 +84,7 @@ public class NativeQueryMaker implements QueryMaker
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      ExecutionVertex ev = ExecutionVertex.of(query);
-      if (Intervals.ONLY_ETERNITY.equals(ev.getEffectiveQuerySegmentSpec().getIntervals())) {
+      if (!RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query)) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
         );
