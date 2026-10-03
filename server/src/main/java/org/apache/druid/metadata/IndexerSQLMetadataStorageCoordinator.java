@@ -40,6 +40,14 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.overlord.ShareInboxBatch;
+import org.apache.druid.indexing.overlord.ShareInboxClaimRequest;
+import org.apache.druid.indexing.overlord.ShareInboxClaimResult;
+import org.apache.druid.indexing.overlord.ShareInboxCompletionRequest;
+import org.apache.druid.indexing.overlord.ShareInboxManifest;
+import org.apache.druid.indexing.overlord.ShareInboxRenewRequest;
+import org.apache.druid.indexing.overlord.ShareInboxRenewResult;
+import org.apache.druid.indexing.overlord.ShareInboxStageResult;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -76,13 +84,18 @@ import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
+import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -93,6 +106,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -150,6 +164,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
     connector.createSegmentTable();
     connector.createUpgradeSegmentsTable();
+    connector.createShareReceiptsTable();
+    connector.createShareInboxTable();
   }
 
   @Override
@@ -161,6 +177,590 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             (handle, status) -> handle.createQuery(sql).mapTo(String.class).list()
         )
     );
+  }
+
+  @Override
+  public ShareInboxStageResult stageShareInboxBatch(ShareInboxBatch batch)
+  {
+    return connector.retryTransaction(
+        (handle, status) -> {
+          try {
+            return stageShareInboxBatch(handle, batch);
+          }
+          catch (RuntimeException e) {
+            if (connector.isUniqueConstraintViolation(e)) {
+              throw new RetryTransactionException("Concurrent share inbox receipt update");
+            }
+            throw e;
+          }
+        },
+        SQLMetadataConnector.QUIET_RETRIES,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  @Override
+  public ShareInboxClaimResult claimShareInboxManifests(ShareInboxClaimRequest request)
+  {
+    return connector.retryTransaction(
+        (handle, status) -> claimShareInboxManifests(handle, request),
+        SQLMetadataConnector.QUIET_RETRIES,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  private ShareInboxClaimResult claimShareInboxManifests(Handle handle, ShareInboxClaimRequest request)
+  {
+    validateShareInboxGeneration(
+        handle,
+        request.getDataSource(),
+        request.getInboxId(),
+        request.getSpecFingerprint()
+    );
+    final DateTime now = DateTimes.nowUtc();
+    final String nowString = now.toString();
+    final String claimExpiresAt = now.plus(request.getClaimDurationMillis()).toString();
+    final List<ShareInboxCandidate> candidates = handle.createQuery(
+        StringUtils.format(
+            "SELECT manifest_id, object_size, record_count, claim_epoch FROM %s "
+            + "WHERE data_source = :dataSource AND inbox_id = :inboxId "
+            + "AND spec_fingerprint = :specFingerprint "
+            + "AND (state = 'STAGED' OR (state = 'CLAIMED' AND claim_expires_at <= :now)) "
+            + "ORDER BY created_date, manifest_id %s",
+            dbTables.getShareInboxTable(),
+            connector.limitClause(request.getMaxManifests())
+        )
+    )
+                                                               .bind("dataSource", request.getDataSource())
+                                                               .bind("inboxId", request.getInboxId())
+                                                               .bind("specFingerprint", request.getSpecFingerprint())
+                                                               .bind("now", nowString)
+                                                               .map(
+                                                                   (index, resultSet, context) ->
+                                                                       new ShareInboxCandidate(
+                                                                           resultSet.getString("manifest_id"),
+                                                                           resultSet.getLong("object_size"),
+                                                                           resultSet.getInt("record_count"),
+                                                                           resultSet.getLong("claim_epoch")
+                                                                       )
+                                                               )
+                                                               .list();
+
+    final List<ShareInboxManifest> claimed = new ArrayList<>();
+    long claimedBytes = 0;
+    int claimedRecords = 0;
+    for (ShareInboxCandidate candidate : candidates) {
+      if (claimedBytes + candidate.objectSize > request.getMaxBytes()
+          || claimedRecords + candidate.recordCount > request.getMaxRecords()) {
+        continue;
+      }
+      final long newEpoch = candidate.claimEpoch + 1;
+      final int updated = handle.createStatement(
+          StringUtils.format(
+              "UPDATE %s SET state = 'CLAIMED', claim_owner = :claimOwner, claim_epoch = :newEpoch, "
+              + "claim_expires_at = :claimExpiresAt, processing_attempts = processing_attempts + 1, "
+              + "updated_date = :updatedDate WHERE manifest_id = :manifestId AND claim_epoch = :oldEpoch "
+              + "AND (state = 'STAGED' OR (state = 'CLAIMED' AND claim_expires_at <= :now))",
+              dbTables.getShareInboxTable()
+          )
+      )
+                                .bind("claimOwner", request.getClaimOwner())
+                                .bind("newEpoch", newEpoch)
+                                .bind("claimExpiresAt", claimExpiresAt)
+                                .bind("updatedDate", nowString)
+                                .bind("manifestId", candidate.manifestId)
+                                .bind("oldEpoch", candidate.claimEpoch)
+                                .bind("now", nowString)
+                                .execute();
+      if (updated == 1) {
+        claimed.add(retrieveClaimedShareInboxManifest(handle, candidate.manifestId));
+        claimedBytes += candidate.objectSize;
+        claimedRecords += candidate.recordCount;
+      }
+    }
+    return new ShareInboxClaimResult(claimed);
+  }
+
+  @Override
+  public ShareInboxRenewResult renewShareInboxClaims(ShareInboxRenewRequest request)
+  {
+    return connector.retryTransaction(
+        (handle, status) -> renewShareInboxClaims(handle, request),
+        SQLMetadataConnector.QUIET_RETRIES,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    );
+  }
+
+  private ShareInboxRenewResult renewShareInboxClaims(Handle handle, ShareInboxRenewRequest request)
+  {
+    validateShareInboxGeneration(
+        handle,
+        request.getDataSource(),
+        request.getInboxId(),
+        request.getSpecFingerprint()
+    );
+    final DateTime now = DateTimes.nowUtc();
+    final String nowString = now.toString();
+    final String claimExpiresAt = now.plus(request.getClaimDurationMillis()).toString();
+    final List<String> renewed = new ArrayList<>();
+    for (Map.Entry<String, Long> claim : new TreeMap<>(request.getClaims()).entrySet()) {
+      final int updated = handle.createStatement(
+          StringUtils.format(
+              "UPDATE %s SET claim_expires_at = :claimExpiresAt, updated_date = :updatedDate "
+              + "WHERE manifest_id = :manifestId AND data_source = :dataSource AND inbox_id = :inboxId "
+              + "AND spec_fingerprint = :specFingerprint AND state = 'CLAIMED' "
+              + "AND claim_owner = :claimOwner AND claim_epoch = :claimEpoch AND claim_expires_at > :now",
+              dbTables.getShareInboxTable()
+          )
+      )
+                                .bind("claimExpiresAt", claimExpiresAt)
+                                .bind("updatedDate", nowString)
+                                .bind("manifestId", claim.getKey())
+                                .bind("dataSource", request.getDataSource())
+                                .bind("inboxId", request.getInboxId())
+                                .bind("specFingerprint", request.getSpecFingerprint())
+                                .bind("claimOwner", request.getClaimOwner())
+                                .bind("claimEpoch", claim.getValue())
+                                .bind("now", nowString)
+                                .execute();
+      if (updated == 1) {
+        renewed.add(claim.getKey());
+      }
+    }
+    return new ShareInboxRenewResult(renewed);
+  }
+
+  private ShareInboxCompletionCheck checkShareInboxCompletion(
+      SegmentMetadataTransaction transaction,
+      ShareInboxCompletionRequest request
+  )
+  {
+    final DateTime now = DateTimes.nowUtc();
+    int activeClaims = 0;
+    int completedClaims = 0;
+    for (Map.Entry<String, Long> claim : new TreeMap<>(request.getClaims()).entrySet()) {
+      final List<ShareInboxCompletionRow> rows = transaction.getHandle().createQuery(
+          StringUtils.format(
+              "SELECT state, claim_owner, claim_epoch, claim_expires_at, completion_id, completed_by_task "
+              + "FROM %s WHERE manifest_id = :manifestId AND data_source = :dataSource "
+              + "AND inbox_id = :inboxId AND spec_fingerprint = :specFingerprint",
+              dbTables.getShareInboxTable()
+          )
+      )
+                                                                  .bind("manifestId", claim.getKey())
+                                                                  .bind("dataSource", request.getDataSource())
+                                                                  .bind("inboxId", request.getInboxId())
+                                                                  .bind("specFingerprint", request.getSpecFingerprint())
+                                                                  .map(
+                                                                      (index, resultSet, context) ->
+                                                                          new ShareInboxCompletionRow(
+                                                                              resultSet.getString("state"),
+                                                                              resultSet.getString("claim_owner"),
+                                                                              resultSet.getLong("claim_epoch"),
+                                                                              resultSet.getString("claim_expires_at"),
+                                                                              resultSet.getString("completion_id"),
+                                                                              resultSet.getString("completed_by_task")
+                                                                          )
+                                                                  )
+                                                                  .list();
+      if (rows.size() != 1) {
+        return ShareInboxCompletionCheck.INVALID;
+      }
+      final ShareInboxCompletionRow row = rows.get(0);
+      if ("COMPLETE".equals(row.state)) {
+        if (!request.getCompletionId().equals(row.completionId)
+            || !request.getTaskId().equals(row.completedByTask)) {
+          return ShareInboxCompletionCheck.INVALID;
+        }
+        completedClaims++;
+      } else if ("CLAIMED".equals(row.state)
+                 && request.getTaskId().equals(row.claimOwner)
+                 && claim.getValue() == row.claimEpoch
+                 && row.claimExpiresAt != null
+                 && DateTimes.of(row.claimExpiresAt).isAfter(now)) {
+        activeClaims++;
+      } else {
+        return ShareInboxCompletionCheck.INVALID;
+      }
+    }
+    if (completedClaims == request.getClaims().size()) {
+      return ShareInboxCompletionCheck.ALREADY_COMPLETE;
+    }
+    return activeClaims == request.getClaims().size()
+           ? ShareInboxCompletionCheck.ACTIVE
+           : ShareInboxCompletionCheck.INVALID;
+  }
+
+  private void completeShareInbox(
+      SegmentMetadataTransaction transaction,
+      ShareInboxCompletionRequest request
+  )
+  {
+    final String now = DateTimes.nowUtc().toString();
+    for (Map.Entry<String, Long> claim : new TreeMap<>(request.getClaims()).entrySet()) {
+      final int updated = transaction.getHandle().createStatement(
+          StringUtils.format(
+              "UPDATE %s SET state = 'COMPLETE', completion_id = :completionId, "
+              + "completed_by_task = :taskId, completed_date = :completedDate, updated_date = :updatedDate "
+              + "WHERE manifest_id = :manifestId AND data_source = :dataSource AND inbox_id = :inboxId "
+              + "AND spec_fingerprint = :specFingerprint AND state = 'CLAIMED' "
+              + "AND claim_owner = :taskId AND claim_epoch = :claimEpoch AND claim_expires_at > :now",
+              dbTables.getShareInboxTable()
+          )
+      )
+                                                  .bind("completionId", request.getCompletionId())
+                                                  .bind("taskId", request.getTaskId())
+                                                  .bind("completedDate", now)
+                                                  .bind("updatedDate", now)
+                                                  .bind("manifestId", claim.getKey())
+                                                  .bind("dataSource", request.getDataSource())
+                                                  .bind("inboxId", request.getInboxId())
+                                                  .bind("specFingerprint", request.getSpecFingerprint())
+                                                  .bind("claimEpoch", claim.getValue())
+                                                  .bind("now", now)
+                                                  .execute();
+      if (updated != 1) {
+        throw new ISE("Share inbox claim[%s] was fenced during completion", claim.getKey());
+      }
+    }
+  }
+
+  private ShareInboxManifest retrieveClaimedShareInboxManifest(Handle handle, String manifestId)
+  {
+    return handle.createQuery(
+        StringUtils.format(
+            "SELECT manifest_id, data_source, inbox_id, group_id, cluster_id, topic_id, topic_name, partition_id, "
+            + "spec_fingerprint, object_path, object_hash, object_size, selected_offsets_bitmap, record_count, "
+            + "claim_owner, claim_epoch, claim_expires_at, processing_attempts FROM %s "
+            + "WHERE manifest_id = :manifestId AND state = 'CLAIMED'",
+            dbTables.getShareInboxTable()
+        )
+    )
+                 .bind("manifestId", manifestId)
+                 .map((index, resultSet, context) -> mapShareInboxManifest(resultSet))
+                 .first();
+  }
+
+  private static ShareInboxManifest mapShareInboxManifest(ResultSet resultSet) throws SQLException
+  {
+    return new ShareInboxManifest(
+        resultSet.getString("manifest_id"),
+        resultSet.getString("data_source"),
+        resultSet.getString("inbox_id"),
+        resultSet.getString("group_id"),
+        resultSet.getString("cluster_id"),
+        resultSet.getString("topic_id"),
+        resultSet.getString("topic_name"),
+        resultSet.getInt("partition_id"),
+        resultSet.getString("spec_fingerprint"),
+        resultSet.getString("object_path"),
+        resultSet.getString("object_hash"),
+        resultSet.getLong("object_size"),
+        ShareInboxOffsetCodec.decode(resultSet.getBytes("selected_offsets_bitmap")),
+        resultSet.getInt("record_count"),
+        resultSet.getString("claim_owner"),
+        resultSet.getLong("claim_epoch"),
+        DateTimes.of(resultSet.getString("claim_expires_at")),
+        resultSet.getInt("processing_attempts")
+    );
+  }
+
+  private void validateShareInboxGeneration(
+      Handle handle,
+      String dataSource,
+      String inboxId,
+      String specFingerprint
+  )
+  {
+    final List<String> fingerprints = handle.createQuery(
+        StringUtils.format(
+            "SELECT spec_fingerprint FROM %s WHERE data_source = :dataSource "
+            + "AND inbox_id = :inboxId AND partition_id = -1",
+            dbTables.getShareReceiptsTable()
+        )
+    )
+                                            .bind("dataSource", dataSource)
+                                            .bind("inboxId", inboxId)
+                                            .mapTo(String.class)
+                                            .list();
+    if (!fingerprints.isEmpty() && fingerprints.stream().anyMatch(value -> !value.equals(specFingerprint))) {
+      throw InvalidInput.exception("Share inbox[%s] has a different spec fingerprint", inboxId);
+    }
+  }
+
+  private ShareInboxStageResult stageShareInboxBatch(Handle handle, ShareInboxBatch batch)
+  {
+    final String now = DateTimes.nowUtc().toString();
+    ensureShareInboxGeneration(handle, batch, now);
+
+    final Map<Long, List<Long>> offsetsByPage = new TreeMap<>();
+    for (long offset : batch.getOffsets()) {
+      offsetsByPage.computeIfAbsent(
+          ShareInboxOffsetCodec.pageStart(offset, batch.getReceiptPageSize()),
+          ignored -> new ArrayList<>()
+      ).add(offset);
+    }
+
+    final List<Long> admittedOffsets = new ArrayList<>();
+    for (Map.Entry<Long, List<Long>> page : offsetsByPage.entrySet()) {
+      updateShareReceiptPage(handle, batch, page.getKey(), page.getValue(), admittedOffsets, now);
+    }
+    if (admittedOffsets.isEmpty()) {
+      return new ShareInboxStageResult(ShareInboxStageResult.Status.ALREADY_STAGED, List.of());
+    }
+
+    final long firstOffset = admittedOffsets.get(0);
+    final long lastOffset = admittedOffsets.get(admittedOffsets.size() - 1);
+    handle.createStatement(
+        StringUtils.format(
+            "INSERT INTO %s ("
+            + "manifest_id, data_source, inbox_id, group_id, cluster_id, topic_id, topic_name, partition_id, "
+            + "spec_fingerprint, object_path, object_hash, object_size, first_offset, last_offset, "
+            + "selected_offsets_bitmap, record_count, state, claim_epoch, processing_attempts, created_date, updated_date"
+            + ") VALUES ("
+            + ":manifestId, :dataSource, :inboxId, :groupId, :clusterId, :topicId, :topicName, :partitionId, "
+            + ":specFingerprint, :objectPath, :objectHash, :objectSize, :firstOffset, :lastOffset, "
+            + ":selectedOffsets, :recordCount, 'STAGED', 0, 0, :createdDate, :updatedDate"
+            + ")",
+            dbTables.getShareInboxTable()
+        )
+    )
+          .bind("manifestId", batch.getManifestId())
+          .bind("dataSource", batch.getDataSource())
+          .bind("inboxId", batch.getInboxId())
+          .bind("groupId", batch.getGroupId())
+          .bind("clusterId", batch.getClusterId())
+          .bind("topicId", batch.getTopicId())
+          .bind("topicName", batch.getTopicName())
+          .bind("partitionId", batch.getPartitionId())
+          .bind("specFingerprint", batch.getSpecFingerprint())
+          .bind("objectPath", batch.getObjectPath())
+          .bind("objectHash", batch.getObjectHash())
+          .bind("objectSize", batch.getObjectSize())
+          .bind("firstOffset", firstOffset)
+          .bind("lastOffset", lastOffset)
+          .bind(
+              "selectedOffsets",
+              ShareInboxOffsetCodec.encode(admittedOffsets, batch.getReceiptPageSize())
+          )
+          .bind("recordCount", admittedOffsets.size())
+          .bind("createdDate", now)
+          .bind("updatedDate", now)
+          .execute();
+    return new ShareInboxStageResult(ShareInboxStageResult.Status.STAGED, admittedOffsets);
+  }
+
+  private void ensureShareInboxGeneration(Handle handle, ShareInboxBatch batch, String now)
+  {
+    final String generationKey = shareReceiptKey(batch, null);
+    final List<Pair<String, Integer>> generations = handle.createQuery(
+        StringUtils.format(
+            "SELECT spec_fingerprint, receipt_page_size FROM %s WHERE receipt_key = :receiptKey",
+            dbTables.getShareReceiptsTable()
+        )
+    )
+                                            .bind("receiptKey", generationKey)
+                                            .map(
+                                                (index, resultSet, context) -> Pair.of(
+                                                    resultSet.getString(1),
+                                                    resultSet.getInt(2)
+                                                )
+                                            )
+                                            .list();
+    if (!generations.isEmpty()) {
+      final Pair<String, Integer> generation = generations.get(0);
+      if (!generation.lhs.equals(batch.getSpecFingerprint())) {
+        throw InvalidInput.exception("Share inbox[%s] has a different spec fingerprint", batch.getInboxId());
+      }
+      if (generation.rhs != batch.getReceiptPageSize()) {
+        throw InvalidInput.exception("Share inbox[%s] has a different receipt page size", batch.getInboxId());
+      }
+      return;
+    }
+
+    insertShareReceipt(
+        handle,
+        batch,
+        generationKey,
+        -1,
+        -1,
+        new byte[0],
+        now
+    );
+  }
+
+  private void updateShareReceiptPage(
+      Handle handle,
+      ShareInboxBatch batch,
+      long pageStart,
+      List<Long> offsets,
+      List<Long> admittedOffsets,
+      String now
+  )
+  {
+    final String receiptKey = shareReceiptKey(batch, pageStart);
+    final List<byte[]> rows = handle.createQuery(
+        StringUtils.format(
+            "SELECT received_bitmap FROM %s WHERE receipt_key = :receiptKey FOR UPDATE",
+            dbTables.getShareReceiptsTable()
+        )
+    )
+                                    .bind("receiptKey", receiptKey)
+                                    .map(ByteArrayMapper.FIRST)
+                                    .list();
+    final boolean newPage = rows.isEmpty();
+    final byte[] bitmap = newPage
+                          ? ShareInboxOffsetCodec.emptyPage(batch.getReceiptPageSize())
+                          : rows.get(0);
+    if (bitmap.length != ShareInboxOffsetCodec.emptyPage(batch.getReceiptPageSize()).length) {
+      throw new ISE("Share inbox receipt page size changed for inbox[%s]", batch.getInboxId());
+    }
+
+    boolean changed = false;
+    for (long offset : offsets) {
+      final int bit = Math.toIntExact(offset - pageStart);
+      if (!ShareInboxOffsetCodec.get(bitmap, bit)) {
+        ShareInboxOffsetCodec.set(bitmap, bit);
+        admittedOffsets.add(offset);
+        changed = true;
+      }
+    }
+    if (!changed) {
+      return;
+    }
+    if (newPage) {
+      insertShareReceipt(
+          handle,
+          batch,
+          receiptKey,
+          batch.getPartitionId(),
+          pageStart,
+          bitmap,
+          now
+      );
+    } else {
+      handle.createStatement(
+          StringUtils.format(
+              "UPDATE %s SET received_bitmap = :bitmap, updated_date = :updatedDate "
+              + "WHERE receipt_key = :receiptKey",
+              dbTables.getShareReceiptsTable()
+          )
+      )
+            .bind("bitmap", bitmap)
+            .bind("updatedDate", now)
+            .bind("receiptKey", receiptKey)
+            .execute();
+    }
+  }
+
+  private void insertShareReceipt(
+      Handle handle,
+      ShareInboxBatch batch,
+      String receiptKey,
+      int partitionId,
+      long pageStart,
+      byte[] bitmap,
+      String now
+  )
+  {
+    handle.createStatement(
+        StringUtils.format(
+            "INSERT INTO %s (receipt_key, data_source, inbox_id, group_id, cluster_id, topic_id, "
+            + "spec_fingerprint, receipt_page_size, partition_id, page_start_offset, received_bitmap, "
+            + "created_date, updated_date) "
+            + "VALUES (:receiptKey, :dataSource, :inboxId, :groupId, :clusterId, :topicId, "
+            + ":specFingerprint, :receiptPageSize, :partitionId, :pageStart, :bitmap, :createdDate, :updatedDate)",
+            dbTables.getShareReceiptsTable()
+        )
+    )
+          .bind("receiptKey", receiptKey)
+          .bind("dataSource", batch.getDataSource())
+          .bind("inboxId", batch.getInboxId())
+          .bind("groupId", batch.getGroupId())
+          .bind("clusterId", batch.getClusterId())
+          .bind("topicId", batch.getTopicId())
+          .bind("specFingerprint", batch.getSpecFingerprint())
+          .bind("receiptPageSize", batch.getReceiptPageSize())
+          .bind("partitionId", partitionId)
+          .bind("pageStart", pageStart)
+          .bind("bitmap", bitmap)
+          .bind("createdDate", now)
+          .bind("updatedDate", now)
+          .execute();
+  }
+
+  private static String shareReceiptKey(ShareInboxBatch batch, @Nullable Long pageStart)
+  {
+    final String identity;
+    if (pageStart == null) {
+      identity = String.join("\u0000", batch.getDataSource(), batch.getInboxId(), "generation");
+    } else {
+      identity = String.join(
+          "\u0000",
+          batch.getDataSource(),
+          batch.getInboxId(),
+          batch.getGroupId(),
+          batch.getClusterId(),
+          batch.getTopicId(),
+          String.valueOf(batch.getPartitionId()),
+          String.valueOf(pageStart)
+      );
+    }
+    return Hashing.sha256().hashString(identity, StandardCharsets.UTF_8).toString();
+  }
+
+  private static class ShareInboxCandidate
+  {
+    private final String manifestId;
+    private final long objectSize;
+    private final int recordCount;
+    private final long claimEpoch;
+
+    private ShareInboxCandidate(String manifestId, long objectSize, int recordCount, long claimEpoch)
+    {
+      this.manifestId = manifestId;
+      this.objectSize = objectSize;
+      this.recordCount = recordCount;
+      this.claimEpoch = claimEpoch;
+    }
+  }
+
+  private enum ShareInboxCompletionCheck
+  {
+    ACTIVE,
+    ALREADY_COMPLETE,
+    INVALID
+  }
+
+  private static class ShareInboxCompletionRow
+  {
+    private final String state;
+    @Nullable
+    private final String claimOwner;
+    private final long claimEpoch;
+    @Nullable
+    private final String claimExpiresAt;
+    @Nullable
+    private final String completionId;
+    @Nullable
+    private final String completedByTask;
+
+    private ShareInboxCompletionRow(
+        String state,
+        @Nullable String claimOwner,
+        long claimEpoch,
+        @Nullable String claimExpiresAt,
+        @Nullable String completionId,
+        @Nullable String completedByTask
+    )
+    {
+      this.state = state;
+      this.claimOwner = claimOwner;
+      this.claimEpoch = claimEpoch;
+      this.claimExpiresAt = claimExpiresAt;
+      this.completionId = completionId;
+      this.completedByTask = completedByTask;
+    }
   }
 
   @Override
@@ -573,7 +1173,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         null,
         null,
         taskAllocatorId,
-        segmentSchemaMapping
+        segmentSchemaMapping,
+        null
     );
   }
 
@@ -595,7 +1196,29 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         startMetadata,
         endMetadata,
         taskAllocatorId,
-        segmentSchemaMapping
+        segmentSchemaMapping,
+        null
+    );
+  }
+
+  @Override
+  public SegmentPublishResult commitAppendSegmentsAndShareInbox(
+      Set<DataSegment> appendSegments,
+      Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
+      String taskAllocatorId,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping,
+      ShareInboxCompletionRequest completionRequest
+  )
+  {
+    return commitAppendSegmentsAndMetadataInTransaction(
+        appendSegments,
+        appendSegmentToReplaceLock,
+        null,
+        null,
+        null,
+        taskAllocatorId,
+        segmentSchemaMapping,
+        completionRequest
     );
   }
 
@@ -1211,10 +1834,22 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       String taskAllocatorId,
-      @Nullable SegmentSchemaMapping segmentSchemaMapping
+      @Nullable SegmentSchemaMapping segmentSchemaMapping,
+      @Nullable ShareInboxCompletionRequest completionRequest
   )
   {
-    final String dataSource = verifySegmentsToCommit(appendSegments);
+    final String dataSource;
+    if (appendSegments.isEmpty()) {
+      if (completionRequest == null) {
+        throw InvalidInput.exception("No segment to commit");
+      }
+      dataSource = completionRequest.getDataSource();
+    } else {
+      dataSource = verifySegmentsToCommit(appendSegments);
+      if (completionRequest != null && !dataSource.equals(completionRequest.getDataSource())) {
+        throw InvalidInput.exception("Share inbox completion datasource does not match segment datasource");
+      }
+    }
     IndexerMetadataStorageCoordinator.validateDataSourceMetadata(supervisorId, startMetadata, endMetadata);
 
     final List<PendingSegmentRecord> segmentIdsForNewVersions = inReadOnlyDatasourceTransaction(
@@ -1249,6 +1884,19 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final SegmentPublishResult result = inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
+            if (completionRequest != null) {
+              final ShareInboxCompletionCheck completionCheck = checkShareInboxCompletion(
+                  transaction,
+                  completionRequest
+              );
+              if (completionCheck == ShareInboxCompletionCheck.ALREADY_COMPLETE) {
+                return SegmentPublishResult.ok(Set.of());
+              }
+              if (completionCheck == ShareInboxCompletionCheck.INVALID) {
+                return SegmentPublishResult.fail("Share inbox claims are stale or do not match the completion request");
+              }
+            }
+
             // Try to update datasource metadata first
             if (startMetadata != null) {
               final SegmentPublishResult metadataUpdateResult = updateDataSourceMetadataInTransaction(
@@ -1275,16 +1923,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             );
             log.info("Deleted [%d] entries from pending segments table upon commit.", numDeletedPendingSegments);
 
-            return SegmentPublishResult.ok(
-                insertSegments(
-                    transaction,
-                    allSegmentsToInsert,
-                    segmentSchemaMapping,
-                    Collections.emptyMap(),
-                    newVersionSegmentToParent,
-                    upgradedFromSegmentIdMap
-                )
-            );
+            final Set<DataSegment> insertedSegments = allSegmentsToInsert.isEmpty()
+                                                       ? Set.of()
+                                                       : insertSegments(
+                                                           transaction,
+                                                           allSegmentsToInsert,
+                                                           segmentSchemaMapping,
+                                                           Collections.emptyMap(),
+                                                           newVersionSegmentToParent,
+                                                           upgradedFromSegmentIdMap
+                                                       );
+            if (completionRequest != null) {
+              completeShareInbox(transaction, completionRequest);
+            }
+            return SegmentPublishResult.ok(insertedSegments);
           }
       );
 

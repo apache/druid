@@ -205,6 +205,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                          || e instanceof SQLTransientException
                          || e instanceof SQLRecoverableException
                          || e instanceof UnableToObtainConnectionException
+                         || (e instanceof CallbackFailedException && isTransientException(e.getCause()))
                          || (e instanceof UnableToExecuteStatementException && isTransientException(e.getCause()))
                          || connectorIsTransientException(e)
                          || (e instanceof SQLException && isTransientException(e.getCause()))
@@ -1209,6 +1210,99 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createIndexingStatesTable(tablesConfigSupplier.get().getIndexingStatesTable());
+    }
+  }
+
+  public void createShareReceiptsTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  receipt_key VARCHAR(255) NOT NULL,\n"
+                + "  data_source VARCHAR(255) %3$s NOT NULL,\n"
+                + "  inbox_id VARCHAR(255) NOT NULL,\n"
+                + "  group_id VARCHAR(255) NOT NULL,\n"
+                + "  cluster_id VARCHAR(255) NOT NULL,\n"
+                + "  topic_id VARCHAR(255) NOT NULL,\n"
+                + "  spec_fingerprint VARCHAR(255) NOT NULL,\n"
+                + "  receipt_page_size INTEGER NOT NULL,\n"
+                + "  partition_id INTEGER NOT NULL,\n"
+                + "  page_start_offset BIGINT NOT NULL,\n"
+                + "  received_bitmap %2$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  updated_date VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (receipt_key)\n"
+                + ")",
+                tableName, getPayloadType(), getCollation()
+            )
+        )
+    );
+    createIndex(
+        tableName,
+        "IDX_%S_DATASOURCE_INBOX",
+        List.of("data_source", "inbox_id")
+    );
+  }
+
+  public void createShareInboxTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            StringUtils.format(
+                "CREATE TABLE %1$s (\n"
+                + "  manifest_id VARCHAR(255) NOT NULL,\n"
+                + "  data_source VARCHAR(255) %3$s NOT NULL,\n"
+                + "  inbox_id VARCHAR(255) NOT NULL,\n"
+                + "  group_id VARCHAR(255) NOT NULL,\n"
+                + "  cluster_id VARCHAR(255) NOT NULL,\n"
+                + "  topic_id VARCHAR(255) NOT NULL,\n"
+                + "  topic_name VARCHAR(255) NOT NULL,\n"
+                + "  partition_id INTEGER NOT NULL,\n"
+                + "  spec_fingerprint VARCHAR(255) NOT NULL,\n"
+                + "  object_path VARCHAR(2048) NOT NULL,\n"
+                + "  object_hash VARCHAR(255) NOT NULL,\n"
+                + "  object_size BIGINT NOT NULL,\n"
+                + "  first_offset BIGINT NOT NULL,\n"
+                + "  last_offset BIGINT NOT NULL,\n"
+                + "  selected_offsets_bitmap %2$s NOT NULL,\n"
+                + "  record_count INTEGER NOT NULL,\n"
+                + "  state VARCHAR(32) NOT NULL,\n"
+                + "  claim_owner VARCHAR(255),\n"
+                + "  claim_epoch BIGINT NOT NULL,\n"
+                + "  claim_expires_at VARCHAR(255),\n"
+                + "  processing_attempts INTEGER NOT NULL,\n"
+                + "  completion_id VARCHAR(255),\n"
+                + "  completed_by_task VARCHAR(255),\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  updated_date VARCHAR(255) NOT NULL,\n"
+                + "  completed_date VARCHAR(255),\n"
+                + "  PRIMARY KEY (manifest_id)\n"
+                + ")",
+                tableName, getPayloadType(), getCollation()
+            )
+        )
+    );
+    createIndex(
+        tableName,
+        "IDX_%S_DATASOURCE_INBOX_STATE",
+        List.of("data_source", "inbox_id", "state")
+    );
+  }
+
+  public void createShareReceiptsTable()
+  {
+    if (config.get().isCreateTables()) {
+      createShareReceiptsTable(tablesConfigSupplier.get().getShareReceiptsTable());
+    }
+  }
+
+  public void createShareInboxTable()
+  {
+    if (config.get().isCreateTables()) {
+      createShareInboxTable(tablesConfigSupplier.get().getShareInboxTable());
     }
   }
 
