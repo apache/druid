@@ -89,13 +89,27 @@ public abstract class SimpleSqlAggregator implements SqlAggregator
       fieldName = virtualColumnRegistry.getOrCreateVirtualColumnForExpression(arg, aggregateCall.getType());
     }
 
-    return getAggregation(name, aggregateCall, macroTable, fieldName);
+    // 'finalizeAggregations' is also set by DruidAggregateCaseToFilterRule, to indicate that the filter of this
+    // aggregate call comes from the D1 rewrite of SUM(CASE WHEN COND THEN value ELSE 0 END), in which case it
+    // is semantically a SUM0 with 0 - rather than null - as its empty result. See that rule and
+    // SumZeroSqlAggregator for details.
+    return getAggregation(name, aggregateCall, macroTable, fieldName, finalizeAggregations);
   }
 
+  /**
+   * Returns the Druid {@link Aggregation} for this aggregate call.
+   *
+   * @param filteredByElseZeroRewrite true if the filter of this call was introduced by the
+   *                                  {@code DruidAggregateCaseToFilterRule} rewrite of a
+   *                                  {@code SUM(CASE WHEN COND THEN value ELSE 0 END)} expression, see
+   *                                  {@link #toDruidAggregation}. Implementations that do not care about that
+   *                                  distinction may ignore it.
+   */
   abstract Aggregation getAggregation(
       String name,
       AggregateCall aggregateCall,
       ExprMacroTable macroTable,
-      String fieldName
+      String fieldName,
+      boolean filteredByElseZeroRewrite
   );
 }
