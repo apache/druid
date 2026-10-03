@@ -47,7 +47,6 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Ingestion test for Iceberg tables via a REST catalog.
@@ -139,18 +138,19 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
   @Test
   public void testIngestFromIcebergRestCatalog()
   {
-    ingestFromIcebergRestCatalog(dataSource, false);
+    final long traditionalElapsedNanos = ingestFromIcebergRestCatalog(dataSource, false);
+    final long arrowElapsedNanos = ingestFromIcebergRestCatalog(dataSource + "_arrow", true);
+    log.info(
+        "Iceberg REST catalog MSQ diagnostic task timing comparison: traditionalElapsedMs [%.2f], "
+        + "arrowElapsedMs [%.2f], traditionalToArrowRatio [%.2f]; includes task submission and status polling",
+        traditionalElapsedNanos / 1_000_000D,
+        arrowElapsedNanos / 1_000_000D,
+        (double) traditionalElapsedNanos / arrowElapsedNanos
+    );
   }
 
-  @Test
-  public void testIngestFromIcebergRestCatalogWithArrowReader()
+  private long ingestFromIcebergRestCatalog(final String targetDataSource, final boolean useArrowReader)
   {
-    ingestFromIcebergRestCatalog(dataSource + "_arrow", true);
-  }
-
-  private void ingestFromIcebergRestCatalog(final String targetDataSource, final boolean useArrowReader)
-  {
-    final long startNanos = System.nanoTime();
     final String catalogUri = icebergCatalog.getCatalogUri();
     final String warehouseSource = useArrowReader ? "" : "\"warehouseSource\":{\"type\":\"local\"}";
     final String arrowReaderOptions = useArrowReader
@@ -186,9 +186,13 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
         arrowReaderOptions
     );
 
+    final long startNanos = System.nanoTime();
     final SqlTaskStatus taskStatus = msqApis.submitTaskSql(sql);
     cluster.callApi().waitForTaskToSucceed(taskStatus.getTaskId(), overlord);
+    final long taskElapsedNanos = System.nanoTime() - startNanos;
+    final long availabilityStartNanos = System.nanoTime();
     cluster.callApi().waitForAllSegmentsToBeAvailable(targetDataSource, coordinator, broker);
+    final long availabilityElapsedNanos = System.nanoTime() - availabilityStartNanos;
 
     cluster.callApi().verifySqlQuery(
         "SELECT __time, \"name\", \"value\" FROM %s ORDER BY __time",
@@ -199,10 +203,13 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
     );
 
     log.info(
-        "Iceberg REST catalog ingestion timing: useArrowReader[%s], dataSource[%s], elapsedMs[%d]",
+        "Iceberg REST catalog MSQ diagnostic timing: useArrowReader [%s], dataSource [%s], "
+        + "taskElapsedMs [%.2f], segmentAvailabilityWaitMs [%.2f]",
         useArrowReader,
         targetDataSource,
-        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startNanos)
+        taskElapsedNanos / 1_000_000D,
+        availabilityElapsedNanos / 1_000_000D
     );
+    return taskElapsedNanos;
   }
 }
