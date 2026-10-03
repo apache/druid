@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -50,6 +51,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -67,6 +69,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 /**
  *
@@ -388,6 +392,229 @@ public class CacheSchedulerTest
   @MethodSource("data")
   @ParameterizedTest
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRetainedRetiredCacheSkipsPollUntilReferenceCloses(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
+  {
+    initCacheSchedulerTest(createCacheManager);
+    final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
+    config.setMaxRetiredCacheEntries(1);
+    config.setRetiredCacheEntryTimeoutMillis(60_000L);
+    scheduler = newCacheSchedulerWithVersionedCacheGenerator(config, cacheManager);
+
+    try (CacheScheduler.Entry entry = scheduler.schedule(getUriExtractionNamespace(5))) {
+      entry.awaitTotalUpdatesWithTimeout(1, 10_000L);
+      final CacheScheduler.VersionedCache firstVersion =
+          (CacheScheduler.VersionedCache) entry.getCacheState();
+      final Closeable retainedFirstVersion = firstVersion.acquireReference();
+
+      entry.awaitTotalUpdatesWithTimeout(2, 10_000L);
+      final long updatesStartedAfterSecondVersion = scheduler.updatesStarted();
+
+      try {
+        entry.awaitTotalUpdatesWithTimeout(3, 100L);
+        Assertions.fail("Expected the third cache load to be skipped while the retired cache is retained");
+      }
+      catch (TimeoutException expected) {
+        // expected
+      }
+      Assertions.assertEquals(updatesStartedAfterSecondVersion, scheduler.updatesStarted());
+
+      retainedFirstVersion.close();
+      entry.awaitTotalUpdatesWithTimeout(3, 10_000L);
+    }
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRetiredCacheRejectsNewReference(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
+  {
+    initCacheSchedulerTest(createCacheManager);
+    final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
+    config.setMaxRetiredCacheEntries(1);
+    config.setRetiredCacheEntryTimeoutMillis(60_000L);
+    scheduler = newCacheSchedulerWithVersionedCacheGenerator(config, cacheManager);
+
+    try (CacheScheduler.Entry entry = scheduler.schedule(getUriExtractionNamespace(5))) {
+      entry.awaitTotalUpdatesWithTimeout(1, 10_000L);
+      final CacheScheduler.VersionedCache firstVersion =
+          (CacheScheduler.VersionedCache) entry.getCacheState();
+      final Closeable retainedFirstVersion = firstVersion.acquireReference();
+      try {
+        entry.awaitTotalUpdatesWithTimeout(2, 10_000L);
+        waitForCondition(() -> entry.pruneAndCountRetiredCaches() == 1, 10_000L);
+        final Closeable staleRetainedFirstVersion = firstVersion.acquireReference();
+        staleRetainedFirstVersion.close();
+        Assertions.fail("Expected retired cache to reject a new reference");
+      }
+      catch (ISE expected) {
+        // expected
+      }
+      finally {
+        retainedFirstVersion.close();
+      }
+    }
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRetiredCacheTimeoutForceDisposesActiveReference(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
+  {
+    initCacheSchedulerTest(createCacheManager);
+    final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
+    config.setMaxRetiredCacheEntries(1);
+    config.setRetiredCacheEntryTimeoutMillis(0L);
+    scheduler = newCacheSchedulerWithVersionedCacheGenerator(config, cacheManager);
+
+    try (CacheScheduler.Entry entry = scheduler.schedule(getUriExtractionNamespace(5))) {
+      entry.awaitTotalUpdatesWithTimeout(1, 10_000L);
+      final CacheScheduler.VersionedCache firstVersion =
+          (CacheScheduler.VersionedCache) entry.getCacheState();
+      final Closeable retainedFirstVersion = firstVersion.acquireReference();
+
+      entry.awaitTotalUpdatesWithTimeout(3, 10_000L);
+      retainedFirstVersion.close();
+    }
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testMaxRetiredCacheEntriesAllowsConfiguredNumberBeforeSkipping(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
+  {
+    initCacheSchedulerTest(createCacheManager);
+    final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
+    config.setMaxRetiredCacheEntries(2);
+    config.setRetiredCacheEntryTimeoutMillis(60_000L);
+    scheduler = newCacheSchedulerWithVersionedCacheGenerator(config, cacheManager);
+
+    try (CacheScheduler.Entry entry = scheduler.schedule(getUriExtractionNamespace(5))) {
+      entry.awaitTotalUpdatesWithTimeout(1, 10_000L);
+      final Closeable retainedFirstVersion =
+          ((CacheScheduler.VersionedCache) entry.getCacheState()).acquireReference();
+
+      entry.awaitTotalUpdatesWithTimeout(2, 10_000L);
+      final Closeable retainedSecondVersion =
+          ((CacheScheduler.VersionedCache) entry.getCacheState()).acquireReference();
+
+      entry.awaitTotalUpdatesWithTimeout(3, 10_000L);
+      final long updatesStartedAfterThirdVersion = scheduler.updatesStarted();
+
+      try {
+        entry.awaitTotalUpdatesWithTimeout(4, 100L);
+        Assertions.fail("Expected the fourth cache load to be skipped while two retired caches are retained");
+      }
+      catch (TimeoutException expected) {
+        // expected
+      }
+      Assertions.assertEquals(updatesStartedAfterThirdVersion, scheduler.updatesStarted());
+
+      retainedFirstVersion.close();
+      entry.awaitTotalUpdatesWithTimeout(4, 10_000L);
+      retainedSecondVersion.close();
+    }
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testFailedRetiredCacheDisposeIsRetriedOnNextPrune(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
+  {
+    initCacheSchedulerTest(createCacheManager);
+    final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
+    config.setMaxRetiredCacheEntries(1);
+    config.setRetiredCacheEntryTimeoutMillis(0L);
+    final FailingDisposeCacheManager failingCacheManager = new FailingDisposeCacheManager(
+        lifecycle,
+        new NoopServiceEmitter(),
+        config,
+        2
+    );
+    scheduler = newCacheSchedulerWithVersionedCacheGenerator(config, failingCacheManager);
+
+    try (CacheScheduler.Entry entry = scheduler.schedule(getUriExtractionNamespace(5))) {
+      entry.awaitTotalUpdatesWithTimeout(1, 10_000L);
+      entry.awaitTotalUpdatesWithTimeout(2, 10_000L);
+      waitForCondition(() -> failingCacheManager.getDisposeAttempts() >= 2, 10_000L);
+
+      entry.awaitTotalUpdatesWithTimeout(3, 10_000L);
+      Assertions.assertTrue(failingCacheManager.getDisposeAttempts() >= 3);
+    }
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testEntryCloseRetiresActiveCacheUntilReferenceCloses(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
+  {
+    initCacheSchedulerTest(createCacheManager);
+    final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
+    final CountingDisposeCacheManager countingCacheManager = new CountingDisposeCacheManager(
+        lifecycle,
+        new NoopServiceEmitter(),
+        config
+    );
+    scheduler = newCacheSchedulerWithVersionedCacheGenerator(config, countingCacheManager);
+
+    final CacheScheduler.Entry entry = scheduler.schedule(getUriExtractionNamespace(60_000L));
+    Closeable retainedLookup = null;
+    boolean entryClosed = false;
+    try {
+      entry.awaitTotalUpdatesWithTimeout(1, 10_000L);
+      retainedLookup = ((CacheScheduler.VersionedCache) entry.getCacheState()).acquireReference();
+
+      entry.close();
+      entryClosed = true;
+      Assertions.assertEquals(0, entry.pruneAndCountRetiredCaches());
+      Assertions.assertEquals(0, countingCacheManager.getDisposeAttempts());
+
+      retainedLookup.close();
+      Assertions.assertEquals(1, countingCacheManager.getDisposeAttempts());
+    }
+    finally {
+      if (retainedLookup != null) {
+        retainedLookup.close();
+      }
+      if (!entryClosed) {
+        entry.close();
+      }
+    }
+  }
+
+  private CacheScheduler newCacheSchedulerWithVersionedCacheGenerator(
+      NamespaceExtractionConfig config,
+      NamespaceExtractionCacheManager namespaceCacheManager
+  )
+  {
+    final AtomicInteger version = new AtomicInteger();
+    final CacheGenerator<UriExtractionNamespace> cacheGenerator = (extractionNamespace, id, lastVersion, cache) -> {
+      final int nextVersion = version.incrementAndGet();
+      cache.getCache().put(KEY, VALUE + nextVersion);
+      return Integer.toString(nextVersion);
+    };
+    return new CacheScheduler(
+        new NoopServiceEmitter(),
+        ImmutableMap.of(UriExtractionNamespace.class, cacheGenerator),
+        namespaceCacheManager,
+        config
+    );
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testShutdown(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager)
       throws Exception
   {
@@ -547,5 +774,72 @@ public class CacheSchedulerTest
   private static File newFolder(File root, String... subDirs)
   {
     return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
+  }
+
+  private static void waitForCondition(BooleanSupplier condition, long timeoutMillis) throws InterruptedException
+  {
+    final long start = System.currentTimeMillis();
+    while (!condition.getAsBoolean()) {
+      Assertions.assertTrue(System.currentTimeMillis() - start < timeoutMillis);
+      Thread.sleep(10L);
+    }
+  }
+
+  private static class FailingDisposeCacheManager extends OnHeapNamespaceExtractionCacheManager
+  {
+    private final AtomicInteger failuresRemaining;
+    private final AtomicInteger disposeAttempts = new AtomicInteger();
+
+    private FailingDisposeCacheManager(
+        Lifecycle lifecycle,
+        NoopServiceEmitter serviceEmitter,
+        NamespaceExtractionConfig config,
+        int failures
+    )
+    {
+      super(lifecycle, serviceEmitter, config);
+      this.failuresRemaining = new AtomicInteger(failures);
+    }
+
+    @Override
+    void disposeCache(CacheHandler cacheHandler)
+    {
+      disposeAttempts.incrementAndGet();
+      if (failuresRemaining.getAndDecrement() > 0) {
+        throw new RuntimeException("test dispose failure");
+      }
+      super.disposeCache(cacheHandler);
+    }
+
+    private int getDisposeAttempts()
+    {
+      return disposeAttempts.get();
+    }
+  }
+
+  private static class CountingDisposeCacheManager extends OnHeapNamespaceExtractionCacheManager
+  {
+    private final AtomicInteger disposeAttempts = new AtomicInteger();
+
+    private CountingDisposeCacheManager(
+        Lifecycle lifecycle,
+        NoopServiceEmitter serviceEmitter,
+        NamespaceExtractionConfig config
+    )
+    {
+      super(lifecycle, serviceEmitter, config);
+    }
+
+    @Override
+    void disposeCache(CacheHandler cacheHandler)
+    {
+      disposeAttempts.incrementAndGet();
+      super.disposeCache(cacheHandler);
+    }
+
+    private int getDisposeAttempts()
+    {
+      return disposeAttempts.get();
+    }
   }
 }

@@ -68,6 +68,12 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   }
 
   @Override
+  public ExtractionFn getExtractionFnForMetadata()
+  {
+    return delegate.getExtractionFnForMetadata();
+  }
+
+  @Override
   public boolean mustDecorate()
   {
     return true;

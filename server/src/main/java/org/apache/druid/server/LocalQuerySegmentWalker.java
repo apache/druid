@@ -109,10 +109,15 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
                            .map(queryRunnerFactory::createRunner).iterator()
     );
 
+    // close the segment map function when the result sequence is fully consumed or closed, releasing resources it
+    // retains for the query, such as lookup versions pinned for joins
+    final QueryRunner<T> closingRunner =
+        (queryPlus, responseContext) -> baseRunner.run(queryPlus, responseContext).withBaggage(segmentMapFn);
+
     // Note: Not calling 'postProcess'; it isn't official/documented functionality so we'll only support it where
     // it is already supported.
     return FluentQueryRunner
-        .create(scheduler.wrapQueryRunner(baseRunner), queryRunnerFactory.getToolchest())
+        .create(scheduler.wrapQueryRunner(closingRunner), queryRunnerFactory.getToolchest())
         .applyPreMergeDecoration()
         .mergeResults(true)
         .applyPostMergeDecoration()
