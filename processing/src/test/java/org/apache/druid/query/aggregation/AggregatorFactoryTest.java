@@ -317,7 +317,8 @@ public class AggregatorFactoryTest extends InitializedNullHandlingTest
         new FilteredAggregatorFactory(
             new HyperUniquesAggregatorFactory("col", "hyperunique"),
             new SelectorDimFilter("col", "hello", null),
-            "col"
+            "col",
+            null
         ),
         new SuppressedAggregatorFactory(
             new HyperUniquesAggregatorFactory("col", "hyperunique")

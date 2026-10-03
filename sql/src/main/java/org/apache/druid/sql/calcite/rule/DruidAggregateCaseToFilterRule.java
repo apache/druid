@@ -40,6 +40,7 @@ import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.tools.RelBuilder;
+import org.apache.druid.sql.calcite.aggregation.builtin.SumFilterElseSqlAggregator;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
@@ -49,38 +50,27 @@ import java.util.List;
 /**
  * Druid extension of {@link AggregateCaseToFilterRule}.
  *
- * Turning on extendedFilteredSumRewrite enables rewrites of:
+ * Six rewrite styles are supported:
  * <pre>
- *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
- * </pre>
- * to:
- * <pre>
- *    SUM(COL1) FILTER (WHERE COND)
- * </pre>
- * <p>
- * This rewrite improves performance but introduces a known inconsistency when
- * the condition never matches, as the expected result (0) is replaced with `null`.
- * <p>
- * Example behavior:
- * <pre>
- * +-----------------+--------------+----------+------+--------------+
- * | input row count | cond matches | valueCol | orig | filtered-SUM |
- * +-----------------+--------------+----------+------+--------------+
- * | 0               | *            | *        | null | null         |
- * | >0              | none         | *        | 0    | null         |
- * | >0              | all          | null     | null | null         |
- * | >0              | N>0          | 1        | N    | N            |
- * +-----------------+--------------+----------+------+--------------+
+ * A:   AGG(CASE WHEN x = 'foo' THEN expr END)
+ *    => AGG(expr) FILTER (x = 'foo')
+ * A2:  SUM0(CASE WHEN x = 'foo' THEN expr ELSE 0 END)
+ *    => SUM0(expr) FILTER (x = 'foo')
+ * B:   SUM0(CASE WHEN x = 'foo' THEN 1 ELSE 0 END)
+ *    => COUNT() FILTER (x = 'foo')
+ * C:   COUNT(CASE WHEN x = 'foo' THEN 'dummy' END)
+ *    => COUNT() FILTER (x = 'foo')
+ * D:   SUM(CASE WHEN x = 'foo' THEN expr ELSE 0 END)
+ *    => $SUM_FILTER_ELSE(expr, x = 'foo', 0)
+ * E:   COUNT(DISTINCT CASE WHEN x = 'foo' THEN y END)
+ *    => COUNT(DISTINCT y) FILTER (x = 'foo')
  * </pre>
  */
 public class DruidAggregateCaseToFilterRule extends RelOptRule implements SubstitutionRule
 {
-  private boolean extendedFilteredSumRewrite;
-
-  public DruidAggregateCaseToFilterRule(boolean extendedFilteredSumRewrite)
+  public DruidAggregateCaseToFilterRule()
   {
     super(operand(Aggregate.class, operand(Project.class, any())));
-    this.extendedFilteredSumRewrite = extendedFilteredSumRewrite;
   }
 
   @Override
@@ -184,7 +174,7 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
       //   COUNT(DISTINCT y) FILTER(WHERE x = 'foo')
 
       if (kind == SqlKind.COUNT
-          && RexLiteral.isNullLiteral(arg2)) {
+          && RexLiteral.isNullLiteral(arg2)) { // Case E
         newProjects.add(arg1);
         newProjects.add(filter);
         return AggregateCall.create(
@@ -203,17 +193,6 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
       }
       return null;
     }
-
-    // Four styles supported:
-    //
-    // A1: AGG(CASE WHEN x = 'foo' THEN expr END)
-    //   => AGG(expr) FILTER (x = 'foo')
-    // A2: SUM0(CASE WHEN x = 'foo' THEN cnt ELSE 0 END)
-    //   => SUM0(cnt) FILTER (x = 'foo')
-    // B: SUM0(CASE WHEN x = 'foo' THEN 1 ELSE 0 END)
-    //   => COUNT() FILTER (x = 'foo')
-    // C: COUNT(CASE WHEN x = 'foo' THEN 'dummy' END)
-    //   => COUNT() FILTER (x = 'foo')
 
     if (kind == SqlKind.COUNT // Case C
         && arg1.isA(SqlKind.LITERAL)
@@ -248,10 +227,8 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
           dataType,
           call.getName()
       );
-    } else if ((RexLiteral.isNullLiteral(arg2) // Case A1
-            && call.getAggregation().allowsFilter())
-        || (kind == SqlKind.SUM0 // Case A2
-            && isIntLiteral(arg2, BigDecimal.ZERO))) {
+    } else if (RexLiteral.isNullLiteral(arg2)
+        && call.getAggregation().allowsFilter()) { // Case A
       newProjects.add(arg1);
       newProjects.add(filter);
       return AggregateCall.create(
@@ -267,57 +244,43 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
           call.getType(),
           call.getName()
       );
-    }
+    } else if (kind == SqlKind.SUM0
+        && isIntLiteral(arg2, BigDecimal.ZERO)) { // Case A2
+      newProjects.add(arg1);
+      newProjects.add(filter);
+      return AggregateCall.create(
+          call.getAggregation(),
+          false,
+          false,
+          false,
+          call.rexList,
+          ImmutableList.of(newProjects.size() - 2),
+          newProjects.size() - 1,
+          null,
+          RelCollations.EMPTY,
+          call.getType(),
+          call.getName()
+      );
+    } else if (kind == SqlKind.SUM
+        && isIntLiteral(arg2, BigDecimal.ZERO)) { // Case D
+      newProjects.add(arg1);
+      newProjects.add(filter);
+      newProjects.add(arg2);
 
-    // Rewrites
-    // D1: SUM(CASE WHEN x = 'foo' THEN cnt ELSE 0 END)
-    //   => SUM0(cnt) FILTER (x = 'foo')
-    // D2: SUM(CASE WHEN x = 'foo' THEN 1 ELSE 0 END)
-    //   => COUNT() FILTER (x = 'foo')
-    //
-    // https://issues.apache.org/jira/browse/CALCITE-5953
-    // have restricted this rewrite as in case there are no rows it may not be equvivalent;
-    // however it may have some performance impact in Druid
-    if (extendedFilteredSumRewrite &&
-        kind == SqlKind.SUM && isIntLiteral(arg2, BigDecimal.ZERO)) {
-      if (isIntLiteral(arg1, BigDecimal.ONE)) { // D2
-        newProjects.add(filter);
-        final RelDataType dataType = typeFactory.createTypeWithNullability(
-            typeFactory.createSqlType(SqlTypeName.BIGINT), false
-        );
-        return AggregateCall.create(
-            SqlStdOperatorTable.COUNT,
-            false,
-            false,
-            false,
-            call.rexList,
-            ImmutableList.of(),
-            newProjects.size() - 1,
-            null,
-            RelCollations.EMPTY,
-            dataType,
-            call.getName()
-        );
-
-      } else { // D1
-        newProjects.add(arg1);
-        newProjects.add(filter);
-
-        RelDataType newType = typeFactory.createTypeWithNullability(call.getType(), true);
-        return AggregateCall.create(
-            call.getAggregation(),
-            false,
-            false,
-            false,
-            call.rexList,
-            ImmutableList.of(newProjects.size() - 2),
-            newProjects.size() - 1,
-            null,
-            RelCollations.EMPTY,
-            newType,
-            call.getName()
-        );
-      }
+      final RelDataType newType = typeFactory.createTypeWithNullability(call.getType(), true);
+      return AggregateCall.create(
+          SumFilterElseSqlAggregator.FUNCTION,
+          false,
+          false,
+          false,
+          call.rexList,
+          ImmutableList.of(newProjects.size() - 3, newProjects.size() - 2, newProjects.size() - 1),
+          -1,  // no filterArg: condition moves to an explicit argument
+          null,
+          RelCollations.EMPTY,
+          newType,
+          call.getName()
+      );
     }
 
     return null;
