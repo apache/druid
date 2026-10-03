@@ -74,11 +74,8 @@ export function getHjsonContext(hjson: string): HjsonContext {
   const objectStack: any[] = [{}];
 
   let state:
-    | 'normal'
-    | 'quoted-string'
-    | 'single-line-comment'
-    | 'multi-line-comment'
-    | 'multiline-string' = 'normal';
+    'normal' | 'quoted-string' | 'single-line-comment' | 'multi-line-comment' | 'multiline-string' =
+    'normal';
   let stringDelim = '';
   let token = '';
   let currentKey: string | undefined;

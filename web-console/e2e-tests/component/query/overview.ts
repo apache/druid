@@ -43,7 +43,7 @@ export class QueryOverview {
     await clickButton(this.page, 'Run');
     await this.page.waitForSelector('div.result-table-pane');
 
-    return await extractTable(this.page, 'div.result-table-pane div.rt-tr-group', 'div.rt-td');
+    return await extractTable(this.page, 'div.result-table-pane div.ct-tr-group', 'div.ct-td');
   }
 
   async cancelQuery(query: string): Promise<number> {

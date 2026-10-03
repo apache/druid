@@ -282,14 +282,14 @@ export async function sampleForConnect(
       samplerType === 'kafka'
         ? KAFKA_SAMPLE_INPUT_FORMAT
         : samplerType === 'kinesis'
-        ? KINESIS_SAMPLE_INPUT_FORMAT
-        : WHOLE_ROW_INPUT_FORMAT,
+          ? KINESIS_SAMPLE_INPUT_FORMAT
+          : WHOLE_ROW_INPUT_FORMAT,
     );
   }
 
   const addFileUri = Boolean(
     ioConfig.inputSource &&
-      getPossibleSystemFieldsForInputSource(ioConfig.inputSource).includes('__file_uri'),
+    getPossibleSystemFieldsForInputSource(ioConfig.inputSource).includes('__file_uri'),
   );
   if (addFileUri) {
     ioConfig = deepSet(ioConfig, 'inputSource.systemFields', ['__file_uri']);

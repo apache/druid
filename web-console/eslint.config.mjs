@@ -32,6 +32,12 @@ export default [
   ...configs.typeChecked.map(config => ({ ...config, files: TYPESCRIPT_FILES })),
   ...reactConfigs.reactTypeChecked.map(config => ({ ...config, files: TYPESCRIPT_FILES })),
   {
+    files: TYPESCRIPT_FILES,
+    rules: {
+      '@typescript-eslint/no-deprecated': [2],
+    },
+  },
+  {
     plugins: {
       notice,
     },
@@ -39,8 +45,6 @@ export default [
       'notice/notice': [2, { mustMatch: 'Licensed to the Apache Software Foundation \\(ASF\\).+' }],
       'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
       '@typescript-eslint/switch-exhaustiveness-check': [0], // ToDo: `considerDefaultExhaustiveForUnions: true` should be set upstream on awesome-code-style, then this rule can be re-enabled
-      'react-hooks/refs': [0], // ToDo: React Compiler rule, re-enable once refs are no longer read during render
-      'react-hooks/set-state-in-effect': [0], // ToDo: React Compiler rule, re-enable once effects no longer set state synchronously
     },
   },
   {

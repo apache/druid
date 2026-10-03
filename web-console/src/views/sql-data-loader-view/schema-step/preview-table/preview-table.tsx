@@ -16,16 +16,15 @@
  * limitations under the License.
  */
 
-import { Icon, Popover } from '@blueprintjs/core';
+import { Icon, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import { SqlAlias, SqlFunction, SqlStar } from 'druid-query-toolkit';
 import React, { useState } from 'react';
-import type { RowRenderProps } from 'react-table';
-import ReactTable from 'react-table';
 
-import { BracedText, Deferred, TableCell } from '../../../../components';
+import type { ConsoleTableCellInfo } from '../../../../components';
+import { BracedText, ConsoleTable, Deferred, TableCell } from '../../../../components';
 import { CellFilterMenu } from '../../../../components/cell-filter-menu/cell-filter-menu';
 import { ShowValueDialog } from '../../../../dialogs/show-value-dialog/show-value-dialog';
 import type { QueryAction } from '../../../../utils';
@@ -105,7 +104,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
   const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, undefined);
   return (
     <div className="preview-table">
-      <ReactTable
+      <ConsoleTable
         className="-striped -highlight"
         data={queryResult.rows as any[][]}
         noDataText={queryResult.rows.length ? '' : 'Preview returned no data'}
@@ -153,11 +152,15 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
             className: columnClassName,
             width: columnToWidth(column),
             accessor: String(i),
-            Cell(row: RowRenderProps) {
+            Cell(row: ConsoleTableCellInfo<any>) {
               const value = row.value;
               return (
                 <div>
-                  <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                  <PopoverNext
+                    content={<Deferred content={() => getCellMenu(column, i, value)} />}
+                    lazy
+                    shouldReturnFocusOnClose={false}
+                  >
                     {numericColumnBraces[i] ? (
                       <BracedText
                         className="table-padding"
@@ -168,7 +171,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                     ) : (
                       <TableCell value={value} unlimited />
                     )}
-                  </Popover>
+                  </PopoverNext>
                 </div>
               );
             },

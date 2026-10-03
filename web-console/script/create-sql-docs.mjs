@@ -18,7 +18,7 @@
  * limitations under the License.
  */
 
-import fs from 'fs-extra';
+import fs from 'node:fs/promises';
 import snarkdown from 'snarkdown';
 
 const INPUT_FILELIST_FILE = 'script/sql-doc-files.txt';
@@ -29,7 +29,10 @@ const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 15;
 
 const initialFunctionDocs = {
   TABLE: ['external', convertMarkdownToHtml('Defines a logical table from an external.')],
-  EXTERN: ['inputSource, inputFormat, rowSignature?', convertMarkdownToHtml('Reads external data.')],
+  EXTERN: [
+    'inputSource, inputFormat, rowSignature?',
+    convertMarkdownToHtml('Reads external data.'),
+  ],
   TYPE: [
     'nativeType',
     convertMarkdownToHtml(
@@ -38,8 +41,10 @@ const initialFunctionDocs = {
   ],
   UNNEST: [
     'arrayExpression',
-    convertMarkdownToHtml("Unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like `MV_TO_ARRAY` or `ARRAY`.")
-  ]
+    convertMarkdownToHtml(
+      "Unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like `MV_TO_ARRAY` or `ARRAY`.",
+    ),
+  ],
 };
 
 function hasHtmlTags(str) {
@@ -80,9 +85,7 @@ const readDoc = async () => {
     .filter(line => line && !line.startsWith('#')); // Skip empty lines and comments
 
   // Read all files in parallel
-  const fileContents = await Promise.all(
-    filePaths.map(filePath => fs.readFile(filePath, 'utf-8'))
-  );
+  const fileContents = await Promise.all(filePaths.map(filePath => fs.readFile(filePath, 'utf-8')));
 
   const data = fileContents.join('\n');
 
@@ -143,17 +146,17 @@ const readDoc = async () => {
 
 // prettier-ignore
 export const SQL_DATA_TYPES = new Map<string, [runtime: string, description: string]>(Object.entries(${JSON.stringify(
-  dataTypeDocs,
-  null,
-  2,
-)}));
+    dataTypeDocs,
+    null,
+    2,
+  )}));
 
 // prettier-ignore
 export const SQL_FUNCTIONS = new Map<string, [args: string, description: string]>(Object.entries(${JSON.stringify(
-  functionDocs,
-  null,
-  2,
-)}));
+    functionDocs,
+    null,
+    2,
+  )}));
 `;
 
   // eslint-disable-next-line no-undef
