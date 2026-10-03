@@ -25,14 +25,8 @@ function cp_if_not_exist(){
   fi
 }
 
-if [ $# != 1 ]
-  then
-    echo 'usage: program {$DRUID_ROOT}'
-    exit 1
-fi
-
-DRUID_ROOT=$1
-GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-common-dir)/hooks"
+DRUID_ROOT="${1:-$(dirname "$0")/..}"
+GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-path hooks)"
 
 mkdir -p "${GIT_HOOKS_DIR}"
 cp_if_not_exist "${DRUID_ROOT}/hooks/run-all-in-dir.py" "${GIT_HOOKS_DIR}/run-all-in-dir.py"

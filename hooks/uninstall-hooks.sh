@@ -19,14 +19,8 @@
 # under the License.
 #
 
-if [ $# != 1 ]
-  then
-    echo 'usage: program {$DRUID_ROOT}'
-    exit 1
-fi
-
-DRUID_ROOT=$1
-GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-common-dir)/hooks"
+DRUID_ROOT="${1:-$(dirname "$0")/..}"
+GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-path hooks)"
 
 # This script does not remove .git/hooks/pre-commit, .git/hooks/pre-push, or any other git hook scripts
 # because those files may have user-custom hooks.
