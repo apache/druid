@@ -345,12 +345,7 @@ public class PathChildrenAnnouncer implements ServiceAnnouncer
     }
 
     if (created) {
-      try {
-        createAnnouncement(path, bytes);
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      createAnnouncement(path, bytes);
     }
   }
 
@@ -390,17 +385,22 @@ public class PathChildrenAnnouncer implements ServiceAnnouncer
     }
   }
 
-  private void createAnnouncement(final String path, byte[] value) throws Exception
+  private void createAnnouncement(final String path, byte[] value)
   {
-    curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground(
-        (client, event) -> {
-          if (event.getResultCode() == KeeperException.Code.NODEEXISTS.intValue()) {
-            watchExistingNode(path);
-          } else if (event.getResultCode() != KeeperException.Code.OK.intValue()) {
-            log.warn("Failed to announce node[%s]: %s", path, KeeperException.Code.get(event.getResultCode()));
+    try {
+      curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground(
+          (client, event) -> {
+            if (event.getResultCode() == KeeperException.Code.NODEEXISTS.intValue()) {
+              watchExistingNode(path);
+            } else if (event.getResultCode() != KeeperException.Code.OK.intValue()) {
+              log.warn("Failed to announce node[%s]: %s", path, KeeperException.Code.get(event.getResultCode()));
+            }
           }
-        }
-    ).forPath(path, value);
+      ).forPath(path, value);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -426,15 +426,15 @@ public class PathChildrenAnnouncer implements ServiceAnnouncer
     ).forPath(path);
   }
 
-  private void reinstateAnnouncement(final String path) throws Exception
+  private void reinstateAnnouncement(final String path)
   {
     final ZKPaths.PathAndNode pathAndNode = ZKPaths.getPathAndNode(path);
-    final ConcurrentMap<String, byte[]> subPaths = announcements.get(pathAndNode.getPath());
-    final byte[] value = subPaths == null ? null : subPaths.get(pathAndNode.getNode());
-    if (value != null) {
+    // Create while holding the entry, so a concurrent unannounce either prevents it or deletes the node afterwards.
+    announcements.get(pathAndNode.getPath()).computeIfPresent(pathAndNode.getNode(), (node, value) -> {
       log.info("Node[%s] dropped, reinstating.", path);
       createAnnouncement(path, value);
-    }
+      return value;
+    });
   }
 
   private void updateAnnouncement(final String path, final byte[] value) throws Exception

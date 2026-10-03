@@ -401,11 +401,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
       announcer.announce(testPath, billy);
 
       // Logged once the exists watch on the stale node is set.
-      while (announcerLogs.getLogEvents()
-                          .stream()
-                          .noneMatch(event -> event.getMessage().getFormattedMessage().contains("already exists"))) {
-        Thread.sleep(10);
-      }
+      awaitLogEvents("already exists", 1);
 
       staleCurator.close();
       awaitAnnounced(testPath, billy);
@@ -413,6 +409,47 @@ public class NodeAnnouncerTest extends CuratorTestBase
     finally {
       releaseExec.countDown();
       announcer.stop();
+    }
+  }
+
+  /**
+   * The announcer's own session expires while it waits for the stale node to go away, which drops its watch.
+   */
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testReinstatesWhenOwnSessionExpiresWhileWatchingStaleNode() throws Exception
+  {
+    final byte[] billy = StringUtils.toUtf8("billy");
+    final String testPath = "/somewhere/test";
+    final NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
+    final CountDownLatch releaseExec = new CountDownLatch(1);
+
+    try (CuratorFramework staleCurator = createEphemeralNodeInNewSession(testPath, StringUtils.toUtf8("stale"))) {
+      exec.submit(() -> releaseExec.await(1, TimeUnit.MINUTES));
+      announcer.start();
+      announcer.announce(testPath, billy);
+      awaitLogEvents("already exists", 1);
+
+      KillSession.kill(curator.getZookeeperClient().getZooKeeper());
+      // After reconnecting, the announcer finds the stale node again and watches it from the new session.
+      awaitLogEvents("already exists", 2);
+
+      staleCurator.close();
+      awaitAnnounced(testPath, billy);
+    }
+    finally {
+      releaseExec.countDown();
+      announcer.stop();
+    }
+  }
+
+  private void awaitLogEvents(final String text, final long count) throws InterruptedException
+  {
+    while (announcerLogs.getLogEvents()
+                        .stream()
+                        .filter(event -> event.getMessage().getFormattedMessage().contains(text))
+                        .count() < count) {
+      Thread.sleep(10);
     }
   }
 }

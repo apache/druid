@@ -27,6 +27,8 @@ import org.apache.curator.framework.api.transaction.CuratorMultiTransaction;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -107,6 +109,15 @@ public class NodeAnnouncer implements ServiceAnnouncer
     }
   };
 
+  /**
+   * Re-announces every path after a reconnect, since watches set on an expired session are gone.
+   */
+  private final ConnectionStateListener reconnectListener = (client, newState) -> {
+    if (newState == ConnectionState.RECONNECTED) {
+      announcedPaths.keySet().forEach(this::reinstateAnnouncement);
+    }
+  };
+
   public NodeAnnouncer(CuratorFramework curator, ExecutorService exec)
   {
     this.curator = curator;
@@ -131,6 +142,7 @@ public class NodeAnnouncer implements ServiceAnnouncer
       }
 
       started = true;
+      curator.getConnectionStateListenable().addListener(reconnectListener);
 
       for (Announceable announceable : toAnnounce) {
         announce(announceable.path, announceable.bytes, announceable.removeParentsIfCreated);
@@ -163,6 +175,7 @@ public class NodeAnnouncer implements ServiceAnnouncer
   @GuardedBy("toAnnounce")
   private void closeResources()
   {
+    curator.getConnectionStateListenable().removeListener(reconnectListener);
     try {
       // Close all caches...
       CloseableUtils.closeAll(listeners.values());
@@ -276,12 +289,7 @@ public class NodeAnnouncer implements ServiceAnnouncer
     }
 
     if (created) {
-      try {
-        createAnnouncement(path, bytes);
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      createAnnouncement(path, bytes);
     }
   }
 
@@ -293,12 +301,7 @@ public class NodeAnnouncer implements ServiceAnnouncer
     cache.listenable().addListener(
         (type, oldData, data) -> {
           if (type == CuratorCacheListener.Type.NODE_DELETED) {
-            try {
-              reinstateAnnouncement(path);
-            }
-            catch (Exception e) {
-              throw new RuntimeException(e);
-            }
+            reinstateAnnouncement(path);
           }
         }, nodeCacheExecutor
     );
@@ -334,17 +337,22 @@ public class NodeAnnouncer implements ServiceAnnouncer
     }
   }
 
-  private void createAnnouncement(final String path, byte[] value) throws Exception
+  private void createAnnouncement(final String path, byte[] value)
   {
-    curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground(
-        (client, event) -> {
-          if (event.getResultCode() == KeeperException.Code.NODEEXISTS.intValue()) {
-            watchExistingNode(path);
-          } else if (event.getResultCode() != KeeperException.Code.OK.intValue()) {
-            log.warn("Failed to announce node[%s]: %s", path, KeeperException.Code.get(event.getResultCode()));
+    try {
+      curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground(
+          (client, event) -> {
+            if (event.getResultCode() == KeeperException.Code.NODEEXISTS.intValue()) {
+              watchExistingNode(path);
+            } else if (event.getResultCode() != KeeperException.Code.OK.intValue()) {
+              log.warn("Failed to announce node[%s]: %s", path, KeeperException.Code.get(event.getResultCode()));
+            }
           }
-        }
-    ).forPath(path, value);
+      ).forPath(path, value);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   /**
@@ -370,13 +378,14 @@ public class NodeAnnouncer implements ServiceAnnouncer
     ).forPath(path);
   }
 
-  private void reinstateAnnouncement(final String path) throws Exception
+  private void reinstateAnnouncement(final String path)
   {
-    final byte[] value = announcedPaths.get(path);
-    if (value != null) {
+    // Create while holding the entry, so a concurrent unannounce either prevents it or deletes the node afterwards.
+    announcedPaths.computeIfPresent(path, (p, value) -> {
       log.info("ZooKeeper Node[%s] dropped, reinstating...", path);
       createAnnouncement(path, value);
-    }
+      return value;
+    });
   }
 
   private void updateAnnouncement(final String path, final byte[] value) throws Exception
