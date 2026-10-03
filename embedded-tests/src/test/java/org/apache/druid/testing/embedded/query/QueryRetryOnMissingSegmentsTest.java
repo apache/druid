@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -197,7 +198,7 @@ public class QueryRetryOnMissingSegmentsTest extends QueryTestBase
     final Map<String, Object> context = new HashMap<>();
     // Disable cache so that each run hits historical.
     context.put(QueryContexts.USE_CACHE_KEY, false);
-    context.put(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, false);
+    QueryContextParameters.USE_RESULT_LEVEL_CACHE.set(context, false);
     context.put(QueryContexts.NUM_RETRIES_ON_MISSING_SEGMENTS_KEY, numRetriesOnMissingSegments);
     context.put(QueryContexts.RETURN_PARTIAL_RESULTS_KEY, allowPartialResults);
     context.put(QUERY_RETRY_TEST_CONTEXT_KEY, true);
