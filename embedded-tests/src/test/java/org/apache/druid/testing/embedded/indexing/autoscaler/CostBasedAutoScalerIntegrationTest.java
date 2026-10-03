@@ -35,6 +35,7 @@ import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
+import org.apache.druid.testing.embedded.utils.ITRetryUtil;
 import org.hamcrest.Matchers;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -61,6 +62,8 @@ import static org.apache.druid.indexing.seekablestream.supervisor.autoscaler.Cos
 public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 {
   private static final int PARTITION_COUNT = 50;
+  private static final long TASK_COUNT_RETRY_INTERVAL_MILLIS = 1_000;
+  private static final int TASK_COUNT_RETRY_COUNT = 60;
 
   private String topic;
   private final KafkaResource kafkaServer = new KafkaResource();
@@ -272,34 +275,46 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .build(dataSource, topic);
     cluster.callApi().postSupervisor(supervisor);
 
-    // Ingest a large number of records to trigger a scale-up
-    // 10k records = 100 segments to publish * 100 rows per segment
+    overlord.latchableEmitter()
+            .waitForEvent(event -> event.hasMetricName("task/run/time")
+                                        .hasDimension(DruidMetrics.DATASOURCE, dataSource));
+
     int totalRecords = 0;
     for (int i = 0; i < 10; ++i) {
       totalRecords += publish1kRecords(topic, false);
     }
 
-    // Wait for tasks to scale up
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/autoScaler/updatedCount")
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.greaterThan(1L))
     );
-    Assertions.assertTrue(getCurrentTaskCount(supervisor.getId()) > 1);
+    ITRetryUtil.retryUntil(
+        () -> getCurrentTaskCount(supervisor.getId()) > 1,
+        true,
+        TASK_COUNT_RETRY_INTERVAL_MILLIS,
+        TASK_COUNT_RETRY_COUNT,
+        "supervisor task count to scale up"
+    );
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
-    // Let the tasks work through the lag.
-    // Do not publish any more records so that the idleness causes scale-down
     overlord.latchableEmitter().waitForEvent(
         event -> event.hasMetricName("task/autoScaler/updatedCount")
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.equalTo(1L))
     );
-    Assertions.assertEquals(1, getCurrentTaskCount(supervisor.getId()));
+    ITRetryUtil.retryUntilEquals(
+        () -> getCurrentTaskCount(supervisor.getId()),
+        1,
+        TASK_COUNT_RETRY_INTERVAL_MILLIS,
+        TASK_COUNT_RETRY_COUNT,
+        "supervisor task count to scale down"
+    );
 
     cluster.callApi().postSupervisor(supervisor.createSuspendedSpec());
+
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
-    Assertions.assertEquals("10000", cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
+    Assertions.assertEquals(String.valueOf(totalRecords), cluster.runSql("SELECT COUNT(*) FROM %s", dataSource));
 
     final List<TaskStatusPlus> tasks = cluster.callApi().getTasks(dataSource, "complete");
     Assertions.assertFalse(tasks.isEmpty());
@@ -398,4 +413,5 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     Assertions.assertNotNull(supervisorSpec);
     return supervisorSpec.getSpec().getIOConfig().getTaskCount();
   }
+
 }
