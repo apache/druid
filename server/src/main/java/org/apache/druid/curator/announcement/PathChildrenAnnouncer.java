@@ -264,7 +264,7 @@ public class PathChildrenAnnouncer implements ServiceAnnouncer
                 private final AtomicReference<Set<String>> pathsLost = new AtomicReference<>(null);
 
                 @Override
-                public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
+                public void childEvent(CuratorFramework client, PathChildrenCacheEvent event)
                 {
                   // NOTE: ZooKeeper does not guarantee that we will get every event, and thus PathChildrenCache doesn't
                   // as well. If one of the below events are missed, Announcer might not work properly.
