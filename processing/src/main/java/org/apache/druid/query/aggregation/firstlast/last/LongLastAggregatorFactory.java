@@ -60,31 +60,37 @@ public class LongLastAggregatorFactory extends AggregatorFactory
 {
   public static final ColumnType TYPE = ColumnType.ofComplex(SerializablePairLongLongComplexMetricSerde.TYPE_NAME);
 
-  private static final Aggregator NIL_AGGREGATOR = new LongLastAggregator(
-      NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance(),
-      false
-  )
+  private static final Aggregator NIL_AGGREGATOR = new NilLongLastAggregator();
+
+  private static class NilLongLastAggregator extends LongLastAggregator
   {
+    NilLongLastAggregator()
+    {
+      super(NilColumnValueSelector.instance(), NilColumnValueSelector.instance(), false);
+    }
+
     @Override
     public void aggregate()
     {
       // no-op
     }
-  };
+  }
 
-  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new LongLastBufferAggregator(
-      NilColumnValueSelector.instance(),
-      NilColumnValueSelector.instance(),
-      false
-  )
+  private static final BufferAggregator NIL_BUFFER_AGGREGATOR = new NilLongLastBufferAggregator();
+
+  private static class NilLongLastBufferAggregator extends LongLastBufferAggregator
   {
+    NilLongLastBufferAggregator()
+    {
+      super(NilColumnValueSelector.instance(), NilColumnValueSelector.instance(), false);
+    }
+
     @Override
     public void aggregate(ByteBuffer buf, int position)
     {
       // no-op
     }
-  };
+  }
 
   private final String fieldName;
   private final String timeColumn;
