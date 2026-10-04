@@ -47,6 +47,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -66,12 +67,14 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
   private final EmbeddedHistorical historical = new EmbeddedHistorical();
   private final EmbeddedCoordinator coordinator = new EmbeddedCoordinator();
   private KafkaResource kafkaServer;
+  private KafkaSupervisorSpec supervisorSpec;
 
   @Override
   public EmbeddedDruidCluster createCluster()
   {
     final EmbeddedDruidCluster cluster = EmbeddedDruidCluster.withEmbeddedDerbyAndZookeeper();
     indexer.addProperty("druid.segment.handoff.pollDuration", "PT0.1s");
+    indexer.addProperty("druid.monitoring.emissionPeriod", "PT0.1s");
 
     kafkaServer = new KafkaResource();
 
@@ -85,6 +88,24 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
            .addServer(broker);
 
     return cluster;
+  }
+
+  @AfterEach
+  public void stopSupervisor()
+  {
+    if (supervisorSpec != null) {
+      try {
+        cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+        // Suspension stops new tasks, but existing tasks may still be publishing.
+        for (final TaskStatusPlus task : getActiveTasks()) {
+          cluster.callApi().onLeaderOverlord(o -> o.cancelTask(task.getId()));
+        }
+        cluster.callApi().waitForResult(this::getActiveTasks, List::isEmpty).go();
+      }
+      finally {
+        supervisorSpec = null;
+      }
+    }
   }
 
   @Test
@@ -103,7 +124,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec kafkaSupervisorSpec
         = newKafkaSupervisor().withId(supervisorId).build(dataSource, topic);
 
-    Assertions.assertEquals(supervisorId, cluster.callApi().postSupervisor(kafkaSupervisorSpec));
+    Assertions.assertEquals(supervisorId, submitSupervisor(kafkaSupervisorSpec));
 
     // Wait for the broker to discover the realtime segments
     broker.latchableEmitter().waitForEvent(
@@ -118,12 +139,12 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(topic, supervisorStatus.getSource());
 
     // Get the task statuses
-    List<TaskStatusPlus> taskStatuses = ImmutableList.copyOf(
-        (CloseableIterator<TaskStatusPlus>)
-            cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 1))
-    );
-    Assertions.assertEquals(1, taskStatuses.size());
-    Assertions.assertEquals(TaskState.RUNNING, taskStatuses.get(0).getStatusCode());
+    final List<TaskStatusPlus> taskStatuses = getActiveTasks();
+    // A publishing task and its replacement can both be active during rollover.
+    Assertions.assertFalse(taskStatuses.isEmpty());
+    for (final TaskStatusPlus task : taskStatuses) {
+      Assertions.assertEquals(TaskState.RUNNING, task.getStatusCode());
+    }
 
     // Wait until all produced records have been ingested before verifying the row count,
     // otherwise the query below can race ingestion and observe fewer than the expected rows
@@ -170,7 +191,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     final KafkaSupervisorSpec supervisorSpec = newKafkaSupervisor()
         .withIoConfig(ioConfig -> ioConfig.withIdleConfig(new IdleConfig(true, idleAfterMillis)).withTaskCount(1))
         .build(dataSource, topic);
-    cluster.callApi().postSupervisor(supervisorSpec);
+    submitSupervisor(supervisorSpec);
 
     // Wait for the first set of tasks to finish
     overlord.latchableEmitter().waitForEvent(
@@ -196,16 +217,21 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 
     final String emptyColumn = "unknownColumn";
     final KafkaSupervisorSpec supervisorSpec = newKafkaSupervisor()
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(null))
+        .withIoConfig(ioConfig -> ioConfig.withTaskDuration(Period.minutes(1)))
         .withDataSchema(
             s -> s.withDimensions(
                 DimensionsSpec.getDefaultSchemas(List.of(emptyColumn, COL_ITEM))
             )
         )
         .build(dataSource, topic);
-    cluster.callApi().postSupervisor(supervisorSpec);
+    submitSupervisor(supervisorSpec);
 
     final int numRows = 100;
-    kafkaServer.produceRecordsToTopic(generateRecordsForTopic(topic, numRows, DateTimes.nowUtc()));
+    // Empty-dimension handling does not require a separate segment for every row.
+    kafkaServer.produceRecordsToTopic(
+        generateRecordsForTopic(topic, numRows, DateTimes.of("2025-06-01"), Period.seconds(1))
+    );
 
     indexer.latchableEmitter().waitForEventAggregate(
         event -> event.hasMetricName("ingest/events/processed")
@@ -214,6 +240,12 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     );
 
     cluster.callApi().postSupervisor(supervisorSpec.createSuspendedSpec());
+    // Processed-row metrics are emitted before publishing; wait for the segment handoff as well.
+    indexer.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("ingest/handoff/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
 
     Assertions.assertEquals(
@@ -260,17 +292,41 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
         );
   }
 
+  private String submitSupervisor(final KafkaSupervisorSpec spec)
+  {
+    supervisorSpec = spec;
+    return cluster.callApi().postSupervisor(spec);
+  }
+
+  private List<TaskStatusPlus> getActiveTasks()
+  {
+    return ImmutableList.copyOf(
+        (CloseableIterator<TaskStatusPlus>)
+            cluster.callApi().onLeaderOverlord(o -> o.taskStatuses(null, dataSource, 0))
+    );
+  }
+
   private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(
       String topic,
       int numRecords,
       DateTime startTime
   )
   {
+    return generateRecordsForTopic(topic, numRecords, startTime, Period.days(1));
+  }
+
+  private List<ProducerRecord<byte[], byte[]>> generateRecordsForTopic(
+      final String topic,
+      final int numRecords,
+      final DateTime startTime,
+      final Period timestampStep
+  )
+  {
     final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
     for (int i = 0; i < numRecords; ++i) {
       String valueCsv = StringUtils.format(
           "%s,%s,%d",
-          startTime.plusDays(i),
+          startTime.plus(timestampStep.multipliedBy(i)),
           IdUtils.getRandomId(),
           ThreadLocalRandom.current().nextInt(1000)
       );
