@@ -72,6 +72,8 @@ jobs:
           java-version: ${{ inputs.jdk }}
           cache: 'maven'
 
+      # Keep parent-POM resolution separate and before the worker script so transient
+      # Maven Central failures are retried before job-specific build or test work starts.
       - name: Resolve Apache parent POM
         run: |
           set -eu
