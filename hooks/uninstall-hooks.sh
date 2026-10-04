@@ -20,7 +20,7 @@
 #
 
 DRUID_ROOT="${1:-$(dirname "$0")/..}"
-GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-path hooks)"
+GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-common-dir)/hooks"
 
 # This script does not remove .git/hooks/pre-commit, .git/hooks/pre-push, or any other git hook scripts
 # because those files may have user-custom hooks.

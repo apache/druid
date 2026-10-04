@@ -26,7 +26,7 @@ function cp_if_not_exist(){
 }
 
 DRUID_ROOT="${1:-$(dirname "$0")/..}"
-GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-path hooks)"
+GIT_HOOKS_DIR="$(git -C "${DRUID_ROOT}" rev-parse --path-format=absolute --git-common-dir)/hooks"
 
 mkdir -p "${GIT_HOOKS_DIR}"
 cp_if_not_exist "${DRUID_ROOT}/hooks/run-all-in-dir.py" "${GIT_HOOKS_DIR}/run-all-in-dir.py"
