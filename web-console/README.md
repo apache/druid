@@ -26,9 +26,10 @@ This is the Druid web console that serves as a data management interface for Dru
 ### Getting started
 
 1. You need to be within the `web-console` directory
-2. Install the modules with `npm install`
-3. Run `npm run compile` to compile the SCSS files (this usually needs to be done only once)
-4. Run `npm start` to start in development mode and proxy Druid requests to `localhost:8888`
+2. Install [mise](https://mise.jdx.dev/getting-started.html) and run `mise trust` and `mise install` to get the correct Node.js version (pinned in `.node-version`)
+3. Install the modules with `npm install`
+4. Run `npm run compile` to compile the SCSS files (this usually needs to be done only once)
+5. Run `npm start` to start in development mode and proxy Druid requests to `localhost:8888`
 
 **Note:** you can provide an environment variable to proxy to a different Druid host like so: `druid_host=1.2.3.4:8888 npm start`
 **Note:** you can provide an environment variable to use webpack-bundle-analyzer as a plugin in the build script like so: `BUNDLE_ANALYZER_PLUGIN='TRUE' npm start`

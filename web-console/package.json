@@ -39,10 +39,6 @@
   "engines": {
     "node": ">=24"
   },
-  "volta": {
-    "node": "24.21.0",
-    "npm": "11.19.0"
-  },
   "browserslist": [
     "> 1% and supports es6",
     "last 3 versions and supports es6",
