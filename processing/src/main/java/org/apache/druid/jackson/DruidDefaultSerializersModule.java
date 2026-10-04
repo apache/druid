@@ -40,6 +40,7 @@ import org.joda.time.DateTimeZone;
 
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 /**
  *
@@ -152,8 +153,8 @@ public class DruidDefaultSerializersModule extends SimpleModule
                 } else {
                   final Class<?> clazz = o.getClass();
 
-                  if (serializerClass != clazz) {
-                    serializer = JacksonUtils.getSerializer(provider, clazz);
+                  if (serializer == null || serializerClass != clazz) {
+                    serializer = Objects.requireNonNull(JacksonUtils.getSerializer(provider, clazz));
                     serializerClass = clazz;
                   }
 

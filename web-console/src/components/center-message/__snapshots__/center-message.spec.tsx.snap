@@ -1,8 +1,8 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`CenterMessage matches snapshot 1`] = `
 <div
-  class="center-message bp5-input"
+  class="center-message bp6-input"
 >
   <div
     class="center-message-inner"

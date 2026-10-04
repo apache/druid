@@ -1,13 +1,13 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`MoreButton matches snapshot (empty) 1`] = `
 <span
-  class="more-button bp5-popover-target"
+  class="more-button bp6-popover-target"
 >
   <button
     aria-expanded="false"
     aria-haspopup="menu"
-    class="bp5-button bp5-disabled"
+    class="bp6-button bp6-disabled"
     disabled=""
     tabindex="-1"
     title="More actions"
@@ -15,20 +15,11 @@ exports[`MoreButton matches snapshot (empty) 1`] = `
   >
     <span
       aria-hidden="true"
-      class="bp5-icon bp5-icon-more"
+      class="bp6-icon bp6-icon-more"
     >
       <svg
         data-icon="more"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </span>
@@ -36,31 +27,22 @@ exports[`MoreButton matches snapshot (empty) 1`] = `
 
 exports[`MoreButton matches snapshot (full) 1`] = `
 <span
-  class="more-button bp5-popover-target"
+  class="more-button bp6-popover-target"
 >
   <button
     aria-expanded="false"
     aria-haspopup="menu"
-    class="bp5-button"
+    class="bp6-button"
     title="More actions"
     type="button"
   >
     <span
       aria-hidden="true"
-      class="bp5-icon bp5-icon-more"
+      class="bp6-icon bp6-icon-more"
     >
       <svg
         data-icon="more"
-        height="16"
-        role="img"
-        viewBox="0 0 16 16"
-        width="16"
-      >
-        <path
-          d="M2 6.03a2 2 0 100 4 2 2 0 100-4zM14 6.03a2 2 0 100 4 2 2 0 100-4zM8 6.03a2 2 0 100 4 2 2 0 100-4z"
-          fill-rule="evenodd"
-        />
-      </svg>
+      />
     </span>
   </button>
 </span>

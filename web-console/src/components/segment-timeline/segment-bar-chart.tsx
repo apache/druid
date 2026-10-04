@@ -33,11 +33,10 @@ import { SegmentBarChartRender } from './segment-bar-chart-render';
 
 import './segment-bar-chart.scss';
 
-export interface SegmentBarChartProps
-  extends Omit<
-    SegmentBarChartRenderProps,
-    'intervalRows' | 'datasourceRules' | 'datasourceRulesError'
-  > {
+export interface SegmentBarChartProps extends Omit<
+  SegmentBarChartRenderProps,
+  'intervalRows' | 'datasourceRules' | 'datasourceRulesError'
+> {
   capabilities: Capabilities;
 }
 
@@ -109,7 +108,7 @@ export const SegmentBarChart = function SegmentBarChart(props: SegmentBarChartPr
               segments: 1,
               size: segment.size,
               rows: segment.num_rows || 0, // segment.num_rows is really null on this API :-(
-            } as IntervalRow;
+            };
           },
         );
       }

@@ -231,7 +231,7 @@ describe('general', () => {
 
   describe('OVERLAY_OPEN_SELECTOR', () => {
     it('is what it is', () => {
-      expect(OVERLAY_OPEN_SELECTOR).toEqual('.bp5-portal .bp5-overlay-open');
+      expect(OVERLAY_OPEN_SELECTOR).toEqual('.bp6-portal .bp6-overlay-open');
     });
   });
 

@@ -22,12 +22,15 @@ import { Duration, Timezone } from 'chronoshift';
 import { C, F, L } from 'druid-query-toolkit';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
 import {
   bigIntsToNumbers,
+  ECHARTS_BACKGROUND_COLOR,
+  ECHARTS_BRUSH_STYLE,
+  ECHARTS_COLORS,
   formatInteger,
   formatIsoDateRange,
   formatNumber,
@@ -82,8 +85,8 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
       stage,
       runSqlQuery,
     } = props;
-    const containerRef = useRef<HTMLDivElement>();
-    const chartRef = useRef<ECharts>();
+    const containerRef = useRef<HTMLDivElement | undefined>(undefined);
+    const chartRef = useRef<ECharts | undefined>(undefined);
     const [highlight, setHighlight] = useState<MultiAxisChartHighlight | undefined>();
 
     const timeColumnName = querySource.columns.find(column => column.sqlType === 'TIMESTAMP')?.name;
@@ -126,6 +129,8 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
       const myChart = echarts.init(container, 'dark');
 
       myChart.setOption({
+        color: ECHARTS_COLORS,
+        backgroundColor: ECHARTS_BACKGROUND_COLOR,
         tooltip: {
           trigger: 'axis',
           axisPointer: {
@@ -148,6 +153,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
         brush: {
           toolbox: ['lineX'],
           xAxisIndex: 0,
+          brushStyle: ECHARTS_BRUSH_STYLE,
         },
         grid: {
           left: '3%',
@@ -193,10 +199,75 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
       };
     }, []);
 
-    useEffect(() => {
+    // Called by ECharts, so it has to see the latest where clause and time granularity, not the ones from when the data loaded
+    const handleBrush = useEffectEvent((params: any) => {
       const myChart = chartRef.current;
-      const data = sourceDataState.data;
-      if (!myChart || !data) return;
+      if (!myChart) return;
+
+      if (!params.areas.length) return;
+
+      // this is only used for the label and the data saved in the highlight
+      // the positioning is done with the true coordinates until the user
+      // releases the mouse button (in the `brushend` event)
+      const duration = new Duration(timeGranularity);
+      const start = duration.round(params.areas[0].coordRange[0], Timezone.UTC);
+      const end = duration.round(params.areas[0].coordRange[1], Timezone.UTC);
+
+      const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[0]);
+      const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[1]);
+
+      setHighlight({
+        title: formatIsoDateRange(start, end, Timezone.UTC),
+        x: (x0 + x1) / 2,
+        y: 50,
+        start,
+        end,
+        text: (
+          <div className="button-bar">
+            <Button
+              text="Zoom in"
+              intent={Intent.PRIMARY}
+              size="small"
+              onClick={() => {
+                if (!timeColumnName) return;
+                setWhere(
+                  updateFilterClause(
+                    where,
+                    F(
+                      'TIME_IN_INTERVAL',
+                      C(timeColumnName),
+                      `${start.toISOString()}/${end.toISOString()}`,
+                    ),
+                  ),
+                );
+                setHighlight(undefined);
+                myChart.dispatchAction({
+                  type: 'brush',
+                  command: 'clear',
+                  areas: [],
+                });
+              }}
+            />
+            <Button
+              text="Close"
+              size="small"
+              onClick={() => {
+                setHighlight(undefined);
+                myChart.dispatchAction({
+                  type: 'brush',
+                  command: 'clear',
+                  areas: [],
+                });
+              }}
+            />
+          </div>
+        ),
+      });
+    });
+
+    const updateChart = useEffectEvent((data: any[]) => {
+      const myChart = chartRef.current;
+      if (!myChart) return;
 
       myChart.setOption(
         {
@@ -235,71 +306,16 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
 
       myChart.off('brush');
 
-      myChart.on('brush', (params: any) => {
-        if (!params.areas.length) return;
-
-        // this is only used for the label and the data saved in the highlight
-        // the positioning is done with the true coordinates until the user
-        // releases the mouse button (in the `brushend` event)
-        const duration = new Duration(timeGranularity);
-        const start = duration.round(params.areas[0].coordRange[0], Timezone.UTC);
-        const end = duration.round(params.areas[0].coordRange[1], Timezone.UTC);
-
-        const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[0]);
-        const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[1]);
-
-        setHighlight({
-          title: formatIsoDateRange(start, end, Timezone.UTC),
-          x: (x0 + x1) / 2,
-          y: 50,
-          start,
-          end,
-          text: (
-            <div className="button-bar">
-              <Button
-                text="Zoom in"
-                intent={Intent.PRIMARY}
-                small
-                onClick={() => {
-                  if (!timeColumnName) return;
-                  setWhere(
-                    updateFilterClause(
-                      where,
-                      F(
-                        'TIME_IN_INTERVAL',
-                        C(timeColumnName),
-                        `${start.toISOString()}/${end.toISOString()}`,
-                      ),
-                    ),
-                  );
-                  setHighlight(undefined);
-                  myChart.dispatchAction({
-                    type: 'brush',
-                    command: 'clear',
-                    areas: [],
-                  });
-                }}
-              />
-              <Button
-                text="Close"
-                small
-                onClick={() => {
-                  setHighlight(undefined);
-                  myChart.dispatchAction({
-                    type: 'brush',
-                    command: 'clear',
-                    areas: [],
-                  });
-                }}
-              />
-            </div>
-          ),
-        });
-      });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sourceDataState.data]);
+      myChart.on('brush', (params: any) => handleBrush(params));
+    });
 
     useEffect(() => {
+      const data = sourceDataState.data;
+      if (!data) return;
+      updateChart(data);
+    }, [sourceDataState.data]);
+
+    const handleStageChange = useEffectEvent(() => {
       const myChart = chartRef.current;
       if (!myChart) return;
       myChart.resize();
@@ -317,6 +333,10 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           x: (x0 + x1) / 2,
         });
       }
+    });
+
+    useEffect(() => {
+      handleStageChange();
     }, [stage]);
 
     const errorMessage = sourceDataState.getErrorMessage();

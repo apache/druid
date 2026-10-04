@@ -21,8 +21,11 @@ import './bootstrap/ace';
 import { Icons } from '@blueprintjs/icons';
 
 import { UrlBaser } from './singletons';
+import { domSnapshotSerializer } from './test-utils/snapshot-serializer';
 
 UrlBaser.baseUrl = '/some/base_url';
+
+expect.addSnapshotSerializer(domSnapshotSerializer);
 
 beforeAll(async () => {
   await Icons.loadAll();

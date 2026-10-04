@@ -100,7 +100,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
         <div className={`dialog-body ${Classes.DIALOG_BODY}`}>
           <FormGroup label="Why are you making this change?" className="comment">
             <InputGroup
-              large
+              size="large"
               value={comment}
               placeholder="Enter description here"
               onChange={(e: any) => this.handleCommentChange(e.target.value)}
@@ -134,7 +134,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
         {!showFinalStep && historyRecords && (
           <Button
             className="left-align-button"
-            minimal
+            variant="minimal"
             text="History"
             onClick={this.handleGoToHistory}
           />
@@ -156,7 +156,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             text="Save"
             onClick={this.save}
             intent={Intent.PRIMARY}
-            rightIcon={IconNames.TICK}
+            endIcon={IconNames.TICK}
           />
         ) : (
           <Button
@@ -164,7 +164,7 @@ export class SnitchDialog extends React.PureComponent<SnitchDialogProps, SnitchD
             text="Next"
             onClick={this.goToFinalStep}
             intent={Intent.PRIMARY}
-            rightIcon={IconNames.ARROW_RIGHT}
+            endIcon={IconNames.ARROW_RIGHT}
           />
         )}
       </div>

@@ -26,7 +26,7 @@ import {
   Menu,
   MenuDivider,
   MenuItem,
-  Popover,
+  PopoverNext,
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -43,7 +43,7 @@ import {
   SqlType,
 } from 'druid-query-toolkit';
 import type { JSX } from 'react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 
 import {
   ClearableInput,
@@ -280,7 +280,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   const [showRollupConfirm, setShowRollupConfirm] = useState(false);
   const [showRollupAnalysisPane, setShowRollupAnalysisPane] = useState(false);
   const [showDestinationDialog, setShowDestinationDialog] = useState(false);
-  const lastWorkingQueryPattern = useRef<IngestQueryPattern | undefined>();
+  const [lastWorkingQueryPattern, setLastWorkingQueryPattern] = useState<
+    IngestQueryPattern | undefined
+  >();
 
   const columnFilter = useCallback(
     (columnName: string) => caseInsensitiveContains(columnName, columnSearch),
@@ -371,9 +373,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   // Use this direct DOM manipulation via d3 to avoid re-rendering the table when the selection changes
   useLayoutEffect(() => {
     if (mode !== 'table') return;
-    selectAll('.preview-table .rt-th').classed('selected', false);
+    selectAll('.preview-table .ct-th').classed('selected', false);
     if (selectedColumnIndex !== -1) {
-      select(`.preview-table .rt-th.column${selectedColumnIndex}`).classed('selected', true);
+      select(`.preview-table .ct-th.column${selectedColumnIndex}`).classed('selected', true);
     }
   }, [mode, selectedColumnIndex, columnSearch]);
 
@@ -533,11 +535,12 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
     backgroundStatusCheck: executionBackgroundResultStatusCheck,
   });
 
-  useEffect(() => {
-    if (!previewResultState.data) return;
-    lastWorkingQueryPattern.current = ingestQueryPattern;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- excluding 'ingestQueryPattern'
-  }, [previewResultState]);
+  // Remember the query pattern that last produced a preview so that an error can be reverted
+  const [prevPreviewResultState, setPrevPreviewResultState] = useState(previewResultState);
+  if (previewResultState !== prevPreviewResultState) {
+    setPrevPreviewResultState(previewResultState);
+    if (previewResultState.data) setLastWorkingQueryPattern(ingestQueryPattern);
+  }
 
   const unusedColumns = ingestQueryPattern
     ? ingestQueryPattern.mainExternalConfig.signature.filter(columnDeclaration => {
@@ -567,8 +570,8 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
       subtitle="Configure schema"
       toolbar={
         <>
-          <Popover
-            position="bottom"
+          <PopoverNext
+            placement="bottom"
             content={
               <Menu>
                 <MenuItem
@@ -591,17 +594,19 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 )}
               </Menu>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
-            <Button icon={IconNames.FILTER} minimal>
+            <Button icon={IconNames.FILTER} variant="minimal">
               Filters &nbsp;
               <Tag minimal round>
                 {ingestQueryPattern ? ingestQueryPattern.filters.length : '?'}
               </Tag>
             </Button>
-          </Popover>
+          </PopoverNext>
           {ingestQueryPattern && (
-            <Popover
-              position="bottom"
+            <PopoverNext
+              placement="bottom"
               content={
                 <Menu>
                   {timeColumn ? (
@@ -627,8 +632,10 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   )}
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
-              <Button icon={IconNames.SPLIT_COLUMNS} minimal>
+              <Button icon={IconNames.SPLIT_COLUMNS} variant="minimal">
                 Partition &nbsp;
                 <Tag minimal round>
                   {ingestQueryPattern.partitionedBy === 'all'
@@ -636,11 +643,11 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     : ingestQueryPattern.partitionedBy}
                 </Tag>
               </Button>
-            </Popover>
+            </PopoverNext>
           )}
           {ingestQueryPattern && (
-            <Popover
-              position="bottom"
+            <PopoverNext
+              placement="bottom"
               content={
                 <Menu>
                   {ingestQueryPattern.clusteredBy.map((p, i) => (
@@ -698,14 +705,16 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   />
                 </Menu>
               }
+              lazy
+              shouldReturnFocusOnClose={false}
             >
-              <Button icon={IconNames.MERGE_COLUMNS} minimal>
+              <Button icon={IconNames.MERGE_COLUMNS} variant="minimal">
                 Cluster &nbsp;
                 <Tag minimal round>
                   {ingestQueryPattern.clusteredBy.length}
                 </Tag>
               </Button>
-            </Popover>
+            </PopoverNext>
           )}
           <Button
             icon={IconNames.COMPRESSED}
@@ -713,7 +722,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               setEditorColumn(undefined); // Clear any selected column if any
               setShowRollupConfirm(true);
             }}
-            minimal
+            variant="minimal"
           >
             Rollup &nbsp;
             <Tag minimal round>
@@ -724,7 +733,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             <Button
               className="destination-button"
               icon={IconNames.MULTI_SELECT}
-              minimal
+              variant="minimal"
               onClick={() => setShowDestinationDialog(true)}
             >
               {`Datasource: ${ingestQueryPattern.destinationTableName} `}
@@ -765,7 +774,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               <Button
                 icon={IconNames.LIGHTBULB}
                 text="Analyze rollup"
-                minimal
+                variant="minimal"
                 active={showRollupAnalysisPane}
                 onClick={() => setShowRollupAnalysisPane(!showRollupAnalysisPane)}
               />
@@ -773,9 +782,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           </div>
           {effectiveMode !== 'sql' && ingestQueryPattern && (
             <div className="control-line right">
-              <Popover
+              <PopoverNext
                 className="add-column-control"
-                position="bottom"
+                placement="bottom"
                 content={
                   <Menu>
                     {ingestQueryPattern.metrics ? (
@@ -825,9 +834,11 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     )}
                   </Menu>
                 }
+                lazy
+                shouldReturnFocusOnClose={false}
               >
                 <Button className="add-column" icon={IconNames.PLUS} text="Add column" />
-              </Popover>
+              </PopoverNext>
               <ClearableInput
                 className="column-filter-control"
                 value={columnSearch}
@@ -838,7 +849,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           )}
           {effectiveMode === 'sql' && (
             <div className="control-line right">
-              <Button rightIcon={IconNames.ARROW_TOP_RIGHT} onClick={goToQuery}>
+              <Button endIcon={IconNames.ARROW_TOP_RIGHT} onClick={goToQuery}>
                 Open in <strong>Query</strong> view
               </Button>
             </div>
@@ -851,11 +862,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 <PreviewError
                   errorMessage={String(previewResultState.getErrorMessage())}
                   onRevert={
-                    lastWorkingQueryPattern.current &&
-                    (() => {
-                      if (!lastWorkingQueryPattern.current) return;
-                      updatePattern(lastWorkingQueryPattern.current);
-                    })
+                    lastWorkingQueryPattern && (() => updatePattern(lastWorkingQueryPattern))
                   }
                 />
               ) : (
@@ -881,13 +888,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
             (previewResultState.isError() ? (
               <PreviewError
                 errorMessage={String(previewResultState.getErrorMessage())}
-                onRevert={
-                  lastWorkingQueryPattern.current &&
-                  (() => {
-                    if (!lastWorkingQueryPattern.current) return;
-                    updatePattern(lastWorkingQueryPattern.current);
-                  })
-                }
+                onRevert={lastWorkingQueryPattern && (() => updatePattern(lastWorkingQueryPattern))}
               />
             ) : (
               previewResultSomeData && (
@@ -987,7 +988,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   intent={Intent.WARNING}
-                  minimal
+                  variant="minimal"
                 />
               </Callout>
             )}

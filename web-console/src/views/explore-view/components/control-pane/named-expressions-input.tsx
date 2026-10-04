@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import { Classes, Popover, Position, Tag } from '@blueprintjs/core';
+import { Classes, PopoverNext, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import type { JSX } from 'react';
 import type React from 'react';
+import type { JSX } from 'react';
 import { useCallback, useState } from 'react';
 
 import type { ExpressionMeta, Measure } from '../../models';
@@ -73,8 +73,7 @@ export const NamedExpressionsInput = function NamedExpressionsInput<
 
       setDropIndex(i);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dropIndex],
+    [dragIndex, dropIndex],
   );
 
   const onDrop = useCallback(
@@ -112,12 +111,14 @@ export const NamedExpressionsInput = function NamedExpressionsInput<
     >
       <div className={Classes.TAG_INPUT_VALUES} onDragEnd={onDrop}>
         {values.map((c, i) => (
-          <Popover
+          <PopoverNext
             key={i}
             isOpen={Boolean(menuOpenOn && menuOpenOn.openOn === c)}
-            position={Position.BOTTOM}
+            placement="bottom"
             onClose={menuOnClose}
             content={itemMenu(c, menuOnClose)}
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Tag
               className={classNames({
@@ -140,17 +141,19 @@ export const NamedExpressionsInput = function NamedExpressionsInput<
             >
               {c.name}
             </Tag>
-          </Popover>
+          </PopoverNext>
         ))}
         {(!singleton || !values.length) && (
-          <Popover
+          <PopoverNext
             isOpen={Boolean(menuOpenOn && !menuOpenOn.openOn)}
-            position={Position.BOTTOM}
+            placement="bottom"
             onClose={menuOnClose}
             content={itemMenu(undefined, menuOnClose)}
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Tag icon={IconNames.PLUS} interactive onClick={() => setMenuOpenOn({})} />
-          </Popover>
+          </PopoverNext>
         )}
       </div>
     </div>

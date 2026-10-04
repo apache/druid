@@ -484,7 +484,7 @@ export function partition<T>(xs: T[], predicate: (x: T, i: number) => boolean): 
 }
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
-  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
+  return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined');
 }
 
 export function filterMapOrReturn<T>(
@@ -584,8 +584,12 @@ export function arrangeWithPrefixSuffix(
 
 // ----------------------------
 
+export function copyToClipboard(text: string): void {
+  void copy(text, { format: 'text/plain', fallbackToPrompt: true });
+}
+
 export function copyAndAlert(copyString: string, alertMessage: string): void {
-  copy(copyString, { format: 'text/plain' });
+  copyToClipboard(copyString);
   AppToaster.show({
     message: alertMessage,
     intent: Intent.SUCCESS,

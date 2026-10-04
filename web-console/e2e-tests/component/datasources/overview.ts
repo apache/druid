@@ -65,7 +65,7 @@ export class DatasourcesOverview {
     await this.page.goto(this.baseUrl);
     await this.page.reload({ waitUntil: 'networkidle' });
 
-    const data = await extractTable(this.page, 'div div.rt-tr-group', 'div.rt-td');
+    const data = await extractTable(this.page, 'div div.ct-tr-group', 'div.ct-td');
 
     return data.map(
       row =>
@@ -125,13 +125,13 @@ export class DatasourcesOverview {
       throw new Error(`Could not find datasource: ${datasourceName}`);
     }
 
-    const editActions = await this.page.$$('.action-cell span.bp5-icon-more');
+    const editActions = await this.page.$$('.action-cell span.bp6-icon-more');
     await editActions[index].click();
     await this.waitForPopupMenu();
   }
 
   private async waitForPopupMenu(): Promise<void> {
-    await this.page.waitForSelector('ul.bp5-menu');
+    await this.page.waitForSelector('ul.bp6-menu');
   }
 
   async triggerCompaction(): Promise<void> {

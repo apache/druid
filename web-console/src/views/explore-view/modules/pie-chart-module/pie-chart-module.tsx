@@ -19,14 +19,20 @@
 import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { C, F, L } from 'druid-query-toolkit';
-import type { ECharts } from 'echarts';
+import type { ECElementEvent, ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 
 import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
 import { useQueryManager } from '../../../../hooks';
 import { ColorAssigner } from '../../../../singletons';
-import { bigIntsToNumbers, formatEmpty, formatNumber } from '../../../../utils';
+import {
+  bigIntsToNumbers,
+  ECHARTS_BACKGROUND_COLOR,
+  ECHARTS_COLORS,
+  formatEmpty,
+  formatNumber,
+} from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
 import { ModuleRepository } from '../../module-repository/module-repository';
@@ -100,8 +106,8 @@ ModuleRepository.registerModule<PieChartParameterValues>({
   component: function PieChartModule(props) {
     const { querySource, where, setWhere, moduleWhere, parameterValues, stage, runSqlQuery } =
       props;
-    const containerRef = useRef<HTMLDivElement>();
-    const chartRef = useRef<ECharts>();
+    const containerRef = useRef<HTMLDivElement | undefined>(undefined);
+    const chartRef = useRef<ECharts | undefined>(undefined);
     const [highlight, setHighlight] = useState<PieChartHighlight | undefined>();
 
     const { splitColumn, measure, limit, showOthers } = parameterValues;
@@ -156,6 +162,8 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       const myChart = echarts.init(container, 'dark');
 
       myChart.setOption({
+        color: ECHARTS_COLORS,
+        backgroundColor: ECHARTS_BACKGROUND_COLOR,
         tooltip: {
           trigger: 'item',
         },
@@ -194,10 +202,58 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       };
     }, []);
 
-    useEffect(() => {
+    // Called by ECharts, so it has to see the latest highlight and where clause, not the ones from when the data loaded
+    const handleSeriesClick = useEffectEvent((p: ECElementEvent) => {
       const myChart = chartRef.current;
-      const data = sourceDataState.data;
-      if (!myChart || !data) return;
+      if (!myChart) return;
+
+      if (highlight?.name === p.name) {
+        setHighlight(undefined);
+        return;
+      }
+
+      const centroid = getCentroid(myChart, p.dataIndex);
+      if (!centroid) return;
+
+      const { name, value, __isOthers } = p.data as any;
+
+      setHighlight({
+        title: formatEmpty(name),
+        x: centroid.x,
+        y: centroid.y - 20,
+        name,
+        dataIndex: p.dataIndex,
+        text: (
+          <>
+            {formatNumber(value)}
+            <div className="button-bar">
+              {!__isOthers && (
+                <Button
+                  text="Zoom in"
+                  intent={Intent.PRIMARY}
+                  size="small"
+                  onClick={() => {
+                    setWhere(updateFilterClause(where, C(splitColumn.name).equal(name)));
+                    setHighlight(undefined);
+                  }}
+                />
+              )}
+              <Button
+                text="Close"
+                size="small"
+                onClick={() => {
+                  setHighlight(undefined);
+                }}
+              />
+            </div>
+          </>
+        ),
+      });
+    });
+
+    const updateChart = useEffectEvent((data: any[]) => {
+      const myChart = chartRef.current;
+      if (!myChart) return;
 
       myChart.off('click');
 
@@ -219,54 +275,16 @@ ModuleRepository.registerModule<PieChartParameterValues>({
         ],
       });
 
-      myChart.on('click', 'series', p => {
-        if (highlight?.name === p.name) {
-          setHighlight(undefined);
-          return;
-        }
-
-        const centroid = getCentroid(myChart, p.dataIndex);
-        if (!centroid) return;
-
-        const { name, value, __isOthers } = p.data as any;
-
-        setHighlight({
-          title: formatEmpty(name),
-          x: centroid.x,
-          y: centroid.y - 20,
-          name,
-          dataIndex: p.dataIndex,
-          text: (
-            <>
-              {formatNumber(value)}
-              <div className="button-bar">
-                {!__isOthers && (
-                  <Button
-                    text="Zoom in"
-                    intent={Intent.PRIMARY}
-                    small
-                    onClick={() => {
-                      setWhere(updateFilterClause(where, C(splitColumn.name).equal(name)));
-                      setHighlight(undefined);
-                    }}
-                  />
-                )}
-                <Button
-                  text="Close"
-                  small
-                  onClick={() => {
-                    setHighlight(undefined);
-                  }}
-                />
-              </div>
-            </>
-          ),
-        });
-      });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sourceDataState.data]);
+      myChart.on('click', 'series', p => handleSeriesClick(p));
+    });
 
     useEffect(() => {
+      const data = sourceDataState.data;
+      if (!data) return;
+      updateChart(data);
+    }, [sourceDataState.data]);
+
+    const handleStageChange = useEffectEvent(() => {
       const myChart = chartRef.current;
       if (!myChart) return;
       myChart.resize();
@@ -286,6 +304,10 @@ ModuleRepository.registerModule<PieChartParameterValues>({
           y: centroid.y - 20,
         });
       }
+    });
+
+    useEffect(() => {
+      handleStageChange();
     }, [stage]);
 
     const errorMessage = sourceDataState.getErrorMessage();

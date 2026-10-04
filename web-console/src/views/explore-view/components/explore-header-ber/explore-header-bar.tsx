@@ -24,8 +24,7 @@ import {
   MenuItem,
   Navbar,
   NavbarGroup,
-  Popover,
-  Position,
+  PopoverNext,
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
@@ -66,9 +65,9 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
 
   return (
     <Navbar className="explore-header-bar">
-      <NavbarGroup align={Alignment.LEFT}>
-        <Popover
-          position={Position.BOTTOM_RIGHT}
+      <NavbarGroup align={Alignment.START}>
+        <PopoverNext
+          placement="bottom-end"
           content={
             <Menu>
               <MenuItem icon={IconNames.HOME} text="Home" href="#" />
@@ -141,16 +140,18 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
               />
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <div className="explore-logo">
             <DruidLogo compact />
             <span className="explore-logo-text">Explore</span>
           </div>
-        </Popover>
+        </PopoverNext>
       </NavbarGroup>
-      <NavbarGroup align={Alignment.RIGHT}>
-        <Popover
-          position={Position.BOTTOM_RIGHT}
+      <NavbarGroup align={Alignment.END}>
+        <PopoverNext
+          placement="bottom-end"
           content={
             <Menu>
               <TimezoneMenuItems
@@ -163,25 +164,32 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
               />
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
           <Button
             className="header-entry"
             icon={IconNames.GLOBE_NETWORK}
             text={timezone ? timezone.toString() : 'Etc/UTC'}
             data-tooltip="Change query timezone"
-            minimal
+            variant="minimal"
           />
-        </Popover>
-        <Popover position={Position.BOTTOM_RIGHT} content={moreMenu}>
+        </PopoverNext>
+        <PopoverNext
+          placement="bottom-end"
+          content={moreMenu}
+          lazy
+          shouldReturnFocusOnClose={false}
+        >
           <Button
             className="header-entry"
             icon={IconNames.MORE}
             data-tooltip="More options"
-            minimal
+            variant="minimal"
           />
-        </Popover>
-        <Popover
-          position={Position.BOTTOM_RIGHT}
+        </PopoverNext>
+        <PopoverNext
+          placement="bottom-end"
           content={
             <Menu>
               {ExploreState.LAYOUTS.map(l => (
@@ -197,12 +205,19 @@ export const ExploreHeaderBar = React.memo(function ExploreHeaderBar(props: Expl
               ))}
             </Menu>
           }
+          lazy
+          shouldReturnFocusOnClose={false}
         >
-          <Button className="header-entry" icon={IconNames.CONTROL} data-tooltip="Layout" minimal />
-        </Popover>
+          <Button
+            className="header-entry"
+            icon={IconNames.CONTROL}
+            data-tooltip="Layout"
+            variant="minimal"
+          />
+        </PopoverNext>
         <Button
           className="header-entry"
-          minimal
+          variant="minimal"
           icon={IconNames.PANEL}
           data-tooltip="Show/hide side panels"
           onClick={e => onShowHideSidePanel(e.altKey)}
