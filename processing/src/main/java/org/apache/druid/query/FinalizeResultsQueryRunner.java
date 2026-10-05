@@ -24,15 +24,17 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Query runner that applies {@link QueryToolChest#makePostComputeManipulatorFn(Query, MetricManipulationFn)} to the
+ * Query runner that applies {@link QueryToolChest#makePostComputeManipulatorFn(Query, MetricManipulationFn, Closer)} to the
  * result stream. It is expected to be the last runner in the pipeline, after results are fully merged.
  *
  * Note that despite the type parameter "T", this runner may not actually return sequences with type T. This most
@@ -74,50 +76,57 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
       metricManipulationFn = MetricManipulatorFns.identity();
     }
 
-    if (isBySegment) {
-      finalizerFn = new Function<T, Result<BySegmentResultValue<T>>>()
-      {
-        final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
-            query,
-            metricManipulationFn
-        );
-
-        @Override
-        public Result<BySegmentResultValue<T>> apply(T input)
+    final Closer closer = Closer.create();
+    try {
+      if (isBySegment) {
+        finalizerFn = new Function<T, Result<BySegmentResultValue<T>>>()
         {
-          //noinspection unchecked (input is not actually a T; see class-level javadoc)
-          Result<BySegmentResultValueClass<T>> result = (Result<BySegmentResultValueClass<T>>) input;
-
-          if (input == null) {
-            throw new ISE("Cannot have a null result!");
-          }
-
-          BySegmentResultValue<T> resultsClass = result.getValue();
-
-          final List<T> originalResults = resultsClass.getResults();
-          final ArrayList<T> transformedResults = new ArrayList<>(originalResults.size());
-          for (T originalResult : originalResults) {
-            transformedResults.add(baseFinalizer.apply(originalResult));
-          }
-
-          return new Result<>(
-              result.getTimestamp(),
-              new BySegmentResultValueClass<>(
-                  transformedResults,
-                  resultsClass.getSegmentId(),
-                  resultsClass.getInterval()
-              )
+          final Function<T, T> baseFinalizer = toolChest.makePostComputeManipulatorFn(
+              query,
+              metricManipulationFn,
+              closer
           );
-        }
-      };
-    } else {
-      finalizerFn = toolChest.makePostComputeManipulatorFn(query, metricManipulationFn);
-    }
 
-    //noinspection unchecked (Technically unsound, but see class-level javadoc for rationale)
-    return (Sequence<T>) Sequences.map(
-        baseRunner.run(queryPlus.withQuery(queryToRun), responseContext),
-        finalizerFn
-    );
+          @Override
+          public Result<BySegmentResultValue<T>> apply(T input)
+          {
+            //noinspection unchecked (input is not actually a T; see class-level javadoc)
+            Result<BySegmentResultValueClass<T>> result = (Result<BySegmentResultValueClass<T>>) input;
+
+            if (input == null) {
+              throw new ISE("Cannot have a null result!");
+            }
+
+            BySegmentResultValue<T> resultsClass = result.getValue();
+
+            final List<T> originalResults = resultsClass.getResults();
+            final ArrayList<T> transformedResults = new ArrayList<>(originalResults.size());
+            for (T originalResult : originalResults) {
+              transformedResults.add(baseFinalizer.apply(originalResult));
+            }
+
+            return new Result<>(
+                result.getTimestamp(),
+                new BySegmentResultValueClass<>(
+                    transformedResults,
+                    resultsClass.getSegmentId(),
+                    resultsClass.getInterval()
+                )
+            );
+          }
+        };
+      } else {
+        finalizerFn = toolChest.makePostComputeManipulatorFn(query, metricManipulationFn, closer);
+      }
+
+      //noinspection unchecked (Technically unsound, but see class-level javadoc for rationale)
+      return (Sequence<T>) Sequences.map(
+          baseRunner.run(queryPlus.withQuery(queryToRun), responseContext),
+          finalizerFn
+      ).withBaggage(closer);
+    }
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, closer);
+    }
   }
 }
