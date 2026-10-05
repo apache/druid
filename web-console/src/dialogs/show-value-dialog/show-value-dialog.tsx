@@ -29,8 +29,8 @@ import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import React, { useMemo, useState } from 'react';
-import AceEditor from 'react-ace';
 
+import { CodeEditor } from '../../components';
 import { AppToaster } from '../../singletons';
 import { copyToClipboard } from '../../utils';
 
@@ -84,17 +84,12 @@ export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowVa
           </FormGroup>
         )}
         {hasParsed && tab === 'formatted' && (
-          <AceEditor
+          <CodeEditor
             mode="hjson"
-            theme="solarized_dark"
             className="query-string"
-            fontSize={12}
-            width="100%"
             height="100%"
             showGutter
-            showPrintMargin={false}
             value={JSONBig.stringify(parsed, undefined, 2)}
-            readOnly
           />
         )}
         {(!hasParsed || tab === 'raw') && <TextArea value={str} spellCheck={false} />}

@@ -22,10 +22,10 @@ import classNames from 'classnames';
 import type { JSX } from 'react';
 import React from 'react';
 
-import { initAceDsqlMode } from './ace-modes/dsql';
 import { HeaderBar, Loader } from './components';
 import { SqlFunctionsProvider } from './contexts/sql-functions-context';
 import type { ConsoleViewId, QueryContext, QueryWithContext } from './druid-models';
+import { initDsqlMode } from './editor-modes/dsql';
 import type { AvailableFunctions } from './helpers';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { AppToaster } from './singletons';
@@ -154,7 +154,7 @@ export class ConsoleApplication extends React.PureComponent<
         }
         const capabilities = data?.[0] || Capabilities.FULL;
         const availableSqlFunctions = data?.[1];
-        initAceDsqlMode(availableSqlFunctions);
+        initDsqlMode(availableSqlFunctions);
         this.setState({
           capabilities,
           availableSqlFunctions,

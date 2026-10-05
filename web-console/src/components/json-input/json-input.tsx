@@ -16,16 +16,16 @@
  * limitations under the License.
  */
 
-import type { Ace } from 'ace-builds';
+import type { EditorView } from '@codemirror/view';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
-import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
-import AceEditor from 'react-ace';
+import React, { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import { getHjsonCompletions } from '../../ace-completions/hjson-completions';
-import { usePermanentCallback } from '../../hooks';
+import { getHjsonCompletions } from '../../editor-completions/hjson-completions';
 import type { JsonCompletionRule } from '../../utils';
+import type { CompletionRequest } from '../code-editor/code-editor';
+import { CodeEditor, focusEditorAt } from '../code-editor/code-editor';
 
 import './json-input.scss';
 
@@ -98,7 +98,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     stringified: stringifyJson(value),
   }));
   const [showErrorIfNeeded, setShowErrorIfNeeded] = useState(false);
-  const aceEditor = useRef<Ace.Editor | undefined>(undefined);
+  const editorViewRef = useRef<EditorView | undefined>(undefined);
 
   const showValue = useEffectEvent((value: any) => {
     if (deepEqual(value, internalValue.lastShownValue)) return;
@@ -112,105 +112,78 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     showValue(value);
   }, [value]);
 
-  // Ace reads the completers once, when autocompletion is enabled, so they must not change. The callback always sees
-  // the latest props.
-  const getCompletions = usePermanentCallback<Ace.Completer['getCompletions']>(
-    (_editor, session, pos, prefix, callback) => {
-      if (!jsonCompletions) {
-        callback(null, []);
-        return;
-      }
-      const allText = session.getValue();
-      const line = session.getLine(pos.row);
-      const charBeforePrefix = line[pos.column - prefix.length - 1];
-
-      const lines = allText.split('\n').slice(0, pos.row + 1);
-      const lastLineIndex = lines.length - 1;
-      lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
-      callback(
-        null,
-        getHjsonCompletions({
-          jsonCompletions,
-          textBefore: lines.join('\n'),
-          charBeforePrefix,
-          prefix,
-        }),
-      );
+  const getCompletions = useCallback(
+    ({ prefix, charBeforePrefix, textBeforePrefix }: CompletionRequest) => {
+      if (!jsonCompletions) return [];
+      return getHjsonCompletions({
+        jsonCompletions,
+        textBefore: textBeforePrefix,
+        charBeforePrefix,
+        prefix,
+      });
     },
+    [jsonCompletions],
   );
-  const completers = useMemo<Ace.Completer[]>(() => [{ getCompletions }], [getCompletions]);
+
+  const handleInputChange = (inputJson: string) => {
+    let value: any;
+    let error: Error | undefined;
+    try {
+      value = parseHjson(inputJson);
+    } catch (e) {
+      error = e;
+    }
+
+    if (!error && issueWithValue) {
+      const issue = issueWithValue(value);
+      if (issue) {
+        value = undefined;
+        error = new Error(issue);
+      }
+    }
+
+    setInternalValue({
+      lastShownValue: value ?? internalValue.lastShownValue,
+      error,
+      stringified: inputJson,
+    });
+
+    setError?.(error);
+    if (!error) {
+      onChange?.(value);
+    }
+
+    if (showErrorIfNeeded) {
+      setShowErrorIfNeeded(false);
+    }
+  };
 
   const internalValueError = internalValue.error;
   return (
     <div className={classNames('json-input', { invalid: showErrorIfNeeded && internalValueError })}>
-      <AceEditor
+      <CodeEditor
+        ref={editorViewRef}
         mode="hjson"
-        theme="solarized_dark"
-        onChange={(inputJson: string) => {
-          let value: any;
-          let error: Error | undefined;
-          try {
-            value = parseHjson(inputJson);
-          } catch (e) {
-            error = e;
-          }
-
-          if (!error && issueWithValue) {
-            const issue = issueWithValue(value);
-            if (issue) {
-              value = undefined;
-              error = new Error(issue);
-            }
-          }
-
-          setInternalValue({
-            lastShownValue: value ?? internalValue.lastShownValue,
-            error,
-            stringified: inputJson,
-          });
-
-          setError?.(error);
-          if (!error) {
-            onChange?.(value);
-          }
-
-          if (showErrorIfNeeded) {
-            setShowErrorIfNeeded(false);
-          }
-        }}
+        onChange={onChange ? handleInputChange : undefined}
         onBlur={() => setShowErrorIfNeeded(true)}
-        readOnly={!onChange}
-        focus={focus}
-        fontSize={12}
+        autoFocus={focus}
         width={width || '100%'}
         height={height || '8vh'}
-        showPrintMargin={false}
         showGutter={Boolean(showLineNumbers)}
         value={internalValue.stringified}
         placeholder={placeholder}
-        editorProps={{ completers }}
-        enableBasicAutocompletion={Boolean(jsonCompletions)}
-        enableLiveAutocompletion={Boolean(jsonCompletions)}
-        setOptions={{
-          showLineNumbers: Boolean(showLineNumbers),
-          tabSize: 2,
-          newLineMode: 'unix',
-        }}
-        onLoad={editor => {
-          aceEditor.current = editor;
-        }}
+        getCompletions={jsonCompletions ? getCompletions : undefined}
       />
       {showErrorIfNeeded && internalValueError && (
         <div
           className="json-error"
           onClick={() => {
-            if (!aceEditor.current || !internalValueError) return;
+            if (!editorViewRef.current || !internalValueError) return;
 
             const rc = extractRowColumnFromHjsonError(internalValueError);
             if (!rc) return;
 
-            aceEditor.current.focus(); // Grab the focus
-            aceEditor.current.getSelection().moveCursorTo(rc.row, rc.column);
+            focusEditorAt(editorViewRef.current, rc);
           }}
         >
           {internalValueError.message}

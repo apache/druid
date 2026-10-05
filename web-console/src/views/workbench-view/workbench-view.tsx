@@ -51,7 +51,7 @@ import type { Capabilities } from '../../helpers';
 import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
 import { getLink } from '../../links';
 import { AppToaster } from '../../singletons';
-import { AceEditorStateCache } from '../../singletons/ace-editor-state-cache';
+import { EditorStateCache } from '../../singletons/editor-state-cache';
 import { ExecutionStateCache } from '../../singletons/execution-state-cache';
 import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
 import type { ColumnMetadata } from '../../utils';
@@ -102,7 +102,7 @@ function cleanupTabEntry(tabEntry: TabEntry): void {
   const discardedId = tabEntry.id;
   WorkbenchRunningPromises.deletePromise(discardedId);
   ExecutionStateCache.deleteState(discardedId);
-  AceEditorStateCache.deleteState(discardedId);
+  EditorStateCache.deleteState(discardedId);
 }
 
 function externalDataTabId(tabId: string | undefined): boolean {

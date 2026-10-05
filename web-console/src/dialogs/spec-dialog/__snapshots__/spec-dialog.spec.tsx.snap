@@ -50,11 +50,14 @@ exports[`SpecDialog matches snapshot no initSpec 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace_hidpi ace-solarized-dark ace_dark spec-dialog-textarea placeholder-padding"
-          id="ace-editor"
-          style="width: 100%; height: 500px; font-size: 12px;"
+          class="code-editor spec-dialog-textarea"
+          style="width: 100%; height: 500px;"
         >
-          <!-- Ace editor, mode: ace/mode/hjson, value: "", placeholder: "{ JSON spec... }" -->
+          <div
+            class="cm-editor"
+          >
+            <!-- Code editor, mode: hjson, value: "", placeholder: "{ JSON spec... }" -->
+          </div>
         </div>
         <div
           class="bp6-dialog-footer"
@@ -146,11 +149,14 @@ exports[`SpecDialog matches snapshot with initSpec 1`] = `
           </button>
         </div>
         <div
-          class=" ace_editor ace_hidpi ace-solarized-dark ace_dark spec-dialog-textarea placeholder-padding"
-          id="ace-editor"
-          style="width: 100%; height: 500px; font-size: 12px;"
+          class="code-editor spec-dialog-textarea"
+          style="width: 100%; height: 500px;"
         >
-          <!-- Ace editor, mode: ace/mode/hjson, value: "{\\n  \\"type\\": \\"some-spec\\"\\n}" -->
+          <div
+            class="cm-editor"
+          >
+            <!-- Code editor, mode: hjson, value: "{\\n  \\"type\\": \\"some-spec\\"\\n}" -->
+          </div>
         </div>
         <div
           class="bp6-dialog-footer"

@@ -19,13 +19,13 @@
 import { Button, ButtonGroup, Intent } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
-import AceEditor from 'react-ace';
 
 import { Execution } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import { copyToClipboard, downloadFile } from '../../utils';
 import { ExecutionStagesPane } from '../../views/workbench-view/execution-stages-pane/execution-stages-pane';
+import { CodeEditor } from '../code-editor/code-editor';
 import { Loader } from '../loader/loader';
 
 import './show-json-or-stages.scss';
@@ -108,16 +108,10 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
         ) : execution ? (
           <ExecutionStagesPane execution={execution} />
         ) : (
-          <AceEditor
+          <CodeEditor
             mode="hjson"
-            theme="solarized_dark"
-            readOnly
-            fontSize={12}
-            width="100%"
             height="100%"
-            showPrintMargin={false}
-            showGutter={false}
-            value={!jsonState.error ? jsonValue : jsonState.getErrorMessage()}
+            value={(!jsonState.error ? jsonValue : jsonState.getErrorMessage()) ?? ''}
           />
         )}
       </div>

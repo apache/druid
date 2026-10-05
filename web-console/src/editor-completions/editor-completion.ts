@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-// Import Ace editor and all the sub components used in the app. Everything is bundled so Ace never needs to load
-// anything at runtime.
-import 'ace-builds';
-import 'ace-builds/src-noconflict/ext-language_tools';
-import 'ace-builds/src-noconflict/ext-searchbox';
-import 'ace-builds/src-noconflict/theme-solarized_dark';
-import '../ace-modes/dsql';
-import '../ace-modes/hjson';
-
-import './ace.scss';
+export interface EditorCompletion {
+  /** The text that is inserted */
+  value: string;
+  /** What is shown in the list, defaults to the value */
+  caption?: string;
+  /** Higher scores are listed first (among equally good matches) */
+  score?: number;
+  /** A short description of the kind of thing being completed shown next to the caption */
+  meta?: string;
+  /** Documentation to show next to the list when the completion is selected */
+  docHTML?: string;
+}

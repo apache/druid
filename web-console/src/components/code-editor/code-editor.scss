@@ -16,15 +16,8 @@
  * limitations under the License.
  */
 
-import { Icons } from '@blueprintjs/icons';
-
-import { UrlBaser } from './singletons';
-import { domSnapshotSerializer } from './test-utils/snapshot-serializer';
-
-UrlBaser.baseUrl = '/some/base_url';
-
-expect.addSnapshotSerializer(domSnapshotSerializer);
-
-beforeAll(async () => {
-  await Icons.loadAll();
-});
+// Like the Ace editor that this replaced, the editor never grows past the size it is given
+.code-editor {
+  position: relative;
+  overflow: hidden;
+}

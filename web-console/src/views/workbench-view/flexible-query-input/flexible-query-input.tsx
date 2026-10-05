@@ -16,32 +16,89 @@
  * limitations under the License.
  */
 
-import { Intent, ResizeSensor } from '@blueprintjs/core';
+import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Ace } from 'ace-builds';
-import { Range } from 'ace-builds';
-import classNames from 'classnames';
+import type { Extension } from '@codemirror/state';
+import { RangeSet, StateEffect, StateField } from '@codemirror/state';
+import type { DecorationSet } from '@codemirror/view';
+import { Decoration, EditorView, GutterMarker, lineNumberMarkers } from '@codemirror/view';
 import { dedupe } from 'druid-query-toolkit';
 import React from 'react';
-import AceEditor from 'react-ace';
 
-import { getHjsonCompletions } from '../../../ace-completions/hjson-completions';
-import { getSqlCompletions } from '../../../ace-completions/sql-completions';
+import type { CompletionRequest } from '../../../components';
+import { CodeEditor, focusEditorAt } from '../../../components';
 import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import { NATIVE_JSON_QUERY_COMPLETIONS } from '../../../druid-models';
-import { usePermanentCallback } from '../../../hooks';
+import { getHjsonCompletions } from '../../../editor-completions/hjson-completions';
+import { getSqlCompletions } from '../../../editor-completions/sql-completions';
 import { AppToaster } from '../../../singletons';
-import { AceEditorStateCache } from '../../../singletons/ace-editor-state-cache';
 import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
 import { findAllSqlQueriesInText, findMap } from '../../../utils';
 
 import './flexible-query-input.scss';
 
 const V_PADDING = 10;
-const ACE_THEME = 'solarized_dark';
+
+class SubQueryGutterMarker extends GutterMarker {
+  constructor(readonly row: number) {
+    super();
+    this.elementClass = `sub-query-gutter-marker query-${row}`;
+  }
+
+  eq(other: GutterMarker): boolean {
+    return other instanceof SubQueryGutterMarker && other.row === this.row;
+  }
+}
 
 /**
- * The row of the sub query gutter marker (set with `session.setBreakpoint` in `markQueries`) that the event is on
+ * Sets the (0 based) rows that get a sub query gutter marker
+ */
+const setSubQueryRows = StateEffect.define<number[]>();
+
+const subQueryMarkers = StateField.define<RangeSet<GutterMarker>>({
+  create: () => RangeSet.empty,
+  update(markers, tr) {
+    markers = markers.map(tr.changes);
+    for (const effect of tr.effects) {
+      if (!effect.is(setSubQueryRows)) continue;
+      const { doc } = tr.state;
+      markers = RangeSet.of(
+        effect.value
+          .filter(row => row < doc.lines)
+          .map(row => new SubQueryGutterMarker(row).range(doc.line(row + 1).from)),
+        true,
+      );
+    }
+    return markers;
+  },
+  provide: field => lineNumberMarkers.from(field),
+});
+
+const setSubQueryHighlight = StateEffect.define<{ from: number; to: number } | undefined>();
+
+const subQueryHighlightMark = Decoration.mark({ class: 'sub-query-highlight' });
+
+const subQueryHighlight = StateField.define<DecorationSet>({
+  create: () => Decoration.none,
+  update(highlight, tr) {
+    highlight = highlight.map(tr.changes);
+    for (const effect of tr.effects) {
+      if (!effect.is(setSubQueryHighlight)) continue;
+      const range = effect.value;
+      highlight =
+        range && range.from < range.to
+          ? Decoration.set(subQueryHighlightMark.range(range.from, range.to))
+          : Decoration.none;
+    }
+    return highlight;
+  },
+  provide: field => EditorView.decorations.from(field),
+});
+
+const SUB_QUERY_EXTENSIONS: Extension = [subQueryMarkers, subQueryHighlight];
+
+/**
+ * The row of the sub query gutter marker (set in `markQueries`) that the event is on
  */
 function getSubQueryMarkerRow(e: React.MouseEvent): number | undefined {
   const marker = (e.target as Element).closest('.sub-query-gutter-marker');
@@ -84,12 +141,9 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
   } = props;
 
   const availableSqlFunctions = useAvailableSqlFunctions();
-  const [editorHeight, setEditorHeight] = React.useState(200);
-  const aceEditorRef = React.useRef<Ace.Editor | undefined>(undefined);
+  const editorViewRef = React.useRef<EditorView | undefined>(undefined);
   const lastFoundQueriesRef = React.useRef<QuerySlice[]>([]);
-  const highlightFoundQueryRef = React.useRef<{ row: number; marker: number } | undefined>(
-    undefined,
-  );
+  const highlightFoundQueryRowRef = React.useRef<number | undefined>(undefined);
 
   const findAllQueriesByLine = React.useCallback(() => {
     const found = dedupe(findAllSqlQueriesInText(queryString), ({ startRowColumn }) =>
@@ -106,17 +160,14 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
 
   const markQueries = React.useCallback(() => {
     if (!runQuerySlice) return;
-    const aceEditor = aceEditorRef.current;
-    if (!aceEditor) return;
-    const session = aceEditor.getSession();
+    const editorView = editorViewRef.current;
+    if (!editorView) return;
     lastFoundQueriesRef.current = findAllQueriesByLine();
 
-    session.clearBreakpoints();
-    lastFoundQueriesRef.current.forEach(({ startRowColumn }) => {
-      session.setBreakpoint(
-        startRowColumn.row,
-        `sub-query-gutter-marker query-${startRowColumn.row}`,
-      );
+    editorView.dispatch({
+      effects: setSubQueryRows.of(
+        lastFoundQueriesRef.current.map(({ startRowColumn }) => startRowColumn.row),
+      ),
     });
   }, [runQuerySlice, findAllQueriesByLine]);
 
@@ -130,49 +181,13 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
     return () => clearTimeout(timeout);
   }, [queryString, markQueries]);
 
-  React.useEffect(() => {
-    return () => {
-      if (editorStateId && aceEditorRef.current) {
-        AceEditorStateCache.saveState(editorStateId, aceEditorRef.current);
-      }
-    };
-  }, [editorStateId]);
-
   const goToPosition = React.useCallback((rowColumn: RowColumn) => {
-    const aceEditor = aceEditorRef.current;
-    if (!aceEditor) return;
-    aceEditor.focus(); // Grab the focus
-    aceEditor.getSelection().moveCursorTo(rowColumn.row, rowColumn.column);
+    const editorView = editorViewRef.current;
+    if (!editorView) return;
+    focusEditorAt(editorView, rowColumn);
   }, []);
 
   React.useImperativeHandle(ref, () => ({ goToPosition }), [goToPosition]);
-
-  const handleAceContainerResize = React.useCallback((entries: ResizeObserverEntry[]) => {
-    if (entries.length !== 1) return;
-    setEditorHeight(entries[0].contentRect.height);
-  }, []);
-
-  const handleChange = React.useCallback(
-    (value: string) => {
-      if (!onQueryStringChange) return;
-      onQueryStringChange(value);
-    },
-    [onQueryStringChange],
-  );
-
-  const handleAceLoad = React.useCallback(
-    (editor: Ace.Editor) => {
-      editor.renderer.setPadding(V_PADDING);
-      editor.renderer.setScrollMargin(V_PADDING, V_PADDING, 0, 0);
-
-      if (editorStateId) {
-        AceEditorStateCache.applyState(editorStateId, editor);
-      }
-
-      aceEditorRef.current = editor;
-    },
-    [editorStateId],
-  );
 
   const handleContainerClick = React.useCallback(
     (e: React.MouseEvent) => {
@@ -202,120 +217,87 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
   const handleContainerMouseOver = React.useCallback(
     (e: React.MouseEvent) => {
       if (!runQuerySlice) return;
-      const aceEditor = aceEditorRef.current;
-      if (!aceEditor) return;
+      const editorView = editorViewRef.current;
+      if (!editorView) return;
 
       const row = getSubQueryMarkerRow(e);
-      if (typeof row === 'undefined' || highlightFoundQueryRef.current?.row === row) return;
+      if (typeof row === 'undefined' || highlightFoundQueryRowRef.current === row) return;
 
       const slice = lastFoundQueriesRef.current.find(
         ({ startRowColumn }) => startRowColumn.row === row,
       );
       if (!slice) return;
-      const marker = aceEditor
-        .getSession()
-        .addMarker(
-          new Range(
-            slice.startRowColumn.row,
-            slice.startRowColumn.column,
-            slice.endRowColumn.row,
-            slice.endRowColumn.column,
-          ),
-          'sub-query-highlight',
-          'text',
-          false,
-        );
-      highlightFoundQueryRef.current = { row, marker };
+      const docLength = editorView.state.doc.length;
+      editorView.dispatch({
+        effects: setSubQueryHighlight.of({
+          from: Math.min(slice.startOffset, docLength),
+          to: Math.min(slice.endOffset, docLength),
+        }),
+      });
+      highlightFoundQueryRowRef.current = row;
     },
     [runQuerySlice],
   );
 
   const handleContainerMouseOut = React.useCallback(() => {
-    if (!highlightFoundQueryRef.current) return;
-    const aceEditor = aceEditorRef.current;
-    if (!aceEditor) return;
-    aceEditor.getSession().removeMarker(highlightFoundQueryRef.current.marker);
-    highlightFoundQueryRef.current = undefined;
+    if (typeof highlightFoundQueryRowRef.current === 'undefined') return;
+    editorViewRef.current?.dispatch({ effects: setSubQueryHighlight.of(undefined) });
+    highlightFoundQueryRowRef.current = undefined;
   }, []);
 
-  const jsonMode = queryString.trim().startsWith('{');
-
-  // Ace reads the completers once, when autocompletion is enabled, so they must not change. The callback always sees
-  // the latest props.
-  const getCompletions = usePermanentCallback<Ace.Completer['getCompletions']>(
-    (_editor, session, pos, prefix, callback) => {
-      const allText = session.getValue();
-      const line = session.getLine(pos.row);
-      const charBeforePrefix = line[pos.column - prefix.length - 1];
+  const getCompletions = React.useCallback(
+    ({
+      allText,
+      prefix,
+      charBeforePrefix,
+      textBeforePrefix,
+      lineBeforePrefix,
+    }: CompletionRequest) => {
       if (allText.trim().startsWith('{')) {
-        const lines = allText.split('\n').slice(0, pos.row + 1);
-        const lastLineIndex = lines.length - 1;
-        lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
-        callback(
-          null,
-          getHjsonCompletions({
-            jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS,
-            textBefore: lines.join('\n'),
-            charBeforePrefix,
-            prefix,
-          }),
-        );
+        return getHjsonCompletions({
+          jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS,
+          textBefore: textBeforePrefix,
+          charBeforePrefix,
+          prefix,
+        });
       } else {
-        const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
-        callback(
-          null,
-          getSqlCompletions({
-            allText,
-            lineBeforePrefix,
-            charBeforePrefix,
-            prefix,
-            columnMetadata,
-            availableSqlFunctions,
-          }),
-        );
+        return getSqlCompletions({
+          allText,
+          lineBeforePrefix,
+          charBeforePrefix,
+          prefix,
+          columnMetadata,
+          availableSqlFunctions,
+        });
       }
     },
+    [columnMetadata, availableSqlFunctions],
   );
-  const completers = React.useMemo<Ace.Completer[]>(() => [{ getCompletions }], [getCompletions]);
 
   return (
     <div className="flexible-query-input">
-      <ResizeSensor onResize={handleAceContainerResize}>
-        <div
-          className={classNames('ace-container', running ? 'query-running' : 'query-idle')}
-          onClick={handleContainerClick}
-          onMouseOver={handleContainerMouseOver}
-          onMouseOut={handleContainerMouseOut}
-        >
-          <AceEditor
-            mode={jsonMode ? 'hjson' : 'dsql'}
-            theme={ACE_THEME}
-            className={classNames(
-              'placeholder-padding',
-              leaveBackground ? undefined : 'no-background',
-            )}
-            editorProps={{ completers }}
-            enableBasicAutocompletion
-            enableLiveAutocompletion
-            onChange={handleChange}
-            focus
-            fontSize={12}
-            width="100%"
-            height={editorHeight + 'px'}
-            showGutter={showGutter}
-            showPrintMargin={false}
-            tabSize={2}
-            value={queryString}
-            readOnly={!onQueryStringChange}
-            setOptions={{
-              showLineNumbers: true,
-              newLineMode: 'unix',
-            }}
-            placeholder={placeholder || 'SELECT * FROM ...'}
-            onLoad={handleAceLoad}
-          />
-        </div>
-      </ResizeSensor>
+      <div
+        className="editor-container"
+        onClick={handleContainerClick}
+        onMouseOver={handleContainerMouseOver}
+        onMouseOut={handleContainerMouseOut}
+      >
+        <CodeEditor
+          ref={editorViewRef}
+          mode={queryString.trim().startsWith('{') ? 'hjson' : 'dsql'}
+          transparentBackground={!leaveBackground}
+          value={queryString}
+          onChange={onQueryStringChange}
+          autoFocus
+          height="100%"
+          showGutter={showGutter}
+          padding={V_PADDING}
+          placeholder={placeholder || 'SELECT * FROM ...'}
+          getCompletions={getCompletions}
+          stateCacheId={editorStateId}
+          extensions={SUB_QUERY_EXTENSIONS}
+        />
+      </div>
     </div>
   );
 }

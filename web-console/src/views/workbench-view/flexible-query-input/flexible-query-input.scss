@@ -21,18 +21,18 @@
 .flexible-query-input {
   position: relative;
 
-  .ace-container {
+  .editor-container {
     position: absolute;
     width: 100%;
     height: 100%;
   }
 
   .sub-query-highlight {
-    position: absolute;
     background: $gray1;
   }
 
   .sub-query-gutter-marker {
+    position: relative;
     cursor: pointer;
 
     &:before {

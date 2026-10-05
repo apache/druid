@@ -19,8 +19,8 @@
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
-import AceEditor from 'react-ace';
 
+import { CodeEditor } from '../../components';
 import { AppToaster } from '../../singletons';
 import { offsetToRowColumn } from '../../utils';
 
@@ -67,27 +67,16 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
       title={title}
       canOutsideClickClose={false}
     >
-      <AceEditor
+      <CodeEditor
         mode="hjson"
-        theme="solarized_dark"
-        className="spec-dialog-textarea placeholder-padding"
+        className="spec-dialog-textarea"
         onChange={setSpec}
-        fontSize={12}
-        showPrintMargin={false}
         showGutter
-        highlightActiveLine
+        padding={10}
         value={spec}
         width="100%"
-        setOptions={{
-          showLineNumbers: true,
-          tabSize: 2,
-          newLineMode: 'unix',
-        }}
+        height="500px"
         placeholder="{ JSON spec... }"
-        onLoad={editor => {
-          editor.renderer.setPadding(10);
-          editor.renderer.setScrollMargin(10, 10, 0, 0);
-        }}
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

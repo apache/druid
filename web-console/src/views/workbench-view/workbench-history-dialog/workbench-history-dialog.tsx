@@ -29,9 +29,8 @@ import {
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
-import AceEditor from 'react-ace';
 
-import { CenterMessage } from '../../../components';
+import { CenterMessage, CodeEditor } from '../../../components';
 import type { WorkbenchQuery } from '../../../druid-models';
 import type { WorkbenchQueryHistoryEntry } from '../../../singletons/workbench-history';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
@@ -83,16 +82,11 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
             />
           </PopoverNext>
         </div>
-        <AceEditor
+        <CodeEditor
           mode={jsonMode ? 'hjson' : 'dsql'}
-          theme="solarized_dark"
           className="query-string"
-          fontSize={12}
-          width="100%"
           showGutter
-          showPrintMargin={false}
           value={queryString}
-          readOnly
         />
       </div>
     );

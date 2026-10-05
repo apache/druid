@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import type { Ace } from 'ace-builds';
 import { C, filterMap, N, T } from 'druid-query-toolkit';
 
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../../lib/keywords';
@@ -26,6 +25,7 @@ import type { AvailableFunctions } from '../helpers';
 import type { ColumnMetadata } from '../utils';
 import { lookupBy, uniq } from '../utils';
 
+import type { EditorCompletion } from './editor-completion';
 import { makeDocHtml } from './make-doc-html';
 
 const SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_FUNCTION = [
@@ -185,7 +185,7 @@ export function getSqlCompletions({
   columns,
   availableSqlFunctions,
   skipAggregates,
-}: GetSqlCompletionsOptions): Ace.ValueCompletion[] {
+}: GetSqlCompletionsOptions): EditorCompletion[] {
   // We are in a single line comment
   if (lineBeforePrefix.startsWith('--') || lineBeforePrefix.includes(' --')) {
     return [];
@@ -210,7 +210,7 @@ export function getSqlCompletions({
 
   const possibleReferences = getPossibleSqlReferences(allText, 100);
 
-  let completions: Ace.ValueCompletion[] = possibleReferences.map(value => ({
+  let completions: EditorCompletion[] = possibleReferences.map(value => ({
     value,
     score: 1,
     meta: 'local',
@@ -235,7 +235,6 @@ export function getSqlCompletions({
             description,
             syntax: `Druid runtime type: ${runtime}`,
           }),
-          docText: description,
         };
       }),
     );
@@ -261,7 +260,6 @@ export function getSqlCompletions({
               score: 30,
               meta: funcDef.isAggregate ? 'aggregate' : 'function',
               docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
-              docText: description,
             }));
           }),
         );
@@ -274,7 +272,6 @@ export function getSqlCompletions({
               score: 30,
               meta: 'function',
               docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
-              docText: description,
             };
           }),
         );

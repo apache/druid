@@ -16,18 +16,17 @@
  * limitations under the License.
  */
 
-import type { Ace } from 'ace-builds';
+import type { EditorView } from '@codemirror/view';
 import type { Column } from 'druid-query-toolkit';
 import React from 'react';
-import AceEditor from 'react-ace';
 
-import { getSqlCompletions } from '../../../../ace-completions/sql-completions';
+import type { CompletionRequest } from '../../../../components';
+import { CodeEditor, focusEditorAt } from '../../../../components';
 import { useAvailableSqlFunctions } from '../../../../contexts/sql-functions-context';
-import { usePermanentCallback } from '../../../../hooks';
+import { getSqlCompletions } from '../../../../editor-completions/sql-completions';
 import type { RowColumn } from '../../../../utils';
 
 const V_PADDING = 10;
-const ACE_THEME = 'solarized_dark';
 
 export interface SqlInputHandle {
   goToPosition(rowColumn: RowColumn): void;
@@ -59,79 +58,44 @@ export function SqlInput(props: SqlInputProps) {
   } = props;
 
   const availableSqlFunctions = useAvailableSqlFunctions();
-  const aceEditorRef = React.useRef<Ace.Editor | undefined>(undefined);
+  const editorViewRef = React.useRef<EditorView | undefined>(undefined);
 
   const goToPosition = React.useCallback((rowColumn: RowColumn) => {
-    const aceEditor = aceEditorRef.current;
-    if (!aceEditor) return;
-    aceEditor.focus(); // Grab the focus
-    aceEditor.getSelection().moveCursorTo(rowColumn.row, rowColumn.column);
+    const editorView = editorViewRef.current;
+    if (!editorView) return;
+    focusEditorAt(editorView, rowColumn);
   }, []);
 
   React.useImperativeHandle(ref, () => ({ goToPosition }), [goToPosition]);
 
-  const handleChange = React.useCallback(
-    (value: string) => {
-      if (!onValueChange) return;
-      onValueChange(value);
-    },
-    [onValueChange],
+  const getCompletions = React.useCallback(
+    ({ allText, prefix, charBeforePrefix, lineBeforePrefix }: CompletionRequest) =>
+      getSqlCompletions({
+        allText,
+        lineBeforePrefix,
+        charBeforePrefix,
+        prefix,
+        columns: columns?.map(column => column.name),
+        availableSqlFunctions,
+        skipAggregates: !includeAggregates,
+      }),
+    [columns, availableSqlFunctions, includeAggregates],
   );
-
-  const handleAceLoad = React.useCallback((editor: Ace.Editor) => {
-    editor.renderer.setPadding(V_PADDING);
-    editor.renderer.setScrollMargin(V_PADDING, V_PADDING, 0, 0);
-    aceEditorRef.current = editor;
-  }, []);
-
-  // Ace reads the completers once, when autocompletion is enabled, so they must not change. The callback always sees
-  // the latest props.
-  const getCompletions = usePermanentCallback<Ace.Completer['getCompletions']>(
-    (_editor, session, pos, prefix, callback) => {
-      const allText = session.getValue();
-      const line = session.getLine(pos.row);
-      const charBeforePrefix = line[pos.column - prefix.length - 1];
-      const lineBeforePrefix = line.slice(0, pos.column - prefix.length - 1);
-      callback(
-        null,
-        getSqlCompletions({
-          allText,
-          lineBeforePrefix,
-          charBeforePrefix,
-          prefix,
-          columns: columns?.map(column => column.name),
-          availableSqlFunctions,
-          skipAggregates: !includeAggregates,
-        }),
-      );
-    },
-  );
-  const completers = React.useMemo<Ace.Completer[]>(() => [{ getCompletions }], [getCompletions]);
 
   return (
-    <AceEditor
+    <CodeEditor
+      ref={editorViewRef}
+      className="sql-input"
       mode="dsql"
-      theme={ACE_THEME}
-      className="sql-input placeholder-padding"
-      editorProps={{ completers }}
-      enableBasicAutocompletion
-      enableLiveAutocompletion
-      onChange={handleChange}
-      focus={autoFocus}
-      fontSize={12}
+      value={value}
+      onChange={onValueChange}
+      autoFocus={autoFocus}
       width="100%"
       height={editorHeight ? `${editorHeight}px` : '100%'}
       showGutter={Boolean(showGutter)}
-      showPrintMargin={false}
-      tabSize={2}
-      value={value}
-      readOnly={!onValueChange}
-      setOptions={{
-        showLineNumbers: true,
-        newLineMode: 'unix',
-      }}
+      padding={V_PADDING}
       placeholder={placeholder || 'SQL filter'}
-      onLoad={handleAceLoad}
+      getCompletions={getCompletions}
     />
   );
 }

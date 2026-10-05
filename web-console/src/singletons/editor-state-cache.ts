@@ -16,31 +16,22 @@
  * limitations under the License.
  */
 
-import type { Ace } from 'ace-builds';
+/**
+ * Keeps the state of editors (most importantly the undo history) around so that it can be restored when an editor with
+ * the same id is shown again. The state is stored as JSON (see `EditorState.toJSON`).
+ */
+export class EditorStateCache {
+  static states = new Map<string, unknown>();
 
-interface EditorState {
-  undoManager: Ace.UndoManager;
-}
-
-export class AceEditorStateCache {
-  static states = new Map<string, EditorState>();
-
-  static saveState(id: string, editor: Ace.Editor): void {
-    const session = editor.getSession();
-    const undoManager: any = session.getUndoManager();
-    AceEditorStateCache.states.set(id, {
-      undoManager,
-    });
+  static saveState(id: string, state: unknown): void {
+    EditorStateCache.states.set(id, state);
   }
 
-  static applyState(id: string, editor: Ace.Editor): void {
-    const state = AceEditorStateCache.states.get(id);
-    if (!state) return;
-    const session = editor.getSession();
-    session.setUndoManager(state.undoManager);
+  static getState(id: string): unknown {
+    return EditorStateCache.states.get(id);
   }
 
   static deleteState(id: string): void {
-    AceEditorStateCache.states.delete(id);
+    EditorStateCache.states.delete(id);
   }
 }

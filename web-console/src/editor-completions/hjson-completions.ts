@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import type { Ace } from 'ace-builds';
-
 import type { JsonCompletionItem, JsonCompletionRule } from '../utils';
 import { getCompletionsForPath, getHjsonContext } from '../utils';
 
+import type { EditorCompletion } from './editor-completion';
 import { makeDocHtml } from './make-doc-html';
 
 export interface GetHjsonCompletionsOptions {
@@ -35,7 +34,7 @@ export function getHjsonCompletions({
   textBefore,
   charBeforePrefix,
   prefix,
-}: GetHjsonCompletionsOptions): Ace.ValueCompletion[] {
+}: GetHjsonCompletionsOptions): EditorCompletion[] {
   // Get the context of where we are in the JSON structure
   const hjsonContext = getHjsonContext(textBefore + charBeforePrefix + prefix);
 
@@ -66,9 +65,8 @@ export function getHjsonCompletions({
     charBeforePrefix,
   );
 
-  // Convert to Ace completions format
   return filteredCompletions.map(item =>
-    convertToAceCompletion(item, charBeforePrefix, hjsonContext.isEditingKey),
+    convertToEditorCompletion(item, charBeforePrefix, hjsonContext.isEditingKey),
   );
 }
 
@@ -104,16 +102,16 @@ function filterCompletionsByContext(
 }
 
 /**
- * Convert a CompletionItem to an Ace Completion
+ * Convert a CompletionItem to an EditorCompletion
  */
-function convertToAceCompletion(
+function convertToEditorCompletion(
   item: JsonCompletionItem,
   _charBeforePrefix: string,
   isEditingKey: boolean,
-): Ace.ValueCompletion {
+): EditorCompletion {
   // const quote = charBeforePrefix === '"';
 
-  const completion: Ace.ValueCompletion = {
+  const completion: EditorCompletion = {
     value: item.value,
     score: 5,
     meta: isEditingKey ? 'property' : 'value',
@@ -121,7 +119,6 @@ function convertToAceCompletion(
 
   // Add documentation if available
   if (item.documentation) {
-    completion.docText = item.documentation;
     completion.docHTML = makeDocHtml({
       name: item.value,
       description: item.documentation,

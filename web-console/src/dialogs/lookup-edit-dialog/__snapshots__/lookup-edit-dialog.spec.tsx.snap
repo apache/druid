@@ -272,11 +272,14 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                   class="json-input"
                 >
                   <div
-                    class=" ace_editor ace_hidpi ace-solarized-dark ace_dark"
-                    id="ace-editor"
-                    style="width: 100%; height: 60vh; font-size: 12px;"
+                    class="code-editor"
+                    style="width: 100%; height: 60vh;"
                   >
-                    <!-- Ace editor, mode: ace/mode/hjson, value: "{\\n  \\"a\\": 1\\n}" -->
+                    <div
+                      class="cm-editor"
+                    >
+                      <!-- Code editor, mode: hjson, value: "{\\n  \\"a\\": 1\\n}" -->
+                    </div>
                   </div>
                 </div>
               </div>
