@@ -105,7 +105,7 @@ public class LookupJoinable implements Joinable, Closeable
       Closer closer
   )
   {
-    return LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, remainderNeeded);
+    return LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, remainderNeeded, closer);
   }
 
   @Override

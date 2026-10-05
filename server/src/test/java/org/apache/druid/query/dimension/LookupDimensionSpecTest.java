@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.LookupExtractorFactory;
@@ -34,13 +35,18 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.query.lookup.RetainedLookupExtractor;
 import org.apache.druid.query.lookup.RetainingLookupExtractorFactory;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
+import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -360,5 +366,47 @@ public class LookupDimensionSpecTest extends InitializedNullHandlingTest
         return lookupName;
       }
     };
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  public void testListFilteredVirtualColumnMetadataDoesNotRetain(final boolean allowList)
+  {
+    final LookupExtractorFactory factory = new RetainingLookupExtractorFactory(
+        () -> MAP_LOOKUP_EXTRACTOR,
+        () -> {
+          throw new AssertionError("Metadata checks must not retain lookup resources");
+        }
+    );
+    final LookupDimensionSpec spec = new LookupDimensionSpec(
+        "dim",
+        "dim",
+        null,
+        false,
+        null,
+        "lookupName",
+        false,
+        makeLookupProvider(factory)
+    );
+    final ListFilteredVirtualColumn virtualColumn = new ListFilteredVirtualColumn(
+        "filtered",
+        spec,
+        Collections.singleton(allowList ? "value" : "excluded"),
+        allowList
+    );
+    final ColumnSelectorFactory selectorFactory = EasyMock.createStrictMock(ColumnSelectorFactory.class);
+    EasyMock.expect(selectorFactory.makeDimensionSelector(spec)).andReturn(DimensionSelector.constant("value"));
+    EasyMock.replay(selectorFactory);
+
+    final DimensionSelector selector = virtualColumn.makeDimensionSelector(
+        DefaultDimensionSpec.of("filtered"),
+        selectorFactory
+    );
+    Assertions.assertEquals("value", selector.lookupName(selector.getRow().get(0)));
+    Assertions.assertSame(
+        NoIndexesColumnIndexSupplier.getInstance(),
+        virtualColumn.getIndexSupplier("filtered", EasyMock.createStrictMock(ColumnIndexSelector.class))
+    );
+    EasyMock.verify(selectorFactory);
   }
 }

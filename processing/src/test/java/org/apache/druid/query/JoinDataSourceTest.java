@@ -54,6 +54,8 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -699,6 +701,79 @@ public class JoinDataSourceTest
 
     Assertions.assertEquals(1, joinableCloseCount.get());
     Assertions.assertEquals(1, baseFnCloseCount.get());
+  }
+
+  @ParameterizedTest
+  @CsvSource({"false, false", "true, false", "true, true"})
+  public void testClauseConstructionFailureClosesEarlierJoinables(
+      final boolean throwFromBuild,
+      final boolean throwFromClose
+  )
+  {
+    final AtomicInteger closeCount = new AtomicInteger();
+    final RuntimeException buildFailure = new IllegalStateException("lookup unavailable");
+    final IOException closeFailure = new IOException("close failed");
+    final JoinableFactory factory = new NoopJoinableFactory()
+    {
+      @Override
+      public Optional<Joinable> build(final DataSource dataSource, final JoinConditionAnalysis condition)
+      {
+        if (dataSource.equals(lookylooLookup)) {
+          return Optional.of(LookupJoinable.wrap(
+              new MapLookupExtractor(Collections.singletonMap("k", "v"), false),
+              () -> {
+                closeCount.incrementAndGet();
+                if (throwFromClose) {
+                  throw closeFailure;
+                }
+              }
+          ));
+        }
+        if (throwFromBuild) {
+          throw buildFailure;
+        }
+        return Optional.empty();
+      }
+    };
+    final JoinableFactoryWrapper factoryWrapper = new JoinableFactoryWrapper(factory);
+    final JoinDataSource firstJoin = JoinDataSource.create(
+        fooTable,
+        lookylooLookup,
+        "j.",
+        "x == \"j.k\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        factoryWrapper,
+        JoinAlgorithm.BROADCAST
+    );
+    final JoinDataSource secondJoin = JoinDataSource.create(
+        firstJoin,
+        new LookupDataSource("unavailable"),
+        "j2.",
+        "x == \"j2.k\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        factoryWrapper,
+        JoinAlgorithm.BROADCAST
+    );
+    final Query<?> query = Druids.newScanQueryBuilder()
+                                 .dataSource(secondJoin)
+                                 .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+                                 .build();
+
+    final RuntimeException actual = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> secondJoin.createSegmentMapFunction(query)
+    );
+    Assertions.assertEquals(1, closeCount.get());
+    if (throwFromBuild) {
+      Assertions.assertSame(buildFailure, actual);
+    }
+    if (throwFromClose) {
+      Assertions.assertArrayEquals(new Throwable[]{closeFailure}, actual.getSuppressed());
+    }
   }
 
   private static class JoinableFactoryWithCacheKey extends NoopJoinableFactory

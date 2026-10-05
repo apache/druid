@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DimFilterUtils;
 import org.apache.druid.query.lookup.LookupExtractionFn;
@@ -139,8 +140,14 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public ExtractionFn getExtractionFn()
   {
-    final LookupExtractor lookupExtractor = getLookupExtractor();
+    final LookupExtractor lookupExtractor = getLookupExtractor(null);
     return makeLookupExtractionFn(lookupExtractor);
+  }
+
+  @Override
+  public ExtractionFn getExtractionFn(final Closer closer)
+  {
+    return makeLookupExtractionFn(getLookupExtractor(closer));
   }
 
   @Override
@@ -149,7 +156,7 @@ public class LookupDimensionSpec implements DimensionSpec
     return makeLookupExtractionFn(getLookupExtractorForMetadata());
   }
 
-  private LookupExtractor getLookupExtractor()
+  private LookupExtractor getLookupExtractor(@Nullable final Closer closer)
   {
     if (Strings.isNullOrEmpty(name)) {
       return this.lookup;
@@ -160,8 +167,11 @@ public class LookupDimensionSpec implements DimensionSpec
     final Optional<RetainedLookupExtractor> retainedLookupExtractor =
         lookupExtractorFactory.acquireRetainedLookupExtractor();
 
-    // ExtractionFn has no close hook. The RetainedLookupExtractor cleaner releases this reference when the
-    // LookupExtractionFn that owns it becomes unreachable.
+    if (closer != null) {
+      retainedLookupExtractor.ifPresent(closer::register);
+    }
+
+    // Callers without a closer rely on the Cleaner when the owning extraction function becomes unreachable
     return retainedLookupExtractor.<LookupExtractor>map(retained -> retained).orElseGet(lookupExtractorFactory);
   }
 

@@ -21,6 +21,7 @@ package org.apache.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.ColumnType;
 
@@ -71,6 +72,12 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   public ExtractionFn getExtractionFnForMetadata()
   {
     return delegate.getExtractionFnForMetadata();
+  }
+
+  @Override
+  public ExtractionFn getExtractionFn(final Closer closer)
+  {
+    return delegate.getExtractionFn(closer);
   }
 
   @Override
