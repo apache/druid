@@ -869,7 +869,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
     @Override
     public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
     {
-git       if (dimensionSpec.getExtractionFnForMetadata() != null || dimensionSpec.mustDecorate()) {
+      if (dimensionSpec.getExtractionFnForMetadata() != null || dimensionSpec.mustDecorate()) {
         // Not supported; but that's okay, because these features aren't needed when reading from this
         // ColumnSelectorFactory. It is handed to a FrameWriter, which always uses DefaultDimensionSpec.
         throw new UnsupportedOperationException();
