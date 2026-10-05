@@ -109,7 +109,7 @@
         <jetty.version>12.1.13</jetty.version>
         <jspecify.version>1.0.1</jspecify.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.22.2</jackson.version>
+        <jackson.version>2.22.3</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.26.1</log4j.version>
         <mysql.version>26.7.0</mysql.version>
