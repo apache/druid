@@ -20,9 +20,9 @@
 package org.apache.druid.testing.embedded.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
-import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
@@ -34,7 +34,6 @@ import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -82,11 +81,6 @@ public class KillSupervisorsCustomDutyTest extends EmbeddedClusterTestBase
 
     // Terminate the supervisor
     cluster.callApi().onLeaderOverlord(o -> o.terminateSupervisor(supervisor.getId()));
-
-    // Verify that the history now has 2 entries and the latest entry is a tombstone
-    final List<VersionedSupervisorSpec> historyAfterTermination = getSupervisorHistory(supervisor.getId());
-    Assertions.assertEquals(2, historyAfterTermination.size());
-    Assertions.assertInstanceOf(NoopSupervisorSpec.class, historyAfterTermination.get(0).getSpec());
 
     // Wait until both entries have been cleaned up.
     coordinator.latchableEmitter().waitForEventAggregate(

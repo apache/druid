@@ -35,7 +35,7 @@ export function getHjsonCompletions({
   textBefore,
   charBeforePrefix,
   prefix,
-}: GetHjsonCompletionsOptions): Ace.Completion[] {
+}: GetHjsonCompletionsOptions): Ace.ValueCompletion[] {
   // Get the context of where we are in the JSON structure
   const hjsonContext = getHjsonContext(textBefore + charBeforePrefix + prefix);
 
@@ -110,20 +110,19 @@ function convertToAceCompletion(
   item: JsonCompletionItem,
   _charBeforePrefix: string,
   isEditingKey: boolean,
-): Ace.Completion {
+): Ace.ValueCompletion {
   // const quote = charBeforePrefix === '"';
 
-  const completion: Ace.Completion = {
-    name: item.value,
+  const completion: Ace.ValueCompletion = {
     value: item.value,
     score: 5,
     meta: isEditingKey ? 'property' : 'value',
   };
 
-  // Add documentation if available (using caption for now)
+  // Add documentation if available
   if (item.documentation) {
-    (completion as any).docText = item.documentation;
-    (completion as any).docHTML = makeDocHtml({
+    completion.docText = item.documentation;
+    completion.docHTML = makeDocHtml({
       name: item.value,
       description: item.documentation,
     });

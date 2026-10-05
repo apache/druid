@@ -1,8 +1,8 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`IngestSuccessPane matches snapshot 1`] = `
 <div
-  className="ingest-success-pane"
+  class="ingest-success-pane"
 >
   <p>
     465,346 rows inserted into "kttm_simple".
@@ -11,8 +11,7 @@ exports[`IngestSuccessPane matches snapshot 1`] = `
     Insert query took 0:00:14. 
     Segments loaded successfully in 0:00:05 
     <span
-      className="action"
-      onClick={[Function]}
+      class="action"
     >
       Show details
     </span>
@@ -21,8 +20,7 @@ exports[`IngestSuccessPane matches snapshot 1`] = `
     Open new tab with:
      
     <span
-      className="action"
-      onClick={[Function]}
+      class="action"
     >
       SELECT * FROM "kttm_simple"
     </span>

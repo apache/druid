@@ -67,6 +67,7 @@ CentralizedDatasourceSchema
 Ceph
 circledR
 CloudWatch
+ClusterRole
 ColumnDescriptor
 Corretto
 CLI
@@ -104,6 +105,7 @@ DynamicConfigProvider
 EC2
 EC2ContainerCredentialsProviderWrapper
 ECS
+EKS
 EMR
 EMRFS
 ETL
@@ -118,6 +120,7 @@ Float.POSITIVE_INFINITY
 Float.POSITIVE_INFINITY.
 ForwardedRequestCustomizer
 GC
+GKE
 GPG
 GoogleCloudStorageInputSource
 GSSAPI
@@ -179,6 +182,7 @@ Joda
 JsonProperty
 Jupyter
 JupyterLab
+KIP-392
 KMS
 Kerberized
 Kerberos
@@ -205,10 +209,12 @@ Marquez
 MiddleManager
 MiddleManagers
 Montréal
+MSK
 MSQ
 Murmur3
 MVCC
 MV_TO_ARRAY
+Netty
 NFS
 NodeCache
 OCF
@@ -235,6 +241,7 @@ ROUTINE_CATALOG
 ROUTINE_NAME
 ROUTINE_SCHEMA
 ROUTINE_TYPE
+RPC
 Rackspace
 Redis
 residualFilterMode
@@ -420,6 +427,7 @@ kbps
 kerberos
 keystore
 keytool
+kubelet
 keytab
 kubeconfig
 kubernetes
@@ -528,6 +536,7 @@ processFromRaw
 programmatically
 proto
 proxied
+proxying
 proxyConfig
 python2
 python3
@@ -2674,3 +2683,9 @@ dylan
 eve
 opaUri
 rego
+
+- ../docs/querying/sql-jdbc.md
+getters
+savepoints
+Scrollable
+updatable

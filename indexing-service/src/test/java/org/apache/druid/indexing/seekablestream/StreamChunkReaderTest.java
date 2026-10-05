@@ -34,7 +34,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.InputRowFilter;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.filter.AndDimFilter;
@@ -58,6 +57,7 @@ import org.mockito.MockitoAnnotations;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -203,11 +203,11 @@ public class StreamChunkReaderTest
         Arrays.asList(
             new ByteEntity(
                 "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"other\"}"
-                    .getBytes(StringUtils.UTF8_STRING)
+                    .getBytes(StandardCharsets.UTF_8)
             ),
             new ByteEntity(
                 "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"title1\"}"
-                    .getBytes(StringUtils.UTF8_STRING)
+                    .getBytes(StandardCharsets.UTF_8)
             )
         ),
         false
@@ -264,19 +264,19 @@ public class StreamChunkReaderTest
         Arrays.asList(
             new ByteEntity(
                 "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"other\"}"
-                    .getBytes(StringUtils.UTF8_STRING)
+                    .getBytes(StandardCharsets.UTF_8)
             ),
             new ByteEntity(
                 "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"late\"}"
-                    .getBytes(StringUtils.UTF8_STRING)
+                    .getBytes(StandardCharsets.UTF_8)
             ),
             new ByteEntity(
                 "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"early\"}"
-                    .getBytes(StringUtils.UTF8_STRING)
+                    .getBytes(StandardCharsets.UTF_8)
             ),
             new ByteEntity(
                 "{\"timestamp\": \"2020-01-01\", \"column_a\": \"y\", \"column_b\": \"title1\"}"
-                    .getBytes(StringUtils.UTF8_STRING)
+                    .getBytes(StandardCharsets.UTF_8)
             )
         ),
         false
@@ -314,7 +314,7 @@ public class StreamChunkReaderTest
 
     List<InputRow> parsedRows = chunkParser.parse(
         Collections.singletonList(
-            new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))), false
+            new ByteEntity(json.getBytes(StandardCharsets.UTF_8))), false
     );
     // no exception and no parsed rows
     Assertions.assertEquals(0, parsedRows.size());
@@ -334,11 +334,11 @@ public class StreamChunkReaderTest
     Mockito.when(mockedByteEntityReader.read()).thenThrow(new ParseException(null, "error parsing malformed data"));
     final String json = "malformedJson";
     List<ByteEntity> byteEntities = Arrays.asList(
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8)),
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8)),
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8)),
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8)),
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8))
     );
     Assertions.assertThrows(
         RE.class,
@@ -367,11 +367,11 @@ public class StreamChunkReaderTest
     final String json = "malformedJson";
 
     List<ByteEntity> byteEntities = Arrays.asList(
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING)),
-        new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8)),
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8)),
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8)),
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8)),
+        new ByteEntity(json.getBytes(StandardCharsets.UTF_8))
     );
 
     List<InputRow> parsedRows = chunkParser.parse(byteEntities, false);
@@ -398,7 +398,7 @@ public class StreamChunkReaderTest
   private void parseAndAssertResult(StreamChunkReader<ByteEntity> chunkParser) throws IOException
   {
     final String json = "{\"timestamp\": \"2020-01-01\", \"dim\": \"val\", \"met\": \"val2\"}";
-    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(new ByteEntity(json.getBytes(StringUtils.UTF8_STRING))), false);
+    List<InputRow> parsedRows = chunkParser.parse(Collections.singletonList(new ByteEntity(json.getBytes(StandardCharsets.UTF_8))), false);
     Assertions.assertEquals(1, parsedRows.size());
     InputRow row = parsedRows.get(0);
     Assertions.assertEquals(DateTimes.of("2020-01-01"), row.getTimestamp());

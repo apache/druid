@@ -136,9 +136,9 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
                 checked={Boolean(deepGet(currentConfig, 'taskContext.useConcurrentLocks'))}
                 onChange={() => {
                   setCurrentConfig(
-                    (deepGet(currentConfig, 'taskContext.useConcurrentLocks')
+                    deepGet(currentConfig, 'taskContext.useConcurrentLocks')
                       ? deepDelete(currentConfig, 'taskContext.useConcurrentLocks')
-                      : deepSet(currentConfig, 'taskContext.useConcurrentLocks', true)) as any,
+                      : deepSet(currentConfig, 'taskContext.useConcurrentLocks', true),
                   );
                 }}
               />
@@ -160,7 +160,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
           <Button
             className="history-button"
             text="History"
-            minimal
+            variant="minimal"
             onClick={() => setShowHistory(true)}
           />
           {compactionConfig ? (

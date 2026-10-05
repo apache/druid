@@ -16,6 +16,9 @@
  * limitations under the License.
  */
 
+@use 'common/colors' as *;
+@use 'common/variables' as *;
+
 .#{$ns}-dark .#{$ns}-switch.#{$ns}-control {
   &.legacy-switch {
     input:checked ~ .#{$ns}-control-indicator {

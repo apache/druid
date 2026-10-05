@@ -37,6 +37,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -183,7 +184,9 @@ public class Granularities
    * IMPORTANT - this method DOES NOT VERIFY that the virtual column has a single input that is a time column
    * ({@link ColumnHolder#TIME_COLUMN_NAME} or equivalent projection time column as defined by
    * {@link AggregateProjectionSchema#getTimeColumnName()}). Callers must verify this externally before
-   * calling this method by examining {@link VirtualColumn#requiredColumns()}.
+   * calling this method by examining {@link VirtualColumn#requiredColumns()}, or call
+   * {@link #fromTimeVirtualColumn(VirtualColumn)}, which performs the {@link ColumnHolder#TIME_COLUMN_NAME} check
+   * itself.
    * <p>
    * This method also does not handle other time expressions, or if the virtual column is just an identifier for a
    * time column
@@ -214,5 +217,31 @@ public class Granularities
       return gran.getGranularity();
     }
     return null;
+  }
+
+  /**
+   * Like {@link #fromVirtualColumn(VirtualColumn)}, but first verifies that the virtual column reads
+   * {@link ColumnHolder#TIME_COLUMN_NAME} and nothing else, returning null otherwise.
+   */
+  @Nullable
+  public static Granularity fromTimeVirtualColumn(@Nullable VirtualColumn virtualColumn)
+  {
+    if (virtualColumn == null
+        || !Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME).equals(virtualColumn.requiredColumns())) {
+      return null;
+    }
+    return fromVirtualColumn(virtualColumn);
+  }
+
+  /**
+   * Returns true when {@code granularity} is exactly a {@link PeriodGranularity} in the UTC time zone with no origin.
+   */
+  public static boolean isStandardUtcPeriod(@Nullable Granularity granularity)
+  {
+    if (granularity == null || !granularity.getClass().equals(PeriodGranularity.class)) {
+      return false;
+    }
+    final PeriodGranularity period = (PeriodGranularity) granularity;
+    return DateTimeZone.UTC.equals(period.getTimeZone()) && period.getOrigin() == null;
   }
 }

@@ -16,17 +16,17 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
-@import '../../../blueprint-overrides/common/colors';
+@use '../../../variables' as *;
+@use '../../../blueprint-overrides/common/colors' as *;
 
 .parse-data-table {
-  .rt-th {
+  .ct-th {
     &.flattened {
       background: rgba($druid-brand, 0.2);
     }
   }
 
-  .rt-td {
+  .ct-td {
     &.flattened {
       background: rgba($druid-brand, 0.06);
     }

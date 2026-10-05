@@ -179,12 +179,8 @@ public class TaskQueueScaleTest
       taskQueue.add(testTask);
     }
 
-    // in theory we can get a race here, since we fetch the counts at separate times
+    // The running, pending, and waiting counters are separate snapshots and cannot be summed while tasks transition.
     Assertions.assertEquals(numTasks, taskQueue.getTasks().size(), "all tasks should be known");
-    long runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    long pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    long waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    Assertions.assertEquals(numTasks, (runningTasks + pendingTasks + waitingTasks), "all tasks should be known");
 
     // Wait for all tasks to finish.
     final TaskLookup.CompleteTaskLookup completeTaskLookup =
@@ -194,12 +190,18 @@ public class TaskQueueScaleTest
       Thread.sleep(100);
     }
 
-    Thread.sleep(100);
+    // Completion is persisted before cleanup finishes. The test timeout bounds this wait.
+    while (!taskStorage.getActiveTasks().isEmpty()
+           || taskQueue.getRunningTaskCount().values().stream().anyMatch(count -> count != 0)
+           || taskQueue.getPendingTaskCount().values().stream().anyMatch(count -> count != 0)
+           || taskQueue.getWaitingTaskCount().values().stream().anyMatch(count -> count != 0)) {
+      Thread.sleep(100);
+    }
 
     Assertions.assertEquals(0, taskStorage.getActiveTasks().size(), "no tasks should be active");
-    runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
-    waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    final long runningTasks = taskQueue.getRunningTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    final long pendingTasks = taskQueue.getPendingTaskCount().values().stream().mapToLong(Long::longValue).sum();
+    final long waitingTasks = taskQueue.getWaitingTaskCount().values().stream().mapToLong(Long::longValue).sum();
     Assertions.assertEquals(0, runningTasks, "no tasks should be running");
     Assertions.assertEquals(0, pendingTasks, "no tasks should be pending");
     Assertions.assertEquals(0, waitingTasks, "no tasks should be waiting");
@@ -281,7 +283,7 @@ public class TaskQueueScaleTest
               try {
                 synchronized (knownTasks) {
                   final TestTaskRunnerWorkItem item2 = knownTasks.get(task.getId());
-                  if (item2.getState() == RunnerTaskState.PENDING) {
+                  if (item2 != null && item2.getState() == RunnerTaskState.PENDING) {
                     knownTasks.put(task.getId(), item2.withState(RunnerTaskState.RUNNING));
                   }
                 }
@@ -292,7 +294,9 @@ public class TaskQueueScaleTest
                         final TestTaskRunnerWorkItem item2;
                         synchronized (knownTasks) {
                           item2 = knownTasks.get(task.getId());
-                          knownTasks.put(task.getId(), item2.withState(RunnerTaskState.NONE));
+                          if (item2 != null) {
+                            knownTasks.put(task.getId(), item2.withState(RunnerTaskState.NONE));
+                          }
                         }
                         if (item2 != null) {
                           item2.setResult(TaskStatus.success(task.getId()));

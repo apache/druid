@@ -166,7 +166,18 @@ public class SegmentLoadDropHandler
         loaded = segmentManager.loadSegment(segment);
       }
       catch (Exception e) {
-        removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+        // decides whether to clean up a failed load; a load request for a segment this server already serves is a
+        // reload, not a new load, and we only want to discard the half-materialized state a failed *new* load leaves
+        // behind.
+        if (segmentManager.isSegmentLoaded(segment)) {
+          log.warn(
+              e,
+              "Failed to load segment[%s], but it is serving already; leaving it in place to be retried.",
+              segment.getId()
+          );
+        } else {
+          removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+        }
         throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
       }
       try {

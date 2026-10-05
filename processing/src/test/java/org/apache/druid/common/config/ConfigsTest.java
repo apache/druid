@@ -31,7 +31,10 @@ public class ConfigsTest
     Assertions.assertEquals(11, Configs.valueOrDefault((Integer) null, 11));
 
     Assertions.assertEquals(10, Configs.valueOrDefault((Long) 10L, 11L));
-    Assertions.assertEquals(11, Configs.valueOrDefault(null, 11L));
+    Assertions.assertEquals(11, Configs.valueOrDefault((Long) null, 11L));
+
+    Assertions.assertEquals(10.0, Configs.valueOrDefault((Double) 10.0, 11.0));
+    Assertions.assertEquals(11.0, Configs.valueOrDefault(null, 11.0));
 
     Assertions.assertFalse(Configs.valueOrDefault((Boolean) false, true));
     Assertions.assertTrue(Configs.valueOrDefault(null, true));

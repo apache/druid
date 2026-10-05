@@ -100,6 +100,20 @@
             <version>${aws.sdk.v2.version}</version>
             <scope>runtime</scope>
         </dependency>
+        <!-- Keep S3 classes on the shared classpath to avoid loading separate copies in the different extensions. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <!-- Keep CRT classes on the shared classpath too: s3 brings crt-core here which relies on the aws-crt-client. -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>aws-crt-client</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>

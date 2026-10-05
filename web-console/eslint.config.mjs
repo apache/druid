@@ -32,6 +32,12 @@ export default [
   ...configs.typeChecked.map(config => ({ ...config, files: TYPESCRIPT_FILES })),
   ...reactConfigs.reactTypeChecked.map(config => ({ ...config, files: TYPESCRIPT_FILES })),
   {
+    files: TYPESCRIPT_FILES,
+    rules: {
+      '@typescript-eslint/no-deprecated': [2],
+    },
+  },
+  {
     plugins: {
       notice,
     },

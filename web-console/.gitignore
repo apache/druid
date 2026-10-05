@@ -19,3 +19,6 @@ tscommand-*.tmp.txt
 
 licenses.json
 .druid.pid
+
+# Screenshots the e2e tests write on failure
+/*.jpeg

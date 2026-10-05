@@ -1,180 +1,471 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`AutoForm matches snapshot 1`] = `
 <div
-  className="auto-form"
+  class="auto-form"
 >
-  <Memo(FormGroupWithInfo)
-    label="Test number"
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Memo(FancyNumericInput)
-      disabled={false}
-      fill={true}
-      min={0}
-      onBlur={[Function]}
-      onValueChange={[Function]}
-      placeholder=""
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test size bytes"
+    <label
+      class="bp6-label"
+    >
+      Test number
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="bp6-control-group bp6-fill fancy-numeric-input bp6-numeric-input"
+        role="group"
+      >
+        <div
+          class="bp6-input-group"
+        >
+          <input
+            aria-valuemin="0"
+            autocomplete="off"
+            class="bp6-input"
+            placeholder=""
+            type="text"
+            value=""
+          />
+        </div>
+        <div
+          class="bp6-button-group bp6-vertical bp6-fixed"
+        >
+          <button
+            aria-label="increment"
+            class="bp6-button"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-chevron-up"
+            >
+              <svg
+                data-icon="chevron-up"
+              />
+            </span>
+          </button>
+          <button
+            aria-label="decrement"
+            class="bp6-button"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-chevron-down"
+            >
+              <svg
+                data-icon="chevron-down"
+              />
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Blueprint5.NumericInput
-      allowNumericCharactersOnly={true}
-      buttonPosition="right"
-      clampValueOnBlur={false}
-      defaultValue=""
-      disabled={false}
-      fill={true}
-      large={false}
-      majorStepSize={1000000}
-      min={0}
-      minorStepSize={0.1}
-      onBlur={[Function]}
-      onValueChange={[Function]}
-      selectAllOnFocus={false}
-      selectAllOnIncrement={false}
-      small={false}
-      stepSize={1000}
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test string"
+    <label
+      class="bp6-label"
+    >
+      Test size bytes
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="bp6-control-group bp6-fill bp6-numeric-input"
+        role="group"
+      >
+        <div
+          class="bp6-input-group"
+        >
+          <input
+            aria-disabled="false"
+            aria-valuemin="0"
+            aria-valuenow="0"
+            autocomplete="off"
+            class="bp6-input"
+            id="numericInput-0"
+            min="0"
+            role="spinbutton"
+            type="text"
+            value=""
+          />
+        </div>
+        <div
+          class="bp6-button-group bp6-vertical bp6-fixed"
+        >
+          <button
+            aria-controls="numericInput-0"
+            aria-label="increment"
+            class="bp6-button"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-chevron-up"
+            >
+              <svg
+                data-icon="chevron-up"
+              />
+            </span>
+          </button>
+          <button
+            aria-controls="numericInput-0"
+            aria-label="decrement"
+            class="bp6-button"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-chevron-down"
+            >
+              <svg
+                data-icon="chevron-down"
+              />
+            </span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Memo(SuggestibleInput)
-      disabled={false}
-      multiline={false}
-      onBlur={[Function]}
-      onValueChange={[Function]}
-      placeholder=""
-      value=""
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test string with default"
+    <label
+      class="bp6-label"
+    >
+      Test string
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="formatted-input suggestible-input"
+      >
+        <div
+          class="bp6-input-group"
+        >
+          <input
+            aria-disabled="false"
+            class="bp6-input"
+            placeholder=""
+            type="text"
+            value=""
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Memo(SuggestibleInput)
-      disabled={false}
-      multiline={false}
-      onBlur={[Function]}
-      onValueChange={[Function]}
-      placeholder=""
-      value="Hello World"
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test string with multiline"
+    <label
+      class="bp6-label"
+    >
+      Test string with default
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="formatted-input suggestible-input"
+      >
+        <div
+          class="bp6-input-group"
+        >
+          <input
+            aria-disabled="false"
+            class="bp6-input"
+            placeholder=""
+            type="text"
+            value="Hello World"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Memo(SuggestibleInput)
-      disabled={false}
-      multiline={true}
-      onBlur={[Function]}
-      onValueChange={[Function]}
-      placeholder=""
-      value="Hello World"
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test boolean"
+    <label
+      class="bp6-label"
+    >
+      Test string with multiline
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="formatted-input suggestible-input"
+      >
+        <textarea
+          class="bp6-input bp6-text-area"
+          placeholder=""
+        >
+          Hello World
+        </textarea>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Blueprint5.SegmentedControl
-      intent="none"
-      onValueChange={[Function]}
-      options={
-        [
-          {
-            "disabled": false,
-            "label": "False",
-            "value": "false",
-          },
-          {
-            "disabled": false,
-            "label": "True",
-            "value": "true",
-          },
-        ]
-      }
-      small={true}
-      value="undefined"
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test boolean with default"
+    <label
+      class="bp6-label"
+    >
+      Test boolean
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="bp6-segmented-control"
+        role="radiogroup"
+      >
+        <button
+          aria-checked="false"
+          class="bp6-button bp6-small bp6-minimal"
+          role="radio"
+          tabindex="0"
+          type="button"
+        >
+          <span
+            class="bp6-button-text"
+          >
+            False
+          </span>
+        </button>
+        <button
+          aria-checked="false"
+          class="bp6-button bp6-small bp6-minimal"
+          role="radio"
+          tabindex="-1"
+          type="button"
+        >
+          <span
+            class="bp6-button-text"
+          >
+            True
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Blueprint5.SegmentedControl
-      intent="none"
-      onValueChange={[Function]}
-      options={
-        [
-          {
-            "disabled": false,
-            "label": "False",
-            "value": "false",
-          },
-          {
-            "disabled": false,
-            "label": "True",
-            "value": "true",
-          },
-        ]
-      }
-      small={true}
-      value="false"
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test string array"
+    <label
+      class="bp6-label"
+    >
+      Test boolean with default
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="bp6-segmented-control"
+        role="radiogroup"
+      >
+        <button
+          aria-checked="true"
+          class="bp6-button bp6-small"
+          role="radio"
+          tabindex="0"
+          type="button"
+        >
+          <span
+            class="bp6-button-text"
+          >
+            False
+          </span>
+        </button>
+        <button
+          aria-checked="false"
+          class="bp6-button bp6-small bp6-minimal"
+          role="radio"
+          tabindex="-1"
+          type="button"
+        >
+          <span
+            class="bp6-button-text"
+          >
+            True
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Memo(ArrayInput)
-      disabled={false}
-      onChange={[Function]}
-      placeholder=""
-      values={[]}
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test string array with default"
+    <label
+      class="bp6-label"
+    >
+      Test string array
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="array-input"
+      >
+        <textarea
+          class="bp6-input bp6-text-area bp6-fill"
+          placeholder=""
+        />
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Memo(ArrayInput)
-      disabled={false}
-      onChange={[Function]}
-      placeholder=""
-      values={
-        [
-          "Hello",
-          "World",
-        ]
-      }
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test json"
+    <label
+      class="bp6-label"
+    >
+      Test string array with default
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="array-input"
+      >
+        <textarea
+          class="bp6-input bp6-text-area bp6-fill"
+          placeholder=""
+        >
+          Hello, World
+        </textarea>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Memo(JsonInput)
-      onChange={[Function]}
-      placeholder=""
-    />
-  </Memo(FormGroupWithInfo)>
-  <Memo(FormGroupWithInfo)
-    label="Test string required and default value"
+    <label
+      class="bp6-label"
+    >
+      Test json
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="json-input"
+      >
+        <div
+          class=" ace_editor ace_hidpi ace-solarized-dark ace_dark"
+          id="ace-editor"
+          style="width: 100%; height: 8vh; font-size: 12px;"
+        >
+          <!-- Ace editor, mode: ace/mode/hjson, value: "" -->
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group form-group-with-info"
   >
-    <Memo(SuggestibleInput)
-      disabled={false}
-      intent="primary"
-      multiline={false}
-      onBlur={[Function]}
-      onValueChange={[Function]}
-      placeholder=""
-      value=""
-    />
-  </Memo(FormGroupWithInfo)>
-  <Blueprint5.FormGroup>
-    <Blueprint5.Button
-      minimal={true}
-      onClick={[Function]}
-      rightIcon="chevron-down"
-      text="Show more"
-    />
-  </Blueprint5.FormGroup>
+    <label
+      class="bp6-label"
+    >
+      Test string required and default value
+       
+      <span
+        class="bp6-text-muted"
+      />
+    </label>
+    <div
+      class="bp6-form-content"
+    >
+      <div
+        class="formatted-input suggestible-input"
+      >
+        <div
+          class="bp6-input-group bp6-intent-primary"
+        >
+          <input
+            aria-disabled="false"
+            class="bp6-input"
+            placeholder=""
+            type="text"
+            value=""
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    class="bp6-form-group"
+  >
+    <div
+      class="bp6-form-content"
+    >
+      <button
+        class="bp6-button bp6-minimal"
+        type="button"
+      >
+        <span
+          class="bp6-button-text"
+        >
+          Show more
+        </span>
+        <span
+          aria-hidden="true"
+          class="bp6-icon bp6-icon-chevron-down"
+        >
+          <svg
+            data-icon="chevron-down"
+          />
+        </span>
+      </button>
+    </div>
+  </div>
 </div>
 `;

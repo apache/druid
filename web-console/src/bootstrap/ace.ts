@@ -16,9 +16,13 @@
  * limitations under the License.
  */
 
-import 'ace-builds/src-noconflict/ace'; // Import Ace editor and all the sub components used in the app
+// Import Ace editor and all the sub components used in the app. Everything is bundled so Ace never needs to load
+// anything at runtime.
+import 'ace-builds';
 import 'ace-builds/src-noconflict/ext-language_tools';
 import 'ace-builds/src-noconflict/ext-searchbox';
 import 'ace-builds/src-noconflict/theme-solarized_dark';
+import '../ace-modes/dsql';
+import '../ace-modes/hjson';
 
 import './ace.scss';

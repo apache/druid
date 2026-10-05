@@ -63,6 +63,14 @@ public class FixedIndexed<T> implements Indexed<T>
     final boolean isSorted = (flags & IS_SORTED_MASK) == IS_SORTED_MASK ? true : false;
     Preconditions.checkState(!(hasNull && !isSorted), "cannot have null values if not sorted");
     final int size = buffer.getInt() + (hasNull ? 1 : 0);
+    final int valuesCount = hasNull ? size - 1 : size;
+    Preconditions.checkArgument(valuesCount >= 0, "valuesCount[%s] must be non-negative", valuesCount);
+    Preconditions.checkArgument(
+        (long) width * valuesCount <= buffer.remaining(),
+        "size[%s] with width[%s] exceeds the available buffer",
+        size,
+        width
+    );
     final int valuesOffset = buffer.position();
     final Supplier<FixedIndexed<T>> fixedIndexed = () -> new FixedIndexed<>(
         bb,
@@ -75,7 +83,7 @@ public class FixedIndexed<T> implements Indexed<T>
         valuesOffset
     );
 
-    bb.position(buffer.position() + (width * (hasNull ? size - 1 : size)));
+    bb.position(buffer.position() + (width * valuesCount));
     return fixedIndexed;
   }
 

@@ -29,10 +29,18 @@ import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.apache.druid.testing.embedded.tools.EventSerializer;
+import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
+import org.apache.druid.testing.embedded.tools.StreamGenerator;
+import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -172,6 +180,21 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     Assertions.assertEquals("UNHEALTHY_SUPERVISOR", status.getState());
   }
 
+  /**
+   * Task duration for bounded supervisors in this test. The shared fixture uses a 500ms
+   * taskDuration so that unbounded tasks publish quickly, but a bounded task publishes on
+   * its own when it reaches its end offset. With the short duration, a bounded task that
+   * has not consumed its whole range within one supervisor cycle is rolled over at its
+   * current offset, and each successor task is rolled over again before the Kafka consumer
+   * finishes starting, so the supervisor never reaches the end offset.
+   * <p>
+   * 10 seconds is an order of magnitude above the time a bounded task in this class needs
+   * to start and consume its range. It is deliberately not longer: a task that pauses for a
+   * checkpoint and is not resumed by the supervisor only recovers at the next rollover, so
+   * the duration also caps how long such a stall can hold a test.
+   */
+  private static final Period BOUNDED_TASK_DURATION = Period.seconds(10);
+
   private KafkaSupervisorSpec createBoundedKafkaSupervisor(
       KafkaResource kafkaServer,
       String topic,
@@ -181,9 +204,24 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     return createKafkaSupervisor(kafkaServer)
         .withIoConfig(io -> io
             .withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null))
+            .withTaskDuration(BOUNDED_TASK_DURATION)
             .withBoundedStreamConfig(boundedConfig)
         )
         .build(dataSource, topic);
+  }
+
+  private void publishRecordsToBothPartitions(String topic)
+  {
+    final EventSerializer serializer = new JsonEventSerializer(overlord.bindings().jsonMapper());
+    final StreamGenerator generator = new WikipediaStreamEventStreamGenerator(serializer, 100, 100);
+    final List<byte[]> records = generator.generateEvents(10);
+    final List<ProducerRecord<byte[], byte[]>> producerRecords = new ArrayList<>();
+    // Fixed per-partition end offsets require data in both partitions; Kafka's default partitioner need not balance it.
+    for (int i = 0; i < records.size(); i++) {
+      producerRecords.add(new ProducerRecord<>(topic, i % 2, null, records.get(i)));
+    }
+    kafkaServer.produceRecordsWithoutTransaction(producerRecords);
+    Assertions.assertEquals(Map.of("0", 500L, "1", 500L), kafkaServer.getPartitionOffsets(topic));
   }
 
   @Test
@@ -191,7 +229,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   {
     final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 2);
-    publish1kRecords(topic, false);
+    publishRecordsToBothPartitions(topic);
 
     // Get the current end offsets for all partitions
     Map<String, Long> currentOffsets = kafkaServer.getPartitionOffsets(topic);
@@ -265,7 +303,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   {
     final String topic = IdUtils.getRandomId();
     kafkaServer.createTopicWithPartitions(topic, 2);
-    publish1kRecords(topic, false);
+    publishRecordsToBothPartitions(topic);
 
     // Run 1: ingest up to offset 100 on each partition and complete.
     Map<String, Long> startOffsets1 = new HashMap<>();

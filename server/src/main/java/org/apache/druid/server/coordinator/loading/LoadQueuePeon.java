@@ -23,6 +23,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -36,7 +37,7 @@ public interface LoadQueuePeon
 
   Set<DataSegment> getSegmentsToLoad();
 
-  Set<SegmentHolder> getSegmentsInQueue();
+  List<SegmentHolder> getSegmentsInQueue();
 
   Set<DataSegment> getSegmentsToDrop();
 

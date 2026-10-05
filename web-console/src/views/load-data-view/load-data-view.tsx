@@ -32,7 +32,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
+  PopoverNext,
   Radio,
   RadioGroup,
   Switch,
@@ -596,8 +596,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       case 'publish':
         return Boolean(
           cacheRows &&
-            deepGet(spec, 'spec.dataSchema.timestampSpec') &&
-            deepGet(spec, 'spec.dataSchema.dimensionsSpec'),
+          deepGet(spec, 'spec.dataSchema.timestampSpec') &&
+          deepGet(spec, 'spec.dataSchema.dimensionsSpec'),
         );
 
       default:
@@ -852,7 +852,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       <div className="next-bar">
         <Button
           text={`Next: ${VIEW_TITLE[nextStep]}`}
-          rightIcon={IconNames.ARROW_RIGHT}
+          endIcon={IconNames.ARROW_RIGHT}
           intent={Intent.PRIMARY}
           disabled={Boolean(disabled || nextSpec || unsavedChange)}
           onClick={() => {
@@ -1089,10 +1089,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <FormGroup>
             <Button
               text="Connect data"
-              rightIcon={IconNames.ARROW_RIGHT}
+              endIcon={IconNames.ARROW_RIGHT}
               intent={Intent.PRIMARY}
               onClick={() => {
-                this.updateSpec(updateIngestionType(spec, selectedComboType as any));
+                this.updateSpec(updateIngestionType(spec, selectedComboType));
                 this.updateStep('connect');
               }}
             />
@@ -1110,7 +1110,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <FormGroup>
               <Button
                 text="Connect via Kafka API"
-                rightIcon={IconNames.ARROW_RIGHT}
+                endIcon={IconNames.ARROW_RIGHT}
                 intent={Intent.PRIMARY}
                 onClick={() => {
                   // Use the kafka ingestion type but preset some consumerProperties required for Event Hubs
@@ -1155,7 +1155,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <FormGroup>
               <Button
                 text="Submit supervisor"
-                rightIcon={IconNames.ARROW_RIGHT}
+                endIcon={IconNames.ARROW_RIGHT}
                 intent={Intent.PRIMARY}
                 onClick={openSupervisorSubmit}
               />
@@ -1163,7 +1163,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <FormGroup>
               <Button
                 text="Submit task"
-                rightIcon={IconNames.ARROW_RIGHT}
+                endIcon={IconNames.ARROW_RIGHT}
                 intent={Intent.PRIMARY}
                 onClick={openTaskSubmit}
               />
@@ -1298,10 +1298,10 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const specialSource = druidSource
       ? 'druid'
       : fixedFormatSource
-      ? 'fixedFormat'
-      : isKafkaOrKinesis(specType)
-      ? specType
-      : undefined;
+        ? 'fixedFormat'
+        : isKafkaOrKinesis(specType)
+          ? specType
+          : undefined;
 
     let mainFill: JSX.Element | string;
     if (inlineMode) {
@@ -1791,7 +1791,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             href={`${getLink('DOCS')}/ingestion/data-formats#flattenspec`}
             target="_blank"
             rel="noopener noreferrer"
-            minimal
+            variant="minimal"
           />
         </FormGroup>
       );
@@ -2648,9 +2648,9 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               </FormGroup>
               {schemaToolsMenu && (
                 <FormGroup>
-                  <Popover content={schemaToolsMenu}>
+                  <PopoverNext content={schemaToolsMenu} lazy shouldReturnFocusOnClose={false}>
                     <Button icon={IconNames.BUILD} text="Tools" />
-                  </Popover>
+                  </PopoverNext>
                 </FormGroup>
               )}
             </>
@@ -3066,27 +3066,27 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
       >
         {selectedDimensionSpec.index !== -1 && (
           <FormGroup>
-            <Popover content={reorderDimensionMenu}>
+            <PopoverNext content={reorderDimensionMenu} lazy shouldReturnFocusOnClose={false}>
               <Button
                 icon={IconNames.ARROWS_HORIZONTAL}
                 text="Reorder dimension"
-                rightIcon={IconNames.CARET_DOWN}
+                endIcon={IconNames.CARET_DOWN}
               />
-            </Popover>
+            </PopoverNext>
           </FormGroup>
         )}
         {selectedDimensionSpec.index !== -1 &&
           deepGet(spec, 'spec.dataSchema.metricsSpec') &&
           !selectedTime && (
             <FormGroup>
-              <Popover content={convertToMetricMenu}>
+              <PopoverNext content={convertToMetricMenu} lazy shouldReturnFocusOnClose={false}>
                 <Button
                   icon={IconNames.EXCHANGE}
                   text="Convert to metric"
-                  rightIcon={IconNames.CARET_DOWN}
+                  endIcon={IconNames.CARET_DOWN}
                   disabled={dimensions.length <= 1}
                 />
-              </Popover>
+              </PopoverNext>
             </FormGroup>
           )}
       </FormEditor>
@@ -3151,13 +3151,13 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           schemaMode === 'fixed' &&
           selectedMetricSpecFieldName && (
             <FormGroup>
-              <Popover content={convertToDimensionMenu}>
+              <PopoverNext content={convertToDimensionMenu} lazy shouldReturnFocusOnClose={false}>
                 <Button
                   icon={IconNames.EXCHANGE}
                   text="Convert to dimension"
-                  rightIcon={IconNames.CARET_DOWN}
+                  endIcon={IconNames.CARET_DOWN}
                 />
-              </Popover>
+              </PopoverNext>
             </FormGroup>
           )}
       </FormEditor>
@@ -3711,7 +3711,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   ? 'Submitting...'
                   : `Submit supervisor (${spec.suspended ? 'suspended' : 'running'})`
               }
-              rightIcon={IconNames.CLOUD_UPLOAD}
+              endIcon={IconNames.CLOUD_UPLOAD}
               intent={Intent.PRIMARY}
               disabled={submitting || Boolean(issueWithSpec)}
               onClick={() => void this.handleSubmitSupervisor()}
@@ -3719,7 +3719,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           ) : (
             <Button
               text={submitting ? 'Submitting...' : 'Submit task'}
-              rightIcon={IconNames.CLOUD_UPLOAD}
+              endIcon={IconNames.CLOUD_UPLOAD}
               intent={Intent.PRIMARY}
               disabled={submitting || Boolean(issueWithSpec)}
               onClick={() => void this.handleSubmitTask()}

@@ -158,6 +158,7 @@ public class MSQTaskSqlEngine implements SqlEngine
       case GROUPING_SETS:
       case ALLOW_TOP_LEVEL_UNION_ALL:
       case GROUPBY_IMPLICITLY_SORTS:
+      case CAN_DDL:
         return false;
       case WINDOW_FUNCTIONS:
       case WINDOW_LEAF_OPERATOR:

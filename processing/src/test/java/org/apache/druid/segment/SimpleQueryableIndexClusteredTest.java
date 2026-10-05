@@ -19,11 +19,9 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -44,6 +42,8 @@ import java.util.Map;
  */
 class SimpleQueryableIndexClusteredTest
 {
+  private static final ColumnHolderTable EMPTY_TABLE = ColumnHolderTable.builder().build();
+
   /**
    * Build a one-column STRING-clustered summary plus its specs from typed tenant values. Returns the helper's
    * {@link ClusterGroupSchemaTestHelpers.Built} bundle plus the constructed schema (whose {@code clusterGroups} are
@@ -83,8 +83,8 @@ class SimpleQueryableIndexClusteredTest
 
   private static SimpleQueryableIndex buildClusteredIndex(
       ClusteredValueGroupsBaseTableSchema summary,
-      List<Map<String, Supplier<BaseColumnHolder>>> clusterGroupColumns,
-      Map<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumns
+      List<ColumnHolderTable> clusterGroupColumns,
+      Map<String, ColumnHolderTable> projectionColumns
   )
   {
     final Metadata reconstructed = summary.asMetadata(null);
@@ -92,7 +92,7 @@ class SimpleQueryableIndexClusteredTest
         Intervals.of("2025-01-01/2025-01-02"),
         new ListIndexed<>(List.of()),
         new RoaringBitmapFactory(),
-        Map.of(),                       // clustered summary has no top-level columns
+        EMPTY_TABLE,                    // clustered summary has no top-level columns
         null,                           // no SegmentFileMapper for in-memory test
         reconstructed,
         projectionColumns,
@@ -119,7 +119,7 @@ class SimpleQueryableIndexClusteredTest
   {
     // Pre-Phase-2 the constructor would NPE here because __time isn't in the columns map.
     Assertions.assertDoesNotThrow(
-        () -> buildClusteredIndex(summarySchema("acme"), List.of(Map.of()), Map.of())
+        () -> buildClusteredIndex(summarySchema("acme"), List.of(EMPTY_TABLE), Map.of())
     );
   }
 
@@ -127,7 +127,7 @@ class SimpleQueryableIndexClusteredTest
   void testGetClusteredBaseSummaryReturnsSummary()
   {
     final ClusteredValueGroupsBaseTableSchema s = summarySchema("acme");
-    SimpleQueryableIndex index = buildClusteredIndex(s, List.of(Map.of()), Map.of());
+    SimpleQueryableIndex index = buildClusteredIndex(s, List.of(EMPTY_TABLE), Map.of());
     Assertions.assertSame(s, index.getClusteredBaseSummary());
   }
 
@@ -136,7 +136,7 @@ class SimpleQueryableIndexClusteredTest
   {
     final ClusterGroupSchemaTestHelpers.Built built = summary("acme", "globex");
     final ClusteredValueGroupsBaseTableSchema sum = built.specs().get(0).getSummary();
-    SimpleQueryableIndex index = buildClusteredIndex(sum, List.of(Map.of(), Map.of()), Map.of());
+    SimpleQueryableIndex index = buildClusteredIndex(sum, List.of(EMPTY_TABLE, EMPTY_TABLE), Map.of());
     List<TableClusterGroupSpec> result = index.getClusterGroupSchemas();
     Assertions.assertEquals(2, result.size());
     Assertions.assertSame(built.specs().get(0), result.get(0));
@@ -181,7 +181,7 @@ class SimpleQueryableIndexClusteredTest
     // aggregate-only path; cluster-group dispatch is QueryableIndexCursorFactory's job.
     SimpleQueryableIndex index = buildClusteredIndex(
         summarySchema("acme"),
-        List.of(Map.of()),
+        List.of(EMPTY_TABLE),
         Map.of()
     );
     // No aggregate projections were added, so no aggregate by name "tenant=acme" exists either.

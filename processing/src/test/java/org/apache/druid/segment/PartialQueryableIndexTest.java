@@ -72,6 +72,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
@@ -177,6 +178,23 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       // no downloads triggered
       Assertions.assertEquals(0, rangeReader.getReadCount());
       Assertions.assertEquals(Set.of(), rangeReader.getReadFilenames());
+    }
+  }
+
+  @Test
+  void testSegmentsShareDescriptors() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentDir);
+
+    try (
+        PartialSegmentFileMapperV10 mapper1 = createMapper(rangeReader, newCacheDir("share1"));
+        PartialSegmentFileMapperV10 mapper2 = createMapper(rangeReader, newCacheDir("share2"))
+    ) {
+      final Map<String, ColumnDescriptor> descriptors1 = mapper1.getSegmentFileMetadata().getColumnDescriptors();
+      final Map<String, ColumnDescriptor> descriptors2 = mapper2.getSegmentFileMetadata().getColumnDescriptors();
+      for (Map.Entry<String, ColumnDescriptor> entry : descriptors1.entrySet()) {
+        Assertions.assertSame(entry.getValue(), descriptors2.get(entry.getKey()), entry.getKey());
+      }
     }
   }
 

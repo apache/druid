@@ -75,14 +75,12 @@ public class LocalDataSegmentPusherTest
   public void setUp() throws IOException
   {
     config = new LocalDataSegmentPusherConfig();
-    config.zip = false;
     config.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusher = new LocalDataSegmentPusher(config);
+    localDataSegmentPusher = new LocalDataSegmentPusher(config, new DeepStorageSegmentConfig(false));
 
     configZip = new LocalDataSegmentPusherConfig();
-    configZip.zip = true;
     configZip.storageDirectory = temporaryFolder.newFolder();
-    localDataSegmentPusherZip = new LocalDataSegmentPusher(configZip);
+    localDataSegmentPusherZip = new LocalDataSegmentPusher(configZip, new DeepStorageSegmentConfig(true));
 
     dataSegmentFiles = temporaryFolder.newFolder();
     Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));

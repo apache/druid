@@ -29,6 +29,7 @@ import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.kafka.test.EmbeddedKafkaBroker;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -647,34 +648,31 @@ public class KafkaRecordSupplierTest
   }
 
   @Test
-  public void testSeekUnassigned()
+  public void testSeekUnassigned() throws ExecutionException, InterruptedException
   {
-    assertThrows(IllegalStateException.class, () -> {
-      // Insert data
-      try (final KafkaProducer<byte[], byte[]> kafkaProducer = KAFKA_SERVER.newProducer()) {
-        for (ProducerRecord<byte[], byte[]> record : records) {
-          kafkaProducer.send(record).get();
-        }
-      }
+    insertData();
 
-      StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(TOPIC, PARTITION_0);
-      StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(TOPIC, PARTITION_1);
+    final StreamPartition<KafkaTopicPartition> partition0 = StreamPartition.of(TOPIC, PARTITION_0);
+    final StreamPartition<KafkaTopicPartition> partition1 = StreamPartition.of(TOPIC, PARTITION_1);
+    final Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
+        StreamPartition.of(TOPIC, PARTITION_0)
+    );
+    final KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, null);
 
-      Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(
-          StreamPartition.of(TOPIC, PARTITION_0)
-      );
-
-      KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-          KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, null);
-
+    try {
       recordSupplier.assign(partitions);
-
+      recordSupplier.seekToEarliest(Collections.singleton(partition0));
       Assertions.assertEquals(0, (long) recordSupplier.getEarliestSequenceNumber(partition0));
-
-      recordSupplier.seekToEarliest(Collections.singleton(partition1));
-
+      final StreamException exception = Assertions.assertThrows(
+          StreamException.class,
+          () -> recordSupplier.seekToEarliest(Collections.singleton(partition1))
+      );
+      Assertions.assertInstanceOf(IllegalStateException.class, exception.getCause());
+    }
+    finally {
       recordSupplier.close();
-    });
+    }
   }
 
   @Test

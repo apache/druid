@@ -1,483 +1,322 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`LookupEditDialog matches snapshot 1`] = `
-<Blueprint5.Dialog
-  canEscapeKeyClose={false}
-  canOutsideClickClose={true}
-  className="lookup-edit-dialog"
-  isOpen={true}
-  onClose={[Function]}
-  title="Add lookup"
+<div
+  class="bp6-portal"
 >
   <div
-    className="content"
-  >
-    <Blueprint5.FormGroup
-      label="Name"
-    >
-      <Blueprint5.InputGroup
-        disabled={false}
-        intent="none"
-        onChange={[Function]}
-        placeholder="Enter the lookup name"
-        value="test"
-      />
-    </Blueprint5.FormGroup>
-    <Blueprint5.FormGroup
-      label="Tier"
-    >
-      <Blueprint5.HTMLSelect
-        onChange={[Function]}
-        value="test"
-      >
-        <option
-          value="__default"
-        >
-          __default
-        </option>
-        <option
-          value="alt-tier"
-        >
-          alt-tier
-        </option>
-      </Blueprint5.HTMLSelect>
-    </Blueprint5.FormGroup>
-    <Blueprint5.FormGroup
-      label="Version"
-    >
-      <Blueprint5.InputGroup
-        onChange={[Function]}
-        placeholder="Enter the lookup version"
-        rightElement={
-          <Blueprint5.Button
-            minimal={true}
-            onClick={[Function]}
-            text="Set to current ISO time"
-          />
-        }
-        value="test"
-      />
-    </Blueprint5.FormGroup>
-    <Memo(FormJsonSelector)
-      onChange={[Function]}
-      tab="form"
-    />
-    <AutoForm
-      fields={
-        [
-          {
-            "adjustment": [Function],
-            "name": "type",
-            "required": true,
-            "suggestions": [
-              "map",
-              "cachedNamespace",
-              "kafka",
-            ],
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "height": "60vh",
-            "issueWithValue": [Function],
-            "name": "map",
-            "required": true,
-            "type": "json",
-          },
-          {
-            "defined": [Function],
-            "label": "Extraction type",
-            "name": "extractionNamespace.type",
-            "placeholder": "uri",
-            "required": true,
-            "suggestions": [
-              "uri",
-              "jdbc",
-            ],
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": <p>
-              A URI which specifies a directory (or other searchable resource) in which to search for files specified as a 
-              <ForwardRef>
-                file
-              </ForwardRef>
-              , 
-              <ForwardRef>
-                hdfs
-              </ForwardRef>
-              , 
-              <ForwardRef>
-                s3
-              </ForwardRef>
-              , or
-               
-              <ForwardRef>
-                gs
-              </ForwardRef>
-               path prefix.
-            </p>,
-            "issueWithValue": [Function],
-            "label": "URI prefix",
-            "name": "extractionNamespace.uriPrefix",
-            "placeholder": "s3://bucket/some/key/prefix/",
-            "required": [Function],
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": <p>
-              URI for the file of interest, specified as a 
-              <ForwardRef>
-                file
-              </ForwardRef>
-              , 
-              <ForwardRef>
-                hdfs
-              </ForwardRef>
-              ,
-               
-              <ForwardRef>
-                s3
-              </ForwardRef>
-              , or 
-              <ForwardRef>
-                gs
-              </ForwardRef>
-               path
-            </p>,
-            "issueWithValue": [Function],
-            "label": "URI",
-            "name": "extractionNamespace.uri",
-            "placeholder": "s3://bucket/some/key/prefix/lookups-01.gz",
-            "required": [Function],
-            "type": "string",
-          },
-          {
-            "defaultValue": ".*",
-            "defined": [Function],
-            "info": "Optional regex for matching the file name under uriPrefix.",
-            "label": "File regex",
-            "name": "extractionNamespace.fileRegex",
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                The format of the data in the lookup files.
-              </p>
-              <p>
-                The 
-                <ForwardRef>
-                  simpleJson
-                </ForwardRef>
-                 lookupParseSpec does not take any parameters. It is simply a line delimited JSON file where the field is the key, and the field's value is the value.
-              </p>
-            </React.Fragment>,
-            "label": "Parse format",
-            "name": "extractionNamespace.namespaceParseSpec.format",
-            "required": true,
-            "suggestions": [
-              "csv",
-              "tsv",
-              "simpleJson",
-              "customJson",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": "	",
-            "defined": [Function],
-            "name": "extractionNamespace.namespaceParseSpec.delimiter",
-            "suggestions": [
-              "	",
-              ";",
-              "|",
-              "#",
-            ],
-            "type": "string",
-          },
-          {
-            "defaultValue": 0,
-            "defined": [Function],
-            "info": "Number of header rows to be skipped.",
-            "name": "extractionNamespace.namespaceParseSpec.skipHeaderRows",
-            "type": "number",
-          },
-          {
-            "defaultValue": false,
-            "defined": [Function],
-            "info": "A flag to indicate that column information can be extracted from the input files' header row",
-            "name": "extractionNamespace.namespaceParseSpec.hasHeaderRow",
-            "type": "boolean",
-          },
-          {
-            "defined": [Function],
-            "info": "The list of columns in the csv file",
-            "name": "extractionNamespace.namespaceParseSpec.columns",
-            "placeholder": "key, value",
-            "required": [Function],
-            "type": "string-array",
-          },
-          {
-            "defined": [Function],
-            "info": "The name of the column containing the key",
-            "name": "extractionNamespace.namespaceParseSpec.keyColumn",
-            "placeholder": "(optional - defaults to the first column)",
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": "The name of the column containing the value",
-            "name": "extractionNamespace.namespaceParseSpec.valueColumn",
-            "placeholder": "(optional - defaults to the second column)",
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "name": "extractionNamespace.namespaceParseSpec.keyFieldName",
-            "placeholder": "key",
-            "required": true,
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "name": "extractionNamespace.namespaceParseSpec.valueFieldName",
-            "placeholder": "value",
-            "required": true,
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": "Defines the connectURI for connecting to the database",
-            "issueWithValue": [Function],
-            "label": "Connect URI",
-            "name": "extractionNamespace.connectorConfig.connectURI",
-            "required": true,
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": "Defines the user to be used by the connector config",
-            "name": "extractionNamespace.connectorConfig.user",
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": "Defines the password to be used by the connector config",
-            "name": "extractionNamespace.connectorConfig.password",
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                The table which contains the key value pairs. This will become the table value in the SQL query:
-              </p>
-              <p>
-                SELECT keyColumn, valueColumn, tsColumn? FROM 
-                <strong>
-                  table
-                </strong>
-                 WHERE filter
-              </p>
-            </React.Fragment>,
-            "name": "extractionNamespace.table",
-            "placeholder": "lookup_table",
-            "required": true,
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                The column in the table which contains the keys. This will become the keyColumn value in the SQL query:
-              </p>
-              <p>
-                SELECT 
-                <strong>
-                  keyColumn
-                </strong>
-                , valueColumn, tsColumn? FROM table WHERE filter
-              </p>
-            </React.Fragment>,
-            "name": "extractionNamespace.keyColumn",
-            "placeholder": "key_column",
-            "required": true,
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                The column in table which contains the values. This will become the valueColumn value in the SQL query:
-              </p>
-              <p>
-                SELECT keyColumn, 
-                <strong>
-                  valueColumn
-                </strong>
-                , tsColumn? FROM table WHERE filter
-              </p>
-            </React.Fragment>,
-            "name": "extractionNamespace.valueColumn",
-            "placeholder": "value_column",
-            "required": true,
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                The column in table which contains when the key was updated. This will become the Value in the SQL query:
-              </p>
-              <p>
-                SELECT keyColumn, valueColumn, 
-                <strong>
-                  tsColumn
-                </strong>
-                ? FROM table WHERE filter
-              </p>
-            </React.Fragment>,
-            "label": "Timestamp column",
-            "name": "extractionNamespace.tsColumn",
-            "placeholder": "timestamp_column (optional)",
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": <React.Fragment>
-              <p>
-                The filter to be used when selecting lookups, this is used to create a where clause on lookup population. This will become the expression filter in the SQL query:
-              </p>
-              <p>
-                SELECT keyColumn, valueColumn, tsColumn? FROM table WHERE 
-                <strong>
-                  filter
-                </strong>
-              </p>
-            </React.Fragment>,
-            "name": "extractionNamespace.filter",
-            "placeholder": "for_lookup = 1 (optional)",
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "info": "Period between polling for updates",
-            "name": "extractionNamespace.pollPeriod",
-            "required": true,
-            "suggestions": [
-              "PT1M",
-              "PT10M",
-              "PT30M",
-              "PT1H",
-              "PT6H",
-              "P1D",
-            ],
-            "type": "duration",
-          },
-          {
-            "defaultValue": 0,
-            "defined": [Function],
-            "info": "How much jitter to add (in seconds) up to maximum as a delay (actual value will be used as random from 0 to jitterSeconds), used to distribute db load more evenly. Default is 0.",
-            "name": "extractionNamespace.jitterSeconds",
-            "required": false,
-            "suggestions": [],
-            "type": "number",
-          },
-          {
-            "defaultValue": 60,
-            "defined": [Function],
-            "info": "How much time (in seconds) it can take to query and populate lookup values. It will be helpful in lookup updates. On lookup update, it will wait maximum of \`loadTimeoutSeconds\` for new lookup to come up and continue serving from old lookup until new lookup successfully loads. Default is 60 Sec.",
-            "name": "extractionNamespace.loadTimeoutSeconds",
-            "required": false,
-            "suggestions": [],
-            "type": "number",
-          },
-          {
-            "defaultValue": 10,
-            "defined": [Function],
-            "info": "The maximum percentage of heap size that the lookup should consume. If the lookup grows beyond this size, warning messages will be logged in the respective service logs. Default is 10 % of jvm size.",
-            "name": "extractionNamespace.maxHeapPercentage",
-            "required": false,
-            "suggestions": [],
-            "type": "number",
-          },
-          {
-            "defaultValue": 0,
-            "defined": [Function],
-            "info": "How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait",
-            "name": "firstCacheTimeout",
-            "type": "number",
-          },
-          {
-            "defaultValue": false,
-            "defined": [Function],
-            "info": "If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to true",
-            "name": "injective",
-            "type": "boolean",
-          },
-          {
-            "defined": [Function],
-            "info": "The Kafka topic to read the data from",
-            "name": "kafkaTopic",
-            "required": true,
-            "type": "string",
-          },
-          {
-            "defined": [Function],
-            "height": "100px",
-            "issueWithValue": [Function],
-            "name": "kafkaProperties",
-            "required": true,
-            "type": "json",
-          },
-          {
-            "defaultValue": 0,
-            "defined": [Function],
-            "info": "How long to wait for an initial connection",
-            "name": "connectTimeout",
-            "type": "number",
-          },
-          {
-            "defaultValue": false,
-            "defined": [Function],
-            "info": "If the underlying map is one-to-one (keys and values are unique) then optimizations can occur internally by setting this to true",
-            "name": "isOneToOne",
-            "type": "boolean",
-          },
-        ]
-      }
-      model={
-        {
-          "map": {
-            "a": 1,
-          },
-          "type": "map",
-        }
-      }
-      onChange={[Function]}
-    />
-  </div>
-  <div
-    className="bp5-dialog-footer"
+    aria-live="polite"
+    class="bp6-overlay bp6-overlay-open bp6-overlay-scroll-container"
   >
     <div
-      className="bp5-dialog-footer-actions"
+      class="bp6-overlay-start-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp6-overlay-backdrop bp6-overlay-appear bp6-overlay-appear-active"
+    />
+    <div
+      class="bp6-dialog-container bp6-overlay-content bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
     >
-      <Blueprint5.Button
-        onClick={[Function]}
-        text="Close"
-      />
-      <Blueprint5.Button
-        disabled={false}
-        intent="primary"
-        onClick={[Function]}
-        text="Submit"
-      />
+      <div
+        aria-labelledby="title-bp-dialog-0"
+        aria-modal="true"
+        class="bp6-dialog lookup-edit-dialog"
+        role="dialog"
+      >
+        <div
+          class="bp6-dialog-header"
+        >
+          <h2
+            class="bp6-heading"
+            id="title-bp-dialog-0"
+          >
+            Add lookup
+          </h2>
+          <button
+            aria-label="Close"
+            class="bp6-button bp6-minimal bp6-dialog-close-button"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-small-cross"
+            >
+              <svg
+                data-icon="small-cross"
+              />
+            </span>
+          </button>
+        </div>
+        <div
+          class="content"
+        >
+          <div
+            class="bp6-form-group"
+          >
+            <label
+              class="bp6-label"
+            >
+              Name
+               
+              <span
+                class="bp6-text-muted"
+              />
+            </label>
+            <div
+              class="bp6-form-content"
+            >
+              <div
+                class="bp6-input-group"
+              >
+                <input
+                  aria-disabled="false"
+                  class="bp6-input"
+                  placeholder="Enter the lookup name"
+                  type="text"
+                  value="test"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            class="bp6-form-group"
+          >
+            <label
+              class="bp6-label"
+            >
+              Tier
+               
+              <span
+                class="bp6-text-muted"
+              />
+            </label>
+            <div
+              class="bp6-form-content"
+            >
+              <div
+                class="bp6-html-select"
+              >
+                <select>
+                  <option
+                    value="__default"
+                  >
+                    __default
+                  </option>
+                  <option
+                    value="alt-tier"
+                  >
+                    alt-tier
+                  </option>
+                </select>
+                <span
+                  class="bp6-icon bp6-icon-double-caret-vertical"
+                >
+                  <svg
+                    data-icon="double-caret-vertical"
+                  />
+                </span>
+              </div>
+            </div>
+          </div>
+          <div
+            class="bp6-form-group"
+          >
+            <label
+              class="bp6-label"
+            >
+              Version
+               
+              <span
+                class="bp6-text-muted"
+              />
+            </label>
+            <div
+              class="bp6-form-content"
+            >
+              <div
+                class="bp6-input-group"
+              >
+                <input
+                  class="bp6-input"
+                  placeholder="Enter the lookup version"
+                  style="padding-right: 0px;"
+                  type="text"
+                  value="test"
+                />
+                <span
+                  class="bp6-input-action"
+                >
+                  <button
+                    class="bp6-button bp6-minimal"
+                    type="button"
+                  >
+                    <span
+                      class="bp6-button-text"
+                    >
+                      Set to current ISO time
+                    </span>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div
+            class="bp6-form-group form-json-selector"
+          >
+            <div
+              class="bp6-form-content"
+            >
+              <div
+                class="bp6-button-group bp6-fill"
+              >
+                <button
+                  class="bp6-button bp6-active"
+                  type="button"
+                >
+                  <span
+                    class="bp6-button-text"
+                  >
+                    Form
+                  </span>
+                </button>
+                <button
+                  class="bp6-button"
+                  type="button"
+                >
+                  <span
+                    class="bp6-button-text"
+                  >
+                    JSON
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div
+            class="auto-form"
+          >
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Type
+                 
+                <span
+                  class="bp6-text-muted"
+                />
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="formatted-input suggestible-input"
+                >
+                  <div
+                    class="bp6-input-group"
+                  >
+                    <input
+                      aria-disabled="false"
+                      class="bp6-input"
+                      placeholder=""
+                      style="padding-right: 0px;"
+                      type="text"
+                      value="map"
+                    />
+                    <span
+                      class="bp6-input-action"
+                    >
+                      <span
+                        class="bp6-popover-target"
+                      >
+                        <button
+                          aria-expanded="false"
+                          aria-haspopup="menu"
+                          class="bp6-button bp6-minimal"
+                          type="button"
+                        >
+                          <span
+                            aria-hidden="true"
+                            class="bp6-icon bp6-icon-caret-down"
+                          >
+                            <svg
+                              data-icon="caret-down"
+                            />
+                          </span>
+                        </button>
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="bp6-form-group form-group-with-info"
+            >
+              <label
+                class="bp6-label"
+              >
+                Map
+                 
+                <span
+                  class="bp6-text-muted"
+                />
+              </label>
+              <div
+                class="bp6-form-content"
+              >
+                <div
+                  class="json-input"
+                >
+                  <div
+                    class=" ace_editor ace_hidpi ace-solarized-dark ace_dark"
+                    id="ace-editor"
+                    style="width: 100%; height: 60vh; font-size: 12px;"
+                  >
+                    <!-- Ace editor, mode: ace/mode/hjson, value: "{\\n  \\"a\\": 1\\n}" -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          class="bp6-dialog-footer"
+        >
+          <div
+            class="bp6-dialog-footer-actions"
+          >
+            <button
+              class="bp6-button"
+              type="button"
+            >
+              <span
+                class="bp6-button-text"
+              >
+                Close
+              </span>
+            </button>
+            <button
+              class="bp6-button bp6-intent-primary"
+              type="button"
+            >
+              <span
+                class="bp6-button-text"
+              >
+                Submit
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+    <div
+      class="bp6-overlay-end-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
+    />
   </div>
-</Blueprint5.Dialog>
+</div>
 `;

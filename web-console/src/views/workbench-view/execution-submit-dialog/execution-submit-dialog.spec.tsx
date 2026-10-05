@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { ExecutionSubmitDialog } from './execution-submit-dialog';
 
 describe('ExecutionSubmitDialog', () => {
   it('matches snapshot', () => {
-    const comp = shallow(<ExecutionSubmitDialog onSubmit={() => {}} onClose={() => {}} />);
+    render(<ExecutionSubmitDialog onSubmit={() => {}} onClose={() => {}} />);
 
-    expect(comp).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });
