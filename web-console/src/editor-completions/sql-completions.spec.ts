@@ -71,7 +71,7 @@ describe('sql-completions', () => {
         prefix: 'FR',
       });
       expect(completions.length).toBeGreaterThan(0);
-      const keywordCompletions = completions.filter(c => c.meta === 'keyword');
+      const keywordCompletions = completions.filter(c => c.detail === 'keyword');
       expect(keywordCompletions.length).toBeGreaterThan(0);
     });
 
@@ -103,14 +103,14 @@ describe('sql-completions', () => {
 
       expect(completions).toHaveLength(2);
       expect(completions[0]).toEqual({
-        value: 'France',
-        score: 1,
-        meta: 'local',
+        label: 'France',
+        boost: 1,
+        detail: 'local',
       });
       expect(completions[1]).toEqual({
-        value: 'Germany',
-        score: 1,
-        meta: 'local',
+        label: 'Germany',
+        boost: 1,
+        detail: 'local',
       });
     });
 
@@ -120,8 +120,8 @@ describe('sql-completions', () => {
         lineBeforePrefix: 'SELECT',
       });
 
-      const keywordCompletions = completions.filter(c => c.meta === 'keyword');
-      const keywordValues = keywordCompletions.map(c => c.value);
+      const keywordCompletions = completions.filter(c => c.detail === 'keyword');
+      const keywordValues = keywordCompletions.map(c => c.label);
 
       expect(keywordValues).toContain('DISTINCT');
       expect(keywordValues).toContain('ALL');
@@ -134,10 +134,10 @@ describe('sql-completions', () => {
         lineBeforePrefix: 'LIMIT',
       });
 
-      const functionCompletions = completions.filter(c => c.meta === 'function');
+      const functionCompletions = completions.filter(c => c.detail === 'function');
       expect(functionCompletions).toHaveLength(0);
 
-      const dynamicCompletions = completions.filter(c => c.meta === 'dynamic');
+      const dynamicCompletions = completions.filter(c => c.detail === 'dynamic');
       expect(dynamicCompletions).toHaveLength(0);
     });
 
@@ -147,10 +147,10 @@ describe('sql-completions', () => {
         lineBeforePrefix: 'WHERE',
       });
 
-      const functionCompletions = completions.filter(c => c.meta === 'function');
+      const functionCompletions = completions.filter(c => c.detail === 'function');
       expect(functionCompletions.length).toBeGreaterThan(0);
 
-      const dynamicCompletions = completions.filter(c => c.meta === 'dynamic');
+      const dynamicCompletions = completions.filter(c => c.detail === 'dynamic');
       expect(dynamicCompletions.length).toBeGreaterThan(0);
     });
 
@@ -176,10 +176,10 @@ describe('sql-completions', () => {
         columnMetadata,
       });
 
-      const columnCompletions = completions.filter(c => c.meta === 'column');
+      const columnCompletions = completions.filter(c => c.detail === 'column');
       expect(columnCompletions).toHaveLength(0);
 
-      const tableCompletions = completions.filter(c => c.meta === 'table');
+      const tableCompletions = completions.filter(c => c.detail === 'table');
       expect(tableCompletions).toHaveLength(0);
     });
 
@@ -206,10 +206,10 @@ describe('sql-completions', () => {
         columnMetadata,
       });
 
-      const columnCompletions = completions.filter(c => c.meta === 'column');
+      const columnCompletions = completions.filter(c => c.detail === 'column');
       expect(columnCompletions.length).toBeGreaterThan(0);
-      expect(columnCompletions.map(c => c.value)).toContain('"page"');
-      expect(columnCompletions.map(c => c.value)).toContain('"user"');
+      expect(columnCompletions.map(c => c.label)).toContain('"page"');
+      expect(columnCompletions.map(c => c.label)).toContain('"user"');
     });
 
     it('includes context keys after SET keyword', () => {
@@ -218,7 +218,7 @@ describe('sql-completions', () => {
         lineBeforePrefix: 'SET',
       });
 
-      const contextCompletions = completions.filter(c => c.meta === 'context');
+      const contextCompletions = completions.filter(c => c.detail === 'context');
       expect(contextCompletions.length).toBeGreaterThan(0);
     });
 
@@ -237,23 +237,23 @@ describe('sql-completions', () => {
       });
 
       const columnWithoutQuote = completionsWithoutQuote.find(c =>
-        c.value.includes('column name with spaces'),
+        c.label.includes('column name with spaces'),
       );
-      expect(columnWithoutQuote?.value).toBe('"column name with spaces"');
+      expect(columnWithoutQuote?.label).toBe('"column name with spaces"');
 
-      const columnWithQuote = completionsWithQuote.find(c => c.value === 'column name with spaces');
-      expect(columnWithQuote?.value).toBe('column name with spaces');
+      const columnWithQuote = completionsWithQuote.find(c => c.label === 'column name with spaces');
+      expect(columnWithQuote?.label).toBe('column name with spaces');
     });
 
     it('includes constants and data types in completions', () => {
       const completions = getSqlCompletions(baseOptions);
 
-      const constantCompletions = completions.filter(c => c.meta === 'constant');
-      expect(constantCompletions.map(c => c.value)).toContain('NULL');
-      expect(constantCompletions.map(c => c.value)).toContain('TRUE');
-      expect(constantCompletions.map(c => c.value)).toContain('FALSE');
+      const constantCompletions = completions.filter(c => c.detail === 'constant');
+      expect(constantCompletions.map(c => c.label)).toContain('NULL');
+      expect(constantCompletions.map(c => c.label)).toContain('TRUE');
+      expect(constantCompletions.map(c => c.label)).toContain('FALSE');
 
-      const typeCompletions = completions.filter(c => c.meta === 'type');
+      const typeCompletions = completions.filter(c => c.detail === 'type');
       expect(typeCompletions.length).toBeGreaterThan(0);
     });
 
@@ -263,8 +263,8 @@ describe('sql-completions', () => {
         allText: 'SELECT my_column FROM my_table WHERE other_column = 1',
       });
 
-      const localCompletions = completions.filter(c => c.meta === 'local');
-      const localValues = localCompletions.map(c => c.value);
+      const localCompletions = completions.filter(c => c.detail === 'local');
+      const localValues = localCompletions.map(c => c.label);
 
       expect(localValues).toContain('my_column');
       expect(localValues).toContain('my_table');

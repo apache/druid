@@ -26,7 +26,6 @@ import type { ColumnMetadata } from '../utils';
 import { lookupBy, uniq } from '../utils';
 
 import type { EditorCompletion } from './editor-completion';
-import { makeDocHtml } from './make-doc-html';
 
 const SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_FUNCTION = [
   'AS',
@@ -194,10 +193,10 @@ export function getSqlCompletions({
   // If we are autocompleting inside a literal, then don't do any of the standard suggestions.
   // Only autocomplete other literals. The imagined use-case for this is if you have `country = 'France'` or `TIMESTAMP '2024-03-02 O1:00:00'` you might want to reuse the literals
   if (charBeforePrefix === "'") {
-    return getSqlLiterals(allText, 100).map(value => ({
-      value,
-      score: 1,
-      meta: 'local',
+    return getSqlLiterals(allText, 100).map(label => ({
+      label,
+      boost: 1,
+      detail: 'local',
     }));
   }
 
@@ -210,31 +209,31 @@ export function getSqlCompletions({
 
   const possibleReferences = getPossibleSqlReferences(allText, 100);
 
-  let completions: EditorCompletion[] = possibleReferences.map(value => ({
-    value,
-    score: 1,
-    meta: 'local',
+  let completions: EditorCompletion[] = possibleReferences.map(label => ({
+    label,
+    boost: 1,
+    detail: 'local',
   }));
 
   const quote = charBeforePrefix === '"';
   if (!quote) {
     completions = completions.concat(
       (SQL_KEYWORD_FOLLOW_SUGGESTIONS[keywordBeforePrefix || ''] || SQL_KEYWORDS).map(v => ({
-        value: v,
-        score: 10,
-        meta: 'keyword',
+        label: v,
+        boost: 10,
+        detail: 'keyword',
       })),
-      SQL_CONSTANTS.map(v => ({ value: v, score: 11, meta: 'constant' })),
+      SQL_CONSTANTS.map(v => ({ label: v, boost: 11, detail: 'constant' })),
       Array.from(SQL_DATA_TYPES.entries()).map(([name, [runtime, description]]) => {
         return {
-          value: name,
-          score: 31,
-          meta: 'type',
-          docHTML: makeDocHtml({
+          label: name,
+          boost: 31,
+          detail: 'type',
+          doc: {
             name,
-            description,
             syntax: `Druid runtime type: ${runtime}`,
-          }),
+            descriptionHtml: description,
+          },
         };
       }),
     );
@@ -244,7 +243,7 @@ export function getSqlCompletions({
       !SQL_KEYWORDS_THAT_CAN_NOT_BE_FOLLOWED_BY_FUNCTION.includes(keywordBeforePrefix)
     ) {
       completions = completions.concat(
-        SQL_DYNAMICS.map(v => ({ value: v, score: 20, meta: 'dynamic' })),
+        SQL_DYNAMICS.map(v => ({ label: v, boost: 20, detail: 'dynamic' })),
       );
 
       // If availableSqlFunctions map is provided, use it; otherwise fall back to static SQL_FUNCTIONS
@@ -255,11 +254,11 @@ export function getSqlCompletions({
             const description = SQL_FUNCTIONS.get(name)?.[1];
             return funcDef.args.map(args => ({
               // Functions with several signatures are listed once per signature, but only the name is inserted
-              caption: funcDef.args.length > 1 ? `${name}(${args})` : undefined,
-              value: name,
-              score: 30,
-              meta: funcDef.isAggregate ? 'aggregate' : 'function',
-              docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
+              label: name,
+              displayLabel: funcDef.args.length > 1 ? `${name}(${args})` : undefined,
+              boost: 30,
+              detail: funcDef.isAggregate ? 'aggregate' : 'function',
+              doc: { name, syntax: `${name}(${args})`, descriptionHtml: description },
             }));
           }),
         );
@@ -268,10 +267,10 @@ export function getSqlCompletions({
           Array.from(SQL_FUNCTIONS.entries()).map(([name, argDesc]) => {
             const [args, description] = argDesc;
             return {
-              value: name,
-              score: 30,
-              meta: 'function',
-              docHTML: makeDocHtml({ name, description, syntax: `${name}(${args})` }),
+              label: name,
+              boost: 30,
+              detail: 'function',
+              doc: { name, syntax: `${name}(${args})`, descriptionHtml: description },
             };
           }),
         );
@@ -288,9 +287,9 @@ export function getSqlCompletions({
 
       completions = completions.concat(
         uniq(columnMetadata.map(({ TABLE_SCHEMA }) => TABLE_SCHEMA)).map(schema => ({
-          value: quote ? schema : String(N(schema)),
-          score: 30,
-          meta: 'schema',
+          label: quote ? schema : String(N(schema)),
+          boost: 30,
+          detail: 'schema',
         })),
         uniq(
           filterMap(columnMetadata, ({ TABLE_SCHEMA, TABLE_NAME }) =>
@@ -299,18 +298,18 @@ export function getSqlCompletions({
               : undefined,
           ),
         ).map(table => ({
-          value: quote ? table : String(T(table)),
-          score: 40,
-          meta: 'table',
+          label: quote ? table : String(T(table)),
+          boost: 40,
+          detail: 'table',
         })),
         uniq(
           filterMap(columnMetadata, d =>
             possibleReferencesLookup[d.TABLE_NAME] ? d.COLUMN_NAME : undefined,
           ),
         ).map(v => ({
-          value: quote ? v : String(C(v)),
-          score: 50,
-          meta: 'column',
+          label: quote ? v : String(C(v)),
+          boost: 50,
+          detail: 'column',
         })),
       );
     }
@@ -318,9 +317,9 @@ export function getSqlCompletions({
     if (columns?.length) {
       completions = completions.concat(
         columns.map(column => ({
-          value: quote ? column : String(C(column)),
-          score: 50,
-          meta: 'column',
+          label: quote ? column : String(C(column)),
+          boost: 50,
+          detail: 'column',
         })),
       );
     }
@@ -329,9 +328,9 @@ export function getSqlCompletions({
   if (keywordBeforePrefix === 'SET') {
     completions = completions.concat(
       Object.keys(DEFAULT_SERVER_QUERY_CONTEXT).map(key => ({
-        value: quote ? key : String(C(key)),
-        score: 50,
-        meta: 'context',
+        label: quote ? key : String(C(key)),
+        boost: 50,
+        detail: 'context',
       })),
     );
   }

@@ -29,8 +29,8 @@ look as possible. For how to use the new component, see [README.md](./README.md)
   `@lezer/highlight` were added.
 - All 10 places that rendered `<AceEditor>` now render the new `CodeEditor` component (`src/components/code-editor/`).
 - The custom DruidSQL (`dsql`) and Hjson (`hjson`) Ace modes were ported to CodeMirror `StreamLanguage`s.
-- The SQL and Hjson completion builders were kept. Only their return type changed from Ace's `ValueCompletion` to a
-  console-owned `EditorCompletion`.
+- The SQL and Hjson completion builders were kept. Their return type changed from Ace's `ValueCompletion` to a
+  console-owned `EditorCompletion` that uses the field names of CodeMirror's `Completion`.
 - The workbench's "run this query" gutter markers and hover highlight were reimplemented as CodeMirror extensions.
 - The styling reproduces Ace's `solarized_dark` theme with the console's overrides. It was compared side by side
   against master in the browser.
@@ -47,7 +47,8 @@ look as possible. For how to use the new component, see [README.md](./README.md)
 | `src/ace-modes/ace-modes.spec.ts`                | `src/editor-modes/editor-modes.spec.ts`                                  |
 | `initAceDsqlMode(functions)`                     | `initDsqlMode(functions)`                                                |
 | `src/ace-completions/*`                          | `src/editor-completions/*` (+ `editor-completion.ts` for the type)       |
-| `Ace.ValueCompletion`                            | `EditorCompletion` (`value`, `caption`, `score`, `meta`, `docHTML`)      |
+| `makeDocHtml` (HTML strings in `docHTML`)        | Structured `doc` rendered by `completion-doc.ts`                         |
+| `Ace.ValueCompletion`                            | `EditorCompletion` (`label`, `displayLabel`, `boost`, `detail`, `doc`) |
 | `src/singletons/ace-editor-state-cache.ts`       | `src/singletons/editor-state-cache.ts` (`EditorStateCache`)              |
 | `editor.getSelection().moveCursorTo(row, col)`   | `focusEditorAt(view, { row, column })`                                   |
 
@@ -76,9 +77,9 @@ These Ace behaviors were deliberately preserved:
   characters, including `$` and `-`) and on Ctrl-Space. Tab accepts a suggestion as well as Enter.
 - **Autocomplete inputs:** the old completers worked out `charBeforePrefix`, `lineBeforePrefix` and `textBefore`
   from the Ace session. `CodeEditor` now computes these once and passes them in a `CompletionRequest`.
-- **Ranking:** Ace's `score` becomes CodeMirror's `boost` (clamped to ±99). CodeMirror ranks by match quality first and
-  boost second, which gave the same ordering in practice.
-- **Doc tooltip:** `docHTML` is shown in a 500px panel next to the list, styled like the old `.ace_tooltip`
+- **Ranking:** Ace's `score` became CodeMirror's `boost` (the scores were already within its ±99 range). CodeMirror ranks by
+  match quality first and boost second, which gave the same ordering in practice.
+- **Doc tooltip:** the `doc` is shown in a 500px panel next to the list, styled like the old `.ace_tooltip`
   (`doc-name`, `doc-syntax` classes).
 - **Tab:** with nothing selected, Tab inserts spaces to the next 2-column stop; with a selection it indents the lines.
   This matches Ace (CodeMirror does not bind Tab by default).
@@ -164,6 +165,9 @@ Playwright at 2× scale.
   the prefix are now dropped explicitly.
 - **`{` is not auto-closed in SQL.** Ace only "maybe" inserted the closing brace (it added it on Enter). Typing `{` into
   the workbench usually starts a native JSON query, and an eager `}` was left behind once the mode switched to Hjson.
+- **Plain text docs are escaped.** Ace's `docHTML` took every doc as HTML, so Hjson docs for values like
+  `ARRAY<STRING>` showed up as `ARRAY`. A `doc` now says whether its description is plain text or HTML, and only
+  `descriptionHtml` (the SQL docs) is inserted as HTML.
 - **Undo granularity:** CodeMirror groups typing into undo steps differently from Ace.
 - **Tooltips:** all editors share one tooltip container that is *prepended* to `<body>`. Like Ace's popup, it can't be
   clipped by the editor's containers. Prepending also keeps `document.body.lastChild` pointing at Blueprint portals,

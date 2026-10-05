@@ -44,7 +44,7 @@ describe('getHjsonCompletions', () => {
       textBefore: '{',
     });
 
-    const completionValues = completions.map(c => c.value);
+    const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('queryType');
     expect(completionValues).toContain('dataSource');
   });
@@ -55,7 +55,7 @@ describe('getHjsonCompletions', () => {
       textBefore: '{ "queryType": ',
     });
 
-    const completionValues = completions.map(c => c.value);
+    const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('timeseries');
     expect(completionValues).toContain('topN');
     expect(completionValues).toContain('groupBy');
@@ -68,7 +68,7 @@ describe('getHjsonCompletions', () => {
       textBefore: '{ "queryType": "timeseries", ',
     });
 
-    const completionValues = completions.map(c => c.value);
+    const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('granularity');
     expect(completionValues).toContain('aggregations');
     expect(completionValues).toContain('intervals');
@@ -83,7 +83,7 @@ describe('getHjsonCompletions', () => {
       textBefore: '{ "queryType": "timeseries", "granularity": ',
     });
 
-    const completionValues = completions.map(c => c.value);
+    const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('hour');
     expect(completionValues).toContain('day');
     expect(completionValues).toContain('all');
@@ -95,7 +95,7 @@ describe('getHjsonCompletions', () => {
       textBefore: '{ "queryType": "timeseries", "aggregations": [{ ',
     });
 
-    const completionValues = completions.map(c => c.value);
+    const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('type');
     expect(completionValues).toContain('name');
   });
@@ -106,7 +106,7 @@ describe('getHjsonCompletions', () => {
       textBefore: '{ "queryType": "timeseries", "aggregations": [{ "type": ',
     });
 
-    const completionValues = completions.map(c => c.value);
+    const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('count');
     expect(completionValues).toContain('longSum');
     expect(completionValues).toContain('doubleSum');
@@ -118,7 +118,7 @@ describe('getHjsonCompletions', () => {
       textBefore: '{ "queryType": "timeseries", "aggregations": [{ "type": "longSum", ',
     });
 
-    const completionValues = completions.map(c => c.value);
+    const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('fieldName');
     expect(completionValues).toContain('name');
 
@@ -140,11 +140,11 @@ describe('getHjsonCompletions', () => {
     });
 
     // Unquoted should include quotes for property names
-    const unquotedValues = unquotedCompletions.map(c => c.value);
+    const unquotedValues = unquotedCompletions.map(c => c.label);
     expect(unquotedValues.some(v => v.includes('"'))).toBe(false); // Simple property names don't need quotes
 
     // Quoted completions should not add extra quotes
-    const quotedValues = quotedCompletions.map(c => c.value);
+    const quotedValues = quotedCompletions.map(c => c.label);
     expect(quotedValues).toContain('queryType');
     expect(quotedValues).toContain('dataSource');
   });
@@ -155,8 +155,8 @@ describe('getHjsonCompletions', () => {
       textBefore: '{',
     });
 
-    const queryTypeCompletion = completions.find(c => c.value === 'queryType');
+    const queryTypeCompletion = completions.find(c => c.label === 'queryType');
     expect(queryTypeCompletion).toBeDefined();
-    expect(queryTypeCompletion?.meta).toBe('property');
+    expect(queryTypeCompletion?.detail).toBe('property');
   });
 });

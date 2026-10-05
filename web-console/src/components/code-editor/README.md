@@ -32,6 +32,7 @@ It is a controlled component that you give a string and an `onChange` callback. 
 | ----------------------- | -------------------------------------------------------------------------------- |
 | `code-editor.tsx`       | The component, its props, the CodeMirror setup and the `focusEditorAt` helper    |
 | `code-editor-theme.ts`  | The editor theme (layout, gutter, popups) and the syntax highlighting colors     |
+| `completion-doc.ts`     | Renders the documentation panel shown next to the completion list               |
 | `code-editor.scss`      | The few styles for the wrapper element that can't live in the CodeMirror theme  |
 
 Related code lives elsewhere:
@@ -126,13 +127,23 @@ It returns `EditorCompletion`s (from `src/editor-completions/editor-completion.t
 
 ```ts
 interface EditorCompletion {
-  value: string; // What gets inserted
-  caption?: string; // What is shown in the list (defaults to value)
-  score?: number; // Ranks equally good matches, higher first
-  meta?: string; // Shown on the right, like 'column' or 'function'
-  docHTML?: string; // Shown in a panel next to the list when the item is selected
+  label: string; // What gets inserted (and matched against what was typed)
+  displayLabel?: string; // What is shown in the list (defaults to label)
+  detail?: string; // Shown on the right, like 'column' or 'function'
+  boost?: number; // Ranks equally good matches, from -99 to 99, higher first
+  doc?: CompletionDoc; // Shown in a panel next to the list when the item is selected
+}
+
+interface CompletionDoc {
+  name: string; // The title
+  syntax?: string; // Plain text in monospace under the title, like a function signature
+  description?: string; // Plain text
+  descriptionHtml?: string; // HTML, only for trusted HTML like the docs in lib/sql-docs.ts
 }
 ```
+
+The field names are the ones of CodeMirror's `Completion`. The editor renders the doc panel itself
+(`completion-doc.ts`), so completion builders only describe what to show.
 
 Usually you don't write completions yourself. Hook up the existing builders:
 

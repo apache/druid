@@ -68,6 +68,7 @@ import {
   codeEditorPaddingTheme,
   codeEditorTheme,
 } from './code-editor-theme';
+import { renderCompletionDoc } from './completion-doc';
 
 import './code-editor.scss';
 
@@ -199,20 +200,8 @@ function positionInfo(_view: EditorView, list: Rect, _option: Rect, info: Rect, 
   };
 }
 
-function toCompletion({ value, caption, score, meta, docHTML }: EditorCompletion): Completion {
-  return {
-    label: value,
-    displayLabel: caption,
-    detail: meta,
-    boost: score ? Math.max(-99, Math.min(99, score)) : undefined,
-    info: docHTML
-      ? () => {
-          const doc = document.createElement('div');
-          doc.innerHTML = docHTML;
-          return doc;
-        }
-      : undefined,
-  };
+function toCompletion({ doc, ...completion }: EditorCompletion): Completion {
+  return doc ? { ...completion, info: () => renderCompletionDoc(doc) } : completion;
 }
 
 /**
@@ -293,7 +282,7 @@ export function CodeEditor(props: CodeEditorProps) {
         lineBeforePrefix: from > line.from ? state.sliceDoc(line.from, from - 1) : '',
       });
       // Do not suggest what has already been typed (it shows up as a reference in the text)
-      const options = completions.filter(c => c.value !== prefix).map(toCompletion);
+      const options = completions.filter(c => c.label !== prefix).map(toCompletion);
       if (!options.length) return null;
 
       return {

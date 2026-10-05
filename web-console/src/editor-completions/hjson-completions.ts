@@ -20,7 +20,6 @@ import type { JsonCompletionItem, JsonCompletionRule } from '../utils';
 import { getCompletionsForPath, getHjsonContext } from '../utils';
 
 import type { EditorCompletion } from './editor-completion';
-import { makeDocHtml } from './make-doc-html';
 
 export interface GetHjsonCompletionsOptions {
   jsonCompletions: JsonCompletionRule[];
@@ -112,17 +111,17 @@ function convertToEditorCompletion(
   // const quote = charBeforePrefix === '"';
 
   const completion: EditorCompletion = {
-    value: item.value,
-    score: 5,
-    meta: isEditingKey ? 'property' : 'value',
+    label: item.value,
+    boost: 5,
+    detail: isEditingKey ? 'property' : 'value',
   };
 
   // Add documentation if available
   if (item.documentation) {
-    completion.docHTML = makeDocHtml({
+    completion.doc = {
       name: item.value,
       description: item.documentation,
-    });
+    };
   }
 
   return completion;

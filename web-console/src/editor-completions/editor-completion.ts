@@ -16,15 +16,31 @@
  * limitations under the License.
  */
 
+/**
+ * Documentation shown next to the completion list when the completion is selected
+ */
+export interface CompletionDoc {
+  /** The title */
+  name: string;
+  /** Plain text shown (in monospace) under the title, like a function signature */
+  syntax?: string;
+  /** Plain text description */
+  description?: string;
+  /** HTML description, only for trusted HTML like the docs in lib/sql-docs.ts */
+  descriptionHtml?: string;
+}
+
+/**
+ * A completion suggestion. The fields mirror the ones of CodeMirror's `Completion`.
+ */
 export interface EditorCompletion {
-  /** The text that is inserted */
-  value: string;
-  /** What is shown in the list, defaults to the value */
-  caption?: string;
-  /** Higher scores are listed first (among equally good matches) */
-  score?: number;
-  /** A short description of the kind of thing being completed shown next to the caption */
-  meta?: string;
-  /** Documentation to show next to the list when the completion is selected */
-  docHTML?: string;
+  /** The text that is inserted (and matched against what was typed) */
+  label: string;
+  /** What is shown in the list, defaults to the label */
+  displayLabel?: string;
+  /** Shown to the right of the label, like 'column' or 'function' */
+  detail?: string;
+  /** Ranks equally good matches, from -99 to 99, higher first */
+  boost?: number;
+  doc?: CompletionDoc;
 }
