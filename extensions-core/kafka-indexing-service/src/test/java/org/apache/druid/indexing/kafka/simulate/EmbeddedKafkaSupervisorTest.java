@@ -217,7 +217,9 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
 
     final String emptyColumn = "unknownColumn";
     final KafkaSupervisorSpec supervisorSpec = newKafkaSupervisor()
+        // Use the default row limit so this test does not create a segment for each row.
         .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(null))
+        // Allow ingestion to finish before time-based rollover; suspension below triggers publishing.
         .withIoConfig(ioConfig -> ioConfig.withTaskDuration(Period.minutes(1)))
         .withDataSchema(
             s -> s.withDimensions(
@@ -228,7 +230,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
     submitSupervisor(supervisorSpec);
 
     final int numRows = 100;
-    // Empty-dimension handling does not require a separate segment for every row.
+    // One-second timestamp steps keep all 100 rows in one daily segment interval.
     kafkaServer.produceRecordsToTopic(
         generateRecordsForTopic(topic, numRows, DateTimes.of("2025-06-01"), Period.seconds(1))
     );
@@ -312,6 +314,7 @@ public class EmbeddedKafkaSupervisorTest extends EmbeddedClusterTestBase
       DateTime startTime
   )
   {
+    // Daily steps place each row in a separate segment interval for the handoff and lock-release assertions.
     return generateRecordsForTopic(topic, numRecords, startTime, Period.days(1));
   }
 
