@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -272,16 +271,6 @@ public class Druids
       return this;
     }
 
-    /**
-     * Adds, overrides, or (with a {@code null} value) removes one typed query context parameter without replacing
-     * other context values.
-     */
-    public <V> TimeseriesQueryBuilder context(final QueryContextParameter<V> parameter, @Nullable final V value)
-    {
-      context = QueryContexts.override(context, parameter, value);
-      return this;
-    }
-
     public TimeseriesQueryBuilder randomQueryId()
     {
       return queryId(UUID.randomUUID().toString());
@@ -516,16 +505,6 @@ public class Druids
       return this;
     }
 
-    /**
-     * Adds, overrides, or (with a {@code null} value) removes one typed query context parameter without replacing
-     * other context values.
-     */
-    public <V> SearchQueryBuilder context(final QueryContextParameter<V> parameter, @Nullable final V value)
-    {
-      context = QueryContexts.override(context, parameter, value);
-      return this;
-    }
-
     public SearchQueryBuilder randomQueryId()
     {
       return queryId(UUID.randomUUID().toString());
@@ -640,16 +619,6 @@ public class Druids
     public TimeBoundaryQueryBuilder context(Map<String, Object> c)
     {
       this.context = c;
-      return this;
-    }
-
-    /**
-     * Adds, overrides, or (with a {@code null} value) removes one typed query context parameter without replacing
-     * other context values.
-     */
-    public <V> TimeBoundaryQueryBuilder context(final QueryContextParameter<V> parameter, @Nullable final V value)
-    {
-      context = QueryContexts.override(context, parameter, value);
       return this;
     }
 
@@ -822,16 +791,6 @@ public class Druids
       this.context = c;
       return this;
     }
-
-    /**
-     * Adds, overrides, or (with a {@code null} value) removes one typed query context parameter without replacing
-     * other context values.
-     */
-    public <V> SegmentMetadataQueryBuilder context(final QueryContextParameter<V> parameter, @Nullable final V value)
-    {
-      context = QueryContexts.override(context, parameter, value);
-      return this;
-    }
   }
 
   public static SegmentMetadataQueryBuilder newSegmentMetadataQueryBuilder()
@@ -953,16 +912,6 @@ public class Druids
     public ScanQueryBuilder context(Map<String, Object> c)
     {
       this.context = c;
-      return this;
-    }
-
-    /**
-     * Adds, overrides, or (with a {@code null} value) removes one typed query context parameter without replacing
-     * other context values.
-     */
-    public <V> ScanQueryBuilder context(final QueryContextParameter<V> parameter, @Nullable final V value)
-    {
-      context = QueryContexts.override(context, parameter, value);
       return this;
     }
 
@@ -1115,16 +1064,6 @@ public class Druids
     public DataSourceMetadataQueryBuilder context(Map<String, Object> c)
     {
       this.context = c;
-      return this;
-    }
-
-    /**
-     * Adds, overrides, or (with a {@code null} value) removes one typed query context parameter without replacing
-     * other context values.
-     */
-    public <V> DataSourceMetadataQueryBuilder context(final QueryContextParameter<V> parameter, @Nullable final V value)
-    {
-      context = QueryContexts.override(context, parameter, value);
       return this;
     }
   }
