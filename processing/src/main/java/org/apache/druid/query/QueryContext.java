@@ -32,8 +32,6 @@ import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryContexts.Vectorize;
 import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
-import org.apache.druid.query.filter.InDimFilter;
-import org.apache.druid.query.filter.TypedInFilter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -557,29 +555,6 @@ public class QueryContext
     return String.valueOf(maxSubqueryBytesObject);
   }
 
-  public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)
-  {
-    return getOrDefault(
-        QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
-        defaultUseNestedForUnkownTypeInSubquery
-    );
-  }
-
-  public boolean isUseNestedForUnknownTypeInSubquery()
-  {
-    return getOrDefault(QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
-  }
-
-  public int getUncoveredIntervalsLimit()
-  {
-    return getOrDefault(QueryContextParameters.UNCOVERED_INTERVALS_LIMIT);
-  }
-
-  public int getUncoveredIntervalsLimit(int defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.UNCOVERED_INTERVALS_LIMIT, defaultValue);
-  }
-
   public int getPriority()
   {
     return getOrDefault(QueryContextParameters.PRIORITY);
@@ -635,11 +610,6 @@ public class QueryContext
     return getOrDefault(QueryContextParameters.SECONDARY_PARTITION_PRUNING);
   }
 
-  public boolean isOptimizeAggregators()
-  {
-    return getOrDefault(QueryContextParameters.OPTIMIZE_AGGREGATORS);
-  }
-
   public long getMaxQueuedBytes(long defaultValue)
   {
     return getOrDefault(QueryContextParameters.MAX_QUEUED_BYTES, defaultValue);
@@ -648,11 +618,6 @@ public class QueryContext
   public long getMaxScatterGatherBytes()
   {
     return getOrDefault(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE);
-  }
-
-  public String getEngine()
-  {
-    return getOrDefault(QueryContextParameters.ENGINE);
   }
 
   public boolean hasTimeout()
@@ -751,16 +716,6 @@ public class QueryContext
     }
   }
 
-  public int getNumRetriesOnMissingSegments(int defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.NUM_RETRIES_ON_MISSING_SEGMENTS, defaultValue);
-  }
-
-  public boolean allowReturnPartialResults(boolean defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.RETURN_PARTIAL_RESULTS, defaultValue);
-  }
-
   public boolean getEnableJoinFilterRewriteValueColumnFilters()
   {
     return getOrDefault(QueryContextParameters.ENABLE_JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS);
@@ -775,68 +730,6 @@ public class QueryContext
   {
     return getOrDefault(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER);
   }
-
-  public boolean getEnableJoinLeftScanDirect()
-  {
-    return getOrDefault(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT);
-  }
-
-  public int getInSubQueryThreshold()
-  {
-    return getOrDefault(QueryContextParameters.IN_SUBQUERY_THRESHOLD);
-  }
-
-  public int getInSubQueryThreshold(int defaultValue)
-  {
-    return getOrDefault(QueryContextParameters.IN_SUBQUERY_THRESHOLD, defaultValue);
-  }
-
-  /**
-   * At or above this threshold number of values, when planning SQL queries, use the SQL SCALAR_IN_ARRAY operator rather
-   * than a stack of SQL ORs. This speeds up planning for large sets of points because it is opaque to various
-   * expensive optimizations. But, because this does bypass certain optimizations, we only do the transformation above
-   * a certain threshold. The SCALAR_IN_ARRAY operator is still able to convert to {@link InDimFilter} or
-   * {@link TypedInFilter}.
-   */
-  public int getInFunctionThreshold()
-  {
-    return getOrDefault(QueryContextParameters.IN_FUNCTION_THRESHOLD);
-  }
-
-  /**
-   * At or above this threshold, when converting the SEARCH operator to a native expression, use the "scalar_in_array"
-   * function rather than a sequence of equals (==) separated by or (||). This is typically a lower threshold
-   * than {@link #getInFunctionThreshold()}, because it does not prevent any SQL planning optimizations, and it
-   * speeds up query execution.
-   */
-  public int getInFunctionExprThreshold()
-  {
-    return getOrDefault(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD);
-  }
-
-  public boolean isTimeBoundaryPlanningEnabled()
-  {
-    return getOrDefault(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING);
-  }
-
-  public boolean isCatalogValidationEnabled()
-  {
-    return getOrDefault(QueryContextParameters.CATALOG_VALIDATION_ENABLED);
-  }
-
-  public boolean isExtendedFilteredSumRewrite()
-  {
-    return getOrDefault(QueryContextParameters.EXTENDED_FILTERED_SUM_REWRITE);
-  }
-
-  /**
-   * Returns true if {@link QueryContextParameters#FULL_REPORT} is set to true, false if it is set to false or not set.
-   */
-  public boolean getFullReport()
-  {
-    return getOrDefault(QueryContextParameters.FULL_REPORT);
-  }
-
 
   public QueryResourceId getQueryResourceId()
   {
@@ -895,11 +788,6 @@ public class QueryContext
       return this;
     }
     return override(queryContext.asMap());
-  }
-
-  public boolean isPrePlanned()
-  {
-    return getOrDefault(QueryContextParameters.PREPLANNED);
   }
 
   /**

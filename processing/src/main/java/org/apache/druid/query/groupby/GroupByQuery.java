@@ -881,7 +881,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Override
   public Query<ResultRow> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
-    if (!context().isOptimizeAggregators()) {
+    if (!context().getOrDefault(QueryContextParameters.OPTIMIZE_AGGREGATORS)) {
       return this;
     }
     final List<AggregatorFactory> optimizedAggs = new ArrayList<>(aggregatorSpecs.size());

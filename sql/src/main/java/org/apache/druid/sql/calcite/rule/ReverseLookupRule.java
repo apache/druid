@@ -100,7 +100,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
     final int maxOptimizeCount = plannerContext.queryContext().getInt(CTX_MAX_OPTIMIZE_COUNT, Integer.MAX_VALUE);
     final int maxInSize =
         Math.min(
-            plannerContext.queryContext().getInSubQueryThreshold(),
+            plannerContext.queryContext().getOrDefault(QueryContextParameters.IN_SUBQUERY_THRESHOLD),
             plannerContext.queryContext().getOrDefault(QueryContextParameters.SQL_REVERSE_LOOKUP_THRESHOLD)
         );
     final ReverseLookupShuttle reverseLookupShuttle = new ReverseLookupShuttle(
@@ -274,7 +274,7 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
       final RexNode expanded = SearchOperatorConversion.expandSearch(
           call,
           rexBuilder,
-          plannerContext.queryContext().getInFunctionThreshold()
+          plannerContext.queryContext().getOrDefault(QueryContextParameters.IN_FUNCTION_THRESHOLD)
       );
 
       if (expanded instanceof RexCall) {
@@ -571,7 +571,8 @@ public class ReverseLookupRule extends RelOptRule implements SubstitutionRule
               reverseLookupKey.negate,
 
               // Use regular equals, or SCALAR_IN_ARRAY, depending on inFunctionThreshold.
-              reversedMatchValues.size() >= plannerContext.queryContext().getInFunctionThreshold(),
+              reversedMatchValues.size()
+              >= plannerContext.queryContext().getOrDefault(QueryContextParameters.IN_FUNCTION_THRESHOLD),
               rexBuilder
           );
         }

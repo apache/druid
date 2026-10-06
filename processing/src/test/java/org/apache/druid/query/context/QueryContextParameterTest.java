@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
@@ -307,27 +308,26 @@ class QueryContextParameterTest
   {
     final QueryContextParameter<String> parameter = QueryContextParameter
         .builder("internalParameter", String.class, String::valueOf)
-        .internal()
+        .visibility(Visibility.INTERNAL)
         .since("39.0.0")
         .build();
 
-    assertTrue(parameter.isInternal());
+    assertEquals(Visibility.INTERNAL, parameter.getVisibility());
     assertNull(parameter.getDocumentation());
     assertEquals("39.0.0", parameter.getSince());
   }
 
   @Test
-  void testUndocumentedParameterKeepsDocumentation()
+  void testHiddenParameterKeepsDocumentation()
   {
     final QueryContextParameter<Boolean> parameter = QueryContextParameter
         .builder("debugSwitch", Boolean.class, value -> Boolean.valueOf(String.valueOf(value)))
         .description("A switch for debugging.")
         .since("39.0.0")
-        .undocumented()
+        .visibility(Visibility.HIDDEN)
         .build();
 
-    assertTrue(parameter.isUndocumented());
-    assertFalse(parameter.isInternal());
+    assertEquals(Visibility.HIDDEN, parameter.getVisibility());
     assertEquals("A switch for debugging.", parameter.getDocumentation().getDescription());
     assertEquals("39.0.0", parameter.getSince());
   }
@@ -340,7 +340,7 @@ class QueryContextParameterTest
         .since("39.0.0")
         .build();
 
-    assertFalse(parameter.isInternal());
+    assertEquals(Visibility.PUBLIC, parameter.getVisibility());
     assertNull(parameter.getDocumentation());
     assertEquals("39.0.0", parameter.getSince());
   }
@@ -364,13 +364,11 @@ class QueryContextParameterTest
   }
 
   @Test
-  void testInternalParametersAreDescribed()
+  void testAllParametersAreDescribed()
   {
     for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
-      if (parameter.isInternal()) {
-        assertNotNull(parameter.getDocumentation(), parameter.getName());
-        assertNotNull(parameter.getSince(), parameter.getName());
-      }
+      assertNotNull(parameter.getDocumentation(), parameter.getName());
+      assertNotNull(parameter.getSince(), parameter.getName());
     }
   }
 }

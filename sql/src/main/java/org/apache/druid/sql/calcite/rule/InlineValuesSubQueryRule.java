@@ -48,6 +48,7 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.util.Sarg;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.planner.DruidRexExecutor;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.utils.CollectionUtils;
@@ -117,7 +118,8 @@ public class InlineValuesSubQueryRule implements Program
     InlineValuesRexShuttle(final RexBuilder rexBuilder, final PlannerContext plannerContext)
     {
       this.rexBuilder = rexBuilder;
-      this.inSubQueryThreshold = plannerContext.queryContext().getInSubQueryThreshold();
+      this.inSubQueryThreshold =
+          plannerContext.queryContext().getOrDefault(QueryContextParameters.IN_SUBQUERY_THRESHOLD);
       this.executor = new DruidRexExecutor(plannerContext);
     }
 

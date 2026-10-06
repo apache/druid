@@ -26,6 +26,7 @@ import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.ExecutionMode;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
@@ -190,7 +191,7 @@ public final class QueryContextParameters
       .since("0.10.1")
       .query(Query.JSON, Query.SQL)
       .engine(Engine.NATIVE)
-      .internal()
+      .visibility(Visibility.INTERNAL)
       .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_PARALLEL_MERGE =
@@ -438,7 +439,7 @@ public final class QueryContextParameters
           .since("32.0.0")
           .query(Query.JSON, Query.SQL)
           .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .undocumented()
+          .visibility(Visibility.HIDDEN)
           .build();
 
   public static final QueryContextParameter<CloneQueryMode> CLONE_QUERY_MODE =
@@ -474,7 +475,7 @@ public final class QueryContextParameters
           .since("38.0.0")
           .query(Query.JSON, Query.SQL)
           .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .undocumented()
+          .visibility(Visibility.HIDDEN)
           .build();
 
   public static final QueryContextParameter<Boolean> ENABLE_JOIN_LEFT_SCAN_DIRECT =
@@ -815,7 +816,7 @@ public final class QueryContextParameters
           .query(Query.JSON, Query.SQL)
           .engine(Engine.NATIVE)
           .queryType(QueryType.TOP_N)
-          .undocumented()
+          .visibility(Visibility.HIDDEN)
           .build();
 
   public static final QueryContextParameter<Boolean> USE_RESULT_LEVEL_CACHE = booleanParameter("useResultLevelCache")
@@ -845,7 +846,7 @@ public final class QueryContextParameters
           .since("32.0.0")
           .query(Query.SQL)
           .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .undocumented()
+          .visibility(Visibility.HIDDEN)
           .build();
 
   public static final QueryContextParameter<Boolean> NO_PROJECTIONS =
@@ -895,7 +896,7 @@ public final class QueryContextParameters
           .since("30.0.0")
           .query(Query.JSON, Query.SQL)
           .engine(Engine.NATIVE)
-          .internal()
+          .visibility(Visibility.INTERNAL)
           .build();
 
   // SQL query context parameters.
@@ -1117,7 +1118,7 @@ public final class QueryContextParameters
           .since("32.0.0")
           .query(Query.SQL)
           .engine(Engine.DART)
-          .internal()
+          .visibility(Visibility.INTERNAL)
           .build();
 
   public static final QueryContextParameter<String> SUB_QUERY_ID =
@@ -1126,7 +1127,7 @@ public final class QueryContextParameters
           .since("0.18.0")
           .query(Query.JSON, Query.SQL)
           .engine(Engine.NATIVE)
-          .internal()
+          .visibility(Visibility.INTERNAL)
           .build();
 
   public static final QueryContextParameter<Boolean> FULL_REPORT = booleanParameter("fullReport")
@@ -1168,7 +1169,7 @@ public final class QueryContextParameters
           .since("27.0.0")
           .query(Query.SQL)
           .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
-          .undocumented()
+          .visibility(Visibility.HIDDEN)
           .build();
 
   public static final QueryContextParameter<Boolean> REALTIME_SEGMENTS_ONLY =
@@ -1214,7 +1215,7 @@ public final class QueryContextParameters
       .since("34.0.0")
       .query(Query.SQL)
       .engine(Engine.DART)
-      .undocumented()
+      .visibility(Visibility.HIDDEN)
       .build();
 
   public static final QueryContextParameter<Integer> MAX_ROWS_QUEUED_FOR_ORDERING =

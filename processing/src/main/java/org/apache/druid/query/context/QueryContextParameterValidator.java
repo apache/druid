@@ -44,9 +44,9 @@ public final class QueryContextParameterValidator
     if (parameter == null) {
       return;
     }
-    if (parameter.isInternal()) {
+    if (parameter.getVisibility() == QueryContextParameter.Visibility.INTERNAL) {
       throw new BadQueryContextException(
-          StringUtils.format("Query context parameter [%s] is set by Druid and cannot be set by users", name)
+          StringUtils.format("Query context parameter [%s] is an internal one, cannot be set by users", name)
       );
     }
     parameter.parse(value);

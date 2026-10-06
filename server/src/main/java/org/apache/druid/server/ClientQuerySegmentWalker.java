@@ -190,8 +190,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final int maxSubqueryRows = context.getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
     final String maxSubqueryMemoryString = context.getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
     final long maxSubqueryMemory = subqueryGuardrailHelper.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
-    final boolean useNestedForUnknownTypeInSubquery = context
-        .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
+    final boolean useNestedForUnknownTypeInSubquery = context.getOrDefault(
+        QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
+        serverConfig.isuseNestedForUnknownTypeInSubquery()
+    );
 
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {

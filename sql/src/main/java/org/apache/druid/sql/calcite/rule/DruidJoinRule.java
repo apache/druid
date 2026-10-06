@@ -50,6 +50,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;
@@ -80,7 +81,8 @@ public class DruidJoinRule extends RelOptRule
             operand(DruidRel.class, any())
         )
     );
-    this.enableLeftScanDirect = plannerContext.queryContext().getEnableJoinLeftScanDirect();
+    this.enableLeftScanDirect =
+        plannerContext.queryContext().getOrDefault(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT);
     this.plannerContext = plannerContext;
   }
 

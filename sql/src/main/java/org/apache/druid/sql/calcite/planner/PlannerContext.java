@@ -652,7 +652,8 @@ public class PlannerContext
    */
   public boolean featureAvailable(final EngineFeature feature)
   {
-    if (feature == EngineFeature.TIME_BOUNDARY_QUERY && !queryContext().isTimeBoundaryPlanningEnabled()) {
+    if (feature == EngineFeature.TIME_BOUNDARY_QUERY
+        && !queryContext().getOrDefault(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING)) {
       // Short-circuit: feature requires context flag.
       return false;
     }
@@ -752,7 +753,7 @@ public class PlannerContext
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
-      this.queryContext.put(QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId);
+      this.queryContext.put(QueryContextParameters.SQL_QUERY_ID.getName(), UUID.randomUUID().toString());
     }
 
     if (plannerConfig != null) {

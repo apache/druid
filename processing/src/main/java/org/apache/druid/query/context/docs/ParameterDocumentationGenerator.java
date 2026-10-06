@@ -94,7 +94,7 @@ public final class ParameterDocumentationGenerator
   {
     final Map<String, Map<String, String>> rowsByDocument = new LinkedHashMap<>();
     for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
-      if (parameter.isInternal() || parameter.isUndocumented()) {
+      if (parameter.getVisibility() != QueryContextParameter.Visibility.PUBLIC) {
         continue;
       }
       final ParameterDocumentation docs = parameter.getDocumentation();

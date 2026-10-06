@@ -74,7 +74,7 @@ public class SqlQueryPlusTest
         e,
         DruidExceptionMatcher
             .invalidSqlInput()
-            .expectMessageContains("Query context parameter [dartQueryId] is set by Druid and cannot be set by users")
+            .expectMessageContains("Query context parameter [dartQueryId] is an internal one, cannot be set by users")
     );
   }
 

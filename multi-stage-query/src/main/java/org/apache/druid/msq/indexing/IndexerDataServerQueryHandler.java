@@ -49,6 +49,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.DefaultResponseContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.rpc.RpcException;
@@ -170,7 +171,10 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
 
     List<DataServerRequestDescriptor> pendingRequests = ImmutableList.of(dataServerRequestDescriptor);
 
-    final int maxRetries = preparedQuery.context().getNumRetriesOnMissingSegments(DEFAULT_NUM_TRIES);
+    final int maxRetries = preparedQuery.context().getOrDefault(
+        QueryContextParameters.NUM_RETRIES_ON_MISSING_SEGMENTS,
+        DEFAULT_NUM_TRIES
+    );
     int retryCount = 0;
 
     while (!pendingRequests.isEmpty()) {

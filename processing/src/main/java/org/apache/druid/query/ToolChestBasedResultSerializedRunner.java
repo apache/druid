@@ -22,6 +22,7 @@ package org.apache.druid.query;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 
 /**
@@ -52,7 +53,8 @@ public class ToolChestBasedResultSerializedRunner<T> implements QueryRunner<T>
     Query<T> query = queryPlus.getQuery();
     Sequence<T> seq = runner.run(queryPlus, responseContext);
 
-    boolean useNestedForUnknownTypeInSubquery = query.context().isUseNestedForUnknownTypeInSubquery();
+    boolean useNestedForUnknownTypeInSubquery =
+        query.context().getOrDefault(QueryContextParameters.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
 
     ResultSerializationMode serializationMode = getResultSerializationMode(query);
     Sequence<?> resultSeq;

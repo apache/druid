@@ -245,7 +245,7 @@ public class SqlResource
 
       // Redefine queryContext to include SET parameters and default context.
       queryContext = new QueryContext(sqlQueryPlus.context());
-      final String engineName = queryContext.getEngine();
+      final String engineName = queryContext.getOrDefault(QueryContextParameters.ENGINE);
       final SqlEngine engine = sqlEngineRegistry.getEngine(engineName);
       stmt = engine.getSqlStatementFactory().httpStatement(sqlQueryPlus, req);
     }

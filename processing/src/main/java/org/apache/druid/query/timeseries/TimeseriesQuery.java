@@ -230,7 +230,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public Query<Result<TimeseriesResultValue>> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
-    if (!context().isOptimizeAggregators()) {
+    if (!context().getOrDefault(QueryContextParameters.OPTIMIZE_AGGREGATORS)) {
       return this;
     }
     return Druids.TimeseriesQueryBuilder.copy(this).aggregators(optimizeAggs(optimizationContext)).build();

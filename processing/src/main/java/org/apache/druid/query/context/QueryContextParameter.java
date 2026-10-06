@@ -48,6 +48,30 @@ import java.util.function.Function;
  */
 public final class QueryContextParameter<T>
 {
+  /**
+   * Who a query context parameter is intended for. Visibility is independent of documentation metadata: parameters of
+   * every visibility carry a description.
+   */
+  public enum Visibility
+  {
+    /**
+     * A user-facing parameter that is part of the documented contract and is rendered in the generated documentation.
+     */
+    PUBLIC,
+
+    /**
+     * A user-settable parameter, such as a switch for debugging, testing or tuning, that is not part of the documented
+     * contract. It is left out of the generated documentation and may change or be removed without notice.
+     */
+    HIDDEN,
+
+    /**
+     * A parameter that Druid sets itself to coordinate between services. It is left out of the generated documentation
+     * and users can't set it with a SQL {@code SET} statement.
+     */
+    INTERNAL
+  }
+
   @FunctionalInterface
   public interface ValueParser<T>
   {
@@ -87,8 +111,7 @@ public final class QueryContextParameter<T>
   @Nullable
   private final T defaultValue;
   private final boolean nullable;
-  private final boolean internal;
-  private final boolean undocumented;
+  private final Visibility visibility;
   @Nullable
   private final String since;
   @Nullable
@@ -104,8 +127,7 @@ public final class QueryContextParameter<T>
     this.constraints = List.copyOf(builder.constraints);
     this.defaultValue = builder.defaultValue;
     this.nullable = builder.nullable;
-    this.internal = builder.internal;
-    this.undocumented = builder.undocumented;
+    this.visibility = builder.visibility;
     this.since = builder.since;
     this.deprecationMessage = builder.deprecationMessage;
 
@@ -257,21 +279,9 @@ public final class QueryContextParameter<T>
     return nullable;
   }
 
-  /**
-   * Returns whether this parameter is used for Druid-internal coordination and is omitted from public documentation.
-   */
-  public boolean isInternal()
+  public Visibility getVisibility()
   {
-    return internal;
-  }
-
-  /**
-   * Returns whether this user-settable parameter is intentionally omitted from the generated documentation, such as a
-   * switch intended for debugging or testing. Unlike {@link #isInternal()}, Druid does not set these parameters itself.
-   */
-  public boolean isUndocumented()
-  {
-    return undocumented;
+    return visibility;
   }
 
   /**
@@ -357,8 +367,7 @@ public final class QueryContextParameter<T>
     private T defaultValue;
     // Query context maps historically permit explicit null values, so preserve that behavior unless declared otherwise.
     private boolean nullable = true;
-    private boolean internal;
-    private boolean undocumented;
+    private Visibility visibility = Visibility.PUBLIC;
     @Nullable
     private String deprecationMessage;
     @Nullable
@@ -395,18 +404,9 @@ public final class QueryContextParameter<T>
       return this;
     }
 
-    public Builder<T> internal()
+    public Builder<T> visibility(final Visibility visibility)
     {
-      this.internal = true;
-      return this;
-    }
-
-    /**
-     * Keeps the parameter's metadata, including its description, but omits it from the generated documentation.
-     */
-    public Builder<T> undocumented()
-    {
-      this.undocumented = true;
+      this.visibility = Objects.requireNonNull(visibility, "visibility");
       return this;
     }
 
