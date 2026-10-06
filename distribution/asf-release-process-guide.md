@@ -140,6 +140,8 @@ $ git checkout origin/master
 $ git checkout -b 37.0.0
 ```
 
+For a hotfix or minor version release, branch off of the previous release branch instead:
+
 ```bash
 $ git checkout origin/37.0.0
 ...
@@ -405,6 +407,7 @@ $ svn checkout https://dist.apache.org/repos/dist/dev/druid
 Copy the `src` and `bin` artifacts to a folder for the release version and add it to SVN and publish the artifacts:
 
 ```bash
+$ mkdir 37.0.0-rc1
 $ cp ../druid-release/distribution/target/apache* ./37.0.0-rc1/.
 $ svn add 37.0.0-rc1
 ...
@@ -609,7 +612,7 @@ The vote has passed with 3 binding +1 votes!
 
 ### Cancelling a vote
 
-If for any reason during the Druid PMC vote a blocking issue becomes apparent, a vote should be officially cancelled by sending an email with the following subject line: `[CANCEL][VOTE] Release Apache Druid 37.0.0 [RC3]` and the reasons for the cancellation in the body.
+If for any reason during the Druid PMC vote a blocking issue becomes apparent, a vote should be officially cancelled by sending an email with the following subject line: `[CANCEL][VOTE] Release Apache Druid 37.0.0 [RC2]` and the reasons for the cancellation in the body.
 
 ### Previous vote threads for additional examples
 
