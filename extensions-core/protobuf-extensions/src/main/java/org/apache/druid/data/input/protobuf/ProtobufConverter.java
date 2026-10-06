@@ -66,12 +66,13 @@ public class ProtobufConverter
       return null;
     }
     final Map<Descriptors.FieldDescriptor, Object> fields = msg.getAllFields();
-    final Map<String, Object> converted = Maps.newHashMapWithExpectedSize(fields.size());
+    final List<Descriptors.FieldDescriptor> declaredFields = msg.getDescriptorForType().getFields();
+    final Map<String, Object> converted = Maps.newHashMapWithExpectedSize(Math.max(fields.size(), declaredFields.size()));
     for (Map.Entry<Descriptors.FieldDescriptor, Object> field : fields.entrySet()) {
       converted.put(field.getKey().getJsonName(), convertField(field.getKey(), field.getValue()));
     }
     // getAllFields() omits singular fields without presence tracking (e.g. proto3 non-optional) set to their default
-    for (Descriptors.FieldDescriptor field : msg.getDescriptorForType().getFields()) {
+    for (final Descriptors.FieldDescriptor field : declaredFields) {
       if (!field.hasPresence() && !field.isRepeated() && !fields.containsKey(field)) {
         converted.put(field.getJsonName(), convertField(field, msg.getField(field)));
       }

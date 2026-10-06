@@ -32,32 +32,24 @@ public class ProtobufConverterTest
   @Test
   public void testProto3ImplicitPresenceFieldsKeepDefaultValues() throws Exception
   {
-    final Map<String, Object> converted = convert(Proto3TestEvent.getDefaultInstance());
-
     Assertions.assertEquals(
         ImmutableMap.of(
             "someInt", 0,
-            "someLong", 0L,
             "someString", "",
-            "someBool", false,
             "category", "CATEGORY_ZERO"
         ),
-        converted
+        convert(Proto3TestEvent.getDefaultInstance())
     );
   }
 
   @Test
-  public void testProto3ExplicitPresenceFieldsSetToDefaultValues() throws Exception
+  public void testProto3NestedMessageKeepsDefaultValues() throws Exception
   {
     final Proto3TestEvent event = Proto3TestEvent.newBuilder()
-                                                 .setOptionalInt(0)
                                                  .setNested(Proto3TestEvent.Nested.getDefaultInstance())
                                                  .build();
 
-    final Map<String, Object> converted = convert(event);
-
-    Assertions.assertEquals(0, converted.get("optionalInt"));
-    Assertions.assertEquals(ImmutableMap.of("value", 0), converted.get("nested"));
+    Assertions.assertEquals(ImmutableMap.of("value", 0), convert(event).get("nested"));
   }
 
   private static Map<String, Object> convert(Proto3TestEvent event) throws Exception

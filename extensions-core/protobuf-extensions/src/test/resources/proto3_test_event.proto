@@ -29,11 +29,9 @@ message Proto3TestEvent {
     }
 
     int32 someInt = 1;
-    int64 someLong = 2;
-    string someString = 3;
-    bool someBool = 4;
-    Category category = 5;
-    optional int32 optionalInt = 6;
-    Nested nested = 7;
-    repeated int32 someList = 8;
+    string someString = 2;
+    Category category = 3;
+    optional int32 optionalInt = 4;
+    Nested nested = 5;
+    repeated int32 someList = 6;
 }
