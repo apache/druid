@@ -51,7 +51,6 @@ exports[`SpecDialog matches snapshot no initSpec 1`] = `
         </div>
         <div
           class="code-editor spec-dialog-textarea"
-          style="width: 100%; height: 500px;"
         >
           <div
             class="cm-editor"
@@ -150,7 +149,6 @@ exports[`SpecDialog matches snapshot with initSpec 1`] = `
         </div>
         <div
           class="code-editor spec-dialog-textarea"
-          style="width: 100%; height: 500px;"
         >
           <div
             class="cm-editor"

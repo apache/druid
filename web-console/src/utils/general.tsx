@@ -733,26 +733,29 @@ export function generate8HexId(): string {
   return (Math.random() * 1e10).toString(16).replace('.', '').slice(0, 8);
 }
 
-export interface RowColumn {
-  row: number;
+/**
+ * A position in a text, both 1-based, the way Druid and Hjson errors report them (and the way CodeMirror counts lines)
+ */
+export interface LineColumn {
+  line: number;
   column: number;
 }
 
-export function offsetToRowColumn(str: string, offset: number): RowColumn | undefined {
+export function offsetToLineColumn(str: string, offset: number): LineColumn | undefined {
   // Ensure offset is within the string length
   if (offset < 0 || offset > str.length) return;
 
   const lines = str.split('\n');
-  for (let row = 0; row < lines.length; row++) {
-    const line = lines[row];
-    if (offset <= line.length) {
+  for (let i = 0; i < lines.length; i++) {
+    const lineText = lines[i];
+    if (offset <= lineText.length) {
       return {
-        row,
-        column: offset,
+        line: i + 1,
+        column: offset + 1,
       };
     }
 
-    offset -= line.length + 1;
+    offset -= lineText.length + 1;
   }
 
   return;

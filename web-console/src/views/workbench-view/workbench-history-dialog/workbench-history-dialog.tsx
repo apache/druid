@@ -90,7 +90,8 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
         <CodeEditor
           language={jsonMode ? hjson() : sqlLanguage}
           className="query-string"
-          showGutter
+          readOnly
+          showLineNumbers
           value={queryString}
         />
       </div>

@@ -401,7 +401,7 @@ exports[`AutoForm matches snapshot 1`] = `
       >
         <div
           class="code-editor"
-          style="width: 100%; height: 8vh;"
+          style="height: 8vh;"
         >
           <div
             class="cm-editor"

@@ -35,7 +35,7 @@ Status: ✅ done, ⬜ to do.
 3. ✅ 2a + 2b + 1g: `LanguageSupport` factories that bring their own completion sources
 4. ✅ 1c + 1d: completion sources that read the syntax tree
 5. ✅ 4a + 4b: the partial query markers
-6. ⬜ 3a + 3b and 5: positions and prop renames (these touch the most callers)
+6. ✅ 3a + 3b and 5: positions and prop renames (these touch the most callers)
 7. ⬜ 6: low priority leftovers
 
 Update [README.md](./README.md) and [MIGRATION.md](./MIGRATION.md) as each step lands.
@@ -223,21 +223,36 @@ Lezer grammar would change the tokens and so the rendering, so keep it.
 
 ## 3. Positions
 
-### ⬜ 3a. Offsets or 1-based lines instead of `RowColumn`
+### ✅ 3a. 1-based `LineColumn` instead of `RowColumn`
 
-`RowColumn` is Ace's 0-based `Position`. Druid and Hjson errors report 1-based `line,col`; the console subtracts 1
-(`getRowColumnFromIssue`, `extractRowColumnFromHjsonError`) and `focusEditorAt` adds 1 back. CodeMirror works with
-offsets and 1-based line numbers, and `QuerySlice` already has offsets.
+**Was:** `RowColumn` was Ace's 0-based `Position`. Druid and Hjson errors report 1-based `line,col`; the console
+subtracted 1 (`getRowColumnFromIssue`, `extractRowColumnFromHjsonError`, `DruidError.extractStartRowColumn`) and
+`focusEditorAt` added 1 back. The two dialogs that show a parse error position added 1 again for display.
 
-**To do:** make `focusEditorAt` take an offset or a 1-based `{ line, column }`. `RowColumn` is also used outside the
-editor (`DruidError`, `prefixLines`), so this is the widest change in the plan.
+**Done:** `RowColumn` and `offsetToRowColumn` are now `LineColumn` and `offsetToLineColumn` (`src/utils/general.tsx`),
+both 1-based, with no conversions left:
 
-### ⬜ 3b. One way to move the cursor from outside
+- `focusEditorAt(view, { line, column })`
+- `DruidError.startLineColumn` / `endLineColumn` (`extractStartLineColumn`, `extractEndLineColumn`)
+- `WorkbenchQuery.getLineColumnFromIssue`, `extractLineColumnFromHjsonError`
+- `QuerySlice.startLineColumn` / `endLineColumn`; the workbench passes `line - 1` to `changePrefixLines` (the number of
+  lines before the slice)
+- `SpecDialog` and `ExecutionSubmitDialog` show the position as is
 
-`SqlInput` and `FlexibleQueryInput` each define the same `goToPosition` imperative handle (a wrapper around Ace's
-`moveCursorTo`), and `query-tab.tsx` types it inline.
+The specs were updated (in `sql.spec.ts` every line and column in the inline snapshots went up by exactly 1).
 
-**To do:** pass the `EditorView` through, or share one handle type.
+**Considered, not done:** offsets. The positions come from Druid and Hjson as line and column, and CodeMirror's
+`doc.line(n)` takes the same 1-based line, so `LineColumn` is the natural type at the edges.
+
+### ✅ 3b. One way to move the cursor from outside
+
+**Was:** `SqlInput` and `FlexibleQueryInput` each defined the same `goToPosition` imperative handle (a wrapper around
+Ace's `moveCursorTo`), and `query-tab.tsx` typed it inline.
+
+**Done:** both pass their `ref` on to the `CodeEditor`, so it gives the `EditorView`, and callers use
+`focusEditorAt(view, position)` like `JsonInput` already did. `SqlInputHandle` and `FlexibleQueryInputHandle` are gone.
+`FlexibleQueryInput` keeps its own ref too (it reconfigures its sub query compartment), and hands the view on with
+`useImperativeHandle`.
 
 ## 4. Partial query markers (`FlexibleQueryInput`)
 
@@ -269,20 +284,34 @@ warning or calls `runQuerySlice`). The timer, the refs and the clamp are gone.
 **Considered, not done:** debouncing the search. It ran on every change before too (the timer only repeated it), and
 doing it in the update keeps the markers in step with the text.
 
-## 5. Props inherited from react-ace
+## 5. ✅ Props inherited from react-ace
 
-- ⬜ **Read-only is implied by a missing `onChange`** (react-ace's `readOnly={!onChange}` habit). It forces
-  `onChange ? handleInputChange : undefined` in `JsonInput`. Add an explicit `readOnly` prop.
-- ⬜ **Ace names:** `showGutter` only shows line numbers. `width` / `height` strings are react-ace's sizing; nearly every
-  caller passes `100%`, and the rest could be CSS on `className`.
-- ⬜ **`padding` is the only display prop that is read once.** Put it in a compartment like the others.
-- ⬜ **The wrappers' names are inconsistent:**
-  - `JsonInput`: `focus` (react-ace's name) and `showLineNumbers`
-  - `FlexibleQueryInput`: `editorStateId` (passed on as `stateCacheId`) and `leaveBackground` (the opposite of
-    `transparentBackground`)
-  - `SqlInput`: `editorHeight: number` and `onValueChange`
-- ⬜ **`transparentBackground` depends on the wrapper's class** (`.no-background > &` in the theme). A theme
-  compartment would keep it inside the editor. Minor.
+- ✅ **Read-only was implied by a missing `onChange`** (react-ace's `readOnly={!onChange}` habit). `CodeEditor`,
+  `JsonInput` and `FlexibleQueryInput` now take an explicit `readOnly`. The editors that had no `onChange` pass it
+  (`ShowJson`, `ShowJsonOrStages`, `ShowValueDialog`, `ExplainDialog`, `WorkbenchHistoryDialog`, the retention
+  dialog's default rules and the execution details pane), and `JsonInput` always passes its change handler.
+  `SqlInput`'s `onValueChange` is now required (every caller passed one).
+- ✅ **Ace names:** `showGutter` is `showLineNumbers` everywhere (`CodeEditor`, `SqlInput`, `FlexibleQueryInput`,
+  matching `JsonInput`). `width` / `height` are gone from `CodeEditor`: the fixed sizes moved to the callers' SCSS (on
+  the `className` or the wrapping element), and the sizes that change (`JsonInput`'s `height`, `SqlInput`'s `height`)
+  go through a new `style` prop.
+- ✅ **`padding` was the only display prop that was read once.** It is in a compartment like the others.
+- ✅ **The wrappers' names:**
+  - `JsonInput`: `focus` → `autoFocus`, `width` removed (no caller passed it), `showLineNumbers` kept
+  - `FlexibleQueryInput`: `editorStateId` → `stateCacheId`, `leaveBackground` → `transparentBackground` (defaults to
+    `true`, so callers write `transparentBackground={false}`)
+  - `SqlInput`: `editorHeight` → `height` (still a number of px). **Kept** `onValueChange`: it is the name that the
+    console's other value inputs (`FormattedInput`, `ClearableInput`, `MenuBoolean`, …) use, so renaming it would make
+    it the odd one out. `FlexibleQueryInput`'s `onQueryStringChange` is kept for the same reason (it is named after its
+    value).
+- ✅ **`transparentBackground` depended on the wrapper's class** (`.no-background > &` in the theme). It is now a theme
+  (`codeEditorTransparentTheme`) in a compartment, so it no longer depends on the wrapper.
+
+**Checked:** DOM snapshots changed only by the inline `width` / `height` styles and the `no-background` class going
+away (19 snapshots). In a browser, the last commit and this change were run side by side: the workbench editor
+(size, transparent background), the SQL error link (line 2, column 5), the Hjson "Go to issue" toast (line 4,
+column 1), and the `JsonInput` in the coordinator dynamic config dialog (size, background, error link to line 3,
+column 7) all came out the same.
 
 ## 6. Low priority
 

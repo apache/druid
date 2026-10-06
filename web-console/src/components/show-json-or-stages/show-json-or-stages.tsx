@@ -111,7 +111,7 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
         ) : (
           <CodeEditor
             language={hjson()}
-            height="100%"
+            readOnly
             value={(!jsonState.error ? jsonValue : jsonState.getErrorMessage()) ?? ''}
           />
         )}

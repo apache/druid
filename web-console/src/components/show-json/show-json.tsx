@@ -93,7 +93,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
         ) : (
           <CodeEditor
             language={hjson()}
-            height="100%"
+            readOnly
             value={(!jsonState.error ? jsonValue : jsonState.getErrorMessage()) ?? ''}
           />
         )}

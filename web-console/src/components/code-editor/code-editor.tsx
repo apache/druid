@@ -53,12 +53,13 @@ import { useEffect, useEffectEvent, useImperativeHandle, useLayoutEffect, useRef
 
 import { useConstant, usePermanentCallback } from '../../hooks';
 import { EditorStateCache } from '../../singletons/editor-state-cache';
-import type { RowColumn } from '../../utils';
+import type { LineColumn } from '../../utils';
 
 import {
   codeEditorHighlightStyle,
   codeEditorPaddingTheme,
   codeEditorTheme,
+  codeEditorTransparentTheme,
 } from './code-editor-theme';
 
 import './code-editor.scss';
@@ -74,17 +75,18 @@ export interface CodeEditorProps {
   ref?: React.Ref<EditorView | undefined>;
   className?: string;
   value: string;
-  /** Without an onChange the editor is read only */
   onChange?: (value: string) => void;
+  readOnly?: boolean;
   onBlur?: () => void;
   /** The language (like dsql() or hjson()), it brings its own highlighting and completions. Plain text without one */
   language?: LanguageSupport;
   autoFocus?: boolean;
-  width?: string;
-  height?: string;
-  showGutter?: boolean;
-  /** Pads the text on all sides */
+  /** For a size that changes, the rest is best set with CSS on className. With no height the editor grows with the text */
+  style?: React.CSSProperties;
+  showLineNumbers?: boolean;
+  /** Pads the text on all sides (in px), the default is a bit of horizontal padding */
   padding?: number;
+  /** Drops the editor's own background */
   transparentBackground?: boolean;
   placeholder?: string;
   /** Makes the editor remember its state (undo history, selection) between mounts */
@@ -109,8 +111,16 @@ function getTooltipHost(): HTMLElement {
   return tooltipHost;
 }
 
-function gutterExtension(showGutter: boolean | undefined): Extension {
-  return showGutter ? [lineNumbers(), highlightActiveLineGutter()] : [];
+function lineNumbersExtension(showLineNumbers: boolean | undefined): Extension {
+  return showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : [];
+}
+
+function paddingExtension(padding: number | undefined): Extension {
+  return typeof padding === 'number' ? codeEditorPaddingTheme(padding) : [];
+}
+
+function transparentBackgroundExtension(transparentBackground: boolean | undefined): Extension {
+  return transparentBackground ? codeEditorTransparentTheme : [];
 }
 
 function readOnlyExtension(readOnly: boolean): Extension {
@@ -177,14 +187,15 @@ function diffStrings(from: string, to: string): ChangeSpec {
 }
 
 /**
- * Focuses the editor and puts the cursor at the given (0 based) row and column
+ * Focuses the editor and puts the cursor at the given (1-based) line and column, as reported by Druid and Hjson errors.
+ * Positions past the end of the line or the text are clamped.
  */
-export function focusEditorAt(view: EditorView, { row, column }: RowColumn): void {
+export function focusEditorAt(view: EditorView, { line, column }: LineColumn): void {
   const { doc } = view.state;
-  const line = doc.line(Math.min(Math.max(row + 1, 1), doc.lines));
+  const docLine = doc.line(Math.min(Math.max(line, 1), doc.lines));
   view.focus();
   view.dispatch({
-    selection: { anchor: Math.min(line.from + Math.max(column, 0), line.to) },
+    selection: { anchor: Math.min(docLine.from + Math.max(column - 1, 0), docLine.to) },
     scrollIntoView: true,
   });
 }
@@ -195,12 +206,12 @@ export function CodeEditor(props: CodeEditorProps) {
     className,
     value,
     onChange,
+    readOnly = false,
     onBlur,
     language,
     autoFocus,
-    width,
-    height,
-    showGutter,
+    style,
+    showLineNumbers,
     padding,
     transparentBackground,
     placeholder,
@@ -213,10 +224,11 @@ export function CodeEditor(props: CodeEditorProps) {
   const compartments = useConstant(() => ({
     language: new Compartment(),
     readOnly: new Compartment(),
-    gutter: new Compartment(),
+    lineNumbers: new Compartment(),
+    padding: new Compartment(),
+    transparentBackground: new Compartment(),
     placeholder: new Compartment(),
   }));
-  const readOnly = !onChange;
 
   const handleChange = usePermanentCallback((newValue: string) => onChange?.(newValue));
   const handleBlur = usePermanentCallback(() => onBlur?.());
@@ -243,10 +255,11 @@ export function CodeEditor(props: CodeEditorProps) {
       EditorState.tabSize.of(TAB_SIZE),
       indentUnit.of(' '.repeat(TAB_SIZE)),
       codeEditorTheme,
-      typeof padding === 'number' ? codeEditorPaddingTheme(padding) : [],
+      compartments.padding.of(paddingExtension(padding)),
+      compartments.transparentBackground.of(transparentBackgroundExtension(transparentBackground)),
       compartments.language.of(language ?? []),
       compartments.readOnly.of(readOnlyExtension(readOnly)),
-      compartments.gutter.of(gutterExtension(showGutter)),
+      compartments.lineNumbers.of(lineNumbersExtension(showLineNumbers)),
       compartments.placeholder.of(placeholderTextExtension(placeholder)),
       EditorView.updateListener.of(update => {
         if (!update.docChanged) return;
@@ -327,9 +340,23 @@ export function CodeEditor(props: CodeEditorProps) {
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: compartments.gutter.reconfigure(gutterExtension(showGutter)),
+      effects: compartments.lineNumbers.reconfigure(lineNumbersExtension(showLineNumbers)),
     });
-  }, [compartments, showGutter]);
+  }, [compartments, showLineNumbers]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: compartments.padding.reconfigure(paddingExtension(padding)),
+    });
+  }, [compartments, padding]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: compartments.transparentBackground.reconfigure(
+        transparentBackgroundExtension(transparentBackground),
+      ),
+    });
+  }, [compartments, transparentBackground]);
 
   useEffect(() => {
     viewRef.current?.dispatch({
@@ -337,11 +364,5 @@ export function CodeEditor(props: CodeEditorProps) {
     });
   }, [compartments, placeholder]);
 
-  return (
-    <div
-      className={classNames('code-editor', className, { 'no-background': transparentBackground })}
-      style={{ width, height }}
-      ref={containerRef}
-    />
-  );
+  return <div className={classNames('code-editor', className)} style={style} ref={containerRef} />;
 }

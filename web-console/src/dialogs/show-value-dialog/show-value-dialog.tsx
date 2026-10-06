@@ -88,8 +88,8 @@ export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowVa
           <CodeEditor
             language={hjson()}
             className="query-string"
-            height="100%"
-            showGutter
+            readOnly
+            showLineNumbers
             value={JSONBig.stringify(parsed, undefined, 2)}
           />
         )}

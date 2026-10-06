@@ -23,7 +23,7 @@ import React, { useState } from 'react';
 import { CodeEditor } from '../../components';
 import { hjson } from '../../editor-languages/hjson';
 import { AppToaster } from '../../singletons';
-import { offsetToRowColumn } from '../../utils';
+import { offsetToLineColumn } from '../../utils';
 
 import './spec-dialog.scss';
 
@@ -45,11 +45,11 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
     try {
       parsed = JSONBig.parse(spec);
     } catch (e) {
-      const rowColumn = typeof e.at === 'number' ? offsetToRowColumn(spec, e.at) : undefined;
+      const position = typeof e.at === 'number' ? offsetToLineColumn(spec, e.at) : undefined;
       AppToaster.show({
         intent: Intent.DANGER,
         message: `Could not parse JSON: ${e.message}${
-          rowColumn ? ` (at line ${rowColumn.row + 1}, column ${rowColumn.column + 1})` : ''
+          position ? ` (at line ${position.line}, column ${position.column})` : ''
         }`,
         timeout: 5000,
       });
@@ -72,11 +72,9 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
         language={hjson()}
         className="spec-dialog-textarea"
         onChange={setSpec}
-        showGutter
+        showLineNumbers
         padding={10}
         value={spec}
-        width="100%"
-        height="500px"
         placeholder="{ JSON spec... }"
       />
       <div className={Classes.DIALOG_FOOTER}>

@@ -23,7 +23,7 @@ import * as JSONBig from 'json-bigint-native';
 import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { hjson } from '../../editor-languages/hjson';
-import type { JsonCompletionRule } from '../../utils';
+import type { JsonCompletionRule, LineColumn } from '../../utils';
 import { CodeEditor, focusEditorAt } from '../code-editor/code-editor';
 
 import './json-input.scss';
@@ -33,16 +33,14 @@ function parseHjson(str: string): any {
   return Hjson.parse(str);
 }
 
-export function extractRowColumnFromHjsonError(
-  error: Error,
-): { row: number; column: number } | undefined {
+export function extractLineColumnFromHjsonError(error: Error): LineColumn | undefined {
   // Message would be something like:
   // `Found '}' where a key name was expected at line 26,7`
-  // Use this to extract the row and column (subtract 1) and jump the cursor to the right place on click
+  // Use this to extract the line and column and jump the cursor to the right place on click
   const m = /line (\d+),(\d+)/.exec(error.message);
   if (!m) return;
 
-  return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
+  return { line: Number(m[1]), column: Number(m[2]) };
 }
 
 function stringifyJson(item: any): string {
@@ -69,10 +67,11 @@ interface InternalValue {
 interface JsonInputProps {
   value: any;
   onChange?: (value: any) => void;
+  readOnly?: boolean;
   setError?: (error: Error | undefined) => void;
   placeholder?: string;
-  focus?: boolean;
-  width?: string;
+  autoFocus?: boolean;
+  /** A CSS height, defaults to 8vh */
   height?: string;
   showLineNumbers?: boolean;
   issueWithValue?: (value: any) => string | undefined;
@@ -82,10 +81,10 @@ interface JsonInputProps {
 export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
   const {
     onChange,
+    readOnly,
     setError,
     placeholder,
-    focus,
-    width,
+    autoFocus,
     height,
     showLineNumbers,
     value,
@@ -150,12 +149,12 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
       <CodeEditor
         ref={editorViewRef}
         language={hjson({ jsonCompletions })}
-        onChange={onChange ? handleInputChange : undefined}
+        onChange={handleInputChange}
+        readOnly={readOnly}
         onBlur={() => setShowErrorIfNeeded(true)}
-        autoFocus={focus}
-        width={width || '100%'}
-        height={height || '8vh'}
-        showGutter={Boolean(showLineNumbers)}
+        autoFocus={autoFocus}
+        style={{ height: height || '8vh' }}
+        showLineNumbers={showLineNumbers}
         value={internalValue.stringified}
         placeholder={placeholder}
       />
@@ -165,10 +164,10 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           onClick={() => {
             if (!editorViewRef.current || !internalValueError) return;
 
-            const rc = extractRowColumnFromHjsonError(internalValueError);
-            if (!rc) return;
+            const position = extractLineColumnFromHjsonError(internalValueError);
+            if (!position) return;
 
-            focusEditorAt(editorViewRef.current, rc);
+            focusEditorAt(editorViewRef.current, position);
           }}
         >
           {internalValueError.message}

@@ -19,7 +19,7 @@
 import { render } from '@testing-library/react';
 import Hjson from 'hjson';
 
-import { extractRowColumnFromHjsonError, JsonInput } from './json-input';
+import { extractLineColumnFromHjsonError, JsonInput } from './json-input';
 
 describe('JsonInput', () => {
   it('matches snapshot (null)', () => {
@@ -37,11 +37,11 @@ describe('JsonInput', () => {
     expect(container.firstChild).toMatchSnapshot();
   });
 
-  it('extractRowColumnFromHjsonError is ok with non matching error', () => {
-    expect(extractRowColumnFromHjsonError(new Error('blah blah'))).toBeUndefined();
+  it('extractLineColumnFromHjsonError is ok with non matching error', () => {
+    expect(extractLineColumnFromHjsonError(new Error('blah blah'))).toBeUndefined();
   });
 
-  it('extractRowColumnFromHjsonError works with real error', () => {
+  it('extractLineColumnFromHjsonError works with real error', () => {
     let error: Error | undefined;
     try {
       Hjson.parse(`{\n"Hello" "World"\n}`);
@@ -51,10 +51,9 @@ describe('JsonInput', () => {
 
     expect(error).toBeDefined();
 
-    const rc = extractRowColumnFromHjsonError(error!);
-    expect(rc).toEqual({
-      column: 8,
-      row: 1,
+    expect(extractLineColumnFromHjsonError(error!)).toEqual({
+      line: 2,
+      column: 9,
     });
   });
 });

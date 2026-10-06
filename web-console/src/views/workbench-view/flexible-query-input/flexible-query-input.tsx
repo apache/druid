@@ -22,14 +22,14 @@ import { Compartment } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import React from 'react';
 
-import { CodeEditor, focusEditorAt } from '../../../components';
+import { CodeEditor } from '../../../components';
 import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import { NATIVE_JSON_QUERY_COMPLETIONS } from '../../../druid-models';
 import { dsql } from '../../../editor-languages/dsql';
 import { hjson } from '../../../editor-languages/hjson';
 import { useConstant, usePermanentCallback } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
-import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
+import type { ColumnMetadata, QuerySlice } from '../../../utils';
 
 import { subQueryMarkers } from './sub-query-markers';
 
@@ -37,21 +37,22 @@ import './flexible-query-input.scss';
 
 const V_PADDING = 10;
 
-export interface FlexibleQueryInputHandle {
-  goToPosition(rowColumn: RowColumn): void;
-}
-
 export interface FlexibleQueryInputProps {
-  ref?: React.Ref<FlexibleQueryInputHandle | undefined>;
+  /** Gives you the CodeMirror EditorView (to use with focusEditorAt for example) */
+  ref?: React.Ref<EditorView | undefined>;
   queryString: string;
   onQueryStringChange?: (newQueryString: string) => void;
+  readOnly?: boolean;
   runQuerySlice?: (querySlice: QuerySlice) => void;
   running?: boolean;
-  showGutter?: boolean;
+  /** Defaults to true */
+  showLineNumbers?: boolean;
   placeholder?: string;
   columnMetadata?: readonly ColumnMetadata[];
-  editorStateId?: string;
-  leaveBackground?: boolean;
+  /** Makes the editor remember its state (undo history, selection) between mounts, see CodeEditor */
+  stateCacheId?: string;
+  /** Defaults to true */
+  transparentBackground?: boolean;
 }
 
 export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
@@ -59,17 +60,19 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
     ref,
     queryString,
     onQueryStringChange,
+    readOnly,
     runQuerySlice,
     running,
-    showGutter = true,
+    showLineNumbers = true,
     placeholder,
     columnMetadata,
-    editorStateId,
-    leaveBackground,
+    stateCacheId,
+    transparentBackground = true,
   } = props;
 
   const availableSqlFunctions = useAvailableSqlFunctions();
   const editorViewRef = React.useRef<EditorView | undefined>(undefined);
+  React.useImperativeHandle(ref, () => editorViewRef.current);
 
   const handleRunSubQuery = usePermanentCallback((slice: QuerySlice) => {
     if (!runQuerySlice) return;
@@ -85,8 +88,8 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
     runQuerySlice(slice);
   });
 
-  // The sub query markers live on the line numbers, so they are only there when the gutter is
-  const subQueriesEnabled = Boolean(runQuerySlice) && showGutter;
+  // The sub query markers live on the line numbers, so they are only there when the line numbers are
+  const subQueriesEnabled = Boolean(runQuerySlice) && showLineNumbers;
   const subQueryCompartment = useConstant(() => new Compartment());
   const subQueryExtension = React.useMemo(
     () => (subQueriesEnabled ? subQueryMarkers(handleRunSubQuery) : []),
@@ -99,14 +102,6 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
       effects: subQueryCompartment.reconfigure(subQueryExtension),
     });
   }, [subQueryCompartment, subQueryExtension]);
-
-  const goToPosition = React.useCallback((rowColumn: RowColumn) => {
-    const editorView = editorViewRef.current;
-    if (!editorView) return;
-    focusEditorAt(editorView, rowColumn);
-  }, []);
-
-  React.useImperativeHandle(ref, () => ({ goToPosition }), [goToPosition]);
 
   const isJson = queryString.trim().startsWith('{');
   const language = React.useMemo(
@@ -123,15 +118,15 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
         <CodeEditor
           ref={editorViewRef}
           language={language}
-          transparentBackground={!leaveBackground}
+          transparentBackground={transparentBackground}
           value={queryString}
           onChange={onQueryStringChange}
+          readOnly={readOnly}
           autoFocus
-          height="100%"
-          showGutter={showGutter}
+          showLineNumbers={showLineNumbers}
           padding={V_PADDING}
           placeholder={placeholder || 'SELECT * FROM ...'}
-          stateCacheId={editorStateId}
+          stateCacheId={stateCacheId}
           extensions={extensions}
         />
       </div>

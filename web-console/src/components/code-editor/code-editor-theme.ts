@@ -44,9 +44,6 @@ export const codeEditorTheme = EditorView.theme(
       color: '#c7dde0',
       backgroundColor: `rgba(${DARK_GRAY1}, 0.5)`,
     },
-    '.no-background > &': {
-      backgroundColor: 'transparent',
-    },
     '&.cm-focused': {
       outline: 'none',
     },
@@ -175,6 +172,15 @@ export const codeEditorTheme = EditorView.theme(
   },
   { dark: true },
 );
+
+/**
+ * Drops the editor's own background (the selector is more specific than the one in codeEditorTheme so that it wins)
+ */
+export const codeEditorTransparentTheme = EditorView.theme({
+  '&.cm-editor': {
+    backgroundColor: 'transparent',
+  },
+});
 
 /**
  * Pads the text by the given amount (the default is a bit of horizontal padding)

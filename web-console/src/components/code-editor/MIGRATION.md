@@ -52,20 +52,31 @@ look as possible. For how to use the new component, see [README.md](./README.md)
 | `makeDocHtml` (HTML strings in `docHTML`)      | Structured `doc` rendered by `completion-doc.ts`                         |
 | `Ace.ValueCompletion`                          | `EditorCompletion` (`label`, `displayLabel`, `boost`, `detail`, `doc`)   |
 | `src/singletons/ace-editor-state-cache.ts`     | `src/singletons/editor-state-cache.ts` (`EditorStateCache`)              |
-| `editor.getSelection().moveCursorTo(row, col)` | `focusEditorAt(view, { row, column })`                                   |
+| `editor.getSelection().moveCursorTo(row, col)` | `focusEditorAt(view, { line, column })` (1-based `LineColumn`)           |
 
 ### Call sites
 
 | Component                        | Notes                                                                                            |
 | -------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `FlexibleQueryInput` (workbench) | Rewritten. See [Partial query markers](#partial-query-markers)                                   |
-| `SqlInput` (explore view)        | Same props and behavior                                                                          |
-| `JsonInput`                      | Same props. The change handler is only passed when `onChange` is given (that makes it read-only) |
+| `FlexibleQueryInput` (workbench) | Rewritten. See [Partial query markers](#partial-query-markers). Props renamed, see below         |
+| `SqlInput` (explore view)        | `ref` gives the `EditorView`, `height` (was `editorHeight`), `showLineNumbers` (was `showGutter`) |
+| `JsonInput`                      | An explicit `readOnly`, `autoFocus` (was `focus`), no `width`                                    |
 | `ShowJson`, `ShowJsonOrStages`   | Read-only Hjson                                                                                  |
-| `SpecDialog`                     | `height="500px"` is now explicit (it used to come from react-ace's default)                      |
+| `SpecDialog`                     | The 500px height (react-ace's default) is now set in its SCSS                                    |
 | `ShowValueDialog`                | Its SCSS targeted `.ace-editor`, a class Ace never set. It now targets `.code-editor`            |
 | `WorkbenchHistoryDialog`         | Read-only, `dsql` or `hjson`                                                                     |
 | `ExplainDialog`                  | Read-only Hjson                                                                                  |
+
+Props that came from react-ace were renamed after the migration:
+
+- `CodeEditor`: `showGutter` → `showLineNumbers`, `width` / `height` → CSS on `className` (or `style` for a size that
+  changes), read-only → an explicit `readOnly`. `padding` and `transparentBackground` can now change after mount.
+- `FlexibleQueryInput`: `editorStateId` → `stateCacheId`, `leaveBackground` → `transparentBackground` (defaults to
+  `true`), `showGutter` → `showLineNumbers`, and a `ref` that gives the `EditorView` (it had a `goToPosition` handle).
+- `SqlInput` and `JsonInput`: see the table above. `SqlInput` keeps `onValueChange`, the name the console's other value
+  inputs (`FormattedInput`, `ClearableInput`, …) use.
+- Positions: `RowColumn` (0-based, from Ace) → `LineColumn` (1-based), so `DruidError.startLineColumn`,
+  `QuerySlice.startLineColumn` and the Hjson and issue positions are passed to `focusEditorAt` as reported.
 
 ## Behavior parity
 
@@ -73,8 +84,8 @@ These Ace behaviors were deliberately preserved:
 
 - **Controlled value:** react-ace replaced the text on prop changes without calling `onChange`. `CodeEditor` does the
   same, but it applies only the changed part, so the cursor stays where it was and the change is undoable.
-- **Read-only:** `readOnly={!onChange}` was the pattern everywhere, so the editor is now read-only exactly when
-  `onChange` is not given.
+- **Read-only:** `readOnly={!onChange}` was the pattern everywhere. The editors that had no `onChange` now pass an
+  explicit `readOnly` (on `CodeEditor`, `JsonInput` and `FlexibleQueryInput`), so the same editors are read-only.
 - **Autocomplete triggering:** like Ace's live autocompletion, the list opens while typing a word (Ace's identifier
   characters, including `$` and `-`) and on Ctrl-Space. Tab accepts a suggestion as well as Enter.
 - **Autocomplete inputs:** the old completers worked out `charBeforePrefix`, `lineBeforePrefix` and `textBefore`

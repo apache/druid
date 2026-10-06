@@ -273,7 +273,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                 >
                   <div
                     class="code-editor"
-                    style="width: 100%; height: 60vh;"
+                    style="height: 60vh;"
                   >
                     <div
                       class="cm-editor"

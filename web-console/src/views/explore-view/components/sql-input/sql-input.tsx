@@ -20,26 +20,23 @@ import type { EditorView } from '@codemirror/view';
 import type { Column } from 'druid-query-toolkit';
 import React from 'react';
 
-import { CodeEditor, focusEditorAt } from '../../../../components';
+import { CodeEditor } from '../../../../components';
 import { useAvailableSqlFunctions } from '../../../../contexts/sql-functions-context';
 import { dsql } from '../../../../editor-languages/dsql';
-import type { RowColumn } from '../../../../utils';
 
 const V_PADDING = 10;
 
-export interface SqlInputHandle {
-  goToPosition(rowColumn: RowColumn): void;
-}
-
 export interface SqlInputProps {
-  ref?: React.Ref<SqlInputHandle | undefined>;
+  /** Gives you the CodeMirror EditorView (to use with focusEditorAt for example) */
+  ref?: React.Ref<EditorView | undefined>;
   value: string;
-  onValueChange?: (newValue: string) => void;
+  onValueChange: (newValue: string) => void;
   placeholder?: string;
-  editorHeight?: number;
+  /** In px, by default the input fills its container */
+  height?: number;
   columns?: readonly Column[];
   autoFocus?: boolean;
-  showGutter?: boolean;
+  showLineNumbers?: boolean;
   includeAggregates?: boolean;
 }
 
@@ -50,23 +47,13 @@ export function SqlInput(props: SqlInputProps) {
     onValueChange,
     placeholder,
     autoFocus,
-    editorHeight,
-    showGutter,
+    height,
+    showLineNumbers,
     columns,
     includeAggregates,
   } = props;
 
   const availableSqlFunctions = useAvailableSqlFunctions();
-  const editorViewRef = React.useRef<EditorView | undefined>(undefined);
-
-  const goToPosition = React.useCallback((rowColumn: RowColumn) => {
-    const editorView = editorViewRef.current;
-    if (!editorView) return;
-    focusEditorAt(editorView, rowColumn);
-  }, []);
-
-  React.useImperativeHandle(ref, () => ({ goToPosition }), [goToPosition]);
-
   const language = React.useMemo(
     () =>
       dsql({
@@ -79,15 +66,14 @@ export function SqlInput(props: SqlInputProps) {
 
   return (
     <CodeEditor
-      ref={editorViewRef}
+      ref={ref}
       className="sql-input"
       language={language}
       value={value}
       onChange={onValueChange}
       autoFocus={autoFocus}
-      width="100%"
-      height={editorHeight ? `${editorHeight}px` : '100%'}
-      showGutter={Boolean(showGutter)}
+      style={{ width: '100%', height: height ? `${height}px` : '100%' }}
+      showLineNumbers={showLineNumbers}
       padding={V_PADDING}
       placeholder={placeholder || 'SQL filter'}
     />

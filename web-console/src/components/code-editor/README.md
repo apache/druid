@@ -54,10 +54,10 @@ import { hjson } from '../../editor-languages/hjson';
 
 // Editable SQL (memoize the language, see Languages)
 const sqlLanguage = useMemo(() => dsql({ availableSqlFunctions }), [availableSqlFunctions]);
-<CodeEditor language={sqlLanguage} value={sql} onChange={setSql} height="300px" showGutter />
+<CodeEditor language={sqlLanguage} value={sql} onChange={setSql} showLineNumbers />
 
-// Read-only JSON (leaving out onChange makes the editor read-only)
-<CodeEditor language={hjson()} value={JSON.stringify(spec, undefined, 2)} height="100%" />
+// Read-only JSON, sized with CSS on its className
+<CodeEditor className="spec-viewer" language={hjson()} value={JSON.stringify(spec, undefined, 2)} readOnly />
 ```
 
 ## Props
@@ -65,12 +65,13 @@ const sqlLanguage = useMemo(() => dsql({ availableSqlFunctions }), [availableSql
 | Prop                    | Type                      | Notes                                                                                                                        |
 | ----------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `value`                 | `string`                  | Required. The text to show.                                                                                                  |
-| `onChange`              | `(value: string) => void` | Called when the **user** edits the text. **If omitted, the editor is read-only.**                                            |
+| `onChange`              | `(value: string) => void` | Called when the **user** edits the text.                                                                                     |
+| `readOnly`              | `boolean`                 | Makes the editor read-only.                                                                                                  |
 | `onBlur`                | `() => void`              |                                                                                                                              |
 | `language`              | `LanguageSupport`         | `dsql(...)` or `hjson(...)`. Brings highlighting, completions, comment toggling and bracket closing. Plain text without one. |
-| `width` / `height`      | `string`                  | CSS sizes for the wrapper. With no `height`, the editor grows with its content.                                              |
-| `className`             | `string`                  | Added to the wrapper `div` (which always has the `code-editor` class).                                                       |
-| `showGutter`            | `boolean`                 | Shows line numbers.                                                                                                          |
+| `className`             | `string`                  | Added to the wrapper `div` (which always has the `code-editor` class). Size the editor with CSS on it.                       |
+| `style`                 | `CSSProperties`           | Inline styles for the wrapper, for a size that changes (like `JsonInput`'s `height`). With no height it grows with the text. |
+| `showLineNumbers`       | `boolean`                 | Shows the line numbers.                                                                                                      |
 | `padding`               | `number`                  | Pads the text on all sides (in px). By default there is only a little horizontal padding.                                    |
 | `transparentBackground` | `boolean`                 | Drops the editor's own background.                                                                                           |
 | `placeholder`           | `string`                  | Shown while the editor is empty.                                                                                             |
@@ -95,12 +96,13 @@ the parent passes back.
 
 ### Props that change vs. props read once
 
-Most props (`language`, `onChange`/read-only, `showGutter`, `placeholder`, `onBlur`) can change at any time. The
+Most props (`language`, `onChange`, `readOnly`, `showLineNumbers`, `padding`, `transparentBackground`, `placeholder`,
+`onBlur`) can change at any time. The
 editor updates in place without being recreated. The workbench input uses this to switch between `dsql()` and
 `hjson()` as soon as the text starts with `{`. The editor is reconfigured whenever `language` is a new object, so keep
 it stable between renders (see [Languages](#languages)).
 
-`padding`, `extensions` and `autoFocus` are only read when the editor is created. Changing `stateCacheId` recreates
+`extensions` and `autoFocus` are only read when the editor is created. Changing `stateCacheId` recreates
 the editor.
 
 ### Remembering state between mounts
@@ -189,12 +191,17 @@ const viewRef = useRef<EditorView | undefined>(undefined);
 
 <CodeEditor ref={viewRef} value={sql} onChange={setSql} />;
 
-// Later: put the cursor on row 3, column 5 (both 0-based) and focus the editor
-if (viewRef.current) focusEditorAt(viewRef.current, { row: 3, column: 5 });
+// Later: put the cursor on line 3, column 5 (both 1-based) and focus the editor
+if (viewRef.current) focusEditorAt(viewRef.current, { line: 3, column: 5 });
 ```
 
-`focusEditorAt` is exported next to the component. It clamps out-of-range positions and scrolls the cursor into view.
-It is used to jump to the location of query errors.
+`focusEditorAt` is exported next to the component. It takes a `LineColumn` (from `src/utils/general.tsx`): 1-based,
+the way Druid and Hjson errors report positions and the way CodeMirror numbers lines, so error positions are passed
+straight through. It clamps out-of-range positions and scrolls the cursor into view. It is used to jump to the location
+of query errors.
+
+`SqlInput` and `FlexibleQueryInput` pass their `ref` on to the `CodeEditor`, so their callers get the `EditorView` the
+same way. For example, the workbench calls `focusEditorAt(queryInputRef.current, position)` to jump to an error.
 
 If you need decorations, gutter markers or other custom behavior, pass CodeMirror extensions through `extensions`.
 The "run this query" markers of `FlexibleQueryInput` (`sub-query-markers.ts` in
@@ -266,7 +273,7 @@ DOM snapshots don't include CodeMirror's internal DOM. The snapshot serializer (
 replaces each editor with a comment listing what the console configured, for example:
 
 ```html
-<div class="code-editor query-string" style="height: 100%;">
+<div class="code-editor query-string">
   <div class="cm-editor">
     <!-- Code editor, language: hjson, value: "{\n  \"a\": 1\n}", read only -->
   </div>

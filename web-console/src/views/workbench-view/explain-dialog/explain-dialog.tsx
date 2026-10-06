@@ -131,8 +131,8 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
           <CodeEditor
             language={hjson()}
             className="query-string"
-            height="100%"
-            showGutter
+            readOnly
+            showLineNumbers
             value={queryString}
           />
         </FormGroup>

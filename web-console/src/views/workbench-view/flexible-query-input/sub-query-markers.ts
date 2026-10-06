@@ -35,8 +35,8 @@ import { findAllSqlQueriesInText } from '../../../utils';
  * The queries in the text that can be run on their own, at most one per line
  */
 export function findSubQueries(text: string): QuerySlice[] {
-  const found = dedupe(findAllSqlQueriesInText(text), ({ startRowColumn }) =>
-    String(startRowColumn.row),
+  const found = dedupe(findAllSqlQueriesInText(text), ({ startLineColumn }) =>
+    String(startLineColumn.line),
   );
   if (!found.length) return [];
 

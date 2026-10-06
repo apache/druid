@@ -6,7 +6,7 @@ exports[`JsonInput matches snapshot (null) 1`] = `
 >
   <div
     class="code-editor"
-    style="width: 100%; height: 8vh;"
+    style="height: 8vh;"
   >
     <div
       class="cm-editor"
@@ -23,7 +23,7 @@ exports[`JsonInput matches snapshot (value) 1`] = `
 >
   <div
     class="code-editor"
-    style="width: 100%; height: 8vh;"
+    style="height: 8vh;"
   >
     <div
       class="cm-editor"

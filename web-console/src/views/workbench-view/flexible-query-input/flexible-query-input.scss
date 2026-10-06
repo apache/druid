@@ -25,6 +25,10 @@
     position: absolute;
     width: 100%;
     height: 100%;
+
+    & > .code-editor {
+      height: 100%;
+    }
   }
 
   .sub-query-highlight {
