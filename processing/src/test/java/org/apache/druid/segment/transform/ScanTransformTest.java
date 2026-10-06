@@ -340,6 +340,34 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetRequiredColumnsIncludesUnnestFilterFields()
+  {
+    // Inner unnest filters on a raw field that is not otherwise a dimension, metric or transform input.
+    // If these are missing from getRequiredColumns(), InputRowSchemas.createColumnsFilter() can prune the
+    // field before ScanTransformer runs, and the filter would then see null and wrongly reject rows.
+    final UnnestDataSource inner = UnnestDataSource.create(
+        new TableDataSource("__input__"),
+        new ExpressionVirtualColumn("tag", "\"tags\"", ColumnType.STRING, ExprMacroTable.nil()),
+        new SelectorDimFilter("innerFilterField", "keep", null)
+    );
+    final UnnestDataSource outer = UnnestDataSource.create(
+        inner,
+        new ExpressionVirtualColumn("tag2", "\"tags2\"", ColumnType.STRING, ExprMacroTable.nil()),
+        new SelectorDimFilter("outerFilterField", "keep", null)
+    );
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                   .dataSource(outer)
+                                   .eternityInterval()
+                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
+                                   .build();
+
+    Assertions.assertEquals(
+        Set.of("tags", "tags2", "innerFilterField", "outerFilterField"),
+        new ScanTransformSpec(query).getRequiredColumns()
+    );
+  }
+
+  @Test
   public void testTransformerWithSingleScanTransform()
   {
     final ScanTransformSpec spec = new ScanTransformSpec(

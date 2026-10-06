@@ -117,6 +117,9 @@ public class ScanTransformSpec implements BaseTransformSpec
     if (dataSource instanceof UnnestDataSource) {
       final UnnestDataSource unnest = (UnnestDataSource) dataSource;
       columns.addAll(unnest.getVirtualColumn().requiredColumns());
+      if (unnest.getUnnestFilter() != null) {
+        columns.addAll(unnest.getUnnestFilter().getRequiredColumns());
+      }
       collectRequiredColumns(unnest.getBase(), columns);
     }
   }
