@@ -62,7 +62,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -582,18 +581,12 @@ public class NamespaceLookupExtractorFactoryTest
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
     reset(scheduler, entry, versionedCache);
 
-    when(entry.getCacheState()).thenReturn(versionedCache);
-    when(entry.getCache()).thenReturn(new HashMap<String, String>());
-    when(versionedCache.getCache()).thenReturn(new HashMap<>());
-    when(versionedCache.getVersion()).thenThrow(new ISE("some exception"));
+    when(entry.getCacheState()).thenReturn(CacheScheduler.NoCache.CACHE_NOT_INITIALIZED);
 
     final Response response = (Response) clazz.getMethod(method).invoke(handler);
     Assertions.assertEquals(404, response.getStatus());
 
     verify(entry).getCacheState();
-    verify(entry, atMostOnce()).getCache();
-    verify(versionedCache, atMostOnce()).getCache();
-    verify(versionedCache).getVersion();
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
