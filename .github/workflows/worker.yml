@@ -78,7 +78,7 @@ jobs:
         run: |
           set -eu
           for attempt in 1 2 3; do
-            if mvn -B -U -N validate -Pskip-static-checks -Dweb.console.skip=true; then
+            if ./mvnw -B -U -N validate -Pskip-static-checks -Dweb.console.skip=true; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then

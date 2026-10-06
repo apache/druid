@@ -46,7 +46,7 @@ jobs:
           cache: maven
 
       - name: maven build # needed to rebuild in case of maven snapshot resolution fails
-        run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
+        run: ./mvnw clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
 
       - name: security vulnerabilities check
         env:
@@ -54,10 +54,10 @@ jobs:
           OSS_INDEX_PASSWORD: ${{ secrets.OSS_INDEX_PASSWORD }}
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          mvn -B dependency-check:purge dependency-check:check -DnvdApiKey=$NVD_API_KEY -DossIndexUsername=$OSS_INDEX_USERNAME -DossIndexPassword=$OSS_INDEX_PASSWORD || { echo "
+          ./mvnw -B dependency-check:purge dependency-check:check -DnvdApiKey=$NVD_API_KEY -DossIndexUsername=$OSS_INDEX_USERNAME -DossIndexPassword=$OSS_INDEX_PASSWORD || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
-          `mvn dependency-check:check`
+          `./mvnw dependency-check:check`
           If the analysis has false positives,
           they can be suppressed by adding entries to owasp-dependency-check-suppressions.xml (for more
           information, see https://jeremylong.github.io/DependencyCheck/general/suppression.html).

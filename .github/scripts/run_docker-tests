@@ -41,4 +41,4 @@ OPTS+=" -nsu"
 # local Maven repository on a fresh runner, and no Maven build cache is persisted
 # across jobs. Adding -am would re-run the whole reactor, including web-console,
 # a second time.
-mvn -B -pl embedded-tests $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
+./mvnw -B -pl embedded-tests $OPTS verify -Pdocker-tests,skip-static-checks -DskipUTs -D$DRUID_IMAGE_SYS_PROPERTY=$DRUID_IMAGE_NAME "-DjfrProfilerArgLine=$JFR_PROFILER_ARG_LINE" "$@"
