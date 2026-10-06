@@ -37,7 +37,6 @@ import org.apache.druid.query.filter.TypedInFilter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -402,21 +401,6 @@ public class QueryContext
   }
 
   /**
-   * Return a value as an {@code Float}, returning {@link null} if the
-   * context value is not set.
-   *
-   * @throws BadQueryContextException for an invalid value
-   * @deprecated Use {@link #getFloat(String, float)}, or declare the parameter in {@link QueryContextParameters}
-   * and read it with {@link #get(QueryContextParameter)}.
-   */
-  @Deprecated
-  @SuppressWarnings("unused")
-  public Float getFloat(final String key)
-  {
-    return QueryContexts.getAsFloat(key, get(key));
-  }
-
-  /**
    * Return a value as an {@code float}, returning the default value if the
    * context value is not set.
    *
@@ -719,19 +703,6 @@ public class QueryContext
     );
   }
 
-  /**
-   * @deprecated Use {@link #hasTimeout()} and {@link #getTimeout()} instead.
-   */
-  @Deprecated
-  @Nullable
-  public Duration getTimeoutDuration()
-  {
-    if (hasTimeout()) {
-      return Duration.ofMillis(getTimeout());
-    }
-    return null;
-  }
-
   public long getDefaultTimeout()
   {
     final long defaultTimeout = getLong(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
@@ -1025,14 +996,5 @@ public class QueryContext
              : QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
     }
     return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
-  }
-
-  /**
-   * @deprecated Use {@link #getRealtimeSegmentsMode()} instead.
-   */
-  @Deprecated
-  public boolean isRealtimeSegmentsOnly()
-  {
-    return getRealtimeSegmentsMode() == RealtimeSegmentsMode.EXCLUSIVE;
   }
 }
