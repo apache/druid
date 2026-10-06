@@ -109,13 +109,8 @@ export function hjson({ jsonCompletions }: HjsonOptions = {}): LanguageSupport {
     support = new LanguageSupport(
       hjsonLanguage,
       hjsonLanguage.data.of({
-        autocomplete: makeCompletionSource(({ prefix, charBeforePrefix, textBeforePrefix }) =>
-          getHjsonCompletions({
-            jsonCompletions,
-            textBefore: textBeforePrefix,
-            charBeforePrefix,
-            prefix,
-          }),
+        autocomplete: makeCompletionSource((context, word) =>
+          getHjsonCompletions(context, word, jsonCompletions),
         ),
       }),
     );

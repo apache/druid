@@ -16,7 +16,14 @@
  * limitations under the License.
  */
 
-import type { Completion, CompletionSource } from '@codemirror/autocomplete';
+import type {
+  Completion,
+  CompletionContext,
+  CompletionResult,
+  CompletionSource,
+} from '@codemirror/autocomplete';
+import { syntaxTree } from '@codemirror/language';
+import type { EditorState } from '@codemirror/state';
 
 import type { EditorCompletion } from '../../editor-completions/editor-completion';
 
@@ -26,16 +33,39 @@ import { renderCompletionDoc } from './completion-doc';
 const PREFIX_REGEXP = /[\w$\-\u00A2-\u2000\u2070-\uFFFF]*/;
 const VALID_PREFIX_REGEXP = new RegExp(`^${PREFIX_REGEXP.source}$`);
 
-export interface CompletionRequest {
-  allText: string;
-  /** The (partial) word being completed */
-  prefix: string;
-  /** The character right before the prefix ('\n' at the start of a line, '' at the start of the text) */
-  charBeforePrefix: string;
-  /** All of the text before charBeforePrefix */
-  textBeforePrefix: string;
-  /** The part of the line before charBeforePrefix */
-  lineBeforePrefix: string;
+/**
+ * The (partial) word being completed, it ends at the cursor
+ */
+export interface CompletionWord {
+  from: number;
+  text: string;
+}
+
+/**
+ * Builds the completions for the word being completed, CodeMirror filters and ranks them against it
+ */
+export type EditorCompletionBuilder = (
+  context: CompletionContext,
+  word: CompletionWord,
+) => readonly EditorCompletion[];
+
+/**
+ * The word before the cursor, or undefined when there is nothing to complete (no word typed and the completion was not
+ * asked for explicitly)
+ */
+export function matchCompletionWord(context: CompletionContext): CompletionWord | undefined {
+  const { state, pos } = context;
+  const from = context.matchBefore(PREFIX_REGEXP)?.from ?? pos;
+  if (from === pos && !context.explicit) return;
+  return { from, text: state.sliceDoc(from, pos) };
+}
+
+/**
+ * The name of the syntax node (the token) that the cursor is in or right after, like 'comment' or 'string'
+ */
+export function tokenBefore(state: EditorState, pos: number): { name: string; to: number } {
+  const { name, to } = syntaxTree(state).resolveInner(pos, -1);
+  return { name, to };
 }
 
 function toCompletion({ doc, ...completion }: EditorCompletion): Completion {
@@ -43,31 +73,19 @@ function toCompletion({ doc, ...completion }: EditorCompletion): Completion {
 }
 
 /**
- * Makes a CodeMirror completion source out of a completion builder (like getSqlCompletions) that takes the text around
- * the cursor split up into a CompletionRequest
+ * Makes a CodeMirror completion source out of a completion builder (like getSqlCompletions)
  */
-export function makeCompletionSource(
-  getCompletions: (request: CompletionRequest) => readonly EditorCompletion[],
-): CompletionSource {
-  return context => {
-    const { state, pos } = context;
-    if (state.readOnly) return null;
-    const from = context.matchBefore(PREFIX_REGEXP)?.from ?? pos;
-    const prefix = state.sliceDoc(from, pos);
-    if (!prefix && !context.explicit) return null;
+export function makeCompletionSource(build: EditorCompletionBuilder): CompletionSource {
+  return (context): CompletionResult | null => {
+    if (context.state.readOnly) return null;
+    const word = matchCompletionWord(context);
+    if (!word) return null;
 
-    const line = state.doc.lineAt(from);
-    const options = getCompletions({
-      allText: state.doc.toString(),
-      prefix,
-      charBeforePrefix: state.sliceDoc(from - 1, from),
-      textBeforePrefix: state.sliceDoc(0, Math.max(0, from - 1)),
-      lineBeforePrefix: from > line.from ? state.sliceDoc(line.from, from - 1) : '',
-    }).map(toCompletion);
+    const options = build(context, word).map(toCompletion);
     if (!options.length) return null;
 
     return {
-      from,
+      from: word.from,
       options,
       validFor: VALID_PREFIX_REGEXP,
     };

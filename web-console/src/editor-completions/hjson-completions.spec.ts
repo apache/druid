@@ -17,32 +17,25 @@
  */
 
 import { NATIVE_JSON_QUERY_COMPLETIONS } from '../druid-models';
+import { hjson } from '../editor-languages/hjson';
+import { completionContextAt } from '../test-utils/completion-context';
 
-import type { GetHjsonCompletionsOptions } from './hjson-completions';
 import { getHjsonCompletions } from './hjson-completions';
 
 describe('getHjsonCompletions', () => {
-  const baseOptions: GetHjsonCompletionsOptions = {
-    jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS,
-    textBefore: '',
-    charBeforePrefix: '',
-    prefix: '',
-  };
+  // The completions with the cursor at the |
+  function completionsAt(textWithCursor: string) {
+    const [context, word] = completionContextAt(hjson(), textWithCursor);
+    return getHjsonCompletions(context, word, NATIVE_JSON_QUERY_COMPLETIONS);
+  }
 
   it('returns empty array for comments', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ "queryType": "scan", // This is a comment with ',
-      prefix: 'S',
-    });
-    expect(completions).toEqual([]);
+    expect(completionsAt('{ "queryType": "scan", // This is a comment with S|')).toEqual([]);
+    expect(completionsAt('{ "queryType": "scan", /* S| */')).toEqual([]);
   });
 
   it('returns root level property suggestions', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{',
-    });
+    const completions = completionsAt('{|');
 
     const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('queryType');
@@ -50,10 +43,7 @@ describe('getHjsonCompletions', () => {
   });
 
   it('returns queryType value suggestions', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ "queryType": ',
-    });
+    const completions = completionsAt('{ "queryType": |');
 
     const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('timeseries');
@@ -63,10 +53,7 @@ describe('getHjsonCompletions', () => {
   });
 
   it('returns query-specific properties based on queryType', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ "queryType": "timeseries", ',
-    });
+    const completions = completionsAt('{ "queryType": "timeseries", |');
 
     const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('granularity');
@@ -78,10 +65,7 @@ describe('getHjsonCompletions', () => {
   });
 
   it('returns granularity value suggestions', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ "queryType": "timeseries", "granularity": ',
-    });
+    const completions = completionsAt('{ "queryType": "timeseries", "granularity": |');
 
     const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('hour');
@@ -90,10 +74,7 @@ describe('getHjsonCompletions', () => {
   });
 
   it('returns aggregation properties in array context', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ "queryType": "timeseries", "aggregations": [{ ',
-    });
+    const completions = completionsAt('{ "queryType": "timeseries", "aggregations": [{ |');
 
     const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('type');
@@ -101,10 +82,7 @@ describe('getHjsonCompletions', () => {
   });
 
   it('returns aggregation type values', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ "queryType": "timeseries", "aggregations": [{ "type": ',
-    });
+    const completions = completionsAt('{ "queryType": "timeseries", "aggregations": [{ "type": |');
 
     const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('count');
@@ -113,10 +91,9 @@ describe('getHjsonCompletions', () => {
   });
 
   it('returns fieldName for field-based aggregators', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ "queryType": "timeseries", "aggregations": [{ "type": "longSum", ',
-    });
+    const completions = completionsAt(
+      '{ "queryType": "timeseries", "aggregations": [{ "type": "longSum", |',
+    );
 
     const completionValues = completions.map(c => c.label);
     expect(completionValues).toContain('fieldName');
@@ -127,17 +104,8 @@ describe('getHjsonCompletions', () => {
   });
 
   it('handles quoted vs unquoted completions', () => {
-    const unquotedCompletions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ ',
-      charBeforePrefix: '',
-    });
-
-    const quotedCompletions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{ "',
-      charBeforePrefix: '"',
-    });
+    const unquotedCompletions = completionsAt('{ |');
+    const quotedCompletions = completionsAt('{ "|');
 
     // Unquoted should include quotes for property names
     const unquotedValues = unquotedCompletions.map(c => c.label);
@@ -150,10 +118,7 @@ describe('getHjsonCompletions', () => {
   });
 
   it('provides documentation for completions', () => {
-    const completions = getHjsonCompletions({
-      ...baseOptions,
-      textBefore: '{',
-    });
+    const completions = completionsAt('{|');
 
     const queryTypeCompletion = completions.find(c => c.label === 'queryType');
     expect(queryTypeCompletion).toBeDefined();

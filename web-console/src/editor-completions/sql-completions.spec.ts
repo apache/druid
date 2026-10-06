@@ -16,109 +16,99 @@
  * limitations under the License.
  */
 
+import { dsql } from '../editor-languages/dsql';
+import { completionContextAt } from '../test-utils/completion-context';
 import type { ColumnMetadata } from '../utils';
 
+import type { SqlCompletionOptions } from './sql-completions';
 import { getPossibleSqlReferences, getSqlCompletions, getSqlLiterals } from './sql-completions';
 
 describe('sql-completions', () => {
   describe('getSqlCompletions', () => {
-    const baseOptions = {
-      allText: '',
-      lineBeforePrefix: '',
-      charBeforePrefix: '',
-      prefix: '',
-    };
+    // The completions with the cursor at the |
+    function completionsAt(textWithCursor: string, options?: SqlCompletionOptions) {
+      const [context, word] = completionContextAt(dsql(), textWithCursor);
+      return getSqlCompletions(context, word, options);
+    }
+
+    const columnMetadata: ColumnMetadata[] = [
+      {
+        TABLE_SCHEMA: 'druid',
+        TABLE_NAME: 'wikipedia',
+        COLUMN_NAME: 'page',
+        DATA_TYPE: 'VARCHAR',
+      },
+      {
+        TABLE_SCHEMA: 'druid',
+        TABLE_NAME: 'wikipedia',
+        COLUMN_NAME: 'user',
+        DATA_TYPE: 'VARCHAR',
+      },
+    ];
 
     it('returns empty array when in a single line comment', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: '-- This is a comment',
-        prefix: 'SEL',
-      });
-      expect(completions).toEqual([]);
+      expect(completionsAt('-- This is a comment SEL|')).toEqual([]);
     });
 
     it('returns empty array when typing after comment marker', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: 'SELECT * FROM table -- ',
-        prefix: 'com',
-      });
-      expect(completions).toEqual([]);
+      expect(completionsAt('SELECT * FROM table -- com|')).toEqual([]);
     });
 
     it('returns empty array when comment is in middle of line', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: 'SELECT -- some comment',
-        prefix: 'FR',
-      });
-      expect(completions).toEqual([]);
+      expect(completionsAt('SELECT -- some comment FR|')).toEqual([]);
+    });
+
+    it('returns empty array in block comments', () => {
+      expect(completionsAt('SELECT /* FR| */ 1')).toEqual([]);
+      expect(completionsAt('SELECT /*\n  FR|')).toEqual([]);
+    });
+
+    it('returns completions after a comment marker inside a literal', () => {
+      const completions = completionsAt("SELECT 'a -- b' FR|");
+      expect(completions.filter(c => c.detail === 'keyword').length).toBeGreaterThan(0);
     });
 
     it('returns empty array when prefix is a number', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        prefix: '123',
-      });
-      expect(completions).toEqual([]);
+      expect(completionsAt('SELECT 123|')).toEqual([]);
     });
 
     it('returns completions before comment marker on same line', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: 'SELECT ',
-        prefix: 'FR',
-      });
+      const completions = completionsAt('SELECT FR| -- comment');
       expect(completions.length).toBeGreaterThan(0);
       const keywordCompletions = completions.filter(c => c.detail === 'keyword');
       expect(keywordCompletions.length).toBeGreaterThan(0);
     });
 
     it('returns empty array even when comment contains SQL keywords', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: '-- TODO: need to SELECT * FROM',
-        prefix: 'WHE',
-      });
-      expect(completions).toEqual([]);
+      expect(completionsAt('-- TODO: need to SELECT * FROM WHE|')).toEqual([]);
     });
 
     it('returns empty array for indented comments', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: '    -- indented comment',
-        prefix: 'FRO',
-      });
-      expect(completions).toEqual([]);
+      expect(completionsAt('    -- indented comment FRO|')).toEqual([]);
     });
 
-    it('returns only literals when charBeforePrefix is single quote', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        allText: "SELECT * FROM table WHERE country = 'France' OR country = 'Germany'",
-        charBeforePrefix: "'",
-        prefix: 'Fr',
-      });
+    it('returns only literals right after a single quote', () => {
+      const completions = completionsAt(
+        "SELECT * FROM table WHERE country = 'France' OR country = 'Germany' OR country = 'Fr|",
+      );
 
-      expect(completions).toHaveLength(2);
-      expect(completions[0]).toEqual({
-        label: 'France',
-        boost: 1,
-        detail: 'local',
-      });
-      expect(completions[1]).toEqual({
-        label: 'Germany',
-        boost: 1,
-        detail: 'local',
-      });
+      expect(completions).toEqual([
+        { label: 'France', boost: 1, detail: 'local' },
+        { label: 'Germany', boost: 1, detail: 'local' },
+      ]);
+    });
+
+    it('returns only literals anywhere inside a literal', () => {
+      const completions = completionsAt(
+        "SELECT * FROM table WHERE country = 'France' OR country = 'not Fra|'",
+      );
+
+      expect(completions.map(c => c.label)).toContain('France');
+      expect(completions.every(c => c.detail === 'local')).toBe(true);
     });
 
     it('returns keyword suggestions after SELECT', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: 'SELECT',
-      });
+      const completions = completionsAt('SELECT |');
 
       const keywordCompletions = completions.filter(c => c.detail === 'keyword');
       const keywordValues = keywordCompletions.map(c => c.label);
@@ -129,10 +119,7 @@ describe('sql-completions', () => {
     });
 
     it('does not include functions after keywords that cannot be followed by functions', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: 'LIMIT',
-      });
+      const completions = completionsAt('SELECT * FROM t LIMIT |');
 
       const functionCompletions = completions.filter(c => c.detail === 'function');
       expect(functionCompletions).toHaveLength(0);
@@ -142,10 +129,7 @@ describe('sql-completions', () => {
     });
 
     it('includes functions after keywords that can be followed by functions', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: 'WHERE',
-      });
+      const completions = completionsAt('SELECT * FROM t WHERE |');
 
       const functionCompletions = completions.filter(c => c.detail === 'function');
       expect(functionCompletions.length).toBeGreaterThan(0);
@@ -155,24 +139,7 @@ describe('sql-completions', () => {
     });
 
     it('does not include column references after keywords that cannot be followed by refs', () => {
-      const columnMetadata: ColumnMetadata[] = [
-        {
-          TABLE_SCHEMA: 'druid',
-          TABLE_NAME: 'wikipedia',
-          COLUMN_NAME: 'page',
-          DATA_TYPE: 'VARCHAR',
-        },
-        {
-          TABLE_SCHEMA: 'druid',
-          TABLE_NAME: 'wikipedia',
-          COLUMN_NAME: 'user',
-          DATA_TYPE: 'VARCHAR',
-        },
-      ];
-
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: 'DESC',
+      const completions = completionsAt('SELECT * FROM "wikipedia" ORDER BY page DESC |', {
         columnMetadata,
       });
 
@@ -184,27 +151,7 @@ describe('sql-completions', () => {
     });
 
     it('includes column references after keywords that can be followed by refs', () => {
-      const columnMetadata: ColumnMetadata[] = [
-        {
-          TABLE_SCHEMA: 'druid',
-          TABLE_NAME: 'wikipedia',
-          COLUMN_NAME: 'page',
-          DATA_TYPE: 'VARCHAR',
-        },
-        {
-          TABLE_SCHEMA: 'druid',
-          TABLE_NAME: 'wikipedia',
-          COLUMN_NAME: 'user',
-          DATA_TYPE: 'VARCHAR',
-        },
-      ];
-
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        allText: 'SELECT * FROM "wikipedia"',
-        lineBeforePrefix: 'WHERE',
-        columnMetadata,
-      });
+      const completions = completionsAt('SELECT * FROM "wikipedia" WHERE |', { columnMetadata });
 
       const columnCompletions = completions.filter(c => c.detail === 'column');
       expect(columnCompletions.length).toBeGreaterThan(0);
@@ -213,10 +160,7 @@ describe('sql-completions', () => {
     });
 
     it('includes context keys after SET keyword', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        lineBeforePrefix: 'SET',
-      });
+      const completions = completionsAt('SET |');
 
       const contextCompletions = completions.filter(c => c.detail === 'context');
       expect(contextCompletions.length).toBeGreaterThan(0);
@@ -225,16 +169,8 @@ describe('sql-completions', () => {
     it('handles column names correctly with quotes', () => {
       const columns = ['column name with spaces', 'normal_column'];
 
-      const completionsWithoutQuote = getSqlCompletions({
-        ...baseOptions,
-        columns,
-      });
-
-      const completionsWithQuote = getSqlCompletions({
-        ...baseOptions,
-        charBeforePrefix: '"',
-        columns,
-      });
+      const completionsWithoutQuote = completionsAt('SELECT |', { columns });
+      const completionsWithQuote = completionsAt('SELECT "|"', { columns });
 
       const columnWithoutQuote = completionsWithoutQuote.find(c =>
         c.label.includes('column name with spaces'),
@@ -246,7 +182,7 @@ describe('sql-completions', () => {
     });
 
     it('includes constants and data types in completions', () => {
-      const completions = getSqlCompletions(baseOptions);
+      const completions = completionsAt('|');
 
       const constantCompletions = completions.filter(c => c.detail === 'constant');
       expect(constantCompletions.map(c => c.label)).toContain('NULL');
@@ -258,10 +194,7 @@ describe('sql-completions', () => {
     });
 
     it('includes local references from the query text', () => {
-      const completions = getSqlCompletions({
-        ...baseOptions,
-        allText: 'SELECT my_column FROM my_table WHERE other_column = 1',
-      });
+      const completions = completionsAt('|SELECT my_column FROM my_table WHERE other_column = 1');
 
       const localCompletions = completions.filter(c => c.detail === 'local');
       const localValues = localCompletions.map(c => c.label);
@@ -272,23 +205,16 @@ describe('sql-completions', () => {
     });
 
     it('does not suggest the word that is being typed', () => {
-      const references = getSqlCompletions({
-        ...baseOptions,
-        allText: 'SELECT my_column, my FROM my_table',
-        prefix: 'my',
-      })
+      const references = completionsAt('SELECT my_column, my| FROM my_table')
         .filter(c => c.detail === 'local')
         .map(c => c.label);
 
       expect(references).toContain('my_column');
       expect(references).not.toContain('my');
 
-      const literals = getSqlCompletions({
-        ...baseOptions,
-        allText: "SELECT * FROM t WHERE country = 'France' OR country = 'Fr'",
-        charBeforePrefix: "'",
-        prefix: 'Fr',
-      }).map(c => c.label);
+      const literals = completionsAt(
+        "SELECT * FROM t WHERE country = 'France' OR country = 'Fr|'",
+      ).map(c => c.label);
 
       expect(literals).toEqual(['France']);
     });

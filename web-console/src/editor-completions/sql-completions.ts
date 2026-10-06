@@ -16,10 +16,13 @@
  * limitations under the License.
  */
 
+import type { CompletionContext } from '@codemirror/autocomplete';
 import { C, filterMap, N, T } from 'druid-query-toolkit';
 
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
+import type { CompletionWord } from '../components/code-editor/completion-source';
+import { tokenBefore } from '../components/code-editor/completion-source';
 import { DEFAULT_SERVER_QUERY_CONTEXT } from '../druid-models';
 import type { AvailableFunctions } from '../helpers';
 import type { ColumnMetadata } from '../utils';
@@ -164,42 +167,43 @@ const KNOWN_SQL_PARTS: Record<string, boolean> = {
   ...lookupBy(Array.from(SQL_FUNCTIONS.keys()), String, () => true),
 };
 
-export interface GetSqlCompletionsOptions {
-  allText: string;
-  lineBeforePrefix: string;
-  charBeforePrefix: string;
-  prefix: string;
+export interface SqlCompletionOptions {
   columnMetadata?: readonly ColumnMetadata[];
   columns?: readonly string[];
   availableSqlFunctions?: AvailableFunctions;
   skipAggregates?: boolean;
 }
 
-export function getSqlCompletions({
-  allText,
-  lineBeforePrefix,
-  charBeforePrefix,
-  prefix,
-  columnMetadata,
-  columns,
-  availableSqlFunctions,
-  skipAggregates,
-}: GetSqlCompletionsOptions): EditorCompletion[] {
-  // We are in a single line comment
-  if (lineBeforePrefix.startsWith('--') || lineBeforePrefix.includes(' --')) {
+/**
+ * The completions for the word being typed in DruidSQL. Needs the dsql language for the syntax tree.
+ */
+export function getSqlCompletions(
+  { state, pos }: CompletionContext,
+  { from, text: prefix }: CompletionWord,
+  { columnMetadata, columns, availableSqlFunctions, skipAggregates }: SqlCompletionOptions = {},
+): EditorCompletion[] {
+  const token = tokenBefore(state, pos);
+  const charBeforePrefix = state.sliceDoc(from - 1, from);
+
+  // We are in a comment
+  if (token.name === 'comment' || token.name === 'issue') {
     return [];
   }
 
   // If we are autocompleting inside a literal, then don't do any of the standard suggestions.
   // Only autocomplete other literals. The imagined use-case for this is if you have `country = 'France'` or `TIMESTAMP '2024-03-02 O1:00:00'` you might want to reuse the literals
-  if (charBeforePrefix === "'") {
-    return getSqlLiterals(allText, 100, prefix).map(label => ({
+  // A literal that is not closed yet is not a string token, so also count the word right after a quote
+  if ((token.name === 'string' && pos < token.to) || charBeforePrefix === "'") {
+    return getSqlLiterals(state.doc.toString(), 100, prefix).map(label => ({
       label,
       boost: 1,
       detail: 'local',
     }));
   }
 
+  // The last word on the line before the word being typed (and the character right before it)
+  const line = state.doc.lineAt(from);
+  const lineBeforePrefix = state.sliceDoc(line.from, Math.max(line.from, from - 1));
   const keywordBeforePrefix = (/(\w+)\s*$/.exec(lineBeforePrefix) || [])[1]?.toUpperCase();
 
   // Other than literals, do not autocomplete numbers
@@ -207,7 +211,7 @@ export function getSqlCompletions({
     return []; // Don't start completing if the user is typing a number
   }
 
-  const possibleReferences = getPossibleSqlReferences(allText, 100, prefix);
+  const possibleReferences = getPossibleSqlReferences(state.doc.toString(), 100, prefix);
 
   let completions: EditorCompletion[] = possibleReferences.map(label => ({
     label,

@@ -16,31 +16,31 @@
  * limitations under the License.
  */
 
+import type { CompletionContext } from '@codemirror/autocomplete';
+
+import type { CompletionWord } from '../components/code-editor/completion-source';
+import { tokenBefore } from '../components/code-editor/completion-source';
 import type { JsonCompletionItem, JsonCompletionRule } from '../utils';
 import { getCompletionsForPath, getHjsonContext } from '../utils';
 
 import type { EditorCompletion } from './editor-completion';
 
-export interface GetHjsonCompletionsOptions {
-  jsonCompletions: JsonCompletionRule[];
-  textBefore: string;
-  charBeforePrefix: string;
-  prefix: string;
-}
-
-export function getHjsonCompletions({
-  jsonCompletions,
-  textBefore,
-  charBeforePrefix,
-  prefix,
-}: GetHjsonCompletionsOptions): EditorCompletion[] {
-  // Get the context of where we are in the JSON structure
-  const hjsonContext = getHjsonContext(textBefore + charBeforePrefix + prefix);
-
+/**
+ * The completions for the word being typed in Hjson. Needs the hjson language for the syntax tree.
+ */
+export function getHjsonCompletions(
+  { state, pos }: CompletionContext,
+  { from }: CompletionWord,
+  jsonCompletions: JsonCompletionRule[],
+): EditorCompletion[] {
   // Don't provide completions if we're in a comment
-  if (hjsonContext.isEditingComment) {
+  if (tokenBefore(state, pos).name === 'comment') {
     return [];
   }
+
+  // Get the context of where we are in the JSON structure
+  const hjsonContext = getHjsonContext(state.sliceDoc(0, pos));
+  const quote = state.sliceDoc(from - 1, from) === '"';
 
   // Get completions based on the current path and object context
   let pathForCompletions = hjsonContext.path;
@@ -58,11 +58,7 @@ export function getHjsonCompletions({
   );
 
   // Filter completions based on whether we're editing a key or value
-  const filteredCompletions = filterCompletionsByContext(
-    completionItems,
-    hjsonContext,
-    charBeforePrefix,
-  );
+  const filteredCompletions = filterCompletionsByContext(completionItems, hjsonContext, quote);
 
   return filteredCompletions.map(item =>
     convertToEditorCompletion(item, hjsonContext.isEditingKey),
@@ -75,10 +71,8 @@ export function getHjsonCompletions({
 function filterCompletionsByContext(
   completions: JsonCompletionItem[],
   hjsonContext: { isEditingKey: boolean; currentKey?: string; currentObject: any },
-  charBeforePrefix: string,
+  quote: boolean,
 ): JsonCompletionItem[] {
-  const quote = charBeforePrefix === '"';
-
   if (hjsonContext.isEditingKey) {
     // We're editing a key - only show property completions
     // Filter out properties that already exist in the current object

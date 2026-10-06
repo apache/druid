@@ -33,7 +33,7 @@ Status: ✅ done, ⬜ to do.
 1. ✅ 1a + 1b: a CodeMirror-shaped completion type with a structured `doc` (and 1a+: no HTML in the SQL docs)
 2. ✅ 1e, 1h: small cleanups
 3. ✅ 2a + 2b + 1g: `LanguageSupport` factories that bring their own completion sources
-4. ⬜ 1c + 1d: completion sources that read the syntax tree
+4. ✅ 1c + 1d: completion sources that read the syntax tree
 5. ⬜ 4a + 4b: the partial query markers
 6. ⬜ 3a + 3b and 5: positions and prop renames (these touch the most callers)
 7. ⬜ 6: low priority leftovers
@@ -93,30 +93,47 @@ The SQL and Hjson builders and their specs were updated.
 console shows that kind as text on the right, which is what `detail` does, so `detail` was kept. With `icons: false`,
 `type` would only add a `cm-completionIcon-<type>` class.
 
-### ⬜ 1c. Replace `CompletionRequest` with CodeMirror's `CompletionContext`
+### ✅ 1c. Replace `CompletionRequest` with CodeMirror's `CompletionContext`
 
-`CompletionRequest` (`prefix`, `charBeforePrefix`, `lineBeforePrefix`, `textBeforePrefix`, `allText`) is how Ace split
-up the text around the cursor.
+**Was:** `CompletionRequest` (`prefix`, `charBeforePrefix`, `lineBeforePrefix`, `textBeforePrefix`, `allText`) was how
+Ace split up the text around the cursor. `getHjsonCompletions` glued the pieces back together
+(`textBefore + charBeforePrefix + prefix`), and `allText` called `doc.toString()` on every request, needed or not.
 
-- `getHjsonCompletions` glues the pieces back together (`textBefore + charBeforePrefix + prefix`).
-- Its option is called `textBefore` while the request calls it `textBeforePrefix`.
-- `allText` calls `doc.toString()` on every request.
+**Done:**
 
-**To do:** make the builders CodeMirror `CompletionSource`s that take a `CompletionContext` (`state`, `pos`,
-`matchBefore`, `explicit`) and return a `CompletionResult`. Best done together with 1d and after 1g.
+- The builders take CodeMirror's `CompletionContext` and a `CompletionWord` (`{ from, text }`, the word being
+  completed): `getSqlCompletions(context, word, options)` and `getHjsonCompletions(context, word, jsonCompletions)`.
+  They read the text they need from `context.state`. `CompletionRequest` is gone.
+- `makeCompletionSource(builder)` still owns the parts every source shares (finding the word, skipping read-only
+  editors, rendering the doc panel), so the builders stay `EditorCompletion` producers rather than full
+  `CompletionSource`s. That keeps the structured `doc` (1a) and keeps the specs readable.
+- The specs are written as text with a `|` for the cursor, using `completionContextAt` (`src/test-utils/`). Before,
+  they passed the pieces by hand, sometimes in combinations the editor can't produce (a `lineBeforePrefix` that does not
+  match `allText`).
 
-### ⬜ 1d. Detect the context with the syntax tree, not regexes
+**Kept on purpose:** the SQL builder still takes "the keyword before the word" from the line before the word,
+excluding the one character right before it, as Ace did. So `x AS "a` still sees `AS`, and `COUNT(a` sees `COUNT`.
+Looking past the punctuation another way would change which suggestions show up.
 
-`StreamLanguage` already builds a syntax tree whose nodes are named after the tokens (`comment`, `string`, `column`,
-…), but the builders look at the raw text instead:
+### ✅ 1d. Detect the context with the syntax tree, not regexes
 
-- `sql-completions.ts` treats `--` anywhere on the line as the start of a comment, even inside `'a -- b'`, and does not
-  know about `/* */` comments.
-- It only knows that it is inside a string literal when `'` is right before the prefix.
-- The Hjson builder finds out whether it is in a comment by parsing all of the text before the cursor again.
+**Was:** the builders looked at the raw text: `sql-completions.ts` treated `--` anywhere on the line as the start of a
+comment (even inside `'a -- b'`), did not know about `/* */` comments, and only knew it was inside a string literal
+when `'` was right before the word. The Hjson builder found comments by parsing all of the text before the cursor.
 
-**To do:** use `syntaxTree(state).resolveInner(pos, -1)` for these checks. `getHjsonContext` is still needed to work
-out the JSON path.
+**Done:** `tokenBefore(state, pos)` (`completion-source.ts`) reads the token at the cursor from the syntax tree
+(`syntaxTree(state).resolveInner(pos, -1)`).
+
+- SQL: no completions in `comment` and `issue` tokens; only literals inside a `string` token.
+- Hjson: no completions in `comment` tokens. `getHjsonContext` is still used for the JSON path.
+
+**Behavior changes (fixes):**
+
+- SQL completes after `--` inside a literal (`'a -- b' FR`), and not inside `/* */` comments.
+- SQL suggests literals anywhere inside a closed literal (`'not Fra|'`), not only right after the quote.
+- Still the same: a literal that is not closed yet is not a string token (it is not highlighted as one either), so the
+  word right after a `'` keeps counting as inside a literal. With bracket closing on, typing `'` closes the literal
+  anyway.
 
 ### ✅ 1e. Move the "typed word" filter out of `CodeEditor`
 
@@ -134,7 +151,7 @@ whenever the list had more than that one item.
 
 ### ⬜ 1f. Word characters per language
 
-`PREFIX_REGEXP` in `code-editor.tsx` is Ace's identifier regex (`$`, `-` and Unicode ranges), the same for every
+`PREFIX_REGEXP` in `completion-source.ts` is Ace's identifier regex (`$`, `-` and Unicode ranges), the same for every
 language. In CodeMirror, word characters are language data (`wordChars`) or the source's own `matchBefore`.
 
 **Decide first:** this changes which part of the text is completed (for example `foo-ba`), so it is a behavior change.
@@ -150,7 +167,7 @@ and again to pick the completer, and `JsonInput` and `SqlInput` each wrapped the
 - `dsql({ columnMetadata, columns, availableSqlFunctions, skipAggregates })` and `hjson({ jsonCompletions })` attach
   a completion source with `language.data.of({ autocomplete })`. Switching the language switches the completions.
 - `makeCompletionSource` (`completion-source.ts`) holds what used to be `CodeEditor`'s `handleCompletions`: it works
-  out the prefix, builds the `CompletionRequest` (until 1c) and turns `EditorCompletion`s into `Completion`s.
+  out the word being completed, calls the builder and turns `EditorCompletion`s into `Completion`s.
 - `CodeEditor` has no `getCompletions` prop and no `override`, and knows nothing about SQL or Hjson.
 - `FlexibleQueryInput` checks `startsWith('{')` once.
 

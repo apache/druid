@@ -30,7 +30,7 @@ import { dedupe } from 'druid-query-toolkit';
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
 import { makeCompletionSource } from '../components/code-editor/completion-source';
-import type { GetSqlCompletionsOptions } from '../editor-completions/sql-completions';
+import type { SqlCompletionOptions } from '../editor-completions/sql-completions';
 import { getSqlCompletions } from '../editor-completions/sql-completions';
 import type { AvailableFunctions } from '../helpers';
 
@@ -113,10 +113,7 @@ export function getDsqlLanguage(availableSqlFunctions?: AvailableFunctions): Lan
   return language;
 }
 
-export type DsqlOptions = Pick<
-  GetSqlCompletionsOptions,
-  'columnMetadata' | 'columns' | 'availableSqlFunctions' | 'skipAggregates'
->;
+export type DsqlOptions = SqlCompletionOptions;
 
 /**
  * DruidSQL support for a CodeEditor: highlighting, completions and bracket closing
@@ -125,9 +122,8 @@ export function dsql(options: DsqlOptions = {}): LanguageSupport {
   const language = getDsqlLanguage(options.availableSqlFunctions);
   return new LanguageSupport(language, [
     language.data.of({
-      autocomplete: makeCompletionSource(
-        ({ allText, prefix, charBeforePrefix, lineBeforePrefix }) =>
-          getSqlCompletions({ ...options, allText, prefix, charBeforePrefix, lineBeforePrefix }),
+      autocomplete: makeCompletionSource((context, word) =>
+        getSqlCompletions(context, word, options),
       ),
     }),
     closeBrackets(),

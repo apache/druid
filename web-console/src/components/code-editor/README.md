@@ -28,22 +28,22 @@ It is a controlled component that you give a string and an `onChange` callback. 
 
 ## Files
 
-| File                    | What it holds                                                                    |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| `code-editor.tsx`       | The component, its props, the CodeMirror setup and the `focusEditorAt` helper    |
-| `code-editor-theme.ts`  | The editor theme (layout, gutter, popups) and the syntax highlighting colors     |
-| `completion-source.ts`  | Turns a completion builder into a CodeMirror completion source                   |
-| `completion-doc.ts`     | Renders the documentation panel shown next to the completion list               |
-| `doc-markdown.ts`       | Renders "doc markdown" (the format of the SQL docs) as DOM elements             |
-| `code-editor.scss`      | The few styles for the wrapper element that can't live in the CodeMirror theme  |
+| File                   | What it holds                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `code-editor.tsx`      | The component, its props, the CodeMirror setup and the `focusEditorAt` helper  |
+| `code-editor-theme.ts` | The editor theme (layout, gutter, popups) and the syntax highlighting colors   |
+| `completion-source.ts` | Turns a completion builder into a CodeMirror completion source                 |
+| `completion-doc.ts`    | Renders the documentation panel shown next to the completion list              |
+| `doc-markdown.ts`      | Renders "doc markdown" (the format of the SQL docs) as DOM elements            |
+| `code-editor.scss`     | The few styles for the wrapper element that can't live in the CodeMirror theme |
 
 Related code lives elsewhere:
 
-| Location                               | What it holds                                                           |
-| -------------------------------------- | ----------------------------------------------------------------------- |
-| `src/editor-languages/`                | The `dsql()` and `hjson()` languages (highlighting and completions)     |
-| `src/editor-completions/`              | What to suggest when autocompleting SQL and Hjson                       |
-| `src/singletons/editor-state-cache.ts` | Keeps editor state (undo history, selection) between mounts             |
+| Location                               | What it holds                                                       |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| `src/editor-languages/`                | The `dsql()` and `hjson()` languages (highlighting and completions) |
+| `src/editor-completions/`              | What to suggest when autocompleting SQL and Hjson                   |
+| `src/singletons/editor-state-cache.ts` | Keeps editor state (undo history, selection) between mounts         |
 
 ## Basic usage
 
@@ -62,22 +62,22 @@ const sqlLanguage = useMemo(() => dsql({ availableSqlFunctions }), [availableSql
 
 ## Props
 
-| Prop                    | Type                         | Notes                                                                                                         |
-| ----------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `value`                 | `string`                     | Required. The text to show.                                                                                   |
-| `onChange`              | `(value: string) => void`    | Called when the **user** edits the text. **If omitted, the editor is read-only.**                             |
-| `onBlur`                | `() => void`                 |                                                                                                               |
-| `language`              | `LanguageSupport`            | `dsql(...)` or `hjson(...)`. Brings highlighting, completions, comment toggling and bracket closing. Plain text without one. |
-| `width` / `height`      | `string`                     | CSS sizes for the wrapper. With no `height`, the editor grows with its content.                               |
-| `className`             | `string`                     | Added to the wrapper `div` (which always has the `code-editor` class).                                        |
-| `showGutter`            | `boolean`                    | Shows line numbers.                                                                                           |
-| `padding`               | `number`                     | Pads the text on all sides (in px). By default there is only a little horizontal padding.                     |
-| `transparentBackground` | `boolean`                    | Drops the editor's own background.                                                                            |
-| `placeholder`           | `string`                     | Shown while the editor is empty.                                                                              |
-| `autoFocus`             | `boolean`                    | Focuses the editor when it mounts.                                                                            |
-| `stateCacheId`          | `string`                     | Remembers the undo history and selection under this id, so they survive the editor being unmounted.           |
-| `extensions`            | `Extension`                  | Extra CodeMirror extensions. **Only read when the editor is created.**                                        |
-| `ref`                   | `Ref<EditorView>`            | Gives you the underlying CodeMirror `EditorView`.                                                             |
+| Prop                    | Type                      | Notes                                                                                                                        |
+| ----------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `value`                 | `string`                  | Required. The text to show.                                                                                                  |
+| `onChange`              | `(value: string) => void` | Called when the **user** edits the text. **If omitted, the editor is read-only.**                                            |
+| `onBlur`                | `() => void`              |                                                                                                                              |
+| `language`              | `LanguageSupport`         | `dsql(...)` or `hjson(...)`. Brings highlighting, completions, comment toggling and bracket closing. Plain text without one. |
+| `width` / `height`      | `string`                  | CSS sizes for the wrapper. With no `height`, the editor grows with its content.                                              |
+| `className`             | `string`                  | Added to the wrapper `div` (which always has the `code-editor` class).                                                       |
+| `showGutter`            | `boolean`                 | Shows line numbers.                                                                                                          |
+| `padding`               | `number`                  | Pads the text on all sides (in px). By default there is only a little horizontal padding.                                    |
+| `transparentBackground` | `boolean`                 | Drops the editor's own background.                                                                                           |
+| `placeholder`           | `string`                  | Shown while the editor is empty.                                                                                             |
+| `autoFocus`             | `boolean`                 | Focuses the editor when it mounts.                                                                                           |
+| `stateCacheId`          | `string`                  | Remembers the undo history and selection under this id, so they survive the editor being unmounted.                          |
+| `extensions`            | `Extension`               | Extra CodeMirror extensions. **Only read when the editor is created.**                                                       |
+| `ref`                   | `Ref<EditorView>`         | Gives you the underlying CodeMirror `EditorView`.                                                                            |
 
 ## How it works
 
@@ -119,21 +119,24 @@ given rules. Each attaches a CodeMirror completion source as language data (`lan
 switching the language switches the completions. Suggestions appear as the user types a word, and Ctrl-Space opens the
 list on demand. Enter or Tab accepts the selected one. Read-only editors don't complete.
 
-The completion builders in `src/editor-completions/` (`getSqlCompletions`, `getHjsonCompletions`) are plain functions.
-`makeCompletionSource` (`completion-source.ts`) turns one into a completion source. It works out the word being
-completed and hands the builder a `CompletionRequest` describing where the cursor is:
+The completion builders in `src/editor-completions/` (`getSqlCompletions`, `getHjsonCompletions`) are
+`EditorCompletionBuilder`s. `makeCompletionSource` (`completion-source.ts`) turns one into a completion source: it
+works out the word being completed, skips read-only editors, and calls the builder with CodeMirror's
+`CompletionContext` and the word:
 
 ```ts
-interface CompletionRequest {
-  allText: string; // The whole text
-  prefix: string; // The (partial) word being completed
-  charBeforePrefix: string; // The character before it: '\n' at the start of a line, '' at the start of the text
-  textBeforePrefix: string; // Everything before charBeforePrefix
-  lineBeforePrefix: string; // The part of the current line before charBeforePrefix
-}
+type EditorCompletionBuilder = (
+  context: CompletionContext, // CodeMirror's: state, pos, explicit, matchBefore(...)
+  word: CompletionWord, // { from, text }: the (partial) word being completed, it ends at pos
+) => readonly EditorCompletion[];
 ```
 
-It returns `EditorCompletion`s (from `src/editor-completions/editor-completion.ts`):
+Builders read whatever text they need from `context.state`. To find out what the cursor is in, they look at the syntax
+tree that the language builds (`tokenBefore(state, pos)` in `completion-source.ts` gives the token name, like
+`comment` or `string`) instead of looking for `--` or quotes in the text. In specs, `completionContextAt(dsql(),
+'SELECT * FROM t WHERE |')` (`src/test-utils/completion-context.ts`) makes the context for the cursor at the `|`.
+
+A builder returns `EditorCompletion`s (from `src/editor-completions/editor-completion.ts`):
 
 ```ts
 interface EditorCompletion {

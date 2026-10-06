@@ -37,35 +37,35 @@ look as possible. For how to use the new component, see [README.md](./README.md)
 
 ## What moved where
 
-| Before (Ace)                                     | After (CodeMirror)                                                       |
-| ------------------------------------------------ | ------------------------------------------------------------------------ |
-| `react-ace`'s `<AceEditor>`                      | `src/components/code-editor/code-editor.tsx` (`CodeEditor`)              |
-| `src/bootstrap/ace.ts` (imports, theme, modes)   | Removed. Everything is imported where it is used                        |
-| `src/bootstrap/ace.scss` (theme overrides)       | `src/components/code-editor/code-editor-theme.ts` (+ `code-editor.scss`) |
-| `src/ace-modes/dsql.ts`, `hjson.ts`              | `src/editor-languages/dsql.ts`, `hjson.ts`                               |
-| `src/ace-modes/ace-mode-helpers.ts`              | `src/editor-languages/rule-parser.ts` (Ace-style rules → stream parser)  |
-| `src/ace-modes/ace-modes.spec.ts`                | `src/editor-languages/editor-languages.spec.ts`                          |
-| `initAceDsqlMode(functions)`                     | `dsql({ availableSqlFunctions })` (no global state)                      |
-| `mode="dsql"` / `mode="hjson"`                   | `language={dsql(...)}` / `language={hjson(...)}` (`LanguageSupport`s)    |
-| `setCompleters` / `getCompletions` prop          | The language's completion source (`language.data.of({ autocomplete })`) |
-| `src/ace-completions/*`                          | `src/editor-completions/*` (+ `editor-completion.ts` for the type)       |
-| `makeDocHtml` (HTML strings in `docHTML`)        | Structured `doc` rendered by `completion-doc.ts`                         |
-| `Ace.ValueCompletion`                            | `EditorCompletion` (`label`, `displayLabel`, `boost`, `detail`, `doc`) |
-| `src/singletons/ace-editor-state-cache.ts`       | `src/singletons/editor-state-cache.ts` (`EditorStateCache`)              |
-| `editor.getSelection().moveCursorTo(row, col)`   | `focusEditorAt(view, { row, column })`                                   |
+| Before (Ace)                                   | After (CodeMirror)                                                       |
+| ---------------------------------------------- | ------------------------------------------------------------------------ |
+| `react-ace`'s `<AceEditor>`                    | `src/components/code-editor/code-editor.tsx` (`CodeEditor`)              |
+| `src/bootstrap/ace.ts` (imports, theme, modes) | Removed. Everything is imported where it is used                         |
+| `src/bootstrap/ace.scss` (theme overrides)     | `src/components/code-editor/code-editor-theme.ts` (+ `code-editor.scss`) |
+| `src/ace-modes/dsql.ts`, `hjson.ts`            | `src/editor-languages/dsql.ts`, `hjson.ts`                               |
+| `src/ace-modes/ace-mode-helpers.ts`            | `src/editor-languages/rule-parser.ts` (Ace-style rules → stream parser)  |
+| `src/ace-modes/ace-modes.spec.ts`              | `src/editor-languages/editor-languages.spec.ts`                          |
+| `initAceDsqlMode(functions)`                   | `dsql({ availableSqlFunctions })` (no global state)                      |
+| `mode="dsql"` / `mode="hjson"`                 | `language={dsql(...)}` / `language={hjson(...)}` (`LanguageSupport`s)    |
+| `setCompleters` / `getCompletions` prop        | The language's completion source (`language.data.of({ autocomplete })`)  |
+| `src/ace-completions/*`                        | `src/editor-completions/*` (+ `editor-completion.ts` for the type)       |
+| `makeDocHtml` (HTML strings in `docHTML`)      | Structured `doc` rendered by `completion-doc.ts`                         |
+| `Ace.ValueCompletion`                          | `EditorCompletion` (`label`, `displayLabel`, `boost`, `detail`, `doc`)   |
+| `src/singletons/ace-editor-state-cache.ts`     | `src/singletons/editor-state-cache.ts` (`EditorStateCache`)              |
+| `editor.getSelection().moveCursorTo(row, col)` | `focusEditorAt(view, { row, column })`                                   |
 
 ### Call sites
 
-| Component                       | Notes                                                                                     |
-| ------------------------------- | ----------------------------------------------------------------------------------------- |
-| `FlexibleQueryInput` (workbench) | Rewritten. See [Partial query markers](#partial-query-markers)                          |
-| `SqlInput` (explore view)       | Same props and behavior                                                                   |
-| `JsonInput`                     | Same props. The change handler is only passed when `onChange` is given (that makes it read-only) |
-| `ShowJson`, `ShowJsonOrStages`  | Read-only Hjson                                                                           |
-| `SpecDialog`                    | `height="500px"` is now explicit (it used to come from react-ace's default)               |
-| `ShowValueDialog`               | Its SCSS targeted `.ace-editor`, a class Ace never set. It now targets `.code-editor` |
-| `WorkbenchHistoryDialog`        | Read-only, `dsql` or `hjson`                                                              |
-| `ExplainDialog`                 | Read-only Hjson                                                                           |
+| Component                        | Notes                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `FlexibleQueryInput` (workbench) | Rewritten. See [Partial query markers](#partial-query-markers)                                   |
+| `SqlInput` (explore view)        | Same props and behavior                                                                          |
+| `JsonInput`                      | Same props. The change handler is only passed when `onChange` is given (that makes it read-only) |
+| `ShowJson`, `ShowJsonOrStages`   | Read-only Hjson                                                                                  |
+| `SpecDialog`                     | `height="500px"` is now explicit (it used to come from react-ace's default)                      |
+| `ShowValueDialog`                | Its SCSS targeted `.ace-editor`, a class Ace never set. It now targets `.code-editor`            |
+| `WorkbenchHistoryDialog`         | Read-only, `dsql` or `hjson`                                                                     |
+| `ExplainDialog`                  | Read-only Hjson                                                                                  |
 
 ## Behavior parity
 
@@ -78,8 +78,9 @@ These Ace behaviors were deliberately preserved:
 - **Autocomplete triggering:** like Ace's live autocompletion, the list opens while typing a word (Ace's identifier
   characters, including `$` and `-`) and on Ctrl-Space. Tab accepts a suggestion as well as Enter.
 - **Autocomplete inputs:** the old completers worked out `charBeforePrefix`, `lineBeforePrefix` and `textBefore`
-  from the Ace session. `makeCompletionSource` (`completion-source.ts`) now computes these once and passes them in a
-  `CompletionRequest`. The callers no longer pick the completer: `dsql(...)` and `hjson(...)` bring theirs.
+  from the Ace session. The builders now get CodeMirror's `CompletionContext` and the word being completed, and read
+  the syntax tree to tell comments and strings apart. The callers no longer pick the completer: `dsql(...)` and
+  `hjson(...)` bring theirs.
 - **Ranking:** Ace's `score` became CodeMirror's `boost` (the scores were already within its ±99 range). CodeMirror ranks by
   match quality first and boost second, which gave the same ordering in practice.
 - **Doc tooltip:** the `doc` is shown in a 500px panel next to the list, styled like the old `.ace_tooltip`
@@ -136,18 +137,18 @@ Playwright at 2× scale.
   active-line and highlight backgrounds live inside the content element, so the same filter would brighten them too.
   The filter was applied to each solarized color ahead of time instead:
 
-  | Token             | Ace class                | Solarized | Rendered (used now) |
-  | ----------------- | ------------------------ | --------- | ------------------- |
-  | Default text      |                          | `#839496` | `#c7dde0`           |
-  | Keyword           | `keyword`                | `#859900` | `#c8e315`           |
-  | Function          | `support.function`       | `#268bd2` | `#45cef7`           |
-  | Constant / escape | `constant.language`      | `#b58900` | `#facd14`           |
-  | Data type         | `storage.type` (custom)  | `#27c923` | `#49f943`           |
-  | Number            | `constant.numeric`       | `#d33682` | `#f256bc`           |
-  | String            | `string`                 | `#2aa198` | `#4deee1`           |
-  | Comment (italic)  | `comment`                | `#657b83` | `#9ab8c3`           |
-  | `--:ISSUE:` (wavy underline) | `comment.issue` (custom) | `#cb3116` | `#f04d29`   |
-  | Column reference  | `variable.column` (custom) | `#2ceefb` | `#51fbfb`         |
+  | Token                        | Ace class                  | Solarized | Rendered (used now) |
+  | ---------------------------- | -------------------------- | --------- | ------------------- |
+  | Default text                 |                            | `#839496` | `#c7dde0`           |
+  | Keyword                      | `keyword`                  | `#859900` | `#c8e315`           |
+  | Function                     | `support.function`         | `#268bd2` | `#45cef7`           |
+  | Constant / escape            | `constant.language`        | `#b58900` | `#facd14`           |
+  | Data type                    | `storage.type` (custom)    | `#27c923` | `#49f943`           |
+  | Number                       | `constant.numeric`         | `#d33682` | `#f256bc`           |
+  | String                       | `string`                   | `#2aa198` | `#4deee1`           |
+  | Comment (italic)             | `comment`                  | `#657b83` | `#9ab8c3`           |
+  | `--:ISSUE:` (wavy underline) | `comment.issue` (custom)   | `#cb3116` | `#f04d29`           |
+  | Column reference             | `variable.column` (custom) | `#2ceefb` | `#51fbfb`           |
 
 - **Metrics:** 12px Monaco/Menlo stack with `line-height: normal` (≈16px lines, like Ace). The gutter cells are padded
   `0 13px 0 21px` to match Ace's gutter width. `padding={10}` reproduces `renderer.setPadding(10)` plus
@@ -174,7 +175,7 @@ Playwright at 2× scale.
   SQL docs: a single `<br>` in the docs is now a line break (snarkdown turned it into a space or dropped it), and a
   literal `*` in the ATAN2 doc no longer starts italics.
 - **Undo granularity:** CodeMirror groups typing into undo steps differently from Ace.
-- **Tooltips:** all editors share one tooltip container that is *prepended* to `<body>`. Like Ace's popup, it can't be
+- **Tooltips:** all editors share one tooltip container that is _prepended_ to `<body>`. Like Ace's popup, it can't be
   clipped by the editor's containers. Prepending also keeps `document.body.lastChild` pointing at Blueprint portals,
   which about 25 dialog specs snapshot.
 
