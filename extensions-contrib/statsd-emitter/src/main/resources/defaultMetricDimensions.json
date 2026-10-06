@@ -43,6 +43,7 @@
   "ingest/events/unparseable" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/duplicate" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/processed" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/events/filtered" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/events/messageGap" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "ingest/rows/output" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/persists/count" : { "dimensions" : ["dataSource"], "type" : "count" },

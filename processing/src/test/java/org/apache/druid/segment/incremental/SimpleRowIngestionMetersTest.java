@@ -35,15 +35,16 @@ public class SimpleRowIngestionMetersTest
     rowIngestionMeters.incrementProcessedWithError();
     rowIngestionMeters.incrementUnparseable();
     rowIngestionMeters.incrementThrownAway(InputRowFilterResult.NULL_OR_EMPTY_RECORD);
+    rowIngestionMeters.incrementFiltered();
     final Map<String, Long> expected = Map.of(InputRowFilterResult.NULL_OR_EMPTY_RECORD.getReason(), 1L);
-    Assertions.assertEquals(new RowIngestionMetersTotals(1, 5, 1, expected, 1), rowIngestionMeters.getTotals());
+    Assertions.assertEquals(new RowIngestionMetersTotals(1, 5, 1, expected, 1, 1), rowIngestionMeters.getTotals());
   }
 
   @Test
   public void testAddRowIngestionMetersTotals()
   {
     SimpleRowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
-    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 1, 1);
+    RowIngestionMetersTotals rowIngestionMetersTotals = new RowIngestionMetersTotals(10, 0, 1, 1, 1, 2);
     rowIngestionMeters.addRowIngestionMetersTotals(rowIngestionMetersTotals);
     Assertions.assertEquals(rowIngestionMetersTotals, rowIngestionMeters.getTotals());
   }
