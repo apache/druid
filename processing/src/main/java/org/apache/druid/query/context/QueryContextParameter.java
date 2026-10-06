@@ -21,19 +21,28 @@ package org.apache.druid.query.context;
 
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.context.constraint.ParameterConstraint;
+import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation;
 
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * Describes a query context parameter without changing how existing query code reads the context. Instances are
  * immutable and thread-safe when their parser and constraint implementations are thread-safe.
+ *
+ * <p>A {@code null} value means "unset": readers treat an explicit {@code null} the same as an absent key, and writers
+ * remove the key (or store {@code null} where removal is not possible). {@link #isNullable()} controls whether a
+ * {@code null} may be supplied at all. Invalid values are reported with {@link BadQueryContextException}.</p>
  *
  * @param <T> parsed value type
  */
@@ -42,9 +51,33 @@ public final class QueryContextParameter<T>
   @FunctionalInterface
   public interface ValueParser<T>
   {
-    /** Implementations must be thread-safe. */
+    /**
+     * Converts a raw context value into the parameter type. Values that are already instances of the parameter's value
+     * type bypass the parser, so implementations only need to handle values that require coercion, such as strings.
+     * {@code null} values are handled before the parser is invoked. Implementations must be thread-safe and must throw
+     * {@link BadQueryContextException} for values that cannot be converted.
+     */
     @Nullable
-    T parse(@Nullable Object value);
+    T parse(Object value);
+  }
+
+  /**
+   * Thrown by {@link #exactNumber} for a whole number that does not fit the value type. {@link #parse(Object)}
+   * converts it to a {@link BadQueryContextException} that quotes the parameter's {@link Range} bounds when declared.
+   */
+  private static final class OutOfTypeRangeException extends RuntimeException
+  {
+    private final Object value;
+    private final long min;
+    private final long max;
+
+    OutOfTypeRangeException(final Object value, final long min, final long max)
+    {
+      super(null, null, false, false);
+      this.value = value;
+      this.min = min;
+      this.max = max;
+    }
   }
 
   private final String name;
@@ -69,7 +102,15 @@ public final class QueryContextParameter<T>
                          ? Optional.empty()
                          : Optional.of(builder.documentationBuilder.build());
 
-    defaultValue.ifPresent(this::validate);
+    if (defaultValue.isPresent()) {
+      try {
+        validate(defaultValue.get());
+      }
+      catch (BadQueryContextException e) {
+        // An invalid declared default is a programming error, not a bad user-supplied value.
+        throw new IAE(e, "Invalid default value for query context parameter [%s]: %s", name, e.getMessage());
+      }
+    }
   }
 
   public static <T> Builder<T> builder(
@@ -92,26 +133,57 @@ public final class QueryContextParameter<T>
   }
 
   /**
-   * Sets this parameter in a mutable query context map.
+   * Sets this parameter in a mutable query context map. A {@code null} value removes the key.
+   *
+   * @throws BadQueryContextException if the value is invalid
    */
   public void set(final Map<String, Object> context, @Nullable final T value)
   {
-    context.put(name, validate(value));
+    if (validate(value) == null) {
+      context.remove(name);
+    } else {
+      context.put(name, value);
+    }
   }
 
   /**
-   * Parses and validates a non-default value supplied for this parameter.
+   * Converts a raw context value, such as one supplied in a JSON request or a SQL {@code SET} statement, into the
+   * parameter type and validates it. The declared default is not applied.
+   *
+   * @return the parsed value, or {@code null} if the raw value is {@code null}
+   * @throws BadQueryContextException if the value cannot be converted or violates a constraint
    */
   @Nullable
   public T parse(@Nullable final Object value)
   {
-    if (value == null && !nullable) {
-      throw new IAE("Query context parameter [%s] must not be null", name);
+    if (value == null) {
+      return validate(null);
     }
     if (valueType.isInstance(value)) {
       return validate(valueType.cast(value));
     }
-    return validate(valueType.cast(parser.parse(value)));
+    final T parsed;
+    try {
+      parsed = parser.parse(value);
+    }
+    catch (OutOfTypeRangeException e) {
+      throw outOfRangeException(e);
+    }
+    return validate(parsed);
+  }
+
+  /**
+   * Reports a value that does not fit the value type using the parameter's own {@link Range} bounds when declared, so
+   * users see the same bounds regardless of whether the value overflowed the type or only violated the constraint.
+   */
+  private BadQueryContextException outOfRangeException(final OutOfTypeRangeException e)
+  {
+    for (final ParameterConstraint<T> constraint : constraints) {
+      if (constraint instanceof Range.Constraint<T> range) {
+        return Range.outOfRangeException(name, range.getLowerBound(), range.getUpperBound(), e.value);
+      }
+    }
+    return Range.outOfRangeException(name, e.min, e.max, e.value);
   }
 
   /**
@@ -132,13 +204,17 @@ public final class QueryContextParameter<T>
 
   /**
    * Validates and returns an already-typed value without invoking the parser.
+   *
+   * @throws BadQueryContextException if the value is {@code null} for a non-nullable parameter or violates a constraint
    */
   @Nullable
   public T validate(@Nullable final T value)
   {
     if (value == null) {
       if (!nullable) {
-        throw new IAE("Query context parameter [%s] must not be null", name);
+        throw new BadQueryContextException(
+            StringUtils.format("Query context parameter [%s] must not be null", name)
+        );
       }
       return null;
     }
@@ -184,6 +260,45 @@ public final class QueryContextParameter<T>
   public String toString()
   {
     return name;
+  }
+
+  /**
+   * Converts a number or numeric string without silent truncation or overflow, unlike {@link Number#intValue()} and
+   * {@link Number#longValue()}. Integral values with a zero fractional part, such as {@code 12.0} or {@code "12.00"},
+   * are accepted. Whole numbers outside {@code [min, max]} are reported through
+   * {@link OutOfTypeRangeException} so the parameter can quote its own range constraint.
+   */
+  static <T> T exactNumber(
+      final String name,
+      final Object value,
+      final String typeName,
+      final long min,
+      final long max,
+      final Function<BigDecimal, T> converter
+  )
+  {
+    final String expectedFormat = "in " + typeName + " format";
+    final BigDecimal decimal;
+    try {
+      if (value instanceof BigDecimal) {
+        decimal = (BigDecimal) value;
+      } else if (value instanceof Number || value instanceof String) {
+        decimal = new BigDecimal(value.toString());
+      } else {
+        throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
+      }
+    }
+    catch (NumberFormatException e) {
+      throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
+    }
+
+    if (decimal.signum() != 0 && decimal.stripTrailingZeros().scale() > 0) {
+      throw QueryContextParameters.invalidValueException(name, expectedFormat, value);
+    }
+    if (decimal.compareTo(BigDecimal.valueOf(min)) < 0 || decimal.compareTo(BigDecimal.valueOf(max)) > 0) {
+      throw new OutOfTypeRangeException(value, min, max);
+    }
+    return converter.apply(decimal);
   }
 
   /** Not thread-safe. */

@@ -20,25 +20,23 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class QueryContextBuilderTest
 {
   @Test
-  void testPutRawAndTypedParameters()
+  void testPutAllAndTypedParameters()
   {
     final Map<String, Object> context = QueryContext.builder()
-        .putRaw("legacy", 1)
+        .putAll(ImmutableMap.of("legacy", 1))
         .put(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 10)
         .put(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
         .toMap();
@@ -58,7 +56,7 @@ class QueryContextBuilderTest
   {
     final Map<String, Object> context = QueryContext.builder()
         .put(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 10)
-        .putRaw("maxRowsQueuedForOrdering", 20)
+        .putAll(ImmutableMap.of("maxRowsQueuedForOrdering", 20))
         .toMap();
 
     assertEquals(20, context.get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName()));
@@ -81,20 +79,29 @@ class QueryContextBuilderTest
   void testTypedPutValidatesParameter()
   {
     assertThrows(
-        IAE.class,
+        BadQueryContextException.class,
         () -> QueryContext.builder().put(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
     );
   }
 
   @Test
-  void testTypedPutAcceptsNullableParameter()
+  void testTypedPutNullRemovesParameter()
   {
     final Map<String, Object> context = QueryContext.builder()
+        .put(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
         .put(QueryContextParameters.USE_RESULT_LEVEL_CACHE, null)
         .toMap();
 
-    assertTrue(context.containsKey(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
-    assertNull(context.get(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
+    assertFalse(context.containsKey(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
+  }
+
+  @Test
+  void testPutAllRejectsNull()
+  {
+    final Map<String, Object> withNullValue = new HashMap<>();
+    withNullValue.put("legacy", null);
+
+    assertThrows(NullPointerException.class, () -> QueryContext.builder().putAll(withNullValue));
   }
 
   @Test

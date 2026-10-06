@@ -189,11 +189,15 @@ public interface Query<T>
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
   /**
-   * Returns a new query with the given typed context parameter overridden.
+   * Returns a new query with the given typed context parameter overridden. Because {@link #withOverriddenContext(Map)}
+   * can only add or replace keys, a {@code null} value is stored as an explicit {@code null}, which
+   * {@link QueryContext} treats the same as an unset parameter.
+   *
+   * @throws BadQueryContextException if the value is invalid
    */
   default <V> Query<T> withOverriddenContext(
       final QueryContextParameter<V> parameter,
-      final V value
+      @Nullable final V value
   )
   {
     return withOverriddenContext(

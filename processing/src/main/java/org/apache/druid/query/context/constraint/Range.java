@@ -20,6 +20,8 @@
 package org.apache.druid.query.context.constraint;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.BadQueryContextException;
 
 import java.util.Objects;
 
@@ -74,15 +76,31 @@ public final class Range
       public void validate(final String parameterName, final T value)
       {
         if (value.compareTo(lowerBound) < 0 || value.compareTo(upperBound) > 0) {
-          throw new IAE(
-              "Query context parameter [%s] must be within the range [%s, %s], but was [%s]",
-              parameterName,
-              lowerBound,
-              upperBound,
-              value
-          );
+          throw outOfRangeException(parameterName, lowerBound, upperBound, value);
         }
       }
     };
+  }
+
+  /**
+   * Creates the exception reported when a value falls outside an inclusive range. The value may be of a wider type
+   * than the bounds, for example a number that does not fit the parameter's value type.
+   */
+  public static BadQueryContextException outOfRangeException(
+      final String parameterName,
+      final Object lowerBound,
+      final Object upperBound,
+      final Object value
+  )
+  {
+    return new BadQueryContextException(
+        StringUtils.format(
+            "Query context parameter [%s] must be within the range [%s, %s], but was [%s]",
+            parameterName,
+            lowerBound,
+            upperBound,
+            value
+        )
+    );
   }
 }

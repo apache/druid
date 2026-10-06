@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.context;
 
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BadQueryContextException;
 
 import javax.annotation.Nullable;
@@ -34,23 +33,22 @@ public final class QueryContextParameterValidator
 
   /**
    * Validates a value assigned by a SQL {@code SET} statement.
+   *
+   * @throws BadQueryContextException if the parameter is recognized and the value is invalid
    */
   public static void validate(final String name, @Nullable final Object value)
   {
-    final QueryContextParameter<?> parameter = QueryContextParameters.BY_NAME.get(name);
+    final QueryContextParameter<?> parameter = QueryContextParameters.ALL.get().get(name);
     // Unmigrated parameters are intentionally accepted until the catalog contains every supported context parameter.
     if (parameter != null) {
-      try {
-        parameter.parse(value);
-      }
-      catch (BadQueryContextException e) {
-        throw new IAE(e, "Invalid query context parameter [%s]: %s", name, e.getMessage());
-      }
+      parameter.parse(value);
     }
   }
 
   /**
    * Validates every recognized query context parameter in the supplied map.
+   *
+   * @throws BadQueryContextException if a recognized parameter has an invalid value
    */
   public static void validate(final Map<String, Object> parameters)
   {

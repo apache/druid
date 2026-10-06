@@ -26,11 +26,11 @@ import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
@@ -268,7 +268,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
                                   .build();
 
     Assertions.assertThrows(
-        IAE.class,
+        BadQueryContextException.class,
         () -> query.withOverriddenContext(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
     );
     Assertions.assertEquals(

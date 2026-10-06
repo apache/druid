@@ -30,38 +30,41 @@ import java.util.Objects;
 /**
  * Builds an immutable query context map using typed parameter descriptors.
  * Existing string-keyed maps can be copied with {@link #putAll(Map)} for backward compatibility.
+ *
+ * <p>Like {@link com.google.common.collect.ImmutableMap.Builder}, {@link #putAll(Map)} rejects {@code null} keys and
+ * values.
+ * Typed entries follow the {@link QueryContextParameter} convention that {@code null} means "unset", so
+ * {@link #put(QueryContextParameter, Object)} with a {@code null} value removes the parameter.
+ * Unlike {@code ImmutableMap.Builder}, a later value for the same key replaces the earlier one.</p>
  */
 public final class QueryContextBuilder
 {
   private final Map<String, Object> values = new LinkedHashMap<>();
 
   /**
-   * Adds a context value using a raw string key.
-   *
-   * <p>This is an explicit escape hatch for keys that do not yet have a declared
-   * {@link QueryContextParameter} descriptor.</p>
-   */
-  public QueryContextBuilder putRaw(final String name, @Nullable final Object value)
-  {
-    values.put(Objects.requireNonNull(name, "name"), value);
-    return this;
-  }
-
-  /**
    * Adds all values from an existing query context map.
+   *
+   * @throws NullPointerException if any key or value is {@code null}
    */
   public QueryContextBuilder putAll(final Map<? extends String, ?> values)
   {
-    values.forEach((name, value) -> this.values.put(Objects.requireNonNull(name, "name"), value));
+    values.forEach(
+        (name, value) -> this.values.put(
+            Objects.requireNonNull(name, "name"),
+            Objects.requireNonNull(value, () -> "value for query context key [" + name + "]")
+        )
+    );
     return this;
   }
 
   /**
-   * Adds a context value using a typed parameter descriptor.
+   * Adds a context value using a typed parameter descriptor. A {@code null} value removes the parameter.
+   *
+   * @throws BadQueryContextException if the value is invalid
    */
   public <V> QueryContextBuilder put(final QueryContextParameter<V> parameter, @Nullable final V value)
   {
-    values.put(parameter.getName(), parameter.validate(value));
+    parameter.set(values, value);
     return this;
   }
 

@@ -93,7 +93,7 @@ public final class ParameterDocumentationGenerator
   private static Map<String, Map<String, String>> renderRows()
   {
     final Map<String, Map<String, String>> rowsByDocument = new LinkedHashMap<>();
-    for (final QueryContextParameter<?> parameter : QueryContextParameters.BY_NAME.values()) {
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
       final ParameterDocumentation docs = parameter.getDocumentation().orElse(null);
       if (docs == null) {
         continue;

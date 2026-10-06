@@ -19,18 +19,22 @@
 
 package org.apache.druid.query.context;
 
+import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
 import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.function.Supplier;
 
 /// Central catalog of query context parameter descriptors.
 ///
@@ -79,40 +83,115 @@ public final class QueryContextParameters
           .queryType(QueryType.SCAN)
           .build();
 
-  /** Immutable query context parameter descriptors indexed by parameter name. */
-  public static final Map<String, QueryContextParameter<?>> BY_NAME =
-      Arrays.stream(QueryContextParameters.class.getDeclaredFields())
-            .filter(field -> Modifier.isPublic(field.getModifiers()) && Modifier.isStatic(field.getModifiers()) && QueryContextParameter.class.equals(field.getType()))
-            .map((field) -> {
-              try {
-                return (QueryContextParameter<?>) field.get(null);
-              }
-              catch (final IllegalAccessException e) {
-                throw new ISE(e, "Unable to read query context parameter field [%s]", field.getName());
-              }
-            })
-            .collect(Collectors.toUnmodifiableMap(QueryContextParameter::getName, Function.identity()));
+  private QueryContextParameters()
+  {
+  }
 
-  // These builders temporarily delegate to QueryContexts for its established coercion behavior. The coercion logic
-  // can move into this class after all query context parameters and their callers have migrated to descriptors.
+  /**
+   * Immutable query context parameter descriptors indexed by parameter name. Built lazily on first access so that
+   * every parameter field is initialized regardless of where it is declared in this class.
+   */
+  public static final Supplier<Map<String, QueryContextParameter<?>>> ALL =
+      Suppliers.memoize(() -> {
+        final Map<String, QueryContextParameter<?>> byName = new LinkedHashMap<>();
+        for (final Field field : QueryContextParameters.class.getDeclaredFields()) {
+          if (!Modifier.isPublic(field.getModifiers())
+              || !Modifier.isStatic(field.getModifiers())
+              || !QueryContextParameter.class.equals(field.getType())) {
+            continue;
+          }
+
+          final QueryContextParameter<?> parameter;
+          try {
+            parameter = (QueryContextParameter<?>) field.get(null);
+          }
+          catch (final IllegalAccessException e) {
+            throw new ISE(e, "Unable to read query context parameter field [%s]", field.getName());
+          }
+
+          final QueryContextParameter<?> existing = byName.putIfAbsent(parameter.getName(), parameter);
+          if (existing != null) {
+            throw new ISE(
+                "Duplicate query context parameter [%s] declared by field [%s]",
+                parameter.getName(),
+                field.getName()
+            );
+          }
+        }
+        return Collections.unmodifiableMap(byName);
+      });
+
   static QueryContextParameter.Builder<Boolean> booleanParameter(final String name)
   {
-    return QueryContextParameter.builder(name, Boolean.class, value -> QueryContexts.getAsBoolean(name, value));
+    return QueryContextParameter.builder(
+        name,
+        Boolean.class,
+        value -> {
+          if (value instanceof String) {
+            // Matches the established QueryContexts coercion: any string other than "true" (ignoring case) is false.
+            return Boolean.parseBoolean((String) value);
+          }
+          throw invalidValueException(name, "a boolean", value);
+        }
+    );
   }
 
   static QueryContextParameter.Builder<Integer> integerParameter(final String name)
   {
-    return QueryContextParameter.builder(name, Integer.class, value -> QueryContexts.getAsInt(name, value));
+    return QueryContextParameter.builder(
+        name,
+        Integer.class,
+        value -> QueryContextParameter.exactNumber(
+            name,
+            value,
+            "integer",
+            Integer.MIN_VALUE,
+            Integer.MAX_VALUE,
+            BigDecimal::intValueExact
+        )
+    );
   }
 
   static QueryContextParameter.Builder<Long> longParameter(final String name)
   {
-    return QueryContextParameter.builder(name, Long.class, value -> QueryContexts.getAsLong(name, value));
+    return QueryContextParameter.builder(
+        name,
+        Long.class,
+        value -> QueryContextParameter.exactNumber(
+            name,
+            value,
+            "long",
+            Long.MIN_VALUE,
+            Long.MAX_VALUE,
+            BigDecimal::longValueExact
+        )
+    );
   }
 
   static QueryContextParameter.Builder<String> stringParameter(final String name)
   {
-    return QueryContextParameter.builder(name, String.class, value -> QueryContexts.getAsString(name, value, null));
+    return QueryContextParameter.builder(
+        name,
+        String.class,
+        value -> {
+          throw invalidValueException(name, "a string", value);
+        }
+    );
   }
 
+  /**
+   * Creates the exception that parsers throw for a value that cannot be converted to the parameter type.
+   *
+   * @param expected description of the expected value that completes "should be ...", such as "in integer format"
+   */
+  public static BadQueryContextException invalidValueException(
+      final String name,
+      final String expected,
+      final Object actual
+  )
+  {
+    return new BadQueryContextException(
+        StringUtils.format("Query context parameter [%s] should be %s, but got [%s]", name, expected, actual)
+    );
+  }
 }

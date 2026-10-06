@@ -28,7 +28,6 @@ import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -124,7 +123,7 @@ public class QueryContextTest
                     .get(QueryContextParameters.USE_RESULT_LEVEL_CACHE)
     );
     assertThrows(
-        IAE.class,
+        BadQueryContextException.class,
         () -> QueryContext.ofMap(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
     );
   }
@@ -195,7 +194,7 @@ public class QueryContextTest
   }
 
   @Test
-  public void testGetParameterDistinguishesAbsentFromExplicitNull()
+  public void testGetParameterTreatsExplicitNullAsUnset()
   {
     final QueryContextParameter<Integer> nullableWithDefault = QueryContextParameter
         .builder("nullable", Integer.class, value -> (Integer) value)
@@ -210,11 +209,12 @@ public class QueryContextTest
     values.put(nonNullable.getName(), null);
     final QueryContext context = QueryContext.of(values);
 
-    assertNull(context.get(nullableWithDefault));
+    assertFalse(context.has(nullableWithDefault));
+    assertEquals(10, context.get(nullableWithDefault));
     assertEquals(10, context.getOrDefault(nullableWithDefault));
     assertEquals(20, context.getOrDefault(nullableWithDefault, 20));
-    assertThrows(IAE.class, () -> context.get(nonNullable));
-    assertThrows(IAE.class, () -> context.getOrDefault(nonNullable, 20));
+    assertThrows(BadQueryContextException.class, () -> context.get(nonNullable));
+    assertThrows(BadQueryContextException.class, () -> context.getOrDefault(nonNullable, 20));
   }
 
   @Test
@@ -520,7 +520,7 @@ public class QueryContextTest
     assertEquals(10, overriddenQuery.context().get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
 
     assertThrows(
-        IAE.class,
+        BadQueryContextException.class,
         () -> query.withOverriddenContext(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
     );
 
@@ -530,6 +530,8 @@ public class QueryContextTest
     );
     assertTrue(nullOverriddenQuery.getContext().containsKey(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
     assertNull(nullOverriddenQuery.getContext().get(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
+    assertFalse(nullOverriddenQuery.context().has(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
+    assertTrue(nullOverriddenQuery.context().isUseResultLevelCache());
   }
 
   @Test

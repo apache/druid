@@ -21,7 +21,6 @@ package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids.SearchQueryBuilder;
@@ -122,19 +121,19 @@ public class DruidsTest
     }
 
     @Test
-    public void testTypedContextParameterValidatesAndAcceptsNull()
+    public void testTypedContextParameterValidatesAndRemovesNull()
     {
       Assertions.assertThrows(
-          IAE.class,
+          BadQueryContextException.class,
           () -> builder.context(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
       );
 
       final TimeseriesQuery query = builder
+          .context(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
           .context(QueryContextParameters.USE_RESULT_LEVEL_CACHE, null)
           .build();
 
-      Assertions.assertTrue(query.getContext().containsKey(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
-      Assertions.assertNull(query.getContext().get(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
+      Assertions.assertFalse(query.getContext().containsKey(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
     }
   }
 

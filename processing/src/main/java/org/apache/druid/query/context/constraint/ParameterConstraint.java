@@ -25,5 +25,8 @@ package org.apache.druid.query.context.constraint;
  */
 public interface ParameterConstraint<T>
 {
+  /**
+   * @throws org.apache.druid.query.BadQueryContextException if the value violates this constraint
+   */
   void validate(String parameterName, T value);
 }

@@ -21,6 +21,7 @@ package org.apache.druid.query.context;
 
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation;
@@ -90,9 +91,9 @@ class QueryContextParameterTest
         .constraint(closedRange(0, 10))
         .build();
 
-    assertThrows(IAE.class, () -> parameter.parse(-1));
-    assertThrows(IAE.class, () -> parameter.validate(-1));
-    assertThrows(IAE.class, () -> parameter.validate(11));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(-1));
+    assertThrows(BadQueryContextException.class, () -> parameter.validate(-1));
+    assertThrows(BadQueryContextException.class, () -> parameter.validate(11));
     parameter.validate(0);
     parameter.validate(10);
   }
@@ -175,16 +176,97 @@ class QueryContextParameterTest
     final Map<String, Object> context = new HashMap<>();
 
     assertFalse(parameter.isNullable());
-    assertThrows(IAE.class, () -> parameter.parse(null));
-    assertThrows(IAE.class, () -> parameter.validate(null));
-    assertThrows(IAE.class, () -> parameter.set(context, null));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(null));
+    assertThrows(BadQueryContextException.class, () -> parameter.validate(null));
+    assertThrows(BadQueryContextException.class, () -> parameter.set(context, null));
     assertTrue(context.isEmpty());
 
     final QueryContextParameter<String> nullProducingParser = QueryContextParameter
         .builder("required", String.class, ignored -> null)
         .nullable(false)
         .build();
-    assertThrows(IAE.class, () -> nullProducingParser.parse(42));
+    assertThrows(BadQueryContextException.class, () -> nullProducingParser.parse(42));
+  }
+
+  @Test
+  void testSetNullRemovesKey()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("tag", String.class, String::valueOf)
+        .build();
+    final Map<String, Object> context = new HashMap<>();
+    context.put("tag", "value");
+
+    parameter.set(context, null);
+
+    assertTrue(context.isEmpty());
+  }
+
+  @Test
+  void testIntegerParameterRejectsLossyNumbers()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameters.integerParameter("ints").build();
+
+    assertEquals(12, parameter.parse(12L));
+    assertEquals(12, parameter.parse(12.0d));
+    assertEquals(12, parameter.parse(new java.math.BigDecimal("12.00")));
+    assertEquals(12, parameter.parse("12"));
+    assertEquals(Integer.MAX_VALUE, parameter.parse((long) Integer.MAX_VALUE));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(5_000_000_000L));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(4_294_967_295L));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(12.7d));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(Double.NaN));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("5000000000"));
+  }
+
+  @Test
+  void testIntegerOverflowMessageQuotesRangeConstraint()
+  {
+    final QueryContextParameter<Integer> unconstrained = QueryContextParameters.integerParameter("ints").build();
+    assertEquals(
+        "Query context parameter [ints] must be within the range [-2147483648, 2147483647], but was [5000000000]",
+        assertThrows(BadQueryContextException.class, () -> unconstrained.parse(5_000_000_000L)).getMessage()
+    );
+
+    final QueryContextParameter<Integer> constrained = QueryContextParameters.integerParameter("ints")
+                                                                             .constraint(closedRange(1, 100))
+                                                                             .build();
+    assertEquals(
+        "Query context parameter [ints] must be within the range [1, 100], but was [5000000000]",
+        assertThrows(BadQueryContextException.class, () -> constrained.parse("5000000000")).getMessage()
+    );
+    assertEquals(
+        "Query context parameter [ints] must be within the range [1, 100], but was [101]",
+        assertThrows(BadQueryContextException.class, () -> constrained.parse(101L)).getMessage()
+    );
+  }
+
+  @Test
+  void testLongParameterRejectsLossyNumbers()
+  {
+    final QueryContextParameter<Long> parameter = QueryContextParameters.longParameter("longs").build();
+
+    assertEquals(12L, parameter.parse(12));
+    assertEquals(12L, parameter.parse(12.0d));
+    assertEquals(Long.MAX_VALUE, parameter.parse(new java.math.BigInteger(String.valueOf(Long.MAX_VALUE))));
+    assertThrows(
+        BadQueryContextException.class,
+        () -> parameter.parse(new java.math.BigInteger(String.valueOf(Long.MAX_VALUE)).add(java.math.BigInteger.ONE))
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(12.5d));
+    assertThrows(BadQueryContextException.class, () -> parameter.parse("9223372036854775808"));
+  }
+
+  @Test
+  void testStringParameterRejectsNonStrings()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameters.stringParameter("strings").build();
+
+    assertEquals("value", parameter.parse("value"));
+    assertEquals(
+        "Query context parameter [strings] should be a string, but got [1]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse(1)).getMessage()
+    );
   }
 
   @Test

@@ -37,10 +37,10 @@ import org.apache.druid.query.filter.TypedInFilter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -251,11 +251,12 @@ public class QueryContext
   }
 
   /**
-   * Check if the given declared query context parameter is set.
+   * Check if the given declared query context parameter is set to a non-null value. An explicit {@code null} is
+   * treated the same as an absent key.
    */
   public boolean has(final QueryContextParameter<?> parameter)
   {
-    return containsKey(parameter.getName());
+    return get(parameter.getName()) != null;
   }
 
   /**
@@ -269,21 +270,22 @@ public class QueryContext
   }
 
   /**
-   * Returns a parsed parameter value, its declared default, or {@code null} when neither is present.
+   * Returns the parsed parameter value. If the key is absent or explicitly {@code null}, returns the declared default,
+   * or {@code null} if the parameter has no declared default.
+   *
+   * @throws BadQueryContextException if the value is invalid
    */
   @Nullable
   public <T> T get(final QueryContextParameter<T> parameter)
   {
-    if (!has(parameter)) {
-      return parameter.getDefaultValue().orElse(null);
-    }
-    return parameter.parse(get(parameter.getName()));
+    return parseOrDefault(parameter, parameter.getDefaultValue().orElse(null));
   }
 
   /**
-   * Returns a parsed parameter value or its declared default, including when the parsed value is {@code null}.
+   * Returns the parsed parameter value. If the key is absent or explicitly {@code null}, returns the declared default.
    *
    * @throws ISE if the parameter has no declared default
+   * @throws BadQueryContextException if the value is invalid
    */
   public <T> T getOrDefault(final QueryContextParameter<T> parameter)
   {
@@ -296,14 +298,24 @@ public class QueryContext
   }
 
   /**
-   * Returns a parsed parameter value or the supplied default, including when the parsed value is {@code null}.
+   * Returns the parsed parameter value. If the key is absent or explicitly {@code null}, returns the supplied default.
+   *
+   * @throws BadQueryContextException if the value is invalid
    */
   public <T> T getOrDefault(final QueryContextParameter<T> parameter, final T defaultValue)
   {
-    if (!has(parameter)) {
+    return parseOrDefault(parameter, defaultValue);
+  }
+
+  @Nullable
+  private <T> T parseOrDefault(final QueryContextParameter<T> parameter, @Nullable final T defaultValue)
+  {
+    if (!containsKey(parameter.getName())) {
       return defaultValue;
     }
-    return Optional.ofNullable(parameter.parse(get(parameter.getName()))).orElse(defaultValue);
+    // Parse even an explicit null so that non-nullable parameters reject it.
+    final T parsed = parameter.parse(get(parameter.getName()));
+    return parsed == null ? defaultValue : parsed;
   }
 
   /**
@@ -387,6 +399,21 @@ public class QueryContext
   public long getLong(final String key, final long defaultValue)
   {
     return QueryContexts.parseLong(context, key, defaultValue);
+  }
+
+  /**
+   * Return a value as an {@code Float}, returning {@link null} if the
+   * context value is not set.
+   *
+   * @throws BadQueryContextException for an invalid value
+   * @deprecated Use {@link #getFloat(String, float)}, or declare the parameter in {@link QueryContextParameters}
+   * and read it with {@link #get(QueryContextParameter)}.
+   */
+  @Deprecated
+  @SuppressWarnings("unused")
+  public Float getFloat(final String key)
+  {
+    return QueryContexts.getAsFloat(key, get(key));
   }
 
   /**
@@ -692,6 +719,19 @@ public class QueryContext
     );
   }
 
+  /**
+   * @deprecated Use {@link #hasTimeout()} and {@link #getTimeout()} instead.
+   */
+  @Deprecated
+  @Nullable
+  public Duration getTimeoutDuration()
+  {
+    if (hasTimeout()) {
+      return Duration.ofMillis(getTimeout());
+    }
+    return null;
+  }
+
   public long getDefaultTimeout()
   {
     final long defaultTimeout = getLong(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
@@ -987,4 +1027,12 @@ public class QueryContext
     return QueryContexts.DEFAULT_REALTIME_SEGMENTS_MODE;
   }
 
+  /**
+   * @deprecated Use {@link #getRealtimeSegmentsMode()} instead.
+   */
+  @Deprecated
+  public boolean isRealtimeSegmentsOnly()
+  {
+    return getRealtimeSegmentsMode() == RealtimeSegmentsMode.EXCLUSIVE;
+  }
 }

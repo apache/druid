@@ -1560,7 +1560,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     validateInvalidSqlError(
         errorResponse,
-        "Invalid query context parameter [maxRowsQueuedForOrdering]"
+        "Query context parameter [maxRowsQueuedForOrdering] should be in integer format, but got [not-an-int]"
     );
     Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
     Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
