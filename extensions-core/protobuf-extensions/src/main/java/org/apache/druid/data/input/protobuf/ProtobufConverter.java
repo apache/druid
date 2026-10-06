@@ -70,6 +70,12 @@ public class ProtobufConverter
     for (Map.Entry<Descriptors.FieldDescriptor, Object> field : fields.entrySet()) {
       converted.put(field.getKey().getJsonName(), convertField(field.getKey(), field.getValue()));
     }
+    // getAllFields() omits singular fields without presence tracking (e.g. proto3 non-optional) set to their default
+    for (Descriptors.FieldDescriptor field : msg.getDescriptorForType().getFields()) {
+      if (!field.hasPresence() && !field.isRepeated() && !fields.containsKey(field)) {
+        converted.put(field.getJsonName(), convertField(field, msg.getField(field)));
+      }
+    }
     return converted;
   }
 
