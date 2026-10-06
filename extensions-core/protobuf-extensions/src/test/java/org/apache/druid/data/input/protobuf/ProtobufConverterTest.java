@@ -45,9 +45,8 @@ public class ProtobufConverterTest
   @Test
   public void testProto3NestedMessageKeepsDefaultValues() throws Exception
   {
-    final Proto3TestEvent event = Proto3TestEvent.newBuilder()
-                                                 .setNested(Proto3TestEvent.Nested.getDefaultInstance())
-                                                 .build();
+    final Proto3TestEvent event =
+        Proto3TestEvent.newBuilder().setNested(Proto3TestEvent.Nested.getDefaultInstance()).build();
 
     Assertions.assertEquals(ImmutableMap.of("value", 0), convert(event).get("nested"));
   }
