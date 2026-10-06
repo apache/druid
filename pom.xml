@@ -171,10 +171,6 @@
             <!-- required for SIMD for druid.expressions.useVectorApi -->
             --add-modules=jdk.incubator.vector
         </jdk.strong.encapsulation.argLine>
-        <repoOrgId>maven.org</repoOrgId>
-        <repoOrgName>Maven Central Repository</repoOrgName>
-        <repoOrgUrl>https://repo.maven.apache.org/maven2/</repoOrgUrl>
-
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
         <surefire.trimStackTrace>false</surefire.trimStackTrace>
@@ -285,9 +281,9 @@
 
     <repositories>
         <repository>
-            <id>${repoOrgId}</id>
-            <name>${repoOrgName}</name>
-            <url>${repoOrgUrl}</url>
+            <id>maven.org</id>
+            <name>Maven Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
@@ -304,9 +300,9 @@
 
     <pluginRepositories>
         <pluginRepository>
-            <id>${repoOrgId}</id>
-            <name>${repoOrgName}</name>
-            <url>${repoOrgUrl}</url>
+            <id>maven.org</id>
+            <name>Maven Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
