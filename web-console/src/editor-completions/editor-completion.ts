@@ -22,7 +22,7 @@
 export interface CompletionDoc {
   /** The title */
   name: string;
-  /** Plain text shown (in monospace) under the title, like a function signature */
+  /** Plain text shown (in monospace) under the title, like a function signature (one per line if there are several) */
   syntax?: string;
   /** Plain text description */
   description?: string;

@@ -174,6 +174,10 @@ Playwright at 2× scale.
   `script/create-sql-docs.mjs` produces doc markdown instead of HTML (snarkdown was removed), which also fixed a few
   SQL docs: a single `<br>` in the docs is now a line break (snarkdown turned it into a space or dropped it), and a
   literal `*` in the ATAN2 doc no longer starts italics.
+- **Functions with several signatures are listed once.** Ace listed one item per signature with the signature as the
+  caption (`BIG_MAX(<ANY>)`, `BIG_MAX(column, size)`, …). CodeMirror drops options with the same label and detail, so
+  only the first signature was left. The list now shows the name (`BIG_MAX`), and the doc panel shows every signature,
+  one per line.
 - **Undo granularity:** CodeMirror groups typing into undo steps differently from Ace.
 - **Tooltips:** all editors share one tooltip container that is _prepended_ to `<body>`. Like Ace's popup, it can't be
   clipped by the editor's containers. Prepending also keeps `document.body.lastChild` pointing at Blueprint portals,

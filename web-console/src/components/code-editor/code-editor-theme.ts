@@ -167,6 +167,7 @@ export const codeEditorTheme = EditorView.theme(
     '.cm-completionInfo .doc-syntax': {
       paddingTop: '8px',
       paddingBottom: '10px',
+      whiteSpace: 'pre-wrap', // One line per signature
     },
     '.cm-completionInfo .doc-name, .cm-completionInfo .doc-syntax': {
       fontFamily: MONOSPACE_FONT,

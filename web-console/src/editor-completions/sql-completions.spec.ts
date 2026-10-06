@@ -204,6 +204,34 @@ describe('sql-completions', () => {
       expect(localValues).toContain('other_column');
     });
 
+    it('lists a function with several signatures once, with all of them in the doc', () => {
+      const availableSqlFunctions = new Map([
+        ['BIG_MAX', { args: ['<ANY>', 'column, size'], isAggregate: true }],
+        ['MAX', { args: ['<COMPARABLE_TYPE>'], isAggregate: true }],
+      ]);
+
+      const functions = completionsAt('SELECT MAX|', { availableSqlFunctions }).filter(
+        c => c.detail === 'aggregate',
+      );
+
+      expect(functions).toEqual([
+        {
+          label: 'BIG_MAX',
+          boost: 30,
+          detail: 'aggregate',
+          doc: {
+            name: 'BIG_MAX',
+            syntax: 'BIG_MAX(<ANY>)\nBIG_MAX(column, size)',
+            descriptionMarkdown: undefined,
+          },
+        },
+        expect.objectContaining({
+          label: 'MAX',
+          doc: expect.objectContaining({ syntax: 'MAX(<COMPARABLE_TYPE>)' }),
+        }),
+      ]);
+    });
+
     it('does not suggest the word that is being typed', () => {
       const references = completionsAt('SELECT my_column, my| FROM my_table')
         .filter(c => c.detail === 'local')

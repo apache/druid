@@ -253,17 +253,20 @@ export function getSqlCompletions(
       // If availableSqlFunctions map is provided, use it; otherwise fall back to static SQL_FUNCTIONS
       if (availableSqlFunctions) {
         completions = completions.concat(
-          Array.from(availableSqlFunctions.entries()).flatMap(([name, funcDef]) => {
-            if (skipAggregates && funcDef.isAggregate) return [];
+          filterMap(Array.from(availableSqlFunctions.entries()), ([name, funcDef]) => {
+            if (skipAggregates && funcDef.isAggregate) return;
             const description = SQL_FUNCTIONS.get(name)?.[1];
-            return funcDef.args.map(args => ({
-              // Functions with several signatures are listed once per signature, but only the name is inserted
+            return {
               label: name,
-              displayLabel: funcDef.args.length > 1 ? `${name}(${args})` : undefined,
               boost: 30,
               detail: funcDef.isAggregate ? 'aggregate' : 'function',
-              doc: { name, syntax: `${name}(${args})`, descriptionMarkdown: description },
-            }));
+              doc: {
+                name,
+                // A function with several signatures shows them all, one per line
+                syntax: funcDef.args.map(args => `${name}(${args})`).join('\n'),
+                descriptionMarkdown: description,
+              },
+            };
           }),
         );
       } else {
