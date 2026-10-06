@@ -18,6 +18,8 @@
 
 import type { CompletionDoc } from '../../editor-completions/editor-completion';
 
+import { renderDocMarkdown } from './doc-markdown';
+
 function makeDiv(className: string): HTMLDivElement {
   const div = document.createElement('div');
   div.className = className;
@@ -31,7 +33,7 @@ export function renderCompletionDoc({
   name,
   syntax,
   description,
-  descriptionHtml,
+  descriptionMarkdown,
 }: CompletionDoc): HTMLElement {
   const container = document.createElement('div');
 
@@ -45,10 +47,10 @@ export function renderCompletionDoc({
     container.append(syntaxDiv);
   }
 
-  if (descriptionHtml || description) {
+  if (descriptionMarkdown || description) {
     const descriptionDiv = makeDiv('doc-description');
-    if (descriptionHtml) {
-      descriptionDiv.innerHTML = descriptionHtml;
+    if (descriptionMarkdown) {
+      descriptionDiv.append(renderDocMarkdown(descriptionMarkdown));
     } else {
       descriptionDiv.textContent = description!;
     }

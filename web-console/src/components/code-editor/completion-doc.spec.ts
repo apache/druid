@@ -19,12 +19,12 @@
 import { renderCompletionDoc } from './completion-doc';
 
 describe('renderCompletionDoc', () => {
-  it('renders the name, syntax and HTML description', () => {
+  it('renders the name, syntax and markdown description', () => {
     expect(
       renderCompletionDoc({
         name: 'COUNT',
         syntax: 'COUNT(*)',
-        descriptionHtml: 'Counts the number of <code>things</code>',
+        descriptionMarkdown: 'Counts the number of `things`',
       }).innerHTML,
     ).toEqual(
       '<div class="doc-name">COUNT</div>' +
@@ -48,7 +48,7 @@ describe('renderCompletionDoc', () => {
   });
 
   it('leaves out the empty parts', () => {
-    expect(renderCompletionDoc({ name: 'REAL', descriptionHtml: '' }).innerHTML).toEqual(
+    expect(renderCompletionDoc({ name: 'REAL', descriptionMarkdown: '' }).innerHTML).toEqual(
       '<div class="doc-name">REAL</div>',
     );
   });

@@ -165,9 +165,11 @@ Playwright at 2× scale.
   the prefix are now dropped explicitly.
 - **`{` is not auto-closed in SQL.** Ace only "maybe" inserted the closing brace (it added it on Enter). Typing `{` into
   the workbench usually starts a native JSON query, and an eager `}` was left behind once the mode switched to Hjson.
-- **Plain text docs are escaped.** Ace's `docHTML` took every doc as HTML, so Hjson docs for values like
-  `ARRAY<STRING>` showed up as `ARRAY`. A `doc` now says whether its description is plain text or HTML, and only
-  `descriptionHtml` (the SQL docs) is inserted as HTML.
+- **No HTML in docs.** Ace's `docHTML` took every doc as HTML, so Hjson docs for values like `ARRAY<STRING>` showed
+  up as `ARRAY`. A `doc` is now plain text, or "doc markdown" for the SQL docs, and is rendered as elements.
+  `script/create-sql-docs.mjs` produces doc markdown instead of HTML (snarkdown was removed), which also fixed a few
+  SQL docs: a single `<br>` in the docs is now a line break (snarkdown turned it into a space or dropped it), and a
+  literal `*` in the ATAN2 doc no longer starts italics.
 - **Undo granularity:** CodeMirror groups typing into undo steps differently from Ace.
 - **Tooltips:** all editors share one tooltip container that is *prepended* to `<body>`. Like Ace's popup, it can't be
   clipped by the editor's containers. Prepending also keeps `document.body.lastChild` pointing at Blueprint portals,

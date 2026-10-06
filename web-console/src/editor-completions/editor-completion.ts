@@ -26,8 +26,8 @@ export interface CompletionDoc {
   syntax?: string;
   /** Plain text description */
   description?: string;
-  /** HTML description, only for trusted HTML like the docs in lib/sql-docs.ts */
-  descriptionHtml?: string;
+  /** Description in "doc markdown", the simplified markdown of the docs in lib/sql-docs.ts */
+  descriptionMarkdown?: string;
 }
 
 /**

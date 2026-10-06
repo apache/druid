@@ -232,7 +232,7 @@ export function getSqlCompletions({
           doc: {
             name,
             syntax: `Druid runtime type: ${runtime}`,
-            descriptionHtml: description,
+            descriptionMarkdown: description,
           },
         };
       }),
@@ -258,7 +258,7 @@ export function getSqlCompletions({
               displayLabel: funcDef.args.length > 1 ? `${name}(${args})` : undefined,
               boost: 30,
               detail: funcDef.isAggregate ? 'aggregate' : 'function',
-              doc: { name, syntax: `${name}(${args})`, descriptionHtml: description },
+              doc: { name, syntax: `${name}(${args})`, descriptionMarkdown: description },
             }));
           }),
         );
@@ -270,7 +270,7 @@ export function getSqlCompletions({
               label: name,
               boost: 30,
               detail: 'function',
-              doc: { name, syntax: `${name}(${args})`, descriptionHtml: description },
+              doc: { name, syntax: `${name}(${args})`, descriptionMarkdown: description },
             };
           }),
         );

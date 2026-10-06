@@ -133,7 +133,6 @@
     "prettier": "^3.9.9",
     "sass": "^1.99.0",
     "sass-loader": "^17.0.1",
-    "snarkdown": "^2.0.0",
     "style-loader": "^4.0.0",
     "stylelint": "^16.26.1",
     "ts-jest": "^29.4.13",

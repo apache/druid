@@ -19,7 +19,6 @@
  */
 
 import fs from 'node:fs/promises';
-import snarkdown from 'snarkdown';
 
 const INPUT_FILELIST_FILE = 'script/sql-doc-files.txt';
 const OUTPUT_FILE = 'lib/sql-docs.ts';
@@ -27,28 +26,39 @@ const OUTPUT_FILE = 'lib/sql-docs.ts';
 const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 198;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 15;
 
+const HTML_ENTITIES = {
+  '&mdash;': '\u2014',
+  '&ndash;': '\u2013',
+  '&nbsp;': ' ',
+  '&#124;': '|',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&amp;': '&',
+};
+
+// Emphasis: _text_ or *text*, not inside of words
+const EMPHASIS_REGEXP = /(?<![\w*])([*_])(?!\s)(.+?)(?<!\s)\1(?![\w*])/g;
+
 const initialFunctionDocs = {
-  TABLE: ['external', convertMarkdownToHtml('Defines a logical table from an external.')],
-  EXTERN: [
-    'inputSource, inputFormat, rowSignature?',
-    convertMarkdownToHtml('Reads external data.'),
-  ],
+  TABLE: ['external', sanitizeMarkdown('Defines a logical table from an external.')],
+  EXTERN: ['inputSource, inputFormat, rowSignature?', sanitizeMarkdown('Reads external data.')],
   TYPE: [
     'nativeType',
-    convertMarkdownToHtml(
+    sanitizeMarkdown(
       'A purely type system modification function what wraps a Druid native type to make it into a SQL type.',
     ),
   ],
   UNNEST: [
     'arrayExpression',
-    convertMarkdownToHtml(
+    sanitizeMarkdown(
       "Unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like `MV_TO_ARRAY` or `ARRAY`.",
     ),
   ],
 };
 
 function hasHtmlTags(str) {
-  return /<(a|br|span|div|p|code)\/?>/.test(str);
+  return /<\/?[a-z][^>]*>/i.test(str);
 }
 
 function sanitizeArguments(str) {
@@ -62,18 +72,70 @@ function sanitizeArguments(str) {
   return str;
 }
 
-function convertMarkdownToHtml(markdown) {
-  markdown = markdown.replace(/<br\/?>/g, '\n'); // Convert inline <br> to newlines
+function escapeDocMarkdown(text) {
+  return text.replace(/[\\*`]/g, '\\$&');
+}
 
-  // Ensure there are no more html tags other than the <br> we just removed
-  if (hasHtmlTags(markdown)) {
-    throw new Error(`Markdown contains HTML: ${markdown}`);
+/**
+ * Converts the text (not code) parts of a line
+ */
+function sanitizeText(text, context) {
+  if (hasHtmlTags(text)) {
+    throw new Error(`Markdown contains HTML: ${context}`);
   }
 
-  // Concert to markdown
-  markdown = snarkdown(markdown);
+  text = text.replace(/&[a-z]+;|&#\d+;/g, entity => {
+    if (!HTML_ENTITIES[entity]) throw new Error(`Unknown HTML entity ${entity} in: ${context}`);
+    return HTML_ENTITIES[entity];
+  });
 
-  return markdown.replace(/<a[^>]*>(.*?)<\/a>/g, '$1'); // Remove links
+  let result = '';
+  let lastIndex = 0;
+  for (const m of text.matchAll(EMPHASIS_REGEXP)) {
+    result += escapeDocMarkdown(text.slice(lastIndex, m.index));
+    result += `*${escapeDocMarkdown(m[2])}*`;
+    lastIndex = m.index + m[0].length;
+  }
+  return result + escapeDocMarkdown(text.slice(lastIndex));
+}
+
+function sanitizeLine(line, context) {
+  // Keep `code` spans as they are and sanitize the text around them
+  return line
+    .split(/(`[^`]*`)/)
+    .map((part, i) => (i % 2 ? part : sanitizeText(part, context)))
+    .join('');
+}
+
+/**
+ * Converts the markdown from the docs to "doc markdown", the simplified markdown that the console renders (see
+ * renderDocMarkdown in src/components/code-editor/doc-markdown.ts):
+ * - `code` spans
+ * - *emphasis*
+ * - line breaks (\n)
+ * - list items (lines that start with "- ")
+ * - a backslash escapes the next character
+ * Links are reduced to their text and HTML is not allowed (other than <br> and simple lists, which are converted).
+ */
+function sanitizeMarkdown(markdown) {
+  const context = markdown;
+
+  const lines = markdown
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // Remove links
+    .replace(/(?:<br\s*\/?>)*<ul>(.*?)<\/ul>/g, (_, items) => {
+      return items.replace(/<li>(.*?)<\/li>/g, '<br>\u0000$1') + '<br>';
+    })
+    .replace(/(?:<br\s*\/?>)+$/, '')
+    .split(/<br\s*\/?>/);
+
+  return lines
+    .map(line => {
+      if (line.startsWith('\u0000')) return `- ${sanitizeLine(line.slice(1), context)}`;
+      line = sanitizeLine(line, context);
+      return line.startsWith('- ') ? `\\${line}` : line; // Not a list item
+    })
+    .join('\n')
+    .trim();
 }
 
 const readDoc = async () => {
@@ -98,13 +160,13 @@ const readDoc = async () => {
     if (functionMatch) {
       const functionName = functionMatch[1];
       const args = sanitizeArguments(functionMatch[2]);
-      const description = convertMarkdownToHtml(functionMatch[3].trim());
+      const description = sanitizeMarkdown(functionMatch[3].trim());
       functionDocs[functionName] = [args, description];
     }
 
     const dataTypeMatch = line.match(/^\|([A-Z]+)\|([A-Z]+)\|([^|]*)\|([^|]*)\|$/);
     if (dataTypeMatch) {
-      dataTypeDocs[dataTypeMatch[1]] = [dataTypeMatch[2], convertMarkdownToHtml(dataTypeMatch[4])];
+      dataTypeDocs[dataTypeMatch[1]] = [dataTypeMatch[2], sanitizeMarkdown(dataTypeMatch[4])];
     }
   }
 
@@ -143,6 +205,8 @@ const readDoc = async () => {
  */
 
 // This file is auto generated and should not be modified
+
+// The descriptions are in "doc markdown", see sanitizeMarkdown in script/create-sql-docs.mjs
 
 // prettier-ignore
 export const SQL_DATA_TYPES = new Map<string, [runtime: string, description: string]>(Object.entries(${JSON.stringify(

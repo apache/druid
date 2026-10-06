@@ -33,6 +33,7 @@ It is a controlled component that you give a string and an `onChange` callback. 
 | `code-editor.tsx`       | The component, its props, the CodeMirror setup and the `focusEditorAt` helper    |
 | `code-editor-theme.ts`  | The editor theme (layout, gutter, popups) and the syntax highlighting colors     |
 | `completion-doc.ts`     | Renders the documentation panel shown next to the completion list               |
+| `doc-markdown.ts`       | Renders "doc markdown" (the format of the SQL docs) as DOM elements             |
 | `code-editor.scss`      | The few styles for the wrapper element that can't live in the CodeMirror theme  |
 
 Related code lives elsewhere:
@@ -138,12 +139,17 @@ interface CompletionDoc {
   name: string; // The title
   syntax?: string; // Plain text in monospace under the title, like a function signature
   description?: string; // Plain text
-  descriptionHtml?: string; // HTML, only for trusted HTML like the docs in lib/sql-docs.ts
+  descriptionMarkdown?: string; // "Doc markdown", the simplified markdown of the docs in lib/sql-docs.ts
 }
 ```
 
 The field names are the ones of CodeMirror's `Completion`. The editor renders the doc panel itself
-(`completion-doc.ts`), so completion builders only describe what to show.
+(`completion-doc.ts`), so completion builders only describe what to show. No HTML strings are involved: plain text is
+inserted as text, and "doc markdown" is turned into elements by `renderDocMarkdown` (`doc-markdown.ts`).
+
+"Doc markdown" is what `script/create-sql-docs.mjs` produces from the Druid docs for `lib/sql-docs.ts`. It only has
+`` `code` ``, `*emphasis*`, line breaks (`\n`), list items (lines starting with `- `) and backslash escapes. The script
+drops links, converts `<br>` and simple lists, and fails on any other HTML.
 
 Usually you don't write completions yourself. Hook up the existing builders:
 
