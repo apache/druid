@@ -624,6 +624,11 @@ public class KafkaScanTransformTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(tagCountByUser.size())
     );
 
+    broker.latchableEmitter().waitForEvent(
+        event -> event.hasMetricName(Metric.SCHEMA_ROW_SIGNATURE_COLUMN_COUNT)
+                      .hasDimension(DruidMetrics.DATASOURCE, limitDataSource)
+    );
+
     Assertions.assertEquals(
         "10",
         cluster.runSql(StringUtils.format("SELECT COUNT(*) FROM \"%s\"", limitDataSource)).trim(),
