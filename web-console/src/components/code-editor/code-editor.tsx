@@ -281,8 +281,7 @@ export function CodeEditor(props: CodeEditorProps) {
         textBeforePrefix: state.sliceDoc(0, Math.max(0, from - 1)),
         lineBeforePrefix: from > line.from ? state.sliceDoc(line.from, from - 1) : '',
       });
-      // Do not suggest what has already been typed (it shows up as a reference in the text)
-      const options = completions.filter(c => c.label !== prefix).map(toCompletion);
+      const options = completions.map(toCompletion);
       if (!options.length) return null;
 
       return {

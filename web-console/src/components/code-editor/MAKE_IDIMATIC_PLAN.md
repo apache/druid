@@ -31,7 +31,7 @@ Status: ✅ done, ⬜ to do.
 ## Suggested order
 
 1. ✅ 1a + 1b: a CodeMirror-shaped completion type with a structured `doc` (and 1a+: no HTML in the SQL docs)
-2. ⬜ 1e, 1h: small cleanups
+2. ✅ 1e, 1h: small cleanups
 3. ⬜ 2a + 2b + 1g: `LanguageSupport` factories that bring their own completion sources
 4. ⬜ 1c + 1d: completion sources that read the syntax tree
 5. ⬜ 4a + 4b: the partial query markers
@@ -118,12 +118,19 @@ up the text around the cursor.
 **To do:** use `syntaxTree(state).resolveInner(pos, -1)` for these checks. `getHjsonContext` is still needed to work
 out the JSON path.
 
-### ⬜ 1e. Move the "typed word" filter out of `CodeEditor`
+### ✅ 1e. Move the "typed word" filter out of `CodeEditor`
 
-`CodeEditor` drops completions whose `label` equals the prefix (`completions.filter(c => c.label !== prefix)`). That
-exists only because `getPossibleSqlReferences` picks up the word that is being typed.
+**Was:** `CodeEditor` dropped every completion whose `label` equaled the prefix
+(`completions.filter(c => c.label !== prefix)`). That existed only because `getPossibleSqlReferences` picked up the
+word being typed as a reference.
 
-**To do:** exclude the word at the cursor in `sql-completions.ts` and remove the filter from the generic component.
+**Done:** `getPossibleSqlReferences` and `getSqlLiterals` take the prefix and leave it out, and the filter is gone from
+the generic component. A spec covers both.
+
+**Behavior change:** a keyword, function or other suggestion that exactly matches what was typed (same case) is now
+listed. For example, after typing `FROM` the list still shows `FROM`, so Enter accepts it instead of inserting a
+newline. That is what already happened when typing in lowercase (`from` is not equal to `FROM`), and what Ace did
+whenever the list had more than that one item.
 
 ### ⬜ 1f. Word characters per language
 
@@ -144,9 +151,10 @@ The callers choose the completion builder:
 `hjson({ jsonCompletions })`, switching the language switches the completions, and `autocompletion()` no longer needs
 `override`. Goes together with 2a and 2b.
 
-### ⬜ 1h. Leftovers in `hjson-completions.ts`
+### ✅ 1h. Leftovers in `hjson-completions.ts`
 
-`convertToEditorCompletion` has an unused `_charBeforePrefix` parameter and a commented-out `quote` line.
+**Done:** removed the unused `_charBeforePrefix` parameter and the commented-out `quote` line from
+`convertToEditorCompletion`.
 
 ## 2. Languages
 

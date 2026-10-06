@@ -167,7 +167,6 @@ Things to know:
 
 - The callback can change between renders, and the latest one is always used.
 - The editor filters and ranks your list against the prefix (fuzzy matching), so you don't need to filter it yourself.
-- A suggestion that is exactly the typed prefix is hidden, because it adds nothing.
 - The popup and its doc panel are rendered in a shared container at the start of `<body>`, so they are never clipped by
   dialogs or popovers that contain the editor.
 

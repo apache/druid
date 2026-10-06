@@ -193,7 +193,7 @@ export function getSqlCompletions({
   // If we are autocompleting inside a literal, then don't do any of the standard suggestions.
   // Only autocomplete other literals. The imagined use-case for this is if you have `country = 'France'` or `TIMESTAMP '2024-03-02 O1:00:00'` you might want to reuse the literals
   if (charBeforePrefix === "'") {
-    return getSqlLiterals(allText, 100).map(label => ({
+    return getSqlLiterals(allText, 100, prefix).map(label => ({
       label,
       boost: 1,
       detail: 'local',
@@ -207,7 +207,7 @@ export function getSqlCompletions({
     return []; // Don't start completing if the user is typing a number
   }
 
-  const possibleReferences = getPossibleSqlReferences(allText, 100);
+  const possibleReferences = getPossibleSqlReferences(allText, 100, prefix);
 
   let completions: EditorCompletion[] = possibleReferences.map(label => ({
     label,
@@ -338,14 +338,25 @@ export function getSqlCompletions({
   return completions;
 }
 
-export function getSqlLiterals(sqlText: string, maxWords: number): string[] {
+/**
+ * The literals in the text. The prefix (the word being typed) is left out since it shows up as a literal itself.
+ */
+export function getSqlLiterals(sqlText: string, maxWords: number, prefix?: string): string[] {
   const literalRegexp = /'[^'\n]{2,}'/g;
   const matches = (sqlText.match(literalRegexp) || []).map(stripOuterChars);
 
-  return uniq(matches).slice(0, maxWords);
+  return uniq(matches.filter(m => m !== prefix)).slice(0, maxWords);
 }
 
-export function getPossibleSqlReferences(sqlText: string, maxWords: number): string[] {
+/**
+ * The words in the text that could be references. The prefix (the word being typed) is left out since it shows up as a
+ * reference itself.
+ */
+export function getPossibleSqlReferences(
+  sqlText: string,
+  maxWords: number,
+  prefix?: string,
+): string[] {
   const quotedRegexp = /"\w{2,}"/g;
   const quotedMatches = (sqlText.match(quotedRegexp) || []).map(stripOuterChars);
 
@@ -354,10 +365,9 @@ export function getPossibleSqlReferences(sqlText: string, maxWords: number): str
   const nakedRegexp = /(?:^|[\s,([\-+*/])[a-zA-Z]\w+(?=[\s,)\]\-+*/]|$)/g;
   const nakedMatches = (sqlText.match(nakedRegexp) || []).map(s => s.replace(/^[\s,([\-+*/]/, ''));
 
-  return uniq([...quotedMatches, ...nakedMatches.filter(v => !KNOWN_SQL_PARTS[v])]).slice(
-    0,
-    maxWords,
-  );
+  return uniq(
+    [...quotedMatches, ...nakedMatches.filter(v => !KNOWN_SQL_PARTS[v])].filter(v => v !== prefix),
+  ).slice(0, maxWords);
 }
 
 function stripOuterChars(str: string): string {

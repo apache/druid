@@ -65,7 +65,7 @@ export function getHjsonCompletions({
   );
 
   return filteredCompletions.map(item =>
-    convertToEditorCompletion(item, charBeforePrefix, hjsonContext.isEditingKey),
+    convertToEditorCompletion(item, hjsonContext.isEditingKey),
   );
 }
 
@@ -105,11 +105,8 @@ function filterCompletionsByContext(
  */
 function convertToEditorCompletion(
   item: JsonCompletionItem,
-  _charBeforePrefix: string,
   isEditingKey: boolean,
 ): EditorCompletion {
-  // const quote = charBeforePrefix === '"';
-
   const completion: EditorCompletion = {
     label: item.value,
     boost: 5,

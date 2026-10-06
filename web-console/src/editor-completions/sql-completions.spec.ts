@@ -270,6 +270,28 @@ describe('sql-completions', () => {
       expect(localValues).toContain('my_table');
       expect(localValues).toContain('other_column');
     });
+
+    it('does not suggest the word that is being typed', () => {
+      const references = getSqlCompletions({
+        ...baseOptions,
+        allText: 'SELECT my_column, my FROM my_table',
+        prefix: 'my',
+      })
+        .filter(c => c.detail === 'local')
+        .map(c => c.label);
+
+      expect(references).toContain('my_column');
+      expect(references).not.toContain('my');
+
+      const literals = getSqlCompletions({
+        ...baseOptions,
+        allText: "SELECT * FROM t WHERE country = 'France' OR country = 'Fr'",
+        charBeforePrefix: "'",
+        prefix: 'Fr',
+      }).map(c => c.label);
+
+      expect(literals).toEqual(['France']);
+    });
   });
 
   describe('getSqlLiterals', () => {

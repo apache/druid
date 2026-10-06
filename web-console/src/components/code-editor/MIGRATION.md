@@ -161,8 +161,8 @@ Playwright at 2× scale.
 
 - **The typed word is not suggested.** The SQL completer suggests words found in the text, which includes the
   half-typed word itself. Ace gathered suggestions after the first character (too short to count as a reference) and
-  then only filtered them, so the typed word never appeared. CodeMirror can gather them later, so completions equal to
-  the prefix are now dropped explicitly.
+  then only filtered them, so the typed word never appeared. CodeMirror can gather them later, so the SQL completer
+  now leaves the typed word out of the references and literals it finds.
 - **`{` is not auto-closed in SQL.** Ace only "maybe" inserted the closing brace (it added it on Enter). Typing `{` into
   the workbench usually starts a native JSON query, and an eager `}` was left behind once the mode switched to Hjson.
 - **No HTML in docs.** Ace's `docHTML` took every doc as HTML, so Hjson docs for values like `ARRAY<STRING>` showed
