@@ -278,7 +278,7 @@ exports[`LookupEditDialog matches snapshot 1`] = `
                     <div
                       class="cm-editor"
                     >
-                      <!-- Code editor, mode: hjson, value: "{\\n  \\"a\\": 1\\n}" -->
+                      <!-- Code editor, language: hjson, value: "{\\n  \\"a\\": 1\\n}" -->
                     </div>
                   </div>
                 </div>

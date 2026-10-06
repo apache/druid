@@ -21,6 +21,7 @@ import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { CodeEditor } from '../../components';
+import { hjson } from '../../editor-languages/hjson';
 import { AppToaster } from '../../singletons';
 import { offsetToRowColumn } from '../../utils';
 
@@ -68,7 +69,7 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
       canOutsideClickClose={false}
     >
       <CodeEditor
-        mode="hjson"
+        language={hjson()}
         className="spec-dialog-textarea"
         onChange={setSpec}
         showGutter

@@ -21,6 +21,7 @@ import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
 import { Execution } from '../../druid-models';
+import { hjson } from '../../editor-languages/hjson';
 import { useQueryManager } from '../../hooks';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import { copyToClipboard, downloadFile } from '../../utils';
@@ -109,7 +110,7 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
           <ExecutionStagesPane execution={execution} />
         ) : (
           <CodeEditor
-            mode="hjson"
+            language={hjson()}
             height="100%"
             value={(!jsonState.error ? jsonValue : jsonState.getErrorMessage()) ?? ''}
           />

@@ -56,7 +56,7 @@ exports[`SpecDialog matches snapshot no initSpec 1`] = `
           <div
             class="cm-editor"
           >
-            <!-- Code editor, mode: hjson, value: "", placeholder: "{ JSON spec... }" -->
+            <!-- Code editor, language: hjson, value: "", placeholder: "{ JSON spec... }" -->
           </div>
         </div>
         <div
@@ -155,7 +155,7 @@ exports[`SpecDialog matches snapshot with initSpec 1`] = `
           <div
             class="cm-editor"
           >
-            <!-- Code editor, mode: hjson, value: "{\\n  \\"type\\": \\"some-spec\\"\\n}" -->
+            <!-- Code editor, language: hjson, value: "{\\n  \\"type\\": \\"some-spec\\"\\n}" -->
           </div>
         </div>
         <div

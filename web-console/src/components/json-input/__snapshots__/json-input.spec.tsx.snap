@@ -11,7 +11,7 @@ exports[`JsonInput matches snapshot (null) 1`] = `
     <div
       class="cm-editor"
     >
-      <!-- Code editor, mode: hjson, value: "" -->
+      <!-- Code editor, language: hjson, value: "" -->
     </div>
   </div>
 </div>
@@ -28,7 +28,7 @@ exports[`JsonInput matches snapshot (value) 1`] = `
     <div
       class="cm-editor"
     >
-      <!-- Code editor, mode: hjson, value: "{\\n  \\"hello\\": [\\n    \\"world\\",\\n    {\\n      \\"a\\": 1,\\n      \\"b\\": 2\\n    }\\n  ]\\n}" -->
+      <!-- Code editor, language: hjson, value: "{\\n  \\"hello\\": [\\n    \\"world\\",\\n    {\\n      \\"a\\": 1,\\n      \\"b\\": 2\\n    }\\n  ]\\n}" -->
     </div>
   </div>
 </div>

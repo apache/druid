@@ -14,7 +14,7 @@ exports[`FlexibleQueryInput matches snapshot 1`] = `
       <div
         class="cm-editor"
       >
-        <!-- Code editor, mode: dsql, value: "hello world" -->
+        <!-- Code editor, language: dsql, value: "hello world" -->
       </div>
     </div>
   </div>

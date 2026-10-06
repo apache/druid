@@ -32,6 +32,7 @@ It is a controlled component that you give a string and an `onChange` callback. 
 | ----------------------- | -------------------------------------------------------------------------------- |
 | `code-editor.tsx`       | The component, its props, the CodeMirror setup and the `focusEditorAt` helper    |
 | `code-editor-theme.ts`  | The editor theme (layout, gutter, popups) and the syntax highlighting colors     |
+| `completion-source.ts`  | Turns a completion builder into a CodeMirror completion source                   |
 | `completion-doc.ts`     | Renders the documentation panel shown next to the completion list               |
 | `doc-markdown.ts`       | Renders "doc markdown" (the format of the SQL docs) as DOM elements             |
 | `code-editor.scss`      | The few styles for the wrapper element that can't live in the CodeMirror theme  |
@@ -40,7 +41,7 @@ Related code lives elsewhere:
 
 | Location                               | What it holds                                                           |
 | -------------------------------------- | ----------------------------------------------------------------------- |
-| `src/editor-modes/`                    | The `dsql` and `hjson` languages (syntax highlighting rules)            |
+| `src/editor-languages/`                | The `dsql()` and `hjson()` languages (highlighting and completions)     |
 | `src/editor-completions/`              | What to suggest when autocompleting SQL and Hjson                       |
 | `src/singletons/editor-state-cache.ts` | Keeps editor state (undo history, selection) between mounts             |
 
@@ -48,12 +49,15 @@ Related code lives elsewhere:
 
 ```tsx
 import { CodeEditor } from '../../components';
+import { dsql } from '../../editor-languages/dsql';
+import { hjson } from '../../editor-languages/hjson';
 
-// Editable SQL
-<CodeEditor mode="dsql" value={sql} onChange={setSql} height="300px" showGutter />
+// Editable SQL (memoize the language, see Languages)
+const sqlLanguage = useMemo(() => dsql({ availableSqlFunctions }), [availableSqlFunctions]);
+<CodeEditor language={sqlLanguage} value={sql} onChange={setSql} height="300px" showGutter />
 
 // Read-only JSON (leaving out onChange makes the editor read-only)
-<CodeEditor mode="hjson" value={JSON.stringify(spec, undefined, 2)} height="100%" />
+<CodeEditor language={hjson()} value={JSON.stringify(spec, undefined, 2)} height="100%" />
 ```
 
 ## Props
@@ -63,7 +67,7 @@ import { CodeEditor } from '../../components';
 | `value`                 | `string`                     | Required. The text to show.                                                                                   |
 | `onChange`              | `(value: string) => void`    | Called when the **user** edits the text. **If omitted, the editor is read-only.**                             |
 | `onBlur`                | `() => void`                 |                                                                                                               |
-| `mode`                  | `'dsql' \| 'hjson' \| 'text'` | The language, which controls highlighting, comment toggling and bracket auto-closing. Defaults to `'text'`.   |
+| `language`              | `LanguageSupport`            | `dsql(...)` or `hjson(...)`. Brings highlighting, completions, comment toggling and bracket closing. Plain text without one. |
 | `width` / `height`      | `string`                     | CSS sizes for the wrapper. With no `height`, the editor grows with its content.                               |
 | `className`             | `string`                     | Added to the wrapper `div` (which always has the `code-editor` class).                                        |
 | `showGutter`            | `boolean`                    | Shows line numbers.                                                                                           |
@@ -71,7 +75,6 @@ import { CodeEditor } from '../../components';
 | `transparentBackground` | `boolean`                    | Drops the editor's own background.                                                                            |
 | `placeholder`           | `string`                     | Shown while the editor is empty.                                                                              |
 | `autoFocus`             | `boolean`                    | Focuses the editor when it mounts.                                                                            |
-| `getCompletions`        | `(request) => EditorCompletion[]` | Turns on autocomplete. See [Autocomplete](#autocomplete).                                                |
 | `stateCacheId`          | `string`                     | Remembers the undo history and selection under this id, so they survive the editor being unmounted.           |
 | `extensions`            | `Extension`                  | Extra CodeMirror extensions. **Only read when the editor is created.**                                        |
 | `ref`                   | `Ref<EditorView>`            | Gives you the underlying CodeMirror `EditorView`.                                                             |
@@ -92,9 +95,10 @@ the parent passes back.
 
 ### Props that change vs. props read once
 
-Most props (`mode`, `onChange`/read-only, `showGutter`, `placeholder`, `getCompletions`, `onBlur`) can change at any
-time. The editor updates in place without being recreated. The workbench input uses this to switch between `dsql`
-and `hjson` as soon as the text starts with `{`.
+Most props (`language`, `onChange`/read-only, `showGutter`, `placeholder`, `onBlur`) can change at any time. The
+editor updates in place without being recreated. The workbench input uses this to switch between `dsql()` and
+`hjson()` as soon as the text starts with `{`. The editor is reconfigured whenever `language` is a new object, so keep
+it stable between renders (see [Languages](#languages)).
 
 `padding`, `extensions` and `autoFocus` are only read when the editor is created. Changing `stateCacheId` recreates
 the editor.
@@ -110,9 +114,14 @@ when a tab is closed).
 
 ## Autocomplete
 
-Pass `getCompletions` to turn on autocomplete. Suggestions appear as the user types a word, and Ctrl-Space opens the
-list on demand. Enter or Tab accepts the selected one. The callback gets a `CompletionRequest` describing where the
-cursor is:
+The completions come with the language: `dsql(...)` always completes and `hjson({ jsonCompletions })` completes when
+given rules. Each attaches a CodeMirror completion source as language data (`language.data.of({ autocomplete })`), so
+switching the language switches the completions. Suggestions appear as the user types a word, and Ctrl-Space opens the
+list on demand. Enter or Tab accepts the selected one. Read-only editors don't complete.
+
+The completion builders in `src/editor-completions/` (`getSqlCompletions`, `getHjsonCompletions`) are plain functions.
+`makeCompletionSource` (`completion-source.ts`) turns one into a completion source. It works out the word being
+completed and hands the builder a `CompletionRequest` describing where the cursor is:
 
 ```ts
 interface CompletionRequest {
@@ -151,21 +160,19 @@ inserted as text, and "doc markdown" is turned into elements by `renderDocMarkdo
 `` `code` ``, `*emphasis*`, line breaks (`\n`), list items (lines starting with `- `) and backslash escapes. The script
 drops links, converts `<br>` and simple lists, and fails on any other HTML.
 
-Usually you don't write completions yourself. Hook up the existing builders:
+Usually you don't write completions yourself. Pass what the builders need to the language:
 
 ```tsx
-const getCompletions = useCallback(
-  ({ allText, prefix, charBeforePrefix, lineBeforePrefix }: CompletionRequest) =>
-    getSqlCompletions({ allText, prefix, charBeforePrefix, lineBeforePrefix, columnMetadata, availableSqlFunctions }),
+const language = useMemo(
+  () => dsql({ columnMetadata, availableSqlFunctions }),
   [columnMetadata, availableSqlFunctions],
 );
 
-<CodeEditor mode="dsql" value={sql} onChange={setSql} getCompletions={getCompletions} />;
+<CodeEditor language={language} value={sql} onChange={setSql} />;
 ```
 
 Things to know:
 
-- The callback can change between renders, and the latest one is always used.
 - The editor filters and ranks your list against the prefix (fuzzy matching), so you don't need to filter it yourself.
 - The popup and its doc panel are rendered in a shared container at the start of `<body>`, so they are never clipped by
   dialogs or popovers that contain the editor.
@@ -198,17 +205,23 @@ a wrapping `div`.
 
 ## Languages
 
-The modes are CodeMirror `StreamLanguage`s defined in `src/editor-modes/`:
+`src/editor-languages/` exports a `LanguageSupport` factory per language. A `LanguageSupport` is CodeMirror's bundle
+of a language and the extensions that go with it:
 
-- **`dsql`** (DruidSQL): Keywords, functions, data types and constants come from `lib/keywords.ts` and
-  `lib/sql-docs`. Double-quoted references (`"column"`) and `--:ISSUE:` comments get their own colors.
-  `initDsqlMode(availableSqlFunctions)` adds the functions that the cluster reports, and is called once the
-  capabilities are known. The SQL mode auto-closes `(`, `[`, `'` and `"` (not `{`), and Cmd/Ctrl-/ toggles `--`
-  comments.
-- **`hjson`** (Hjson/JSON): highlights keys, strings, numbers, escapes and `#`, `//` and `/* */` comments, including
-  objects without the outer braces.
+- **`dsql({ availableSqlFunctions, columnMetadata, columns, skipAggregates })`** (DruidSQL): Keywords, functions,
+  data types and constants come from `lib/keywords.ts` and `lib/sql-docs`, plus the `availableSqlFunctions` that the
+  cluster reports (from `useAvailableSqlFunctions()`). Double-quoted references (`"column"`) and `--:ISSUE:` comments
+  get their own colors. It auto-closes `(`, `[`, `'` and `"` (not `{`), and Cmd/Ctrl-/ toggles `--` comments. The
+  options are passed on to `getSqlCompletions`. Each call makes a new `LanguageSupport`, so memoize it.
+- **`hjson({ jsonCompletions })`** (Hjson/JSON): highlights keys, strings, numbers, escapes and `#`, `//` and `/* */`
+  comments, including objects without the outer braces. It returns the same object for the same `jsonCompletions`,
+  so `hjson()` can be called while rendering.
 
-Both are built with `createRuleParser` (`src/editor-modes/rule-parser.ts`). It takes Ace-style rules: for each state, a
+The highlighting of `dsql` depends on the cluster's functions, so `getDsqlLanguage(availableSqlFunctions)` makes one
+`StreamLanguage` per set of functions (and the same one for the same set). When the functions arrive, the editors that
+are open re-highlight right away.
+
+Both are built with `createRuleParser` (`src/editor-languages/rule-parser.ts`). It takes Ace-style rules: for each state, a
 list of regexes tried in order, where a rule can push or pop a state. Token names map to highlighting tags through
 `TOKEN_TABLE` in the same file.
 
@@ -249,13 +262,14 @@ replaces each editor with a comment listing what the console configured, for exa
 ```html
 <div class="code-editor query-string" style="height: 100%;">
   <div class="cm-editor">
-    <!-- Code editor, mode: hjson, value: "{\n  \"a\": 1\n}", read only -->
+    <!-- Code editor, language: hjson, value: "{\n  \"a\": 1\n}", read only -->
   </div>
 </div>
 ```
 
-So a snapshot changes only when the mode, value, placeholder or read-only state changes, not when CodeMirror is
+So a snapshot changes only when the language, value, placeholder or read-only state changes, not when CodeMirror is
 upgraded.
 
-The language rules are tested directly in `src/editor-modes/editor-modes.spec.ts`. It parses text with the language's
-parser and checks the token name produced for each piece of text.
+The languages are tested directly in `src/editor-languages/editor-languages.spec.ts`. It parses text with the
+language's parser and checks the token name produced for each piece of text, and it checks that `dsql()` and `hjson()`
+bring their completion sources.

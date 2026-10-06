@@ -31,6 +31,7 @@ import * as JSONBig from 'json-bigint-native';
 import React, { useMemo, useState } from 'react';
 
 import { CodeEditor } from '../../components';
+import { hjson } from '../../editor-languages/hjson';
 import { AppToaster } from '../../singletons';
 import { copyToClipboard } from '../../utils';
 
@@ -85,7 +86,7 @@ export const ShowValueDialog = React.memo(function ShowValueDialog(props: ShowVa
         )}
         {hasParsed && tab === 'formatted' && (
           <CodeEditor
-            mode="hjson"
+            language={hjson()}
             className="query-string"
             height="100%"
             showGutter

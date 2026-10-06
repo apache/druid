@@ -28,10 +28,13 @@ import {
 } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { CenterMessage, CodeEditor } from '../../../components';
+import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import type { WorkbenchQuery } from '../../../druid-models';
+import { dsql } from '../../../editor-languages/dsql';
+import { hjson } from '../../../editor-languages/hjson';
 import type { WorkbenchQueryHistoryEntry } from '../../../singletons/workbench-history';
 import { WorkbenchHistory } from '../../../singletons/workbench-history';
 import { pluralIfNeeded } from '../../../utils';
@@ -49,6 +52,8 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
   const { onSelectQuery, onClose } = props;
   const [activeTab, setActiveTab] = useState(0);
   const [queryRecords] = useState(() => WorkbenchHistory.getHistory());
+  const availableSqlFunctions = useAvailableSqlFunctions();
+  const sqlLanguage = useMemo(() => dsql({ availableSqlFunctions }), [availableSqlFunctions]);
 
   function handleSelect() {
     const queryRecord = queryRecords[activeTab];
@@ -83,7 +88,7 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
           </PopoverNext>
         </div>
         <CodeEditor
-          mode={jsonMode ? 'hjson' : 'dsql'}
+          language={jsonMode ? hjson() : sqlLanguage}
           className="query-string"
           showGutter
           value={queryString}

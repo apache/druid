@@ -35,6 +35,7 @@ import React from 'react';
 import { CodeEditor, Loader } from '../../../components';
 import type { DruidEngine, QueryContext, QueryWithContext } from '../../../druid-models';
 import { isEmptyContext } from '../../../druid-models';
+import { hjson } from '../../../editor-languages/hjson';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
 import type { QueryExplanation } from '../../../utils';
@@ -128,7 +129,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       <div className="query-explanation">
         <FormGroup className="query-group">
           <CodeEditor
-            mode="hjson"
+            language={hjson()}
             className="query-string"
             height="100%"
             showGutter

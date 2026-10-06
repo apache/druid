@@ -25,12 +25,11 @@ import { Decoration, EditorView, GutterMarker, lineNumberMarkers } from '@codemi
 import { dedupe } from 'druid-query-toolkit';
 import React from 'react';
 
-import type { CompletionRequest } from '../../../components';
 import { CodeEditor, focusEditorAt } from '../../../components';
 import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-context';
 import { NATIVE_JSON_QUERY_COMPLETIONS } from '../../../druid-models';
-import { getHjsonCompletions } from '../../../editor-completions/hjson-completions';
-import { getSqlCompletions } from '../../../editor-completions/sql-completions';
+import { dsql } from '../../../editor-languages/dsql';
+import { hjson } from '../../../editor-languages/hjson';
 import { AppToaster } from '../../../singletons';
 import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
 import { findAllSqlQueriesInText, findMap } from '../../../utils';
@@ -245,33 +244,13 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
     highlightFoundQueryRowRef.current = undefined;
   }, []);
 
-  const getCompletions = React.useCallback(
-    ({
-      allText,
-      prefix,
-      charBeforePrefix,
-      textBeforePrefix,
-      lineBeforePrefix,
-    }: CompletionRequest) => {
-      if (allText.trim().startsWith('{')) {
-        return getHjsonCompletions({
-          jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS,
-          textBefore: textBeforePrefix,
-          charBeforePrefix,
-          prefix,
-        });
-      } else {
-        return getSqlCompletions({
-          allText,
-          lineBeforePrefix,
-          charBeforePrefix,
-          prefix,
-          columnMetadata,
-          availableSqlFunctions,
-        });
-      }
-    },
-    [columnMetadata, availableSqlFunctions],
+  const isJson = queryString.trim().startsWith('{');
+  const language = React.useMemo(
+    () =>
+      isJson
+        ? hjson({ jsonCompletions: NATIVE_JSON_QUERY_COMPLETIONS })
+        : dsql({ columnMetadata, availableSqlFunctions }),
+    [isJson, columnMetadata, availableSqlFunctions],
   );
 
   return (
@@ -284,7 +263,7 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
       >
         <CodeEditor
           ref={editorViewRef}
-          mode={queryString.trim().startsWith('{') ? 'hjson' : 'dsql'}
+          language={language}
           transparentBackground={!leaveBackground}
           value={queryString}
           onChange={onQueryStringChange}
@@ -293,7 +272,6 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
           showGutter={showGutter}
           padding={V_PADDING}
           placeholder={placeholder || 'SELECT * FROM ...'}
-          getCompletions={getCompletions}
           stateCacheId={editorStateId}
           extensions={SUB_QUERY_EXTENSIONS}
         />

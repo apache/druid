@@ -59,7 +59,7 @@ exports[`EditContextDialog matches snapshot 1`] = `
             <div
               class="cm-editor"
             >
-              <!-- Code editor, mode: hjson, value: "{\\n\\n}" -->
+              <!-- Code editor, language: hjson, value: "{\\n\\n}" -->
             </div>
           </div>
         </div>

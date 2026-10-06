@@ -16,10 +16,16 @@
  * limitations under the License.
  */
 
+import type { CompletionResult, CompletionSource } from '@codemirror/autocomplete';
+import { CompletionContext } from '@codemirror/autocomplete';
 import type { Language } from '@codemirror/language';
+import type { Extension } from '@codemirror/state';
+import { EditorState } from '@codemirror/state';
 
-import { dsqlLanguage, initDsqlMode } from './dsql';
-import { hjsonLanguage } from './hjson';
+import { dsql, getDsqlLanguage } from './dsql';
+import { hjson, hjsonLanguage } from './hjson';
+
+const dsqlLanguage = getDsqlLanguage();
 
 function tokenize(language: Language, text: string): [type: string, value: string][] {
   const tokens: [string, string][] = [];
@@ -36,7 +42,7 @@ function tokenOf(language: Language, text: string, value: string): string | unde
   return tokenize(language, text).find(t => t[1] === value)?.[0];
 }
 
-describe('editor modes', () => {
+describe('editor languages', () => {
   it('highlights DruidSQL', () => {
     const sql = `--:ISSUE: bad
 SELECT COUNT(*), "col", CAST(x AS VARCHAR), TRUE FROM t WHERE y <> 'lit' AND z = 3.5 -- comment
@@ -56,11 +62,13 @@ line */ SELECT`;
     expect(tokenOf(dsqlLanguage, sql, 'x')).toBeUndefined();
   });
 
-  it('highlights the available functions once they are known', () => {
+  it('highlights the available functions', () => {
+    const availableSqlFunctions = new Map([['MY_FN', { args: ['x'], isAggregate: false }]]);
     expect(tokenOf(dsqlLanguage, 'SELECT MY_FN(x)', 'MY_FN')).toBeUndefined();
-    initDsqlMode(new Map([['MY_FN', { args: ['x'], isAggregate: false }]]));
-    expect(tokenOf(dsqlLanguage, 'SELECT MY_FN(x)', 'MY_FN')).toEqual('function');
-    initDsqlMode(undefined);
+    expect(tokenOf(getDsqlLanguage(availableSqlFunctions), 'SELECT MY_FN(x)', 'MY_FN')).toEqual(
+      'function',
+    );
+    expect(getDsqlLanguage(availableSqlFunctions)).toBe(getDsqlLanguage(availableSqlFunctions));
   });
 
   it('highlights Hjson', () => {
@@ -88,5 +96,44 @@ dataSource: wikipedia`;
     expect(tokenOf(hjsonLanguage, hjson, 'queryType')).toEqual('keyword');
     expect(tokenOf(hjsonLanguage, hjson, 'dataSource')).toEqual('keyword');
     expect(tokenOf(hjsonLanguage, hjson, 'wikipedia')).toEqual('string');
+  });
+
+  describe('completions', () => {
+    // Completes at the end of the text (marked with a |) the way the editor would
+    function complete(
+      extension: Extension,
+      textWithCursor: string,
+      readOnly = false,
+    ): string[] | undefined {
+      const pos = textWithCursor.indexOf('|');
+      const state = EditorState.create({
+        doc: textWithCursor.replace('|', ''),
+        extensions: [extension, EditorState.readOnly.of(readOnly)],
+      });
+      const sources = state.languageDataAt<CompletionSource>('autocomplete', pos);
+      if (!sources.length) return;
+      const result = sources[0](
+        new CompletionContext(state, pos, false),
+      ) as CompletionResult | null;
+      return result?.options.map(option => option.label);
+    }
+
+    it('comes with dsql', () => {
+      expect(complete(dsql({ columns: ['my_column'] }), 'SELECT my_c|')).toContain('"my_column"');
+      expect(complete(dsql(), 'SELECT COU|')).toContain('COUNT');
+    });
+
+    it('comes with hjson when given jsonCompletions', () => {
+      const jsonCompletions = [
+        { path: '$', isObject: true, completions: [{ value: 'queryType' }] },
+      ];
+      expect(complete(hjson({ jsonCompletions }), '{\n  que|')).toEqual(['queryType']);
+      expect(hjson({ jsonCompletions })).toBe(hjson({ jsonCompletions }));
+      expect(complete(hjson(), '{\n  que|')).toBeUndefined();
+    });
+
+    it('is off in read only editors', () => {
+      expect(complete(dsql(), 'SELECT COU|', true)).toBeUndefined();
+    });
   });
 });

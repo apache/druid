@@ -16,13 +16,7 @@
  * limitations under the License.
  */
 
-import type { Completion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
-import {
-  acceptCompletion,
-  autocompletion,
-  closeBrackets,
-  closeBracketsKeymap,
-} from '@codemirror/autocomplete';
+import { acceptCompletion, autocompletion } from '@codemirror/autocomplete';
 import {
   defaultKeymap,
   history,
@@ -31,6 +25,7 @@ import {
   indentLess,
   indentMore,
 } from '@codemirror/commands';
+import type { LanguageSupport } from '@codemirror/language';
 import { bracketMatching, indentUnit, syntaxHighlighting } from '@codemirror/language';
 import { search, searchKeymap } from '@codemirror/search';
 import type { ChangeSpec, Extension } from '@codemirror/state';
@@ -56,9 +51,6 @@ import classNames from 'classnames';
 import type React from 'react';
 import { useEffect, useEffectEvent, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 
-import type { EditorCompletion } from '../../editor-completions/editor-completion';
-import { dsqlLanguage } from '../../editor-modes/dsql';
-import { hjsonLanguage } from '../../editor-modes/hjson';
 import { useConstant, usePermanentCallback } from '../../hooks';
 import { EditorStateCache } from '../../singletons/editor-state-cache';
 import type { RowColumn } from '../../utils';
@@ -68,34 +60,15 @@ import {
   codeEditorPaddingTheme,
   codeEditorTheme,
 } from './code-editor-theme';
-import { renderCompletionDoc } from './completion-doc';
 
 import './code-editor.scss';
 
 const TAB_SIZE = 2;
 
-// The characters that make up the word being completed
-const PREFIX_REGEXP = /[\w$\-\u00A2-\u2000\u2070-\uFFFF]*/;
-const VALID_PREFIX_REGEXP = new RegExp(`^${PREFIX_REGEXP.source}$`);
-
 /**
  * Marks the changes that come from a new value being passed in (as opposed to the user editing the text)
  */
 const externalChange = Annotation.define<boolean>();
-
-export type CodeEditorMode = 'dsql' | 'hjson' | 'text';
-
-export interface CompletionRequest {
-  allText: string;
-  /** The (partial) word being completed */
-  prefix: string;
-  /** The character right before the prefix ('\n' at the start of a line, '' at the start of the text) */
-  charBeforePrefix: string;
-  /** All of the text before charBeforePrefix */
-  textBeforePrefix: string;
-  /** The part of the line before charBeforePrefix */
-  lineBeforePrefix: string;
-}
 
 export interface CodeEditorProps {
   ref?: React.Ref<EditorView | undefined>;
@@ -104,7 +77,8 @@ export interface CodeEditorProps {
   /** Without an onChange the editor is read only */
   onChange?: (value: string) => void;
   onBlur?: () => void;
-  mode?: CodeEditorMode;
+  /** The language (like dsql() or hjson()), it brings its own highlighting and completions. Plain text without one */
+  language?: LanguageSupport;
   autoFocus?: boolean;
   width?: string;
   height?: string;
@@ -113,7 +87,6 @@ export interface CodeEditorProps {
   padding?: number;
   transparentBackground?: boolean;
   placeholder?: string;
-  getCompletions?: (request: CompletionRequest) => readonly EditorCompletion[];
   /** Makes the editor remember its state (undo history, selection) between mounts */
   stateCacheId?: string;
   /** Additional extensions, only read when the editor is created */
@@ -134,19 +107,6 @@ function getTooltipHost(): HTMLElement {
     document.body.prepend(tooltipHost);
   }
   return tooltipHost;
-}
-
-function modeExtension(mode: CodeEditorMode | undefined): Extension {
-  switch (mode) {
-    case 'dsql':
-      return [dsqlLanguage, closeBrackets(), keymap.of(closeBracketsKeymap)];
-
-    case 'hjson':
-      return hjsonLanguage;
-
-    default:
-      return [];
-  }
 }
 
 function gutterExtension(showGutter: boolean | undefined): Extension {
@@ -200,10 +160,6 @@ function positionInfo(_view: EditorView, list: Rect, _option: Rect, info: Rect, 
   };
 }
 
-function toCompletion({ doc, ...completion }: EditorCompletion): Completion {
-  return doc ? { ...completion, info: () => renderCompletionDoc(doc) } : completion;
-}
-
 /**
  * The smallest change that turns one string into the other
  */
@@ -240,7 +196,7 @@ export function CodeEditor(props: CodeEditorProps) {
     value,
     onChange,
     onBlur,
-    mode,
+    language,
     autoFocus,
     width,
     height,
@@ -248,7 +204,6 @@ export function CodeEditor(props: CodeEditorProps) {
     padding,
     transparentBackground,
     placeholder,
-    getCompletions,
     stateCacheId,
     extensions,
   } = props;
@@ -256,7 +211,7 @@ export function CodeEditor(props: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | undefined>(undefined);
   const compartments = useConstant(() => ({
-    mode: new Compartment(),
+    language: new Compartment(),
     readOnly: new Compartment(),
     gutter: new Compartment(),
     placeholder: new Compartment(),
@@ -265,33 +220,6 @@ export function CodeEditor(props: CodeEditorProps) {
 
   const handleChange = usePermanentCallback((newValue: string) => onChange?.(newValue));
   const handleBlur = usePermanentCallback(() => onBlur?.());
-  const handleCompletions = usePermanentCallback(
-    (context: CompletionContext): CompletionResult | null => {
-      if (!getCompletions) return null;
-      const { state, pos } = context;
-      const from = context.matchBefore(PREFIX_REGEXP)?.from ?? pos;
-      const prefix = state.sliceDoc(from, pos);
-      if (!prefix && !context.explicit) return null;
-
-      const line = state.doc.lineAt(from);
-      const completions = getCompletions({
-        allText: state.doc.toString(),
-        prefix,
-        charBeforePrefix: state.sliceDoc(from - 1, from),
-        textBeforePrefix: state.sliceDoc(0, Math.max(0, from - 1)),
-        lineBeforePrefix: from > line.from ? state.sliceDoc(line.from, from - 1) : '',
-      });
-      const options = completions.map(toCompletion);
-      if (!options.length) return null;
-
-      return {
-        from,
-        options,
-        validFor: VALID_PREFIX_REGEXP,
-      };
-    },
-  );
-
   const createView = useEffectEvent((container: HTMLElement) => {
     const editorExtensions: Extension = [
       history(),
@@ -301,7 +229,6 @@ export function CodeEditor(props: CodeEditorProps) {
       highlightActiveLine(),
       syntaxHighlighting(codeEditorHighlightStyle),
       autocompletion({
-        override: [handleCompletions],
         icons: false,
         positionInfo,
       }),
@@ -317,7 +244,7 @@ export function CodeEditor(props: CodeEditorProps) {
       indentUnit.of(' '.repeat(TAB_SIZE)),
       codeEditorTheme,
       typeof padding === 'number' ? codeEditorPaddingTheme(padding) : [],
-      compartments.mode.of(modeExtension(mode)),
+      compartments.language.of(language ?? []),
       compartments.readOnly.of(readOnlyExtension(readOnly)),
       compartments.gutter.of(gutterExtension(showGutter)),
       compartments.placeholder.of(placeholderTextExtension(placeholder)),
@@ -388,9 +315,9 @@ export function CodeEditor(props: CodeEditorProps) {
 
   useEffect(() => {
     viewRef.current?.dispatch({
-      effects: compartments.mode.reconfigure(modeExtension(mode)),
+      effects: compartments.language.reconfigure(language ?? []),
     });
-  }, [compartments, mode]);
+  }, [compartments, language]);
 
   useEffect(() => {
     viewRef.current?.dispatch({

@@ -20,11 +20,10 @@ import type { EditorView } from '@codemirror/view';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
-import React, { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 
-import { getHjsonCompletions } from '../../editor-completions/hjson-completions';
+import { hjson } from '../../editor-languages/hjson';
 import type { JsonCompletionRule } from '../../utils';
-import type { CompletionRequest } from '../code-editor/code-editor';
 import { CodeEditor, focusEditorAt } from '../code-editor/code-editor';
 
 import './json-input.scss';
@@ -112,19 +111,6 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     showValue(value);
   }, [value]);
 
-  const getCompletions = useCallback(
-    ({ prefix, charBeforePrefix, textBeforePrefix }: CompletionRequest) => {
-      if (!jsonCompletions) return [];
-      return getHjsonCompletions({
-        jsonCompletions,
-        textBefore: textBeforePrefix,
-        charBeforePrefix,
-        prefix,
-      });
-    },
-    [jsonCompletions],
-  );
-
   const handleInputChange = (inputJson: string) => {
     let value: any;
     let error: Error | undefined;
@@ -163,7 +149,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     <div className={classNames('json-input', { invalid: showErrorIfNeeded && internalValueError })}>
       <CodeEditor
         ref={editorViewRef}
-        mode="hjson"
+        language={hjson({ jsonCompletions })}
         onChange={onChange ? handleInputChange : undefined}
         onBlur={() => setShowErrorIfNeeded(true)}
         autoFocus={focus}
@@ -172,7 +158,6 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
         showGutter={Boolean(showLineNumbers)}
         value={internalValue.stringified}
         placeholder={placeholder}
-        getCompletions={jsonCompletions ? getCompletions : undefined}
       />
       {showErrorIfNeeded && internalValueError && (
         <div

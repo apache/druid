@@ -20,7 +20,11 @@
 // https://github.com/thlorenz/brace/blob/master/mode/hjson.js
 // Originally licensed under the MIT license (https://github.com/thlorenz/brace/blob/master/LICENSE)
 
-import { StreamLanguage } from '@codemirror/language';
+import { LanguageSupport, StreamLanguage } from '@codemirror/language';
+
+import { makeCompletionSource } from '../components/code-editor/completion-source';
+import { getHjsonCompletions } from '../editor-completions/hjson-completions';
+import type { JsonCompletionRule } from '../utils';
 
 import type { TokenRule } from './rule-parser';
 import { createRuleParser, TOKEN_TABLE } from './rule-parser';
@@ -85,3 +89,37 @@ export const hjsonLanguage = StreamLanguage.define({
     commentTokens: { line: '//', block: { open: '/*', close: '*/' } },
   },
 });
+
+const plainHjson = new LanguageSupport(hjsonLanguage);
+const hjsonWithCompletions = new WeakMap<JsonCompletionRule[], LanguageSupport>();
+
+export interface HjsonOptions {
+  /** The rules for the property and value completions */
+  jsonCompletions?: JsonCompletionRule[];
+}
+
+/**
+ * Hjson support for a CodeEditor: highlighting and, given jsonCompletions, completions. The same options always give
+ * the same LanguageSupport so that it can be created while rendering.
+ */
+export function hjson({ jsonCompletions }: HjsonOptions = {}): LanguageSupport {
+  if (!jsonCompletions) return plainHjson;
+  let support = hjsonWithCompletions.get(jsonCompletions);
+  if (!support) {
+    support = new LanguageSupport(
+      hjsonLanguage,
+      hjsonLanguage.data.of({
+        autocomplete: makeCompletionSource(({ prefix, charBeforePrefix, textBeforePrefix }) =>
+          getHjsonCompletions({
+            jsonCompletions,
+            textBefore: textBeforePrefix,
+            charBeforePrefix,
+            prefix,
+          }),
+        ),
+      }),
+    );
+    hjsonWithCompletions.set(jsonCompletions, support);
+  }
+  return support;
+}

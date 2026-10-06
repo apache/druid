@@ -23,12 +23,12 @@ import { EditorView } from '@codemirror/view';
 // - the empty padding rows that ConsoleTable always renders are collapsed into a single comment
 // - icon <svg>s are reduced to their icon name (the path data changes whenever an icon is redrawn)
 // - the inside of code editors (CodeMirror's own DOM, which changes with every CodeMirror version) is replaced with a
-//   comment describing what the console configured: the mode, the value and the placeholder
+//   comment describing what the console configured: the language, the value and the placeholder
 
 const cleaned = new WeakSet<Node>();
 
 function describeEditor(view: EditorView): string {
-  const parts = [`mode: ${view.state.facet(language)?.name || 'text'}`];
+  const parts = [`language: ${view.state.facet(language)?.name || 'text'}`];
   parts.push(`value: ${JSON.stringify(view.state.doc.toString())}`);
   const placeholder = view.dom.querySelector('.cm-placeholder')?.textContent;
   if (placeholder) parts.push(`placeholder: ${JSON.stringify(placeholder)}`);

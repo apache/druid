@@ -20,10 +20,9 @@ import type { EditorView } from '@codemirror/view';
 import type { Column } from 'druid-query-toolkit';
 import React from 'react';
 
-import type { CompletionRequest } from '../../../../components';
 import { CodeEditor, focusEditorAt } from '../../../../components';
 import { useAvailableSqlFunctions } from '../../../../contexts/sql-functions-context';
-import { getSqlCompletions } from '../../../../editor-completions/sql-completions';
+import { dsql } from '../../../../editor-languages/dsql';
 import type { RowColumn } from '../../../../utils';
 
 const V_PADDING = 10;
@@ -68,13 +67,9 @@ export function SqlInput(props: SqlInputProps) {
 
   React.useImperativeHandle(ref, () => ({ goToPosition }), [goToPosition]);
 
-  const getCompletions = React.useCallback(
-    ({ allText, prefix, charBeforePrefix, lineBeforePrefix }: CompletionRequest) =>
-      getSqlCompletions({
-        allText,
-        lineBeforePrefix,
-        charBeforePrefix,
-        prefix,
+  const language = React.useMemo(
+    () =>
+      dsql({
         columns: columns?.map(column => column.name),
         availableSqlFunctions,
         skipAggregates: !includeAggregates,
@@ -86,7 +81,7 @@ export function SqlInput(props: SqlInputProps) {
     <CodeEditor
       ref={editorViewRef}
       className="sql-input"
-      mode="dsql"
+      language={language}
       value={value}
       onChange={onValueChange}
       autoFocus={autoFocus}
@@ -95,7 +90,6 @@ export function SqlInput(props: SqlInputProps) {
       showGutter={Boolean(showGutter)}
       padding={V_PADDING}
       placeholder={placeholder || 'SQL filter'}
-      getCompletions={getCompletions}
     />
   );
 }

@@ -32,7 +32,7 @@ Status: ✅ done, ⬜ to do.
 
 1. ✅ 1a + 1b: a CodeMirror-shaped completion type with a structured `doc` (and 1a+: no HTML in the SQL docs)
 2. ✅ 1e, 1h: small cleanups
-3. ⬜ 2a + 2b + 1g: `LanguageSupport` factories that bring their own completion sources
+3. ✅ 2a + 2b + 1g: `LanguageSupport` factories that bring their own completion sources
 4. ⬜ 1c + 1d: completion sources that read the syntax tree
 5. ⬜ 4a + 4b: the partial query markers
 6. ⬜ 3a + 3b and 5: positions and prop renames (these touch the most callers)
@@ -139,17 +139,23 @@ language. In CodeMirror, word characters are language data (`wordChars`) or the 
 
 **Decide first:** this changes which part of the text is completed (for example `foo-ba`), so it is a behavior change.
 
-### ⬜ 1g. Languages bring their own completion sources
+### ✅ 1g. Languages bring their own completion sources
 
-The callers choose the completion builder:
+**Was:** the callers chose the completion builder. `FlexibleQueryInput` checked `startsWith('{')` once to pick the mode
+and again to pick the completer, and `JsonInput` and `SqlInput` each wrapped their builder by hand in a
+`getCompletions` prop, which `CodeEditor` plugged into `autocompletion({ override })`.
 
-- `FlexibleQueryInput` checks `startsWith('{')` once to pick the mode and again to pick the completer.
-- `JsonInput` and `SqlInput` each wrap their builder by hand.
+**Done:**
 
-**To do:** attach completion sources to the languages with `language.data.of({ autocomplete })`, inside a
-`LanguageSupport`. Callers then pass something like `dsql({ columnMetadata, functions, skipAggregates })` or
-`hjson({ jsonCompletions })`, switching the language switches the completions, and `autocompletion()` no longer needs
-`override`. Goes together with 2a and 2b.
+- `dsql({ columnMetadata, columns, availableSqlFunctions, skipAggregates })` and `hjson({ jsonCompletions })` attach
+  a completion source with `language.data.of({ autocomplete })`. Switching the language switches the completions.
+- `makeCompletionSource` (`completion-source.ts`) holds what used to be `CodeEditor`'s `handleCompletions`: it works
+  out the prefix, builds the `CompletionRequest` (until 1c) and turns `EditorCompletion`s into `Completion`s.
+- `CodeEditor` has no `getCompletions` prop and no `override`, and knows nothing about SQL or Hjson.
+- `FlexibleQueryInput` checks `startsWith('{')` once.
+
+**Behavior change (none expected):** a read-only editor now never completes (the source returns nothing), which is
+what happened before because read-only editors were never given `getCompletions`.
 
 ### ✅ 1h. Leftovers in `hjson-completions.ts`
 
@@ -158,22 +164,37 @@ The callers choose the completion builder:
 
 ## 2. Languages
 
-### ⬜ 2a. A `language` instead of a `mode` string
+### ✅ 2a. A `language` instead of a `mode` string
 
-`mode` (`'dsql' | 'hjson' | 'text'`) is Ace's term, and the string is decoded inside `CodeEditor` (`modeExtension`),
-which also adds `closeBrackets` for `dsql` only. That puts language behavior in the generic component. The Ace term is
-also in `src/editor-modes/` and `initDsqlMode`.
+**Was:** `mode` (`'dsql' | 'hjson' | 'text'`) is Ace's term, and the string was decoded inside `CodeEditor`
+(`modeExtension`), which also added `closeBrackets` for `dsql` only. The Ace term was also in `src/editor-modes/` and
+`initDsqlMode`.
 
-**To do:** export `LanguageSupport` factories (`dsql()`, `hjson()`) that include their bracket behavior, and take a
-`language` prop. Keep the snapshot serializer's description of the editor working (it reads the `language` facet).
+**Done:**
 
-### ⬜ 2b. No global state for the cluster's SQL functions
+- `CodeEditor` takes `language?: LanguageSupport` and puts it in a compartment (no language means plain text).
+  `modeExtension` and `CodeEditorMode` are gone.
+- `dsql()` includes `closeBrackets()` and its keymap, in the same place in the extension order as before.
+- `hjson()` returns the same `LanguageSupport` for the same `jsonCompletions`, so the read-only callers write
+  `language={hjson()}`. `dsql()` makes a new one per call, so its callers memoize it.
+- `src/editor-modes/` is now `src/editor-languages/` (`editor-languages.spec.ts`).
+- The snapshot serializer says `language: dsql` instead of `mode: dsql`. 7 snapshot files changed, only in that
+  word.
 
-`initDsqlMode` stores the cluster's functions in module-level variables (`dsql.ts`). Editors that are already open
-only pick them up on their next edit. The functions are already in React context (`useAvailableSqlFunctions`).
+**Found, not changed:** the `closeBrackets` Backspace binding (delete an empty `()` pair) never runs, because the
+default keymap's Backspace comes first. That was so before this step too; it can be fixed separately by moving
+`closeBracketsKeymap` ahead of `defaultKeymap`.
 
-**To do:** a memoized `dsql({ functions })` factory, reconfigured through the language compartment so that open
-editors re-highlight right away.
+### ✅ 2b. No global state for the cluster's SQL functions
+
+**Was:** `initDsqlMode` (called by `ConsoleApplication`) stored the cluster's functions in module-level variables in
+`dsql.ts`. Editors that were already open only picked them up on their next edit.
+
+**Done:** `getDsqlLanguage(availableSqlFunctions)` makes one `StreamLanguage` per set of functions (cached in a
+`WeakMap`, so the same set gives the same language and does not re-parse). The callers get the functions from
+`useAvailableSqlFunctions()` and pass them to `dsql()`. When they arrive, the language compartment is reconfigured and
+open editors re-highlight right away. `WorkbenchHistoryDialog` now reads the context too, so its read-only SQL keeps
+highlighting the cluster's functions.
 
 ### ⬜ 2c. Keep `createRuleParser`, but name it for what it is
 

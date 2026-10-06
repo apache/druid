@@ -20,6 +20,7 @@ import { Button, ButtonGroup, Intent } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 
+import { hjson } from '../../editor-languages/hjson';
 import { useQueryManager } from '../../hooks';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
 import { copyToClipboard, downloadFile } from '../../utils';
@@ -91,7 +92,7 @@ export const ShowJson = React.memo(function ShowJson(props: ShowJsonProps) {
           <Loader />
         ) : (
           <CodeEditor
-            mode="hjson"
+            language={hjson()}
             height="100%"
             value={(!jsonState.error ? jsonValue : jsonState.getErrorMessage()) ?? ''}
           />

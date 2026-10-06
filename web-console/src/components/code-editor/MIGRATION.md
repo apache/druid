@@ -42,10 +42,12 @@ look as possible. For how to use the new component, see [README.md](./README.md)
 | `react-ace`'s `<AceEditor>`                      | `src/components/code-editor/code-editor.tsx` (`CodeEditor`)              |
 | `src/bootstrap/ace.ts` (imports, theme, modes)   | Removed. Everything is imported where it is used                        |
 | `src/bootstrap/ace.scss` (theme overrides)       | `src/components/code-editor/code-editor-theme.ts` (+ `code-editor.scss`) |
-| `src/ace-modes/dsql.ts`, `hjson.ts`              | `src/editor-modes/dsql.ts`, `hjson.ts`                                   |
-| `src/ace-modes/ace-mode-helpers.ts`              | `src/editor-modes/rule-parser.ts` (Ace-style rules → stream parser)      |
-| `src/ace-modes/ace-modes.spec.ts`                | `src/editor-modes/editor-modes.spec.ts`                                  |
-| `initAceDsqlMode(functions)`                     | `initDsqlMode(functions)`                                                |
+| `src/ace-modes/dsql.ts`, `hjson.ts`              | `src/editor-languages/dsql.ts`, `hjson.ts`                               |
+| `src/ace-modes/ace-mode-helpers.ts`              | `src/editor-languages/rule-parser.ts` (Ace-style rules → stream parser)  |
+| `src/ace-modes/ace-modes.spec.ts`                | `src/editor-languages/editor-languages.spec.ts`                          |
+| `initAceDsqlMode(functions)`                     | `dsql({ availableSqlFunctions })` (no global state)                      |
+| `mode="dsql"` / `mode="hjson"`                   | `language={dsql(...)}` / `language={hjson(...)}` (`LanguageSupport`s)    |
+| `setCompleters` / `getCompletions` prop          | The language's completion source (`language.data.of({ autocomplete })`) |
 | `src/ace-completions/*`                          | `src/editor-completions/*` (+ `editor-completion.ts` for the type)       |
 | `makeDocHtml` (HTML strings in `docHTML`)        | Structured `doc` rendered by `completion-doc.ts`                         |
 | `Ace.ValueCompletion`                            | `EditorCompletion` (`label`, `displayLabel`, `boost`, `detail`, `doc`) |
@@ -76,7 +78,8 @@ These Ace behaviors were deliberately preserved:
 - **Autocomplete triggering:** like Ace's live autocompletion, the list opens while typing a word (Ace's identifier
   characters, including `$` and `-`) and on Ctrl-Space. Tab accepts a suggestion as well as Enter.
 - **Autocomplete inputs:** the old completers worked out `charBeforePrefix`, `lineBeforePrefix` and `textBefore`
-  from the Ace session. `CodeEditor` now computes these once and passes them in a `CompletionRequest`.
+  from the Ace session. `makeCompletionSource` (`completion-source.ts`) now computes these once and passes them in a
+  `CompletionRequest`. The callers no longer pick the completer: `dsql(...)` and `hjson(...)` bring theirs.
 - **Ranking:** Ace's `score` became CodeMirror's `boost` (the scores were already within its ±99 range). CodeMirror ranks by
   match quality first and boost second, which gave the same ordering in practice.
 - **Doc tooltip:** the `doc` is shown in a 500px panel next to the list, styled like the old `.ace_tooltip`
@@ -88,9 +91,9 @@ These Ace behaviors were deliberately preserved:
 - **Comment toggling:** Cmd/Ctrl-/ uses `--` for `dsql`, and `//` and `/* */` for `hjson`.
 - **Undo across tabs:** the old cache kept Ace's `UndoManager` per workbench tab. The new cache keeps
   `EditorState.toJSON({ history })` and restores it with `EditorState.fromJSON`, so undo works after switching tabs.
-- **Highlighting the cluster's functions:** `initDsqlMode` adds them to the highlighting. With Ace, only editors created
-  afterwards picked them up. With CodeMirror, existing editors pick them up as soon as they re-highlight (on the next
-  edit).
+- **Highlighting the cluster's functions:** `dsql({ availableSqlFunctions })` adds them to the highlighting. With Ace
+  (a global `initAceDsqlMode`), only editors created afterwards picked them up. Now the open editors are reconfigured
+  with the new language and re-highlight right away.
 
 ### Syntax highlighting port
 
@@ -185,9 +188,10 @@ Playwright at 2× scale.
 
 ## Tests
 
-- `editor-modes.spec.ts` was rewritten to tokenize with the CodeMirror parser. It covers the same cases as before, plus
-  block comments, arrays and brace-less Hjson objects.
-- The snapshot serializer replaces each `.cm-editor` with a comment (mode, value, placeholder, read-only) and drops
+- `editor-languages.spec.ts` (was `ace-modes.spec.ts`) was rewritten to tokenize with the CodeMirror parser. It covers
+  the same cases as before, plus block comments, arrays and brace-less Hjson objects, and that the languages bring
+  their completions.
+- The snapshot serializer replaces each `.cm-editor` with a comment (language, value, placeholder, read-only) and drops
   CodeMirror's generated theme classes. 10 snapshots were updated; in every case only the wrapper markup changed.
 - `explain-dialog.spec.tsx` mocked the entire `hooks` module, which removed hooks that `CodeEditor` uses. The mock now
   spreads `jest.requireActual` and overrides only `useQueryManager`.

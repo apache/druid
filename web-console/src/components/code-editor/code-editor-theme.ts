@@ -20,7 +20,7 @@ import { HighlightStyle } from '@codemirror/language';
 import { EditorView } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 
-import { editorTags } from '../../editor-modes/rule-parser';
+import { editorTags } from '../../editor-languages/rule-parser';
 
 // The editor is styled to look like the Ace editor (with the solarized_dark theme and some overrides) that the console
 // used to use.
