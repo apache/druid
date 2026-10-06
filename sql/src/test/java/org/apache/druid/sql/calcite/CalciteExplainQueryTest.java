@@ -21,9 +21,9 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.query.context.QueryContextParameters;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;

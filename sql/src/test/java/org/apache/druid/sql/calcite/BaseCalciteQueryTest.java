@@ -177,7 +177,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       QueryContext.builder()
                   .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
                   .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
-                  .put(QueryContextParameters.DEFAULT_TIMEOUT, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+                  .put(
+                      QueryContextParameters.DEFAULT_TIMEOUT,
+                      QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+                  )
                   .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
                   .toMap();
 
@@ -194,7 +197,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = QueryContext.builder()
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
-      .put(QueryContextParameters.DEFAULT_TIMEOUT, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, false)
@@ -202,7 +208,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = QueryContext.builder()
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
-      .put(QueryContextParameters.DEFAULT_TIMEOUT, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
@@ -216,7 +225,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = QueryContext.builder()
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
-      .put(QueryContextParameters.DEFAULT_TIMEOUT, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .putRaw(QueryContextParameters.USE_APPROXIMATE_TOP_N.getName(), "false")
@@ -224,7 +236,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = QueryContext.builder()
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
-      .put(QueryContextParameters.DEFAULT_TIMEOUT, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .put(QueryContextParameters.SQL_TIME_ZONE, LOS_ANGELES)
@@ -233,7 +248,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   // Matches QUERY_CONTEXT_DEFAULT
   public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = QueryContext.builder()
       .put(QueryContextParameters.SQL_QUERY_ID, DUMMY_SQL_ID)
-      .put(QueryContextParameters.DEFAULT_TIMEOUT, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .put(
+          QueryContextParameters.DEFAULT_TIMEOUT,
+          QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+      )
       .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
@@ -274,7 +292,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     QueryContextParameters.SQL_TIME_ZONE.set(TIMESERIES_CONTEXT_LOS_ANGELES, LOS_ANGELES);
     QueryContextParameters.SKIP_EMPTY_BUCKETS.set(TIMESERIES_CONTEXT_LOS_ANGELES, true);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContextParameters.DEFAULT_TIMEOUT.getName(), QueryContexts.DEFAULT_TIMEOUT_MILLIS);
+    QueryContextParameters.DEFAULT_TIMEOUT.set(
+        TIMESERIES_CONTEXT_LOS_ANGELES,
+        QueryContextParameters.DEFAULT_TIMEOUT.getDefaultValue().orElseThrow()
+    );
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES.getName(), Long.MAX_VALUE);
 
     OUTER_LIMIT_CONTEXT.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 2);

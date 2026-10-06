@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.context;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BadQueryContextException;
 
 import javax.annotation.Nullable;
@@ -34,15 +35,21 @@ public final class QueryContextParameterValidator
   /**
    * Validates a value assigned by a SQL {@code SET} statement.
    *
-   * @throws BadQueryContextException if the parameter is recognized and the value is invalid
+   * @throws BadQueryContextException if the parameter is internal, or if it is recognized and the value is invalid
    */
   public static void validate(final String name, @Nullable final Object value)
   {
     final QueryContextParameter<?> parameter = QueryContextParameters.ALL.get().get(name);
     // Unmigrated parameters are intentionally accepted until the catalog contains every supported context parameter.
-    if (parameter != null) {
-      parameter.parse(value);
+    if (parameter == null) {
+      return;
     }
+    if (parameter.isInternal()) {
+      throw new BadQueryContextException(
+          StringUtils.format("Query context parameter [%s] is set by Druid and cannot be set by users", name)
+      );
+    }
+    parameter.parse(value);
   }
 
   /**

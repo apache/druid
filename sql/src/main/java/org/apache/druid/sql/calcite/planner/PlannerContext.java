@@ -725,51 +725,21 @@ public class PlannerContext
       utcNow = new DateTime(DateTimeZone.UTC);
     }
 
-    final Object tzParam = queryContext.get(QueryContextParameters.SQL_TIME_ZONE.getName());
+    final QueryContext context = QueryContext.of(queryContext);
+    final String tzParam = context.get(QueryContextParameters.SQL_TIME_ZONE);
     final DateTimeZone timeZone;
     if (tzParam != null) {
-      timeZone = DateTimes.inferTzFromString(String.valueOf(tzParam));
+      timeZone = DateTimes.inferTzFromString(tzParam);
     } else {
       timeZone = plannerToolbox.plannerConfig().getSqlTimeZone();
     }
     localNow = utcNow.withZone(timeZone);
 
-    final Object stringifyParam = queryContext.get(QueryContextParameters.SQL_STRINGIFY_ARRAYS.getName());
-    if (stringifyParam != null) {
-      stringifyArrays = Numbers.parseBoolean(stringifyParam);
-    } else {
-      stringifyArrays = true;
-    }
-
-    final Object useBoundsAndSelectorsParam = queryContext.get(
-        QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS.getName()
-    );
-    if (useBoundsAndSelectorsParam != null) {
-      useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
-    } else {
-      useBoundsAndSelectors = QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS.getDefaultValue().orElse(false);
-    }
-
-    final Object useExtractionFnsParam = queryContext.get(QueryContextParameters.SQL_USE_EXTRACTION_FNS.getName());
-    if (useExtractionFnsParam != null) {
-      useExtractionFns = Numbers.parseBoolean(useExtractionFnsParam);
-    } else {
-      useExtractionFns = QueryContextParameters.SQL_USE_EXTRACTION_FNS.getDefaultValue().orElse(false);
-    }
-
-    final Object pullUpLookupParam = queryContext.get(QueryContextParameters.SQL_PULL_UP_LOOKUP.getName());
-    if (pullUpLookupParam != null) {
-      pullUpLookup = Numbers.parseBoolean(pullUpLookupParam);
-    } else {
-      pullUpLookup = QueryContextParameters.SQL_PULL_UP_LOOKUP.getDefaultValue().orElse(true);
-    }
-
-    final Object reverseLookupParam = queryContext.get(QueryContextParameters.SQL_REVERSE_LOOKUP.getName());
-    if (reverseLookupParam != null) {
-      reverseLookup = Numbers.parseBoolean(reverseLookupParam);
-    } else {
-      reverseLookup = QueryContextParameters.SQL_REVERSE_LOOKUP.getDefaultValue().orElse(true);
-    }
+    stringifyArrays = context.getOrDefault(QueryContextParameters.SQL_STRINGIFY_ARRAYS, true);
+    useBoundsAndSelectors = context.getOrDefault(QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS);
+    useExtractionFns = context.getOrDefault(QueryContextParameters.SQL_USE_EXTRACTION_FNS);
+    pullUpLookup = context.getOrDefault(QueryContextParameters.SQL_PULL_UP_LOOKUP);
+    reverseLookup = context.getOrDefault(QueryContextParameters.SQL_REVERSE_LOOKUP);
 
     final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
     if (useGranularityParam != null) {
@@ -778,7 +748,7 @@ public class PlannerContext
       useGranularity = DEFAULT_SQL_USE_GRANULARITY;
     }
 
-    sqlQueryId = (String) this.queryContext.get(QueryContextParameters.SQL_QUERY_ID.getName());
+    sqlQueryId = context.get(QueryContextParameters.SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();

@@ -31,6 +31,7 @@ import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
 import org.apache.druid.query.context.docs.ParameterDocumentation.StatementType;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigInteger;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.druid.query.context.constraint.Range.closedRange;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -67,8 +69,8 @@ class QueryContextParameterTest
     assertEquals(10, parameter.getDefaultValue().orElseThrow());
     assertTrue(parameter.isNullable());
     assertFalse(parameter.isDeprecated());
-    assertTrue(parameter.getDeprecationMessage().isEmpty());
-    final ParameterDocumentation docs = parameter.getDocumentation().orElseThrow();
+    assertNull(parameter.getDeprecationMessage());
+    final ParameterDocumentation docs = parameter.getDocumentation();
     assertEquals("39.0.0", docs.getSince().orElseThrow());
     assertEquals("Maximum number of things.", docs.getDescription());
     assertEquals(Set.of(Query.JSON), docs.getQueries());
@@ -156,7 +158,7 @@ class QueryContextParameterTest
     final AtomicBoolean constraintCalled = new AtomicBoolean();
     final QueryContextParameter<Integer> parameter = QueryContextParameter
         .builder("required", Integer.class, value -> (Integer) value)
-        .constraint((parameterName, value) -> constraintCalled.set(true))
+        .constraint((_, _) -> constraintCalled.set(true))
         .build();
 
     assertNull(parameter.validate(null));
@@ -229,10 +231,10 @@ class QueryContextParameterTest
 
     assertEquals(12L, parameter.parse(12));
     assertEquals(12L, parameter.parse(12.0d));
-    assertEquals(Long.MAX_VALUE, parameter.parse(new java.math.BigInteger(String.valueOf(Long.MAX_VALUE))));
+    assertEquals(Long.MAX_VALUE, parameter.parse(new BigInteger(String.valueOf(Long.MAX_VALUE))));
     assertThrows(
         BadQueryContextException.class,
-        () -> parameter.parse(new java.math.BigInteger(String.valueOf(Long.MAX_VALUE)).add(java.math.BigInteger.ONE))
+        () -> parameter.parse(new BigInteger(String.valueOf(Long.MAX_VALUE)).add(BigInteger.ONE))
     );
     assertThrows(BadQueryContextException.class, () -> parameter.parse(12.5d));
     assertThrows(BadQueryContextException.class, () -> parameter.parse("9223372036854775808"));
@@ -290,44 +292,57 @@ class QueryContextParameterTest
   void testDefaultsApplyToOptionalMetadata()
   {
     final QueryContextParameter<String> parameter = QueryContextParameter
-        .builder("tag", String.class, value -> String.valueOf(value))
+        .builder("tag", String.class, String::valueOf)
         .deprecated("Use `newTag` instead.")
         .build();
 
     assertTrue(parameter.isDeprecated());
-    assertEquals("Use `newTag` instead.", parameter.getDeprecationMessage().orElseThrow());
+    assertEquals("Use `newTag` instead.", parameter.getDeprecationMessage());
     assertTrue(parameter.getDefaultValue().isEmpty());
-    assertTrue(parameter.getDocumentation().isEmpty());
+    assertNull(parameter.getDocumentation());
   }
 
   @Test
-  void testInternalParameterGetsGeneratedDocumentation()
+  void testInternalParameterKeepsSinceWithoutDocumentation()
   {
     final QueryContextParameter<String> parameter = QueryContextParameter
-        .builder("internalParameter", String.class, value -> String.valueOf(value))
+        .builder("internalParameter", String.class, String::valueOf)
         .internal()
         .since("39.0.0")
         .build();
 
     assertTrue(parameter.isInternal());
-    final ParameterDocumentation documentation = parameter.getDocumentation().orElseThrow();
-    assertEquals(
-        "System generated description: Internal query context parameter `internalParameter`.",
-        documentation.getDescription()
-    );
-    assertEquals("39.0.0", documentation.getSince().orElseThrow());
+    assertNull(parameter.getDocumentation());
+    assertEquals("39.0.0", parameter.getSince());
   }
 
   @Test
-  void testInternalParameterRequiresSince()
+  void testUndocumentedParameterKeepsDocumentation()
   {
-    assertThrows(
-        IAE.class,
-        () -> QueryContextParameter
-            .builder("internalParameter", String.class, value -> String.valueOf(value))
-            .internal()
-            .build()
-    );
+    final QueryContextParameter<Boolean> parameter = QueryContextParameter
+        .builder("debugSwitch", Boolean.class, value -> Boolean.valueOf(String.valueOf(value)))
+        .description("A switch for debugging.")
+        .since("39.0.0")
+        .undocumented()
+        .build();
+
+    assertTrue(parameter.isUndocumented());
+    assertFalse(parameter.isInternal());
+    assertEquals("A switch for debugging.", parameter.getDocumentation().getDescription());
+    assertEquals("39.0.0", parameter.getSince());
+  }
+
+  @Test
+  void testSinceWithoutDocumentationIsKept()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("undocumented", String.class, String::valueOf)
+        .since("39.0.0")
+        .build();
+
+    assertFalse(parameter.isInternal());
+    assertNull(parameter.getDocumentation());
+    assertEquals("39.0.0", parameter.getSince());
   }
 
   @Test
@@ -335,7 +350,7 @@ class QueryContextParameterTest
   {
     assertThrows(
         IAE.class,
-        () -> QueryContextParameter.builder(" parameter", String.class, value -> String.valueOf(value))
+        () -> QueryContextParameter.builder(" parameter", String.class, String::valueOf)
     );
   }
 
@@ -346,5 +361,16 @@ class QueryContextParameterTest
         .builder("parameter", String.class, String::valueOf);
 
     assertThrows(IAE.class, () -> builder.deprecated(" "));
+  }
+
+  @Test
+  void testInternalParametersAreDescribed()
+  {
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      if (parameter.isInternal()) {
+        assertNotNull(parameter.getDocumentation(), parameter.getName());
+        assertNotNull(parameter.getSince(), parameter.getName());
+      }
+    }
   }
 }

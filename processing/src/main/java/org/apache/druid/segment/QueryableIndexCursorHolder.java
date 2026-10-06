@@ -141,7 +141,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
               Cursors.getTimeOrdering(ordering),
               interval,
               filter,
-              cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.CURSOR_AUTO_ARRANGE_FILTERS, true),
+              cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.CURSOR_AUTO_ARRANGE_FILTERS),
               metrics
           );
           resourcesComputed.set(true);

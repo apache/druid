@@ -85,6 +85,9 @@ class ParameterDocumentationGeneratorTest
     assertTrue(sql.contains("|`sqlQueryId`|"));
     assertTrue(sql.contains(SQL_MARKER));
     assertFalse(sql.contains("dartQueryId"));
+    // Undocumented parameters have descriptions but are left out of the generated tables.
+    assertFalse(sql.contains("prePlanned"));
+    assertFalse(general.contains("optimizeAggregators"));
 
     assertEquals(general, Files.readString(generatedOutput.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8));
     assertEquals(scan, Files.readString(generatedOutput.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8));
@@ -191,11 +194,11 @@ class ParameterDocumentationGeneratorTest
   private String addMissingMarkers(final String document, final String documentPath)
   {
     final StringBuilder output = new StringBuilder(document);
-    for (final QueryContextParameter<?> parameter : QueryContextParameters.BY_NAME.values()) {
-      if (parameter.isInternal()) {
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      if (parameter.isInternal() || parameter.isUndocumented()) {
         continue;
       }
-      final ParameterDocumentation docs = parameter.getDocumentation().orElse(null);
+      final ParameterDocumentation docs = parameter.getDocumentation();
       if (docs == null) {
         continue;
       }

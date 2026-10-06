@@ -913,8 +913,8 @@ public class QueryContext
     final RealtimeSegmentsMode mode = has(QueryContextParameters.REALTIME_SEGMENTS_MODE)
                                       ? get(QueryContextParameters.REALTIME_SEGMENTS_MODE)
                                       : null;
-    // Keep the legacy null semantics: an explicitly null value is treated as unset.
-    final boolean hasDeprecatedFlag = get(QueryContextParameters.REALTIME_SEGMENTS_ONLY.getName()) != null;
+    // has() treats an explicitly null value as unset, matching the legacy semantics.
+    final boolean hasDeprecatedFlag = has(QueryContextParameters.REALTIME_SEGMENTS_ONLY);
     if (mode != null && hasDeprecatedFlag) {
       throw new BadQueryContextException(
           StringUtils.format(

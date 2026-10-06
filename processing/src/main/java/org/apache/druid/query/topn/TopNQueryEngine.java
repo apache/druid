@@ -292,8 +292,7 @@ public class TopNQueryEngine
       final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
       final boolean allowMultiPassPooled = query.context().getOrDefault(
-          QueryContextParameters.USE_TOPN_MULTI_PASS_POOLED_QUERY_GRANULARITY,
-          false
+          QueryContextParameters.USE_TOPN_MULTI_PASS_POOLED_QUERY_GRANULARITY
       );
       if (Granularities.ALL.equals(query.getGranularity()) || allowMultiPassPooled) {
         return numValuesPerPass > 0;

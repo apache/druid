@@ -113,7 +113,7 @@ public class Projections
       Function<String, T> getRowSelector
   )
   {
-    if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.NO_PROJECTIONS, false)) {
+    if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.NO_PROJECTIONS)) {
       return null;
     }
     final String name = cursorBuildSpec.getQueryContext().get(QueryContextParameters.USE_PROJECTION);
@@ -145,7 +145,7 @@ public class Projections
     if (name != null) {
       throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
     }
-    if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.FORCE_PROJECTIONS, false)) {
+    if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.FORCE_PROJECTIONS)) {
       throw InvalidInput.exception("Force projections specified, but none satisfy query");
     }
     return null;

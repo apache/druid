@@ -42,6 +42,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -315,14 +316,15 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
    */
   private SqlQuery buildSqlQueryWithId(SqlQuery sqlQuery)
   {
-    Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
-    String sqlQueryId = (String) context.getOrDefault(
-        QueryContextParameters.SQL_QUERY_ID.getName(),
+    final Map<String, Object> context = new HashMap<>(sqlQuery.getContext());
+    final QueryContext queryContext = QueryContext.of(context);
+    final String sqlQueryId = queryContext.getOrDefault(
+        QueryContextParameters.SQL_QUERY_ID,
         UUID.randomUUID().toString()
     );
     // set queryId to sqlQueryId if not overridden
-    String queryId = (String) context.getOrDefault(QueryContextParameters.QUERY_ID.getName(), sqlQueryId);
-    context.put(QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId);
+    final String queryId = queryContext.getOrDefault(QueryContextParameters.QUERY_ID, sqlQueryId);
+    QueryContextParameters.SQL_QUERY_ID.set(context, sqlQueryId);
     QueryContextParameters.QUERY_ID.set(context, queryId);
     return sqlQuery.withOverridenContext(context);
   }

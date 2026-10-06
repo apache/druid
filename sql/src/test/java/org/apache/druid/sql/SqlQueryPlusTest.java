@@ -61,6 +61,24 @@ public class SqlQueryPlusTest
   }
 
   @Test
+  public void testSetInternalParameterIsRejected()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET dartQueryId = 'mine'; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains("Query context parameter [dartQueryId] is set by Druid and cannot be set by users")
+    );
+  }
+
+  @Test
   public void testSetParameterParserFailureIsInvalidSqlInput()
   {
     final DruidException e = Assertions.assertThrows(

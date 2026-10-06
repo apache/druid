@@ -19,8 +19,8 @@
 
 package org.apache.druid.msq.test;
 
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
@@ -34,8 +34,6 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-
-import java.util.Map;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DartComponentSupplier.class)
 public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQueryTest

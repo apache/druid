@@ -50,4 +50,20 @@ class QueryContextParameterValidatorTest
     );
     QueryContextParameterValidator.validate(Map.of("maxRowsQueuedForOrdering", 1, "unmigratedParameter", -1));
   }
+
+  @Test
+  void testRejectsInternalParameters()
+  {
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      if (parameter.isInternal()) {
+        assertEquals(
+            "Query context parameter [" + parameter.getName() + "] is set by Druid and cannot be set by users",
+            assertThrows(
+                BadQueryContextException.class,
+                () -> QueryContextParameterValidator.validate(parameter.getName(), "value")
+            ).getMessage()
+        );
+      }
+    }
+  }
 }

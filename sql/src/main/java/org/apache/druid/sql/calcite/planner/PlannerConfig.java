@@ -33,6 +33,8 @@ import java.util.Objects;
 
 public class PlannerConfig
 {
+  // These context keys are not documented in sql-query-context.md, so they have not been migrated to
+  // QueryContextParameters descriptors yet.
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_REQUIRE_TIME_CONDITION = "requireTimeCondition";

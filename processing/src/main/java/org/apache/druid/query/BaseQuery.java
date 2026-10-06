@@ -56,6 +56,24 @@ public abstract class BaseQuery<T> implements Query<T>
     }
   }
 
+  /**
+   * @deprecated Use {@link QueryContextParameters#QUERY_ID} instead.
+   */
+  @Deprecated
+  public static final String QUERY_ID = "queryId";
+
+  /**
+   * @deprecated Use {@link QueryContextParameters#SUB_QUERY_ID} instead.
+   */
+  @Deprecated
+  public static final String SUB_QUERY_ID = "subQueryId";
+
+  /**
+   * @deprecated Use {@link QueryContextParameters#SQL_QUERY_ID} instead.
+   */
+  @Deprecated
+  public static final String SQL_QUERY_ID = "sqlQueryId";
+
   private final DataSource dataSource;
   private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;

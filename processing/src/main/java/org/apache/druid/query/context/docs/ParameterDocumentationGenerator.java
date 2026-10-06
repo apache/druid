@@ -36,6 +36,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Generates the checked-in query context parameter table rows from the descriptor catalog.
@@ -46,6 +47,9 @@ public final class ParameterDocumentationGenerator
   private static final String SCAN_REFERENCE = "docs/querying/scan-query.md";
   private static final String SQL_REFERENCE = "docs/querying/sql-query-context.md";
   private static final String MARKER_FORMAT = "<!-- GENERATED QUERY CONTEXT PARAMETER: %s -->";
+  private static final Pattern TEXT_BLOCK_LINE_CONTINUATION = Pattern.compile("\\\\[ \\t]*\\R");
+  private static final Pattern LINE_BREAK = Pattern.compile("\\R");
+  private static final Pattern HORIZONTAL_WHITESPACE = Pattern.compile("[ \\t]+");
 
   private ParameterDocumentationGenerator()
   {
@@ -90,10 +94,10 @@ public final class ParameterDocumentationGenerator
   {
     final Map<String, Map<String, String>> rowsByDocument = new LinkedHashMap<>();
     for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
-      if (parameter.isInternal()) {
+      if (parameter.isInternal() || parameter.isUndocumented()) {
         continue;
       }
-      final ParameterDocumentation docs = parameter.getDocumentation().orElse(null);
+      final ParameterDocumentation docs = parameter.getDocumentation();
       if (docs == null) {
         continue;
       }
@@ -232,75 +236,11 @@ public final class ParameterDocumentationGenerator
    */
   static String normalizeTableCell(final String value)
   {
-    final StringBuilder normalized = new StringBuilder(value.length());
-    boolean pendingSpace = false;
-
-    for (int index = 0; index < value.length();) {
-      final int continuationEnd = lineContinuationEnd(value, index);
-      if (continuationEnd > index) {
-        index = continuationEnd;
-        continue;
-      }
-
-      final int lineSeparatorLength = lineSeparatorLength(value, index);
-      if (lineSeparatorLength > 0) {
-        pendingSpace = true;
-        index += lineSeparatorLength;
-        continue;
-      }
-
-      final char character = value.charAt(index++);
-      if (character == ' ' || character == '\t') {
-        pendingSpace = true;
-        continue;
-      }
-
-      if (pendingSpace && normalized.length() > 0) {
-        normalized.append(' ');
-      }
-      normalized.append(character);
-      pendingSpace = false;
-    }
-
-    return normalized.toString().trim();
-  }
-
-  private static int lineContinuationEnd(final String value, final int index)
-  {
-    if (value.charAt(index) != '\\') {
-      return index;
-    }
-
-    int separatorStart = index + 1;
-    while (separatorStart < value.length()) {
-      final char character = value.charAt(separatorStart);
-      if (character != ' ' && character != '\t') {
-        break;
-      }
-      separatorStart++;
-    }
-
-    final int separatorLength = lineSeparatorLength(value, separatorStart);
-    return separatorLength == 0 ? index : separatorStart + separatorLength;
-  }
-
-  private static int lineSeparatorLength(final String value, final int index)
-  {
-    if (index >= value.length()) {
-      return 0;
-    }
-
-    final char character = value.charAt(index);
-    if (character == '\r') {
-      return index + 1 < value.length() && value.charAt(index + 1) == '\n' ? 2 : 1;
-    }
-
-    return character == '\n'
-           || character == '\u000B'
-           || character == '\f'
-           || character == '\u0085'
-           || character == '\u2028'
-           || character == '\u2029' ? 1 : 0;
+    return HORIZONTAL_WHITESPACE.matcher(
+                         LINE_BREAK.matcher(TEXT_BLOCK_LINE_CONTINUATION.matcher(value).replaceAll("")).replaceAll(" ")
+                     )
+                     .replaceAll(" ")
+                     .trim();
   }
 
   private enum Mode
