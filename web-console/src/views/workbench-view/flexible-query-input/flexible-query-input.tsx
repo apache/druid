@@ -18,11 +18,8 @@
 
 import { Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Extension } from '@codemirror/state';
-import { RangeSet, StateEffect, StateField } from '@codemirror/state';
-import type { DecorationSet } from '@codemirror/view';
-import { Decoration, EditorView, GutterMarker, lineNumberMarkers } from '@codemirror/view';
-import { dedupe } from 'druid-query-toolkit';
+import { Compartment } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 import React from 'react';
 
 import { CodeEditor, focusEditorAt } from '../../../components';
@@ -30,83 +27,15 @@ import { useAvailableSqlFunctions } from '../../../contexts/sql-functions-contex
 import { NATIVE_JSON_QUERY_COMPLETIONS } from '../../../druid-models';
 import { dsql } from '../../../editor-languages/dsql';
 import { hjson } from '../../../editor-languages/hjson';
+import { useConstant, usePermanentCallback } from '../../../hooks';
 import { AppToaster } from '../../../singletons';
 import type { ColumnMetadata, QuerySlice, RowColumn } from '../../../utils';
-import { findAllSqlQueriesInText, findMap } from '../../../utils';
+
+import { subQueryMarkers } from './sub-query-markers';
 
 import './flexible-query-input.scss';
 
 const V_PADDING = 10;
-
-class SubQueryGutterMarker extends GutterMarker {
-  constructor(readonly row: number) {
-    super();
-    this.elementClass = `sub-query-gutter-marker query-${row}`;
-  }
-
-  eq(other: GutterMarker): boolean {
-    return other instanceof SubQueryGutterMarker && other.row === this.row;
-  }
-}
-
-/**
- * Sets the (0 based) rows that get a sub query gutter marker
- */
-const setSubQueryRows = StateEffect.define<number[]>();
-
-const subQueryMarkers = StateField.define<RangeSet<GutterMarker>>({
-  create: () => RangeSet.empty,
-  update(markers, tr) {
-    markers = markers.map(tr.changes);
-    for (const effect of tr.effects) {
-      if (!effect.is(setSubQueryRows)) continue;
-      const { doc } = tr.state;
-      markers = RangeSet.of(
-        effect.value
-          .filter(row => row < doc.lines)
-          .map(row => new SubQueryGutterMarker(row).range(doc.line(row + 1).from)),
-        true,
-      );
-    }
-    return markers;
-  },
-  provide: field => lineNumberMarkers.from(field),
-});
-
-const setSubQueryHighlight = StateEffect.define<{ from: number; to: number } | undefined>();
-
-const subQueryHighlightMark = Decoration.mark({ class: 'sub-query-highlight' });
-
-const subQueryHighlight = StateField.define<DecorationSet>({
-  create: () => Decoration.none,
-  update(highlight, tr) {
-    highlight = highlight.map(tr.changes);
-    for (const effect of tr.effects) {
-      if (!effect.is(setSubQueryHighlight)) continue;
-      const range = effect.value;
-      highlight =
-        range && range.from < range.to
-          ? Decoration.set(subQueryHighlightMark.range(range.from, range.to))
-          : Decoration.none;
-    }
-    return highlight;
-  },
-  provide: field => EditorView.decorations.from(field),
-});
-
-const SUB_QUERY_EXTENSIONS: Extension = [subQueryMarkers, subQueryHighlight];
-
-/**
- * The row of the sub query gutter marker (set in `markQueries`) that the event is on
- */
-function getSubQueryMarkerRow(e: React.MouseEvent): number | undefined {
-  const marker = (e.target as Element).closest('.sub-query-gutter-marker');
-  if (!marker) return;
-  return findMap([...marker.classList], c => {
-    const m = /^query-(\d+)$/.exec(c);
-    return m ? Number(m[1]) : undefined;
-  });
-}
 
 export interface FlexibleQueryInputHandle {
   goToPosition(rowColumn: RowColumn): void;
@@ -141,44 +70,35 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
 
   const availableSqlFunctions = useAvailableSqlFunctions();
   const editorViewRef = React.useRef<EditorView | undefined>(undefined);
-  const lastFoundQueriesRef = React.useRef<QuerySlice[]>([]);
-  const highlightFoundQueryRowRef = React.useRef<number | undefined>(undefined);
 
-  const findAllQueriesByLine = React.useCallback(() => {
-    const found = dedupe(findAllSqlQueriesInText(queryString), ({ startRowColumn }) =>
-      String(startRowColumn.row),
-    );
-    if (!found.length) return [];
-
-    // Do not report the first query if it is basically the main query minus whitespace
-    const firstQuery = found[0].sql;
-    if (firstQuery === queryString.trim()) return found.slice(1);
-
-    return found;
-  }, [queryString]);
-
-  const markQueries = React.useCallback(() => {
+  const handleRunSubQuery = usePermanentCallback((slice: QuerySlice) => {
     if (!runQuerySlice) return;
-    const editorView = editorViewRef.current;
-    if (!editorView) return;
-    lastFoundQueriesRef.current = findAllQueriesByLine();
+    if (running) {
+      AppToaster.show({
+        icon: IconNames.WARNING_SIGN,
+        intent: Intent.WARNING,
+        message: `Another query is currently running`,
+      });
+      return;
+    }
 
-    editorView.dispatch({
-      effects: setSubQueryRows.of(
-        lastFoundQueriesRef.current.map(({ startRowColumn }) => startRowColumn.row),
-      ),
+    runQuerySlice(slice);
+  });
+
+  // The sub query markers live on the line numbers, so they are only there when the gutter is
+  const subQueriesEnabled = Boolean(runQuerySlice) && showGutter;
+  const subQueryCompartment = useConstant(() => new Compartment());
+  const subQueryExtension = React.useMemo(
+    () => (subQueriesEnabled ? subQueryMarkers(handleRunSubQuery) : []),
+    [subQueriesEnabled, handleRunSubQuery],
+  );
+  const extensions = useConstant(() => subQueryCompartment.of(subQueryExtension));
+
+  React.useEffect(() => {
+    editorViewRef.current?.dispatch({
+      effects: subQueryCompartment.reconfigure(subQueryExtension),
     });
-  }, [runQuerySlice, findAllQueriesByLine]);
-
-  React.useEffect(() => {
-    markQueries();
-  }, [markQueries]);
-
-  // Re-mark the queries once the query string has not changed for a bit
-  React.useEffect(() => {
-    const timeout = setTimeout(markQueries, 900);
-    return () => clearTimeout(timeout);
-  }, [queryString, markQueries]);
+  }, [subQueryCompartment, subQueryExtension]);
 
   const goToPosition = React.useCallback((rowColumn: RowColumn) => {
     const editorView = editorViewRef.current;
@@ -187,62 +107,6 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
   }, []);
 
   React.useImperativeHandle(ref, () => ({ goToPosition }), [goToPosition]);
-
-  const handleContainerClick = React.useCallback(
-    (e: React.MouseEvent) => {
-      if (!runQuerySlice) return;
-      const row = getSubQueryMarkerRow(e);
-      if (typeof row === 'undefined') return;
-
-      const slice = lastFoundQueriesRef.current.find(
-        ({ startRowColumn }) => startRowColumn.row === row,
-      );
-      if (!slice) return;
-
-      if (running) {
-        AppToaster.show({
-          icon: IconNames.WARNING_SIGN,
-          intent: Intent.WARNING,
-          message: `Another query is currently running`,
-        });
-        return;
-      }
-
-      runQuerySlice(slice);
-    },
-    [runQuerySlice, running],
-  );
-
-  const handleContainerMouseOver = React.useCallback(
-    (e: React.MouseEvent) => {
-      if (!runQuerySlice) return;
-      const editorView = editorViewRef.current;
-      if (!editorView) return;
-
-      const row = getSubQueryMarkerRow(e);
-      if (typeof row === 'undefined' || highlightFoundQueryRowRef.current === row) return;
-
-      const slice = lastFoundQueriesRef.current.find(
-        ({ startRowColumn }) => startRowColumn.row === row,
-      );
-      if (!slice) return;
-      const docLength = editorView.state.doc.length;
-      editorView.dispatch({
-        effects: setSubQueryHighlight.of({
-          from: Math.min(slice.startOffset, docLength),
-          to: Math.min(slice.endOffset, docLength),
-        }),
-      });
-      highlightFoundQueryRowRef.current = row;
-    },
-    [runQuerySlice],
-  );
-
-  const handleContainerMouseOut = React.useCallback(() => {
-    if (typeof highlightFoundQueryRowRef.current === 'undefined') return;
-    editorViewRef.current?.dispatch({ effects: setSubQueryHighlight.of(undefined) });
-    highlightFoundQueryRowRef.current = undefined;
-  }, []);
 
   const isJson = queryString.trim().startsWith('{');
   const language = React.useMemo(
@@ -255,12 +119,7 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
 
   return (
     <div className="flexible-query-input">
-      <div
-        className="editor-container"
-        onClick={handleContainerClick}
-        onMouseOver={handleContainerMouseOver}
-        onMouseOut={handleContainerMouseOut}
-      >
+      <div className="editor-container">
         <CodeEditor
           ref={editorViewRef}
           language={language}
@@ -273,7 +132,7 @@ export function FlexibleQueryInput(props: FlexibleQueryInputProps) {
           padding={V_PADDING}
           placeholder={placeholder || 'SELECT * FROM ...'}
           stateCacheId={editorStateId}
-          extensions={SUB_QUERY_EXTENSIONS}
+          extensions={extensions}
         />
       </div>
     </div>

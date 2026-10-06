@@ -117,14 +117,14 @@ In `FlexibleQueryInput`, a play button in the gutter runs a single query when th
 - **Before:** markers were Ace "breakpoints" (`session.setBreakpoint(row, className)`). The hover highlight was an Ace
   text marker (`session.addMarker(new Range(...))`).
 - **After:**
-  - A `StateField` provides `SubQueryGutterMarker`s to the `lineNumberMarkers` facet. Each marker sets
-    `elementClass = 'sub-query-gutter-marker query-<row>'` on its line-number cell, the same classes Ace used. The
-    existing SCSS (the blue square and triangle drawn with `:before`/`:after`) works unchanged apart from adding
-    `position: relative`.
-  - A second `StateField` holds a `Decoration.mark` with the `sub-query-highlight` class over the hovered query's
-    offsets.
-  - Both are updated with `StateEffect`s. The click and hover handlers on the wrapping `div` are unchanged: they
-    still find the row from the `query-<row>` class.
+  - `subQueryMarkers(onRun)` (`sub-query-markers.ts`) is a CodeMirror extension. Its `StateField` finds the queries
+    in the document on every change and provides the markers to the `lineNumberMarkers` facet. Each marker sets
+    `elementClass = 'sub-query-gutter-marker'` on its line-number cell. The existing SCSS (the blue square and
+    triangle drawn with `:before`/`:after`) works unchanged apart from adding `position: relative`.
+  - The same field provides a `Decoration.mark` with the `sub-query-highlight` class over the hovered query.
+  - Clicks and hovers come from `lineNumbers({ domEventHandlers })`, which hands over the line. Ace's breakpoints
+    could only carry a class name, so the row used to be written into a `query-<row>` class and read back by React
+    handlers on a wrapping `div`.
   - The `ResizeSensor` that fed Ace an explicit pixel height is gone, because the editor now fills its container with
     CSS.
 

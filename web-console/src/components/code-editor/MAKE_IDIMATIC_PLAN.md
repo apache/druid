@@ -34,7 +34,7 @@ Status: ✅ done, ⬜ to do.
 2. ✅ 1e, 1h: small cleanups
 3. ✅ 2a + 2b + 1g: `LanguageSupport` factories that bring their own completion sources
 4. ✅ 1c + 1d: completion sources that read the syntax tree
-5. ⬜ 4a + 4b: the partial query markers
+5. ✅ 4a + 4b: the partial query markers
 6. ⬜ 3a + 3b and 5: positions and prop renames (these touch the most callers)
 7. ⬜ 6: low priority leftovers
 
@@ -241,22 +241,33 @@ editor (`DruidError`, `prefixLines`), so this is the widest change in the plan.
 
 ## 4. Partial query markers (`FlexibleQueryInput`)
 
-### ⬜ 4a. Gutter event handlers instead of class names
+### ✅ 4a. Gutter event handlers instead of class names
 
-The row is written into the marker's class (`query-<row>`) and read back from `classList` by React handlers on a
-wrapping `div`. That was an Ace limit (breakpoints could only carry a class name).
+**Was:** the row was written into the marker's class (`query-<row>`) and read back from `classList` by React handlers
+on a wrapping `div`. That was an Ace limit (breakpoints could only carry a class name).
 
-**To do:** use `lineNumbers({ domEventHandlers: { click, mouseover, … } })`, which hands over the line, and let the
-marker hold its `QuerySlice`. Keep `elementClass` and the SCSS as they are so the marker looks the same.
+**Done:** the click and hover come from `lineNumbers({ domEventHandlers: { click, mouseover, mouseout } })`, which
+hands over the line. The marker only sets `elementClass = 'sub-query-gutter-marker'`, so it looks the same (same SCSS).
+The wrapping `div` has no handlers any more.
 
-### ⬜ 4b. Find the queries in the editor state
+The extra `lineNumbers(...)` would show the line numbers on its own, so the markers are only added when the gutter is
+shown (`showGutter`), in a `Compartment` that `FlexibleQueryInput` reconfigures, since `extensions` is only read when
+the editor is created. Before, they were always added but only visible with the gutter.
 
-React finds the queries (`findAllSqlQueriesInText`), re-checks them on a 900ms timer and dispatches the rows to the
-editor. `lastFoundQueriesRef` is not updated by edits while the markers are, which is why the hover highlight has to
-clamp its range to the document length.
+### ✅ 4b. Find the queries in the editor state
 
-**To do:** a `ViewPlugin` or `StateField` that finds the slices from the document (debounced), so that the markers,
-hover highlight and click all read from one place and React only provides `runQuerySlice`.
+**Was:** React found the queries (`findAllSqlQueriesInText`) on every change of the query string (plus a 900ms timer
+that did the same again), kept them in `lastFoundQueriesRef` and dispatched the rows to the editor. The ref was not
+updated by edits while the markers were, which is why the hover highlight had to clamp its range to the document
+length.
+
+**Done:** `sub-query-markers.ts` (with a spec) has one `StateField` that finds the queries from the document whenever
+it changes, and provides the markers and the hover highlight. The click handler reads the query from that field, so it
+always matches the current text. React only provides `onRun` (which shows the "Another query is currently running"
+warning or calls `runQuerySlice`). The timer, the refs and the clamp are gone.
+
+**Considered, not done:** debouncing the search. It ran on every change before too (the timer only repeated it), and
+doing it in the update keeps the markers in step with the text.
 
 ## 5. Props inherited from react-ace
 

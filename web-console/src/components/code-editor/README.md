@@ -197,14 +197,17 @@ if (viewRef.current) focusEditorAt(viewRef.current, { row: 3, column: 5 });
 It is used to jump to the location of query errors.
 
 If you need decorations, gutter markers or other custom behavior, pass CodeMirror extensions through `extensions`.
-`FlexibleQueryInput` (`src/views/workbench-view/flexible-query-input/`) is the example to read. It adds:
+The "run this query" markers of `FlexibleQueryInput` (`sub-query-markers.ts` in
+`src/views/workbench-view/flexible-query-input/`) are the example to read. `subQueryMarkers(onRun)` is one extension
+made of:
 
-- a `StateField` that puts a "run this query" marker on the line numbers (via the `lineNumberMarkers` facet), with the
-  `sub-query-gutter-marker query-<row>` classes on the line-number cell
-- a `StateField` with a mark decoration that highlights a query while its marker is hovered
+- a `StateField` that finds the queries in the document whenever it changes, and provides the markers to the
+  `lineNumberMarkers` facet and the hover highlight to `EditorView.decorations`
+- `lineNumbers({ domEventHandlers })` for the click and hover, which hands over the line that was clicked or hovered
+- a `StateEffect` to set the hovered query
 
-Both are changed with `StateEffect`s dispatched on the view. Clicks and hovers are handled by plain React handlers on
-a wrapping `div`.
+React only provides `onRun`. Because `extensions` is only read once, `FlexibleQueryInput` puts the markers in its own
+`Compartment` and reconfigures it when they are turned on or off.
 
 ## Languages
 
