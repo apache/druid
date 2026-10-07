@@ -920,7 +920,8 @@ public class OverlordResource
         response.setContentType(MediaType.APPLICATION_JSON);
         jsonMapper.writeValue(response.getOutputStream(), result);
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       log.noStackTrace().warn(e, "Request timed out or is closed already");
     }
   }

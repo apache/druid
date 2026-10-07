@@ -35,7 +35,8 @@ public interface TaskActionClient
   {
     try {
       return Futures.immediateFuture(submit(taskAction));
-    } catch (IOException e) {
+    }
+    catch (IOException e) {
       return Futures.immediateFailedFuture(e);
     }
   }

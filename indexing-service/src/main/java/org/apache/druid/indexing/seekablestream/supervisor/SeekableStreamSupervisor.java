@@ -228,7 +228,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     boolean handoffEarly = false; // set by SupervisorManager.stopTaskGroupEarly
 
     final AtomicBoolean completed = new AtomicBoolean(false);
-    final List<Runnable> completionListeners = new  ArrayList<>();
+    final List<Runnable> completionListeners = new ArrayList<>();
 
     TaskGroup(
         int groupId,
@@ -3030,7 +3030,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       @SuppressWarnings("unchecked")
       final PartitionIdType partitionId = (PartitionIdType) partition;
       if (partitionIdToPublishingGroups.containsKey(partitionId)) {
-        for (TaskGroup taskGroup :  partitionIdToPublishingGroups.get(partitionId)) {
+        for (TaskGroup taskGroup : partitionIdToPublishingGroups.get(partitionId)) {
           blockingTaskGroups.computeIfAbsent(taskGroup, _ -> new HashSet<>())
                             .add(partitionId);
         }
