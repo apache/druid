@@ -532,7 +532,6 @@ public class OverlordResource
     asyncContext.addListener(
         ServletResourceUtils.createAsyncTimeoutListener(event -> {
           // HTTP 204 NO_CONTENT is sent to the client.
-          // TODO: send back an error response that allows the client to retry
           future.cancel(true);
           event.getAsyncContext().complete();
         })
