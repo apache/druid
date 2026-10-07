@@ -29,7 +29,7 @@ Status: ✅ done, ⬜ to do.
 1. ✅ 1: the Hjson context from the syntax tree
 2. ✅ 2 + 3: the SQL completions from the syntax tree, with the grammar changes that make that possible (3 removes the
    workaround in 2)
-3. ⬜ 6: comments that refer to Ace
+3. ✅ 6: comments that refer to Ace
 4. ⬜ 4: the completion plumbing and the word characters
 5. ✅ 7: underline the Hjson parse error in the editor
 
@@ -106,11 +106,11 @@ Not action items. This code exists to behave or look like Ace did, and that beha
 - The shared tooltip host prepended to the body: tooltips are not clipped by the editor's containers, and
   `document.body.lastChild` stays the Blueprint portal that the dialog specs snapshot.
 
-## ⬜ 6. Comments that refer to Ace
+## ✅ 6. Comments that refer to Ace
 
-About ten comments explain a choice with "Like Ace…" (`code-editor.tsx`, `code-editor-theme.ts`, `code-editor.scss`,
-`dsql.ts`, `hjson.ts`, `hjson.grammar`). They should give the actual reason instead, for example "a new line keeps the
-indentation of the line before".
+The comments that explained a choice with "Like Ace…" (`code-editor.tsx`, `code-editor-theme.ts`, `code-editor.scss`,
+`dsql.ts`, `hjson.ts`) now say what the code does and why, for example "a new line keeps the indentation of the line
+before". The README says the same without the history. The only mentions of Ace left in the code are in this file.
 
 ## ✅ 7. Underline the Hjson parse error in the editor
 

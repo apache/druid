@@ -22,8 +22,7 @@ import { tags } from '@lezer/highlight';
 
 import { editorTags } from '../../editor-languages/editor-tags';
 
-// The editor is styled to look like the Ace editor (with the solarized_dark theme and some overrides) that the console
-// used to use.
+// A dark theme with the solarized_dark colors and the console's overrides
 
 const MONOSPACE_FONT =
   "Monaco, Menlo, 'Ubuntu Mono', Consolas, 'Source Code Pro', source-code-pro, monospace";

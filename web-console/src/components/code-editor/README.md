@@ -266,21 +266,20 @@ To add a token type, add it to the grammar, give it a tag in the language's `sty
 `codeEditorHighlightStyle` (in `code-editor-theme.ts`) if it does not have one. Mind that a child node without a tag
 is not styled as part of its parent: tokens like the quotes of a string are anonymous (lowercase) for that reason.
 
-Both languages keep the indentation of the line before on Enter (`indentNodeProp` returns `null`), like Ace did,
-rather than indenting inside brackets.
+Both languages keep the indentation of the line before on Enter (`indentNodeProp` returns `null`), rather than
+indenting inside brackets.
 
 ## Styling
 
-The theme reproduces the look of the Ace editor the console used before: Ace's `solarized_dark` theme plus the
-console's overrides. Most of it is in `code-editor-theme.ts` as an `EditorView.theme(...)`, which CodeMirror scopes to
+The theme is a dark one with the `solarized_dark` colors plus the console's overrides. Most of it is in `code-editor-theme.ts` as an `EditorView.theme(...)`, which CodeMirror scopes to
 the editor and to its tooltips. Some things to know before changing it:
 
 - **The tooltips live in one shared element at the start of `<body>`** (`getTooltipHost` in `code-editor.tsx`), so
   that dialogs, popovers and the editor's own `overflow: hidden` don't clip them, and so that it doesn't become
   `document.body.lastChild`, which the dialog specs snapshot. The comment on `getTooltipHost` has the details.
 
-- **The token colors are pre-brightened.** The Ace theme drew text through `filter: brightness(1.5) saturate(0.9)`.
-  The colors in `codeEditorHighlightStyle` are the result of that filter. Don't add a CSS filter to `.cm-content`,
+- **The token colors are pre-brightened.** They are the `solarized_dark` colors put through
+  `filter: brightness(1.5) saturate(0.9)`, and `codeEditorHighlightStyle` has the result. Don't add a CSS filter to `.cm-content`,
   because it would also brighten the active-line and highlight backgrounds.
 - **Console colors are copied as constants.** The theme lives in TypeScript, so the few SCSS colors it needs
   (`$dark-gray1`, `$dark-gray4`, `$gray1`, `$gray5`) are copied in with a comment pointing to
@@ -288,7 +287,7 @@ the editor and to its tooltips. Some things to know before changing it:
 - **Mind selector specificity.** CodeMirror's base theme uses selectors like `&dark .cm-gutters`. A theme rule wins
   when its selector is as specific as the base one. `codeEditorPaddingTheme` uses slightly more specific selectors on
   purpose so it beats the main theme.
-- **The wrapper** gets `position: relative; overflow: hidden` (in `code-editor.scss`), like Ace's root element, so the
+- **The wrapper** gets `position: relative; overflow: hidden` (in `code-editor.scss`), so the
   editor never pushes past the size it is given in flex layouts.
 - **The find panel is React.** `createSearchPanel` (`search-panel.tsx`) replaces CodeMirror's own panel, which has
   its own tiny buttons, with Blueprint inputs, buttons and checkboxes so that it looks like the rest of the console. It
@@ -301,9 +300,9 @@ the editor and to its tooltips. Some things to know before changing it:
 
 ## Keyboard
 
-The standard CodeMirror keymaps are on: editing, undo/redo, search (Cmd/Ctrl-F) and autocomplete. Tab behaves like it
-did in Ace. With nothing selected it inserts spaces up to the next 2-column tab stop. With a selection it indents the
-selected lines, and Shift-Tab un-indents.
+The standard CodeMirror keymaps are on: editing, undo/redo, search (Cmd/Ctrl-F) and autocomplete. With nothing
+selected Tab inserts spaces up to the next 2-column tab stop. With a selection it indents the selected lines, and
+Shift-Tab un-indents.
 
 ## Testing
 

@@ -121,7 +121,7 @@ let tooltipHost: HTMLElement | undefined;
 /**
  * The element that the tooltips of all editors (the autocomplete list and its doc panel) are rendered in.
  *
- * - It is in the body, like Ace's popup was, so that the tooltips are not clipped by the containers of the editor: the
+ * - It is in the body so that the tooltips are not clipped by the containers of the editor: the
  *   editor wrapper itself (`overflow: hidden`), dialogs and popovers. CodeMirror's own z-index for tooltips puts them
  *   above Blueprint overlays.
  * - It is put at the start of the body rather than the end. Blueprint renders dialogs, popovers and toasts into portals
@@ -159,7 +159,8 @@ function placeholderTextExtension(placeholder: string | undefined): Extension {
 }
 
 /**
- * Like Ace: with nothing selected Tab inserts spaces up to the next tab stop, otherwise it indents the selected lines
+ * With nothing selected Tab inserts spaces up to the next tab stop (CodeMirror's indentWithTab would indent the whole
+ * line), otherwise it indents the selected lines
  */
 const insertSoftTab: Command = view => {
   const { state } = view;
@@ -182,7 +183,8 @@ const insertSoftTab: Command = view => {
 };
 
 /**
- * Like Ace: show the documentation next to the completion list, aligned with its top
+ * Shows the documentation next to the completion list, aligned with its top (CodeMirror aligns it with the selected
+ * option)
  */
 function positionInfo(_view: EditorView, list: Rect, _option: Rect, info: Rect, space: Rect) {
   const infoWidth = info.right - info.left;

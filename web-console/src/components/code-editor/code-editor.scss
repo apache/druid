@@ -18,7 +18,7 @@
 
 @use '../../variables' as *;
 
-// Like the Ace editor that this replaced, the editor never grows past the size it is given
+// The editor never grows past the size it is given (so that it does not push out its container in flex layouts)
 .code-editor {
   position: relative;
   overflow: hidden;

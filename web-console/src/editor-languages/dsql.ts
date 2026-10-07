@@ -51,7 +51,7 @@ function makeDsqlLanguage(availableSqlFunctions: AvailableFunctions | undefined)
     parser: parser.configure({
       props: [
         dsqlHighlighting,
-        // Like Ace, a new line keeps the indentation of the line before (rather than indenting inside parentheses)
+        // A new line keeps the indentation of the line before (rather than indenting inside parentheses)
         indentNodeProp.add({ 'Script Parens': () => null }),
       ],
       specializers: availableSqlFunctions
@@ -60,7 +60,7 @@ function makeDsqlLanguage(availableSqlFunctions: AvailableFunctions | undefined)
     }),
     languageData: {
       commentTokens: { line: '--' },
-      // Like Ace, do not auto close braces (they are rare in SQL and typing one usually means the start of a JSON query)
+      // Do not auto close braces (they are rare in SQL and typing one usually means the start of a JSON query)
       closeBrackets: { brackets: ['(', '[', "'", '"'] },
     },
   });

@@ -46,7 +46,7 @@ export const hjsonLanguage = LRLanguage.define({
         '[ ]': tags.squareBracket,
         ', :': tags.separator,
       }),
-      // Like Ace, a new line keeps the indentation of the line before (rather than indenting inside brackets)
+      // A new line keeps the indentation of the line before (rather than indenting inside brackets)
       indentNodeProp.add({ 'Document Object Array': () => null }),
     ],
   }),
