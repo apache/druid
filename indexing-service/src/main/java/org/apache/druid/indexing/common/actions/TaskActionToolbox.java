@@ -151,10 +151,14 @@ public class TaskActionToolbox
       DataSourceMetadata startMetadata
   )
   {
-    if (startMetadata == null) {
+    if (startMetadata == null || supervisorId == null) {
       return Futures.immediateFuture(true);
     }
 
-    return getSupervisorManager().isTaskReadyToPublishSegments(supervisorId, task.getId(), startMetadata);
+    return supervisorManager.isTaskReadyToPublishSegments(
+        supervisorId,
+        task.getId(),
+        startMetadata
+    );
   }
 }
