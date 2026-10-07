@@ -184,7 +184,8 @@ public class OverlordResourceTest
         auditManager,
         authMapper,
         workerTaskRunnerQueryAdapter,
-        authConfig
+        authConfig,
+        TestHelper.JSON_MAPPER
     );
   }
 
@@ -1463,7 +1464,7 @@ public class OverlordResourceTest
   {
     replayAll();
     OverlordResource overlordResource =
-        new OverlordResource(null, null, null, null, null, null, null, null, null, null);
+        new OverlordResource(null, null, null, null, null, null, null, null, null, null, null);
     final Response response = overlordResource.getTaskSegments("taskId");
     Assertions.assertEquals(404, response.getStatus());
     Assertions.assertEquals(

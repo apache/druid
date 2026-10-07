@@ -19,9 +19,24 @@
 
 package org.apache.druid.indexing.common.actions;
 
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+
 import java.io.IOException;
 
+/**
+ * Client to submit a {@link TaskAction} on behalf of a Task to the Overlord.
+ */
 public interface TaskActionClient
 {
   <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException;
+
+  default <RetType> ListenableFuture<RetType> submitAsync(TaskAction<RetType> taskAction)
+  {
+    try {
+      return Futures.immediateFuture(submit(taskAction));
+    } catch (IOException e) {
+      return Futures.immediateFailedFuture(e);
+    }
+  }
 }

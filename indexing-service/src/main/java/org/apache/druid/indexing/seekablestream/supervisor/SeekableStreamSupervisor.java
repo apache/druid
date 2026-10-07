@@ -38,6 +38,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import jakarta.validation.constraints.NotNull;
@@ -129,6 +130,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -224,6 +226,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
     boolean handoffEarly = false; // set by SupervisorManager.stopTaskGroupEarly
+
+    final AtomicBoolean completed = new AtomicBoolean(false);
+    final List<Runnable> completionListeners = new  ArrayList<>();
 
     TaskGroup(
         int groupId,
@@ -358,6 +363,33 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return baseSequenceName;
     }
 
+    /**
+     * Called when this TaskGroup is removed from {@link #pendingCompletionTaskGroups}.
+     */
+    private void onCompleted()
+    {
+      if (completed.compareAndSet(false, true)) {
+        runCompletionListeners();
+      }
+    }
+
+    private synchronized void addCompletionListener(Runnable runnable)
+    {
+      if (completed.get()) {
+        runnable.run();
+      } else {
+        completionListeners.add(runnable);
+      }
+    }
+
+    private synchronized void runCompletionListeners()
+    {
+      for (Runnable runnable : completionListeners) {
+        runnable.run();
+      }
+      completionListeners.clear();
+    }
+
     @Override
     public String toString()
     {
@@ -382,6 +414,37 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
              ", startTime=" + startTime +
              ", checkpointSequences=" + currentSequences +
              '}';
+    }
+  }
+
+  /**
+   * Represents a task that waits until all prior task groups that were publishing
+   * to overlapping partitions have completed.
+   */
+  private class TaskWaitingToPublish
+  {
+    final CountDownLatch latch;
+    final SettableFuture<Boolean> readyToPublish = SettableFuture.create();
+    final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups;
+
+    TaskWaitingToPublish(String taskId, Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups)
+    {
+      this.latch = new CountDownLatch(blockingTaskGroups.size());
+      this.blockingTaskGroups = new HashMap<>(blockingTaskGroups);
+
+      tasksWaitingToPublish.put(taskId, this);
+
+      for (TaskGroup group : blockingTaskGroups.keySet()) {
+        group.addCompletionListener(() -> {
+          latch.countDown();
+          blockingTaskGroups.remove(group);
+
+          if (latch.getCount() == 0) {
+            readyToPublish.set(true);
+            tasksWaitingToPublish.remove(taskId);
+          }
+        });
+      }
     }
   }
 
@@ -1008,6 +1071,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // have multiple sets of tasks publishing at once if time-to-publish > taskDuration.
   // Map<{group id}, List<{pending completion task groups}>>
   private final ConcurrentHashMap<Integer, CopyOnWriteArrayList<TaskGroup>> pendingCompletionTaskGroups = new ConcurrentHashMap<>();
+
+  /**
+   * Tasks waiting on other task groups to finish publishing to overlapping partitions.
+   * Map from taskId to {@link TaskWaitingToPublish}. This map is maintained only
+   * for reporting purposes.
+   */
+  private final ConcurrentHashMap<String, TaskWaitingToPublish> tasksWaitingToPublish = new ConcurrentHashMap<>();
 
   // We keep two separate maps for tracking the current state of partition->task group mappings [partitionGroups] and partition->offset
   // mappings [partitionOffsets]. The starting offset for a new partition in [partitionOffsets] is initially set to getNotSetMarker(). When a new task group
@@ -2926,11 +2996,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   /**
    * Checks if there is a Task distinct from the given {@code taskId} or its replicas
-   * publishing to any of the given partitions. If this method returns true, it
+   * publishing to any of the given partitions. If this method returns a non-empty map,it
    * indicates that the current task would need to wait for the other tasks to
    * finish publishing before it can publish its own offsets.
+   *
+   * @return Map containing the conflicting TaskGroups that are publishing to
+   * overlapping partitions.
    */
-  public boolean isAnotherTaskGroupPublishingToPartitions(String taskId, Set<Object> partitions)
+  private Map<TaskGroup, Set<PartitionIdType>> getOtherTaskGroupsPublishingToPartitions(
+      String taskId,
+      Set<Object> partitions
+  )
   {
     // Identify all the partitions that are being published by other taskGroups
     final Map<PartitionIdType, Set<TaskGroup>> partitionIdToPublishingGroups = new HashMap<>();
@@ -2945,27 +3021,62 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     });
 
     if (partitionIdToPublishingGroups.isEmpty()) {
-      return false;
+      return Map.of();
     }
 
     // Check if any of the partitions of this taskId are being published by other taskGroups
+    final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups = new HashMap<>();
     for (Object partition : partitions) {
       @SuppressWarnings("unchecked")
       final PartitionIdType partitionId = (PartitionIdType) partition;
       if (partitionIdToPublishingGroups.containsKey(partitionId)) {
-        log.info(
-            "Task[%s] needs to wait before publishing as other taskGroups[%s] are currently publishing to partition[%s].",
-            taskId,
-            partitionIdToPublishingGroups.get(partitionId),
-            partitionId
-        );
-        return true;
+        for (TaskGroup taskGroup :  partitionIdToPublishingGroups.get(partitionId)) {
+          blockingTaskGroups.computeIfAbsent(taskGroup, _ -> new HashSet<>())
+                            .add(partitionId);
+        }
       }
     }
 
-    return false;
+    return blockingTaskGroups;
   }
 
+  private boolean isAnotherTaskGroupPublishingToPartitions(
+      String taskId,
+      Set<Object> partitions
+  )
+  {
+    return !getOtherTaskGroupsPublishingToPartitions(taskId, partitions).isEmpty();
+  }
+
+  /**
+   * Checks if there is a Task distinct from the given {@code taskId} or its replicas
+   * publishing to any of the given partitions.
+   *
+   * @return A future that completes when the current task is ready to publish
+   * its segments since all previous tasks that were reading from an overlapping
+   * set of partitions have already published their offsets.
+   */
+  public ListenableFuture<Boolean> isTaskReadyToPublishSegments(String taskId, Set<Object> partitions)
+  {
+    final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups =
+        getOtherTaskGroupsPublishingToPartitions(taskId, partitions);
+
+    // No tasks writing to overlapping partitions, task may proceed with publish
+    if (blockingTaskGroups.isEmpty()) {
+      return Futures.immediateFuture(true);
+    } else {
+      final TaskWaitingToPublish waitingTask = new TaskWaitingToPublish(taskId, blockingTaskGroups);
+
+      log.info(
+          "Task[%s] needs to wait before publishing as [%d] other taskGroups are"
+          + " currently publishing to partitions[%s].",
+          taskId,
+          blockingTaskGroups.size(),
+          blockingTaskGroups.values().stream().flatMap(Collection::stream).collect(Collectors.toSet())
+      );
+      return waitingTask.readyToPublish;
+    }
+  }
 
   @VisibleForTesting
   protected void addDiscoveredTaskToPendingCompletionTaskGroups(
@@ -4189,7 +4300,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // kill all the tasks in this pending completion group
           killTasksInGroup(
               group,
-              "No task in pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              "No successful task in taskGroup within completion timeout",
               groupId
           );
           // set a flag so the other pending completion groups for this set of partitions will also stop
@@ -4198,7 +4309,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           // kill all the tasks in the currently reading task group and remove the bad task group
           killTasksInGroup(
               activelyReadingTaskGroups.remove(groupId),
-              "No task in the corresponding pending completion taskGroup[%d] succeeded before completion timeout elapsed",
+              "No successful task in prior taskGroup within completion timeout",
               groupId
           );
           toRemove.add(group);
@@ -4206,6 +4317,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
 
       taskGroupList.removeAll(toRemove);
+      toRemove.forEach(TaskGroup::onCompleted);
     }
 
     // Ignore return value; just await.

@@ -22,6 +22,9 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
@@ -219,12 +222,25 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     }
 
     IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
+    return retVal;
+  }
 
-    if (toolbox.shouldFailSegmentPublishImmediately(retVal, task, supervisorId, startMetadata)) {
-      return SegmentPublishResult.fail(retVal.getErrorMsg());
-    } else {
-      return retVal;
-    }
+  @Override
+  public ListenableFuture<SegmentPublishResult> performAsync(Task task, TaskActionToolbox toolbox)
+  {
+    final ListenableFuture<Boolean> taskReadyToPublishFuture
+        = toolbox.isTaskReadyToPublish(task, supervisorId, startMetadata);
+    return Futures.transform(
+        taskReadyToPublishFuture,
+        taskIsReadyToPublish -> {
+          if (Boolean.TRUE.equals(taskIsReadyToPublish)) {
+            return SegmentPublishResult.doNotRetryOffsetMismatchFailure(perform(task, toolbox));
+          } else {
+            return SegmentPublishResult.retryableFailure("Task is not ready to publish yet");
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
   }
 
   @Override

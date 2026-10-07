@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -194,7 +195,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   }
 
   @Override
-  public Future<SegmentIdWithShardSpec> performAsync(Task task, TaskActionToolbox toolbox)
+  public ListenableFuture<SegmentIdWithShardSpec> performAsync(Task task, TaskActionToolbox toolbox)
   {
     if (!toolbox.canBatchSegmentAllocation()) {
       throw new ISE("Batched segment allocation is disabled");

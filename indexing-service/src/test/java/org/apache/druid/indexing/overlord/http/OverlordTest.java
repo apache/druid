@@ -75,6 +75,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -296,7 +297,8 @@ public class OverlordTest
         auditManager,
         AuthTestUtils.TEST_AUTHORIZER_MAPPER,
         workerTaskRunnerQueryAdapter,
-        new AuthConfig()
+        new AuthConfig(),
+        TestHelper.JSON_MAPPER
     );
     Response response = overlordResource.getLeader();
     Assertions.assertEquals(druidNode.getHostAndPort(), response.getEntity());

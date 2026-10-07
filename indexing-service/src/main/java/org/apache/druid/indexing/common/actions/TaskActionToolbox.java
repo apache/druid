@@ -21,13 +21,14 @@ package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskStorage;
@@ -140,25 +141,20 @@ public class TaskActionToolbox
   }
 
   /**
-   * Checks if the given publish action should be failed without allowing any
-   * more retries. A failed publish action should be retried only if there is
-   * another task waiting to publish offsets for an overlapping set of partitions.
+   * Returns a future that completes when the given task is ready to publish its
+   * segments. A streaming task must wait for previously created tasks that are
+   * yet to publish offsets for an overlapping set of partitions.
    */
-  public boolean shouldFailSegmentPublishImmediately(
-      SegmentPublishResult result,
+  public ListenableFuture<Boolean> isTaskReadyToPublish(
       Task task,
       String supervisorId,
       DataSourceMetadata startMetadata
   )
   {
-    if (result.isSuccess() || !result.isRetryable() || startMetadata == null) {
-      return false;
+    if (startMetadata == null) {
+      return Futures.immediateFuture(true);
     }
 
-    return !getSupervisorManager().isAnotherTaskGroupPublishingToPartitions(
-        supervisorId,
-        task.getId(),
-        startMetadata
-    );
+    return getSupervisorManager().isTaskReadyToPublishSegments(supervisorId, task.getId(), startMetadata);
   }
 }

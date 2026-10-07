@@ -27,6 +27,8 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -1150,7 +1152,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   {
     final DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> manager.isAnotherTaskGroupPublishingToPartitions(null, "task1", null)
+        () -> manager.isTaskReadyToPublishSegments(null, "task1", null)
     );
     Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
     Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
@@ -1159,11 +1161,11 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_isAnotherTaskGroupPublishingToPartitions_throwsException_ifSupervisorNotFound()
+  public void test_isTaskReadyToPublish_Segments_throwsException_ifSupervisorNotFound()
   {
     final DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> manager.isAnotherTaskGroupPublishingToPartitions("supervisor1", "task1", null)
+        () -> manager.isTaskReadyToPublishSegments("supervisor1", "task1", null)
     );
     Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
     Assertions.assertEquals(DruidException.Category.NOT_FOUND, exception.getCategory());
@@ -1172,7 +1174,8 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_isAnotherTaskGroupPublishingToPartitions_returnsFalse_forNonStreamingSupervisor()
+  public void test_isTaskReadyToPublishSegments_returnsCompleteFuture_forNonStreamingSupervisor()
+      throws Exception
   {
     final String supervisorId = "supervisor1";
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(
@@ -1185,8 +1188,8 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     manager.start();
 
-    Assertions.assertFalse(
-        manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", null)
+    Assertions.assertTrue(
+        manager.isTaskReadyToPublishSegments(supervisorId, "task1", null).get()
     );
   }
 
@@ -1209,7 +1212,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     final DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", null)
+        () -> manager.isTaskReadyToPublishSegments(supervisorId, "task1", null)
     );
     Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
     Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
@@ -1239,7 +1242,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     final DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, "task1", new ObjectMetadata("abc"))
+        () -> manager.isTaskReadyToPublishSegments(supervisorId, "task1", new ObjectMetadata("abc"))
     );
     Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
     Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
@@ -1253,7 +1256,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
-  public void test_isAnotherTaskGroupPublishingToPartitions()
+  public void test_isTaskReadyToPublishSegments() throws Exception
   {
     final String supervisorId = "supervisor1";
     final SeekableStreamSupervisor<Integer, String, ByteEntity> seekableStreamSupervisor =
@@ -1268,20 +1271,20 @@ public class SupervisorManagerTest extends EasyMockSupport
     // Expect a readyTaskId for which no other group is currently publishing
     final String readyTaskId = "task1";
     EasyMock.expect(
-        seekableStreamSupervisor.isAnotherTaskGroupPublishingToPartitions(
+        seekableStreamSupervisor.isTaskReadyToPublishSegments(
             EasyMock.eq(readyTaskId),
             EasyMock.anyObject()
         )
-    ).andReturn(false).atLeastOnce();
+    ).andReturn(Futures.immediateFuture(true)).atLeastOnce();
 
     // Expect a conflictingTaskId for which another group is currently publishing
     final String conflictingTaskId = "task2";
     EasyMock.expect(
-        seekableStreamSupervisor.isAnotherTaskGroupPublishingToPartitions(
+        seekableStreamSupervisor.isTaskReadyToPublishSegments(
             EasyMock.eq(conflictingTaskId),
             EasyMock.anyObject()
         )
-    ).andReturn(true).atLeastOnce();
+    ).andReturn(SettableFuture.create()).atLeastOnce();
 
     replayAll();
     EasyMock.replay(seekableStreamSupervisor);
@@ -1291,12 +1294,15 @@ public class SupervisorManagerTest extends EasyMockSupport
         "topic",
         Map.of("0", "10")
     );
-    Assertions.assertTrue(
-        manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, conflictingTaskId, startMetadata)
-    );
-    Assertions.assertFalse(
-        manager.isAnotherTaskGroupPublishingToPartitions(supervisorId, readyTaskId, startMetadata)
-    );
+
+    final ListenableFuture<Boolean> conflictingTaskFuture =
+        manager.isTaskReadyToPublishSegments(supervisorId, conflictingTaskId, startMetadata);
+    Assertions.assertFalse(conflictingTaskFuture.isDone());
+
+    final ListenableFuture<Boolean> readyTaskFuture =
+        manager.isTaskReadyToPublishSegments(supervisorId, readyTaskId, startMetadata);
+    Assertions.assertTrue(readyTaskFuture.isDone());
+    Assertions.assertTrue(readyTaskFuture.get());
   }
 
   @Test

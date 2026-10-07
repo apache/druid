@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.http;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -26,6 +27,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
@@ -79,7 +84,9 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.servlet.AsyncContext;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -96,7 +103,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.InputStream;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +127,7 @@ public class OverlordResource
   private final WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter;
 
   private final AuthConfig authConfig;
+  private final ObjectMapper jsonMapper;
 
   private static final List<String> API_TASK_STATES = ImmutableList.of("pending", "waiting", "running", "complete");
   private static final Set<String> AUDITED_TASK_TYPES
@@ -137,7 +144,8 @@ public class OverlordResource
       AuditManager auditManager,
       AuthorizerMapper authorizerMapper,
       WorkerTaskRunnerQueryAdapter workerTaskRunnerQueryAdapter,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      ObjectMapper jsonMapper
   )
   {
     this.overlord = overlord;
@@ -150,6 +158,7 @@ public class OverlordResource
     this.authorizerMapper = authorizerMapper;
     this.workerTaskRunnerQueryAdapter = workerTaskRunnerQueryAdapter;
     this.authConfig = authConfig;
+    this.jsonMapper = jsonMapper;
   }
 
   /**
@@ -506,34 +515,51 @@ public class OverlordResource
   @Path("/action")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public Response doAction(final TaskActionHolder holder)
+  public void doAction(
+      final TaskActionHolder holder,
+      @Context HttpServletRequest request
+  )
   {
-    return asLeaderWith(
-        taskMaster.getTaskActionClient(holder.getTask()),
-        new Function<>()
+    final AsyncContext asyncContext = request.startAsync();
+    final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
+    if (!taskActionClient.isPresent()) {
+      // Encourage client to try again soon, when we'll likely have a redirect set up
+      completeRequest(asyncContext, Status.SERVICE_UNAVAILABLE.getStatusCode(), null);
+      return;
+    }
+
+    final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
+    asyncContext.addListener(
+        ServletResourceUtils.createAsyncTimeoutListener(event -> {
+          // HTTP 204 NO_CONTENT is sent to the client.
+          // TODO: send back an error response that allows the client to retry
+          future.cancel(true);
+          event.getAsyncContext().complete();
+        })
+    );
+    asyncContext.setTimeout(5 * 60_000);
+
+    Futures.addCallback(
+        future,
+        new FutureCallback<Object>()
         {
           @Override
-          public Response apply(TaskActionClient taskActionClient)
+          public void onSuccess(Object result)
           {
-            final Map<String, Object> retMap;
-
-            // It would be great to verify that this worker is actually supposed to be running the task before
-            // actually doing the action.  Some ideas for how that could be done would be using some sort of attempt_id
-            // or token that gets passed around.
-
-            try {
-              final Object ret = taskActionClient.submit(holder.getAction());
-              retMap = new HashMap<>();
-              retMap.put("result", ret);
-            }
-            catch (Exception e) {
-              log.warn(e, "Failed to perform task action");
-              return Response.serverError().entity(ImmutableMap.of("error", e.getMessage())).build();
-            }
-
-            return Response.ok().entity(retMap).build();
+            completeRequest(asyncContext, Status.OK.getStatusCode(), Map.of("result", result));
           }
-        }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            if (t instanceof DruidException druidException) {
+              completeRequest(asyncContext, druidException.getStatusCode(), druidException.toErrorResponse());
+            } else {
+              completeRequest(asyncContext, Status.INTERNAL_SERVER_ERROR.getStatusCode(), null);
+            }
+          }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -883,5 +909,19 @@ public class OverlordResource
             authorizerMapper
         )
     );
+  }
+
+  private void completeRequest(AsyncContext context, int statusCode, Object result)
+  {
+    try {
+      final HttpServletResponse response = (HttpServletResponse) context.getResponse();
+      response.setStatus(statusCode);
+      if (result != null) {
+        response.setContentType(MediaType.APPLICATION_JSON);
+        jsonMapper.writeValue(response.getOutputStream(), result);
+      }
+    } catch (Exception e) {
+      log.noStackTrace().warn(e, "Request timed out or is closed already");
+    }
   }
 }
