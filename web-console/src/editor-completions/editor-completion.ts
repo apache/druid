@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+import type { Completion } from '@codemirror/autocomplete';
+
 /**
  * Documentation shown next to the completion list when the completion is selected
  */
@@ -31,16 +33,7 @@ export interface CompletionDoc {
 }
 
 /**
- * A completion suggestion. The fields mirror the ones of CodeMirror's `Completion`.
+ * A completion suggestion: CodeMirror's `Completion` (`label`, `detail`, `boost`, ...) with the documentation as data
+ * (`doc`) rather than an `info` that renders it. `makeCompletionSource` turns the `doc` into the `info`.
  */
-export interface EditorCompletion {
-  /** The text that is inserted (and matched against what was typed) */
-  label: string;
-  /** What is shown in the list, defaults to the label */
-  displayLabel?: string;
-  /** Shown to the right of the label, like 'column' or 'function' */
-  detail?: string;
-  /** Ranks equally good matches, from -99 to 99, higher first */
-  boost?: number;
-  doc?: CompletionDoc;
-}
+export type EditorCompletion = Omit<Completion, 'info'> & { doc?: CompletionDoc };

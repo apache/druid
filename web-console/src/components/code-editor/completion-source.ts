@@ -24,15 +24,12 @@ import type {
 } from '@codemirror/autocomplete';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
+import { CharCategory } from '@codemirror/state';
 import type { Tree } from '@lezer/common';
 
 import type { EditorCompletion } from '../../editor-completions/editor-completion';
 
 import { renderCompletionDoc } from './completion-doc';
-
-// The characters that make up the word being completed
-const PREFIX_REGEXP = /[\w$\-\u00A2-\u2000\u2070-\uFFFF]*/;
-const VALID_PREFIX_REGEXP = new RegExp(`^${PREFIX_REGEXP.source}$`);
 
 /**
  * The (partial) word being completed, it ends at the cursor
@@ -52,11 +49,13 @@ export type EditorCompletionBuilder = (
 
 /**
  * The word before the cursor, or undefined when there is nothing to complete (no word typed and the completion was not
- * asked for explicitly)
+ * asked for explicitly). What is a word is up to the language: letters, digits and _, plus the language's `wordChars`
+ * (language data).
  */
 export function matchCompletionWord(context: CompletionContext): CompletionWord | undefined {
   const { state, pos } = context;
-  const from = context.matchBefore(PREFIX_REGEXP)?.from ?? pos;
+  const word = state.wordAt(pos);
+  const from = word && word.from < pos ? word.from : pos;
   if (from === pos && !context.explicit) return;
   return { from, text: state.sliceDoc(from, pos) };
 }
@@ -100,7 +99,11 @@ export function makeCompletionSource(build: EditorCompletionBuilder): Completion
     return {
       from: word.from,
       options,
-      validFor: VALID_PREFIX_REGEXP,
+      // Keep filtering the options (rather than asking again) while the word grows
+      validFor: (text, from, _to, state) => {
+        const categorize = state.charCategorizer(from);
+        return Array.from(text).every(char => categorize(char) === CharCategory.Word);
+      },
     };
   };
 }

@@ -124,7 +124,8 @@ list on demand. Enter or Tab accepts the selected one. Read-only editors don't c
 
 The completion builders in `src/editor-completions/` (`getSqlCompletions`, `getHjsonCompletions`) are
 `EditorCompletionBuilder`s. `makeCompletionSource` (`completion-source.ts`) turns one into a completion source: it
-works out the word being completed, skips read-only editors, and calls the builder with CodeMirror's
+works out the word being completed (`state.wordAt`, so the word characters are letters, digits and `_` plus the
+language's `wordChars` language data: `$` for DruidSQL, `$` and `-` for Hjson), skips read-only editors, and calls the builder with CodeMirror's
 `CompletionContext` and the word:
 
 ```ts
@@ -144,13 +145,10 @@ text if the editor has not yet. In specs, `completionContextAt(dsql(),
 A builder returns `EditorCompletion`s (from `src/editor-completions/editor-completion.ts`):
 
 ```ts
-interface EditorCompletion {
-  label: string; // What gets inserted (and matched against what was typed)
-  displayLabel?: string; // What is shown in the list (defaults to label)
-  detail?: string; // Shown on the right, like 'column' or 'function'
-  boost?: number; // Ranks equally good matches, from -99 to 99, higher first
+// CodeMirror's Completion (label, displayLabel, detail, boost, ...) with the doc as data instead of an info
+type EditorCompletion = Omit<Completion, 'info'> & {
   doc?: CompletionDoc; // Shown in a panel next to the list when the item is selected
-}
+};
 
 interface CompletionDoc {
   name: string; // The title
@@ -160,7 +158,7 @@ interface CompletionDoc {
 }
 ```
 
-The field names are the ones of CodeMirror's `Completion`. The editor renders the doc panel itself
+`makeCompletionSource` turns the `doc` into CodeMirror's `info`: the editor renders the doc panel itself
 (`completion-doc.ts`), so completion builders only describe what to show. No HTML strings are involved: plain text is
 inserted as text, and "doc markdown" is turned into elements by `renderDocMarkdown` (`doc-markdown.ts`).
 

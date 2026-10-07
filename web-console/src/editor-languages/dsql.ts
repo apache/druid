@@ -60,6 +60,8 @@ function makeDsqlLanguage(availableSqlFunctions: AvailableFunctions | undefined)
     }),
     languageData: {
       commentTokens: { line: '--' },
+      // Identifiers can contain $ (letters, digits and _ are word characters anyway)
+      wordChars: '$',
       // Do not auto close braces (they are rare in SQL and typing one usually means the start of a JSON query)
       closeBrackets: { brackets: ['(', '[', "'", '"'] },
     },

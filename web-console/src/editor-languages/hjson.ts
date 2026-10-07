@@ -52,6 +52,8 @@ export const hjsonLanguage = LRLanguage.define({
   }),
   languageData: {
     commentTokens: { line: '//', block: { open: '/*', close: '*/' } },
+    // Keys and values can contain - (like mv-filtered) and $ (letters, digits and _ are word characters anyway)
+    wordChars: '$-',
   },
 });
 
