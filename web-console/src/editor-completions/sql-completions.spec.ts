@@ -16,12 +16,19 @@
  * limitations under the License.
  */
 
+import { EditorState } from '@codemirror/state';
+
 import { dsql } from '../editor-languages/dsql';
 import { completionContextAt } from '../test-utils/completion-context';
 import type { ColumnMetadata } from '../utils';
 
 import type { SqlCompletionOptions } from './sql-completions';
 import { getPossibleSqlReferences, getSqlCompletions, getSqlLiterals } from './sql-completions';
+
+// A state with the dsql language (for the syntax tree)
+function dsqlState(sqlText: string): EditorState {
+  return EditorState.create({ doc: sqlText, extensions: dsql() });
+}
 
 describe('sql-completions', () => {
   describe('getSqlCompletions', () => {
@@ -98,6 +105,11 @@ describe('sql-completions', () => {
       ]);
     });
 
+    it('does not return only literals right after a closed literal', () => {
+      const completions = completionsAt("SELECT * FROM t WHERE country = 'France'|");
+      expect(completions.some(c => c.detail === 'keyword')).toBe(true);
+    });
+
     it('returns only literals anywhere inside a literal', () => {
       const completions = completionsAt(
         "SELECT * FROM table WHERE country = 'France' OR country = 'not Fra|'",
@@ -116,6 +128,21 @@ describe('sql-completions', () => {
       expect(keywordValues).toContain('DISTINCT');
       expect(keywordValues).toContain('ALL');
       expect(keywordValues).not.toContain('SELECT');
+    });
+
+    it('looks at the keyword on an earlier line and past comments', () => {
+      for (const sql of ['SELECT * FROM t GROUP\n  |', 'SELECT * FROM t GROUP /* by what */ |']) {
+        expect(
+          completionsAt(sql)
+            .filter(c => c.detail === 'keyword')
+            .map(c => c.label),
+        ).toEqual(['BY']);
+      }
+    });
+
+    it('looks at the keyword before a quote', () => {
+      const completions = completionsAt('SELECT * FROM t LIMIT "|', { columns: ['page'] });
+      expect(completions.filter(c => c.detail === 'column')).toHaveLength(0);
     });
 
     it('does not include functions after keywords that cannot be followed by functions', () => {
@@ -252,14 +279,14 @@ describe('sql-completions', () => {
     it('extracts string literals from SQL text', () => {
       const sqlText =
         "SELECT * FROM table WHERE country = 'France' OR city = 'Paris' OR code = 'FR'";
-      const literals = getSqlLiterals(sqlText, 10);
+      const literals = getSqlLiterals(dsqlState(sqlText), 10);
 
       expect(literals).toEqual(['France', 'Paris', 'FR']);
     });
 
     it('respects maxWords limit', () => {
       const sqlText = "SELECT 'one', 'two', 'three', 'four', 'five'";
-      const literals = getSqlLiterals(sqlText, 3);
+      const literals = getSqlLiterals(dsqlState(sqlText), 3);
 
       expect(literals).toHaveLength(3);
     });
@@ -268,7 +295,7 @@ describe('sql-completions', () => {
   describe('getPossibleSqlReferences', () => {
     it('extracts quoted identifiers', () => {
       const sqlText = 'SELECT "myColumn" FROM "myTable"';
-      const references = getPossibleSqlReferences(sqlText, 10);
+      const references = getPossibleSqlReferences(dsqlState(sqlText), 10);
 
       expect(references).toContain('myColumn');
       expect(references).toContain('myTable');
@@ -276,7 +303,7 @@ describe('sql-completions', () => {
 
     it('extracts unquoted identifiers', () => {
       const sqlText = 'SELECT column1, column2 FROM table1 WHERE column3 = 1';
-      const references = getPossibleSqlReferences(sqlText, 10);
+      const references = getPossibleSqlReferences(dsqlState(sqlText), 10);
 
       expect(references).toContain('column1');
       expect(references).toContain('column2');
@@ -286,7 +313,7 @@ describe('sql-completions', () => {
 
     it('filters out known SQL keywords', () => {
       const sqlText = 'SELECT column1 FROM table1 WHERE column2 = 1 ORDER BY column3';
-      const references = getPossibleSqlReferences(sqlText, 20);
+      const references = getPossibleSqlReferences(dsqlState(sqlText), 20);
 
       expect(references).not.toContain('SELECT');
       expect(references).not.toContain('FROM');
@@ -295,9 +322,32 @@ describe('sql-completions', () => {
       expect(references).not.toContain('BY');
     });
 
+    it('finds identifiers next to any operator or punctuation', () => {
+      const references = getPossibleSqlReferences(
+        dsqlState('SELECT t.col1 FROM t WHERE col2=1 AND col3<>col4'),
+        10,
+      );
+
+      expect(references).toEqual(['col1', 'col2', 'col3', 'col4']);
+    });
+
+    it('filters out keywords and functions in any case', () => {
+      const references = getPossibleSqlReferences(
+        dsqlState('select count(*) from table1 where column1 is not null'),
+        10,
+      );
+
+      expect(references).toEqual(['table1', 'column1']);
+    });
+
+    it('skips quotes that are not closed', () => {
+      expect(getPossibleSqlReferences(dsqlState('SELECT "col1", "col2'), 10)).toEqual(['col1']);
+      expect(getSqlLiterals(dsqlState("SELECT 'one', 'two"), 10)).toEqual(['one']);
+    });
+
     it('handles identifiers in expressions', () => {
       const sqlText = 'SELECT (column1 + column2) * column3 FROM table1';
-      const references = getPossibleSqlReferences(sqlText, 10);
+      const references = getPossibleSqlReferences(dsqlState(sqlText), 10);
 
       expect(references).toContain('column1');
       expect(references).toContain('column2');

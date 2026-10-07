@@ -22,8 +22,9 @@ import type {
   CompletionResult,
   CompletionSource,
 } from '@codemirror/autocomplete';
-import { syntaxTree } from '@codemirror/language';
+import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
+import type { Tree } from '@lezer/common';
 
 import type { EditorCompletion } from '../../editor-completions/editor-completion';
 
@@ -61,11 +62,23 @@ export function matchCompletionWord(context: CompletionContext): CompletionWord 
 }
 
 /**
- * The name of the syntax node (the token) that the cursor is in or right after, like 'LineComment' or 'String'
+ * The syntax node (the token) that the cursor is in or right after, like 'LineComment' or 'String'
  */
-export function tokenBefore(state: EditorState, pos: number): { name: string; to: number } {
-  const { name, to } = syntaxTree(state).resolveInner(pos, -1);
-  return { name, to };
+export function tokenBefore(
+  state: EditorState,
+  pos: number,
+): { name: string; from: number; to: number } {
+  const { name, from, to } = syntaxTree(state).resolveInner(pos, -1);
+  return { name, from, to };
+}
+
+/**
+ * The syntax tree of the whole text, for completions that look at more than the text around the cursor. The editor
+ * parses in the background, so the end of a long text might not be parsed yet. It is parsed here (for a short while),
+ * otherwise the tree is what has been parsed so far.
+ */
+export function completeSyntaxTree(state: EditorState): Tree {
+  return ensureSyntaxTree(state, state.doc.length, 50) ?? syntaxTree(state);
 }
 
 function toCompletion({ doc, ...completion }: EditorCompletion): Completion {

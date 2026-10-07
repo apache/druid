@@ -51,12 +51,12 @@ Array { "[" (value | ",")* "]" }
 @external tokens quoteless from "./hjson-tokens" { quotelessKey, QuotelessString }
 
 @skip {} {
-  // Like in Ace, a string can go over several lines and an unterminated one lasts until the end of the text
+  // A string does not span lines, an unterminated one ends with (and includes) the end of the line
   String { stringStart (stringContent | Escape | InvalidEscape)* stringEnd }
 }
 
 @local tokens {
-  stringEnd { '"' }
+  stringEnd { '"' | "\n" }
   Escape { "\\" ($["\\/bfnrt] | "u" hex hex hex hex) }
   InvalidEscape { "\\" _ }
   hex { $[0-9a-fA-F] }

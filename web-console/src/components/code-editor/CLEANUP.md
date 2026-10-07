@@ -27,7 +27,7 @@ Status: ✅ done, ⬜ to do.
 ## Suggested order
 
 1. ✅ 1: the Hjson context from the syntax tree
-2. ⬜ 2 + 3: the SQL completions from the syntax tree, with the grammar changes that make that possible (3 removes the
+2. ✅ 2 + 3: the SQL completions from the syntax tree, with the grammar changes that make that possible (3 removes the
    workaround in 2)
 3. ⬜ 6: comments that refer to Ace
 4. ⬜ 4: the completion plumbing and the word characters
@@ -53,27 +53,33 @@ comments, quoted and multiline strings, brackets and keys, which `hjson.grammar`
 - `currentKey` is only set when editing a value (it was sometimes the half-typed key, which nothing used), and
   `isEditingComment` (never used) is gone. The comment check stays in `getHjsonCompletions`.
 
-## ⬜ 2. The SQL completions read the text with regexes
+## ✅ 2. The SQL completions read the syntax tree
 
 In `src/editor-completions/sql-completions.ts`:
 
-- The keyword before the word being typed is found with a regex on the current line only, so a keyword on the line
-  above is ignored (`GROUP` on one line and the cursor on the next does not narrow the suggestions to `BY`). Looking
-  back through the tree, skipping comments, would fix this.
-- `getPossibleSqlReferences` and `getSqlLiterals` scan the text with regexes, and `KNOWN_SQL_PARTS` repeats the word
-  list that `dsql-tokens.ts` already has. Collecting the `Identifier`, `QuotedIdentifier` and `String` nodes would
-  replace all three. An `Identifier` node already leaves out the known words.
-- The `charBeforePrefix === "'"` check only exists because an unclosed literal is not a `String` node (see 3).
+- The keyword before the word being typed is the last token before it (before its quote, if it is quoted) that is not
+  a comment, found by going back through the tree (`tokenEndingBefore`). It used to be the last word on the same line,
+  so a keyword on the line above was ignored: with `GROUP` on one line and the cursor on the next, the only keyword
+  suggested is now `BY`, and the same for `GROUP /* by what */ |`.
+- `getPossibleSqlReferences` and `getSqlLiterals` take the `EditorState` and collect the `QuotedIdentifier` and
+  `Identifier` nodes, and the `String` nodes, instead of scanning the text with regexes. `KNOWN_SQL_PARTS` is gone:
+  keywords, functions, constants and types are not `Identifier`s. Differences: identifiers next to any operator or
+  punctuation are found (`t.col`, `a=1`, `x<>y` were missed), lowercase keywords are no longer suggested as
+  references, and neither are the functions that only the cluster has. Unclosed quotes are skipped.
+- An unclosed literal is now a `String` node (see 3), so the `charBeforePrefix === "'"` workaround is gone. The cursor
+  is inside a literal when it is before the end of the `String` node, or at the end of one that is not closed.
+- `completeSyntaxTree(state)` (`completion-source.ts`) parses the rest of the text if the editor has not yet (with a
+  short time limit), for the builders that look at the whole text. The Hjson context uses it too.
 
-## ⬜ 3. Grammar choices copied from Ace's regexes
+## ✅ 3. Grammar choices no longer copied from Ace's regexes
 
-These were made so that the highlighting stayed the same as Ace's:
-
-- In `dsql.grammar`, an unclosed quote (`'` or `"`) is a `Punctuation` character. A grammar written from scratch would
-  make it a `String` (or `QuotedIdentifier`) that runs to the end of the line, so it is colored while it is typed and
-  the workaround in 2 can go. **This changes what users see.**
-- In `dsql.grammar`, the sign is part of the number, so `a-1` is `a` and `-1`. Normally `-` would be an `Operator`.
-- In `hjson.grammar`, quoted strings can span lines "like in Ace".
+- `dsql.grammar`: an unclosed `'` or `"` is a `String` or `QuotedIdentifier` that lasts until the end of the line (it
+  was a `Punctuation` character, and the text after it was highlighted as code). **Users see this:** a literal is
+  colored as a string while it is typed.
+- `dsql.grammar`: the sign is no longer part of the number, `a-1` is `a`, `-` and `1` (it was `a` and `-1`). The `-`
+  is an `Operator`, which is not colored.
+- `hjson.grammar`: quoted strings do not span lines (Hjson does not allow it). An unclosed one ends with, and includes,
+  the end of the line, so the lines after it are no longer taken as part of the string.
 
 ## ⬜ 4. Completion plumbing shaped like Ace's completer API
 

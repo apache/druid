@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import { syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 import Hjson from 'hjson';
+
+import { completeSyntaxTree } from '../components/code-editor/completion-source';
 
 /**
  * Where the cursor is in an Hjson document
@@ -72,8 +73,8 @@ function stringValue(text: string): string {
   try {
     return JSON.parse(text);
   } catch {
-    // Not closed yet (or a bad escape)
-    return text.replace(/^"|"$/g, '');
+    // Not closed yet (it ends at the end of the line), or with a bad escape
+    return text.replace(/^"/, '').replace(/(?:"|\r?\n)$/, '');
   }
 }
 
@@ -179,7 +180,7 @@ export function getHjsonContext(state: EditorState, pos: number): HjsonContext {
   // Go up from the cursor to the object or array that it is in (or the document, at the root without braces). A closed
   // object or array that ends at the cursor is a value that was just typed.
   let cursorProperty: SyntaxNode | undefined;
-  let container: SyntaxNode = syntaxTree(state).resolveInner(pos, -1);
+  let container: SyntaxNode = completeSyntaxTree(state).resolveInner(pos, -1);
   while (
     container.parent &&
     !(

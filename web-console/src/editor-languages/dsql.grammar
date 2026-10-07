@@ -61,12 +61,12 @@ Parens { "(" element* ")" }
   blockCommentRest { ![*] blockCommentRest | "*" blockCommentAfterStar | @eof }
   blockCommentAfterStar { "/" | "*" blockCommentAfterStar | ![/*] blockCommentRest | @eof }
 
-  // Quoted identifiers and string literals do not span lines, an unterminated quote is just a character
-  QuotedIdentifier { '"' ![\n"]* '"' }
-  String { "'" ![\n']* "'" }
+  // Quoted identifiers and string literals do not span lines, an unterminated one lasts until the end of the line
+  QuotedIdentifier { '"' ![\n"]* '"'? }
+  String { "'" ![\n']* "'"? }
 
-  // The sign is part of the number
-  Number { $[+\-]? @digit+ ("." @digit*)? ($[eE] $[+\-]? @digit+)? }
+  // A sign is an operator
+  Number { @digit+ ("." @digit*)? ($[eE] $[+\-]? @digit+)? }
 
   Identifier { $[a-zA-Z_$] $[a-zA-Z0-9_$]* }
 

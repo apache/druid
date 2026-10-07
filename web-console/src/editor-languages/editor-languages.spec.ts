@@ -68,14 +68,20 @@ line */ SELECT`;
 
   it('highlights unterminated DruidSQL tokens', () => {
     expect(tokenOf(dsqlLanguage, 'SELECT /* not closed', '/* not closed')).toEqual('BlockComment');
-    // An unterminated quote is just a character
-    expect(tokenize(dsqlLanguage, `SELECT 'x`)).toEqual([
+    // An unterminated literal or quoted identifier lasts until the end of the line
+    expect(tokenize(dsqlLanguage, `SELECT 'x AND y\nFROM "t`)).toEqual([
       ['Keyword', 'SELECT'],
-      ['Punctuation', "'"],
-      ['Identifier', 'x'],
+      ['String', "'x AND y"],
+      ['Keyword', 'FROM'],
+      ['QuotedIdentifier', '"t'],
     ]);
-    // The sign is part of the number
-    expect(tokenOf(dsqlLanguage, 'SELECT a-1', '-1')).toEqual('Number');
+    // A sign is an operator
+    expect(tokenize(dsqlLanguage, 'SELECT a-1')).toEqual([
+      ['Keyword', 'SELECT'],
+      ['Identifier', 'a'],
+      ['Operator', '-'],
+      ['Number', '1'],
+    ]);
   });
 
   it('highlights the available functions', () => {
@@ -112,6 +118,13 @@ line */ SELECT`;
     expect(tokenOf(hjsonLanguage, hjson, '"two"')).toEqual('String');
     expect(tokenOf(hjsonLanguage, hjson, 'some text')).toEqual('QuotelessString');
     expect(tokenOf(hjsonLanguage, hjson, "'''\n    lines\n  '''")).toEqual('MultilineString');
+  });
+
+  it('ends an unterminated Hjson string at the end of the line', () => {
+    const hjson = '{\n  "a": "not closed\n  "b": 1\n}';
+    expect(tokenOf(hjsonLanguage, hjson, '"not closed\n')).toEqual('String');
+    expect(tokenOf(hjsonLanguage, hjson, '"b"')).toEqual('PropertyName');
+    expect(tokenOf(hjsonLanguage, hjson, '1')).toEqual('Number');
   });
 
   it('highlights JSON', () => {

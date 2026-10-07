@@ -17,11 +17,13 @@
  */
 
 import type { CompletionContext } from '@codemirror/autocomplete';
+import type { EditorState } from '@codemirror/state';
+import type { SyntaxNode } from '@lezer/common';
 import { C, filterMap, N, T } from 'druid-query-toolkit';
 
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
 import type { CompletionWord } from '../components/code-editor/completion-source';
-import { tokenBefore } from '../components/code-editor/completion-source';
+import { completeSyntaxTree, tokenBefore } from '../components/code-editor/completion-source';
 import { DEFAULT_SERVER_QUERY_CONTEXT } from '../druid-models';
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../editor-languages/dsql-keywords';
 import type { AvailableFunctions } from '../helpers';
@@ -155,17 +157,38 @@ const SQL_KEYWORD_FOLLOW_SUGGESTIONS: Record<string, string[]> = {
   MILLENNIUM: [],
 };
 
-const KNOWN_SQL_PARTS: Record<string, boolean> = {
-  ...lookupBy(
-    SQL_KEYWORDS.flatMap(k => k.split(/\s/g)), // The flatMap is needed because some keywords are like "EXPLAIN PLAN FOR"
-    String,
-    () => true,
-  ),
-  ...lookupBy(SQL_CONSTANTS, String, () => true),
-  ...lookupBy(SQL_DYNAMICS, String, () => true),
-  ...lookupBy(Array.from(SQL_DATA_TYPES.keys()), String, () => true),
-  ...lookupBy(Array.from(SQL_FUNCTIONS.keys()), String, () => true),
-};
+const COMMENT_NODES = new Set(['LineComment', 'BlockComment', 'Issue']);
+
+// The tokens that are words, the specializer in dsql-tokens.ts tells them apart
+const WORD_NODES = new Set(['Keyword', 'FunctionName', 'Constant', 'TypeName', 'Identifier']);
+
+/**
+ * Whether a string literal or quoted identifier (the text of its token) is closed, an unterminated one lasts until the
+ * end of the line
+ */
+function isClosed(tokenText: string): boolean {
+  return tokenText.length >= 2 && tokenText.endsWith(tokenText[0]);
+}
+
+/**
+ * The last token (that is not a comment) that ends before the given position, it can be on an earlier line
+ */
+function tokenEndingBefore(state: EditorState, pos: number): SyntaxNode | undefined {
+  const cursor = completeSyntaxTree(state).cursorAt(pos, -1);
+  do {
+    const { node } = cursor;
+    if (
+      node.to <= pos &&
+      node.from < node.to &&
+      !node.firstChild &&
+      !node.type.isTop &&
+      !COMMENT_NODES.has(node.name)
+    ) {
+      return node;
+    }
+  } while (cursor.prev());
+  return;
+}
 
 export interface SqlCompletionOptions {
   columnMetadata?: readonly ColumnMetadata[];
@@ -183,35 +206,40 @@ export function getSqlCompletions(
   { columnMetadata, columns, availableSqlFunctions, skipAggregates }: SqlCompletionOptions = {},
 ): EditorCompletion[] {
   const token = tokenBefore(state, pos);
-  const charBeforePrefix = state.sliceDoc(from - 1, from);
 
   // We are in a comment
-  if (token.name === 'LineComment' || token.name === 'BlockComment' || token.name === 'Issue') {
+  if (COMMENT_NODES.has(token.name)) {
     return [];
   }
 
   // If we are autocompleting inside a literal, then don't do any of the standard suggestions.
   // Only autocomplete other literals. The imagined use-case for this is if you have `country = 'France'` or `TIMESTAMP '2024-03-02 O1:00:00'` you might want to reuse the literals
-  // A literal that is not closed yet is not a string token, so also count the word right after a quote
-  if ((token.name === 'String' && pos < token.to) || charBeforePrefix === "'") {
-    return getSqlLiterals(state.doc.toString(), 100, prefix).map(label => ({
+  // Right after a closed literal is not inside it
+  if (
+    token.name === 'String' &&
+    (pos < token.to || !isClosed(state.sliceDoc(token.from, token.to)))
+  ) {
+    return getSqlLiterals(state, 100, prefix).map(label => ({
       label,
       boost: 1,
       detail: 'local',
     }));
   }
 
-  // The last word on the line before the word being typed (and the character right before it)
-  const line = state.doc.lineAt(from);
-  const lineBeforePrefix = state.sliceDoc(line.from, Math.max(line.from, from - 1));
-  const keywordBeforePrefix = (/(\w+)\s*$/.exec(lineBeforePrefix) || [])[1]?.toUpperCase();
+  // The word before the word being typed (before its quote if it is quoted), it can be on an earlier line
+  const quote = state.sliceDoc(from - 1, from) === '"';
+  const tokenBeforePrefix = tokenEndingBefore(state, quote ? from - 1 : from);
+  const keywordBeforePrefix =
+    tokenBeforePrefix && WORD_NODES.has(tokenBeforePrefix.name)
+      ? state.sliceDoc(tokenBeforePrefix.from, tokenBeforePrefix.to).toUpperCase()
+      : undefined;
 
   // Other than literals, do not autocomplete numbers
   if (/^\d+$/.test(prefix)) {
     return []; // Don't start completing if the user is typing a number
   }
 
-  const possibleReferences = getPossibleSqlReferences(state.doc.toString(), 100, prefix);
+  const possibleReferences = getPossibleSqlReferences(state, 100, prefix);
 
   let completions: EditorCompletion[] = possibleReferences.map(label => ({
     label,
@@ -219,7 +247,6 @@ export function getSqlCompletions(
     detail: 'local',
   }));
 
-  const quote = charBeforePrefix === '"';
   if (!quote) {
     completions = completions.concat(
       (SQL_KEYWORD_FOLLOW_SUGGESTIONS[keywordBeforePrefix || ''] || SQL_KEYWORDS).map(v => ({
@@ -346,37 +373,45 @@ export function getSqlCompletions(
 }
 
 /**
- * The literals in the text. The prefix (the word being typed) is left out since it shows up as a literal itself.
+ * The (closed) string literals in the text. The prefix (the word being typed) is left out since it shows up as a
+ * literal itself. Needs the dsql language for the syntax tree.
  */
-export function getSqlLiterals(sqlText: string, maxWords: number, prefix?: string): string[] {
-  const literalRegexp = /'[^'\n]{2,}'/g;
-  const matches = (sqlText.match(literalRegexp) || []).map(stripOuterChars);
+export function getSqlLiterals(state: EditorState, maxWords: number, prefix?: string): string[] {
+  const literals: string[] = [];
+  completeSyntaxTree(state).iterate({
+    enter: ({ name, from, to }) => {
+      if (name !== 'String') return;
+      const text = state.sliceDoc(from, to);
+      if (isClosed(text) && text.length >= 4) literals.push(text.slice(1, -1));
+    },
+  });
 
-  return uniq(matches.filter(m => m !== prefix)).slice(0, maxWords);
+  return uniq(literals.filter(m => m !== prefix)).slice(0, maxWords);
 }
 
 /**
- * The words in the text that could be references. The prefix (the word being typed) is left out since it shows up as a
- * reference itself.
+ * The identifiers in the text that could be references (quoted ones first), at least two characters long. The prefix
+ * (the word being typed) is left out since it shows up as a reference itself. Needs the dsql language for the syntax
+ * tree.
  */
 export function getPossibleSqlReferences(
-  sqlText: string,
+  state: EditorState,
   maxWords: number,
   prefix?: string,
 ): string[] {
-  const quotedRegexp = /"\w{2,}"/g;
-  const quotedMatches = (sqlText.match(quotedRegexp) || []).map(stripOuterChars);
+  const quoted: string[] = [];
+  const naked: string[] = [];
+  completeSyntaxTree(state).iterate({
+    enter: ({ name, from, to }) => {
+      const text = state.sliceDoc(from, to);
+      if (name === 'QuotedIdentifier') {
+        if (isClosed(text) && /^"\w{2,}"$/.test(text)) quoted.push(text.slice(1, -1));
+      } else if (name === 'Identifier') {
+        // Keywords, functions, constants and types are not identifiers
+        if (/^[a-zA-Z]\w+$/.test(text)) naked.push(text);
+      }
+    },
+  });
 
-  // Match identifiers that are preceded by whitespace, comma, parenthesis, or operators
-  // and followed by whitespace, comma, parenthesis, operators, or end of string, ensure length of at least 2 chars
-  const nakedRegexp = /(?:^|[\s,([\-+*/])[a-zA-Z]\w+(?=[\s,)\]\-+*/]|$)/g;
-  const nakedMatches = (sqlText.match(nakedRegexp) || []).map(s => s.replace(/^[\s,([\-+*/]/, ''));
-
-  return uniq(
-    [...quotedMatches, ...nakedMatches.filter(v => !KNOWN_SQL_PARTS[v])].filter(v => v !== prefix),
-  ).slice(0, maxWords);
-}
-
-function stripOuterChars(str: string): string {
-  return str.slice(1, str.length - 1);
+  return uniq([...quoted, ...naked].filter(v => v !== prefix)).slice(0, maxWords);
 }
