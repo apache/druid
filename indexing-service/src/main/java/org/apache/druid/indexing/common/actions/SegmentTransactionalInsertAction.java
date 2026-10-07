@@ -266,6 +266,12 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   }
 
   @Override
+  public boolean canPerformAsync(Task task, TaskActionToolbox toolbox)
+  {
+    return supervisorId != null && startMetadata != null;
+  }
+
+  @Override
   public ListenableFuture<SegmentPublishResult> performAsync(Task task, TaskActionToolbox toolbox)
   {
     final ListenableFuture<Boolean> taskReadyToPublishFuture
