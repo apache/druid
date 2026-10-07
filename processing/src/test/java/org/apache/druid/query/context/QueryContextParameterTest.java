@@ -86,30 +86,6 @@ class QueryContextParameterTest
   }
 
   @Test
-  void testParseOrDefault()
-  {
-    final QueryContextParameter<Integer> parameter = QueryContextParameter
-        .builder("maxThings", Integer.class, value -> QueryContexts.getAsInt("maxThings", value))
-        .description("Test parameter.")
-        .defaultValue(10)
-        .build();
-
-    assertEquals(12, parameter.parseOrDefault("12"));
-    assertEquals(10, parameter.parseOrDefault(null));
-  }
-
-  @Test
-  void testParseOrDefaultRequiresDeclaredDefault()
-  {
-    final QueryContextParameter<String> parameter = QueryContextParameter
-        .builder("tag", String.class, value -> (String) value)
-        .description("Test parameter.")
-        .build();
-
-    assertThrows(ISE.class, () -> parameter.parseOrDefault(null));
-  }
-
-  @Test
   void testValidatorRejectsParsedValue()
   {
     final QueryContextParameter<Integer> parameter = QueryContextParameter
@@ -149,6 +125,30 @@ class QueryContextParameterTest
 
     assertEquals(1, parameter.parse("1"));
     assertTrue(parserCalled.get());
+  }
+
+  @Test
+  void testParseOrDefault()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameter
+        .builder("maxThings", Integer.class, value -> QueryContexts.getAsInt("maxThings", value))
+        .description("Test parameter.")
+        .defaultValue(10)
+        .build();
+
+    assertEquals(12, parameter.parseOrDefault("12"));
+    assertEquals(10, parameter.parseOrDefault(null));
+  }
+
+  @Test
+  void testParseOrDefaultRequiresDeclaredDefault()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("tag", String.class, value -> (String) value)
+        .description("Test parameter.")
+        .build();
+
+    assertThrows(ISE.class, () -> parameter.parseOrDefault(null));
   }
 
   @Test
