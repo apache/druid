@@ -60,9 +60,13 @@ import {
   codeEditorTheme,
   codeEditorTransparentTheme,
 } from './code-editor-theme';
+import { editorErrorField, lineColumnToOffset } from './error-mark';
 import { createSearchPanel } from './search-panel';
 
 import './code-editor.scss';
+
+export type { EditorError } from './error-mark';
+export { showEditorError } from './error-mark';
 
 const TAB_SIZE = 2;
 
@@ -213,12 +217,10 @@ function diffStrings(from: string, to: string): ChangeSpec {
  * Focuses the editor and puts the cursor at the given (1-based) line and column, as reported by Druid and Hjson errors.
  * Positions past the end of the line or the text are clamped.
  */
-export function focusEditorAt(view: EditorView, { line, column }: LineColumn): void {
-  const { doc } = view.state;
-  const docLine = doc.line(Math.min(Math.max(line, 1), doc.lines));
+export function focusEditorAt(view: EditorView, position: LineColumn): void {
   view.focus();
   view.dispatch({
-    selection: { anchor: Math.min(docLine.from + Math.max(column - 1, 0), docLine.to) },
+    selection: { anchor: lineColumnToOffset(view.state.doc, position) },
     scrollIntoView: true,
   });
 }
@@ -261,6 +263,7 @@ export function CodeEditor(props: CodeEditorProps) {
       drawSelection(),
       bracketMatching(),
       search({ createPanel: createSearchPanel }),
+      editorErrorField,
       highlightActiveLine(),
       syntaxHighlighting(codeEditorHighlightStyle),
       autocompletion({

@@ -31,6 +31,7 @@ Status: ✅ done, ⬜ to do.
    workaround in 2)
 3. ⬜ 6: comments that refer to Ace
 4. ⬜ 4: the completion plumbing and the word characters
+5. ✅ 7: underline the Hjson parse error in the editor
 
 Section 5 lists what intentionally stays the way it is.
 
@@ -98,6 +99,32 @@ Not action items. This code exists to behave or look like Ace did, and that beha
 About ten comments explain a choice with "Like Ace…" (`code-editor.tsx`, `code-editor-theme.ts`, `code-editor.scss`,
 `dsql.ts`, `hjson.ts`, `hjson.grammar`). They should give the actual reason instead, for example "a new line keeps the
 indentation of the line before".
+
+## ✅ 7. Underline the Hjson parse error in the editor
+
+A new feature rather than a leftover. Before, a parse error was only shown as text: under the editor in `JsonInput`
+(once it loses focus), and as a toast when a JSON query is run in the workbench.
+
+- `error-mark.ts`: a `StateField` of one mark decoration (our own, not `@codemirror/lint`), set with
+  `showEditorError(view, { position, message } | undefined)` and cleared on the next change to the text. It is part
+  of every `CodeEditor`.
+- The mark is a wavy underline (`.cm-errorMark`, in the color of the issue comments) with the message in a
+  `data-tooltip` attribute, so the console's mouse tooltip shows it on hover.
+- It marks the syntax node at the position when it is on one line (`Hjson.parse` gives a position, not a range),
+  otherwise the rest of the line, or the last character before the position at the end of a line.
+- `Hjson.parse` stays the parser (see "Considered and rejected" below). `getHjsonEditorError` (`json-input.tsx`) turns
+  its message into the position and the message without `at line …` and the `>>>` excerpt.
+- `JsonInput` marks the error when the message under the editor shows up. The workbench marks the issue of a JSON
+  query when it is run, next to the toast.
+- Later, the same mark could show Druid's SQL errors, since `DruidError` has `startLineColumn` and `endLineColumn`.
+
+## Considered and rejected
+
+- **Parsing Hjson with `hjson.grammar` instead of the `hjson` package.** The grammar is forgiving on purpose (a key
+  before its colon is typed, unclosed strings and comments, catch-all characters), Lezer gives an error position but
+  no message (and the line and column are read back out of the message), and building the value means redoing
+  Hjson's rules (escapes, `'''` indentation, quoteless trimming, numbers, duplicate keys, the root without braces) in
+  the code that builds what is sent to Druid. The package only saves about 13 KB of parse code.
 
 ## Not leftovers
 

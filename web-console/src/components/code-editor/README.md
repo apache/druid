@@ -36,6 +36,7 @@ It is a controlled component that you give a string and an `onChange` callback. 
 | `completion-doc.ts`    | Renders the documentation panel shown next to the completion list             |
 | `doc-markdown.ts`      | Renders "doc markdown" (the format of the SQL docs) as DOM elements           |
 | `search-panel.tsx`     | The find (and replace) panel, made out of Blueprint components                |
+| `error-mark.ts`        | Underlines an error (like a parse error) in the text, see `showEditorError`   |
 | `code-editor.scss`     | The styles for the wrapper element and the find panel                         |
 
 Related code lives elsewhere:
@@ -199,6 +200,15 @@ if (viewRef.current) focusEditorAt(viewRef.current, { line: 3, column: 5 });
 the way Druid and Hjson errors report positions and the way CodeMirror numbers lines, so error positions are passed
 straight through. It clamps out-of-range positions and scrolls the cursor into view. It is used to jump to the location
 of query errors.
+
+`showEditorError(view, { position, message })` (also exported next to the component) underlines an error in the
+text with a wavy line, and shows the message in a `data-tooltip` on hover (the console's mouse tooltip, see
+`initMouseTooltip`). It marks the syntax node at the position (if it is on one line), otherwise the rest of the line,
+or the last character before the position when it is at the end of a line. The mark goes away on the next change to
+the text, or with `showEditorError(view, undefined)`. `JsonInput` marks its Hjson error once the editor loses focus
+(when the message under the editor shows up too), and the workbench marks the issue of a JSON query when it is run.
+`getHjsonEditorError` (in `json-input.tsx`) turns an Hjson error message into the position and a message without the
+position.
 
 `SqlInput` and `FlexibleQueryInput` pass their `ref` on to the `CodeEditor`, so their callers get the `EditorView` the
 same way. For example, the workbench calls `focusEditorAt(queryInputRef.current, position)` to jump to an error.

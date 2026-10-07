@@ -24,7 +24,14 @@ import type { JSX } from 'react';
 import React, { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
-import { focusEditorAt, Loader, QueryErrorPane, SplitterLayout } from '../../../components';
+import {
+  focusEditorAt,
+  getHjsonEditorError,
+  Loader,
+  QueryErrorPane,
+  showEditorError,
+  SplitterLayout,
+} from '../../../components';
 import type { CapacityInfo, DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
 import { DEFAULT_SERVER_QUERY_CONTEXT, Execution, WorkbenchQuery } from '../../../druid-models';
 import {
@@ -420,6 +427,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     const queryIssue = query.getIssue();
     if (queryIssue) {
       const position = WorkbenchQuery.getLineColumnFromIssue(queryIssue);
+      if (queryInputRef.current) {
+        showEditorError(queryInputRef.current, getHjsonEditorError(queryIssue));
+      }
 
       AppToaster.show({
         icon: IconNames.ERROR,

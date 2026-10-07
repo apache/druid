@@ -24,7 +24,8 @@ import React, { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { hjson } from '../../editor-languages/hjson';
 import type { JsonCompletionRule, LineColumn } from '../../utils';
-import { CodeEditor, focusEditorAt } from '../code-editor/code-editor';
+import type { EditorError } from '../code-editor/code-editor';
+import { CodeEditor, focusEditorAt, showEditorError } from '../code-editor/code-editor';
 
 import './json-input.scss';
 
@@ -33,14 +34,29 @@ function parseHjson(str: string): any {
   return Hjson.parse(str);
 }
 
-export function extractLineColumnFromHjsonError(error: Error): LineColumn | undefined {
+function lineColumnFromHjsonMessage(message: string): LineColumn | undefined {
   // Message would be something like:
   // `Found '}' where a key name was expected at line 26,7`
-  // Use this to extract the line and column and jump the cursor to the right place on click
-  const m = /line (\d+),(\d+)/.exec(error.message);
+  const m = /line (\d+),(\d+)/.exec(message);
   if (!m) return;
 
   return { line: Number(m[1]), column: Number(m[2]) };
+}
+
+export function extractLineColumnFromHjsonError(error: Error): LineColumn | undefined {
+  // Use this to extract the line and column and jump the cursor to the right place on click
+  return lineColumnFromHjsonMessage(error.message);
+}
+
+/**
+ * The error to mark in the editor for an Hjson error message, undefined if the message has no position
+ */
+export function getHjsonEditorError(message: string): EditorError | undefined {
+  const position = lineColumnFromHjsonMessage(message);
+  if (!position) return;
+
+  // The mark shows where the error is, so the position (and the text after it, following ">>>") is left out
+  return { position, message: message.replace(/\s+at line \d+,\d+[\s\S]*$/, '') };
 }
 
 function stringifyJson(item: any): string {
@@ -144,6 +160,15 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
   };
 
   const internalValueError = internalValue.error;
+  const shownError = showErrorIfNeeded ? internalValueError : undefined;
+  useEffect(() => {
+    if (!editorViewRef.current) return;
+    showEditorError(
+      editorViewRef.current,
+      shownError ? getHjsonEditorError(shownError.message) : undefined,
+    );
+  }, [shownError]);
+
   return (
     <div className={classNames('json-input', { invalid: showErrorIfNeeded && internalValueError })}>
       <CodeEditor

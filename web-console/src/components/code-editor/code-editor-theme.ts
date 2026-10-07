@@ -34,6 +34,9 @@ const DARK_GRAY4 = '#383d57';
 const GRAY1 = '96, 101, 128';
 const GRAY5 = '#bdc1d1';
 
+// The color of the issue comments, also used to underline errors
+const ERROR_COLOR = '#f04d29';
+
 const POPUP_SHADOW = '0 5px 15px rgba(15, 19, 32, 0.45)';
 
 export const codeEditorTheme = EditorView.theme(
@@ -93,6 +96,11 @@ export const codeEditorTheme = EditorView.theme(
     },
     '&.cm-focused .cm-nonmatchingBracket': {
       backgroundColor: 'transparent',
+    },
+    // See error-mark.ts
+    '.cm-errorMark': {
+      textDecoration: `underline wavy ${ERROR_COLOR}`,
+      textDecorationSkipInk: 'none',
     },
     '.cm-panels': {
       backgroundColor: DARK_GRAY4,
@@ -208,7 +216,7 @@ export const codeEditorHighlightStyle = HighlightStyle.define([
   { tag: tags.comment, color: '#9ab8c3', fontStyle: 'italic' },
   {
     tag: editorTags.issue,
-    color: '#f04d29',
+    color: ERROR_COLOR,
     fontStyle: 'italic',
     textDecoration: 'underline wavy',
   },

@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { render } from '@testing-library/react';
+import { EditorView } from '@codemirror/view';
+import { act, fireEvent, render } from '@testing-library/react';
 import Hjson from 'hjson';
 
 import { extractLineColumnFromHjsonError, JsonInput } from './json-input';
@@ -55,5 +56,21 @@ describe('JsonInput', () => {
       line: 2,
       column: 9,
     });
+  });
+
+  it('underlines the error once the editor loses focus', () => {
+    const { container } = render(<JsonInput onChange={() => {}} value={{ a: 1 }} />);
+    const view = EditorView.findFromDOM(container.querySelector<HTMLElement>('.cm-editor')!)!;
+    act(() => {
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: '{\n"a" 1\n}' } });
+    });
+    expect(container.querySelector('.cm-errorMark')).toBeNull();
+
+    act(() => {
+      fireEvent.blur(view.contentDOM);
+    });
+    const mark = container.querySelector('.cm-errorMark');
+    expect(mark?.textContent).toEqual('1');
+    expect(mark?.getAttribute('data-tooltip')).toEqual(`Expected ':' instead of '1'`);
   });
 });
