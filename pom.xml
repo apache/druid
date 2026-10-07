@@ -109,7 +109,7 @@
         <jetty.version>12.1.13</jetty.version>
         <jspecify.version>1.0.1</jspecify.version>
         <jersey.version>1.19.4</jersey.version>
-        <jackson.version>2.22.2</jackson.version>
+        <jackson.version>2.22.3</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
         <log4j.version>2.26.1</log4j.version>
         <mysql.version>26.7.0</mysql.version>
@@ -129,7 +129,7 @@
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.55.1</aws.sdk.v2.version>
         <aws.msk.iam.auth.version>2.3.9</aws.msk.iam.auth.version>
-        <caffeine.version>3.2.4</caffeine.version>
+        <caffeine.version>3.3.0</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <hibernate-validator.version>9.1.4.Final</hibernate-validator.version>
@@ -172,10 +172,6 @@
             <!-- required for SIMD for druid.expressions.useVectorApi -->
             --add-modules=jdk.incubator.vector
         </jdk.strong.encapsulation.argLine>
-        <repoOrgId>maven.org</repoOrgId>
-        <repoOrgName>Maven Central Repository</repoOrgName>
-        <repoOrgUrl>https://repo.maven.apache.org/maven2/</repoOrgUrl>
-
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
         <surefire.trimStackTrace>false</surefire.trimStackTrace>
@@ -286,9 +282,9 @@
 
     <repositories>
         <repository>
-            <id>${repoOrgId}</id>
-            <name>${repoOrgName}</name>
-            <url>${repoOrgUrl}</url>
+            <id>maven.org</id>
+            <name>Maven Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
@@ -305,9 +301,9 @@
 
     <pluginRepositories>
         <pluginRepository>
-            <id>${repoOrgId}</id>
-            <name>${repoOrgName}</name>
-            <url>${repoOrgUrl}</url>
+            <id>maven.org</id>
+            <name>Maven Central Repository</name>
+            <url>https://repo.maven.apache.org/maven2/</url>
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
@@ -1102,7 +1098,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents.core5</groupId>
                 <artifactId>httpcore5</artifactId>
-                <version>5.4.3</version>
+                <version>5.4.4</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>

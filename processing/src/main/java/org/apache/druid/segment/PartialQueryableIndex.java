@@ -58,8 +58,8 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -108,12 +108,13 @@ public class PartialQueryableIndex implements QueryableIndex
   // base table columns, built at construction time. each entry's supplier defers mapFile() and column
   // deserialization until the column is actually accessed; the files must already be resident by then (made so by a
   // planned fetch), since mapFile() throws rather than downloads.
-  private final Map<String, Supplier<BaseColumnHolder>> baseColumns;
+  private final ColumnHolderTable baseColumns;
 
   // projection columns, keyed by projection name. built on demand (per-projection) when the projection is matched.
-  // within each projection, per-column suppliers defer both mapFile() and deserialization.
-  private final ConcurrentHashMap<String, Map<String, Supplier<BaseColumnHolder>>> projectionColumnsByName =
-      new ConcurrentHashMap<>();
+  // within each projection, per-column suppliers defer both mapFile() and deserialization. null when there are no
+  // projections, since nothing is ever added then.
+  @Nullable
+  private final ConcurrentHashMap<String, ColumnHolderTable> projectionColumnsByName;
 
   // clustered base summary when this segment is a clustered base table, else null. when non-null, the base table has
   // no top-level columns
@@ -121,9 +122,10 @@ public class PartialQueryableIndex implements QueryableIndex
   private final ClusteredValueGroupsBaseTableSchema clusteredBaseSummary;
 
   // per-cluster-group column suppliers, keyed by group index (into the summary's group list). built on demand like
-  // projectionColumnsByName; each supplier defers both mapFile() and deserialization until the column is read.
-  private final ConcurrentHashMap<Integer, Map<String, Supplier<BaseColumnHolder>>> clusterGroupColumnsByIndex =
-      new ConcurrentHashMap<>();
+  // projectionColumnsByName; each supplier defers both mapFile() and deserialization until the column is read. null
+  // for non-clustered segments.
+  @Nullable
+  private final ConcurrentHashMap<Integer, ColumnHolderTable> clusterGroupColumnsByIndex;
 
   // lazy dimension handlers
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
@@ -184,7 +186,7 @@ public class PartialQueryableIndex implements QueryableIndex
 
     // build aggregate projection metadata for matching
     final List<AggregateProjectionMetadata> aggProjections = new ArrayList<>();
-    this.projectionSpecs = new ConcurrentHashMap<>();
+    final Map<String, ProjectionMetadata> specsByName = new HashMap<>();
     boolean first = true;
     for (ProjectionMetadata projectionSpec : metadata.getProjections()) {
       if (first) {
@@ -198,7 +200,7 @@ public class PartialQueryableIndex implements QueryableIndex
                 projectionSpec.getNumRows()
             )
         );
-        projectionSpecs.put(projectionSpec.getSchema().getName(), projectionSpec);
+        specsByName.put(projectionSpec.getSchema().getName(), projectionSpec);
       } else {
         throw DruidException.defensive(
             "Unexpected projection[%s] with type[%s]",
@@ -208,26 +210,35 @@ public class PartialQueryableIndex implements QueryableIndex
       }
     }
 
-    this.reconstructedMetadata = baseSchema.asMetadata(aggProjections);
+    this.projectionSpecs = Map.copyOf(specsByName);
+    this.reconstructedMetadata = baseSchema.asMetadata(List.copyOf(aggProjections));
     if (reconstructedMetadata.getOrdering() != null) {
       this.ordering = SimpleQueryableIndex.ORDERING_INTERNER.intern(reconstructedMetadata.getOrdering());
     } else {
       this.ordering = Cursors.ascendingTimeOrder();
     }
 
-    this.projectionsMap = Maps.newHashMapWithExpectedSize(aggProjections.size());
-    this.projections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
-    for (AggregateProjectionMetadata projection : aggProjections) {
-      projections.add(projection);
-      projectionsMap.put(projection.getSchema().getName(), projection);
+    if (aggProjections.isEmpty()) {
+      this.projectionsMap = Map.of();
+      this.projections = Collections.emptySortedSet();
+      this.projectionColumnsByName = null;
+    } else {
+      this.projectionsMap = Maps.newHashMapWithExpectedSize(aggProjections.size());
+      this.projections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
+      for (AggregateProjectionMetadata projection : aggProjections) {
+        projections.add(projection);
+        projectionsMap.put(projection.getSchema().getName(), projection);
+      }
+      this.projectionColumnsByName = new ConcurrentHashMap<>();
     }
+    this.clusterGroupColumnsByIndex = clusteredBaseSummary == null ? null : new ConcurrentHashMap<>();
 
     // build per-column suppliers for the base table. each supplier is memoized and defers both mapFile() and
     // deserialization until the column is accessed. A clustered base has no top-level columns (its data lives in
     // per-cluster-group bundles), so its base column map is empty.
     this.baseColumns = clusteredBaseSummary != null
-                       ? Map.of()
-                       : buildProjectionColumnSuppliers(baseProjection, Map.of());
+                       ? ColumnHolderTable.builder().build()
+                       : buildProjectionColumnSuppliers(baseProjection, null);
 
     this.dimensionHandlers = Suppliers.memoize(this::initDimensionHandlers);
   }
@@ -302,8 +313,7 @@ public class PartialQueryableIndex implements QueryableIndex
   @Override
   public BaseColumnHolder getColumnHolder(String columnName)
   {
-    final Supplier<BaseColumnHolder> supplier = baseColumns.get(columnName);
-    return supplier == null ? null : supplier.get();
+    return baseColumns.get(columnName);
   }
 
   /**
@@ -393,7 +403,7 @@ public class PartialQueryableIndex implements QueryableIndex
 
     // build per-column suppliers for this projection on first access. the suppliers themselves still defer download
     // and deserialization until individual columns are read.
-    final Map<String, Supplier<BaseColumnHolder>> projColumns = projectionColumnsByName.computeIfAbsent(
+    final ColumnHolderTable projColumns = projectionColumnsByName.computeIfAbsent(
         name,
         projName -> buildProjectionColumnSuppliers(projectionSpecs.get(projName), baseColumns)
     );
@@ -422,6 +432,8 @@ public class PartialQueryableIndex implements QueryableIndex
         projColumns,
         fileMapper,
         projectionMetadata,
+        null,
+        null,
         null
     )
     {
@@ -475,7 +487,7 @@ public class PartialQueryableIndex implements QueryableIndex
     if (groupIndex < 0) {
       throw DruidException.defensive("Cluster group spec is not part of this segment");
     }
-    final Map<String, Supplier<BaseColumnHolder>> baseColumns = clusterGroupColumnsByIndex.computeIfAbsent(
+    final ColumnHolderTable baseColumns = clusterGroupColumnsByIndex.computeIfAbsent(
         groupIndex,
         i -> buildColumnSuppliers(
             Projections.getClusterGroupBundleName(groupSpec.getClusteringValueIds()),
@@ -483,20 +495,21 @@ public class PartialQueryableIndex implements QueryableIndex
             groupSpec.getNumRows(),
             clusteredBaseSummary.getGroupColumnNames(),
             column -> Projections.getClusterGroupSegmentInternalFileName(groupSpec.getClusteringValueIds(), column),
-            Map.of()
+            null
         )
     );
 
-    final Map<String, Supplier<BaseColumnHolder>> groupColumns;
+    final ColumnHolderTable groupColumns;
     if (withClusteringColumns) {
-      groupColumns = new HashMap<>(baseColumns);
+      final ColumnHolderTable.Builder groupColumnsBuilder = baseColumns.toBuilder();
       ConstantColumns.addConstantClusteringColumns(
-          groupColumns,
+          groupColumnsBuilder::put,
           clusteredBaseSummary.getClusteringColumns(),
           groupSpec.lookupClusteringValues(),
           groupSpec.getNumRows(),
           bitmapFactory
       );
+      groupColumns = groupColumnsBuilder.build();
     } else {
       groupColumns = baseColumns;
     }
@@ -517,6 +530,8 @@ public class PartialQueryableIndex implements QueryableIndex
         groupColumns,
         fileMapper,
         groupMetadata,
+        null,
+        null,
         null
     )
     {
@@ -621,7 +636,7 @@ public class PartialQueryableIndex implements QueryableIndex
       // the parent pull only happens through an existing projection column's supplier, so a column that resolves to
       // no descriptor-backed physical column (constant time, virtual, unknown) has no parent either
       final String physical = resolvePhysicalColumn(schema.getTimeColumnName(), fileNameFn, column);
-      if (physical != null && baseColumns.containsKey(physical)) {
+      if (physical != null && baseColumns.contains(physical)) {
         parents.add(physical);
       }
     }
@@ -647,13 +662,13 @@ public class PartialQueryableIndex implements QueryableIndex
   }
 
   /**
-   * Build a map of column name to per-column supplier for the given projection. Each supplier defers both
+   * Build a table of per-column suppliers for the given projection. Each supplier defers both
    * {@link SegmentFileMapper#mapFile} and {@link ColumnDescriptor#read} until the column is actually accessed, by
    * which point the column's files must be resident (made so by a planned fetch).
    */
-  private Map<String, Supplier<BaseColumnHolder>> buildProjectionColumnSuppliers(
+  private ColumnHolderTable buildProjectionColumnSuppliers(
       ProjectionMetadata projectionSpec,
-      Map<String, Supplier<BaseColumnHolder>> parentColumns
+      @Nullable ColumnHolderTable parentColumns
   )
   {
     return buildColumnSuppliers(
@@ -674,20 +689,21 @@ public class PartialQueryableIndex implements QueryableIndex
    * columns live in (their eviction unit); {@code fileNameFn} maps a logical column name to its segment-internal
    * (smoosh) file name in that bundle's namespace.
    */
-  private Map<String, Supplier<BaseColumnHolder>> buildColumnSuppliers(
+  private ColumnHolderTable buildColumnSuppliers(
       String bundleName,
       @Nullable String timeColumnName,
       int numRows,
       List<String> columnNames,
       Function<String, String> fileNameFn,
-      Map<String, Supplier<BaseColumnHolder>> parentColumns
+      @Nullable ColumnHolderTable parentColumns
   )
   {
     final boolean renameTime = !ColumnHolder.TIME_COLUMN_NAME.equals(timeColumnName);
-    final Map<String, Supplier<BaseColumnHolder>> columns = new LinkedHashMap<>();
+    final ColumnHolderTable.Builder columns = ColumnHolderTable.builder();
 
     for (String column : columnNames) {
-      final String smooshName = fileNameFn.apply(column);
+      // interned so the supplier shares the metadata's copy of the name
+      final String smooshName = SmooshedFileMapper.STRING_INTERNER.intern(fileNameFn.apply(column));
       final ColumnDescriptor columnDescriptor = metadata.getColumnDescriptors().get(smooshName);
       if (columnDescriptor == null) {
         continue;
@@ -696,35 +712,31 @@ public class PartialQueryableIndex implements QueryableIndex
       final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(column);
       // a column with a same-named base parent deserializes through the parent's buffers (dictionary reuse), so its
       // memoization must also invalidate when the parent's (__base) bundle is evicted
-      final boolean readsParent = parentColumns.containsKey(column);
-      final Supplier<BaseColumnHolder> columnSupplier = new EvictionAwareColumnSupplier(bundleName, readsParent, () -> {
-        try {
-          final ByteBuffer colBuffer = fileMapper.mapFile(smooshName);
-          final BaseColumnHolder parentColumn =
-              parentColumns.containsKey(column) ? parentColumns.get(column).get() : null;
-          return columnDescriptor.read(colBuffer, columnConfig, fileMapper, parentColumn);
-        }
-        catch (IOException e) {
-          throw DruidException.defensive(e, "Failed to load column[%s]", smooshName);
-        }
-      });
-
-      columns.put(internedColumnName, columnSupplier);
+      final boolean readsParent = parentColumns != null && parentColumns.contains(column);
+      columns.putSupplier(
+          internedColumnName,
+          new EvictionAwareColumnSupplier(
+              bundleName,
+              internedColumnName,
+              smooshName,
+              columnDescriptor,
+              readsParent ? parentColumns : null
+          )
+      );
 
       if (column.equals(timeColumnName) && renameTime) {
-        columns.put(ColumnHolder.TIME_COLUMN_NAME, columns.get(column));
-        columns.remove(column);
+        columns.rename(column, ColumnHolder.TIME_COLUMN_NAME);
       }
     }
 
     if (timeColumnName == null) {
-      columns.put(
+      columns.putSupplier(
           ColumnHolder.TIME_COLUMN_NAME,
           ConstantTimeColumn.makeConstantTimeSupplier(numRows, dataInterval.getStartMillis())
       );
     }
 
-    return columns;
+    return columns.build();
   }
 
   /**
@@ -992,17 +1004,32 @@ public class PartialQueryableIndex implements QueryableIndex
   private final class EvictionAwareColumnSupplier implements Supplier<BaseColumnHolder>
   {
     private final String bundleName;
-    private final boolean readsParent;
-    private final Supplier<BaseColumnHolder> delegate;
+    private final String columnName;
+    private final String smooshName;
+    private final ColumnDescriptor columnDescriptor;
+
+    /**
+     * Base table columns, if this column reads through its same-named base column; null otherwise.
+     */
+    @Nullable
+    private final ColumnHolderTable parentColumns;
 
     @Nullable
     private volatile Memoized memoized = null;
 
-    private EvictionAwareColumnSupplier(String bundleName, boolean readsParent, Supplier<BaseColumnHolder> delegate)
+    private EvictionAwareColumnSupplier(
+        String bundleName,
+        String columnName,
+        String smooshName,
+        ColumnDescriptor columnDescriptor,
+        @Nullable ColumnHolderTable parentColumns
+    )
     {
       this.bundleName = bundleName;
-      this.readsParent = readsParent;
-      this.delegate = delegate;
+      this.columnName = columnName;
+      this.smooshName = smooshName;
+      this.columnDescriptor = columnDescriptor;
+      this.parentColumns = parentColumns;
     }
 
     @Override
@@ -1020,16 +1047,31 @@ public class PartialQueryableIndex implements QueryableIndex
         if (current != null && current.generation == lockedGeneration) {
           return current.holder;
         }
-        final BaseColumnHolder holder = delegate.get();
+        final BaseColumnHolder holder = load();
         memoized = new Memoized(holder, lockedGeneration);
         return holder;
+      }
+    }
+
+    /**
+     * Deserializes the column, whose files must already be resident.
+     */
+    private BaseColumnHolder load()
+    {
+      try {
+        final ByteBuffer colBuffer = fileMapper.mapFile(smooshName);
+        final BaseColumnHolder parentColumn = parentColumns == null ? null : parentColumns.get(columnName);
+        return columnDescriptor.read(colBuffer, columnConfig, fileMapper, parentColumn);
+      }
+      catch (IOException e) {
+        throw DruidException.defensive(e, "Failed to load column[%s]", smooshName);
       }
     }
 
     private long currentGeneration()
     {
       long generation = fileMapper.getBundleGeneration(bundleName);
-      if (readsParent) {
+      if (parentColumns != null) {
         generation += fileMapper.getBundleGeneration(Projections.BASE_TABLE_PROJECTION_NAME);
       }
       return generation;
