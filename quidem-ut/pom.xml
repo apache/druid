@@ -467,12 +467,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.github.os72</groupId>
-            <artifactId>protobuf-dynamic</artifactId>
-            <version>1.0.1</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>com.github.kgyrtkirk.datasets</groupId>
             <artifactId>kttm-nested</artifactId>
             <version>0.1</version>

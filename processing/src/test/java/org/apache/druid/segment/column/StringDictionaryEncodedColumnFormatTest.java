@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.column;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.segment.StringColumnFormatSpec;
@@ -94,5 +95,11 @@ public class StringDictionaryEncodedColumnFormatTest
     Assertions.assertInstanceOf(StringDictionaryEncodedColumnFormat.class, merged);
     DimensionSchema schema = merged.getColumnSchema("city");
     Assertions.assertNotNull(((StringDimensionSchema) schema).getColumnFormatSpec());
+  }
+
+  @Test
+  public void testEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(StringDictionaryEncodedColumnFormat.class).usingGetClass().verify();
   }
 }
