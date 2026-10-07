@@ -103,7 +103,8 @@ export function findSqlQueryPrefix(text: string): string | undefined {
     } catch {
       // Try to trim out last word
       try {
-        return extractQueryPrefix(prefix.replace(/\s*\w+$/, ''));
+        const lastWord = /\b\w+$/.exec(prefix);
+        return extractQueryPrefix(lastWord ? prefix.slice(0, lastWord.index).trimEnd() : prefix);
       } catch {
         return;
       }

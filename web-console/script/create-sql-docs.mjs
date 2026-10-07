@@ -117,16 +117,25 @@ function sanitizeLine(line, context) {
  * - a backslash escapes the next character
  * Links are reduced to their text and HTML is not allowed (other than <br> and simple lists, which are converted).
  */
+function removeTrailingBreaks(text) {
+  let m;
+  while ((m = /<br\s*\/?>$/.exec(text))) text = text.slice(0, m.index);
+  return text;
+}
+
 function sanitizeMarkdown(markdown) {
   const context = markdown;
 
-  const lines = markdown
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // Remove links
-    .replace(/(?:<br\s*\/?>)*<ul>(.*?)<\/ul>/g, (_, items) => {
-      return items.replace(/<li>(.*?)<\/li>/g, '<br>\u0000$1') + '<br>';
-    })
-    .replace(/(?:<br\s*\/?>)+$/, '')
-    .split(/<br\s*\/?>/);
+  const lines = removeTrailingBreaks(
+    markdown
+      .replace(/\[([^[\]]*)\]\([^)]*\)/g, '$1') // Remove links
+      .split(/<ul>(.*?)<\/ul>/) // The odd parts are the list items
+      .map((part, i, parts) => {
+        if (i % 2) return part.replace(/<li>(.*?)<\/li>/g, '<br>\u0000$1') + '<br>';
+        return i < parts.length - 1 ? removeTrailingBreaks(part) : part; // The breaks before a list are dropped
+      })
+      .join(''),
+  ).split(/<br\s*\/?>/);
 
   return lines
     .map(line => {
