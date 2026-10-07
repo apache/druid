@@ -116,7 +116,6 @@ public final class QueryContextParameter<T>
   private final String since;
   @Nullable
   private final String deprecationMessage;
-  @Nullable
   private final ParameterDocumentation documentation;
 
   private QueryContextParameter(final Builder<T> builder)
@@ -131,14 +130,13 @@ public final class QueryContextParameter<T>
     this.since = builder.since;
     this.deprecationMessage = builder.deprecationMessage;
 
-    if (builder.documentationBuilder == null) {
-      this.documentation = null;
-    } else {
-      if (since != null) {
-        builder.documentationBuilder.since(since);
-      }
-      this.documentation = builder.documentationBuilder.build();
+    if (!builder.hasDescription) {
+      throw new IAE("Query context parameter [%s] must have a description", name);
     }
+    if (since != null) {
+      builder.documentationBuilder.since(since);
+    }
+    this.documentation = builder.documentationBuilder.build();
 
     if (defaultValue != null) {
       try {
@@ -305,7 +303,6 @@ public final class QueryContextParameter<T>
     return deprecationMessage;
   }
 
-  @Nullable
   public ParameterDocumentation getDocumentation()
   {
     return documentation;
@@ -372,6 +369,7 @@ public final class QueryContextParameter<T>
     private String deprecationMessage;
     @Nullable
     private ParameterDocumentation.Builder documentationBuilder;
+    private boolean hasDescription;
     @Nullable
     private String since;
 
@@ -430,6 +428,7 @@ public final class QueryContextParameter<T>
     public Builder<T> description(final String description)
     {
       documentationBuilder().description(description);
+      hasDescription = true;
       return this;
     }
 

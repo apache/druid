@@ -75,7 +75,6 @@ import java.util.stream.Collectors;
 public class IndexerDataServerQueryHandler implements DataServerQueryHandler
 {
   private static final Logger log = new Logger(IndexerDataServerQueryHandler.class);
-  private static final int DEFAULT_NUM_TRIES = 3;
   private final int inputNumber;
   private final String dataSourceName;
   private final ChannelCounters channelCounters;
@@ -148,7 +147,7 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
    * <li>If all the segments were handed off, returns a {@link DataServerQueryResult} with the yielder and list of
    * handed-off segments.</li>
    * <li>If some segments were not handed off, checks with the coordinator to fetch an updated list of servers.
-   * This step is repeated up to {@link #DEFAULT_NUM_TRIES} times.</li>
+   * This step is repeated up to {@link QueryContextParameters#NUM_RETRIES_ON_MISSING_SEGMENTS} times.</li>
    * <li>If the servers could not be found, checks if the segment was handed-off. If it was, returns a
    * {@link DataServerQueryResult} with the yielder and list of handed off segments. Otherwise,
    * throws an exception.</li>
@@ -171,10 +170,7 @@ public class IndexerDataServerQueryHandler implements DataServerQueryHandler
 
     List<DataServerRequestDescriptor> pendingRequests = ImmutableList.of(dataServerRequestDescriptor);
 
-    final int maxRetries = preparedQuery.context().getOrDefault(
-        QueryContextParameters.NUM_RETRIES_ON_MISSING_SEGMENTS,
-        DEFAULT_NUM_TRIES
-    );
+    final int maxRetries = preparedQuery.context().getOrDefault(QueryContextParameters.NUM_RETRIES_ON_MISSING_SEGMENTS);
     int retryCount = 0;
 
     while (!pendingRequests.isEmpty()) {

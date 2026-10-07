@@ -513,16 +513,19 @@ public final class QueryContextParameters
 
   public static final QueryContextParameter<Integer> NUM_RETRIES_ON_MISSING_SEGMENTS =
       integerParameter("numRetriesOnMissingSegments")
+          // Default for MSQ tasks that query realtime data servers. The Broker falls back to
+          // druid.broker.retryPolicy.numTries instead.
+          .defaultValue(3)
           .description(
               """
-              Maximum number of times the Broker retries a query for segments that a data server reports as missing.
-              Overrides `druid.broker.retryPolicy.numTries`.
+              Maximum number of times Druid retries a query for segments that a data server reports as missing.
+              For native queries, this overrides `druid.broker.retryPolicy.numTries`.
               """
           )
           .since("0.20.0")
-          .defaultDescription("`druid.broker.retryPolicy.numTries`")
+          .defaultDescription("`druid.broker.retryPolicy.numTries` for native queries, `3` for MSQ tasks")
           .query(Query.JSON, Query.SQL)
-          .engine(Engine.NATIVE)
+          .engine(Engine.NATIVE, Engine.MSQ)
           .build();
 
   public static final QueryContextParameter<Boolean> RETURN_PARTIAL_RESULTS =

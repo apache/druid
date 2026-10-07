@@ -98,9 +98,6 @@ public final class ParameterDocumentationGenerator
         continue;
       }
       final ParameterDocumentation docs = parameter.getDocumentation();
-      if (docs == null) {
-        continue;
-      }
       final String document;
       if (docs.getQueries().contains(Query.SQL) && !docs.getQueries().contains(Query.JSON)) {
         document = SQL_REFERENCE;

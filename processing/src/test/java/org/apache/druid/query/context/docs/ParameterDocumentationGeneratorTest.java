@@ -199,9 +199,6 @@ class ParameterDocumentationGeneratorTest
         continue;
       }
       final ParameterDocumentation docs = parameter.getDocumentation();
-      if (docs == null) {
-        continue;
-      }
       final String generatedDocument;
       if (docs.getQueries().contains(Query.SQL) && !docs.getQueries().contains(Query.JSON)) {
         generatedDocument = SQL_DOCUMENT;

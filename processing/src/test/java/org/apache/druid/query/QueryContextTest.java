@@ -198,10 +198,12 @@ public class QueryContextTest
   {
     final QueryContextParameter<Integer> nullableWithDefault = QueryContextParameter
         .builder("nullable", Integer.class, value -> (Integer) value)
+        .description("Test parameter.")
         .defaultValue(10)
         .build();
     final QueryContextParameter<Integer> nonNullable = QueryContextParameter
         .builder("nonNullable", Integer.class, value -> (Integer) value)
+        .description("Test parameter.")
         .nullable(false)
         .build();
     final Map<String, Object> values = new HashMap<>();
