@@ -131,7 +131,7 @@ public class QueryContextsTest
   {
     Assertions.assertEquals(
         QueryContexts.DEFAULT_IN_SUB_QUERY_THRESHOLD,
-        QueryContext.empty().getOrDefault(QueryContextParameters.IN_SUBQUERY_THRESHOLD)
+        QueryContext.empty().getInSubQueryThreshold()
     );
   }
 
@@ -140,7 +140,7 @@ public class QueryContextsTest
   {
     Assertions.assertEquals(
         QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING,
-        QueryContext.empty().getOrDefault(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING)
+        QueryContext.empty().isTimeBoundaryPlanningEnabled()
     );
   }
 
@@ -158,29 +158,29 @@ public class QueryContextsTest
   {
     Assertions.assertEquals(
         QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED,
-        QueryContext.empty().getOrDefault(QueryContextParameters.CATALOG_VALIDATION_ENABLED)
+        QueryContext.empty().isCatalogValidationEnabled()
     );
     Assertions.assertTrue(
         QueryContext.of(QueryContextParameters.CATALOG_VALIDATION_ENABLED, true)
-            .getOrDefault(QueryContextParameters.CATALOG_VALIDATION_ENABLED)
+            .isCatalogValidationEnabled()
     );
     Assertions.assertFalse(
         QueryContext.of(QueryContextParameters.CATALOG_VALIDATION_ENABLED, false)
-            .getOrDefault(QueryContextParameters.CATALOG_VALIDATION_ENABLED)
+            .isCatalogValidationEnabled()
     );
   }
 
   @Test
   public void testGetEnableJoinLeftScanDirect()
   {
-    Assertions.assertFalse(QueryContext.empty().getOrDefault(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT));
+    Assertions.assertFalse(QueryContext.empty().getEnableJoinLeftScanDirect());
     Assertions.assertTrue(
         QueryContext.of(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT, true)
-            .getOrDefault(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT)
+            .getEnableJoinLeftScanDirect()
     );
     Assertions.assertFalse(
         QueryContext.of(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT, false)
-            .getOrDefault(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT)
+            .getEnableJoinLeftScanDirect()
     );
   }
 

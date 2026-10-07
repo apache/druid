@@ -45,6 +45,7 @@ import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.CursorFactory;
@@ -52,7 +53,6 @@ import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
@@ -261,7 +261,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     EasyMock.expect(mockQuery.context()).andReturn(
         QueryContext.of(
             ImmutableMap.of(
-                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+                QueryContextParameters.SQL_JOIN_ALGORITHM.getName(),
                 JoinAlgorithm.SORT_MERGE.getId()
             )
         )

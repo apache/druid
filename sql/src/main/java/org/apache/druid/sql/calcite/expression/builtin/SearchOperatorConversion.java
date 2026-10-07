@@ -37,7 +37,6 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.util.RangeSets;
 import org.apache.calcite.util.Sarg;
-import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.column.RowSignature;
@@ -85,11 +84,7 @@ public class SearchOperatorConversion implements SqlOperatorConversion
         plannerContext,
         rowSignature,
         virtualColumnRegistry,
-        expandSearch(
-            (RexCall) rexNode,
-            REX_BUILDER,
-            plannerContext.queryContext().getOrDefault(QueryContextParameters.IN_FUNCTION_THRESHOLD)
-        )
+        expandSearch((RexCall) rexNode, REX_BUILDER, plannerContext.queryContext().getInFunctionThreshold())
     );
   }
 
@@ -104,11 +99,7 @@ public class SearchOperatorConversion implements SqlOperatorConversion
     return Expressions.toDruidExpression(
         plannerContext,
         rowSignature,
-        expandSearch(
-            (RexCall) rexNode,
-            REX_BUILDER,
-            plannerContext.queryContext().getOrDefault(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD)
-        )
+        expandSearch((RexCall) rexNode, REX_BUILDER, plannerContext.queryContext().getInFunctionExprThreshold())
     );
   }
 

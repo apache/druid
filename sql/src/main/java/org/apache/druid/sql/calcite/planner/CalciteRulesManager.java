@@ -509,11 +509,7 @@ public class CalciteRulesManager
     rules.addAll(BASE_RULES);
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
-    rules.add(
-        new DruidAggregateCaseToFilterRule(
-            plannerContext.queryContext().getOrDefault(QueryContextParameters.EXTENDED_FILTERED_SUM_REWRITE)
-        )
-    );
+    rules.add(new DruidAggregateCaseToFilterRule(plannerContext.queryContext().isExtendedFilteredSumRewrite()));
     rules.addAll(configurableRuleSet(plannerContext));
 
     if (withJoinRules) {

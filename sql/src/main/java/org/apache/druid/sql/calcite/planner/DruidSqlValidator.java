@@ -63,7 +63,6 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
@@ -517,8 +516,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         );
       }
     }
-    final boolean isCatalogValidationEnabled =
-        plannerContext.queryContext().getOrDefault(QueryContextParameters.CATALOG_VALIDATION_ENABLED);
+    final boolean isCatalogValidationEnabled = plannerContext.queryContext().isCatalogValidationEnabled();
     if (tableMetadata == null || !isCatalogValidationEnabled) {
       return sourceType;
     }
@@ -847,7 +845,7 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       // Confirm valuesNode is big enough to convert to SCALAR_IN_ARRAY, and references only nonnull literals.
       // (Can't include NULL literals in the conversion, because SCALAR_IN_ARRAY matches NULLs as if they were regular
       // values, whereas IN does not.)
-      if (valuesNode.size() > plannerContext.queryContext().getOrDefault(QueryContextParameters.IN_FUNCTION_THRESHOLD)
+      if (valuesNode.size() > plannerContext.queryContext().getInFunctionThreshold()
           && valuesNode.stream().allMatch(node -> node.getKind() == SqlKind.LITERAL && !SqlUtil.isNull(node))) {
         final SqlCall newCall = ScalarInArrayOperatorConversion.SQL_FUNCTION.createCall(
             call.getParserPosition(),

@@ -182,7 +182,7 @@ public class DartSqlEngine implements SqlEngine
       Map<String, Object> queryContext
   )
   {
-    if (QueryContext.of(queryContext).getOrDefault(QueryContextParameters.FULL_REPORT)) {
+    if (QueryContext.of(queryContext).getFullReport()) {
       return typeFactory.createStructType(
           ImmutableList.of(
               Calcites.createSqlType(typeFactory, SqlTypeName.VARCHAR)
@@ -218,7 +218,7 @@ public class DartSqlEngine implements SqlEngine
         queryKitSpecFactory,
         queryKit
     );
-    if (plannerContext.queryContext().getOrDefault(QueryContextParameters.PREPLANNED)) {
+    if (plannerContext.queryContext().isPrePlanned()) {
       return new PrePlannedDartQueryMaker(plannerContext, dartQueryMaker);
     }
     return dartQueryMaker;

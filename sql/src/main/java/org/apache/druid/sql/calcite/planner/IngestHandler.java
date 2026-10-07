@@ -37,6 +37,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -150,10 +151,10 @@ public abstract class IngestHandler extends QueryHandler
 
     // Check if CTX_SQL_OUTER_LIMIT is specified and fail the query if it is. CTX_SQL_OUTER_LIMIT being provided causes
     // the number of rows inserted to be limited which is likely to be confusing and unintended.
-    if (handlerContext.queryContextMap().get(PlannerContext.CTX_SQL_OUTER_LIMIT) != null) {
+    if (handlerContext.queryContext().has(QueryContextParameters.SQL_OUTER_LIMIT)) {
       throw InvalidSqlInput.exception(
           "Context parameter [%s] cannot be provided on operator [%s]",
-          PlannerContext.CTX_SQL_OUTER_LIMIT,
+          QueryContextParameters.SQL_OUTER_LIMIT,
           operationName()
       );
     }

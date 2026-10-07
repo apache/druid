@@ -34,10 +34,10 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.Collections;
 import java.util.List;
@@ -92,7 +92,7 @@ public class DataServerQueryHandlerUtils
                             .build(
                                 "Cannot handle stage with multiple sources while querying realtime data. "
                                 + "If using broadcast joins, try setting[%s] to[%s] in your query context.",
-                                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+                                QueryContextParameters.SQL_JOIN_ALGORITHM,
                                 JoinAlgorithm.SORT_MERGE.toString()
                             );
       }
@@ -106,7 +106,7 @@ public class DataServerQueryHandlerUtils
                             .build(
                                 "Cannot handle stage with multiple sources while querying realtime data. "
                                 + "If using broadcast joins, try setting[%s] to[%s] in your query context.",
-                                PlannerContext.CTX_SQL_JOIN_ALGORITHM,
+                                QueryContextParameters.SQL_JOIN_ALGORITHM,
                                 JoinAlgorithm.SORT_MERGE.toString()
                             );
       }

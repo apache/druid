@@ -29,7 +29,6 @@ import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -87,7 +86,7 @@ public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQuery
                     QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
                 )
                 .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, true)
-                .putRaw(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm().toString())
+                .putRaw(QueryContextParameters.SQL_JOIN_ALGORITHM.getName(), joinAlgorithm().toString())
                 .put(QueryContextParameters.DEBUG, true)
                 .toMap()
         );

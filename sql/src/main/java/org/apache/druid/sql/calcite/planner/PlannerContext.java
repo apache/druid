@@ -34,14 +34,12 @@ import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -73,7 +71,6 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -92,28 +89,6 @@ import java.util.function.Supplier;
  */
 public class PlannerContext
 {
-  // Query context keys
-  public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
-  public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
-  private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
-
-  /**
-   * Undocumented context key, used internally, to allow the web console to
-   * apply a limit without having to rewrite the SQL query.
-   */
-  public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
-
-  /**
-   * Key to enable transfer of RACs over wire.
-   */
-  public static final String CTX_ENABLE_RAC_TRANSFER_OVER_WIRE = "enableRACOverWire";
-
-  /**
-   * Context key for {@link PlannerContext#isUseGranularity()}.
-   */
-  public static final String CTX_SQL_USE_GRANULARITY = "sqlUseGranularity";
-  public static final boolean DEFAULT_SQL_USE_GRANULARITY = true;
-
   // DataContext keys
   public static final String DATA_CTX_AUTHENTICATION_RESULT = "authenticationResult";
 
@@ -219,22 +194,6 @@ public class PlannerContext
         queryContext,
         hook
     );
-  }
-
-  /**
-   * Returns the join algorithm specified in a query context.
-   */
-  public static JoinAlgorithm getJoinAlgorithm(QueryContext queryContext)
-  {
-    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
-  }
-
-  /**
-   * Returns the join algorithm specified in a query context.
-   */
-  public static JoinAlgorithm getJoinAlgorithm(Map<String, Object> queryContext)
-  {
-    return getJoinAlgorithmFromContextValue(queryContext.get(CTX_SQL_JOIN_ALGORITHM));
   }
 
   public PlannerToolbox getPlannerToolbox()
@@ -473,7 +432,7 @@ public class PlannerContext
 
   public JoinAlgorithm getJoinAlgorithm()
   {
-    return getJoinAlgorithm(queryContext);
+    return QueryContext.of(queryContext).getOrDefault(QueryContextParameters.SQL_JOIN_ALGORITHM);
   }
 
   public String getSql()
@@ -652,8 +611,7 @@ public class PlannerContext
    */
   public boolean featureAvailable(final EngineFeature feature)
   {
-    if (feature == EngineFeature.TIME_BOUNDARY_QUERY
-        && !queryContext().getOrDefault(QueryContextParameters.ENABLE_TIME_BOUNDARY_PLANNING)) {
+    if (feature == EngineFeature.TIME_BOUNDARY_QUERY && !queryContext().isTimeBoundaryPlanningEnabled()) {
       // Short-circuit: feature requires context flag.
       return false;
     }
@@ -718,7 +676,8 @@ public class PlannerContext
 
   private void initializeContextFieldsAndPlannerConfig()
   {
-    final Object tsParam = queryContext.get(CTX_SQL_CURRENT_TIMESTAMP);
+    final QueryContext context = QueryContext.of(queryContext);
+    final Object tsParam = context.get(QueryContextParameters.SQL_CURRENT_TIMESTAMP);
     final DateTime utcNow;
     if (tsParam != null) {
       utcNow = new DateTime(tsParam, DateTimeZone.UTC);
@@ -726,7 +685,6 @@ public class PlannerContext
       utcNow = new DateTime(DateTimeZone.UTC);
     }
 
-    final QueryContext context = QueryContext.of(queryContext);
     final String tzParam = context.get(QueryContextParameters.SQL_TIME_ZONE);
     final DateTimeZone timeZone;
     if (tzParam != null) {
@@ -742,12 +700,7 @@ public class PlannerContext
     pullUpLookup = context.getOrDefault(QueryContextParameters.SQL_PULL_UP_LOOKUP);
     reverseLookup = context.getOrDefault(QueryContextParameters.SQL_REVERSE_LOOKUP);
 
-    final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
-    if (useGranularityParam != null) {
-      useGranularity = Numbers.parseBoolean(useGranularityParam);
-    } else {
-      useGranularity = DEFAULT_SQL_USE_GRANULARITY;
-    }
+    useGranularity = context.getOrDefault(QueryContextParameters.SQL_USE_GRANULARITY);
 
     sqlQueryId = context.get(QueryContextParameters.SQL_QUERY_ID);
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
@@ -760,26 +713,6 @@ public class PlannerContext
       plannerConfig = plannerConfig.withOverrides(queryContext);
     } else {
       plannerConfig = getPlannerToolbox().plannerConfig.withOverrides(queryContext);
-    }
-  }
-
-  private static JoinAlgorithm getJoinAlgorithmFromContextValue(final Object object)
-  {
-    final String s = QueryContexts.getAsString(
-        CTX_SQL_JOIN_ALGORITHM,
-        object,
-        DEFAULT_SQL_JOIN_ALGORITHM.toString()
-    );
-
-    try {
-      return JoinAlgorithm.fromString(s);
-    }
-    catch (IllegalArgumentException e) {
-      throw QueryContexts.badValueException(
-          CTX_SQL_JOIN_ALGORITHM,
-          StringUtils.format("one of %s", Arrays.toString(JoinAlgorithm.values())),
-          object
-      );
     }
   }
 }

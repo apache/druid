@@ -37,7 +37,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -318,7 +317,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
                 QueryContext.builder()
                     .put(QueryContextParameters.DEBUG, true)
                     .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
-                    .putRaw(PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, true)
+                    .put(QueryContextParameters.ENABLE_RAC_TRANSFER_OVER_WIRE, true)
                     .toMap()
             )
             .run()

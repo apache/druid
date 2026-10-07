@@ -423,26 +423,20 @@ public class QueryContextTest
   public void testGetInFunctionThreshold()
   {
     final QueryContext context1 = QueryContext.of(QueryContextParameters.IN_FUNCTION_THRESHOLD, Integer.MAX_VALUE);
-    assertEquals(Integer.MAX_VALUE, context1.getOrDefault(QueryContextParameters.IN_FUNCTION_THRESHOLD));
+    assertEquals(Integer.MAX_VALUE, context1.getInFunctionThreshold());
 
     final QueryContext context2 = QueryContext.empty();
-    assertEquals(
-        QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD,
-        context2.getOrDefault(QueryContextParameters.IN_FUNCTION_THRESHOLD)
-    );
+    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD, context2.getInFunctionThreshold());
   }
 
   @Test
   public void testGetInFunctionExprThreshold()
   {
     final QueryContext context1 = QueryContext.of(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD, Integer.MAX_VALUE);
-    assertEquals(Integer.MAX_VALUE, context1.getOrDefault(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD));
+    assertEquals(Integer.MAX_VALUE, context1.getInFunctionExprThreshold());
 
     final QueryContext context2 = QueryContext.empty();
-    assertEquals(
-        QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD,
-        context2.getOrDefault(QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD)
-    );
+    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD, context2.getInFunctionExprThreshold());
   }
 
   @Test
@@ -470,10 +464,10 @@ public class QueryContextTest
   @Test
   public void testExtendedFilteredSumRewrite()
   {
-    assertTrue(QueryContext.empty().getOrDefault(QueryContextParameters.EXTENDED_FILTERED_SUM_REWRITE));
+    assertTrue(QueryContext.empty().isExtendedFilteredSumRewrite());
     assertFalse(
         QueryContext.of(QueryContextParameters.EXTENDED_FILTERED_SUM_REWRITE, false)
-            .getOrDefault(QueryContextParameters.EXTENDED_FILTERED_SUM_REWRITE)
+            .isExtendedFilteredSumRewrite()
     );
   }
 

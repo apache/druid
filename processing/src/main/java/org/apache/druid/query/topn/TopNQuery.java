@@ -33,7 +33,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -227,7 +226,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   @Override
   public Query<Result<TopNResultValue>> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
-    if (!context().getOrDefault(QueryContextParameters.OPTIMIZE_AGGREGATORS)) {
+    if (!context().isOptimizeAggregators()) {
       return this;
     }
     return new TopNQueryBuilder(this).aggregators(optimizeAggs(optimizationContext)).build();

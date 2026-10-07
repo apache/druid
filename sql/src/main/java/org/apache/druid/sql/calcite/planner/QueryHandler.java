@@ -63,6 +63,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
@@ -624,7 +625,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * is already a {@link Sort}, we can merge our outerLimit into it, similar to what is going on in
    * {@link org.apache.druid.sql.calcite.rule.SortCollapseRule}.
    * <p>
-   * The {@link PlannerContext#CTX_SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
+   * The {@link QueryContextParameters#SQL_OUTER_LIMIT} flag that controls this wrapping is meant for internal use only by
    * the web console, allowing it to apply a limit to queries without rewriting the original SQL.
    *
    * @param root root node
@@ -633,7 +634,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   @Nullable
   private RelRoot possiblyWrapRootWithOuterLimitFromContext(RelRoot root)
   {
-    Long outerLimit = handlerContext.queryContext().getLong(PlannerContext.CTX_SQL_OUTER_LIMIT);
+    final Long outerLimit = handlerContext.queryContext().get(QueryContextParameters.SQL_OUTER_LIMIT);
     if (outerLimit == null) {
       return root;
     }

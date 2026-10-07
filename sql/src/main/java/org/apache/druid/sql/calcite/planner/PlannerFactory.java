@@ -44,7 +44,6 @@ import org.apache.calcite.util.CancelFlag;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.AuthConfig;
@@ -286,7 +285,7 @@ public class PlannerFactory extends PlannerToolbox
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
         .withInSubQueryThreshold(
-            plannerContext.queryContext().getOrDefault(QueryContextParameters.IN_SUBQUERY_THRESHOLD)
+            plannerContext.queryContext().getInSubQueryThreshold()
         );
 
     final Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks

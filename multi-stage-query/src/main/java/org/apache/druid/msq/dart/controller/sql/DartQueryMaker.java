@@ -160,12 +160,7 @@ public class DartQueryMaker implements QueryMaker
   )
   {
     final ControllerImpl controller = makeLegacyController(querySpec, context, resultsContext);
-    return runController(
-        controller,
-        context.getOrDefault(QueryContextParameters.FULL_REPORT),
-        querySpec.getColumnMappings(),
-        resultsContext
-    );
+    return runController(controller, context.getFullReport(), querySpec.getColumnMappings(), resultsContext);
   }
 
   /**
@@ -178,12 +173,7 @@ public class DartQueryMaker implements QueryMaker
   )
   {
     final ControllerImpl controller = makeQueryDefController(querySpec, context, resultsContext);
-    return runController(
-        controller,
-        context.getOrDefault(QueryContextParameters.FULL_REPORT),
-        querySpec.getColumnMappings(),
-        resultsContext
-    );
+    return runController(controller, context.getFullReport(), querySpec.getColumnMappings(), resultsContext);
   }
 
   private ControllerImpl makeLegacyController(LegacyMSQSpec querySpec, QueryContext context, ResultsContext resultsContext)

@@ -129,7 +129,6 @@ import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -9685,7 +9684,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // When sqlUseGranularity: false, this query plans as a groupBy rather than a timeseries.
     final Map<String, Object> context = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        PlannerContext.CTX_SQL_USE_GRANULARITY,
+        QueryContextParameters.SQL_USE_GRANULARITY.getName(),
         false
     );
 
@@ -11262,7 +11261,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // When sqlUseGranularity: false, this query doesn't use a timestamp result context.
     final Map<String, Object> context = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        PlannerContext.CTX_SQL_USE_GRANULARITY,
+        QueryContextParameters.SQL_USE_GRANULARITY.getName(),
         false
     );
 
@@ -13583,7 +13582,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     msqIncompatible();
     Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 4);
+    outerLimitContext.put(QueryContextParameters.SQL_OUTER_LIMIT.getName(), 4);
     QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N.set(outerLimitContext, true);
 
     TopNQueryBuilder baseBuilder = new TopNQueryBuilder()

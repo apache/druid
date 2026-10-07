@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.ExecutionMode;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
@@ -36,6 +37,7 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -1105,6 +1107,98 @@ public final class QueryContextParameters
           .since("30.0.1")
           .query(Query.SQL)
           .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .build();
+
+  public static final QueryContextParameter<JoinAlgorithm> SQL_JOIN_ALGORITHM =
+      QueryContextParameter.builder(
+                               "sqlJoinAlgorithm",
+                               JoinAlgorithm.class,
+                               value -> {
+                                 if (value instanceof String) {
+                                   try {
+                                     return JoinAlgorithm.fromString((String) value);
+                                   }
+                                   catch (IllegalArgumentException e) {
+                                     // Fall through to the invalid-value error below.
+                                   }
+                                 }
+                                 throw invalidValueException(
+                                     "sqlJoinAlgorithm",
+                                     "one of " + Arrays.toString(JoinAlgorithm.values()),
+                                     value
+                                 );
+                               }
+                           )
+                           .defaultValue(JoinAlgorithm.BROADCAST)
+                           .description(
+                               """
+                               Algorithm to use for `JOIN`: `broadcast` for broadcast hash join or `sortMerge` for sort-merge join.
+                               Affects all joins in the query.
+                               This is a hint to the MSQ engine, and the actual joins may proceed differently.
+                               The native engine only supports `broadcast`.
+                               """
+                           )
+                           .since("26.0.0")
+                           .query(Query.SQL)
+                           .engine(Engine.MSQ, Engine.DART)
+                           .build();
+
+  public static final QueryContextParameter<Object> SQL_CURRENT_TIMESTAMP =
+      objectParameter("sqlCurrentTimestamp")
+          .description(
+              """
+              Overrides the current time that SQL functions such as `CURRENT_TIMESTAMP` use, as an ISO 8601 string or
+              milliseconds since the epoch. Intended for testing.
+              """
+          )
+          .since("0.10.0")
+          .query(Query.SQL)
+          .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Long> SQL_OUTER_LIMIT =
+      longParameter("sqlOuterLimit")
+          .description(
+              """
+              Maximum number of rows to return, applied as an outer `LIMIT` around the SQL query so that clients such as
+              the web console can limit results without rewriting the query. Not allowed for `INSERT` and `REPLACE`.
+              """
+          )
+          .since("0.17.0")
+          .query(Query.SQL)
+          .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> ENABLE_RAC_TRANSFER_OVER_WIRE =
+      booleanParameter("enableRACOverWire")
+          .defaultValue(false)
+          .description(
+              """
+              If true, and the engine doesn't support window leaf operators natively, the SQL planner pushes the leaf window
+              operator to data servers, which then transfer rows and columns (RAC) results over the wire.
+              """
+          )
+          .since("32.0.0")
+          .query(Query.SQL)
+          .engine(Engine.NATIVE)
+          .visibility(Visibility.HIDDEN)
+          .build();
+
+  public static final QueryContextParameter<Boolean> SQL_USE_GRANULARITY =
+      booleanParameter("sqlUseGranularity")
+          .defaultValue(true)
+          .description(
+              """
+              Whether the SQL planner may use query granularities other than `all`.
+              Set to false to query tables whose segments aren't sorted by time first, which only support `all`.
+              """
+          )
+          .since("31.0.0")
+          .query(Query.SQL)
+          .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
+          .visibility(Visibility.HIDDEN)
           .build();
 
   // Internal query context parameters.

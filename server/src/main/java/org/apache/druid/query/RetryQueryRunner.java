@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.segment.SegmentMissingException;
@@ -216,18 +215,13 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
       } else {
         final QueryContext queryContext = queryPlus.getQuery().context();
         final List<SegmentDescriptor> missingSegments = getMissingSegments(queryPlus, context);
-        final int maxNumRetries = queryContext.getOrDefault(
-            QueryContextParameters.NUM_RETRIES_ON_MISSING_SEGMENTS,
+        final int maxNumRetries = queryContext.getNumRetriesOnMissingSegments(
             config.getNumTries()
         );
         if (missingSegments.isEmpty()) {
           return false;
         } else if (retryCount >= maxNumRetries) {
-          final boolean returnPartialResults = queryContext.getOrDefault(
-              QueryContextParameters.RETURN_PARTIAL_RESULTS,
-              config.isReturnPartialResults()
-          );
-          if (!returnPartialResults) {
+          if (!queryContext.allowReturnPartialResults(config.isReturnPartialResults())) {
             throw new SegmentMissingException("No results found for segments[%s]", missingSegments);
           } else {
             return false;

@@ -22,11 +22,11 @@ package org.apache.druid.msq.test;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.util.Map;
 
@@ -97,7 +97,7 @@ public class MSQCalciteSelectJoinQueryTest
     {
       Map<String, Object> defaultCtx = QueryContext.builder()
           .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-          .putRaw(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm().toString())
+          .putRaw(QueryContextParameters.SQL_JOIN_ALGORITHM.getName(), joinAlgorithm().toString())
           .toMap();
       return new QueryTestBuilder(new CalciteTestConfig(defaultCtx, true))
           .addCustomRunner(

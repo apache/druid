@@ -285,7 +285,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.isBySegment = queryContext.isBySegment();
       // Note that enabling this leads to putting uncovered intervals information in the response headers
       // and might blow up in some cases https://github.com/apache/druid/issues/2108
-      this.uncoveredIntervalsLimit = queryContext.getOrDefault(QueryContextParameters.UNCOVERED_INTERVALS_LIMIT);
+      this.uncoveredIntervalsLimit = queryContext.getUncoveredIntervalsLimit();
       // For nested queries, we need to look at the intervals of the inner most query.
       this.intervals = ev
           .getEffectiveQuerySegmentSpec()

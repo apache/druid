@@ -1535,9 +1535,9 @@ public class DruidQuery
     // This would cause MSQ queries to plan as
     // Window over an inner scan and avoid
     // leaf operators
-    boolean pushLeafOperator = plannerContext.queryContext()
-                                             .getBoolean(PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, false)
-                               && !plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR);
+    boolean pushLeafOperator =
+        plannerContext.queryContext().getOrDefault(QueryContextParameters.ENABLE_RAC_TRANSFER_OVER_WIRE)
+        && !plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR);
     return new WindowOperatorQuery(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
