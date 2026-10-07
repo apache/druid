@@ -1,4 +1,4 @@
-# CLAUDE.md
+# AGENTS.md
 
 The Apache Druid web console: a React + TypeScript single page app built with Blueprint.js, served by the Druid router.
 `README.md` has the setup and the directory layout.
