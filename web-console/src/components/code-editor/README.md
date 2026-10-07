@@ -222,7 +222,7 @@ React only provides `onRun`. Because `extensions` is only read once, `FlexibleQu
 of a language and the extensions that go with it:
 
 - **`dsql({ availableSqlFunctions, columnMetadata, columns, skipAggregates })`** (DruidSQL): Keywords, functions,
-  data types and constants come from `lib/keywords.ts` and `lib/sql-docs`, plus the `availableSqlFunctions` that the
+  data types and constants come from `dsql-keywords.ts` and `lib/sql-docs`, plus the `availableSqlFunctions` that the
   cluster reports (from `useAvailableSqlFunctions()`). Double-quoted references (`"column"`) and `--:ISSUE:` comments
   get their own colors. It auto-closes `(`, `[`, `'` and `"` (not `{`), and Cmd/Ctrl-/ toggles `--` comments. The
   options are passed on to `getSqlCompletions`. Each call makes a new `LanguageSupport`, so memoize it.

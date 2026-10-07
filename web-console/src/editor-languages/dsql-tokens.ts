@@ -19,11 +19,11 @@
 import type { Stack } from '@lezer/lr';
 import { dedupe } from 'druid-query-toolkit';
 
-import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../../lib/keywords';
 import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
 import type { AvailableFunctions } from '../helpers';
 
 import { Constant, FunctionName, Keyword, TypeName } from './dsql.parser.terms';
+import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from './dsql-keywords';
 
 /**
  * Turns an identifier into a keyword, function, constant or type (by giving the id of that term), or leaves it as an
