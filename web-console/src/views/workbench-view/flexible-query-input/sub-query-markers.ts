@@ -46,9 +46,40 @@ export function findSubQueries(text: string): QuerySlice[] {
   return found;
 }
 
-const subQueryMarker = new (class extends GutterMarker {
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/**
+ * The run button of a query, drawn on the line number of the line where the query starts. A line number marker that
+ * has its own DOM replaces the line number, so the marker shows the number too.
+ */
+class SubQueryMarker extends GutterMarker {
   elementClass = 'sub-query-gutter-marker';
-})();
+
+  constructor(readonly lineNumber: number) {
+    super();
+  }
+
+  eq(other: SubQueryMarker): boolean {
+    return this.lineNumber === other.lineNumber;
+  }
+
+  toDOM(): Node {
+    const triangle = document.createElementNS(SVG_NS, 'polygon');
+    triangle.setAttribute('points', '3,3 9,6 3,9');
+    const icon = document.createElementNS(SVG_NS, 'svg');
+    icon.setAttribute('viewBox', '0 0 12 12');
+    icon.append(triangle);
+
+    const button = document.createElement('span');
+    button.className = 'sub-query-run-button';
+    button.setAttribute('data-tooltip', 'Run this query');
+    button.append(icon);
+
+    const fragment = document.createDocumentFragment();
+    fragment.append(button, String(this.lineNumber));
+    return fragment;
+  }
+}
 
 const subQueryHighlightMark = Decoration.mark({ class: 'sub-query-highlight' });
 
@@ -67,7 +98,10 @@ function makeValue(doc: Text, slices: readonly QuerySlice[]): SubQueriesValue {
   return {
     slices,
     markers: RangeSet.of(
-      slices.map(slice => subQueryMarker.range(doc.lineAt(slice.startOffset).from)),
+      slices.map(slice => {
+        const line = doc.lineAt(slice.startOffset);
+        return new SubQueryMarker(line.number).range(line.from);
+      }),
     ),
     highlight: Decoration.none,
   };

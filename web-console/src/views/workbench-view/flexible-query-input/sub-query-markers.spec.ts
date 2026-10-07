@@ -18,7 +18,7 @@
 
 import type { EditorState } from '@codemirror/state';
 import { EditorState as State } from '@codemirror/state';
-import { lineNumberMarkers } from '@codemirror/view';
+import { EditorView, lineNumberMarkers } from '@codemirror/view';
 
 import { findSubQueries, getSubQueries, subQueryMarkers } from './sub-query-markers';
 
@@ -53,6 +53,21 @@ describe('sub-query-markers', () => {
     expect(
       getSubQueries(state).map(slice => state.sliceDoc(slice.startOffset, slice.startOffset + 8)),
     ).toEqual(['SELECT 0', 'SELECT 1', 'SELECT\n ']);
+  });
+
+  it('draws a run button next to the line number', () => {
+    const view = new EditorView({
+      state: State.create({ doc: TEXT, extensions: subQueryMarkers(() => {}) }),
+    });
+    const markers = Array.from(view.dom.querySelectorAll('.sub-query-gutter-marker'));
+    expect(markers.map(marker => marker.textContent)).toEqual(['2', '3']);
+    expect(markers.every(marker => marker.querySelector('.sub-query-run-button svg'))).toBe(true);
+    expect(
+      markers.map(marker =>
+        marker.querySelector('.sub-query-run-button')?.getAttribute('data-tooltip'),
+      ),
+    ).toEqual(['Run this query', 'Run this query']);
+    view.destroy();
   });
 
   it('has no queries without the extension', () => {
