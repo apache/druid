@@ -194,7 +194,7 @@ dataSource: wikipedia`;
     ): string[] | undefined {
       const pos = textWithCursor.indexOf('|');
       const state = EditorState.create({
-        doc: textWithCursor.replace('|', ''),
+        doc: textWithCursor.slice(0, pos) + textWithCursor.slice(pos + 1),
         extensions: [extension, EditorState.readOnly.of(readOnly)],
       });
       const sources = state.languageDataAt<CompletionSource>('autocomplete', pos);

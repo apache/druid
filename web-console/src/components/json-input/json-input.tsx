@@ -56,7 +56,11 @@ export function getHjsonEditorError(message: string): EditorError | undefined {
   if (!position) return;
 
   // The mark shows where the error is, so the position (and the text after it, following ">>>") is left out
-  return { position, message: message.replace(/\s+at line \d+,\d+[\s\S]*$/, '') };
+  const positionIndex = message.search(/\sat line \d+,\d+/);
+  return {
+    position,
+    message: positionIndex === -1 ? message : message.slice(0, positionIndex).trimEnd(),
+  };
 }
 
 function stringifyJson(item: any): string {
