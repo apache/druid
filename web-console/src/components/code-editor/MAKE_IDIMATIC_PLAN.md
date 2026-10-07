@@ -36,7 +36,7 @@ Status: ✅ done, ⬜ to do.
 4. ✅ 1c + 1d: completion sources that read the syntax tree
 5. ✅ 4a + 4b: the partial query markers
 6. ✅ 3a + 3b and 5: positions and prop renames (these touch the most callers)
-7. ⬜ 6: low priority leftovers
+7. ✅ 6: low priority leftovers
 
 Update [README.md](./README.md) and [MIGRATION.md](./MIGRATION.md) as each step lands.
 
@@ -313,12 +313,21 @@ away (19 snapshots). In a browser, the last commit and this change were run side
 column 1), and the `JsonInput` in the coordinator dynamic config dialog (size, background, error link to line 3,
 column 7) all came out the same.
 
-## 6. Low priority
+## 6. ✅ Low priority
 
-- ⬜ **`EditorStateCache`** is the Ace `UndoManager` cache carried over: a static `Map<string, unknown>` that the
-  workbench cleans up by hand. Type the stored JSON, or have `CodeEditor` expose a way to forget a state.
-- ⬜ **The shared tooltip host is prepended to `<body>`**, partly for Ace parity and partly so that dialog specs that
-  snapshot `document.body.lastChild` keep passing. At least explain this next to the code.
+- ✅ **`EditorStateCache`** was the Ace `UndoManager` cache carried over: a public static `Map<string, unknown>` in
+  `src/singletons/` that `CodeEditor` wrote to and the workbench cleaned up by hand. **Done:** the saved states are now
+  a module-private `Map<string, SavedEditorState>` in `code-editor.tsx` (`SavedEditorState` is what
+  `EditorState.toJSON` gives), and `CodeEditor` exports `forgetEditorState(stateCacheId)`, which the workbench calls
+  when a tab is closed. `src/singletons/editor-state-cache.ts` is gone. `code-editor.spec.tsx` checks that the undo
+  history survives a remount and is gone after `forgetEditorState`.
+- ✅ **The shared tooltip host is prepended to `<body>`.** **Done:** kept as is, with the reasons now next to the code
+  (the comment on `getTooltipHost`) and in the README's styling notes:
+  - In the body so that the editor wrapper (`overflow: hidden`), dialogs and popovers don't clip the tooltips, like
+    Ace's popup. CodeMirror gives tooltips `z-index: 500`, above Blueprint's overlays (20) and toasts (40).
+  - At the start of the body, not the end, because Blueprint appends its portals to the body and the dialog specs
+    snapshot `document.body.lastChild`.
+  - One host for all editors, created the first time one mounts.
 
 ## Leave as is
 

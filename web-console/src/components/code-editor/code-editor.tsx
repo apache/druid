@@ -52,7 +52,6 @@ import type React from 'react';
 import { useEffect, useEffectEvent, useImperativeHandle, useLayoutEffect, useRef } from 'react';
 
 import { useConstant, usePermanentCallback } from '../../hooks';
-import { EditorStateCache } from '../../singletons/editor-state-cache';
 import type { LineColumn } from '../../utils';
 
 import {
@@ -89,18 +88,41 @@ export interface CodeEditorProps {
   /** Drops the editor's own background */
   transparentBackground?: boolean;
   placeholder?: string;
-  /** Makes the editor remember its state (undo history, selection) between mounts */
+  /** Makes the editor remember its state (undo history, selection) between mounts, see forgetEditorState */
   stateCacheId?: string;
   /** Additional extensions, only read when the editor is created */
   extensions?: Extension;
 }
 
+/**
+ * What EditorState.toJSON gives: the text, the selection and (with historyField) the undo history
+ */
+type SavedEditorState = Record<string, unknown>;
+
+/**
+ * The saved states of the unmounted editors that have a stateCacheId
+ */
+const savedEditorStates = new Map<string, SavedEditorState>();
+
+/**
+ * Forgets the state saved for an editor with the given stateCacheId (once that editor will not be shown again)
+ */
+export function forgetEditorState(stateCacheId: string): void {
+  savedEditorStates.delete(stateCacheId);
+}
+
 let tooltipHost: HTMLElement | undefined;
 
 /**
- * Like Ace, show the tooltips (like the autocomplete list) in the body so that they are not clipped by the containers of
- * the editor. All editors share one host element that is put at the start of the body to stay out of the way of the
- * elements (like Blueprint portals) that are added to the end of it.
+ * The element that the tooltips of all editors (the autocomplete list and its doc panel) are rendered in.
+ *
+ * - It is in the body, like Ace's popup was, so that the tooltips are not clipped by the containers of the editor: the
+ *   editor wrapper itself (`overflow: hidden`), dialogs and popovers. CodeMirror's own z-index for tooltips puts them
+ *   above Blueprint overlays.
+ * - It is put at the start of the body rather than the end. Blueprint renders dialogs, popovers and toasts into portals
+ *   appended to the body, and the dialog specs snapshot `document.body.lastChild` expecting that portal. Appending the
+ *   host (it is created the first time an editor mounts) would make it the last child instead.
+ * - All editors share it, so only one element is ever added.
  */
 function getTooltipHost(): HTMLElement {
   if (!tooltipHost) {
@@ -271,7 +293,7 @@ export function CodeEditor(props: CodeEditorProps) {
     ];
 
     let state: EditorState | undefined;
-    const cachedState = stateCacheId ? EditorStateCache.getState(stateCacheId) : undefined;
+    const cachedState = stateCacheId ? savedEditorStates.get(stateCacheId) : undefined;
     if (cachedState) {
       try {
         state = EditorState.fromJSON(
@@ -299,7 +321,7 @@ export function CodeEditor(props: CodeEditorProps) {
 
   const saveState = useEffectEvent((view: EditorView) => {
     if (!stateCacheId) return;
-    EditorStateCache.saveState(stateCacheId, view.state.toJSON({ history: historyField }));
+    savedEditorStates.set(stateCacheId, view.state.toJSON({ history: historyField }));
   });
 
   useLayoutEffect(() => {

@@ -39,11 +39,10 @@ It is a controlled component that you give a string and an `onChange` callback. 
 
 Related code lives elsewhere:
 
-| Location                               | What it holds                                                       |
-| -------------------------------------- | ------------------------------------------------------------------- |
-| `src/editor-languages/`                | The `dsql()` and `hjson()` languages (highlighting and completions) |
-| `src/editor-completions/`              | What to suggest when autocompleting SQL and Hjson                   |
-| `src/singletons/editor-state-cache.ts` | Keeps editor state (undo history, selection) between mounts         |
+| Location                  | What it holds                                                       |
+| ------------------------- | ------------------------------------------------------------------- |
+| `src/editor-languages/`   | The `dsql()` and `hjson()` languages (highlighting and completions) |
+| `src/editor-completions/` | What to suggest when autocompleting SQL and Hjson                   |
 
 ## Basic usage
 
@@ -111,8 +110,8 @@ When `stateCacheId` is set, the editor saves its state (undo history and selecti
 with the same id mounts again, it restores that state. The workbench uses this so that undo still works after you
 switch tabs and come back. If `value` changed while the editor was away, the restored editor is updated to match.
 
-Remove the saved state with `EditorStateCache.deleteState(id)` once it is no longer needed (the workbench does this
-when a tab is closed).
+The saved states are kept inside `code-editor.tsx`. Call `forgetEditorState(id)` once an id will not be shown again
+(the workbench does this when a tab is closed).
 
 ## Autocomplete
 
@@ -246,6 +245,10 @@ To add a token type, add it to `TOKEN_TABLE`, emit it from a rule, and give its 
 The theme reproduces the look of the Ace editor the console used before: Ace's `solarized_dark` theme plus the
 console's overrides. Most of it is in `code-editor-theme.ts` as an `EditorView.theme(...)`, which CodeMirror scopes to
 the editor and to its tooltips. Some things to know before changing it:
+
+- **The tooltips live in one shared element at the start of `<body>`** (`getTooltipHost` in `code-editor.tsx`), so
+  that dialogs, popovers and the editor's own `overflow: hidden` don't clip them, and so that it doesn't become
+  `document.body.lastChild`, which the dialog specs snapshot. The comment on `getTooltipHost` has the details.
 
 - **The token colors are pre-brightened.** The Ace theme drew text through `filter: brightness(1.5) saturate(0.9)`.
   The colors in `codeEditorHighlightStyle` are the result of that filter. Don't add a CSS filter to `.cm-content`,

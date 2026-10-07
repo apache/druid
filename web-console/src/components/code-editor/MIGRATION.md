@@ -51,7 +51,7 @@ look as possible. For how to use the new component, see [README.md](./README.md)
 | `src/ace-completions/*`                        | `src/editor-completions/*` (+ `editor-completion.ts` for the type)       |
 | `makeDocHtml` (HTML strings in `docHTML`)      | Structured `doc` rendered by `completion-doc.ts`                         |
 | `Ace.ValueCompletion`                          | `EditorCompletion` (`label`, `displayLabel`, `boost`, `detail`, `doc`)   |
-| `src/singletons/ace-editor-state-cache.ts`     | `src/singletons/editor-state-cache.ts` (`EditorStateCache`)              |
+| `src/singletons/ace-editor-state-cache.ts`     | Kept inside `code-editor.tsx`, forgotten with `forgetEditorState(id)`    |
 | `editor.getSelection().moveCursorTo(row, col)` | `focusEditorAt(view, { line, column })` (1-based `LineColumn`)           |
 
 ### Call sites
