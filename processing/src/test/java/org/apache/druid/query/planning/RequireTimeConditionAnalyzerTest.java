@@ -107,6 +107,28 @@ public class RequireTimeConditionAnalyzerTest
     Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
   }
 
+  @Test
+  public void testJoinWithLimitWrappedUnboundedRightIsNotSatisfied()
+  {
+    // Right leg is an unbounded QueryDataSource (SQL equivalent: SELECT ... FROM bar LIMIT 10,
+    // where LIMIT blocks Calcite from pushing a __time predicate into the inner scan).
+    // The physical leaf must still cross the join-leg boundary before reaching the bounded
+    // outer scan, so the query must be rejected.
+    QueryDataSource limitWrapper = new QueryDataSource(scan(TABLE_BAR, ETERNITY));
+    ScanQuery query = scan(join(TABLE_FOO, limitWrapper), BOUNDED);
+    Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
+  }
+
+  @Test
+  public void testNestedJoinWithDeepUnboundedLegIsNotSatisfied()
+  {
+    // Join(TABLE_FOO, Join(TABLE_FOO, TABLE_BAR)) under a bounded outer scan. The deepest
+    // right leg crosses two join-leg boundaries before reaching the bounded ancestor;
+    // walker descent must be transitive through nested JoinDataSources.
+    ScanQuery query = scan(join(TABLE_FOO, join(TABLE_FOO, TABLE_BAR)), BOUNDED);
+    Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
+  }
+
   private static ScanQuery scan(DataSource ds, QuerySegmentSpec spec)
   {
     return Druids.newScanQueryBuilder().dataSource(ds).intervals(spec).build();
