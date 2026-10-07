@@ -28,14 +28,15 @@ It is a controlled component that you give a string and an `onChange` callback. 
 
 ## Files
 
-| File                   | What it holds                                                                  |
-| ---------------------- | ------------------------------------------------------------------------------ |
-| `code-editor.tsx`      | The component, its props, the CodeMirror setup and the `focusEditorAt` helper  |
-| `code-editor-theme.ts` | The editor theme (layout, gutter, popups) and the syntax highlighting colors   |
-| `completion-source.ts` | Turns a completion builder into a CodeMirror completion source                 |
-| `completion-doc.ts`    | Renders the documentation panel shown next to the completion list              |
-| `doc-markdown.ts`      | Renders "doc markdown" (the format of the SQL docs) as DOM elements            |
-| `code-editor.scss`     | The few styles for the wrapper element that can't live in the CodeMirror theme |
+| File                   | What it holds                                                                 |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| `code-editor.tsx`      | The component, its props, the CodeMirror setup and the `focusEditorAt` helper |
+| `code-editor-theme.ts` | The editor theme (layout, gutter, popups) and the syntax highlighting colors  |
+| `completion-source.ts` | Turns a completion builder into a CodeMirror completion source                |
+| `completion-doc.ts`    | Renders the documentation panel shown next to the completion list             |
+| `doc-markdown.ts`      | Renders "doc markdown" (the format of the SQL docs) as DOM elements           |
+| `search-panel.tsx`     | The find (and replace) panel, made out of Blueprint components                |
+| `code-editor.scss`     | The styles for the wrapper element and the find panel                         |
 
 Related code lives elsewhere:
 
@@ -261,6 +262,12 @@ the editor and to its tooltips. Some things to know before changing it:
   purpose so it beats the main theme.
 - **The wrapper** gets `position: relative; overflow: hidden` (in `code-editor.scss`), like Ace's root element, so the
   editor never pushes past the size it is given in flex layouts.
+- **The find panel is React.** `createSearchPanel` (`search-panel.tsx`) replaces CodeMirror's own panel, which has
+  its own tiny buttons, with Blueprint inputs, buttons and checkboxes so that it looks like the rest of the console. It
+  renders into the panel's element with its own React root, and re-renders when the search query (or read-only state)
+  changes. The search logic is still CodeMirror's (`findNext`, `replaceAll`, …) and so is the keymap: the panel runs
+  the `search-panel` scope handlers on keydown, so Escape closes it, and Enter / Shift-Enter go to the next / previous
+  match. Its layout is in `code-editor.scss`.
 - **Style it from the outside** with the wrapper's `className` (for size, borders and layout), or `.cm-*` class names
   under it when you need to.
 

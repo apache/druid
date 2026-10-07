@@ -17,8 +17,9 @@
  */
 
 import { undo } from '@codemirror/commands';
+import { openSearchPanel } from '@codemirror/search';
 import type { EditorView } from '@codemirror/view';
-import { render } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { createRef } from 'react';
 
 import { CodeEditor, forgetEditorState } from './code-editor';
@@ -46,5 +47,32 @@ describe('CodeEditor', () => {
     const third = mount('SELECT 2');
     expect(undo(third.view)).toBe(false);
     third.unmount();
+  });
+
+  it('finds and replaces with the search panel', () => {
+    const ref = createRef<EditorView | undefined>();
+    const onChange = jest.fn();
+    const { unmount } = render(<CodeEditor ref={ref} value="foo bar foo" onChange={onChange} />);
+    const view = ref.current!;
+
+    act(() => {
+      openSearchPanel(view);
+    });
+    const searchField = screen.getByLabelText<HTMLInputElement>('Find');
+    expect(document.activeElement).toBe(searchField);
+
+    fireEvent.change(searchField, { target: { value: 'foo' } });
+    fireEvent.keyDown(searchField, { key: 'Enter', keyCode: 13 });
+    expect(view.state.selection.main).toMatchObject({ from: 0, to: 3 });
+    fireEvent.keyDown(searchField, { key: 'Enter', keyCode: 13 });
+    expect(view.state.selection.main).toMatchObject({ from: 8, to: 11 });
+
+    fireEvent.change(screen.getByLabelText('Replace'), { target: { value: 'baz' } });
+    fireEvent.click(screen.getByText('Replace all'));
+    expect(onChange).toHaveBeenLastCalledWith('baz bar baz');
+
+    fireEvent.keyDown(searchField, { key: 'Escape', keyCode: 27 });
+    expect(screen.queryByLabelText('Find')).toBeNull();
+    unmount();
   });
 });

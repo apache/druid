@@ -60,6 +60,7 @@ import {
   codeEditorTheme,
   codeEditorTransparentTheme,
 } from './code-editor-theme';
+import { createSearchPanel } from './search-panel';
 
 import './code-editor.scss';
 
@@ -259,7 +260,7 @@ export function CodeEditor(props: CodeEditorProps) {
       history(),
       drawSelection(),
       bracketMatching(),
-      search(),
+      search({ createPanel: createSearchPanel }),
       highlightActiveLine(),
       syntaxHighlighting(codeEditorHighlightStyle),
       autocompletion({

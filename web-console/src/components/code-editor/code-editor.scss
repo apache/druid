@@ -16,8 +16,39 @@
  * limitations under the License.
  */
 
+@use '../../variables' as *;
+
 // Like the Ace editor that this replaced, the editor never grows past the size it is given
 .code-editor {
   position: relative;
   overflow: hidden;
+}
+
+// The find (and replace) panel, see search-panel.tsx
+.code-editor-search-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 5px;
+  font-size: $pt-font-size;
+
+  .search-row,
+  .replace-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px 10px;
+  }
+
+  .search-field {
+    width: 220px;
+  }
+
+  .#{$bp-ns}-control.#{$bp-ns}-inline {
+    margin: 0;
+  }
+
+  .close-button {
+    margin-left: auto;
+  }
 }

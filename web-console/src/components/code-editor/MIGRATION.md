@@ -56,16 +56,16 @@ look as possible. For how to use the new component, see [README.md](./README.md)
 
 ### Call sites
 
-| Component                        | Notes                                                                                            |
-| -------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `FlexibleQueryInput` (workbench) | Rewritten. See [Partial query markers](#partial-query-markers). Props renamed, see below         |
+| Component                        | Notes                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `FlexibleQueryInput` (workbench) | Rewritten. See [Partial query markers](#partial-query-markers). Props renamed, see below          |
 | `SqlInput` (explore view)        | `ref` gives the `EditorView`, `height` (was `editorHeight`), `showLineNumbers` (was `showGutter`) |
-| `JsonInput`                      | An explicit `readOnly`, `autoFocus` (was `focus`), no `width`                                    |
-| `ShowJson`, `ShowJsonOrStages`   | Read-only Hjson                                                                                  |
-| `SpecDialog`                     | The 500px height (react-ace's default) is now set in its SCSS                                    |
-| `ShowValueDialog`                | Its SCSS targeted `.ace-editor`, a class Ace never set. It now targets `.code-editor`            |
-| `WorkbenchHistoryDialog`         | Read-only, `dsql` or `hjson`                                                                     |
-| `ExplainDialog`                  | Read-only Hjson                                                                                  |
+| `JsonInput`                      | An explicit `readOnly`, `autoFocus` (was `focus`), no `width`                                     |
+| `ShowJson`, `ShowJsonOrStages`   | Read-only Hjson                                                                                   |
+| `SpecDialog`                     | The 500px height (react-ace's default) is now set in its SCSS                                     |
+| `ShowValueDialog`                | Its SCSS targeted `.ace-editor`, a class Ace never set. It now targets `.code-editor`             |
+| `WorkbenchHistoryDialog`         | Read-only, `dsql` or `hjson`                                                                      |
+| `ExplainDialog`                  | Read-only Hjson                                                                                   |
 
 Props that came from react-ace were renamed after the migration:
 
@@ -189,6 +189,9 @@ Playwright at 2× scale.
   caption (`BIG_MAX(<ANY>)`, `BIG_MAX(column, size)`, …). CodeMirror drops options with the same label and detail, so
   only the first signature was left. The list now shows the name (`BIG_MAX`), and the doc panel shows every signature,
   one per line.
+- **The find panel** is at the bottom of the editor, with a replace row (unless the editor is read-only), rather than
+  Ace's floating search box. It is built from Blueprint components (`search-panel.tsx`) instead of CodeMirror's own
+  panel, so it matches the console's inputs and buttons.
 - **Undo granularity:** CodeMirror groups typing into undo steps differently from Ace.
 - **Tooltips:** all editors share one tooltip container that is _prepended_ to `<body>`. Like Ace's popup, it can't be
   clipped by the editor's containers. Prepending also keeps `document.body.lastChild` pointing at Blueprint portals,
