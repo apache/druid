@@ -186,14 +186,14 @@ export function getSqlCompletions(
   const charBeforePrefix = state.sliceDoc(from - 1, from);
 
   // We are in a comment
-  if (token.name === 'comment' || token.name === 'issue') {
+  if (token.name === 'LineComment' || token.name === 'BlockComment' || token.name === 'Issue') {
     return [];
   }
 
   // If we are autocompleting inside a literal, then don't do any of the standard suggestions.
   // Only autocomplete other literals. The imagined use-case for this is if you have `country = 'France'` or `TIMESTAMP '2024-03-02 O1:00:00'` you might want to reuse the literals
   // A literal that is not closed yet is not a string token, so also count the word right after a quote
-  if ((token.name === 'string' && pos < token.to) || charBeforePrefix === "'") {
+  if ((token.name === 'String' && pos < token.to) || charBeforePrefix === "'") {
     return getSqlLiterals(state.doc.toString(), 100, prefix).map(label => ({
       label,
       boost: 1,

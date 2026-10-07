@@ -23,8 +23,8 @@ The [migration from Ace](./MIGRATION.md) deliberately kept a lot of Ace-shaped c
 the changeset stayed small. This plan lists the Ace habits that are left, so that the code reads naturally to someone
 (or some agent) who knows CodeMirror but has never seen Ace.
 
-**Constraint for every step: the rendering stays as it is.** Only the APIs and the code shape change. The one accepted
-exception so far is a bug fix (see 1a).
+**Constraint for every step: the rendering stays as it is.** Only the APIs and the code shape change. The accepted
+exceptions are bug fixes (see 1a and 2c).
 
 Status: ✅ done, ⬜ to do.
 
@@ -213,13 +213,36 @@ default keymap's Backspace comes first. That was so before this step too; it can
 open editors re-highlight right away. `WorkbenchHistoryDialog` now reads the context too, so its read-only SQL keeps
 highlighting the cluster's functions.
 
-### ⬜ 2c. Keep `createRuleParser`, but name it for what it is
+### ✅ 2c. Lezer grammars instead of Ace-style rules
 
-`createRuleParser` runs Ace-style highlight rules (a state stack, push/pop, sticky regexes, a guard against zero-width
-rules that loop). It is tested and it is why the highlighting looks the same. Switching to `@codemirror/lang-sql` or a
-Lezer grammar would change the tokens and so the rendering, so keep it.
+**Was:** `createRuleParser` ran the Ace highlight rules (a state stack, push/pop, sticky regexes matched against the
+whole line, a guard against zero-width rules that loop) as a `StreamLanguage`. The plan was to keep it and only name it
+for what it was, since a grammar would change the tokens.
 
-**To do (optional):** a name or doc comment that says plainly that it runs Ace-style rules.
+**Done:** both languages are Lezer grammars, so nothing of the Ace modes is left:
+
+- `dsql.grammar`: the DruidSQL tokens and nested `Parens`. Keywords, functions, constants and types come from an
+  external specializer (`dsql-tokens.ts`); `getDsqlLanguage` configures it with the cluster's functions
+  (`parser.configure({ specializers })`) instead of building new regex rules.
+- `hjson.grammar`: a real Hjson grammar (`Object`, `Property`, `PropertyName`, `Array`, the root object without braces,
+  `String` with `Escape`s, `MultilineString`, `QuotelessString`, comments). Quoteless keys and strings depend on the
+  context and come from an external tokenizer (`hjson-tokens.ts`).
+- `script/build-grammars.mjs` generates the parsers as part of `script/build` (they are not checked in, like
+  `lib/sql-docs.ts`). `@lezer/lr` and `@lezer/common` are direct dependencies now, `@lezer/generator` a dev
+  dependency.
+- The tags are set with `styleTags`. `rule-parser.ts` and `TOKEN_TABLE` are gone, `editorTags` moved to
+  `editor-tags.ts`. Hjson keys are `tags.propertyName`, styled like keywords.
+- The completions check node names (`LineComment`, `BlockComment`, `Issue`, `String`) instead of the stream tokens.
+- Enter still keeps the indentation of the line before (`indentNodeProp` returns `null`), rather than indenting inside
+  brackets.
+
+**Checked:** the colors of every SQL and JSON example in the Druid docs, old against new, character by character (see
+[MIGRATION.md](./MIGRATION.md#syntax-highlighting)). SQL is the same in 447 of 448. The valid JSON examples are all
+highlighted correctly, where the Ace rules got 97 of 452 wrong.
+
+**Visible changes (fixes):** Hjson values that contain a colon (timestamps, `host:port`, URLs) are strings instead of
+being split into a key and a number, and quoteless Hjson values are strings as a whole. A word inside an Hjson object
+is a key while its colon is still being typed.
 
 ## 3. Positions
 

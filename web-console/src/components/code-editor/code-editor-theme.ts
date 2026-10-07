@@ -20,7 +20,7 @@ import { HighlightStyle } from '@codemirror/language';
 import { EditorView } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 
-import { editorTags } from '../../editor-languages/rule-parser';
+import { editorTags } from '../../editor-languages/editor-tags';
 
 // The editor is styled to look like the Ace editor (with the solarized_dark theme and some overrides) that the console
 // used to use.
@@ -199,7 +199,7 @@ export function codeEditorPaddingTheme(padding: number) {
 
 // The colors were brightened from the solarized_dark ones with `filter: brightness(1.5) saturate(0.9)`
 export const codeEditorHighlightStyle = HighlightStyle.define([
-  { tag: tags.keyword, color: '#c8e315' },
+  { tag: [tags.keyword, tags.propertyName], color: '#c8e315' },
   { tag: tags.function(tags.variableName), color: '#45cef7' },
   { tag: [tags.atom, tags.escape], color: '#facd14' },
   { tag: tags.typeName, color: '#49f943' },

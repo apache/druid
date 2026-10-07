@@ -61,7 +61,7 @@ export function matchCompletionWord(context: CompletionContext): CompletionWord 
 }
 
 /**
- * The name of the syntax node (the token) that the cursor is in or right after, like 'comment' or 'string'
+ * The name of the syntax node (the token) that the cursor is in or right after, like 'LineComment' or 'String'
  */
 export function tokenBefore(state: EditorState, pos: number): { name: string; to: number } {
   const { name, to } = syntaxTree(state).resolveInner(pos, -1);

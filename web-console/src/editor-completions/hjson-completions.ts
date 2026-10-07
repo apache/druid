@@ -34,7 +34,8 @@ export function getHjsonCompletions(
   jsonCompletions: JsonCompletionRule[],
 ): EditorCompletion[] {
   // Don't provide completions if we're in a comment
-  if (tokenBefore(state, pos).name === 'comment') {
+  const tokenName = tokenBefore(state, pos).name;
+  if (tokenName === 'LineComment' || tokenName === 'BlockComment') {
     return [];
   }
 

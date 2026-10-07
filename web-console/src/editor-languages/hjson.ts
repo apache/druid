@@ -16,75 +16,40 @@
  * limitations under the License.
  */
 
-// The highlighting rules are a port of the Ace mode located at
-// https://github.com/thlorenz/brace/blob/master/mode/hjson.js
-// Originally licensed under the MIT license (https://github.com/thlorenz/brace/blob/master/LICENSE)
-
-import { LanguageSupport, StreamLanguage } from '@codemirror/language';
+import { indentNodeProp, LanguageSupport, LRLanguage } from '@codemirror/language';
+import { styleTags, tags } from '@lezer/highlight';
 
 import { makeCompletionSource } from '../components/code-editor/completion-source';
 import { getHjsonCompletions } from '../editor-completions/hjson-completions';
 import type { JsonCompletionRule } from '../utils';
 
-import type { TokenRule } from './rule-parser';
-import { createRuleParser, TOKEN_TABLE } from './rule-parser';
+import { parser } from './hjson.parser';
 
-const COMMENTS: TokenRule[] = [
-  { token: 'comment', regex: /#.*$/ },
-  { token: 'comment', regex: /\/\*/, push: 'blockComment' },
-  { token: 'comment', regex: /\/\/.*$/ },
-];
-
-const KEY_NAME: TokenRule[] = [
-  { token: 'keyword', regex: /(?:[^,{[}\]\s]+|"(?:[^"\\]|\\.)*")\s*(?=:)/ },
-];
-
-const VALUE: TokenRule[] = [
-  { token: 'literal', regex: /\b(?:true|false|null)\b/ },
-  { token: 'number', regex: /-?(?:0|[1-9]\d*)(?:(?:\.\d+)?(?:[eE][+-]?\d+)?)?/ },
-  { token: 'string', regex: /"/, push: 'string' },
-  { token: 'paren', regex: /\[/, push: 'array' },
-  { token: 'paren', regex: /\{/, push: 'object' },
-  ...COMMENTS,
-  { token: 'string', regex: /'''/, push: 'multilineString' },
-  { token: 'string', regex: /\b[^:,0-9\-{[}\]\s].*$/ }, // Unquoted string
-];
-
-const OBJECT_CONTENT: TokenRule[] = [...KEY_NAME, ...VALUE, { token: null, regex: /[:,]/ }];
-
-export const hjsonLanguage = StreamLanguage.define({
+export const hjsonLanguage = LRLanguage.define({
   name: 'hjson',
-  ...createRuleParser({
-    start: [
-      ...COMMENTS,
-      // An object without the braces, it lasts until the end of the text
-      { token: null, regex: /(?=\s*(?:[^,{[}\]\s]+|"(?:[^"\\]|\\.)*")\s*:)/, push: 'rootObject' },
-      ...VALUE,
-    ],
-    rootObject: OBJECT_CONTENT,
-    object: [{ token: 'paren', regex: /\}/, pop: true }, ...OBJECT_CONTENT],
-    array: [
-      { token: 'paren', regex: /\]/, pop: true },
-      ...VALUE,
-      { token: null, regex: /,/ },
-      { token: 'invalid', regex: /[^\s\]]/ },
-    ],
-    string: [
-      { token: 'string', regex: /"/, pop: true },
-      { token: 'escape', regex: /\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4})/ },
-      { token: 'invalid', regex: /\\./ },
-      { token: 'string', regex: /[^"\\]+/ },
-    ],
-    multilineString: [
-      { token: 'string', regex: /'''/, pop: true },
-      { token: 'string', regex: /(?:[^']|'(?!''))+/ },
-    ],
-    blockComment: [
-      { token: 'comment', regex: /\*\//, pop: true },
-      { token: 'comment', regex: /(?:[^*]|\*(?!\/))+/ },
+  parser: parser.configure({
+    props: [
+      styleTags({
+        // The keys (quoted or not) are styled as a whole, including any escapes
+        'PropertyName PropertyName/String PropertyName/String/Escape PropertyName/String/InvalidEscape':
+          tags.propertyName,
+        'String MultilineString QuotelessString': tags.string,
+        'Escape': tags.escape,
+        'InvalidEscape': tags.invalid,
+        'Number': tags.number,
+        // Not styled (tags.null would be, as a keyword)
+        'True False': tags.bool,
+        'Null': tags.literal,
+        'LineComment': tags.lineComment,
+        'BlockComment': tags.blockComment,
+        '{ }': tags.brace,
+        '[ ]': tags.squareBracket,
+        ', :': tags.separator,
+      }),
+      // Like Ace, a new line keeps the indentation of the line before (rather than indenting inside brackets)
+      indentNodeProp.add({ 'Document Object Array': () => null }),
     ],
   }),
-  tokenTable: TOKEN_TABLE,
   languageData: {
     commentTokens: { line: '//', block: { open: '/*', close: '*/' } },
   },

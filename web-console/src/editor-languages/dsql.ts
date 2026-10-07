@@ -16,78 +16,48 @@
  * limitations under the License.
  */
 
-// The highlighting rules are a port of the Ace mode located at
-// https://github.com/thlorenz/brace/blob/master/mode/sql.js
-// Originally licensed under the MIT license (https://github.com/thlorenz/brace/blob/master/LICENSE)
-// The list of keywords was modified to more closely adhere to what is found in DruidSQL
-
 import { closeBrackets, closeBracketsKeymap } from '@codemirror/autocomplete';
-import type { Language } from '@codemirror/language';
-import { LanguageSupport, StreamLanguage } from '@codemirror/language';
+import { indentNodeProp, LanguageSupport, LRLanguage } from '@codemirror/language';
 import { keymap } from '@codemirror/view';
-import { dedupe } from 'druid-query-toolkit';
+import { styleTags, tags } from '@lezer/highlight';
 
-import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../../lib/keywords';
-import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
 import { makeCompletionSource } from '../components/code-editor/completion-source';
 import type { SqlCompletionOptions } from '../editor-completions/sql-completions';
 import { getSqlCompletions } from '../editor-completions/sql-completions';
 import type { AvailableFunctions } from '../helpers';
 
-import { createRuleParser, TOKEN_TABLE } from './rule-parser';
+import { parser } from './dsql.parser';
+import { makeIdentifierSpecializer, specializeIdentifier } from './dsql-tokens';
+import { editorTags } from './editor-tags';
 
-function makeWordTokens(
-  availableSqlFunctions: AvailableFunctions | undefined,
-): Map<string, string> {
-  // A word that is in several lists gets the token of the last one
-  const tokenLists: [string, string[]][] = [
-    [
-      'function',
-      dedupe([
-        ...SQL_DYNAMICS,
-        ...Array.from(SQL_FUNCTIONS.keys()),
-        ...(availableSqlFunctions?.keys() || []),
-      ]),
-    ],
-    ['keyword', SQL_KEYWORDS.flatMap(k => k.split(/\s/g))], // Some keywords are like "EXPLAIN PLAN FOR"
-    ['constant', SQL_CONSTANTS],
-    ['typeName', Array.from(SQL_DATA_TYPES.keys())],
-  ];
+const dsqlHighlighting = styleTags({
+  'Keyword': tags.keyword,
+  'FunctionName': tags.function(tags.variableName),
+  'Constant': tags.atom,
+  'TypeName': tags.typeName,
+  'QuotedIdentifier': editorTags.column,
+  'String': tags.string,
+  'Number': tags.number,
+  'Issue': editorTags.issue,
+  'LineComment': tags.lineComment,
+  'BlockComment': tags.blockComment,
+  'Operator': tags.operator,
+  '( )': tags.paren,
+});
 
-  const wordTokens = new Map<string, string>();
-  for (const [token, words] of tokenLists) {
-    for (const word of words) wordTokens.set(word.toLowerCase(), token);
-  }
-  return wordTokens;
-}
-
-function makeDsqlLanguage(availableSqlFunctions: AvailableFunctions | undefined): Language {
-  let wordTokens: Map<string, string> | undefined;
-  const getWordTokens = () => (wordTokens ??= makeWordTokens(availableSqlFunctions));
-
-  return StreamLanguage.define({
+function makeDsqlLanguage(availableSqlFunctions: AvailableFunctions | undefined): LRLanguage {
+  return LRLanguage.define({
     name: 'dsql',
-    ...createRuleParser({
-      start: [
-        { token: 'issue', regex: /--:ISSUE:.*$/ },
-        { token: 'comment', regex: /--.*$/ },
-        { token: 'comment', regex: /\/\*/, push: 'blockComment' },
-        { token: 'column', regex: /".*?"/ }, // " quoted reference
-        { token: 'string', regex: /'.*?'/ }, // ' string literal
-        { token: 'number', regex: /[+-]?\d+(?:(?:\.\d*)?(?:[eE][+-]?\d+)?)?\b/ },
-        {
-          token: word => getWordTokens().get(word.toLowerCase()) ?? null,
-          regex: /[a-zA-Z_$][a-zA-Z0-9_$]*\b/,
-        },
-        { token: 'operator', regex: /\+|-|\/|\/\/|%|<@>|@>|<@|&|\^|~|<|>|<=|=>|==|!=|<>|=/ },
-        { token: 'paren', regex: /[()]/ },
+    parser: parser.configure({
+      props: [
+        dsqlHighlighting,
+        // Like Ace, a new line keeps the indentation of the line before (rather than indenting inside parentheses)
+        indentNodeProp.add({ 'Script Parens': () => null }),
       ],
-      blockComment: [
-        { token: 'comment', regex: /\*\//, pop: true },
-        { token: 'comment', regex: /(?:[^*]|\*(?!\/))+/ },
-      ],
+      specializers: availableSqlFunctions
+        ? [{ from: specializeIdentifier, to: makeIdentifierSpecializer(availableSqlFunctions) }]
+        : [],
     }),
-    tokenTable: TOKEN_TABLE,
     languageData: {
       commentTokens: { line: '--' },
       // Like Ace, do not auto close braces (they are rare in SQL and typing one usually means the start of a JSON query)
@@ -97,13 +67,13 @@ function makeDsqlLanguage(availableSqlFunctions: AvailableFunctions | undefined)
 }
 
 const defaultDsqlLanguage = makeDsqlLanguage(undefined);
-const dsqlLanguages = new WeakMap<AvailableFunctions, Language>();
+const dsqlLanguages = new WeakMap<AvailableFunctions, LRLanguage>();
 
 /**
  * The DruidSQL language. The functions that the cluster has (in addition to the documented ones) are highlighted as
  * functions. The same functions always give the same language so that reconfiguring an editor does not re-parse it.
  */
-export function getDsqlLanguage(availableSqlFunctions?: AvailableFunctions): Language {
+export function getDsqlLanguage(availableSqlFunctions?: AvailableFunctions): LRLanguage {
   if (!availableSqlFunctions) return defaultDsqlLanguage;
   let language = dsqlLanguages.get(availableSqlFunctions);
   if (!language) {

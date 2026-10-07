@@ -25,7 +25,13 @@ const TYPESCRIPT_FILES = ['**/*.ts', '**/*.tsx'];
 
 export default [
   {
-    ignores: ['public', 'target'],
+    // The parsers generated from the grammars by script/build-grammars.mjs
+    ignores: [
+      'public',
+      'target',
+      'src/editor-languages/*.parser.ts',
+      'src/editor-languages/*.parser.terms.ts',
+    ],
   },
   ...awesomeCodeStyle,
   ...awesomeCodeStyleReact,

@@ -26,9 +26,10 @@ look as possible. For how to use the new component, see [README.md](./README.md)
 ## Summary
 
 - `ace-builds` and `react-ace` were removed. `@codemirror/{state,view,language,autocomplete,commands,search}` and
-  `@lezer/highlight` were added.
+  `@lezer/{common,highlight,lr}` were added, plus `@lezer/generator` as a dev dependency.
 - All 10 places that rendered `<AceEditor>` now render the new `CodeEditor` component (`src/components/code-editor/`).
-- The custom DruidSQL (`dsql`) and Hjson (`hjson`) Ace modes were ported to CodeMirror `StreamLanguage`s.
+- The custom DruidSQL (`dsql`) and Hjson (`hjson`) Ace modes were first ported to CodeMirror `StreamLanguage`s that ran
+  the Ace highlight rules, then replaced with Lezer grammars (see [Syntax highlighting](#syntax-highlighting)).
 - The SQL and Hjson completion builders were kept. Their return type changed from Ace's `ValueCompletion` to a
   console-owned `EditorCompletion` that uses the field names of CodeMirror's `Completion`.
 - The workbench's "run this query" gutter markers and hover highlight were reimplemented as CodeMirror extensions.
@@ -37,22 +38,22 @@ look as possible. For how to use the new component, see [README.md](./README.md)
 
 ## What moved where
 
-| Before (Ace)                                   | After (CodeMirror)                                                       |
-| ---------------------------------------------- | ------------------------------------------------------------------------ |
-| `react-ace`'s `<AceEditor>`                    | `src/components/code-editor/code-editor.tsx` (`CodeEditor`)              |
-| `src/bootstrap/ace.ts` (imports, theme, modes) | Removed. Everything is imported where it is used                         |
-| `src/bootstrap/ace.scss` (theme overrides)     | `src/components/code-editor/code-editor-theme.ts` (+ `code-editor.scss`) |
-| `src/ace-modes/dsql.ts`, `hjson.ts`            | `src/editor-languages/dsql.ts`, `hjson.ts`                               |
-| `src/ace-modes/ace-mode-helpers.ts`            | `src/editor-languages/rule-parser.ts` (Ace-style rules → stream parser)  |
-| `src/ace-modes/ace-modes.spec.ts`              | `src/editor-languages/editor-languages.spec.ts`                          |
-| `initAceDsqlMode(functions)`                   | `dsql({ availableSqlFunctions })` (no global state)                      |
-| `mode="dsql"` / `mode="hjson"`                 | `language={dsql(...)}` / `language={hjson(...)}` (`LanguageSupport`s)    |
-| `setCompleters` / `getCompletions` prop        | The language's completion source (`language.data.of({ autocomplete })`)  |
-| `src/ace-completions/*`                        | `src/editor-completions/*` (+ `editor-completion.ts` for the type)       |
-| `makeDocHtml` (HTML strings in `docHTML`)      | Structured `doc` rendered by `completion-doc.ts`                         |
-| `Ace.ValueCompletion`                          | `EditorCompletion` (`label`, `displayLabel`, `boost`, `detail`, `doc`)   |
-| `src/singletons/ace-editor-state-cache.ts`     | Kept inside `code-editor.tsx`, forgotten with `forgetEditorState(id)`    |
-| `editor.getSelection().moveCursorTo(row, col)` | `focusEditorAt(view, { line, column })` (1-based `LineColumn`)           |
+| Before (Ace)                                   | After (CodeMirror)                                                          |
+| ---------------------------------------------- | --------------------------------------------------------------------------- |
+| `react-ace`'s `<AceEditor>`                    | `src/components/code-editor/code-editor.tsx` (`CodeEditor`)                 |
+| `src/bootstrap/ace.ts` (imports, theme, modes) | Removed. Everything is imported where it is used                            |
+| `src/bootstrap/ace.scss` (theme overrides)     | `src/components/code-editor/code-editor-theme.ts` (+ `code-editor.scss`)    |
+| `src/ace-modes/dsql.ts`, `hjson.ts`            | `src/editor-languages/dsql.ts`, `hjson.ts`                                  |
+| `src/ace-modes/ace-mode-helpers.ts`            | Removed. The languages are Lezer grammars (`dsql.grammar`, `hjson.grammar`) |
+| `src/ace-modes/ace-modes.spec.ts`              | `src/editor-languages/editor-languages.spec.ts`                             |
+| `initAceDsqlMode(functions)`                   | `dsql({ availableSqlFunctions })` (no global state)                         |
+| `mode="dsql"` / `mode="hjson"`                 | `language={dsql(...)}` / `language={hjson(...)}` (`LanguageSupport`s)       |
+| `setCompleters` / `getCompletions` prop        | The language's completion source (`language.data.of({ autocomplete })`)     |
+| `src/ace-completions/*`                        | `src/editor-completions/*` (+ `editor-completion.ts` for the type)          |
+| `makeDocHtml` (HTML strings in `docHTML`)      | Structured `doc` rendered by `completion-doc.ts`                            |
+| `Ace.ValueCompletion`                          | `EditorCompletion` (`label`, `displayLabel`, `boost`, `detail`, `doc`)      |
+| `src/singletons/ace-editor-state-cache.ts`     | Kept inside `code-editor.tsx`, forgotten with `forgetEditorState(id)`       |
+| `editor.getSelection().moveCursorTo(row, col)` | `focusEditorAt(view, { line, column })` (1-based `LineColumn`)              |
 
 ### Call sites
 
@@ -107,19 +108,40 @@ These Ace behaviors were deliberately preserved:
   (a global `initAceDsqlMode`), only editors created afterwards picked them up. Now the open editors are reconfigured
   with the new language and re-highlight right away.
 
-### Syntax highlighting port
+### Syntax highlighting
 
-The Ace modes were defined as Ace highlight rules: per state, a list of regexes tried in order, with push/pop of
-states. `createRuleParser` runs rules of the same shape as a CodeMirror stream parser, so the rules were ported nearly
-verbatim. A few details that keep the results identical:
+The Ace modes were Ace highlight rules: per state, a list of regexes tried in order, with push/pop of states. They were
+first run as they were, by a stream parser (`createRuleParser`), and then replaced with Lezer grammars, so nothing of
+the Ace modes is left:
 
-- Rules are compiled as **sticky regexes matched against the whole line**, not a slice of it, so `\b` and `$` behave
-  as they did in Ace.
-- Zero-width rules (Hjson's "object without braces" lookahead) can push a state without consuming input, as in Ace.
-- When several keyword lists contain the same word, **the last list wins** (for example, a data type that is also a
-  keyword is highlighted as a type). This matches Ace's `createKeywordMapper`.
-- Token names map to Lezer tags through `TOKEN_TABLE`. `--:ISSUE:` comments and double-quoted column references got
-  custom tags (`editorTags.issue`, `editorTags.column`), as they had custom Ace token classes.
+- `src/editor-languages/dsql.grammar`: the tokens of DruidSQL and nested parentheses. Keywords, functions, constants
+  and types come from an external specializer (`dsql-tokens.ts`), configured per set of the cluster's functions. When
+  several keyword lists contain the same word, the last list wins (a data type that is also a keyword is a type), as
+  with Ace's `createKeywordMapper`.
+- `src/editor-languages/hjson.grammar`: a real Hjson grammar (objects, arrays, properties, the root object without
+  braces, all kinds of strings and comments) with an external tokenizer (`hjson-tokens.ts`) for quoteless keys and
+  strings.
+- The parsers are generated by `script/build-grammars.mjs` as part of `script/build` and not checked in.
+- `--:ISSUE:` comments and double-quoted column references have custom tags (`editorTags.issue`, `editorTags.column`
+  in `editor-tags.ts`), as they had custom Ace token classes. Hjson keys are `tags.propertyName`, which the highlight
+  style gives the keyword color they had.
+- The completions look up node names in the syntax tree, so their checks changed from the stream tokens (`comment`,
+  `issue`, `string`) to the node names (`LineComment`, `BlockComment`, `Issue`, `String`).
+
+**How the grammars were checked:** every SQL and JSON example in the Druid docs (448 SQL, 728 JSON, and 605 Hjson
+versions of the JSON) was highlighted by both the Ace rules and the grammars, and the resulting colors were compared
+character by character.
+
+- **SQL:** the same colors in 447 of 448 examples. The other one is JSON pasted into SQL without quotes, where a number
+  directly followed by a letter (`35Z`) is now a number (Ace's `\b` made the whole thing plain).
+- **JSON:** on the 452 examples that are valid JSON, the grammar gets every character right (keys, string values,
+  numbers, escapes, plain punctuation and literals) when checked against a reference tokenizer. The Ace rules got 97
+  of them wrong, see below.
+- **Hjson:** every difference is a quoteless value that is now a string as a whole, see below.
+- **Typing:** for about 20,000 prefixes of the examples (text typed up to some point), the lines before the last one
+  keep their colors, with the Ace rules and with the grammars alike.
+- **Speed:** a full parse of 4.4 MB of JSON takes about as long as before (about 0.5 s). SQL takes about twice as
+  long as before (about 0.1 s per MB). The editor only parses what it shows and then parses incrementally.
 
 ### Partial query markers
 
@@ -192,6 +214,15 @@ Playwright at 2× scale.
 - **The find panel** is at the bottom of the editor, with a replace row (unless the editor is read-only), rather than
   Ace's floating search box. It is built from Blueprint components (`search-panel.tsx`) instead of CodeMirror's own
   panel, so it matches the console's inputs and buttons.
+- **Hjson values that contain a colon are strings.** The Ace rules took a word followed by a colon as a key anywhere,
+  even inside a string value. So `"auditTime": "2023-07-31T18:15:19.302Z"` showed `"2023-07-31T18` as a key and
+  `15` as a number, and the colors were off until the end of the object. That hit timestamps, `host:port` values and
+  URLs, in 97 of the 452 valid JSON examples in the docs.
+- **Quoteless Hjson values are strings as a whole** (`ip: 127.0.0.1`, `version: 26.0.0`, `page: Talk:Main`,
+  non-ASCII text), unless the whole value is a number or `true`, `false` or `null`. Ace highlighted their start as a
+  number, or nothing at all.
+- **A word inside an Hjson object is a key** while its colon is still being typed (Ace showed it as a string), which
+  also applies to `...` placeholders.
 - **Undo granularity:** CodeMirror groups typing into undo steps differently from Ace.
 - **Tooltips:** all editors share one tooltip container that is _prepended_ to `<body>`. Like Ace's popup, it can't be
   clipped by the editor's containers. Prepending also keeps `document.body.lastChild` pointing at Blueprint portals,
@@ -209,7 +240,8 @@ Playwright at 2× scale.
 
 - `editor-languages.spec.ts` (was `ace-modes.spec.ts`) was rewritten to tokenize with the CodeMirror parser. It covers
   the same cases as before, plus block comments, arrays and brace-less Hjson objects, and that the languages bring
-  their completions.
+  their completions. With the Lezer grammars it checks node names, quoteless Hjson values, JSON values with colons,
+  and the styles of Hjson keys and literals.
 - The snapshot serializer replaces each `.cm-editor` with a comment (language, value, placeholder, read-only) and drops
   CodeMirror's generated theme classes. 10 snapshots were updated; in every case only the wrapper markup changed.
 - `explain-dialog.spec.tsx` mocked the entire `hooks` module, which removed hooks that `CodeEditor` uses. The mock now
@@ -222,4 +254,6 @@ Playwright at 2× scale.
 `licenses.yaml` was regenerated with `script/licenses`. The CodeMirror packages and their dependencies (`@lezer/*`,
 `style-mod`, `w3c-keyname`, `crelt`, `@marijn/find-cluster-break`, all MIT) were added under `licenses/bin`. The
 entries and license files for `ace-builds`, `react-ace` and `fast-equals` (a react-ace dependency) were removed;
-`diff-match-patch`, another react-ace dependency, dropped out of `licenses.yaml` too.
+`diff-match-patch`, another react-ace dependency, dropped out of `licenses.yaml` too. `@lezer/lr` and `@lezer/common`
+were already listed (they came with `@codemirror/language`) and are now direct dependencies. `@lezer/generator` is
+only used at build time.
