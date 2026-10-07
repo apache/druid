@@ -86,7 +86,7 @@ public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQuery
                     QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
                 )
                 .put(QueryContextParameters.ENABLE_REWRITE_JOIN_TO_FILTER, true)
-                .putRaw(QueryContextParameters.SQL_JOIN_ALGORITHM.getName(), joinAlgorithm().toString())
+                .put(QueryContextParameters.SQL_JOIN_ALGORITHM, joinAlgorithm())
                 .put(QueryContextParameters.DEBUG, true)
                 .toMap()
         );

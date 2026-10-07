@@ -2659,9 +2659,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testBuilder()
         .plannerConfig(
             PLANNER_CONFIG_NO_HLL.withOverrides(
-                ImmutableMap.of(
-                    QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(), "false",
-                    QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT.getName(), false
+                QueryContext.ofMap(
+                    QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                    false,
+                    QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT,
+                    false
                 )
             )
         )
@@ -2683,12 +2685,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
 
     testQuery(
-        PLANNER_CONFIG_NO_HLL.withOverrides(
-            ImmutableMap.of(
-                QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(),
-                "true"
-            )
-        ),
+        PLANNER_CONFIG_NO_HLL.withOverrides(QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT, true),
         sqlQuery,
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -7569,12 +7566,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     msqIncompatible();
     testQuery(
-        PLANNER_CONFIG_NO_HLL.withOverrides(
-            ImmutableMap.of(
-                QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(),
-                "true"
-            )
-        ),
+        PLANNER_CONFIG_NO_HLL.withOverrides(QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT, true),
         "SELECT FLOOR(__time to day), COUNT(distinct city), COUNT(distinct user) FROM druid.visits GROUP BY 1",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -9330,12 +9322,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     msqIncompatible();
     testQuery(
-        PLANNER_CONFIG_NO_HLL.withOverrides(
-            ImmutableMap.of(
-                QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(),
-                "true"
-            )
-        ),
+        PLANNER_CONFIG_NO_HLL.withOverrides(QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT, true),
         "SELECT\n"
         + "(SUM(CASE WHEN (TIMESTAMP '2000-01-04 17:00:00'<=__time AND __time<TIMESTAMP '2022-01-05 17:00:00') THEN 1 ELSE 0 END)*1.0/COUNT(DISTINCT CASE WHEN (TIMESTAMP '2000-01-04 17:00:00'<=__time AND __time<TIMESTAMP '2022-01-05 17:00:00') THEN dim1 END))\n"
         + "FROM druid.foo\n"

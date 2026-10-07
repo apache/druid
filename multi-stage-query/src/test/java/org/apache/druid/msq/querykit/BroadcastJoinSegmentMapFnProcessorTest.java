@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.querykit;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
@@ -259,12 +258,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     // Query: used only to retrieve configured join from context
     final Query<?> mockQuery = EasyMock.mock(Query.class);
     EasyMock.expect(mockQuery.context()).andReturn(
-        QueryContext.of(
-            ImmutableMap.of(
-                QueryContextParameters.SQL_JOIN_ALGORITHM.getName(),
-                JoinAlgorithm.SORT_MERGE.getId()
-            )
-        )
+        QueryContext.of(QueryContextParameters.SQL_JOIN_ALGORITHM, JoinAlgorithm.SORT_MERGE)
     );
     EasyMock.replay(mockQuery);
     final BroadcastJoinSegmentMapFnProcessor broadcastJoinHelper = new BroadcastJoinSegmentMapFnProcessor(

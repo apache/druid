@@ -24,6 +24,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.joda.time.DateTimeZone;
 
@@ -221,6 +222,14 @@ public class PlannerConfig
     return toBuilder()
         .withOverrides(queryContext)
         .build();
+  }
+
+  /**
+   * Returns a copy of this config with a single query context parameter applied as an override.
+   */
+  public <T> PlannerConfig withOverrides(final QueryContextParameter<T> parameter, final T value)
+  {
+    return withOverrides(QueryContext.ofMap(parameter, value));
   }
 
   @Override
