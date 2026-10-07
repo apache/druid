@@ -152,13 +152,15 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected RecordSupplier<KafkaTopicPartition, Long, KafkaRecordEntity> setupRecordSupplier()
   {
+    final KafkaSupervisorIOConfig ioConfig = spec.getSpec().getIOConfig();
     return new KafkaRecordSupplier(
-        spec.getIoConfig().getConsumerProperties(),
+        ioConfig.getConsumerProperties(),
         sortingMapper,
-        spec.getIoConfig().getConfigOverrides(),
-        spec.getIoConfig().isMultiTopic(),
+        ioConfig.getConfigOverrides(),
+        ioConfig.isMultiTopic(),
         null,
-        spec.getSpec().getIOConfig().getPartitionIds()
+        ioConfig.getHeaderBasedFilterConfig(),
+        ioConfig.getPartitionIds()
     );
   }
 
@@ -294,7 +296,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         kafkaIoConfig.getConfigOverrides(),
         kafkaIoConfig.isMultiTopic(),
         ioConfig.getTaskDuration().getStandardMinutes(),
-        kafkaIoConfig.getBoundedStreamConfig()  // Pass through bounded config
+        kafkaIoConfig.getBoundedStreamConfig(),  // Pass through bounded config
+        kafkaIoConfig.getHeaderBasedFilterConfig()
     );
   }
 

@@ -322,7 +322,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-databind
@@ -375,7 +375,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -425,7 +425,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.2.4
+version: 3.3.0
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -1062,7 +1062,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1997,14 +1997,24 @@ name: Apache HttpCore 5
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.4.3
+version: 5.4.4
 libraries:
   - org.apache.httpcomponents.core5: httpcore5
-  - org.apache.httpcomponents.core5: httpcore5-h2
 notices:
   - httpcore5: |
       Apache HttpComponents Core HTTP/1.1
       Copyright 2005-2021 The Apache Software Foundation
+
+---
+
+name: Apache HttpCore 5 HTTP/2
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.4.3
+libraries:
+  - org.apache.httpcomponents.core5: httpcore5-h2
+notices:
   - httpcore5-h2: |
       Apache HttpComponents Core HTTP/2
       Copyright 2005-2021 The Apache Software Foundation
@@ -2730,7 +2740,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2740,7 +2750,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -2753,7 +2763,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
 notice: |
@@ -2784,7 +2794,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.datatype: jackson-datatype-jsr310
 notice: |
@@ -7243,7 +7253,7 @@ libraries:
 ---
 
 name: Jackson Datatype JDK8
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0

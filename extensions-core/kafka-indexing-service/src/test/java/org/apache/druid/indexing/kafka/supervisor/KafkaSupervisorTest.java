@@ -483,7 +483,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2).getStandardMinutes()
+            Duration.standardHours(2).getStandardMinutes(),
+            null
         ),
         supervisor.getTuningConfig(),
         null,
@@ -6436,7 +6437,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             maximumMessageTime,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2).getStandardMinutes()
+            Duration.standardHours(2).getStandardMinutes(),
+            null
         ),
         Collections.emptyMap(),
         OBJECT_MAPPER,
@@ -6584,6 +6586,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
       return new KafkaRecordSupplier(
           new KafkaConsumer<>(props, keyDeserializerObject, valueDeserializerObject),
           getIoConfig().isMultiTopic(),
+          null,
           null,
           getIoConfig().getPartitionIds()
       );

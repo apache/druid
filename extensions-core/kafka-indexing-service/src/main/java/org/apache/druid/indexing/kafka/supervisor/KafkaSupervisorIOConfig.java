@@ -63,9 +63,144 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   @Nullable
   private final ImmutableSortedSet<Integer> partitionIds;
   private final boolean emitTimeLagMetrics;
+  private final KafkaHeaderBasedFilterConfig headerBasedFilterConfig;
 
   /**
-   * Retains the constructor signature used before partition selection was introduced.
+   * Retains the signature used before {@code partitionIds} was introduced (defaults it to null), so that callers
+   * compiled against it keep working.
+   */
+  public KafkaSupervisorIOConfig(
+      String topic,
+      String topicPattern,
+      InputFormat inputFormat,
+      Integer replicas,
+      Integer taskCount,
+      Period taskDuration,
+      Map<String, Object> consumerProperties,
+      @Nullable AutoScalerConfig autoScalerConfig,
+      @Nullable LagAggregator lagAggregator,
+      Long pollTimeout,
+      Period startDelay,
+      Period period,
+      Boolean useEarliestOffset,
+      Period completionTimeout,
+      Period lateMessageRejectionPeriod,
+      Period earlyMessageRejectionPeriod,
+      DateTime lateMessageRejectionStartDateTime,
+      KafkaConfigOverrides configOverrides,
+      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig,
+      IdleConfig idleConfig,
+      Integer stopTaskCount,
+      @Nullable Boolean emitTimeLagMetrics,
+      @Nullable Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable BoundedStreamConfig boundedStreamConfig
+  )
+  {
+    this(
+        topic,
+        topicPattern,
+        inputFormat,
+        replicas,
+        taskCount,
+        taskDuration,
+        consumerProperties,
+        autoScalerConfig,
+        lagAggregator,
+        pollTimeout,
+        startDelay,
+        period,
+        useEarliestOffset,
+        completionTimeout,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        lateMessageRejectionStartDateTime,
+        configOverrides,
+        headerBasedFilterConfig,
+        idleConfig,
+        stopTaskCount,
+        emitTimeLagMetrics,
+        serverPriorityToReplicas,
+        boundedStreamConfig,
+        null
+    );
+  }
+
+  @JsonCreator
+  public KafkaSupervisorIOConfig(
+      @JsonProperty("topic") String topic,
+      @JsonProperty("topicPattern") String topicPattern,
+      @JsonProperty("inputFormat") InputFormat inputFormat,
+      @JsonProperty("replicas") Integer replicas,
+      @JsonProperty("taskCount") Integer taskCount,
+      @JsonProperty("taskDuration") Period taskDuration,
+      @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
+      @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
+      @Nullable @JsonProperty("lagAggregator") LagAggregator lagAggregator,
+      @JsonProperty("pollTimeout") Long pollTimeout,
+      @JsonProperty("startDelay") Period startDelay,
+      @JsonProperty("period") Period period,
+      @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
+      @JsonProperty("completionTimeout") Period completionTimeout,
+      @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
+      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
+      @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
+      @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
+      @JsonProperty("headerBasedFilterConfig") KafkaHeaderBasedFilterConfig headerBasedFilterConfig,
+      @JsonProperty("idleConfig") IdleConfig idleConfig,
+      @JsonProperty("stopTaskCount") Integer stopTaskCount,
+      @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics,
+      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig,
+      @Nullable @JsonProperty("partitionIds")
+      @JsonDeserialize(contentUsing = StrictIntegerDeserializer.class) Set<Integer> partitionIds
+  )
+  {
+    super(
+        checkTopicArguments(topic, topicPattern),
+        inputFormat,
+        replicas,
+        taskCount,
+        taskDuration,
+        startDelay,
+        period,
+        useEarliestOffset,
+        completionTimeout,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        autoScalerConfig,
+        Configs.valueOrDefault(lagAggregator, LagAggregator.DEFAULT),
+        lateMessageRejectionStartDateTime,
+        idleConfig,
+        stopTaskCount,
+        serverPriorityToReplicas,
+        boundedStreamConfig
+    );
+
+    this.headerBasedFilterConfig = headerBasedFilterConfig;
+    this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
+    Preconditions.checkNotNull(
+        consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
+        StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
+    );
+    this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
+    this.configOverrides = configOverrides;
+    this.topic = topic;
+    this.topicPattern = topicPattern;
+    if (partitionIds != null) {
+      if (partitionIds.isEmpty() || partitionIds.stream().anyMatch(id -> id == null || id < 0)) {
+        throw InvalidInput.exception("partitionIds must contain nonnegative partition IDs and must not be empty");
+      }
+      if (topicPattern != null || boundedStreamConfig != null) {
+        throw InvalidInput.exception("partitionIds requires a single topic and cannot be combined with boundedStreamConfig");
+      }
+    }
+    this.partitionIds = partitionIds == null ? null : ImmutableSortedSet.copyOf(partitionIds);
+    this.emitTimeLagMetrics = Configs.valueOrDefault(emitTimeLagMetrics, false);
+  }
+
+  /**
+   * Backwards-compatible overload without {@code headerBasedFilterConfig} (defaults to null), retained so that
+   * callers compiled against the previous signature keep working.
    */
   public KafkaSupervisorIOConfig(
       String topic,
@@ -112,84 +247,13 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         earlyMessageRejectionPeriod,
         lateMessageRejectionStartDateTime,
         configOverrides,
+        null,
         idleConfig,
         stopTaskCount,
         emitTimeLagMetrics,
         serverPriorityToReplicas,
-        boundedStreamConfig,
-        null
-    );
-  }
-
-  @JsonCreator
-  public KafkaSupervisorIOConfig(
-      @JsonProperty("topic") String topic,
-      @JsonProperty("topicPattern") String topicPattern,
-      @JsonProperty("inputFormat") InputFormat inputFormat,
-      @JsonProperty("replicas") Integer replicas,
-      @JsonProperty("taskCount") Integer taskCount,
-      @JsonProperty("taskDuration") Period taskDuration,
-      @JsonProperty("consumerProperties") Map<String, Object> consumerProperties,
-      @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
-      @Nullable @JsonProperty("lagAggregator") LagAggregator lagAggregator,
-      @JsonProperty("pollTimeout") Long pollTimeout,
-      @JsonProperty("startDelay") Period startDelay,
-      @JsonProperty("period") Period period,
-      @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
-      @JsonProperty("completionTimeout") Period completionTimeout,
-      @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod,
-      @JsonProperty("earlyMessageRejectionPeriod") Period earlyMessageRejectionPeriod,
-      @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
-      @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
-      @JsonProperty("idleConfig") IdleConfig idleConfig,
-      @JsonProperty("stopTaskCount") Integer stopTaskCount,
-      @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics,
-      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
-      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig,
-      @Nullable @JsonProperty("partitionIds")
-      @JsonDeserialize(contentUsing = StrictIntegerDeserializer.class) Set<Integer> partitionIds
-  )
-  {
-    super(
-        checkTopicArguments(topic, topicPattern),
-        inputFormat,
-        replicas,
-        taskCount,
-        taskDuration,
-        startDelay,
-        period,
-        useEarliestOffset,
-        completionTimeout,
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        autoScalerConfig,
-        Configs.valueOrDefault(lagAggregator, LagAggregator.DEFAULT),
-        lateMessageRejectionStartDateTime,
-        idleConfig,
-        stopTaskCount,
-        serverPriorityToReplicas,
         boundedStreamConfig
     );
-
-    this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
-    Preconditions.checkNotNull(
-        consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
-        StringUtils.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
-    );
-    this.pollTimeout = pollTimeout != null ? pollTimeout : DEFAULT_POLL_TIMEOUT_MILLIS;
-    this.configOverrides = configOverrides;
-    this.topic = topic;
-    this.topicPattern = topicPattern;
-    if (partitionIds != null) {
-      if (partitionIds.isEmpty() || partitionIds.stream().anyMatch(id -> id == null || id < 0)) {
-        throw InvalidInput.exception("partitionIds must contain nonnegative partition IDs and must not be empty");
-      }
-      if (topicPattern != null || boundedStreamConfig != null) {
-        throw InvalidInput.exception("partitionIds requires a single topic and cannot be combined with boundedStreamConfig");
-      }
-    }
-    this.partitionIds = partitionIds == null ? null : ImmutableSortedSet.copyOf(partitionIds);
-    this.emitTimeLagMetrics = Configs.valueOrDefault(emitTimeLagMetrics, false);
   }
 
   /**
@@ -256,6 +320,14 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return emitTimeLagMetrics;
   }
 
+  @JsonProperty
+  @Nullable
+  public KafkaHeaderBasedFilterConfig getHeaderBasedFilterConfig()
+  {
+    return headerBasedFilterConfig;
+  }
+
+
   @Override
   public String toString()
   {
@@ -277,6 +349,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", lateMessageRejectionPeriod=" + getLateMessageRejectionPeriod() +
            ", lateMessageRejectionStartDateTime=" + getLateMessageRejectionStartDateTime() +
            ", configOverrides=" + getConfigOverrides() +
+           ", headerBasedFilterConfig=" + headerBasedFilterConfig +
            ", idleConfig=" + getIdleConfig() +
            ", stopTaskCount=" + getStopTaskCount() +
            '}';
@@ -313,7 +386,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            && Objects.equals(configOverrides, that.configOverrides)
            && Objects.equals(topic, that.topic)
            && Objects.equals(topicPattern, that.topicPattern)
-           && Objects.equals(partitionIds, that.partitionIds);
+           && Objects.equals(partitionIds, that.partitionIds)
+           && Objects.equals(headerBasedFilterConfig, that.headerBasedFilterConfig);
   }
 
   @Override
@@ -327,7 +401,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         topic,
         topicPattern,
         partitionIds,
-        emitTimeLagMetrics
+        emitTimeLagMetrics,
+        headerBasedFilterConfig
     );
   }
 

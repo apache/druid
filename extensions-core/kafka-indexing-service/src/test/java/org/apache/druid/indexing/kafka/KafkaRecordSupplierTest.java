@@ -319,7 +319,7 @@ public class KafkaRecordSupplierTest
     // The topic has partitions 0 and 1.
     insertData();
     final KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, null, Set.of(PARTITION_1.partition()));
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, null, null, Set.of(PARTITION_1.partition()));
 
     Assertions.assertEquals(Set.of(PARTITION_1), recordSupplier.getPartitionIds(TOPIC));
 
@@ -336,7 +336,7 @@ public class KafkaRecordSupplierTest
     // The topic has partitions 0 and 1 only.
     insertData();
     final KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, null, Set.of(0, 3));
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, null, null, Set.of(0, 3));
 
     final StreamException error = Assertions.assertThrows(StreamException.class, () -> recordSupplier.getPartitionIds(TOPIC));
     Assertions.assertTrue(error.getMessage().contains("[3]"), error.getMessage());
