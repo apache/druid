@@ -22,6 +22,7 @@ package org.apache.druid.query.context;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.BadQueryContextException;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameter.Visibility;
 import org.apache.druid.query.context.constraint.Range;
@@ -374,5 +375,19 @@ class QueryContextParameterTest
       assertNotNull(parameter.getDocumentation(), parameter.getName());
       assertNotNull(parameter.getSince(), parameter.getName());
     }
+  }
+
+  @Test
+  void testEnumParameterWithCustomLookup()
+  {
+    final QueryContextParameter<JoinAlgorithm> parameter = QueryContextParameters.SQL_JOIN_ALGORITHM;
+
+    assertEquals(JoinAlgorithm.SORT_MERGE, parameter.parse("sortMerge"));
+    assertEquals(JoinAlgorithm.BROADCAST, parameter.parse(JoinAlgorithm.BROADCAST));
+    assertEquals(
+        "Query context parameter [sqlJoinAlgorithm] should be one of [broadcast, sortMerge], but got [SORT_MERGE]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("SORT_MERGE")).getMessage()
+    );
+    assertThrows(BadQueryContextException.class, () -> parameter.parse(1));
   }
 }
