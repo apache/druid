@@ -21,9 +21,11 @@ import type { CompletionContext } from '@codemirror/autocomplete';
 import type { CompletionWord } from '../components/code-editor/completion-source';
 import { tokenBefore } from '../components/code-editor/completion-source';
 import type { JsonCompletionItem, JsonCompletionRule } from '../utils';
-import { getCompletionsForPath, getHjsonContext } from '../utils';
+import { getCompletionsForPath } from '../utils';
 
 import type { EditorCompletion } from './editor-completion';
+import type { HjsonContext } from './hjson-context';
+import { getHjsonContext } from './hjson-context';
 
 /**
  * The completions for the word being typed in Hjson. Needs the hjson language for the syntax tree.
@@ -40,7 +42,7 @@ export function getHjsonCompletions(
   }
 
   // Get the context of where we are in the JSON structure
-  const hjsonContext = getHjsonContext(state.sliceDoc(0, pos));
+  const hjsonContext = getHjsonContext(state, pos);
   const quote = state.sliceDoc(from - 1, from) === '"';
 
   // Get completions based on the current path and object context
@@ -71,7 +73,7 @@ export function getHjsonCompletions(
  */
 function filterCompletionsByContext(
   completions: JsonCompletionItem[],
-  hjsonContext: { isEditingKey: boolean; currentKey?: string; currentObject: any },
+  hjsonContext: HjsonContext,
   quote: boolean,
 ): JsonCompletionItem[] {
   if (hjsonContext.isEditingKey) {

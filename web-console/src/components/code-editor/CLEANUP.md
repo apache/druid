@@ -26,7 +26,7 @@ Status: ✅ done, ⬜ to do.
 
 ## Suggested order
 
-1. ⬜ 1: the Hjson context from the syntax tree
+1. ✅ 1: the Hjson context from the syntax tree
 2. ⬜ 2 + 3: the SQL completions from the syntax tree, with the grammar changes that make that possible (3 removes the
    workaround in 2)
 3. ⬜ 6: comments that refer to Ace
@@ -35,17 +35,23 @@ Status: ✅ done, ⬜ to do.
 
 Section 5 lists what intentionally stays the way it is.
 
-## ⬜ 1. The Hjson context repeats the Hjson grammar
+## ✅ 1. The Hjson context from the syntax tree
 
-`src/utils/hjson-context.ts` (`getHjsonContext`) is a 405-line state machine that reads the text from the start up to
-the cursor. It tracks comments, quoted and multiline strings, brackets and keys, which `hjson.grammar` now gives as
-`Object`, `Property`, `PropertyName` and `Array` nodes.
+`src/utils/hjson-context.ts` was a 405-line state machine that read the text from the start up to the cursor, tracking
+comments, quoted and multiline strings, brackets and keys, which `hjson.grammar` gives as `Object`, `Property`,
+`PropertyName` and `Array` nodes. It is replaced by `src/editor-completions/hjson-context.ts`:
 
-- The JSON path, whether a key or a value is being typed, the current key and the current object can all come from
-  walking up the tree from `syntaxTree(state).resolveInner(pos, -1)`.
-- **Bug fix:** the scanner never sees the text after the cursor, so a completion rule with a `condition` on a property
-  that is written below the cursor (like `type`) does not match. The tree has the whole object.
-- `HjsonContext.isEditingComment` is never used.
+- `getHjsonContext(state, pos)` walks up the tree from `resolveInner(pos, -1)` to the object or array that the cursor
+  is in, and builds the JSON path from the `Property` names and `Array` indexes above it.
+- A value is being edited when the cursor is after the colon of the property it is in (or of the property right before
+  it, when nothing is typed yet), up to the end of the value. A value that starts after the cursor is on a line below
+  (the error recovery took the next line as the value) and also counts as the value being typed.
+- `currentObject` is built from the object's `Property` nodes, without the property that is being edited. Strings are
+  read with `JSON.parse` and multiline strings with `Hjson.parse` (for the indentation).
+- **Bug fix:** the object now includes the properties after the cursor, so a completion rule with a `condition` on a
+  property written below the cursor (like `queryType`) matches, and keys written below are not suggested again.
+- `currentKey` is only set when editing a value (it was sometimes the half-typed key, which nothing used), and
+  `isEditingComment` (never used) is gone. The comment check stays in `getHjsonCompletions`.
 
 ## ⬜ 2. The SQL completions read the text with regexes
 

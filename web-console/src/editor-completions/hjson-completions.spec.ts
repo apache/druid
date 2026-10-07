@@ -52,6 +52,14 @@ describe('getHjsonCompletions', () => {
     expect(completionValues).toContain('scan');
   });
 
+  it('sees the properties after the cursor', () => {
+    const completionValues = completionsAt('{\n  |\n  "queryType": "timeseries"\n}').map(
+      c => c.label,
+    );
+    expect(completionValues).toContain('granularity');
+    expect(completionValues).not.toContain('queryType');
+  });
+
   it('returns query-specific properties based on queryType', () => {
     const completions = completionsAt('{ "queryType": "timeseries", |');
 
