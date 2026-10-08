@@ -52,8 +52,9 @@ Before the tests start, a global setup (`util/global-setup.ts`) waits for the co
   (git ignored). Every HTTP response with a status of 400 or more is also logged with its body
   (`util/fixtures.ts`).
 
-The tests create datasources and tasks and do not clean them up. Each datasource name ends in a timestamp so that
-runs don't collide, but a cluster that runs the tests often will collect them.
+A test deletes the datasources it created when it passes: it stops their tasks, removes their compaction config and
+permanently deletes their segments (with a `kill` task). When it fails, they are kept to look into (the log says which)
+and have to be deleted by hand, from the Datasources view.
 
 ## The tests
 
@@ -82,9 +83,11 @@ e2e-tests/
     query/             Query view: run a query, cancel a query
     workbench/         Query view: run a query, accepting the task slot warning
   util/
-    fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses)
+    fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses, and has the
+                       newDatasourceName fixture)
     global-setup.ts    waits for the console's SQL endpoint before the tests start
-    druid.ts           the tutorial data dir and ingestion specs, runIndexTask (submits a task and waits for it)
+    druid.ts           the tutorial data dir and ingestion specs, runTask (submits a task and waits for it),
+                       deleteDatasource
     sql.ts             querySql, and the cluster state the tests wait for: task statuses, a datasource's segments
     playwright.ts      openView, and helpers that find inputs and buttons by their label or text
     table.ts           extractTable / extractTableRecords: read a table's rows as text (by position / by header)
@@ -112,5 +115,6 @@ e2e-tests/
 - Retry UI checks that depend on data loading with `await expect(async () => { ... }).toPass()`. Make each attempt
   fail fast (like `QueryOverview.runQuery` throwing on a query error) rather than wait out a timeout.
 - Set up data that the test is not about through the API, not the UI: `readTutorialIngestionSpec`, change what you
-  need (the datasource name at least) and `runIndexTask(request, ingestionSpec)`.
-- Give anything you create a unique name (append `new Date().toISOString()`).
+  need (the datasource name at least) and `runTask(request, ingestionSpec)`.
+- Name a datasource you create with the `newDatasourceName` fixture: `newDatasourceName('my-test')` makes a unique
+  name (the prefix and the time) and deletes the datasource after the test passes.

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { APIRequestContext } from '@playwright/test';
+import type { APIRequestContext, APIResponse } from '@playwright/test';
 import { expect } from '@playwright/test';
 import { readFileSync } from 'fs';
 import path from 'path';
@@ -47,14 +47,22 @@ export function readTutorialIngestionSpec(fileName: string): IngestionSpec {
 }
 
 /**
- * Submits a task (through the console's service, which `request`, the Playwright request fixture, uses) and waits
- * for it to succeed. Its segments are loaded some time after that.
+ * Encodes a datasource name (or other value) for a URL path, like Api.encodePath in src/singletons/api.ts (which
+ * can't be imported here).
  */
-export async function runIndexTask(
+function encodePath(path: string): string {
+  return path.replace(/[#%&';?[\\\]^|]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+}
+
+/**
+ * Submits a task (through the console's service, which `request`, the Playwright request fixture, uses) and waits
+ * for it to succeed. For an ingestion task, its segments are loaded some time after that.
+ */
+export async function runTask(
   request: APIRequestContext,
-  ingestionSpec: IngestionSpec,
+  task: IngestionSpec | Record<string, unknown>,
 ): Promise<void> {
-  const submitResponse = await request.post('/druid/indexer/v1/task', { data: ingestionSpec });
+  const submitResponse = await request.post('/druid/indexer/v1/task', { data: task });
   expect(submitResponse.ok(), await submitResponse.text()).toBe(true);
   const taskId = ((await submitResponse.json()) as { task: string }).task;
 
@@ -64,7 +72,7 @@ export async function runIndexTask(
     .poll(
       async () => {
         const statusResponse = await request.get(
-          `/druid/indexer/v1/task/${encodeURIComponent(taskId)}/status`,
+          `/druid/indexer/v1/task/${encodePath(taskId)}/status`,
         );
         expect(statusResponse.ok(), await statusResponse.text()).toBe(true);
         const { status } = (await statusResponse.json()) as {
@@ -79,4 +87,37 @@ export async function runIndexTask(
 
   // Fail here, with why the task failed, rather than time out waiting for its segments
   expect(statusCode, errorMsg).toBe('SUCCESS');
+}
+
+/**
+ * Removes a datasource that a test created, and everything about it: stops its tasks, removes its compaction config
+ * and permanently deletes its segments.
+ */
+export async function deleteDatasource(
+  request: APIRequestContext,
+  datasource: string,
+): Promise<void> {
+  const encodedDatasource = encodePath(datasource);
+  const expectOk = async (response: APIResponse, allowNotFound = false) => {
+    if (allowNotFound && response.status() === 404) return;
+    expect(response.ok(), `${response.url()}: ${await response.text()}`).toBe(true);
+  };
+
+  await expectOk(
+    await request.post(`/druid/indexer/v1/datasources/${encodedDatasource}/shutdownAllTasks`),
+    true, // It has no running tasks
+  );
+  await expectOk(
+    await request.delete(`/druid/indexer/v1/compaction/config/datasources/${encodedDatasource}`),
+    true, // It has no compaction config
+  );
+  await expectOk(
+    await request.delete(`/druid/indexer/v1/datasources/${encodedDatasource}`),
+    true, // It has no segments
+  );
+  await runTask(request, {
+    type: 'kill',
+    dataSource: datasource,
+    interval: '1000-01-01/3000-01-01',
+  });
 }

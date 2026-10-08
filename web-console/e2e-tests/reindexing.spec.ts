@@ -27,13 +27,17 @@ import {
 import { PublishConfig } from './component/load-data/config/publish';
 import { ReindexDataConnector } from './component/load-data/data-connector/reindex';
 import { DataLoader } from './component/load-data/data-loader';
-import { readTutorialIngestionSpec, runIndexTask } from './util/druid';
+import { readTutorialIngestionSpec, runTask } from './util/druid';
 import { expect, test } from './util/fixtures';
 import { CLUSTER_STATE_POLL, getDatasourceSegments, getTaskStatuses } from './util/sql';
 
 test.describe('Reindexing from Druid', () => {
-  test('Reindex datasource from dynamic to range partitions', async ({ page, request }) => {
-    const datasourceName = 'reindex-dynamic-to-range' + new Date().toISOString();
+  test('Reindex datasource from dynamic to range partitions', async ({
+    page,
+    request,
+    newDatasourceName,
+  }) => {
+    const datasourceName = newDatasourceName('reindex-dynamic-to-range');
     const interval = '2015-09-12/2015-09-13';
     const dataConnector = new ReindexDataConnector(page, {
       datasourceName,
@@ -82,7 +86,7 @@ test.describe('Reindexing from Druid', () => {
 async function loadInitialData(request: APIRequestContext, datasourceName: string) {
   const ingestionSpec = readTutorialIngestionSpec('wikipedia-index.json');
   ingestionSpec.spec.dataSchema.dataSource = datasourceName;
-  await runIndexTask(request, ingestionSpec);
+  await runTask(request, ingestionSpec);
 }
 
 function validateConnectLocalData(lines: string[]) {

@@ -21,15 +21,19 @@ import type { APIRequestContext, Page } from '@playwright/test';
 import { CompactionConfig } from './component/datasources/compaction';
 import { DatasourcesOverview } from './component/datasources/overview';
 import { HashedPartitionsSpec } from './component/load-data/config/partition';
-import { readTutorialIngestionSpec, runIndexTask } from './util/druid';
+import { readTutorialIngestionSpec, runTask } from './util/druid';
 import { expect, test } from './util/fixtures';
 import { CLUSTER_STATE_POLL, getDatasourceSegments } from './util/sql';
 
 // The workflow in these tests is based on the compaction tutorial:
 // https://druid.apache.org/docs/latest/tutorials/tutorial-compaction.html
 test.describe('Auto-compaction', () => {
-  test('Compacts segments from dynamic to hash partitions', async ({ page, request }) => {
-    const datasourceName = 'autocompaction-dynamic-to-hash' + new Date().toISOString();
+  test('Compacts segments from dynamic to hash partitions', async ({
+    page,
+    request,
+    newDatasourceName,
+  }) => {
+    const datasourceName = newDatasourceName('autocompaction-dynamic-to-hash');
     await loadInitialData(request, datasourceName);
 
     const numRows = 1412;
@@ -65,7 +69,7 @@ async function loadInitialData(request: APIRequestContext, datasourceName: strin
   const { dataSchema } = ingestionSpec.spec;
   dataSchema.dataSource = datasourceName;
   dataSchema.granularitySpec!.intervals = ['2015-09-12/2015-09-12T02:00']; // 2 hours rather than the day, to be faster
-  await runIndexTask(request, ingestionSpec);
+  await runTask(request, ingestionSpec);
 }
 
 async function configureCompaction(

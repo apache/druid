@@ -18,9 +18,14 @@
 
 import { test as base } from '@playwright/test';
 
+import { deleteDatasource } from './druid';
+
 export { expect } from '@playwright/test';
 
-export const test = base.extend<{ logFailedResponses: void }>({
+export const test = base.extend<{
+  logFailedResponses: void;
+  newDatasourceName: (prefix: string) => string;
+}>({
   // Logs every response with an error status (and its body) so that a failure can be understood from the log alone
   logFailedResponses: [
     async ({ page }, use) => {
@@ -43,5 +48,29 @@ export const test = base.extend<{ logFailedResponses: void }>({
       await use();
     },
     { auto: true },
+  ],
+
+  // Makes a unique datasource name (the prefix and the time), for the test to create. After the test passes, the
+  // datasource is deleted (with its tasks, compaction config and segments). After it fails, it is kept to look into.
+  newDatasourceName: [
+    async ({ request }, use, testInfo) => {
+      const datasourceNames: string[] = [];
+      await use(prefix => {
+        const datasourceName = prefix + new Date().toISOString();
+        datasourceNames.push(datasourceName);
+        return datasourceName;
+      });
+
+      if (testInfo.status !== testInfo.expectedStatus) {
+        for (const datasourceName of datasourceNames) {
+          console.log(`Keeping datasource ${datasourceName} of the failed test`);
+        }
+        return;
+      }
+      for (const datasourceName of datasourceNames) {
+        await deleteDatasource(request, datasourceName);
+      }
+    },
+    { timeout: 2 * 60 * 1000 },
   ],
 });

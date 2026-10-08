@@ -69,9 +69,14 @@ modernize them, in order. Each step should leave the suite passing.
   the datasource name / interval on it, and `runIndexTask` `POST`s it to `/druid/indexer/v1/task` with the `request`
   fixture (so through the console's service) and polls the task status, failing with the task's error if it fails.
 
-## 5. Clean up after each test
+## 5. Clean up after each test (done)
 
-- Mark the datasources a test created as unused (and kill its tasks) in an `afterEach`/fixture teardown.
+- The `newDatasourceName(prefix)` fixture makes a unique name and, after the test passes, deletes the datasource
+  (`deleteDatasource`: shut down its tasks, delete its compaction config, mark its segments unused, run a `kill` task
+  and wait for it). After a failure the datasource is kept to look into.
+- Found on the way (console bug, fixed in its own commit, could be its own PR): `Api.encodePath` left `^` and `|` as
+  they are, which the browser sends as is and Jetty rejects (400 Illegal Path Character), so every action on a
+  datasource with one of those in its name (mark unused, kill, retention rules, compaction config) failed.
 
 ## 6. Simplify the code
 

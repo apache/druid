@@ -35,9 +35,8 @@ import { CLUSTER_STATE_POLL, getDatasourceSegments, getTaskStatuses } from './ut
 const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Україна 한국 中国!?~';
 
 test.describe('Tutorial: Loading a file', () => {
-  test('Loads data from local disk', async ({ page, request }) => {
-    const datasourceName =
-      'load-data-from-local-disk' + ALL_SORTS_OF_CHARS + new Date().toISOString();
+  test('Loads data from local disk', async ({ page, request, newDatasourceName }) => {
+    const datasourceName = newDatasourceName('load-data-from-local-disk' + ALL_SORTS_OF_CHARS);
     const dataLoader = new DataLoader({
       page: page,
       connector: new LocalFileDataConnector(page, {
