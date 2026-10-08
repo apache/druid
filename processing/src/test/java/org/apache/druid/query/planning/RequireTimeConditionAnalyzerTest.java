@@ -31,6 +31,7 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -91,6 +92,20 @@ public class RequireTimeConditionAnalyzerTest
   }
 
   @Test
+  public void testBoundedOuterGroupByOverUnboundedInnerGroupByIsNotSatisfied()
+  {
+    // Nested groupBy: GroupByQuery.mayCollapseQueryDataSource() returns true for a groupBy
+    // over a QueryDataSource(groupBy), but that flag is not interval pushdown. At runtime,
+    // GroupByQueryQueryToolChest.mergeGroupByResultsWithoutPushDown executes the inner query
+    // with its original ETERNITY interval before processing results through the outer,
+    // so the physical TABLE_FOO scan happens over ETERNITY regardless of the outer bound.
+    // Guards Frank's second follow-up P1 on #20441 (comment 4219000942).
+    GroupByQuery inner = groupBy(TABLE_FOO, ETERNITY);
+    GroupByQuery outer = groupBy(new QueryDataSource(inner), BOUNDED);
+    Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(outer));
+  }
+
+  @Test
   public void testGlobalLookupIsSatisfied()
   {
     Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(scan(LOOKUP_LOOKYLOO, ETERNITY)));
@@ -138,6 +153,59 @@ public class RequireTimeConditionAnalyzerTest
     // right leg crosses two join-leg boundaries before reaching the bounded ancestor;
     // walker descent must be transitive through nested JoinDataSources.
     ScanQuery query = scan(join(TABLE_FOO, join(TABLE_FOO, TABLE_BAR)), BOUNDED);
+    Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
+  }
+
+  @Test
+  public void testJoinRightLegHasOwnBoundedInnerQueryIsSatisfied()
+  {
+    // Right leg is a QueryDataSource whose inner query owns a bounded segment spec.
+    // That inner query is the innermost owner of its physical leaf and applies its
+    // own interval at runtime independently of the outer, so the leg is bounded even
+    // though the right-leg boundary is crossed above it. Guards against over-rejection.
+    QueryDataSource boundedRight = new QueryDataSource(scan(TABLE_BAR, BOUNDED));
+    ScanQuery query = scan(join(TABLE_FOO, boundedRight), BOUNDED);
+    Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
+  }
+
+  @Test
+  public void testIntermediateQueryDataSourceBoundIsRespected()
+  {
+    // outer(ETERNITY) -> QDS -> middle(BOUNDED) -> QDS -> inner(ETERNITY)
+    // Only the innermost query owns the physical scan at runtime; the middle layer's
+    // bound does not reach the leaf. Must be rejected.
+    ScanQuery inner = scan(TABLE_FOO, ETERNITY);
+    ScanQuery middle = scan(new QueryDataSource(inner), BOUNDED);
+    ScanQuery outer = scan(new QueryDataSource(middle), ETERNITY);
+    Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(outer));
+  }
+
+  @Test
+  public void testIntermediateBoundedInnerUnderUnboundedOuterIsSatisfied()
+  {
+    // outer(ETERNITY) -> QDS -> inner(BOUNDED, scan on TABLE_FOO). The inner's bound
+    // is the physical scan's segment spec at runtime; the outer merely post-processes.
+    ScanQuery inner = scan(TABLE_FOO, BOUNDED);
+    ScanQuery outer = scan(new QueryDataSource(inner), ETERNITY);
+    Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(outer));
+  }
+
+  @Test
+  public void testUnionOfTablesUnderBoundedOuterIsSatisfied()
+  {
+    // UnionDataSource over same-schema tables shares the outer query's segment spec
+    // (there is no per-member Query owner). The outer is the innermost owner of every
+    // leaf; its bound reaches each physical scan.
+    UnionDataSource union = new UnionDataSource(ImmutableList.of(TABLE_FOO, TABLE_BAR));
+    ScanQuery query = scan(union, BOUNDED);
+    Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
+  }
+
+  @Test
+  public void testUnionOfTablesUnderUnboundedOuterIsNotSatisfied()
+  {
+    UnionDataSource union = new UnionDataSource(ImmutableList.of(TABLE_FOO, TABLE_BAR));
+    ScanQuery query = scan(union, ETERNITY);
     Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(query));
   }
 

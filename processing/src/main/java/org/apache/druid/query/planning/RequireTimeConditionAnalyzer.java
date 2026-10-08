@@ -97,30 +97,30 @@ public final class RequireTimeConditionAnalyzer
       if (!isPhysicalLeaf(dataSource) || dataSource.isGlobal()) {
         return dataSource;
       }
-      boolean crossedJoinLegBoundary = false;
-      boolean collapsedChain = true;
-      int queriesSeen = 0;
+      // Only the innermost Query ancestor's segment spec reaches a physical leaf at
+      // runtime: an outer non-collapsible QueryDataSource executes its inner query with
+      // the inner's original intervals, and even for collapsible pairs (e.g. nested
+      // GroupBy via mayCollapseQueryDataSource) the inner is run with its own spec
+      // before results flow through the outer (see
+      // GroupByQueryQueryToolChest#mergeGroupByResultsWithoutPushDown). An outer bound
+      // therefore does not propagate to the physical scan. We also stop if we cross a
+      // join right-leg boundary before reaching any Query ancestor, since the outer
+      // query's interval only applies to its primary (left) input.
       for (int i = parents.size() - 1; i >= 0; i--) {
         EVNode ancestor = parents.get(i);
-        if (!ancestor.isQuery() && ancestor.index != null && ancestor.index != 0 && i > 0) {
-          EVNode parentOfAncestor = parents.get(i - 1);
-          if (!parentOfAncestor.isQuery() && parentOfAncestor.dataSource instanceof JoinDataSource) {
-            crossedJoinLegBoundary = true;
-          }
-        }
         if (ancestor.isQuery()) {
-          Query<?> q = ancestor.getQuery();
-          if (queriesSeen > 0) {
-            // To trust q's bound, every Query between the leaf and q must have been
-            // absorbed into q (or further up). Each hop needs the outer Query to
-            // mayCollapseQueryDataSource() its inner QueryDataSource; otherwise the
-            // inner query runs independently and the outer's bound does not reach the leaf.
-            collapsedChain &= q.mayCollapseQueryDataSource();
-          }
-          if (!crossedJoinLegBoundary && collapsedChain && isBounded(q)) {
+          if (isBounded(ancestor.getQuery())) {
             return dataSource;
           }
-          queriesSeen++;
+          allLegsBounded = false;
+          return dataSource;
+        }
+        if (ancestor.index != null && ancestor.index != 0 && i > 0) {
+          EVNode parentOfAncestor = parents.get(i - 1);
+          if (!parentOfAncestor.isQuery() && parentOfAncestor.dataSource instanceof JoinDataSource) {
+            allLegsBounded = false;
+            return dataSource;
+          }
         }
       }
       allLegsBounded = false;
