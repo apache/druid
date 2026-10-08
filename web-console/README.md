@@ -115,7 +115,7 @@ be skipped.
 
 `e2e-tests/util/debug.ts:saveScreenshotIfError()` is used to save a screenshot of the web console
 when the test fails. For example, if `e2e-tests/tutorial-batch.spec.ts` fails, it will create
-`load-data-from-local-disk-error-screenshot.png`.
+`load-data-from-local-disk-error-screenshot.jpeg`.
 
 #### Disabling headless mode
 
@@ -142,7 +142,7 @@ Like so: `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT=18081 npm run test-e2e`
 As part of this directory:
 
 - `assets/` - The images (and other assets) used within the console
-- `e2e-tests/` - End-to-end tests for the console
+- `e2e-tests/` - End-to-end tests for the console (see `e2e-tests/README.md`)
 - `public/` - The compiled destination for the files powering this console
 - `script/` - Some helper bash scripts for running this console
 - `src/` - This directory constitutes all the source code for this console
