@@ -42,6 +42,18 @@ describe('hash-routing', () => {
       expect(TableFilters.fromString(route.param).toString()).toEqual(filters.toString());
     });
 
+    it('keeps table filters with every sort of character', () => {
+      const filters = TableFilters.eq({
+        datasource: '<>|!@#$%^&`\'".,:;\\*()[]{}Україна 한국 中国!?~',
+      });
+      // As the browser has it in the URL, which percent-encodes the non-ASCII and some ASCII characters
+      const route = parseHashRoute(encodeURI(`datasources/${filters.toString()}`));
+      expect(route.view).toEqual('datasources');
+      expect(TableFilters.fromString(route.param).toArray()[0].values).toEqual(
+        filters.toArray()[0].values,
+      );
+    });
+
     it('decodes non reserved characters', () => {
       expect(parseHashRoute('segments/datasource=wiki%20pedia')).toEqual({
         view: 'segments',
