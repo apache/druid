@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Tag;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -131,7 +132,7 @@ public abstract class WebConsoleTestBase extends EmbeddedClusterTestBase
    */
   protected void runSpec(String spec, Map<String, String> env) throws Exception
   {
-    final File webConsoleDir = new File(System.getProperty("web.console.dir", "../web-console")).getCanonicalFile();
+    final File webConsoleDir = webConsoleDir();
     final Map<String, String> specEnv = new HashMap<>(env);
     specEnv.put(
         "DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT",
@@ -178,6 +179,14 @@ public abstract class WebConsoleTestBase extends EmbeddedClusterTestBase
             String.join("\n", output)
         )
     );
+  }
+
+  /**
+   * The {@code web-console} directory of this checkout.
+   */
+  protected static File webConsoleDir() throws IOException
+  {
+    return new File(System.getProperty("web.console.dir", "../web-console")).getCanonicalFile();
   }
 
   private void keepAlive(File webConsoleDir, Map<String, String> specEnv, List<String> command)

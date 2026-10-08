@@ -18,13 +18,14 @@
 
 import type { Page } from '@playwright/test';
 
-import { clickButton, setLabeledInput } from '../../util/playwright';
+import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
 
 /**
  * Where the data loader reads the data from.
  */
 export type DataConnector =
   | { readonly type: 'local'; readonly baseDirectory: string; readonly fileFilter: string }
+  | { readonly type: 's3'; readonly uris: string[] }
   | { readonly type: 'reindex'; readonly datasourceName: string; readonly interval: string };
 
 /**
@@ -34,6 +35,8 @@ export function connectorCardTitle(connector: DataConnector): string {
   switch (connector.type) {
     case 'local':
       return 'Local disk';
+    case 's3':
+      return 'Amazon S3';
     case 'reindex':
       return 'Reindex from Druid';
   }
@@ -54,6 +57,10 @@ export async function connect(page: Page, connector: DataConnector): Promise<voi
     case 'local':
       await setLabeledInput(page, 'Base directory', connector.baseDirectory);
       await setLabeledInput(page, 'File filter', connector.fileFilter);
+      break;
+
+    case 's3':
+      await setLabeledTextarea(page, 'S3 URIs', connector.uris.join(', '));
       break;
 
     case 'reindex':

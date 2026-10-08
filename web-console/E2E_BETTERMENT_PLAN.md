@@ -97,6 +97,8 @@ modernize them, in order. Each step should leave the suite passing.
 Prototype (option B: JUnit drives, the specs stay in TypeScript): `WebConsoleTestBase` and `CoreWebConsoleTest` in
 `embedded-tests` (`org.apache.druid.testing.embedded.console`), tag `web-console`, profile `web-console-tests`. The 5
 specs pass unchanged on it (50s for the whole Maven run), with a keep-alive mode for working on a spec.
+`S3WebConsoleTest` (with `S3StorageResource`) runs `s3-ingestion.spec.ts`, which loads from `s3://` through the data
+loader (24s for the test class).
 
 Found on the way (fixed in the specs, they were latent races that the quickstart's timing hid):
 - `extractTableRecords` read a view's table right after opening it, before the view loaded its data.
@@ -106,8 +108,6 @@ Left:
 - CI: a job that installs Druid with the console built (not `-Dweb.console.skip=true`), runs `npm ci` and
   `mvn -pl embedded-tests verify -Pweb-console-tests`, and uploads `web-console/test-results/` and
   `embedded-tests/target/failsafe-reports/` on failure; then drop `script/druid` from `web-checks.sh`.
-- A first feature test with a resource: `S3WebConsoleTest` with `S3StorageResource`, loading from `s3://` through
-  the data loader.
 - Make the `newDatasourceName` cleanup optional (a new cluster per class doesn't need it), or drop it with the
   quickstart way.
 - A check that every spec is run by some `*WebConsoleTest` (they are listed by hand).

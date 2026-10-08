@@ -77,7 +77,8 @@ artifacts of a failed spec in `test-results/<spec>/`. The tests are tagged `web-
   proxies to :8888).
 - **A spec that needs more than Druid** (S3, Kafka...) gets its own `*WebConsoleTest` class that extends
   `WebConsoleTestBase`, adds the resource in `addResources` and passes its settings (endpoint, bucket...) to the spec as
-  environment variables of `runSpec`.
+  environment variables of `runSpec`. See `S3WebConsoleTest` and `s3-ingestion.spec.ts`. The resources run in Docker
+  containers (with Testcontainers), so Docker has to be running.
 
 A test deletes the datasources it created when it passes: it stops their tasks, removes their compaction config and
 permanently deletes their segments (with a `kill` task). When it fails, they are kept to look into (the log says which)
@@ -95,6 +96,7 @@ for up to 2 minutes.
 | `auto-compaction.spec.ts`    | Follows the [compaction tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-compaction): loads 2 hours of `compaction-init-index.json` through the API (3 segments, 1,412 rows), sets a compaction config (`skipOffsetFromLatest: PT0S`, hashed partitions) from the **Datasources** view, reopens the dialog until it reads back the same config, then forces compaction runs (from the Alt-click "more" menu) until there are 2 segments. |
 | `multi-stage-query.spec.ts`  | Runs an MSQ `SELECT` over `EXTERN(...)` on the tutorial file in the **Query** view, clicking "Run it anyway" if the cluster warns it lacks task slots, and checks the top 2 of the 10 channels by count.                                                                                                                                                                                             |
 | `cancel-query.spec.ts`       | Runs `SELECT sleep(40)` in the **Query** view, waits for its `POST` to `druid/v2`, clicks "Cancel query" and checks that the `DELETE` it sends is answered with `202 Accepted`.                                                                                                                                                                                                                       |
+| `s3-ingestion.spec.ts`       | Loads the tutorial file from S3 through the data loader's **Amazon S3** connector (its URI from `DRUID_E2E_TEST_S3_URI`) and waits for the task to succeed and for 1 segment with 39,244 rows. Skipped without `DRUID_E2E_TEST_S3_URI`: it runs on an embedded cluster with an S3 container, from `S3WebConsoleTest` (which also makes S3 the deep storage and task log storage). |
 
 ## Layout
 
