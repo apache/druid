@@ -25,7 +25,7 @@ fails against a live cluster.
 
 They use the Playwright test runner (`@playwright/test`, configured in `../playwright.config.ts`). The Chromium it
 drives is downloaded by the `playwright-chromium` package's install script, so keep the two packages on the same
-version. They run in CI as part of `.github/scripts/web-checks.sh`.
+version. They run in CI on embedded clusters (see below), as part of `.github/scripts/web-checks.sh`.
 
 ## Running them
 
@@ -52,7 +52,7 @@ Before the tests start, a global setup (`util/global-setup.ts`) waits for the co
   (git ignored). Every HTTP response with a status of 400 or more is also logged with its body
   (`util/fixtures.ts`).
 
-### On an embedded cluster (prototype)
+### On an embedded cluster (as in CI)
 
 `CoreWebConsoleTest` in `embedded-tests` (package `org.apache.druid.testing.embedded.console`) starts an embedded
 cluster (in one JVM, with an in-memory metadata store, its Router on :8888) and runs each spec on it with

@@ -109,7 +109,7 @@ From the web-console directory:
 4. Stop druid cluster: `script/druid stop`
 
 If you already have a druid cluster running on the standard ports, the steps to build/start/stop a druid cluster can
-be skipped.
+be skipped. CI runs the tests on embedded clusters instead, see [e2e-tests/README.md](e2e-tests/README.md).
 
 #### Running one test, watching or debugging
 

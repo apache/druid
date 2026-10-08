@@ -100,14 +100,18 @@ specs pass unchanged on it (50s for the whole Maven run), with a keep-alive mode
 `S3WebConsoleTest` (with `S3StorageResource`) runs `s3-ingestion.spec.ts`, which loads from `s3://` through the data
 loader (24s for the test class).
 
+CI: `web-checks.sh` installs `web-console` (with the console built), then runs
+`mvn verify -pl 'embedded-tests,!web-console' -am -Pweb-console-tests -DskipUTs`, which builds the 38 modules
+embedded-tests needs (not the whole of Druid, nor a distribution). `worker.yml` uploads
+`embedded-tests/target/failsafe-reports/` (the Druid and Playwright logs) and `web-console/test-results/` (instead of
+the distribution's logs), and the JUnit report shows the specs' results. `script/druid` stays for running the tests
+against a quickstart locally.
+
 Found on the way (fixed in the specs, they were latent races that the quickstart's timing hid):
 - `extractTableRecords` read a view's table right after opening it, before the view loaded its data.
 - `cancelQuery` waited for any SQL `POST` (it could be the column tree's) and canceled before the query was sent.
 
 Left:
-- CI: a job that installs Druid with the console built (not `-Dweb.console.skip=true`), runs `npm ci` and
-  `mvn -pl embedded-tests verify -Pweb-console-tests`, and uploads `web-console/test-results/` and
-  `embedded-tests/target/failsafe-reports/` on failure; then drop `script/druid` from `web-checks.sh`.
 - Make the `newDatasourceName` cleanup optional (a new cluster per class doesn't need it), or drop it with the
   quickstart way.
 - A check that every spec is run by some `*WebConsoleTest` (they are listed by hand).
