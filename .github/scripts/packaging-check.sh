@@ -25,9 +25,9 @@ set -x
 # profile is enabled here so that the Docker test job only needs to build the
 # binary tarball. GPG signing and the OWASP dependency check are skipped as they
 # are not meaningful in CI.
-mvn -B clean install -Prat -Papache-release --fail-at-end \
+./mvnw -B clean install -Prat -Papache-release --fail-at-end \
   -pl '!benchmarks, !distribution' -P skip-tests -Dweb.console.skip=false -T1C \
   -Dgpg.skip -Ddependency-check.skip
-mvn -B install -Prat -Papache-release -Pdist -Pbundle-contrib-exts --fail-at-end \
+./mvnw -B install -Prat -Papache-release -Pdist -Pbundle-contrib-exts --fail-at-end \
   -pl 'distribution' -P skip-tests -Dweb.console.skip=false -T1C \
   -Dgpg.skip -Ddependency-check.skip
