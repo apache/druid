@@ -20,5 +20,4 @@ rm -rf \
   coverage \
   src/editor-languages/dsql-docs.ts \
   node_modules \
-  public \
-  index.html
+  public
