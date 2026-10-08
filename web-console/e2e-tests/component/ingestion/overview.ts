@@ -18,7 +18,7 @@
 
 import type { Page } from '@playwright/test';
 
-import { filterableText, openView } from '../../util/playwright';
+import { openView } from '../../util/playwright';
 import { extractTableRecords } from '../../util/table';
 
 import { IngestionTask } from './task';
@@ -34,10 +34,10 @@ export class TasksOverview {
   }
 
   /**
-   * The tasks of the datasources whose name contains (the filterable end of) `datasourceName`.
+   * The tasks of the datasource `datasourceName`, as the view shows them.
    */
   async getTasks(datasourceName: string): Promise<IngestionTask[]> {
-    await openView(this.page, 'tasks', { datasource: filterableText(datasourceName) });
+    await openView(this.page, 'tasks', { datasource: datasourceName });
 
     const records = await extractTableRecords(this.page.locator('.tasks-view .console-table'));
 

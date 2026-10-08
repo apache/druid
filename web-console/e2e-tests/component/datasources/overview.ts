@@ -21,7 +21,6 @@ import type { Page } from '@playwright/test';
 import {
   clickButton,
   clickMenuItem,
-  filterableText,
   getLabeledInput,
   openView,
   setLabeledInput,
@@ -47,10 +46,10 @@ export class DatasourcesOverview {
   private readonly table = () => this.page.locator('.datasources-view .console-table');
 
   /**
-   * The datasources whose name contains (the filterable end of) `datasourceName`.
+   * The datasource named `datasourceName` (none, if it doesn't exist yet), as the view shows it.
    */
   async getDatasources(datasourceName: string): Promise<Datasource[]> {
-    await openView(this.page, 'datasources', { datasource: filterableText(datasourceName) });
+    await openView(this.page, 'datasources', { datasource: datasourceName });
 
     const records = await extractTableRecords(this.table());
 
@@ -91,7 +90,7 @@ export class DatasourcesOverview {
   }
 
   private async openCompactionConfigurationDialog(datasourceName: string) {
-    await openView(this.page, 'datasources', { datasource: filterableText(datasourceName) });
+    await openView(this.page, 'datasources', { datasource: datasourceName });
     await this.table().locator('.ct-tbody .action-cell .bp6-icon-more').click();
     await clickMenuItem(this.page, 'Edit compaction configuration');
 

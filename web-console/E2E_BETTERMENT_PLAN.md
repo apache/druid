@@ -46,11 +46,11 @@ modernize them, in order. Each step should leave the suite passing.
 - `openEditActions`: find the datasource's row and click its actions button, rather than the Nth `.bp6-icon-more`.
 - `selectSuggestibleInput`: no legacy `'"value"'` text selector.
 - Found on the way: the Datasources and Tasks tables page at 50 rows, so on a cluster with leftover datasources the
-  test's own row could be on page 2. `openView` now filters the view through its hash route. A filter can't hold
-  `|`, `#` or `?`, so it matches on the end of the name after the last of those (`filterableText`).
-- Found on the way (console bug, not fixed here): `TableFilters.toString()` doesn't encode `#` or `?`, but
-  `parseHashRoute` ends the route at them, so going from a datasource whose name has `#` or `?` to its tasks or
-  segments drops the rest of the name.
+  test's own row could be on page 2. `openView` now filters the view to the datasource through its hash route.
+- Found on the way (console bugs, fixed in their own commit, could be their own PR): `TableFilters.toString()` didn't
+  encode `#` or `?`, which end the hash route, and a filter value couldn't contain `|`, which separates values (so
+  going from a datasource with any of those in its name to its tasks or segments filtered on the wrong thing).
+  Now `#` and `?` are encoded, and `\|` / `\\` escape `|` / `\` in a value.
 
 ## 3. Don't read tables by column position (done)
 

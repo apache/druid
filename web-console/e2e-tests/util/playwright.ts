@@ -22,29 +22,25 @@ const CONSOLE_PATH = '/unified-console.html';
 
 /**
  * Opens a view of the console (`view` is its hash route, like 'datasources'), optionally with its table filtered to
- * the rows where each `filter` column contains the given text (see `filterableText`). If the console is already open
- * it is reloaded, so that the view shows fresh data.
+ * the rows where each `filter` column equals the given value. If the console is already open it is reloaded, so that
+ * the view shows fresh data.
  */
 export async function openView(
   page: Page,
   view: string,
   filter?: Record<string, string>,
 ): Promise<void> {
-  // Encoded like TableFilters.toString() in src/utils/table-filters
+  // Encoded like TableFilters.eq(filter).toString() in src/utils/table-filters (which can't be imported here as it
+  // brings in the whole of src/utils)
   const filterParam = Object.entries(filter ?? {})
-    .map(([column, text]) => `${column}~${text.replace(/[%&/]/g, encodeURIComponent)}`)
+    .map(
+      ([column, value]) =>
+        `${column}=${value.replace(/[\\|]/g, '\\$&').replace(/[#%&/?]/g, encodeURIComponent)}`,
+    )
     .join('&');
   const wasOpen = page.url().includes(CONSOLE_PATH);
   await page.goto(`${CONSOLE_PATH}#${view}${filterParam ? `/${filterParam}` : ''}`);
   if (wasOpen) await page.reload();
-}
-
-/**
- * The longest end of `text` that a table filter in the hash route can hold: `|` separates a filter's values and the
- * route ends at `#` or `?` (see TableFilter and parseHashRoute in src/utils).
- */
-export function filterableText(text: string): string {
-  return text.split(/[#?|]/).pop()!;
 }
 
 function escapeRegExp(text: string): string {
