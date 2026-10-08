@@ -62,11 +62,12 @@ modernize them, in order. Each step should leave the suite passing.
 - Learned: `index_parallel` subtasks share the datasource (filter on `task_id = group_id`), `sys.segments` returns
   no row for an aggregate over no segments, and `expect.poll` stops (does not retry) when its callback throws.
 
-## 4. Set up data through the HTTP API
+## 4. Set up data through the HTTP API (done)
 
-- `runIndexTask` shells out to `sed` + `examples/bin/post-index-task` (bash + Python) and hard-codes the Coordinator
-  on :8081. Read the spec JSON, set the datasource name / interval in code and `POST` it to `/druid/indexer/v1/task`
-  with the `request` fixture, then poll the task status.
+- `runIndexTask` shelled out to `sed` + `examples/bin/post-index-task` (bash + Python) and hard-coded the Coordinator
+  on :8081. Now `readTutorialIngestionSpec` reads the spec JSON (pointing its input at this checkout), the spec sets
+  the datasource name / interval on it, and `runIndexTask` `POST`s it to `/druid/indexer/v1/task` with the `request`
+  fixture (so through the console's service) and polls the task status, failing with the task's error if it fails.
 
 ## 5. Clean up after each test
 

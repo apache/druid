@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import path from 'path';
+import type { APIRequestContext } from '@playwright/test';
 
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
 import {
@@ -27,7 +27,7 @@ import {
 import { PublishConfig } from './component/load-data/config/publish';
 import { ReindexDataConnector } from './component/load-data/data-connector/reindex';
 import { DataLoader } from './component/load-data/data-loader';
-import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, runIndexTask } from './util/druid';
+import { readTutorialIngestionSpec, runIndexTask } from './util/druid';
 import { expect, test } from './util/fixtures';
 import { CLUSTER_STATE_POLL, getDatasourceSegments, getTaskStatuses } from './util/sql';
 
@@ -60,7 +60,7 @@ test.describe('Reindexing from Druid', () => {
       publishConfig: publishConfig,
     });
 
-    loadInitialData(datasourceName);
+    await loadInitialData(request, datasourceName);
 
     await expect
       .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
@@ -79,11 +79,10 @@ test.describe('Reindexing from Druid', () => {
   });
 });
 
-function loadInitialData(datasourceName: string) {
-  const ingestionSpec = path.join(DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, 'wikipedia-index.json');
-  const setDatasourceName = `s/wikipedia/${datasourceName}/`;
-  const sedCommands = [setDatasourceName];
-  runIndexTask(ingestionSpec, sedCommands);
+async function loadInitialData(request: APIRequestContext, datasourceName: string) {
+  const ingestionSpec = readTutorialIngestionSpec('wikipedia-index.json');
+  ingestionSpec.spec.dataSchema.dataSource = datasourceName;
+  await runIndexTask(request, ingestionSpec);
 }
 
 function validateConnectLocalData(lines: string[]) {

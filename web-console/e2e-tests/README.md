@@ -29,8 +29,8 @@ version. They run in CI as part of `.github/scripts/web-checks.sh`.
 
 ## Running them
 
-The tests need a Druid cluster on the standard quickstart ports, started from this checkout (they read the
-`examples/quickstart/tutorial` data files from it and post tasks with `examples/bin/post-index-task`):
+The tests need a Druid cluster with its Router on :8888 (every request goes through the console's service), running
+on the same machine (its tasks read the `examples/quickstart/tutorial` data files of this checkout):
 
 ```bash
 script/druid build   # once, builds a distribution with the extensions the tests need
@@ -63,8 +63,8 @@ for up to 2 minutes.
 | Spec                         | What it does                                                                                                                                                                                                                                                                                                                                                                                         |
 |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `tutorial-batch.spec.ts`     | Follows the [batch loading tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-batch) through the classic **data loader**: connects to `wikiticker-2015-09-12-sampled.json.gz` on local disk, checks the first and last preview lines, sets the timestamp to `timestamp_parse("time") + 1` (so the `__time` check below proves the expression was used), turns rollup off, sets DAY granularity and submits. It then waits (through SQL on `sys.tasks` and `sys.segments`) for the task to succeed and for the datasource to be fully available as 1 segment with 39,244 rows, checks that the **Tasks** and **Datasources** views show the same, and checks the first row of `SELECT *` in the **Query** view. The datasource name contains a string of special and non-Latin characters to test quoting and escaping. |
-| `reindexing.spec.ts`         | Loads `wikipedia-index.json` with `post-index-task` (1 segment), then reindexes it through the data loader's **Reindex from Druid** connector into range partitions on `channel` with 10,000 target rows per segment. Checks the preview rows, that the task succeeds, and that the datasource ends up as 4 segments with the same 39,244 rows.                                                         |
-| `auto-compaction.spec.ts`    | Follows the [compaction tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-compaction): loads 2 hours of `compaction-init-index.json` with `post-index-task` (3 segments, 1,412 rows), sets a compaction config (`skipOffsetFromLatest: PT0S`, hashed partitions) from the **Datasources** view, reopens the dialog until it reads back the same config, then forces compaction runs (from the Alt-click "more" menu) until there are 2 segments. |
+| `reindexing.spec.ts`         | Loads `wikipedia-index.json` through the API (1 segment), then reindexes it through the data loader's **Reindex from Druid** connector into range partitions on `channel` with 10,000 target rows per segment. Checks the preview rows, that the task succeeds, and that the datasource ends up as 4 segments with the same 39,244 rows.                                                         |
+| `auto-compaction.spec.ts`    | Follows the [compaction tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-compaction): loads 2 hours of `compaction-init-index.json` through the API (3 segments, 1,412 rows), sets a compaction config (`skipOffsetFromLatest: PT0S`, hashed partitions) from the **Datasources** view, reopens the dialog until it reads back the same config, then forces compaction runs (from the Alt-click "more" menu) until there are 2 segments. |
 | `multi-stage-query.spec.ts`  | Runs an MSQ `SELECT` over `EXTERN(...)` on the tutorial file in the **Query** view, clicking "Run it anyway" if the cluster warns it lacks task slots, and checks the top 2 of the 10 channels by count.                                                                                                                                                                                             |
 | `cancel-query.spec.ts`       | Runs `SELECT sleep(40)` in the **Query** view, waits for its `POST` to `druid/v2`, clicks "Cancel query" and checks that the `DELETE` it sends is answered with `202 Accepted`.                                                                                                                                                                                                                       |
 
@@ -84,7 +84,7 @@ e2e-tests/
   util/
     fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses)
     global-setup.ts    waits for the console's SQL endpoint before the tests start
-    druid.ts           tutorial data dir, runIndexTask
+    druid.ts           the tutorial data dir and ingestion specs, runIndexTask (submits a task and waits for it)
     sql.ts             querySql, and the cluster state the tests wait for: task statuses, a datasource's segments
     playwright.ts      openView, and helpers that find inputs and buttons by their label or text
     table.ts           extractTable / extractTableRecords: read a table's rows as text (by position / by header)
@@ -111,4 +111,6 @@ e2e-tests/
   being added, hidden or moved doesn't break the test.
 - Retry UI checks that depend on data loading with `await expect(async () => { ... }).toPass()`. Make each attempt
   fail fast (like `QueryOverview.runQuery` throwing on a query error) rather than wait out a timeout.
+- Set up data that the test is not about through the API, not the UI: `readTutorialIngestionSpec`, change what you
+  need (the datasource name at least) and `runIndexTask(request, ingestionSpec)`.
 - Give anything you create a unique name (append `new Date().toISOString()`).

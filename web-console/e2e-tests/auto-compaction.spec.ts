@@ -16,13 +16,12 @@
  * limitations under the License.
  */
 
-import type { Page } from '@playwright/test';
-import path from 'path';
+import type { APIRequestContext, Page } from '@playwright/test';
 
 import { CompactionConfig } from './component/datasources/compaction';
 import { DatasourcesOverview } from './component/datasources/overview';
 import { HashedPartitionsSpec } from './component/load-data/config/partition';
-import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, runIndexTask } from './util/druid';
+import { readTutorialIngestionSpec, runIndexTask } from './util/druid';
 import { expect, test } from './util/fixtures';
 import { CLUSTER_STATE_POLL, getDatasourceSegments } from './util/sql';
 
@@ -31,7 +30,7 @@ import { CLUSTER_STATE_POLL, getDatasourceSegments } from './util/sql';
 test.describe('Auto-compaction', () => {
   test('Compacts segments from dynamic to hash partitions', async ({ page, request }) => {
     const datasourceName = 'autocompaction-dynamic-to-hash' + new Date().toISOString();
-    loadInitialData(datasourceName);
+    await loadInitialData(request, datasourceName);
 
     const numRows = 1412;
     await expect
@@ -61,15 +60,12 @@ test.describe('Auto-compaction', () => {
   });
 });
 
-function loadInitialData(datasourceName: string) {
-  const ingestionSpec = path.join(
-    DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
-    'compaction-init-index.json',
-  );
-  const setDatasourceName = `s/compaction-tutorial/${datasourceName}/`;
-  const setIntervals = 's|2015-09-12/2015-09-13|2015-09-12/2015-09-12T02:00|'; // shorten to reduce test duration
-  const sedCommands = [setDatasourceName, setIntervals];
-  runIndexTask(ingestionSpec, sedCommands);
+async function loadInitialData(request: APIRequestContext, datasourceName: string) {
+  const ingestionSpec = readTutorialIngestionSpec('compaction-init-index.json');
+  const { dataSchema } = ingestionSpec.spec;
+  dataSchema.dataSource = datasourceName;
+  dataSchema.granularitySpec!.intervals = ['2015-09-12/2015-09-12T02:00']; // 2 hours rather than the day, to be faster
+  await runIndexTask(request, ingestionSpec);
 }
 
 async function configureCompaction(

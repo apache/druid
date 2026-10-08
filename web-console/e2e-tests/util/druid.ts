@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-import { execSync } from 'child_process';
+import type { APIRequestContext } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { readFileSync } from 'fs';
 import path from 'path';
 
-export const COORDINATOR_URL = 'http://localhost:8081';
+import type { IngestionSpec } from '../../src/druid-models';
 
 const UTIL_DIR = __dirname;
 const E2E_TEST_DIR = path.dirname(UTIL_DIR);
@@ -32,16 +34,49 @@ export const DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR = path.join(
   'tutorial',
 );
 
-export function runIndexTask(ingestionSpecPath: string, sedCommands: string[]) {
-  const postIndexTask = path.join(DRUID_DIR, 'examples', 'bin', 'post-index-task');
-  const sedCommandsString = sedCommands.map(sedCommand => `-e '${sedCommand}'`).join(' ');
-  execSync(
-    `${postIndexTask} \
-       --file <(sed ${sedCommandsString} ${ingestionSpecPath}) \
-       --url ${COORDINATOR_URL}`,
-    {
-      shell: 'bash',
-      timeout: 3 * 60 * 1000,
-    },
-  );
+/**
+ * Reads one of the ingestion specs of the tutorials (in examples/quickstart/tutorial), reading its input from this
+ * checkout (rather than from `quickstart/tutorial/` relative to where Druid runs).
+ */
+export function readTutorialIngestionSpec(fileName: string): IngestionSpec {
+  const ingestionSpec = JSON.parse(
+    readFileSync(path.join(DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, fileName), 'utf-8'),
+  ) as IngestionSpec;
+  ingestionSpec.spec.ioConfig.inputSource!.baseDir = DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR;
+  return ingestionSpec;
+}
+
+/**
+ * Submits a task (through the console's service, which `request`, the Playwright request fixture, uses) and waits
+ * for it to succeed. Its segments are loaded some time after that.
+ */
+export async function runIndexTask(
+  request: APIRequestContext,
+  ingestionSpec: IngestionSpec,
+): Promise<void> {
+  const submitResponse = await request.post('/druid/indexer/v1/task', { data: ingestionSpec });
+  expect(submitResponse.ok(), await submitResponse.text()).toBe(true);
+  const taskId = ((await submitResponse.json()) as { task: string }).task;
+
+  let statusCode: string | undefined;
+  let errorMsg: string | undefined;
+  await expect
+    .poll(
+      async () => {
+        const statusResponse = await request.get(
+          `/druid/indexer/v1/task/${encodeURIComponent(taskId)}/status`,
+        );
+        expect(statusResponse.ok(), await statusResponse.text()).toBe(true);
+        const { status } = (await statusResponse.json()) as {
+          status: { statusCode: string; errorMsg?: string };
+        };
+        ({ statusCode, errorMsg } = status);
+        return statusCode;
+      },
+      { timeout: 3 * 60 * 1000, intervals: [1000], message: `task ${taskId} to finish` },
+    )
+    .not.toBe('RUNNING');
+
+  // Fail here, with why the task failed, rather than time out waiting for its segments
+  expect(statusCode, errorMsg).toBe('SUCCESS');
 }
