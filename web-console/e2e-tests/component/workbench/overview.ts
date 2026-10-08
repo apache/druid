@@ -16,43 +16,38 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Page } from '@playwright/test';
 
-import { clickButton, setQueryInput } from '../../util/playwright';
+import { clickButton, openView, setQueryInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
  * Represents the workbench tab.
  */
 export class WorkbenchOverview {
-  private readonly page: playwright.Page;
-  private readonly baseUrl: string;
+  private readonly page: Page;
 
-  constructor(page: playwright.Page, unifiedConsoleUrl: string) {
+  constructor(page: Page) {
     this.page = page;
-    this.baseUrl = unifiedConsoleUrl + '#workbench';
   }
 
   async runQuery(query: string): Promise<string[][]> {
-    await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle' });
+    await openView(this.page, 'workbench');
 
     await setQueryInput(this.page, query);
     await clickButton(this.page, 'Run');
 
-    const results = this.page.locator('div.result-table-pane');
+    const results = this.page.locator('.result-table-pane');
     const capacityAlert = this.page.locator('.alert-dialog').filter({
       hasText: 'The cluster does not currently have enough available task slots',
     });
-    const first = await Promise.race([
-      results.waitFor({ timeout: 4 * 60 * 1000 }).then(() => 'results'),
-      capacityAlert.waitFor({ timeout: 4 * 60 * 1000 }).then(() => 'capacityAlert'),
-    ]);
-    if (first === 'capacityAlert') {
-      await capacityAlert.getByRole('button', { name: 'Run it anyway' }).click();
-      await results.waitFor({ timeout: 4 * 60 * 1000 });
+    const timeout = 4 * 60 * 1000;
+    await results.or(capacityAlert).waitFor({ timeout });
+    if (await capacityAlert.isVisible()) {
+      await clickButton(capacityAlert, 'Run it anyway');
+      await results.waitFor({ timeout });
     }
 
-    return await extractTable(this.page, 'div.result-table-pane div.ct-tr-group', 'div.ct-td');
+    return await extractTable(results.locator('.ct-tr-group'), '.ct-td');
   }
 }

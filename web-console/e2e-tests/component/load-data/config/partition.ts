@@ -18,9 +18,10 @@
 
 /* eslint-disable max-classes-per-file */
 
-import type * as playwright from 'playwright-chromium';
+import type { Page } from '@playwright/test';
 
 import {
+  formGroup,
   getLabeledInput,
   getLabeledTextarea,
   selectSuggestibleInput,
@@ -42,10 +43,10 @@ const PARTITIONING_TYPE = 'Partitioning type';
 
 export interface PartitionsSpec {
   readonly type: string;
-  apply(page: playwright.Page): Promise<void>;
+  apply(page: Page): Promise<void>;
 }
 
-export async function readPartitionSpec(page: playwright.Page): Promise<PartitionsSpec | null> {
+export async function readPartitionSpec(page: Page): Promise<PartitionsSpec | null> {
   const type = await getLabeledInput(page, PARTITIONING_TYPE);
   switch (type) {
     case HashedPartitionsSpec.TYPE:
@@ -62,12 +63,11 @@ export class HashedPartitionsSpec implements PartitionsSpec {
 
   readonly type: string;
 
-  static async read(page: playwright.Page): Promise<HashedPartitionsSpec> {
-    // The shards control may not be visible in that case this is not an error, it is simply not set (null)
-    let numShards: number | null = null;
-    try {
-      numShards = await getLabeledInputAsNumber(page, HashedPartitionsSpec.NUM_SHARDS);
-    } catch {}
+  static async read(page: Page): Promise<HashedPartitionsSpec> {
+    // The shards control is not always shown, then it is simply not set (null)
+    const numShards = (await formGroup(page, HashedPartitionsSpec.NUM_SHARDS).count())
+      ? await getLabeledInputAsNumber(page, HashedPartitionsSpec.NUM_SHARDS)
+      : null;
     return new HashedPartitionsSpec({ numShards });
   }
 
@@ -76,7 +76,7 @@ export class HashedPartitionsSpec implements PartitionsSpec {
     this.type = HashedPartitionsSpec.TYPE;
   }
 
-  async apply(page: playwright.Page): Promise<void> {
+  async apply(page: Page): Promise<void> {
     await setLabeledInput(page, PARTITIONING_TYPE, this.type);
     if (this.numShards != null) {
       await setLabeledInput(page, HashedPartitionsSpec.NUM_SHARDS, String(this.numShards));
@@ -84,15 +84,12 @@ export class HashedPartitionsSpec implements PartitionsSpec {
   }
 }
 
-async function getLabeledInputAsNumber(
-  page: playwright.Page,
-  label: string,
-): Promise<number | null> {
+async function getLabeledInputAsNumber(page: Page, label: string): Promise<number | null> {
   const valueString = await getLabeledInput(page, label);
   return valueString === '' ? null : Number(valueString);
 }
 
-async function getLabeledTextareaAsArray(page: playwright.Page, label: string): Promise<string[]> {
+async function getLabeledTextareaAsArray(page: Page, label: string): Promise<string[]> {
   const valueString = await getLabeledTextarea(page, label);
   return valueString === '' ? [] : valueString.split(',').map(v => v.trim());
 }
@@ -111,7 +108,7 @@ export class RangePartitionsSpec implements PartitionsSpec {
 
   readonly type: string;
 
-  static async read(page: playwright.Page): Promise<RangePartitionsSpec> {
+  static async read(page: Page): Promise<RangePartitionsSpec> {
     const partitionDimensions = await getLabeledTextareaAsArray(
       page,
       RangePartitionsSpec.PARTITION_DIMENSIONS,
@@ -136,7 +133,7 @@ export class RangePartitionsSpec implements PartitionsSpec {
     this.type = RangePartitionsSpec.TYPE;
   }
 
-  async apply(page: playwright.Page): Promise<void> {
+  async apply(page: Page): Promise<void> {
     await selectSuggestibleInput(page, PARTITIONING_TYPE, this.type);
     await setLabeledTextarea(
       page,

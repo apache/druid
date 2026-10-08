@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Page } from '@playwright/test';
 
-import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
+import { clickButton, openView, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
 
 import type { ConfigureSchemaConfig } from './config/configure-schema';
 import type { ConfigureTimestampConfig } from './config/configure-timestamp';
@@ -30,19 +30,15 @@ import type { DataConnector } from './data-connector/data-connector';
  * Represents load data tab.
  */
 export class DataLoader {
-  private readonly baseUrl: string;
-
   constructor(props: DataLoaderProps) {
     Object.assign(this, props);
-    this.baseUrl = props.unifiedConsoleUrl + '#data-loader';
   }
 
   /**
    * Execute each step to load data.
    */
   async load() {
-    await this.page.goto(this.baseUrl);
-    await this.startNewSpecIfNeeded();
+    await openView(this.page, 'data-loader');
     await this.start();
     await this.connect(this.connector, this.connectValidator);
     if (this.connector.needParse) {
@@ -58,61 +54,57 @@ export class DataLoader {
     await this.editSpec();
   }
 
-  private async startNewSpecIfNeeded() {
-    const startNewSpecLocator = this.page.locator(`//*[contains(text(),"Start a new")]`);
-    if (await startNewSpecLocator.count()) {
-      await startNewSpecLocator.click();
-    }
+  private async start() {
+    await this.page
+      .locator('.bp6-card')
+      .filter({ has: this.page.locator('p', { hasText: this.connector.name }) })
+      .click();
+    await clickButton(this.page, 'Connect data');
   }
 
-  private async start() {
-    const cardSelector = `//*[contains(@class,"bp6-card")][p[contains(text(),"${this.connector.name}")]]`;
-    await this.page.click(cardSelector);
-    await clickButton(this.page, 'Connect data');
+  private async clickNext(step: string) {
+    await clickButton(this.page.locator('.next-bar'), `Next: ${step}`);
   }
 
   private async connect(connector: DataConnector, validator: (previewLines: string[]) => void) {
     await connector.connect();
     await this.validateConnect(validator);
-    const next = this.connector.needParse ? 'Parse data' : 'Transform';
-    await clickButton(this.page, `Next: ${next}`);
+    await this.clickNext(this.connector.needParse ? 'Parse data' : 'Transform');
   }
 
   private async validateConnect(validator: (previewLines: string[]) => void) {
-    await this.page.waitForSelector('.raw-lines');
-    const previewLines = await this.page.$$eval('.raw-lines .raw-line', els =>
-      els.map(el => el.textContent ?? ''),
-    );
-    validator(previewLines);
+    const rawLines = this.page.locator('.raw-lines .raw-line');
+    await rawLines.first().waitFor();
+    validator(await rawLines.allTextContents());
   }
 
   private async parseData() {
-    await this.page.waitForSelector('.parse-data-table');
-    await clickButton(this.page, 'Next: Parse time');
+    await this.page.locator('.parse-data-table').waitFor();
+    await this.clickNext('Parse time');
   }
 
   private async parseTime(configureTimestampConfig?: ConfigureTimestampConfig) {
-    await this.page.waitForSelector('.parse-time-table');
+    await this.page.locator('.parse-time-table').waitFor();
     if (configureTimestampConfig) {
       await this.applyConfigureTimestampConfig(configureTimestampConfig);
     }
-    await clickButton(this.page, 'Next: Transform');
+    await this.clickNext('Transform');
   }
 
   private async transform() {
-    await this.page.waitForSelector('.transform-table');
-    await clickButton(this.page, 'Next: Filter');
+    await this.page.locator('.transform-table').waitFor();
+    await this.clickNext('Filter');
   }
 
   private async filter() {
-    await this.page.waitForSelector('.filter-table');
-    await clickButton(this.page, 'Next: Configure schema');
+    await this.page.locator('.filter-table').waitFor();
+    await this.clickNext('Configure schema');
   }
 
   private async configureSchema(configureSchemaConfig: ConfigureSchemaConfig) {
-    await this.page.waitForSelector('.schema-table');
+    await this.page.locator('.schema-table').waitFor();
     await this.applyConfigureSchemaConfig(configureSchemaConfig);
-    await clickButton(this.page, 'Next: Partition');
+    await this.clickNext('Partition');
   }
 
   private async applyConfigureTimestampConfig(configureTimestampConfig: ConfigureTimestampConfig) {
@@ -122,24 +114,23 @@ export class DataLoader {
   }
 
   private async applyConfigureSchemaConfig(configureSchemaConfig: ConfigureSchemaConfig) {
-    const rollupSelector = '//*[text()="Rollup"]';
-    const rollupInput = await this.page.$(`${rollupSelector}/input`);
-    const rollupChecked = await rollupInput!.evaluate(el => (el as HTMLInputElement).checked);
-    if (rollupChecked !== configureSchemaConfig.rollup) {
-      await this.page.click(rollupSelector);
-      const confirmationDialogSelector = '//*[contains(@class,"bp6-alert-body")]';
-      await this.page.waitForSelector(confirmationDialogSelector);
-      await clickButton(this.page, 'Yes');
-      const statusMessageSelector = '.recipe-toaster';
-      await this.page.waitForSelector(statusMessageSelector);
-      await this.page.click(`${statusMessageSelector} button`);
+    const { rollup } = configureSchemaConfig;
+    const rollupSwitch = this.page.getByLabel('Rollup', { exact: true });
+    if ((await rollupSwitch.isChecked()) !== rollup) {
+      // The switch's input is visually hidden, so click its label (which asks for confirmation)
+      await this.page.locator('label', { has: rollupSwitch }).click();
+      await clickButton(
+        this.page.locator('.bp6-alert'),
+        `Yes - ${rollup ? 'enable' : 'disable'} rollup`,
+      );
+      await this.page.locator('.recipe-toaster').getByRole('button').click();
     }
   }
 
   private async partition(partitionConfig: PartitionConfig) {
-    await this.page.waitForSelector('div.load-data-view.partition');
+    await this.page.locator('.load-data-view.partition').waitFor();
     await this.applyPartitionConfig(partitionConfig);
-    await clickButton(this.page, 'Next: Tune');
+    await this.clickNext('Tune');
   }
 
   private async applyPartitionConfig(partitionConfig: PartitionConfig) {
@@ -153,14 +144,14 @@ export class DataLoader {
   }
 
   private async tune() {
-    await this.page.waitForSelector('div.load-data-view.tuning');
-    await clickButton(this.page, 'Next: Publish');
+    await this.page.locator('.load-data-view.tuning').waitFor();
+    await this.clickNext('Publish');
   }
 
   private async publish(publishConfig: PublishConfig) {
-    await this.page.waitForSelector('div.load-data-view.publish');
+    await this.page.locator('.load-data-view.publish').waitFor();
     await this.applyPublishConfig(publishConfig);
-    await clickButton(this.page, 'Edit spec');
+    await this.clickNext('Edit spec');
   }
 
   private async applyPublishConfig(publishConfig: PublishConfig) {
@@ -170,14 +161,13 @@ export class DataLoader {
   }
 
   private async editSpec() {
-    await this.page.waitForSelector('div.load-data-view.spec');
-    await clickButton(this.page, 'Submit');
+    await this.page.locator('.load-data-view.spec').waitFor();
+    await clickButton(this.page.locator('.next-bar'), 'Submit task');
   }
 }
 
 interface DataLoaderProps {
-  readonly page: playwright.Page;
-  readonly unifiedConsoleUrl: string;
+  readonly page: Page;
   readonly connector: DataConnector;
   readonly connectValidator: (previewLines: string[]) => void;
   readonly configureTimestampConfig?: ConfigureTimestampConfig;

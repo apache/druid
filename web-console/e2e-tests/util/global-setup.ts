@@ -16,19 +16,21 @@
  * limitations under the License.
  */
 
-import { UNIFIED_CONSOLE_URL } from './druid';
-import { createBrowser, createPage } from './playwright';
+import type { FullConfig } from '@playwright/test';
+import { expect, request } from '@playwright/test';
 
-export async function waitTillWebConsoleReady() {
-  const browser = await createBrowser();
-
+/**
+ * Waits until the console can run SQL, which is what it needs to function.
+ */
+export default async function globalSetup(config: FullConfig) {
+  const { baseURL } = config.projects[0].use;
+  const api = await request.newContext({ baseURL });
   try {
-    const page = await createPage(browser);
-    await page.goto(UNIFIED_CONSOLE_URL);
-    await page.waitForSelector('//*[contains(text(),"console will not function at the moment")]', {
-      state: 'hidden',
-    });
+    await expect(async () => {
+      const response = await api.post('/druid/v2/sql', { data: { query: 'SELECT 1' } });
+      expect(response.status()).toBe(200);
+    }).toPass({ timeout: 2 * 60 * 1000, intervals: [1000] });
   } finally {
-    await browser.close();
+    await api.dispose();
   }
 }

@@ -40,8 +40,8 @@ The Apache Druid web console: a React + TypeScript single page app built with Bl
     bundle first.
   - `npm run autofix` fixes ESLint, stylelint and Prettier issues.
 - **End-to-end tests** (`e2e-tests/`, Playwright) need a running Druid: `script/druid build && script/druid start`,
-  then `npm run test-e2e`. See the README for running one test or with a visible browser, and below for running them
-  against your own changes.
+  then `npm run test-e2e`. See `e2e-tests/README.md` for running one test or with a visible browser, and below for
+  running them against your own changes.
 
 ## Developing against a running Druid
 

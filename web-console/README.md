@@ -111,31 +111,15 @@ From the web-console directory:
 If you already have a druid cluster running on the standard ports, the steps to build/start/stop a druid cluster can
 be skipped.
 
-#### Screenshots for debugging
+#### Running one test, watching or debugging
 
-`e2e-tests/util/debug.ts:saveScreenshotIfError()` is used to save a screenshot of the web console
-when the test fails. For example, if `e2e-tests/tutorial-batch.spec.ts` fails, it will create
-`load-data-from-local-disk-error-screenshot.jpeg`.
+- One spec: `npm run test-e2e -- cancel-query`
+- With a visible browser: `npm run test-e2e -- --headed`, or step through with `--debug` or `--ui`
+- Against a console on another port (like the dev server from `npm start` on `18081`):
+  `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT=18081 npm run test-e2e`
 
-#### Disabling headless mode
-
-Disabling headless mode while running the tests can be helpful. This can be done via the `DRUID_E2E_TEST_HEADLESS`
-environment variable, which defaults to `true`.
-
-Like so: `DRUID_E2E_TEST_HEADLESS=false npm run test-e2e`
-
-#### Running against alternate web console
-
-The environment variable `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT` can be used to target a web console running on a
-non-default port (i.e., not port `8888`). For example, this environment variable can be used to target the
-development mode of the web console (started via `npm start`), which runs on port `18081`.
-
-Like so: `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT=18081 npm run test-e2e`
-
-#### Running and debugging a single e2e test using Jest and Playwright
-
-- Run - `jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`
-- Debug - `PWDEBUG=console jest --config jest.e2e.config.js e2e-tests/tutorial-batch.spec.ts`
+A failed test leaves a screenshot and a trace in `test-results/` (open the trace with `npx playwright show-trace`).
+See `e2e-tests/README.md` for what the tests cover and how they are structured.
 
 ## Description of the directory structure
 

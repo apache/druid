@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import type { Page } from '@playwright/test';
 import path from 'path';
-import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { TasksOverview } from './component/ingestion/overview';
@@ -30,38 +30,12 @@ import {
 import { PublishConfig } from './component/load-data/config/publish';
 import { ReindexDataConnector } from './component/load-data/data-connector/reindex';
 import { DataLoader } from './component/load-data/data-loader';
-import { saveScreenshotIfError } from './util/debug';
-import {
-  DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
-  runIndexTask,
-  UNIFIED_CONSOLE_URL,
-} from './util/druid';
-import { createBrowser, createPage } from './util/playwright';
-import { retryIfJestAssertionError } from './util/retry';
-import { waitTillWebConsoleReady } from './util/setup';
+import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, runIndexTask } from './util/druid';
+import { expect, test } from './util/fixtures';
 
-jest.setTimeout(5 * 60 * 1000);
-
-describe('Reindexing from Druid', () => {
-  let browser: playwright.Browser;
-  let page: playwright.Page;
-
-  beforeAll(async () => {
-    await waitTillWebConsoleReady();
-    browser = await createBrowser();
-  });
-
-  beforeEach(async () => {
-    page = await createPage(browser);
-  });
-
-  afterAll(async () => {
-    await browser.close();
-  });
-
-  it('Reindex datasource from dynamic to range partitions', async () => {
-    const testName = 'reindex-dynamic-to-range';
-    const datasourceName = testName + new Date().toISOString();
+test.describe('Reindexing from Druid', () => {
+  test('Reindex datasource from dynamic to range partitions', async ({ page }) => {
+    const datasourceName = 'reindex-dynamic-to-range' + new Date().toISOString();
     const interval = '2015-09-12/2015-09-13';
     const dataConnector = new ReindexDataConnector(page, {
       datasourceName,
@@ -81,7 +55,6 @@ describe('Reindexing from Druid', () => {
 
     const dataLoader = new DataLoader({
       page: page,
-      unifiedConsoleUrl: UNIFIED_CONSOLE_URL,
       connector: dataConnector,
       connectValidator: validateConnectLocalData,
       configureSchemaConfig: configureSchemaConfig,
@@ -91,16 +64,14 @@ describe('Reindexing from Druid', () => {
 
     loadInitialData(datasourceName);
 
-    await saveScreenshotIfError(testName, page, async () => {
-      const numInitialSegment = 1;
-      await validateDatasourceStatus(page, datasourceName, numInitialSegment);
+    const numInitialSegment = 1;
+    await validateDatasourceStatus(page, datasourceName, numInitialSegment);
 
-      await dataLoader.load();
-      await validateTaskStatus(page, datasourceName);
+    await dataLoader.load();
+    await validateTaskStatus(page, datasourceName);
 
-      const numReindexedSegment = 4; // 39k rows into segments of ~10k rows
-      await validateDatasourceStatus(page, datasourceName, numReindexedSegment);
-    });
+    const numReindexedSegment = 4; // 39k rows into segments of ~10k rows
+    await validateDatasourceStatus(page, datasourceName, numReindexedSegment);
   });
 });
 
@@ -153,30 +124,30 @@ function validateConnectLocalData(lines: string[]) {
   );
 }
 
-async function validateTaskStatus(page: playwright.Page, datasourceName: string) {
-  const tasksOverview = new TasksOverview(page, UNIFIED_CONSOLE_URL);
+async function validateTaskStatus(page: Page, datasourceName: string) {
+  const tasksOverview = new TasksOverview(page);
 
-  await retryIfJestAssertionError(async () => {
-    const tasks = await tasksOverview.getTasks();
+  await expect(async () => {
+    const tasks = await tasksOverview.getTasks(datasourceName);
     const task = tasks.find(t => t.datasource === datasourceName);
     expect(task).toBeDefined();
     expect(task!.status).toMatch('SUCCESS');
-  });
+  }).toPass();
 }
 
 async function validateDatasourceStatus(
-  page: playwright.Page,
+  page: Page,
   datasourceName: string,
   expectedNumSegment: number,
 ) {
-  const datasourcesOverview = new DatasourcesOverview(page, UNIFIED_CONSOLE_URL);
+  const datasourcesOverview = new DatasourcesOverview(page);
   const numSegmentString = `${expectedNumSegment} segment` + (expectedNumSegment !== 1 ? 's' : '');
 
-  await retryIfJestAssertionError(async () => {
-    const datasources = await datasourcesOverview.getDatasources();
+  await expect(async () => {
+    const datasources = await datasourcesOverview.getDatasources(datasourceName);
     const datasource = datasources.find(t => t.name === datasourceName);
     expect(datasource).toBeDefined();
     expect(datasource!.availability).toMatch(`Fully available (${numSegmentString})`);
     expect(datasource!.totalRows).toBe(39244);
-  });
+  }).toPass();
 }

@@ -16,58 +16,52 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Page } from '@playwright/test';
 
-import { clickButton, clickText, setQueryInput } from '../../util/playwright';
+import { clickButton, openView, setQueryInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
  * Represents query overview tab.
  */
 export class QueryOverview {
-  private readonly page: playwright.Page;
-  private readonly baseUrl: string;
+  private readonly page: Page;
 
-  constructor(page: playwright.Page, unifiedConsoleUrl: string) {
+  constructor(page: Page) {
     this.page = page;
-    this.baseUrl = unifiedConsoleUrl + '#workbench';
   }
 
   async runQuery(query: string): Promise<string[][]> {
-    await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle' });
+    await openView(this.page, 'workbench');
 
     await setQueryInput(this.page, query);
-
     await clickButton(this.page, 'Run');
-    await this.page.waitForSelector('div.result-table-pane');
 
-    return await extractTable(this.page, 'div.result-table-pane div.ct-tr-group', 'div.ct-td');
+    const results = this.page.locator('.result-table-pane');
+    const error = this.page.locator('.execution-error-pane');
+    await results.or(error).waitFor();
+    if (await error.isVisible()) {
+      throw new Error(`Query failed: ${await error.innerText()}`);
+    }
+    return await extractTable(results.locator('.ct-tr-group'), '.ct-td');
   }
 
   async cancelQuery(query: string): Promise<number> {
-    await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle' });
+    await openView(this.page, 'workbench');
 
     await setQueryInput(this.page, query);
 
-    await Promise.all([
-      this.page.waitForRequest(
-        request => request.url().includes('druid/v2') && request.method() === 'POST',
-      ),
-      clickButton(this.page, 'Run'),
-    ]);
+    const queryRequest = this.page.waitForRequest(
+      request => request.url().includes('druid/v2') && request.method() === 'POST',
+    );
+    await clickButton(this.page, 'Run');
+    await queryRequest;
 
-    await this.page.waitForSelector('.cancel-label');
+    const cancelResponse = this.page.waitForResponse(
+      response => response.url().includes('druid/v2') && response.request().method() === 'DELETE',
+    );
+    await this.page.locator('.cancel-label', { hasText: 'Cancel query' }).click();
 
-    const [resp] = await Promise.all([
-      this.page.waitForResponse(
-        response => response.url().includes('druid/v2') && response.request().method() === 'DELETE',
-      ),
-
-      clickText(this.page, 'Cancel query'),
-    ]);
-
-    return resp.status();
+    return (await cancelResponse).status();
   }
 }

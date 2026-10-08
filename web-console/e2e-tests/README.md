@@ -23,8 +23,9 @@ These tests drive the web console in a real (headless) Chromium against a real D
 tests can't: the console and Druid's APIs disagreeing, a flow across several views breaking, or a request that only
 fails against a live cluster.
 
-They use Jest as the test runner and the `playwright-chromium` library to control the browser (not the
-`@playwright/test` runner). They run in CI as part of `.github/scripts/web-checks.sh`.
+They use the Playwright test runner (`@playwright/test`, configured in `../playwright.config.ts`). The Chromium it
+drives is downloaded by the `playwright-chromium` package's install script, so keep the two packages on the same
+version. They run in CI as part of `.github/scripts/web-checks.sh`.
 
 ## Running them
 
@@ -34,26 +35,30 @@ The tests need a Druid cluster on the standard quickstart ports, started from th
 ```bash
 script/druid build   # once, builds a distribution with the extensions the tests need
 script/druid start
-npm run test-e2e     # all the tests, one file at a time (--runInBand)
+npm run test-e2e     # all the tests, one at a time (they share the cluster)
 script/druid stop
 ```
 
-- **One file**: `npx jest --config jest.e2e.config.js e2e-tests/cancel-query.spec.ts`
-- **See the browser**: `DRUID_E2E_TEST_HEADLESS=false npm run test-e2e` (also slows each action down by 20ms)
+Before the tests start, a global setup (`util/global-setup.ts`) waits for the console's SQL endpoint to answer.
+
+- **One file**: `npm run test-e2e -- cancel-query` (any `playwright test` arguments go after `--`)
+- **See the browser**: `npm run test-e2e -- --headed`, step through a test with `--debug`, or pick and watch tests in
+  the UI mode with `--ui`
 - **Test a dev server instead of the bundled console**: `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT=18081 npm run test-e2e`.
   Without it the tests run against the console that the router on :8888 serves, which was bundled when Druid was
   built, not your working tree.
-- **On failure** a test writes `<test-name>-error-screenshot.jpeg` to the directory Jest was run from (git ignored),
-  and prints it to the log as a base64 data URL so it can be recovered from CI logs. Every HTTP response with a status
-  of 400 or more is also logged with its body.
+- **On failure** a test leaves a screenshot, a trace (`npx playwright show-trace <path>`: every action with the DOM,
+  console and network at that point) and an `error-context.md` (the page as an accessibility tree) in `test-results/`
+  (git ignored). Every HTTP response with a status of 400 or more is also logged with its body
+  (`util/fixtures.ts`).
 
 The tests create datasources and tasks and do not clean them up. Each datasource name ends in a timestamp so that
 runs don't collide, but a cluster that runs the tests often will collect them.
 
 ## The tests
 
-Each test has a 5 minute timeout. Polling for cluster state (a task finishing, segments loading) retries for up to a
-minute.
+Each test has a 5 minute timeout. Polling for cluster state (a task finishing, segments loading) retries every second
+for up to 2 minutes.
 
 | Spec                         | What it does                                                                                                                                                                                                                                                                                                                                                                                         |
 |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -77,25 +82,30 @@ e2e-tests/
     query/             Query view: run a query, cancel a query
     workbench/         Query view: run a query, accepting the task slot warning
   util/
-    druid.ts           console URL (from DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT), tutorial data dir, runIndexTask
-    playwright.ts      browser and page setup, and helpers that find inputs and buttons by their label or text
+    fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses)
+    global-setup.ts    waits for the console's SQL endpoint before the tests start
+    druid.ts           tutorial data dir, runIndexTask
+    playwright.ts      openView, and helpers that find inputs and buttons by their label or text
     table.ts           extractTable: reads a table's rows as text, skipping blank rows
-    retry.ts           retry a callback on a failed expect (or on any error) every second
-    debug.ts           saveScreenshotIfError
-    setup.ts           waitTillWebConsoleReady: waits for the console to stop showing its "cannot connect" message
 ```
 
 ### Writing a test
 
-- Start from an existing spec: `beforeAll` waits for the console and launches the browser, `beforeEach` opens a fresh
-  page, and the body goes inside `saveScreenshotIfError(testName, page, ...)`.
-- Put selectors in a page object under `component/` rather than in the spec. The helpers in `util/playwright.ts` find
-  form fields by their visible label (`setLabeledInput(page, 'Datasource name', ...)`) and buttons by their text, so
-  renaming a label or a button in the console breaks the tests.
+- Import `test` and `expect` from `util/fixtures.ts` (not from `@playwright/test`) and take the `page` fixture:
+  `test('...', async ({ page }) => { ... })`. Each test gets a fresh browser context, so no local storage carries
+  over.
+- Put selectors in a page object under `component/` rather than in the spec, and use locators (`page.locator`,
+  `getByRole`), not `page.$` / `waitForSelector` / XPath. The helpers in `util/playwright.ts` find form fields by
+  their visible label (`setLabeledInput(page, 'Datasource name', ...)`; the labels are not linked to their inputs,
+  so `getByLabel` does not work) and buttons by their exact text, so renaming a label or a button in the console
+  breaks the tests. Scope a locator (to a dialog, `.next-bar`, ...) when the same text appears twice.
+- Open a view with `openView(page, 'datasources', { datasource: ... })`. Filtering to the test's own rows keeps the
+  test working on a cluster with more datasources or tasks than fit on one page.
 - The query editor is CodeMirror; type into it with `setQueryInput`, which fills its `.cm-content`.
 - Table helpers read columns by position (see the column enums in `component/datasources/overview.ts` and
   `component/ingestion/overview.ts`), so adding, removing or reordering a default visible column needs the enum
   updated.
-- Wrap checks on cluster state in `retryIfJestAssertionError`: segments load and tasks finish some time after the
-  console reports success.
+- Wrap checks on cluster state in `await expect(async () => { ... }).toPass()`: segments load and tasks finish some
+  time after the console reports success. Make each attempt fail fast (like `QueryOverview.runQuery` throwing on a
+  query error) rather than wait out a timeout.
 - Give anything you create a unique name (append `new Date().toISOString()`).

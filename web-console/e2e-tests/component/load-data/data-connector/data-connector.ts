@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Page } from '@playwright/test';
 
 import { clickButton } from '../../../util/playwright';
 
@@ -29,6 +29,6 @@ export interface DataConnector {
   connect(): Promise<void>;
 }
 
-export async function clickApplyButton(page: playwright.Page): Promise<void> {
+export async function clickApplyButton(page: Page): Promise<void> {
   await clickButton(page, 'Apply');
 }

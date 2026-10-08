@@ -23,7 +23,7 @@ The e2e tests (`e2e-tests/`) were written in a Puppeteer style: Jest as the runn
 XPath selectors and element handles. Much of `util/` re-implements what Playwright now provides. This is the plan to
 modernize them, in order. Each step should leave the suite passing.
 
-## 1. Move to the `@playwright/test` runner
+## 1. Move to the `@playwright/test` runner (done)
 
 - Add `@playwright/test` (same version as `playwright-chromium`, which stays for now because its install script
   downloads the Chromium the runner uses, so CI needs no extra `playwright install` step).
@@ -38,13 +38,19 @@ modernize them, in order. Each step should leave the suite passing.
 - Update `e2e-tests/README.md`, `README.md` (running e2e tests), `AGENTS.md`, `.gitignore` (`test-results/`,
   `playwright-report/` instead of `/*.jpeg`), and the eslint override.
 
-## 2. Locators instead of XPath and element handles
+## 2. Locators instead of XPath and element handles (done)
 
 - `util/playwright.ts`: `getByRole('button', { name })`, labeled fields found by their `FormGroup` label rather than
   `//*[text()="..."]/following-sibling::div//input`, no `page.$` / `$$eval` / `waitForSelector` / `ElementHandle`.
 - Web-first assertions (`expect(locator).toBeVisible()` / `toHaveText()`) instead of `waitForSelector`.
 - `openEditActions`: find the datasource's row and click its actions button, rather than the Nth `.bp6-icon-more`.
 - `selectSuggestibleInput`: no legacy `'"value"'` text selector.
+- Found on the way: the Datasources and Tasks tables page at 50 rows, so on a cluster with leftover datasources the
+  test's own row could be on page 2. `openView` now filters the view through its hash route. A filter can't hold
+  `|`, `#` or `?`, so it matches on the end of the name after the last of those (`filterableText`).
+- Found on the way (console bug, not fixed here): `TableFilters.toString()` doesn't encode `#` or `?`, but
+  `parseHashRoute` ends the route at them, so going from a datasource whose name has `#` or `?` to its tasks or
+  segments drops the rest of the name.
 
 ## 3. Don't read tables by column position
 

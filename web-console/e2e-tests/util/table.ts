@@ -16,41 +16,26 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Locator } from '@playwright/test';
 
 /**
- * Extracts an HTML table into a text representation.
- * @param page Playwright page from which to extract HTML table
- * @param tableSelector Playwright selector for table
- * @param rowSelector Playwright selector for table row
+ * Reads the rows of a table as text, skipping the blank rows that pad it.
+ * @param rows locator matching the table's rows
+ * @param cellSelector CSS selector for a cell within a row
  */
-export async function extractTable(
-  page: playwright.Page,
-  tableSelector: string,
-  rowSelector: string,
-): Promise<string[][]> {
-  await page.waitForSelector(tableSelector);
-
-  return page.evaluate(
-    ([tableSelector, rowSelector]) => {
-      const BLANK_VALUE = '\xa0';
-      const data = [];
-      const rows = document.querySelectorAll(tableSelector);
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const columns = row.querySelectorAll(rowSelector);
-        const values = Array.from(columns).map(c => {
-          const realTexts = Array.from(c.querySelectorAll('.real-text'));
-          return realTexts.length
-            ? (realTexts[0] as HTMLElement).innerText
-            : (c as HTMLElement).innerText;
-        });
-        if (!values.every(value => value === BLANK_VALUE)) {
-          data.push(values);
-        }
+export async function extractTable(rows: Locator, cellSelector: string): Promise<string[][]> {
+  return await rows.evaluateAll((rowElements, cellSelector) => {
+    const BLANK_VALUE = '\xa0';
+    const data: string[][] = [];
+    for (const row of rowElements) {
+      const values = Array.from(row.querySelectorAll(cellSelector)).map(c => {
+        const realText = c.querySelector('.real-text');
+        return ((realText ?? c) as HTMLElement).innerText;
+      });
+      if (!values.every(value => value === BLANK_VALUE)) {
+        data.push(values);
       }
-      return data;
-    },
-    [tableSelector, rowSelector],
-  );
+    }
+    return data;
+  }, cellSelector);
 }

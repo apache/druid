@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Page } from '@playwright/test';
 
+import { filterableText, openView } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 import { IngestionTask } from './task';
@@ -40,19 +41,19 @@ enum TaskColumn {
  * Represents task tab.
  */
 export class TasksOverview {
-  private readonly page: playwright.Page;
-  private readonly baseUrl: string;
+  private readonly page: Page;
 
-  constructor(page: playwright.Page, unifiedConsoleUrl: string) {
+  constructor(page: Page) {
     this.page = page;
-    this.baseUrl = unifiedConsoleUrl + '#tasks';
   }
 
-  async getTasks(): Promise<IngestionTask[]> {
-    await this.page.goto(this.baseUrl);
-    await this.page.reload({ waitUntil: 'networkidle' });
+  /**
+   * The tasks of the datasources whose name contains (the filterable end of) `datasourceName`.
+   */
+  async getTasks(datasourceName: string): Promise<IngestionTask[]> {
+    await openView(this.page, 'tasks', { datasource: filterableText(datasourceName) });
 
-    const data = await extractTable(this.page, 'div.ct-tr-group', 'div.ct-td');
+    const data = await extractTable(this.page.locator('.tasks-view .ct-tr-group'), '.ct-td');
 
     return data.map(
       row =>

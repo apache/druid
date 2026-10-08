@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type * as playwright from 'playwright-chromium';
+import type { Page } from '@playwright/test';
 
 import { setLabeledInput } from '../../../util/playwright';
 
@@ -29,9 +29,9 @@ import { clickApplyButton } from './data-connector';
 export class ReindexDataConnector implements DataConnector {
   readonly name: string;
   readonly needParse: boolean;
-  private readonly page: playwright.Page;
+  private readonly page: Page;
 
-  constructor(page: playwright.Page, props: ReindexDataConnectorProps) {
+  constructor(page: Page, props: ReindexDataConnectorProps) {
     Object.assign(this, props);
     this.name = 'Reindex from Druid';
     this.needParse = false;
