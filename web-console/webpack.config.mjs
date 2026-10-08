@@ -20,7 +20,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'path';
 import process from 'process';
-import sass from 'sass';
+import * as sass from 'sass';
 import webpack from 'webpack';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 
@@ -89,15 +89,6 @@ export default env => {
     },
     target: 'web',
     resolve: {
-      alias: {
-        // ./node_modules/@blueprintjs/core/src/common/_mixins.scss imports color definitions
-        // from the "lib" folder in @blueprintjs/colors but we need to import it from the "src"
-        // folder. The "src" version includes "!default" in variable definitions, which allows
-        // us to override color variables, but the "lib" version does not.
-        //
-        // Maps './node_modules/@blueprintjs/colors/lib/scss/colors.scss' to './node_modules/@blueprintjs/colors/src/_colors.scss'
-        '@blueprintjs/colors/lib/scss/colors': '@blueprintjs/colors/src/_colors',
-      },
       extensions: ['.tsx', '.ts', '.js', '.scss', '.css'],
       fallback: {
         os: false,
@@ -173,19 +164,15 @@ export default env => {
               loader: 'sass-loader',
               options: {
                 sassOptions: {
-                  // Blueprint's SCSS (and ours, which builds on it) still uses @import and other constructs
-                  // deprecated in Dart Sass
-                  // TODO: Migrate to @use after upgrading to Blueprint v6
+                  // Blueprint's SCSS still uses @import (see src/blueprint-overrides/_blueprint.scss)
                   quietDeps: true,
-                  silenceDeprecations: ['import'],
                   functions: {
                     // Blueprint's usage of SCSS is dependent on 'node-sass', but we use Dart
                     // Sass for broader compatibility across CPU architectures. Blueprint's build
                     // process substitutes these 'svg-icon' functions with actual icons but we don't
                     // have access to them at this point. None of the components that use svg icons
                     // via CSS are themselves being used by the web console, so we can safely omit the icons.
-                    //
-                    // TODO: Re-evaluate after upgrading to Blueprint v6
+                    // Blueprint v6 still uses them in the same places (breadcrumbs and the checkbox indicator).
                     'svg-icon($_icon, $_path)': () => new sass.SassString('transparent'),
                   },
                 },

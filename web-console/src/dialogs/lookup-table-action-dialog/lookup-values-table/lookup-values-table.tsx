@@ -18,11 +18,14 @@
 
 import { N } from 'druid-query-toolkit';
 import React from 'react';
-import ReactTable from 'react-table';
 
+import {
+  ConsoleTable,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+} from '../../../components';
 import { Loader } from '../../../components/loader/loader';
 import { useQueryManager } from '../../../hooks';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import { queryDruidSql } from '../../../utils';
 
 import './lookup-values-table.scss';
@@ -55,7 +58,7 @@ export const LookupValuesTable = React.memo(function LookupValuesTable(
   function renderTable() {
     const entries = entriesState.data || [];
     return (
-      <ReactTable
+      <ConsoleTable
         data={entries}
         defaultPageSize={SMALL_TABLE_PAGE_SIZE}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}

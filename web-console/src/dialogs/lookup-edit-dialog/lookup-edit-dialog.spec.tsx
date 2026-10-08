@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { LookupEditDialog } from './lookup-edit-dialog';
 
 describe('LookupEditDialog', () => {
   it('matches snapshot', () => {
-    const lookupEditDialog = shallow(
+    render(
       <LookupEditDialog
         onClose={() => {}}
         onSubmit={() => {}}
@@ -36,6 +36,6 @@ describe('LookupEditDialog', () => {
       />,
     );
 
-    expect(lookupEditDialog).toMatchSnapshot();
+    expect(document.body.lastChild).toMatchSnapshot();
   });
 });

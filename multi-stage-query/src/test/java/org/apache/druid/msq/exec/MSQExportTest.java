@@ -36,6 +36,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -368,7 +369,7 @@ public class MSQExportTest extends MSQTestBase
   private List<String> readResultsFromFile(File resultFile) throws IOException
   {
     List<String> results = new ArrayList<>();
-    try (BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(resultFile.toPath()), StringUtils.UTF8_STRING))) {
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(Files.newInputStream(resultFile.toPath()), StandardCharsets.UTF_8))) {
       String line;
       while (!(line = br.readLine()).isEmpty()) {
         results.add(line);
@@ -430,7 +431,7 @@ public class MSQExportTest extends MSQTestBase
     final File manifestFile = new File(exportDir, ExportMetadataManager.MANIFEST_FILE);
     try (
         BufferedReader bufferedReader = new BufferedReader(
-            new InputStreamReader(Files.newInputStream(manifestFile.toPath()), StringUtils.UTF8_STRING)
+            new InputStreamReader(Files.newInputStream(manifestFile.toPath()), StandardCharsets.UTF_8)
         )
     ) {
       for (File file : resultFiles) {
@@ -445,7 +446,7 @@ public class MSQExportTest extends MSQTestBase
     final File metaFile = new File(exportDir, ExportMetadataManager.META_FILE);
     try (
         BufferedReader bufferedReader = new BufferedReader(
-            new InputStreamReader(Files.newInputStream(metaFile.toPath()), StringUtils.UTF8_STRING)
+            new InputStreamReader(Files.newInputStream(metaFile.toPath()), StandardCharsets.UTF_8)
         )
     ) {
       Assertions.assertEquals(
