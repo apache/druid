@@ -684,12 +684,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.github.os72</groupId>
-      <artifactId>protobuf-dynamic</artifactId>
-      <version>1.0.1</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>io.confluent</groupId>
       <artifactId>kafka-protobuf-provider</artifactId>
       <version>${confluent.version}</version>

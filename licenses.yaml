@@ -165,6 +165,27 @@ notice: |
 
 ---
 
+name: Maven Wrapper scripts from Apache Maven Wrapper
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+version: 3.3.4
+source_paths:
+  - mvnw
+  - mvnw.cmd
+notice: |
+  Apache Maven Wrapper
+  Copyright 2013-2022 The Apache Software Foundation
+
+  This product includes software developed at
+  The Apache Software Foundation (http://www.apache.org/).
+
+  The original idea and initial implementation of the maven-wrapper module is derived
+  from the Gradle Wrapper which was written originally by Hans Dockter and Adam Murdoch.
+  Copyright 2007 the original author or authors.
+
+---
+
 name: LDAP string encoding function from OWASP ESAPI
 license_category: source
 module: extensions/druid-basic-security
