@@ -20,6 +20,9 @@
 package org.apache.druid.query.context.docs;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
+import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -56,6 +59,11 @@ class ParameterDocumentationGeneratorTest
     final String general = Files.readString(temporaryFolder.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8);
     assertTrue(general.startsWith("general header\n"));
     assertTrue(general.contains("|`useResultLevelCache`| `true` |"));
+    assertTrue(
+        general.contains(
+            "|`priority`| The default priority is one of the following: <ul><li>Value of `priority` in the query context, if set"
+        )
+    );
     assertTrue(general.contains(GENERAL_MARKER));
 
     final String scan = Files.readString(temporaryFolder.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8);
@@ -85,7 +93,7 @@ class ParameterDocumentationGeneratorTest
   @Test
   void testGenerateRejectsMissingMarker() throws IOException
   {
-    writeDocuments("no generated row", "|stale| " + SCAN_MARKER);
+    writeDocuments("no generated row", "|stale| " + SCAN_MARKER, false);
 
     final ISE exception = assertThrows(
         ISE.class,
@@ -134,10 +142,51 @@ class ParameterDocumentationGeneratorTest
 
   private void writeDocuments(final String general, final String scan) throws IOException
   {
+    writeDocuments(general, scan, true);
+  }
+
+  private void writeDocuments(
+      final String general,
+      final String scan,
+      final boolean addMissingMarkers
+  ) throws IOException
+  {
     final Path generalPath = temporaryFolder.resolve(GENERAL_DOCUMENT);
     final Path scanPath = temporaryFolder.resolve(SCAN_DOCUMENT);
     Files.createDirectories(generalPath.getParent());
-    Files.writeString(generalPath, general, StandardCharsets.UTF_8);
-    Files.writeString(scanPath, scan, StandardCharsets.UTF_8);
+    Files.writeString(
+        generalPath,
+        addMissingMarkers ? addMissingMarkers(general, GENERAL_DOCUMENT) : general,
+        StandardCharsets.UTF_8
+    );
+    Files.writeString(
+        scanPath,
+        addMissingMarkers ? addMissingMarkers(scan, SCAN_DOCUMENT) : scan,
+        StandardCharsets.UTF_8
+    );
+  }
+
+  /**
+   * Appends a stale row for every documented parameter that belongs to the given document but has no marker yet, so
+   * that tests only need to spell out the rows they assert on.
+   */
+  private String addMissingMarkers(final String document, final String documentPath)
+  {
+    final StringBuilder output = new StringBuilder(document);
+    for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      final ParameterDocumentation docs = parameter.getDocumentation().orElse(null);
+      if (docs == null) {
+        continue;
+      }
+      final String generatedDocument =
+          docs.getQueryTypes().contains(QueryType.SCAN) ? SCAN_DOCUMENT : GENERAL_DOCUMENT;
+      if (generatedDocument.equals(documentPath)) {
+        final String marker = "<!-- GENERATED QUERY CONTEXT PARAMETER: " + parameter.getName() + " -->";
+        if (!document.contains(marker)) {
+          output.append("\n|stale| ").append(marker);
+        }
+      }
+    }
+    return output.toString();
   }
 }

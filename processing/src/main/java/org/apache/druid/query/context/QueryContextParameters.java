@@ -26,10 +26,10 @@ import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.constraint.Range;
-import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
 import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
+import org.apache.druid.query.topn.TopNQueryConfig;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;

@@ -40,7 +40,6 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
-import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -50,6 +49,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -81,7 +81,6 @@ import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
