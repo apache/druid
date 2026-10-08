@@ -25,6 +25,7 @@ if len(sys.argv) != 5:
   sys.stderr.write("  e.g., program myusername 75c70c2ccc 29f3a328da 30\n")
   sys.stderr.write("  e.g., The milestone number for Druid 30 is 56, since the milestone has the url https://github.com/apache/druid/milestone/56\n")
   sys.stderr.write("  It is also necessary to set a GIT_TOKEN environment variable containing a personal access token.\n")
+  sys.stderr.write("  Set the APPLY_TAGS environment variable to 'false' to preview changes without actually tagging any pull requests (defaults to 'true').\n")
   sys.exit(1)
 
 expected_apache_html_url_prefix = "https://github.com/apache/druid/pull/"
@@ -53,12 +54,19 @@ for sha in all_commits.splitlines():
         continue
       if pr['milestone'] is None:
         print("Tagging Pull Request {} with milestone {}".format(pr_number, milestone))
-        url = "https://api.github.com/repos/apache/druid/issues/{}".format(pr_number)
-        requests.patch(url, json=milestone_json, auth=(github_username, os.environ["GIT_TOKEN"]))
+        if os.environ.get("APPLY_TAGS", "true").lower() == "true":
+          url = "https://api.github.com/repos/apache/druid/issues/{}".format(pr_number)
+          response = requests.patch(url, json=milestone_json, auth=(github_username, os.environ["GIT_TOKEN"]))
+          if response.status_code == 200:
+            print("✅ Tagged Pull Request {}".format(pr['html_url']))
+          else:
+            print("❌ Response: {}".format(response.json()))
+        else:
+          print("💤 APPLY_TAGS is false, not tagging Pull Request {}".format(pr['html_url']))
       else:
         print("Skipping Pull Request {} since it's already tagged with milestone {}".format(pr_number, pr['milestone']['number']))
 
   except Exception as e:
-    print("Got exception for commit: {}  ex: {}".format(sha, e))
+    print("❌ Got exception for commit: {}  ex: {}".format(sha, e))
     continue
 

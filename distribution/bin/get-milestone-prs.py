@@ -61,19 +61,19 @@ for commit_id in all_release_commits.splitlines():
         resp_json = resp.json()
 
         milestone_found = False
-        closed_pr_nums = []
+        closed_prs = []
         if (resp_json.get("items") is None):
             print("Could not get PRs for commit ID {}, resp: {}".format(commit_id, resp_json))
             continue
 
         for pr in resp_json["items"]:
-            closed_pr_nums.append(pr["number"])
+            closed_prs.append(pr["html_url"])
             milestone = pr["milestone"]
             if milestone is not None:
                 milestone_found = True
-                print("COMMIT: {},  PR#: {},  MILESTONE: {}".format(commit_id, pr["number"], pr["milestone"]["url"]))
+                print("COMMIT: {},  PR#: {},  MILESTONE: {}".format(commit_id, pr["html_url"], pr["milestone"]["url"]))
         if not milestone_found:
-            print("NO MILESTONE FOUND FOR COMMIT: {}, CLOSED PRs: {}".format(commit_id, closed_pr_nums))
+            print("NO MILESTONE FOUND FOR COMMIT: {}, CLOSED PRs: {}".format(commit_id, closed_prs))
 
     except Exception as e:
         print("Got exception for commitID: {}  ex: {}".format(commit_id, e))
