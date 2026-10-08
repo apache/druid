@@ -27,6 +27,7 @@ import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.kafka.supervisor.KafkaHeaderBasedFilterConfig;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -83,6 +84,9 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
 
   private final boolean multiTopic;
 
+  @Nullable
+  private final KafkaHeaderBasedFilterEvaluator headerFilterEvaluator;
+
   /**
    * Store the stream information when partitions get assigned. This is required because the consumer does not
    * know about the parent stream which could be a list of topics.
@@ -97,10 +101,23 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
+    this(consumerProperties, sortingMapper, configOverrides, multiTopic, metricBuilderSupplier, null);
+  }
+
+  public KafkaRecordSupplier(
+      Map<String, Object> consumerProperties,
+      ObjectMapper sortingMapper,
+      KafkaConfigOverrides configOverrides,
+      boolean multiTopic,
+      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier,
+      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
+  )
+  {
     this(
         getKafkaConsumer(sortingMapper, consumerProperties, configOverrides),
         multiTopic,
-        metricBuilderSupplier
+        metricBuilderSupplier,
+        headerBasedFilterConfig
     );
   }
 
@@ -111,9 +128,22 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
+    this(consumer, multiTopic, metricBuilderSupplier, null);
+  }
+
+  @VisibleForTesting
+  public KafkaRecordSupplier(
+      KafkaConsumer<byte[], byte[]> consumer,
+      boolean multiTopic,
+      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier,
+      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
+  )
+  {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
     this.monitor = new KafkaConsumerMonitor(consumer, metricBuilderSupplier);
+    this.headerFilterEvaluator = headerBasedFilterConfig != null
+        ? new KafkaHeaderBasedFilterEvaluator(headerBasedFilterConfig) : null;
   }
 
   @Override
@@ -181,16 +211,36 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   public List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> poll(long timeout)
   {
     List<OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> polledRecords = new ArrayList<>();
-    for (ConsumerRecord<byte[], byte[]> record : consumer.poll(Duration.ofMillis(timeout))) {
 
-      polledRecords.add(new OrderedPartitionableRecord<>(
-          record.topic(),
-          new KafkaTopicPartition(multiTopic, record.topic(), record.partition()),
-          record.offset(),
-          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
-          record.timestamp()
-      ));
+    for (ConsumerRecord<byte[], byte[]> record : consumer.poll(Duration.ofMillis(timeout))) {
+      KafkaTopicPartition kafkaPartition = new KafkaTopicPartition(multiTopic, record.topic(), record.partition());
+
+      // Apply header filter if configured
+      if (headerFilterEvaluator != null && !headerFilterEvaluator.shouldIncludeRecord(record)) {
+        // Mark the record as filtered so the downstream reader skips parsing but still advances the offset.
+        // The payload entity is retained (not dropped) so that its bytes are still counted towards
+        // "ingest/input/bytes", consistent with the all-input-bytes contract of that metric.
+        polledRecords.add(new OrderedPartitionableRecord<>(
+            record.topic(),
+            kafkaPartition,
+            record.offset(),
+            record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
+            record.timestamp(),
+            true // Mark as filtered
+        ));
+      } else {
+        // Create record for accepted records
+        polledRecords.add(new OrderedPartitionableRecord<>(
+            record.topic(),
+            kafkaPartition,
+            record.offset(),
+            record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
+            record.timestamp(),
+            false
+        ));
+      }
     }
+
     return polledRecords;
   }
 
@@ -284,7 +334,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   /**
-   * Returns a Monitor that emits Kafka consumer metrics.
+   * Returns the Kafka consumer monitor.
    */
   public Monitor monitor()
   {

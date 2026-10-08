@@ -100,6 +100,33 @@ class StreamChunkReader<RecordType extends ByteEntity>
 
   List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard) throws IOException
   {
+    return parse(streamChunk, isEndOfShard, false);
+  }
+
+  /**
+   * Parses a stream chunk into input rows.
+   *
+   * @param streamChunk the raw records read from the stream
+   * @param isEndOfShard whether this record marks the end of a shard (Kinesis only)
+   * @param isFiltered   whether this record was dropped by pre-ingestion filtering (for example, Kafka header-based
+   *                     filtering) before parsing. When {@code true}, the record's payload bytes are still counted
+   *                     towards input bytes (they were read from the stream), the record is tracked under the
+   *                     dedicated {@link RowIngestionMeters#FILTERED} meter, and parsing is skipped entirely — avoiding
+   *                     the parse cost is the point of pre-ingestion filtering. The record still flows through so that
+   *                     stream offsets advance.
+   */
+  List<InputRow> parse(@Nullable List<RecordType> streamChunk, boolean isEndOfShard, boolean isFiltered)
+      throws IOException
+  {
+    if (isFiltered) {
+      if (streamChunk != null) {
+        for (RecordType valueBytes : streamChunk) {
+          rowIngestionMeters.incrementProcessedBytes(valueBytes.getBuffer().remaining());
+        }
+      }
+      rowIngestionMeters.incrementFiltered();
+      return Collections.emptyList();
+    }
     if (streamChunk == null || streamChunk.isEmpty()) {
       if (!isEndOfShard) {
         // We do not count end of shard record as thrown away event since this is a record created by Druid

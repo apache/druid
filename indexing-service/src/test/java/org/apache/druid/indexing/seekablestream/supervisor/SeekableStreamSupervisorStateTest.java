@@ -1668,7 +1668,18 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     replayAll();
 
-    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    final CountDownLatch handoffNoticeHandled = new CountDownLatch(1);
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor()
+    {
+      @Override
+      protected void emitNoticeProcessTime(String noticeType, long timeInMillis)
+      {
+        super.emitNoticeProcessTime(noticeType, timeInMillis);
+        if ("handoff_task_group_notice".equals(noticeType)) {
+          handoffNoticeHandled.countDown();
+        }
+      }
+    };
 
     supervisor.start();
     supervisor.runInternal();
@@ -1677,9 +1688,10 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assertions.assertNull(id1.getCurrentRunnerStatus());
     Assertions.assertEquals("NOT_STARTED", id1.getCurrentRunnerStatus());
 
-    while (supervisor.getNoticesQueueSize() > 0) {
-      Thread.sleep(100);
-    }
+    Assertions.assertTrue(
+        handoffNoticeHandled.await(5, TimeUnit.SECONDS),
+        "Handoff task group notice was not handled"
+    );
     supervisor.runInternal();
     verifyAll();
   }

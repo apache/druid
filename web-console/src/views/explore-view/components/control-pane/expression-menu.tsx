@@ -25,8 +25,7 @@ import {
   Intent,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Column } from 'druid-query-toolkit';
@@ -168,8 +167,8 @@ export const ExpressionMenu = function ExpressionMenu(props: ExpressionMenuProps
           </FormGroup>
           <div className="button-bar">
             {onAddToSourceQueryAsColumn && (
-              <Popover
-                position={Position.BOTTOM_LEFT}
+              <PopoverNext
+                placement="bottom-start"
                 content={
                   <Menu>
                     <MenuItem
@@ -183,9 +182,11 @@ export const ExpressionMenu = function ExpressionMenu(props: ExpressionMenuProps
                     />
                   </Menu>
                 }
+                lazy
+                shouldReturnFocusOnClose={false}
               >
-                <Button icon={IconNames.TH_DERIVED} minimal />
-              </Popover>
+                <Button icon={IconNames.TH_DERIVED} variant="minimal" />
+              </PopoverNext>
             )}
             <div className="button-separator" />
             <Button text="Cancel" onClick={onClose} />

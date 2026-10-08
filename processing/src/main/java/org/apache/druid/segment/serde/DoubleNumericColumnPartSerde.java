@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
 
 import javax.annotation.Nullable;
 import java.nio.ByteOrder;
+import java.util.Objects;
 
 public class DoubleNumericColumnPartSerde implements ColumnPartSerde
 {
@@ -111,5 +112,24 @@ public class DoubleNumericColumnPartSerde implements ColumnPartSerde
              .setNumericColumnSupplier(columnSupplier);
 
     };
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final DoubleNumericColumnPartSerde that = (DoubleNumericColumnPartSerde) o;
+    return Objects.equals(byteOrder, that.byteOrder);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(byteOrder);
   }
 }

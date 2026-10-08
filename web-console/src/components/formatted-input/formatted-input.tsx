@@ -61,8 +61,8 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
     typeof intermediateValue !== 'undefined'
       ? intermediateValue
       : typeof value !== 'undefined'
-      ? formatter.stringify(value)
-      : undefined;
+        ? formatter.stringify(value)
+        : undefined;
 
   const myDefaultValue =
     typeof defaultValue !== 'undefined' ? formatter.stringify(defaultValue) : undefined;

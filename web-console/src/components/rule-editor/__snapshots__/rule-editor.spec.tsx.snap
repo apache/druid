@@ -8,82 +8,64 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
     class="title"
   >
     <button
-      class="bp5-button bp5-minimal left"
+      class="bp6-button bp6-minimal left"
       type="button"
     >
       <span
-        class="bp5-button-text"
+        class="bp6-button-text"
       >
         loadForever(1x)
       </span>
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-caret-down"
+        class="bp6-icon bp6-icon-caret-down"
       >
         <svg
           data-icon="caret-down"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
     <div
       class="spacer"
     />
     <button
-      class="bp5-button bp5-minimal"
+      class="bp6-button bp6-minimal"
       type="button"
     >
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-trash"
+        class="bp6-icon bp6-icon-trash"
       >
         <svg
           data-icon="trash"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
   </div>
   <div
-    class="bp5-collapse"
+    class="bp6-collapse"
     style="height: auto; overflow-y: visible; transition: none;"
   >
     <div
       aria-hidden="false"
-      class="bp5-collapse-body"
+      class="bp6-collapse-body"
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="rule-detail bp6-card bp6-elevation-2"
       >
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp6-control-group"
               role="group"
             >
               <div
-                class="bp5-html-select"
+                class="bp6-html-select"
               >
                 <select>
                   <option
@@ -138,47 +120,33 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                   </option>
                 </select>
                 <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                  class="bp6-icon bp6-icon-double-caret-vertical"
                 >
                   <svg
                     data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
+                  />
                 </span>
               </div>
             </div>
           </div>
         </div>
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group tiered-replicant"
+              class="bp6-control-group tiered-replicant"
               role="group"
             >
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Tier:
                 </span>
@@ -187,43 +155,34 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                 class="formatted-input suggestible-input"
               >
                 <div
-                  class="bp5-input-group bp5-fill"
+                  class="bp6-input-group bp6-fill"
                 >
                   <input
                     aria-disabled="false"
-                    class="bp5-input"
+                    class="bp6-input"
                     style="padding-right: 0px;"
                     type="text"
                     value="test1"
                   />
                   <span
-                    class="bp5-input-action"
+                    class="bp6-input-action"
                   >
                     <span
-                      class="bp5-popover-target"
+                      class="bp6-popover-target"
                     >
                       <button
                         aria-expanded="false"
                         aria-haspopup="menu"
-                        class="bp5-button bp5-minimal"
+                        class="bp6-button bp6-minimal"
                         type="button"
                       >
                         <span
                           aria-hidden="true"
-                          class="bp5-icon bp5-icon-caret-down"
+                          class="bp6-icon bp6-icon-caret-down"
                         >
                           <svg
                             data-icon="caret-down"
-                            height="16"
-                            role="img"
-                            viewBox="0 0 16 16"
-                            width="16"
-                          >
-                            <path
-                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-                              fill-rule="evenodd"
-                            />
-                          </svg>
+                          />
                         </span>
                       </button>
                     </span>
@@ -231,22 +190,22 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                 </div>
               </div>
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Replicants:
                 </span>
               </button>
               <div
-                class="bp5-control-group bp5-numeric-input"
+                class="bp6-control-group bp6-numeric-input"
                 role="group"
               >
                 <div
-                  class="bp5-input-group"
+                  class="bp6-input-group"
                 >
                   <input
                     aria-disabled="false"
@@ -254,7 +213,7 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                     aria-valuemin="0"
                     aria-valuenow="1"
                     autocomplete="off"
-                    class="bp5-input"
+                    class="bp6-input"
                     id="numericInput-0"
                     max="256"
                     min="0"
@@ -264,116 +223,76 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
                   />
                 </div>
                 <div
-                  class="bp5-button-group bp5-vertical bp5-fixed"
+                  class="bp6-button-group bp6-vertical bp6-fixed"
                 >
                   <button
                     aria-controls="numericInput-0"
                     aria-label="increment"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-up"
+                      class="bp6-icon bp6-icon-chevron-up"
                     >
                       <svg
                         data-icon="chevron-up"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M254.2 134.2L174.2 214.2C170.6 217.8 165.6 220 160 220S149.4 217.8 145.8 214.2L65.8 134.2C62.2 130.6 60 125.6 60 120C60 109 69 100 80 100C85.6 100 90.6 102.2 94.2 105.8L160 171.8L225.8 106C229.4 102.2 234.4 100 240 100C251 100 260 109 260 120C260 125.6 257.8 130.6 254.2 134.2z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                   <button
                     aria-controls="numericInput-0"
                     aria-label="decrement"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-down"
+                      class="bp6-icon bp6-icon-chevron-down"
                     >
                       <svg
                         data-icon="chevron-down"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M240 220C234.4 220 229.4 217.8 225.8 214.2L160 148.2L94.2 214.2C90.6 217.8 85.6 220 80 220C69 220 60 211 60 200C60 194.4 62.2 189.4 65.8 185.8L145.8 105.8C149.4 102.2 154.4 100 160 100S170.6 102.2 174.2 105.8L254.2 185.8C257.8 189.4 260 194.4 260 200C260 211 251 220 240 220z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                 </div>
               </div>
               <button
-                class="bp5-button"
+                class="bp6-button"
                 type="button"
               >
                 <span
                   aria-hidden="true"
-                  class="bp5-icon bp5-icon-trash"
+                  class="bp6-icon bp6-icon-trash"
                 >
                   <svg
                     data-icon="trash"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <path
-                      d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
+                  />
                 </span>
               </button>
             </div>
           </div>
         </div>
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <button
-              class="bp5-button bp5-minimal"
+              class="bp6-button bp6-minimal"
               type="button"
             >
               <span
                 aria-hidden="true"
-                class="bp5-icon bp5-icon-plus"
+                class="bp6-icon bp6-icon-plus"
               >
                 <svg
                   data-icon="plus"
-                  height="16"
-                  role="img"
-                  viewBox="0 0 16 16"
-                  width="16"
-                >
-                  <path
-                    d="M13 7H9V3c0-.55-.45-1-1-1s-1 .45-1 1v4H3c-.55 0-1 .45-1 1s.45 1 1 1h4v4c0 .55.45 1 1 1s1-.45 1-1V9h4c.55 0 1-.45 1-1s-.45-1-1-1z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
+                />
               </span>
               <span
-                class="bp5-button-text"
+                class="bp6-button-text"
               >
                 Add historical tier replication
               </span>
@@ -394,82 +313,64 @@ exports[`RuleEditor matches snapshot with broadcast rule 1`] = `
     class="title"
   >
     <button
-      class="bp5-button bp5-minimal left"
+      class="bp6-button bp6-minimal left"
       type="button"
     >
       <span
-        class="bp5-button-text"
+        class="bp6-button-text"
       >
         broadcastByInterval(2010-01-01/2015-01-01)
       </span>
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-caret-down"
+        class="bp6-icon bp6-icon-caret-down"
       >
         <svg
           data-icon="caret-down"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
     <div
       class="spacer"
     />
     <button
-      class="bp5-button bp5-minimal"
+      class="bp6-button bp6-minimal"
       type="button"
     >
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-trash"
+        class="bp6-icon bp6-icon-trash"
       >
         <svg
           data-icon="trash"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
   </div>
   <div
-    class="bp5-collapse"
+    class="bp6-collapse"
     style="height: auto; overflow-y: visible; transition: none;"
   >
     <div
       aria-hidden="false"
-      class="bp5-collapse-body"
+      class="bp6-collapse-body"
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="rule-detail bp6-card bp6-elevation-2"
       >
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp6-control-group"
               role="group"
             >
               <div
-                class="bp5-html-select"
+                class="bp6-html-select"
               >
                 <select>
                   <option
@@ -524,32 +425,18 @@ exports[`RuleEditor matches snapshot with broadcast rule 1`] = `
                   </option>
                 </select>
                 <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                  class="bp6-icon bp6-icon-double-caret-vertical"
                 >
                   <svg
                     data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
+                  />
                 </span>
               </div>
               <div
-                class="bp5-input-group"
+                class="bp6-input-group"
               >
                 <input
-                  class="bp5-input"
+                  class="bp6-input"
                   placeholder="2010-01-01/2020-01-01"
                   type="text"
                   value="2010-01-01/2015-01-01"
@@ -572,82 +459,64 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
     class="title"
   >
     <button
-      class="bp5-button bp5-minimal left"
+      class="bp6-button bp6-minimal left"
       type="button"
     >
       <span
-        class="bp5-button-text"
+        class="bp6-button-text"
       >
         loadByInterval(2010-01-01/2015-01-01, 3x)
       </span>
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-caret-down"
+        class="bp6-icon bp6-icon-caret-down"
       >
         <svg
           data-icon="caret-down"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
     <div
       class="spacer"
     />
     <button
-      class="bp5-button bp5-minimal"
+      class="bp6-button bp6-minimal"
       type="button"
     >
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-trash"
+        class="bp6-icon bp6-icon-trash"
       >
         <svg
           data-icon="trash"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
   </div>
   <div
-    class="bp5-collapse"
+    class="bp6-collapse"
     style="height: auto; overflow-y: visible; transition: none;"
   >
     <div
       aria-hidden="false"
-      class="bp5-collapse-body"
+      class="bp6-collapse-body"
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="rule-detail bp6-card bp6-elevation-2"
       >
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp6-control-group"
               role="group"
             >
               <div
-                class="bp5-html-select"
+                class="bp6-html-select"
               >
                 <select>
                   <option
@@ -702,32 +571,18 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   </option>
                 </select>
                 <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                  class="bp6-icon bp6-icon-double-caret-vertical"
                 >
                   <svg
                     data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
+                  />
                 </span>
               </div>
               <div
-                class="bp5-input-group"
+                class="bp6-input-group"
               >
                 <input
-                  class="bp5-input"
+                  class="bp6-input"
                   placeholder="2010-01-01/2020-01-01"
                   type="text"
                   value="2010-01-01/2015-01-01"
@@ -737,22 +592,22 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
           </div>
         </div>
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group tiered-replicant"
+              class="bp6-control-group tiered-replicant"
               role="group"
             >
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Tier:
                 </span>
@@ -761,43 +616,34 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 class="formatted-input suggestible-input"
               >
                 <div
-                  class="bp5-input-group bp5-fill"
+                  class="bp6-input-group bp6-fill"
                 >
                   <input
                     aria-disabled="false"
-                    class="bp5-input"
+                    class="bp6-input"
                     style="padding-right: 0px;"
                     type="text"
                     value="test1"
                   />
                   <span
-                    class="bp5-input-action"
+                    class="bp6-input-action"
                   >
                     <span
-                      class="bp5-popover-target"
+                      class="bp6-popover-target"
                     >
                       <button
                         aria-expanded="false"
                         aria-haspopup="menu"
-                        class="bp5-button bp5-minimal"
+                        class="bp6-button bp6-minimal"
                         type="button"
                       >
                         <span
                           aria-hidden="true"
-                          class="bp5-icon bp5-icon-caret-down"
+                          class="bp6-icon bp6-icon-caret-down"
                         >
                           <svg
                             data-icon="caret-down"
-                            height="16"
-                            role="img"
-                            viewBox="0 0 16 16"
-                            width="16"
-                          >
-                            <path
-                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-                              fill-rule="evenodd"
-                            />
-                          </svg>
+                          />
                         </span>
                       </button>
                     </span>
@@ -805,22 +651,22 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 </div>
               </div>
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Replicants:
                 </span>
               </button>
               <div
-                class="bp5-control-group bp5-numeric-input"
+                class="bp6-control-group bp6-numeric-input"
                 role="group"
               >
                 <div
-                  class="bp5-input-group"
+                  class="bp6-input-group"
                 >
                   <input
                     aria-disabled="false"
@@ -828,7 +674,7 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                     aria-valuemin="0"
                     aria-valuenow="2"
                     autocomplete="off"
-                    class="bp5-input"
+                    class="bp6-input"
                     id="numericInput-3"
                     max="256"
                     min="0"
@@ -838,96 +684,65 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   />
                 </div>
                 <div
-                  class="bp5-button-group bp5-vertical bp5-fixed"
+                  class="bp6-button-group bp6-vertical bp6-fixed"
                 >
                   <button
                     aria-controls="numericInput-3"
                     aria-label="increment"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-up"
+                      class="bp6-icon bp6-icon-chevron-up"
                     >
                       <svg
                         data-icon="chevron-up"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M254.2 134.2L174.2 214.2C170.6 217.8 165.6 220 160 220S149.4 217.8 145.8 214.2L65.8 134.2C62.2 130.6 60 125.6 60 120C60 109 69 100 80 100C85.6 100 90.6 102.2 94.2 105.8L160 171.8L225.8 106C229.4 102.2 234.4 100 240 100C251 100 260 109 260 120C260 125.6 257.8 130.6 254.2 134.2z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                   <button
                     aria-controls="numericInput-3"
                     aria-label="decrement"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-down"
+                      class="bp6-icon bp6-icon-chevron-down"
                     >
                       <svg
                         data-icon="chevron-down"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M240 220C234.4 220 229.4 217.8 225.8 214.2L160 148.2L94.2 214.2C90.6 217.8 85.6 220 80 220C69 220 60 211 60 200C60 194.4 62.2 189.4 65.8 185.8L145.8 105.8C149.4 102.2 154.4 100 160 100S170.6 102.2 174.2 105.8L254.2 185.8C257.8 189.4 260 194.4 260 200C260 211 251 220 240 220z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                 </div>
               </div>
               <button
-                class="bp5-button"
+                class="bp6-button"
                 type="button"
               >
                 <span
                   aria-hidden="true"
-                  class="bp5-icon bp5-icon-trash"
+                  class="bp6-icon bp6-icon-trash"
                 >
                   <svg
                     data-icon="trash"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <path
-                      d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
+                  />
                 </span>
               </button>
             </div>
             <div
-              class="bp5-control-group tiered-replicant"
+              class="bp6-control-group tiered-replicant"
               role="group"
             >
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Tier:
                 </span>
@@ -936,43 +751,34 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 class="formatted-input suggestible-input"
               >
                 <div
-                  class="bp5-input-group bp5-fill"
+                  class="bp6-input-group bp6-fill"
                 >
                   <input
                     aria-disabled="false"
-                    class="bp5-input"
+                    class="bp6-input"
                     style="padding-right: 0px;"
                     type="text"
                     value="nonexist"
                   />
                   <span
-                    class="bp5-input-action"
+                    class="bp6-input-action"
                   >
                     <span
-                      class="bp5-popover-target"
+                      class="bp6-popover-target"
                     >
                       <button
                         aria-expanded="false"
                         aria-haspopup="menu"
-                        class="bp5-button bp5-minimal"
+                        class="bp6-button bp6-minimal"
                         type="button"
                       >
                         <span
                           aria-hidden="true"
-                          class="bp5-icon bp5-icon-caret-down"
+                          class="bp6-icon bp6-icon-caret-down"
                         >
                           <svg
                             data-icon="caret-down"
-                            height="16"
-                            role="img"
-                            viewBox="0 0 16 16"
-                            width="16"
-                          >
-                            <path
-                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-                              fill-rule="evenodd"
-                            />
-                          </svg>
+                          />
                         </span>
                       </button>
                     </span>
@@ -980,22 +786,22 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                 </div>
               </div>
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Replicants:
                 </span>
               </button>
               <div
-                class="bp5-control-group bp5-numeric-input"
+                class="bp6-control-group bp6-numeric-input"
                 role="group"
               >
                 <div
-                  class="bp5-input-group"
+                  class="bp6-input-group"
                 >
                   <input
                     aria-disabled="false"
@@ -1003,7 +809,7 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                     aria-valuemin="0"
                     aria-valuenow="1"
                     autocomplete="off"
-                    class="bp5-input"
+                    class="bp6-input"
                     id="numericInput-4"
                     max="256"
                     min="0"
@@ -1013,116 +819,76 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
                   />
                 </div>
                 <div
-                  class="bp5-button-group bp5-vertical bp5-fixed"
+                  class="bp6-button-group bp6-vertical bp6-fixed"
                 >
                   <button
                     aria-controls="numericInput-4"
                     aria-label="increment"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-up"
+                      class="bp6-icon bp6-icon-chevron-up"
                     >
                       <svg
                         data-icon="chevron-up"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M254.2 134.2L174.2 214.2C170.6 217.8 165.6 220 160 220S149.4 217.8 145.8 214.2L65.8 134.2C62.2 130.6 60 125.6 60 120C60 109 69 100 80 100C85.6 100 90.6 102.2 94.2 105.8L160 171.8L225.8 106C229.4 102.2 234.4 100 240 100C251 100 260 109 260 120C260 125.6 257.8 130.6 254.2 134.2z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                   <button
                     aria-controls="numericInput-4"
                     aria-label="decrement"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-down"
+                      class="bp6-icon bp6-icon-chevron-down"
                     >
                       <svg
                         data-icon="chevron-down"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M240 220C234.4 220 229.4 217.8 225.8 214.2L160 148.2L94.2 214.2C90.6 217.8 85.6 220 80 220C69 220 60 211 60 200C60 194.4 62.2 189.4 65.8 185.8L145.8 105.8C149.4 102.2 154.4 100 160 100S170.6 102.2 174.2 105.8L254.2 185.8C257.8 189.4 260 194.4 260 200C260 211 251 220 240 220z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                 </div>
               </div>
               <button
-                class="bp5-button"
+                class="bp6-button"
                 type="button"
               >
                 <span
                   aria-hidden="true"
-                  class="bp5-icon bp5-icon-trash"
+                  class="bp6-icon bp6-icon-trash"
                 >
                   <svg
                     data-icon="trash"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <path
-                      d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
+                  />
                 </span>
               </button>
             </div>
           </div>
         </div>
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <button
-              class="bp5-button bp5-minimal"
+              class="bp6-button bp6-minimal"
               type="button"
             >
               <span
                 aria-hidden="true"
-                class="bp5-icon bp5-icon-plus"
+                class="bp6-icon bp6-icon-plus"
               >
                 <svg
                   data-icon="plus"
-                  height="16"
-                  role="img"
-                  viewBox="0 0 16 16"
-                  width="16"
-                >
-                  <path
-                    d="M13 7H9V3c0-.55-.45-1-1-1s-1 .45-1 1v4H3c-.55 0-1 .45-1 1s.45 1 1 1h4v4c0 .55.45 1 1 1s1-.45 1-1V9h4c.55 0 1-.45 1-1s-.45-1-1-1z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
+                />
               </span>
               <span
-                class="bp5-button-text"
+                class="bp6-button-text"
               >
                 Add historical tier replication
               </span>
@@ -1143,82 +909,64 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
     class="title"
   >
     <button
-      class="bp5-button bp5-minimal left"
+      class="bp6-button bp6-minimal left"
       type="button"
     >
       <span
-        class="bp5-button-text"
+        class="bp6-button-text"
       >
         loadByInterval(2010-01-01/2015-01-01, 2x)
       </span>
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-caret-down"
+        class="bp6-icon bp6-icon-caret-down"
       >
         <svg
           data-icon="caret-down"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
     <div
       class="spacer"
     />
     <button
-      class="bp5-button bp5-minimal"
+      class="bp6-button bp6-minimal"
       type="button"
     >
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-trash"
+        class="bp6-icon bp6-icon-trash"
       >
         <svg
           data-icon="trash"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
   </div>
   <div
-    class="bp5-collapse"
+    class="bp6-collapse"
     style="height: auto; overflow-y: visible; transition: none;"
   >
     <div
       aria-hidden="false"
-      class="bp5-collapse-body"
+      class="bp6-collapse-body"
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="rule-detail bp6-card bp6-elevation-2"
       >
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp6-control-group"
               role="group"
             >
               <div
-                class="bp5-html-select"
+                class="bp6-html-select"
               >
                 <select>
                   <option
@@ -1273,32 +1021,18 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                   </option>
                 </select>
                 <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                  class="bp6-icon bp6-icon-double-caret-vertical"
                 >
                   <svg
                     data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
+                  />
                 </span>
               </div>
               <div
-                class="bp5-input-group"
+                class="bp6-input-group"
               >
                 <input
-                  class="bp5-input"
+                  class="bp6-input"
                   placeholder="2010-01-01/2020-01-01"
                   type="text"
                   value="2010-01-01/2015-01-01"
@@ -1308,22 +1042,22 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
           </div>
         </div>
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group tiered-replicant"
+              class="bp6-control-group tiered-replicant"
               role="group"
             >
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Tier:
                 </span>
@@ -1332,43 +1066,34 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                 class="formatted-input suggestible-input"
               >
                 <div
-                  class="bp5-input-group bp5-fill"
+                  class="bp6-input-group bp6-fill"
                 >
                   <input
                     aria-disabled="false"
-                    class="bp5-input"
+                    class="bp6-input"
                     style="padding-right: 0px;"
                     type="text"
                     value="test1"
                   />
                   <span
-                    class="bp5-input-action"
+                    class="bp6-input-action"
                   >
                     <span
-                      class="bp5-popover-target"
+                      class="bp6-popover-target"
                     >
                       <button
                         aria-expanded="false"
                         aria-haspopup="menu"
-                        class="bp5-button bp5-minimal"
+                        class="bp6-button bp6-minimal"
                         type="button"
                       >
                         <span
                           aria-hidden="true"
-                          class="bp5-icon bp5-icon-caret-down"
+                          class="bp6-icon bp6-icon-caret-down"
                         >
                           <svg
                             data-icon="caret-down"
-                            height="16"
-                            role="img"
-                            viewBox="0 0 16 16"
-                            width="16"
-                          >
-                            <path
-                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-                              fill-rule="evenodd"
-                            />
-                          </svg>
+                          />
                         </span>
                       </button>
                     </span>
@@ -1376,22 +1101,22 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                 </div>
               </div>
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Replicants:
                 </span>
               </button>
               <div
-                class="bp5-control-group bp5-numeric-input"
+                class="bp6-control-group bp6-numeric-input"
                 role="group"
               >
                 <div
-                  class="bp5-input-group"
+                  class="bp6-input-group"
                 >
                   <input
                     aria-disabled="false"
@@ -1399,7 +1124,7 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                     aria-valuemin="0"
                     aria-valuenow="2"
                     autocomplete="off"
-                    class="bp5-input"
+                    class="bp6-input"
                     id="numericInput-2"
                     max="256"
                     min="0"
@@ -1409,116 +1134,76 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
                   />
                 </div>
                 <div
-                  class="bp5-button-group bp5-vertical bp5-fixed"
+                  class="bp6-button-group bp6-vertical bp6-fixed"
                 >
                   <button
                     aria-controls="numericInput-2"
                     aria-label="increment"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-up"
+                      class="bp6-icon bp6-icon-chevron-up"
                     >
                       <svg
                         data-icon="chevron-up"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M254.2 134.2L174.2 214.2C170.6 217.8 165.6 220 160 220S149.4 217.8 145.8 214.2L65.8 134.2C62.2 130.6 60 125.6 60 120C60 109 69 100 80 100C85.6 100 90.6 102.2 94.2 105.8L160 171.8L225.8 106C229.4 102.2 234.4 100 240 100C251 100 260 109 260 120C260 125.6 257.8 130.6 254.2 134.2z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                   <button
                     aria-controls="numericInput-2"
                     aria-label="decrement"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-down"
+                      class="bp6-icon bp6-icon-chevron-down"
                     >
                       <svg
                         data-icon="chevron-down"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M240 220C234.4 220 229.4 217.8 225.8 214.2L160 148.2L94.2 214.2C90.6 217.8 85.6 220 80 220C69 220 60 211 60 200C60 194.4 62.2 189.4 65.8 185.8L145.8 105.8C149.4 102.2 154.4 100 160 100S170.6 102.2 174.2 105.8L254.2 185.8C257.8 189.4 260 194.4 260 200C260 211 251 220 240 220z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                 </div>
               </div>
               <button
-                class="bp5-button"
+                class="bp6-button"
                 type="button"
               >
                 <span
                   aria-hidden="true"
-                  class="bp5-icon bp5-icon-trash"
+                  class="bp6-icon bp6-icon-trash"
                 >
                   <svg
                     data-icon="trash"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <path
-                      d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
+                  />
                 </span>
               </button>
             </div>
           </div>
         </div>
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <button
-              class="bp5-button bp5-minimal"
+              class="bp6-button bp6-minimal"
               type="button"
             >
               <span
                 aria-hidden="true"
-                class="bp5-icon bp5-icon-plus"
+                class="bp6-icon bp6-icon-plus"
               >
                 <svg
                   data-icon="plus"
-                  height="16"
-                  role="img"
-                  viewBox="0 0 16 16"
-                  width="16"
-                >
-                  <path
-                    d="M13 7H9V3c0-.55-.45-1-1-1s-1 .45-1 1v4H3c-.55 0-1 .45-1 1s.45 1 1 1h4v4c0 .55.45 1 1 1s1-.45 1-1V9h4c.55 0 1-.45 1-1s-.45-1-1-1z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
+                />
               </span>
               <span
-                class="bp5-button-text"
+                class="bp6-button-text"
               >
                 Add historical tier replication
               </span>
@@ -1539,82 +1224,64 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
     class="title"
   >
     <button
-      class="bp5-button bp5-minimal left"
+      class="bp6-button bp6-minimal left"
       type="button"
     >
       <span
-        class="bp5-button-text"
+        class="bp6-button-text"
       >
         loadByInterval(2010-01-01/2015-01-01, 2x)
       </span>
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-caret-down"
+        class="bp6-icon bp6-icon-caret-down"
       >
         <svg
           data-icon="caret-down"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
     <div
       class="spacer"
     />
     <button
-      class="bp5-button bp5-minimal"
+      class="bp6-button bp6-minimal"
       type="button"
     >
       <span
         aria-hidden="true"
-        class="bp5-icon bp5-icon-trash"
+        class="bp6-icon bp6-icon-trash"
       >
         <svg
           data-icon="trash"
-          height="16"
-          role="img"
-          viewBox="0 0 16 16"
-          width="16"
-        >
-          <path
-            d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-            fill-rule="evenodd"
-          />
-        </svg>
+        />
       </span>
     </button>
   </div>
   <div
-    class="bp5-collapse"
+    class="bp6-collapse"
     style="height: auto; overflow-y: visible; transition: none;"
   >
     <div
       aria-hidden="false"
-      class="bp5-collapse-body"
+      class="bp6-collapse-body"
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="rule-detail bp6-card bp6-elevation-2"
       >
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group"
+              class="bp6-control-group"
               role="group"
             >
               <div
-                class="bp5-html-select"
+                class="bp6-html-select"
               >
                 <select>
                   <option
@@ -1669,32 +1336,18 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                   </option>
                 </select>
                 <span
-                  class="bp5-icon bp5-icon-double-caret-vertical"
+                  class="bp6-icon bp6-icon-double-caret-vertical"
                 >
                   <svg
                     data-icon="double-caret-vertical"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <title>
-                      Open dropdown
-                    </title>
-                    <path
-                      d="M100 180H220C231 180 240 189 240 200C240 205.6 237.8 210.6 234.2 214.2L174.2 274.2C170.6 277.8 165.6 280 160 280S149.4 277.8 145.8 274.2L85.8 214.2C82.2 210.6 80 205.6 80 200C80 189 89 180 100 180zM220 140H100C89 140 80 131 80 120C80 114.4 82.2 109.4 85.8 105.8L145.8 45.8C149.4 42.2 154.4 40 160 40S170.6 42.2 174.2 45.8L234.2 105.8C237.8 109.4 240 114.4 240 120C240 131 231 140 220 140z"
-                      fill-rule="evenodd"
-                      style="transform-origin: center;"
-                      transform="scale(0.05, -0.05) translate(-160, -160)"
-                    />
-                  </svg>
+                  />
                 </span>
               </div>
               <div
-                class="bp5-input-group"
+                class="bp6-input-group"
               >
                 <input
-                  class="bp5-input"
+                  class="bp6-input"
                   placeholder="2010-01-01/2020-01-01"
                   type="text"
                   value="2010-01-01/2015-01-01"
@@ -1704,22 +1357,22 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
           </div>
         </div>
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <div
-              class="bp5-control-group tiered-replicant"
+              class="bp6-control-group tiered-replicant"
               role="group"
             >
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Tier:
                 </span>
@@ -1728,43 +1381,34 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                 class="formatted-input suggestible-input"
               >
                 <div
-                  class="bp5-input-group bp5-fill"
+                  class="bp6-input-group bp6-fill"
                 >
                   <input
                     aria-disabled="false"
-                    class="bp5-input"
+                    class="bp6-input"
                     style="padding-right: 0px;"
                     type="text"
                     value="nonexist"
                   />
                   <span
-                    class="bp5-input-action"
+                    class="bp6-input-action"
                   >
                     <span
-                      class="bp5-popover-target"
+                      class="bp6-popover-target"
                     >
                       <button
                         aria-expanded="false"
                         aria-haspopup="menu"
-                        class="bp5-button bp5-minimal"
+                        class="bp6-button bp6-minimal"
                         type="button"
                       >
                         <span
                           aria-hidden="true"
-                          class="bp5-icon bp5-icon-caret-down"
+                          class="bp6-icon bp6-icon-caret-down"
                         >
                           <svg
                             data-icon="caret-down"
-                            height="16"
-                            role="img"
-                            viewBox="0 0 16 16"
-                            width="16"
-                          >
-                            <path
-                              d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
-                              fill-rule="evenodd"
-                            />
-                          </svg>
+                          />
                         </span>
                       </button>
                     </span>
@@ -1772,22 +1416,22 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                 </div>
               </div>
               <button
-                class="bp5-button bp5-minimal"
+                class="bp6-button bp6-minimal"
                 style="pointer-events: none;"
                 type="button"
               >
                 <span
-                  class="bp5-button-text"
+                  class="bp6-button-text"
                 >
                   Replicants:
                 </span>
               </button>
               <div
-                class="bp5-control-group bp5-numeric-input"
+                class="bp6-control-group bp6-numeric-input"
                 role="group"
               >
                 <div
-                  class="bp5-input-group"
+                  class="bp6-input-group"
                 >
                   <input
                     aria-disabled="false"
@@ -1795,7 +1439,7 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                     aria-valuemin="0"
                     aria-valuenow="2"
                     autocomplete="off"
-                    class="bp5-input"
+                    class="bp6-input"
                     id="numericInput-1"
                     max="256"
                     min="0"
@@ -1805,116 +1449,76 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
                   />
                 </div>
                 <div
-                  class="bp5-button-group bp5-vertical bp5-fixed"
+                  class="bp6-button-group bp6-vertical bp6-fixed"
                 >
                   <button
                     aria-controls="numericInput-1"
                     aria-label="increment"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-up"
+                      class="bp6-icon bp6-icon-chevron-up"
                     >
                       <svg
                         data-icon="chevron-up"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M254.2 134.2L174.2 214.2C170.6 217.8 165.6 220 160 220S149.4 217.8 145.8 214.2L65.8 134.2C62.2 130.6 60 125.6 60 120C60 109 69 100 80 100C85.6 100 90.6 102.2 94.2 105.8L160 171.8L225.8 106C229.4 102.2 234.4 100 240 100C251 100 260 109 260 120C260 125.6 257.8 130.6 254.2 134.2z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                   <button
                     aria-controls="numericInput-1"
                     aria-label="decrement"
-                    class="bp5-button"
+                    class="bp6-button"
                     type="button"
                   >
                     <span
                       aria-hidden="true"
-                      class="bp5-icon bp5-icon-chevron-down"
+                      class="bp6-icon bp6-icon-chevron-down"
                     >
                       <svg
                         data-icon="chevron-down"
-                        height="16"
-                        role="img"
-                        viewBox="0 0 16 16"
-                        width="16"
-                      >
-                        <path
-                          d="M240 220C234.4 220 229.4 217.8 225.8 214.2L160 148.2L94.2 214.2C90.6 217.8 85.6 220 80 220C69 220 60 211 60 200C60 194.4 62.2 189.4 65.8 185.8L145.8 105.8C149.4 102.2 154.4 100 160 100S170.6 102.2 174.2 105.8L254.2 185.8C257.8 189.4 260 194.4 260 200C260 211 251 220 240 220z"
-                          fill-rule="evenodd"
-                          style="transform-origin: center;"
-                          transform="scale(0.05, -0.05) translate(-160, -160)"
-                        />
-                      </svg>
+                      />
                     </span>
                   </button>
                 </div>
               </div>
               <button
-                class="bp5-button"
+                class="bp6-button"
                 type="button"
               >
                 <span
                   aria-hidden="true"
-                  class="bp5-icon bp5-icon-trash"
+                  class="bp6-icon bp6-icon-trash"
                 >
                   <svg
                     data-icon="trash"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <path
-                      d="M14.49 3.99h-13c-.28 0-.5.22-.5.5s.22.5.5.5h.5v10c0 .55.45 1 1 1h10c.55 0 1-.45 1-1v-10h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5zm-8.5 9c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm3 0c0 .55-.45 1-1 1s-1-.45-1-1v-6c0-.55.45-1 1-1s1 .45 1 1v6zm2-12h-4c0-.55-.45-1-1-1h-2c-.55 0-1 .45-1 1h-4c-.55 0-1 .45-1 1v1h14v-1c0-.55-.45-1-1-1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
+                  />
                 </span>
               </button>
             </div>
           </div>
         </div>
         <div
-          class="bp5-form-group"
+          class="bp6-form-group"
         >
           <div
-            class="bp5-form-content"
+            class="bp6-form-content"
           >
             <button
-              class="bp5-button bp5-minimal"
+              class="bp6-button bp6-minimal"
               type="button"
             >
               <span
                 aria-hidden="true"
-                class="bp5-icon bp5-icon-plus"
+                class="bp6-icon bp6-icon-plus"
               >
                 <svg
                   data-icon="plus"
-                  height="16"
-                  role="img"
-                  viewBox="0 0 16 16"
-                  width="16"
-                >
-                  <path
-                    d="M13 7H9V3c0-.55-.45-1-1-1s-1 .45-1 1v4H3c-.55 0-1 .45-1 1s.45 1 1 1h4v4c0 .55.45 1 1 1s1-.45 1-1V9h4c.55 0 1-.45 1-1s-.45-1-1-1z"
-                    fill-rule="evenodd"
-                  />
-                </svg>
+                />
               </span>
               <span
-                class="bp5-button-text"
+                class="bp6-button-text"
               >
                 Add historical tier replication
               </span>
