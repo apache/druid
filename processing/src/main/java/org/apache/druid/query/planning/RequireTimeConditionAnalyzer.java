@@ -98,6 +98,8 @@ public final class RequireTimeConditionAnalyzer
         return dataSource;
       }
       boolean crossedJoinLegBoundary = false;
+      boolean collapsedChain = true;
+      int queriesSeen = 0;
       for (int i = parents.size() - 1; i >= 0; i--) {
         EVNode ancestor = parents.get(i);
         if (!ancestor.isQuery() && ancestor.index != null && ancestor.index != 0 && i > 0) {
@@ -106,8 +108,19 @@ public final class RequireTimeConditionAnalyzer
             crossedJoinLegBoundary = true;
           }
         }
-        if (ancestor.isQuery() && !crossedJoinLegBoundary && isBounded(ancestor.getQuery())) {
-          return dataSource;
+        if (ancestor.isQuery()) {
+          Query<?> q = ancestor.getQuery();
+          if (queriesSeen > 0) {
+            // To trust q's bound, every Query between the leaf and q must have been
+            // absorbed into q (or further up). Each hop needs the outer Query to
+            // mayCollapseQueryDataSource() its inner QueryDataSource; otherwise the
+            // inner query runs independently and the outer's bound does not reach the leaf.
+            collapsedChain &= q.mayCollapseQueryDataSource();
+          }
+          if (!crossedJoinLegBoundary && collapsedChain && isBounded(q)) {
+            return dataSource;
+          }
+          queriesSeen++;
         }
       }
       allLegsBounded = false;

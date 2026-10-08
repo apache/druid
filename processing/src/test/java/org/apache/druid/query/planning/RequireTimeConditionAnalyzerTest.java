@@ -79,6 +79,18 @@ public class RequireTimeConditionAnalyzerTest
   }
 
   @Test
+  public void testBoundedOuterOverUnboundedQueryDataSourceIsNotSatisfied()
+  {
+    // Non-collapsible QueryDataSource outside any join. ScanQuery.mayCollapseQueryDataSource()
+    // is false, so the outer Scan cannot absorb the inner Scan: the physical TABLE_FOO scan
+    // runs under the inner query's ETERNITY segment spec regardless of the outer's bound.
+    // Guards Frank's follow-up P1 on #20441.
+    ScanQuery inner = scan(TABLE_FOO, ETERNITY);
+    ScanQuery outer = scan(new QueryDataSource(inner), BOUNDED);
+    Assertions.assertFalse(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(outer));
+  }
+
+  @Test
   public void testGlobalLookupIsSatisfied()
   {
     Assertions.assertTrue(RequireTimeConditionAnalyzer.hasTimeFilterOnAllLegs(scan(LOOKUP_LOOKYLOO, ETERNITY)));
