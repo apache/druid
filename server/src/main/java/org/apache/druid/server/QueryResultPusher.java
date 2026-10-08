@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CountingOutputStream;
 import org.apache.druid.client.DirectDruidClient;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.QueryExceptionCompat;
@@ -68,6 +69,7 @@ public abstract class QueryResultPusher
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
   private final Map<String, Object> queryContext;
+  private final ErrorResponseTransformStrategy errorResponseTransformStrategy;
   private final Map<String, String> trailerFields;
 
   private StreamingHttpResponseAccumulator accumulator;
@@ -83,7 +85,8 @@ public abstract class QueryResultPusher
       String queryId,
       MediaType contentType,
       Map<String, String> extraHeaders,
-      Map<String, Object> queryContext
+      Map<String, Object> queryContext,
+      ErrorResponseTransformStrategy errorResponseTransformStrategy
   )
   {
     this.request = request;
@@ -95,6 +98,7 @@ public abstract class QueryResultPusher
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
     this.queryContext = queryContext;
+    this.errorResponseTransformStrategy = errorResponseTransformStrategy;
     this.trailerFields = new HashMap<>();
   }
 
@@ -257,9 +261,22 @@ public abstract class QueryResultPusher
     }
   }
 
+  /**
+   * Records the failure {@code e}, and sends the client the exception returned for it by the
+   * {@link ErrorResponseTransformStrategy}.
+   */
   private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
   {
     incrementQueryCounterForException(counter, e);
+
+    final DruidException clientException = errorResponseTransformStrategy.sanitizeForClient(e, queryId);
+    if (clientException != e) {
+      log.noStackTrace().error(
+          e,
+          "External Error ID: [%s]. Search the logs for this ID for the full failure details.",
+          queryId
+      );
+    }
 
     if (resultsWriter != null) {
       final long bytesWritten = accumulator != null ? accumulator.getNumBytesSent() : 0;
@@ -274,7 +291,7 @@ public abstract class QueryResultPusher
         if (queryContext != null
             && Boolean.parseBoolean(String.valueOf(queryContext.get(QueryResource.WRITE_EXCEPTION_BODY_AS_RESPONSE_ROW)))) {
           try {
-            accumulator.writer.writeRow(e);
+            accumulator.writer.writeRow(clientException);
             accumulator.writer.writeResponseEnd();
           }
           catch (IOException ioException) {
@@ -285,7 +302,7 @@ public abstract class QueryResultPusher
             );
           }
         }
-        trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
+        trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, clientException.getMessage());
         trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "false");
         return null;
       }
@@ -293,7 +310,7 @@ public abstract class QueryResultPusher
 
     if (response == null) {
       return handleDruidExceptionBeforeResponseStarted(
-          e,
+          clientException,
           contentType,
           ImmutableMap.<String, String>builder()
                       .putAll(extraHeaders)
@@ -305,10 +322,10 @@ public abstract class QueryResultPusher
         QueryResource.NO_STACK_LOGGER.warn(e, "Response was committed without the accumulator writing anything!?");
       }
 
-      response.setStatus(e.getStatusCode());
+      response.setStatus(clientException.getStatusCode());
       response.setHeader("Content-Type", contentType.toString());
       try (ServletOutputStream out = response.getOutputStream()) {
-        writeException(e, out);
+        writeException(clientException, out);
       }
       catch (IOException ioException) {
         log.warn(
