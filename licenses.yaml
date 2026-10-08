@@ -3988,7 +3988,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.73.0
+version: 2.74.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -3998,7 +3998,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.68.0
+version: 2.69.0
 libraries:
   - com.google.api: api-common
 
@@ -4122,7 +4122,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.85.0
+version: 2.86.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4134,7 +4134,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.73.0
+version: 2.74.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4202,7 +4202,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.76.0
+version: 2.77.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4212,7 +4212,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.71.0
+version: 1.72.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4222,7 +4222,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.52.0
+version: 1.53.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4243,7 +4243,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.75.0
+version: 2.76.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
