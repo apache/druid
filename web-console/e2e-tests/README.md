@@ -51,6 +51,11 @@ Before the tests start, a global setup (`util/global-setup.ts`) waits for the co
   console and network at that point) and an `error-context.md` (the page as an accessibility tree) in `test-results/`
   (git ignored). Every HTTP response with a status of 400 or more is also logged with its body
   (`util/fixtures.ts`).
+- **See the steps a test takes**: `E2E_SHOW_STEPS=true npm run test-e2e`. Each test saves a screenshot at each of
+  its steps (each step of the data loader, each view it reads, a query's results, a dialog it fills in, and the
+  page as it ends) to `steps/<spec>-001.png`, `-002.png`, ... (git ignored, replaced by the next run of the spec).
+  The quickest way to see what a test does, especially one someone else wrote. It works on the embedded clusters
+  too: `E2E_SHOW_STEPS=true mvn -pl embedded-tests verify -Pweb-console-tests ...`.
 
 ### On an embedded cluster (as in CI)
 
@@ -124,14 +129,16 @@ e2e-tests/
                        (data-connector.ts: local disk, reindex from Druid; partitions-spec.ts: hashed, range)
     workbench/         Query view: run a query (accepting the task slot warning), cancel a query
   util/
-    fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses, and has the
-                       newDatasourceName fixture)
+    fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses, shows the last
+                       step, and has the newDatasourceName fixture)
     global-setup.ts    waits for the console's SQL endpoint before the tests start
     druid.ts           the tutorial data dir and ingestion specs, runTask (submits a task and waits for it),
                        deleteDatasource
     sql.ts             querySql, and the cluster state the tests wait for: task statuses, a datasource's segments
     playwright.ts      openView, and helpers that find inputs and buttons by their label or text
     table.ts           extractTable / extractTableRecords: read a table's rows as text (by position / by header)
+    steps.ts           showStep: a screenshot of a step of the test, with E2E_SHOW_STEPS=true
+  steps/               the screenshots of showStep (git ignored)
 ```
 
 ### Writing a test
@@ -155,8 +162,11 @@ e2e-tests/
 - Read the console's tables with `extractTableRecords`, which keys each row by its column headers, so a column
   being added, hidden or moved doesn't break the test.
 - Retry UI checks that depend on data loading with `await expect(async () => { ... }).toPass()`. Make each attempt
-  fail fast (like `QueryOverview.runQuery` throwing on a query error) rather than wait out a timeout.
+  fail fast (like `WorkbenchOverview.runQuery` throwing on a query error) rather than wait out a timeout.
 - Set up data that the test is not about through the API, not the UI: `readTutorialIngestionSpec`, change what you
   need (the datasource name at least) and `runTask(request, ingestionSpec)`.
+- Call `showStep(page, 'what the page shows')` at the points worth seeing, once the page shows them (in a page
+  object, so every test using it gets the step). With `E2E_SHOW_STEPS=true` it saves a screenshot, otherwise it does
+  nothing.
 - Name a datasource you create with the `newDatasourceName` fixture: `newDatasourceName('my-test')` makes a unique
   name (the prefix and the time) and deletes the datasource after the test passes.

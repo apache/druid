@@ -107,7 +107,10 @@ export async function selectSuggestibleInput(
 
 export async function setQueryInput(page: Page, value: string): Promise<void> {
   // The query input is a CodeMirror editor, its editable surface is a contenteditable div
-  await page.locator('.flexible-query-input .cm-content').fill(value);
+  const input = page.locator('.flexible-query-input .cm-content');
+  await input.fill(value);
+  // Closes the autocomplete that typing opens, which would cover the query (and its results)
+  await input.press('Escape');
 }
 
 export function button(scope: Page | Locator, text: string): Locator {

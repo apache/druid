@@ -19,6 +19,7 @@
 import type { Page } from '@playwright/test';
 
 import { clickButton, openView, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
+import { showStep } from '../../util/steps';
 
 import type { DataConnector } from './data-connector';
 import { connect, connectorCardTitle, connectorNeedsParse } from './data-connector';
@@ -57,6 +58,7 @@ export async function loadData(page: Page, config: DataLoaderConfig): Promise<vo
     .locator('.bp6-card')
     .filter({ has: page.locator('p', { hasText: connectorCardTitle(config.connector) }) })
     .click();
+  await showStep(page, `Data loader: ${connectorCardTitle(config.connector)} picked`);
   await clickButton(page, 'Connect data');
 
   // Connect
@@ -64,12 +66,14 @@ export async function loadData(page: Page, config: DataLoaderConfig): Promise<vo
   const rawLines = page.locator('.raw-lines .raw-line');
   await rawLines.first().waitFor();
   config.validateConnect(await rawLines.allTextContents());
+  await showStep(page, 'Data loader: Connect, with a preview of the data');
 
   if (connectorNeedsParse(config.connector)) {
     await clickNext('Parse data');
 
     // Parse data
     await page.locator('.parse-data-table').waitFor();
+    await showStep(page, 'Data loader: Parse data');
     await clickNext('Parse time');
 
     // Parse time
@@ -79,20 +83,24 @@ export async function loadData(page: Page, config: DataLoaderConfig): Promise<vo
       await setLabeledInput(page, 'Expression', config.timestampExpression);
       await clickButton(page, 'Apply');
     }
+    await showStep(page, 'Data loader: Parse time');
   }
   await clickNext('Transform');
 
   // Transform
   await page.locator('.transform-table').waitFor();
+  await showStep(page, 'Data loader: Transform');
   await clickNext('Filter');
 
   // Filter
   await page.locator('.filter-table').waitFor();
+  await showStep(page, 'Data loader: Filter');
   await clickNext('Configure schema');
 
   // Configure schema
   await page.locator('.schema-table').waitFor();
   await setRollup(page, config.rollup);
+  await showStep(page, 'Data loader: Configure schema');
   await clickNext('Partition');
 
   // Partition
@@ -104,19 +112,23 @@ export async function loadData(page: Page, config: DataLoaderConfig): Promise<vo
   if (config.partitionsSpec) {
     await applyPartitionsSpec(page, config.partitionsSpec);
   }
+  await showStep(page, 'Data loader: Partition');
   await clickNext('Tune');
 
   // Tune
   await page.locator('.load-data-view.tuning').waitFor();
+  await showStep(page, 'Data loader: Tune');
   await clickNext('Publish');
 
   // Publish
   await page.locator('.load-data-view.publish').waitFor();
   await setLabeledInput(page, 'Datasource name', config.datasourceName);
+  await showStep(page, 'Data loader: Publish');
   await clickNext('Edit spec');
 
   // Edit spec
   await page.locator('.load-data-view.spec').waitFor();
+  await showStep(page, 'Data loader: Edit spec');
   await clickButton(nextBar, 'Submit task');
 }
 

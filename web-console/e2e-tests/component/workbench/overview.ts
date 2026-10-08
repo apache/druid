@@ -19,6 +19,7 @@
 import type { Page } from '@playwright/test';
 
 import { clickButton, openView, setQueryInput } from '../../util/playwright';
+import { showStep } from '../../util/steps';
 import { extractTable } from '../../util/table';
 
 /**
@@ -49,13 +50,16 @@ export class WorkbenchOverview {
     const timeout = 4 * 60 * 1000;
     await results.or(error).or(capacityAlert).waitFor({ timeout });
     if (await capacityAlert.isVisible()) {
+      await showStep(this.page, 'Query view: not enough task slots, to confirm');
       await clickButton(capacityAlert, 'Run it anyway');
       await results.or(error).waitFor({ timeout });
     }
 
     if (await error.isVisible()) {
+      await showStep(this.page, 'Query view: the query failed');
       throw new Error(`Query failed: ${await error.innerText()}`);
     }
+    await showStep(this.page, 'Query view: the query results');
     return await extractTable(results);
   }
 
@@ -76,12 +80,15 @@ export class WorkbenchOverview {
     );
     await clickButton(this.page, 'Run');
     await queryRequest;
+    await showStep(this.page, 'Query view: the query running');
 
     const cancelResponse = this.page.waitForResponse(
       response => response.url().includes('druid/v2') && response.request().method() === 'DELETE',
     );
     await this.page.locator('.cancel-label', { hasText: 'Cancel query' }).click();
 
-    return (await cancelResponse).status();
+    const status = (await cancelResponse).status();
+    await showStep(this.page, 'Query view: the query canceled');
+    return status;
   }
 }

@@ -19,11 +19,13 @@
 import { test as base } from '@playwright/test';
 
 import { deleteDatasource } from './druid';
+import { showStep } from './steps';
 
 export { expect } from '@playwright/test';
 
 export const test = base.extend<{
   logFailedResponses: void;
+  showLastStep: void;
   newDatasourceName: (prefix: string) => string;
 }>({
   // Logs every response with an error status (and its body) so that a failure can be understood from the log alone
@@ -46,6 +48,18 @@ export const test = base.extend<{
       });
 
       await use();
+    },
+    { auto: true },
+  ],
+
+  // Shows the page as the test ends (see showStep), as the last step
+  showLastStep: [
+    async ({ page }, use, testInfo) => {
+      await use();
+      await showStep(
+        page,
+        testInfo.status === testInfo.expectedStatus ? 'The end' : 'The end (failed)',
+      );
     },
     { auto: true },
   ],

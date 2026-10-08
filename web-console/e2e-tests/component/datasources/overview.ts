@@ -25,6 +25,7 @@ import {
   openView,
   setLabeledInput,
 } from '../../util/playwright';
+import { showStep } from '../../util/steps';
 import { extractTableRecords } from '../../util/table';
 import type { PartitionsSpec } from '../load-data/partitions-spec';
 import { applyPartitionsSpec, readPartitionsSpec } from '../load-data/partitions-spec';
@@ -67,6 +68,7 @@ export class DatasourcesOverview {
     await openView(this.page, 'datasources', { datasource: datasourceName });
 
     const records = await extractTableRecords(this.table());
+    await showStep(this.page, `Datasources view, filtered on ${datasourceName}`);
 
     return records.map(record => ({
       name: record['Datasource name'],
@@ -83,6 +85,7 @@ export class DatasourcesOverview {
 
     await setLabeledInput(dialog, SKIP_OFFSET_FROM_LATEST, compactionConfig.skipOffsetFromLatest);
     await applyPartitionsSpec(this.page, compactionConfig.partitionsSpec);
+    await showStep(this.page, 'Compaction config dialog, filled in');
 
     await clickButton(dialog, 'Submit');
   }
@@ -92,6 +95,7 @@ export class DatasourcesOverview {
 
     const skipOffsetFromLatest = await getLabeledInput(dialog, SKIP_OFFSET_FROM_LATEST);
     const partitionsSpec = await readPartitionsSpec(this.page);
+    await showStep(this.page, 'Compaction config dialog, as saved');
 
     await clickButton(dialog.locator('.bp6-dialog-footer'), 'Close');
     return { skipOffsetFromLatest, partitionsSpec: partitionsSpec! };
@@ -111,6 +115,9 @@ export class DatasourcesOverview {
     await openView(this.page, 'datasources');
     await this.page.locator('.more-button button').click({ modifiers: ['Alt'] });
     await clickMenuItem(this.page, 'Force compaction run');
-    await clickButton(this.page.locator('.bp6-alert'), 'Force compaction run');
+    const confirmation = this.page.locator('.bp6-alert');
+    await confirmation.waitFor();
+    await showStep(this.page, 'Force compaction run, to confirm');
+    await clickButton(confirmation, 'Force compaction run');
   }
 }

@@ -19,6 +19,7 @@
 import type { Page } from '@playwright/test';
 
 import { openView } from '../../util/playwright';
+import { showStep } from '../../util/steps';
 import { extractTableRecords } from '../../util/table';
 
 /**
@@ -46,6 +47,7 @@ export class TasksOverview {
     await openView(this.page, 'tasks', { datasource: datasourceName });
 
     const records = await extractTableRecords(this.page.locator('.tasks-view .console-table'));
+    await showStep(this.page, `Tasks view, filtered on ${datasourceName}`);
 
     return records.map(record => ({
       datasource: record['Datasource'],
