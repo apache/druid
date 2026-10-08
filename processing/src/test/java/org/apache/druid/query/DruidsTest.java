@@ -26,6 +26,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids.SearchQueryBuilder;
 import org.apache.druid.query.Druids.TimeBoundaryQueryBuilder;
 import org.apache.druid.query.Druids.TimeseriesQueryBuilder;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
