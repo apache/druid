@@ -74,14 +74,12 @@ for up to 2 minutes.
 ```
 e2e-tests/
   *.spec.ts            the tests, one describe per file
-  component/           page objects: one class per view, wrapping its selectors
+  component/           page objects: one per view, wrapping its selectors
     datasources/       Datasources view (reads the table, edits and triggers compaction)
     ingestion/         Tasks view (reads the table)
-    load-data/         the classic data loader, step by step
-      data-connector/  the input sources it can connect to (local disk, reindex from Druid)
-      config/          what to set at each step (timestamp, schema, partition, publish)
-    query/             Query view: run a query, cancel a query
-    workbench/         Query view: run a query, accepting the task slot warning
+    load-data/         the classic data loader: loadData goes through each step with a DataLoaderConfig
+                       (data-connector.ts: local disk, reindex from Druid; partitions-spec.ts: hashed, range)
+    workbench/         Query view: run a query (accepting the task slot warning), cancel a query
   util/
     fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses, and has the
                        newDatasourceName fixture)
@@ -98,7 +96,8 @@ e2e-tests/
 - Import `test` and `expect` from `util/fixtures.ts` (not from `@playwright/test`) and take the `page` fixture:
   `test('...', async ({ page }) => { ... })`. Each test gets a fresh browser context, so no local storage carries
   over.
-- Put selectors in a page object under `component/` rather than in the spec, and use locators (`page.locator`,
+- Put selectors in a page object under `component/` rather than in the spec (and keep data, like what to set in a
+  form, as plain objects, with a union type when it comes in kinds), and use locators (`page.locator`,
   `getByRole`), not `page.$` / `waitForSelector` / XPath. The helpers in `util/playwright.ts` find form fields by
   their visible label (`setLabeledInput(page, 'Datasource name', ...)`; the labels are not linked to their inputs,
   so `getByLabel` does not work) and buttons by their exact text, so renaming a label or a button in the console

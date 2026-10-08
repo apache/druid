@@ -78,14 +78,14 @@ modernize them, in order. Each step should leave the suite passing.
   they are, which the browser sends as is and Jetty rejects (400 Illegal Path Character), so every action on a
   datasource with one of those in its name (mark unused, kill, retention rules, compaction config) failed.
 
-## 6. Simplify the code
+## 6. Simplify the code (done)
 
-- Merge `component/query/overview.ts` and `component/workbench/overview.ts` (both drive `#workbench`).
-- Plain object types instead of the `Object.assign(this, props)` + interface merging data classes (`PublishConfig`,
-  `Datasource`, `IngestionTask`, ...); then the `no-unsafe-declaration-merging` eslint override can go.
-- No `goto` + `reload({ waitUntil: 'networkidle' })`.
-- `cancel-query`: one `expect(status).toBe(202)`.
-- Drop `--disable-local-storage` (each test gets a fresh context anyway).
+- Merged `component/query/overview.ts` into `component/workbench/overview.ts` (both drove `#workbench`).
+- Plain object types instead of the `Object.assign(this, props)` + interface merging data classes, and union types
+  with functions for the partitions specs and data connectors; the data loader is a `loadData(page, config)`
+  function with one flat config. The `no-unsafe-declaration-merging` eslint override is gone.
+- Done earlier, in steps 1-2: no `goto` + `reload({ waitUntil: 'networkidle' })`, one `expect` in `cancel-query`,
+  no `--disable-local-storage`.
 
 ## 7. More coverage (later, separately)
 

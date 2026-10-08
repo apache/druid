@@ -21,7 +21,13 @@ import type { Page } from '@playwright/test';
 import { openView } from '../../util/playwright';
 import { extractTableRecords } from '../../util/table';
 
-import { IngestionTask } from './task';
+/**
+ * A row of the Tasks view.
+ */
+export interface IngestionTask {
+  readonly datasource: string;
+  readonly status: string;
+}
 
 /**
  * Represents task tab.
@@ -41,12 +47,9 @@ export class TasksOverview {
 
     const records = await extractTableRecords(this.page.locator('.tasks-view .console-table'));
 
-    return records.map(
-      record =>
-        new IngestionTask({
-          datasource: record['Datasource'],
-          status: record['Status'],
-        }),
-    );
+    return records.map(record => ({
+      datasource: record['Datasource'],
+      status: record['Status'],
+    }));
   }
 }

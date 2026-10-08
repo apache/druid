@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { QueryOverview } from './component/query/overview';
+import { WorkbenchOverview } from './component/workbench/overview';
 import { expect, test } from './util/fixtures';
 
 test.describe('Cancel query', () => {
   test('delete accepted', async ({ page }) => {
-    const queryOverview = new QueryOverview(page);
-    const status = await queryOverview.cancelQuery('SELECT sleep(40)');
+    const workbench = new WorkbenchOverview(page);
+    const status = await workbench.cancelQuery('SELECT sleep(40)');
     expect(status).toBe(202);
   });
 });

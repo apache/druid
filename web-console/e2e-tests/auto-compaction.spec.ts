@@ -18,9 +18,8 @@
 
 import type { APIRequestContext, Page } from '@playwright/test';
 
-import { CompactionConfig } from './component/datasources/compaction';
+import type { CompactionConfig } from './component/datasources/overview';
 import { DatasourcesOverview } from './component/datasources/overview';
-import { HashedPartitionsSpec } from './component/load-data/config/partition';
 import { readTutorialIngestionSpec, runTask } from './util/druid';
 import { expect, test } from './util/fixtures';
 import { CLUSTER_STATE_POLL, getDatasourceSegments } from './util/sql';
@@ -41,12 +40,10 @@ test.describe('Auto-compaction', () => {
       .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
       .toEqual({ numSegments: 3, numAvailableSegments: 3, numRows });
 
-    const compactionConfig = new CompactionConfig({
+    const compactionConfig: CompactionConfig = {
       skipOffsetFromLatest: 'PT0S',
-      partitionsSpec: new HashedPartitionsSpec({
-        numShards: null,
-      }),
-    });
+      partitionsSpec: { type: 'hashed', numShards: null },
+    };
     await configureCompaction(page, datasourceName, compactionConfig);
 
     // Depending on the number of configured tasks slots, autocompaction may

@@ -26,10 +26,25 @@ import {
   setLabeledInput,
 } from '../../util/playwright';
 import { extractTableRecords } from '../../util/table';
-import { readPartitionSpec } from '../load-data/config/partition';
+import type { PartitionsSpec } from '../load-data/partitions-spec';
+import { applyPartitionsSpec, readPartitionsSpec } from '../load-data/partitions-spec';
 
-import { CompactionConfig } from './compaction';
-import { Datasource } from './datasource';
+/**
+ * A row of the Datasources view.
+ */
+export interface Datasource {
+  readonly name: string;
+  readonly availability: string;
+  readonly totalRows: number;
+}
+
+/**
+ * What the tests set in the compaction config dialog.
+ */
+export interface CompactionConfig {
+  readonly skipOffsetFromLatest: string;
+  readonly partitionsSpec: PartitionsSpec;
+}
 
 const SKIP_OFFSET_FROM_LATEST = 'Skip offset from latest';
 
@@ -53,18 +68,11 @@ export class DatasourcesOverview {
 
     const records = await extractTableRecords(this.table());
 
-    return records.map(
-      record =>
-        new Datasource({
-          name: record['Datasource name'],
-          availability: record['Availability'],
-          totalRows: DatasourcesOverview.parseNumber(record['Total rows']),
-        }),
-    );
-  }
-
-  private static parseNumber(text: string): number {
-    return Number(text.replace(/,/g, ''));
+    return records.map(record => ({
+      name: record['Datasource name'],
+      availability: record['Availability'],
+      totalRows: Number(record['Total rows'].replace(/,/g, '')),
+    }));
   }
 
   async setCompactionConfiguration(
@@ -74,7 +82,7 @@ export class DatasourcesOverview {
     const dialog = await this.openCompactionConfigurationDialog(datasourceName);
 
     await setLabeledInput(dialog, SKIP_OFFSET_FROM_LATEST, compactionConfig.skipOffsetFromLatest);
-    await compactionConfig.partitionsSpec.apply(this.page);
+    await applyPartitionsSpec(this.page, compactionConfig.partitionsSpec);
 
     await clickButton(dialog, 'Submit');
   }
@@ -83,10 +91,10 @@ export class DatasourcesOverview {
     const dialog = await this.openCompactionConfigurationDialog(datasourceName);
 
     const skipOffsetFromLatest = await getLabeledInput(dialog, SKIP_OFFSET_FROM_LATEST);
-    const partitionsSpec = await readPartitionSpec(this.page);
+    const partitionsSpec = await readPartitionsSpec(this.page);
 
     await clickButton(dialog.locator('.bp6-dialog-footer'), 'Close');
-    return new CompactionConfig({ skipOffsetFromLatest, partitionsSpec: partitionsSpec! });
+    return { skipOffsetFromLatest, partitionsSpec: partitionsSpec! };
   }
 
   private async openCompactionConfigurationDialog(datasourceName: string) {

@@ -18,15 +18,7 @@
 
 import type { APIRequestContext } from '@playwright/test';
 
-import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
-import {
-  PartitionConfig,
-  RangePartitionsSpec,
-  SegmentGranularity,
-} from './component/load-data/config/partition';
-import { PublishConfig } from './component/load-data/config/publish';
-import { ReindexDataConnector } from './component/load-data/data-connector/reindex';
-import { DataLoader } from './component/load-data/data-loader';
+import { loadData } from './component/load-data/data-loader';
 import { readTutorialIngestionSpec, runTask } from './util/druid';
 import { expect, test } from './util/fixtures';
 import { CLUSTER_STATE_POLL, getDatasourceSegments, getTaskStatuses } from './util/sql';
@@ -38,39 +30,25 @@ test.describe('Reindexing from Druid', () => {
     newDatasourceName,
   }) => {
     const datasourceName = newDatasourceName('reindex-dynamic-to-range');
-    const interval = '2015-09-12/2015-09-13';
-    const dataConnector = new ReindexDataConnector(page, {
-      datasourceName,
-      interval,
-    });
-    const configureSchemaConfig = new ConfigureSchemaConfig({ rollup: false });
-    const partitionConfig = new PartitionConfig({
-      segmentGranularity: SegmentGranularity.DAY,
-      timeIntervals: null,
-      partitionsSpec: new RangePartitionsSpec({
-        partitionDimensions: ['channel'],
-        targetRowsPerSegment: 10_000,
-        maxRowsPerSegment: null,
-      }),
-    });
-    const publishConfig = new PublishConfig({ datasourceName: datasourceName });
-
-    const dataLoader = new DataLoader({
-      page: page,
-      connector: dataConnector,
-      connectValidator: validateConnectLocalData,
-      configureSchemaConfig: configureSchemaConfig,
-      partitionConfig: partitionConfig,
-      publishConfig: publishConfig,
-    });
-
     await loadInitialData(request, datasourceName);
 
     await expect
       .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
       .toEqual({ numSegments: 1, numAvailableSegments: 1, numRows: 39244 });
 
-    await dataLoader.load();
+    await loadData(page, {
+      connector: { type: 'reindex', datasourceName, interval: '2015-09-12/2015-09-13' },
+      validateConnect: validateConnectLocalData,
+      rollup: false,
+      segmentGranularity: 'day',
+      partitionsSpec: {
+        type: 'range',
+        partitionDimensions: ['channel'],
+        targetRowsPerSegment: 10_000,
+        maxRowsPerSegment: null,
+      },
+      datasourceName,
+    });
     // The initial load and the reindexing
     await expect
       .poll(() => getTaskStatuses(request, datasourceName), CLUSTER_STATE_POLL)

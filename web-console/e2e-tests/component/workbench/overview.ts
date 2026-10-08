@@ -22,7 +22,7 @@ import { clickButton, openView, setQueryInput } from '../../util/playwright';
 import { extractTable } from '../../util/table';
 
 /**
- * Represents the workbench tab.
+ * Represents the Query view (the workbench).
  */
 export class WorkbenchOverview {
   private readonly page: Page;
@@ -31,6 +31,9 @@ export class WorkbenchOverview {
     this.page = page;
   }
 
+  /**
+   * Runs a query and returns its results (as text, one array of cells per row). Throws if the query fails.
+   */
   async runQuery(query: string): Promise<string[][]> {
     await openView(this.page, 'workbench');
 
@@ -38,16 +41,43 @@ export class WorkbenchOverview {
     await clickButton(this.page, 'Run');
 
     const results = this.page.locator('.result-table-pane');
+    const error = this.page.locator('.execution-error-pane');
+    // Shown before running a query with the MSQ task engine when the cluster lacks task slots
     const capacityAlert = this.page.locator('.alert-dialog').filter({
       hasText: 'The cluster does not currently have enough available task slots',
     });
     const timeout = 4 * 60 * 1000;
-    await results.or(capacityAlert).waitFor({ timeout });
+    await results.or(error).or(capacityAlert).waitFor({ timeout });
     if (await capacityAlert.isVisible()) {
       await clickButton(capacityAlert, 'Run it anyway');
-      await results.waitFor({ timeout });
+      await results.or(error).waitFor({ timeout });
     }
 
+    if (await error.isVisible()) {
+      throw new Error(`Query failed: ${await error.innerText()}`);
+    }
     return await extractTable(results);
+  }
+
+  /**
+   * Runs a query, cancels it once it is running and returns the status of the cancel request.
+   */
+  async cancelQuery(query: string): Promise<number> {
+    await openView(this.page, 'workbench');
+
+    await setQueryInput(this.page, query);
+
+    const queryRequest = this.page.waitForRequest(
+      request => request.url().includes('druid/v2') && request.method() === 'POST',
+    );
+    await clickButton(this.page, 'Run');
+    await queryRequest;
+
+    const cancelResponse = this.page.waitForResponse(
+      response => response.url().includes('druid/v2') && response.request().method() === 'DELETE',
+    );
+    await this.page.locator('.cancel-label', { hasText: 'Cancel query' }).click();
+
+    return (await cancelResponse).status();
   }
 }

@@ -21,13 +21,8 @@ import { T } from 'druid-query-toolkit';
 
 import { DatasourcesOverview } from './component/datasources/overview';
 import { TasksOverview } from './component/ingestion/overview';
-import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
-import { ConfigureTimestampConfig } from './component/load-data/config/configure-timestamp';
-import { PartitionConfig, SegmentGranularity } from './component/load-data/config/partition';
-import { PublishConfig } from './component/load-data/config/publish';
-import { LocalFileDataConnector } from './component/load-data/data-connector/local-file';
-import { DataLoader } from './component/load-data/data-loader';
-import { QueryOverview } from './component/query/overview';
+import { loadData } from './component/load-data/data-loader';
+import { WorkbenchOverview } from './component/workbench/overview';
 import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR } from './util/druid';
 import { expect, test } from './util/fixtures';
 import { CLUSTER_STATE_POLL, getDatasourceSegments, getTaskStatuses } from './util/sql';
@@ -37,26 +32,18 @@ const ALL_SORTS_OF_CHARS = '<>|!@#$%^&`\'".,:;\\*()[]{}Україна 한국 中
 test.describe('Tutorial: Loading a file', () => {
   test('Loads data from local disk', async ({ page, request, newDatasourceName }) => {
     const datasourceName = newDatasourceName('load-data-from-local-disk' + ALL_SORTS_OF_CHARS);
-    const dataLoader = new DataLoader({
-      page: page,
-      connector: new LocalFileDataConnector(page, {
+    await loadData(page, {
+      connector: {
+        type: 'local',
         baseDirectory: DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR,
         fileFilter: 'wikiticker-2015-09-12-sampled.json.gz',
-      }),
-      connectValidator: validateConnectLocalData,
-      configureTimestampConfig: new ConfigureTimestampConfig({
-        timestampExpression: 'timestamp_parse("time") + 1',
-      }),
-      configureSchemaConfig: new ConfigureSchemaConfig({ rollup: false }),
-      partitionConfig: new PartitionConfig({
-        segmentGranularity: SegmentGranularity.DAY,
-        timeIntervals: null,
-        partitionsSpec: null,
-      }),
-      publishConfig: new PublishConfig({ datasourceName: datasourceName }),
+      },
+      validateConnect: validateConnectLocalData,
+      timestampExpression: 'timestamp_parse("time") + 1',
+      rollup: false,
+      segmentGranularity: 'day',
+      datasourceName,
     });
-
-    await dataLoader.load();
 
     await expect
       .poll(() => getTaskStatuses(request, datasourceName), CLUSTER_STATE_POLL)
@@ -152,12 +139,12 @@ async function validateDatasourcesView(page: Page, datasourceName: string) {
 }
 
 async function validateQuery(page: Page, datasourceName: string) {
-  const queryOverview = new QueryOverview(page);
+  const workbench = new WorkbenchOverview(page);
   const query = `SELECT * FROM ${T(datasourceName)} ORDER BY __time`;
   let results!: string[][];
   // The datasource can be available before the Broker's SQL schema knows about it
   await expect(async () => {
-    results = await queryOverview.runQuery(query);
+    results = await workbench.runQuery(query);
     expect(results.length).toBeGreaterThan(0);
   }).toPass();
   expect(results[0]).toStrictEqual([
