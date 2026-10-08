@@ -17,28 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.console;
+package org.apache.druid.testing.embedded.query;
 
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-
-import java.util.Map;
+import org.apache.druid.testing.embedded.console.WebConsoleTestBase;
+import org.junit.jupiter.api.Test;
 
 /**
- * Runs the web console specs that need only a plain cluster (no external resources).
+ * Cancels a running SQL query from the Query view of the web console.
  */
-public class CoreWebConsoleTest extends WebConsoleTestBase
+public class SqlQueryCancelWebConsoleTest extends WebConsoleTestBase
 {
-  @ParameterizedTest(name = "{0}")
-  @ValueSource(strings = {
-      "auto-compaction.spec.ts",
-      "cancel-query.spec.ts",
-      "multi-stage-query.spec.ts",
-      "reindexing.spec.ts",
-      "tutorial-batch.spec.ts"
-  })
-  public void testSpec(String spec) throws Exception
+  @Test
+  public void testCancelQuery() throws Exception
   {
-    runSpec(spec, Map.of());
+    runSpec("cancel-query.spec.ts");
   }
 }

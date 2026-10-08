@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.testing.embedded.console;
+package org.apache.druid.testing.embedded.s3;
 
 import org.apache.druid.data.input.s3.S3InputSourceDruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
-import org.apache.druid.testing.embedded.s3.S3StorageResource;
+import org.apache.druid.testing.embedded.console.WebConsoleTestBase;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.sync.RequestBody;

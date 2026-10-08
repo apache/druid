@@ -56,14 +56,16 @@ import java.util.stream.Collectors;
  * Steps to write a test:
  * <ul>
  * <li>Write the Playwright spec in {@code web-console/e2e-tests}.</li>
- * <li>Write a {@code *WebConsoleTest} class that extends this class. Add the resources the spec needs (S3, Kafka,
- * etc.) in {@link #addResources}, and the extensions and properties in {@link #configureCluster}.</li>
+ * <li>Write a {@code *WebConsoleTest} class that extends this class, in the package of the functionality the spec
+ * covers (like {@code s3} for loading data from S3). Add the resources the spec needs (S3, Kafka, etc.) in
+ * {@link #addResources}, and the extensions and properties in {@link #configureCluster}.</li>
  * <li>Write a {@code @Test} method that calls {@link #runSpec}, passing the settings of the resources to the spec
  * through environment variables.</li>
  * </ul>
- * The tests run only with the {@code web-console-tests} profile:
+ * The tests run only with the {@code web-console-tests} profile, all of them or one class:
  * <pre>
- * mvn -pl embedded-tests verify -Pweb-console-tests -Dit.test=CoreWebConsoleTest
+ * mvn -pl embedded-tests verify -Pweb-console-tests
+ * mvn -pl embedded-tests verify -Pweb-console-tests -Dit.test=BatchIndexingWebConsoleTest
  * </pre>
  * With {@code -Dweb.console.keepAlive=true}, {@link #runSpec} doesn't run the spec. It prints the command to run it
  * and waits, keeping the cluster up, so that the spec can be run (and debugged) from {@code web-console} against it.
@@ -122,6 +124,15 @@ public abstract class WebConsoleTestBase extends EmbeddedClusterTestBase
    */
   protected void configureCluster(EmbeddedDruidCluster cluster)
   {
+  }
+
+  /**
+   * Runs the Playwright spec (a file name or a pattern of {@code web-console/e2e-tests}) against this cluster and
+   * fails if it fails.
+   */
+  protected void runSpec(String spec) throws Exception
+  {
+    runSpec(spec, Map.of());
   }
 
   /**

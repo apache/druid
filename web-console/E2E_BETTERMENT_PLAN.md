@@ -94,8 +94,9 @@ modernize them, in order. Each step should leave the suite passing.
 
 ## 8. Run on embedded clusters (prototype done)
 
-Prototype (option B: JUnit drives, the specs stay in TypeScript): `WebConsoleTestBase` and `CoreWebConsoleTest` in
-`embedded-tests` (`org.apache.druid.testing.embedded.console`), tag `web-console`, profile `web-console-tests`. The 5
+Prototype (option B: JUnit drives, the specs stay in TypeScript): `WebConsoleTestBase` in `embedded-tests`
+(`org.apache.druid.testing.embedded.console`), tag `web-console`, profile `web-console-tests`, and a
+`*WebConsoleTest` per functionality, in its package (`indexing`, `compact`, `msq`, `query`, `s3`). The 5
 specs pass unchanged on it (50s for the whole Maven run), with a keep-alive mode for working on a spec.
 `S3WebConsoleTest` (with `S3StorageResource`) runs `s3-ingestion.spec.ts`, which loads from `s3://` through the data
 loader (24s for the test class).

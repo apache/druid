@@ -54,16 +54,28 @@ Before the tests start, a global setup (`util/global-setup.ts`) waits for the co
 
 ### On an embedded cluster (as in CI)
 
-`CoreWebConsoleTest` in `embedded-tests` (package `org.apache.druid.testing.embedded.console`) starts an embedded
-cluster (in one JVM, with an in-memory metadata store, its Router on :8888) and runs each spec on it with
-`npx playwright test <spec>`. There's no distribution to build and nothing left behind, as every test class gets a new
-cluster. It needs this checkout's Druid modules installed (`mvn install -DskipTests`), with the `web-console` one built
-with the console (not with `-Dweb.console.skip=true`, which leaves the Router with no console to serve):
+Each spec is run by a `*WebConsoleTest` class in `embedded-tests`, in the package of the functionality it covers. The
+class starts an embedded cluster (in one JVM, with an in-memory metadata store, its Router on :8888) with the resources
+the spec needs, and runs the spec on it with `npx playwright test <spec>`:
+
+| Spec                                          | Run by (in `org.apache.druid.testing.embedded`) |
+|-----------------------------------------------|-------------------------------------------------|
+| `tutorial-batch.spec.ts`, `reindexing.spec.ts` | `indexing.BatchIndexingWebConsoleTest`          |
+| `auto-compaction.spec.ts`                     | `compact.AutoCompactionWebConsoleTest`          |
+| `multi-stage-query.spec.ts`                   | `msq.MultiStageQueryWebConsoleTest`             |
+| `cancel-query.spec.ts`                        | `query.SqlQueryCancelWebConsoleTest`            |
+| `s3-ingestion.spec.ts`                        | `s3.S3WebConsoleTest` (with an S3 container)    |
+
+They extend `console.WebConsoleTestBase`. There's no distribution to build and nothing left behind, as every test class
+gets a new cluster. They need this checkout's Druid modules installed (`mvn install -DskipTests`), with the
+`web-console` one built with the console (not with `-Dweb.console.skip=true`, which leaves the Router with no console
+to serve):
 
 ```bash
 # from the root of the checkout
 mvn -pl web-console install -DskipTests   # after changing the console (not the tests), for the Router to serve it
-mvn -pl embedded-tests verify -Pweb-console-tests -Dit.test=CoreWebConsoleTest
+mvn -pl embedded-tests verify -Pweb-console-tests                                         # all of them
+mvn -pl embedded-tests verify -Pweb-console-tests -Dit.test=BatchIndexingWebConsoleTest   # one class
 ```
 
 The Druid logs and the Playwright output are in `embedded-tests/target/failsafe-reports/*-output.txt`, and the
@@ -75,10 +87,11 @@ artifacts of a failed spec in `test-results/<spec>/`. The tests are tagged `web-
   as you like) and waits until it's stopped.
 - **Test a dev server instead of the bundled console**: add `-Dweb.console.port=18081`, with `npm start` running (it
   proxies to :8888).
-- **A spec that needs more than Druid** (S3, Kafka...) gets its own `*WebConsoleTest` class that extends
-  `WebConsoleTestBase`, adds the resource in `addResources` and passes its settings (endpoint, bucket...) to the spec as
-  environment variables of `runSpec`. See `S3WebConsoleTest` and `s3-ingestion.spec.ts`. The resources run in Docker
-  containers (with Testcontainers), so Docker has to be running.
+- **A new spec** gets a `@Test` in the `*WebConsoleTest` class of its functionality (or a new class, next to the
+  embedded tests of that functionality). One that needs more than Druid (S3, Kafka...) adds the resource in
+  `addResources` and passes its settings (endpoint, bucket...) to the spec as environment variables of `runSpec`. See
+  `S3WebConsoleTest` and `s3-ingestion.spec.ts`. The resources run in Docker containers (with Testcontainers), so
+  Docker has to be running.
 
 A test deletes the datasources it created when it passes: it stops their tasks, removes their compaction config and
 permanently deletes their segments (with a `kill` task). When it fails, they are kept to look into (the log says which)
