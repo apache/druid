@@ -71,8 +71,12 @@ export class Api {
     };
   }
 
+  /**
+   * Encodes a value (like a datasource name) for a URL path. Encodes what would change the URL's meaning, and what
+   * the browser sends as is but the server rejects (^ and |); the browser encodes everything else that needs it.
+   */
   static encodePath(path: string): string {
-    return path.replace(/[?#%;&'[\]\\]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+    return path.replace(/[#%&';?[\\\]^|]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
   }
 
   static isNetworkError(e: Error): boolean {
