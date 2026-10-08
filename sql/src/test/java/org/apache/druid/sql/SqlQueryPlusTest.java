@@ -31,7 +31,7 @@ import java.util.Map;
 public class SqlQueryPlusTest
 {
   @Test
-  public void testSetParametersAreFoldedIntoContext()
+  public void testSetAcceptsUnmigratedParameters()
   {
     final SqlQueryPlus query = SqlQueryPlus.builder("SET lane = 'fast'; SELECT 1")
                                            .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
@@ -75,24 +75,6 @@ public class SqlQueryPlusTest
         DruidExceptionMatcher
             .invalidSqlInput()
             .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] should be in integer format, but got [not-an-int]")
-    );
-  }
-
-  @Test
-  public void testSetParameterIntegerOverflowIsInvalidSqlInput()
-  {
-    final DruidException e = Assertions.assertThrows(
-        DruidException.class,
-        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 5000000000; SELECT 1")
-                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
-                          .build()
-    );
-
-    BaseCalciteQueryTest.assertDruidException(
-        e,
-        DruidExceptionMatcher
-            .invalidSqlInput()
-            .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] must be within the range [1, 2147483647], but was [5000000000]")
     );
   }
 

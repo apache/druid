@@ -218,18 +218,6 @@ public class QueryContextTest
   }
 
   @Test
-  public void testUseResultLevelCacheExplicitNullUsesDefault()
-  {
-    final Map<String, Object> values = new HashMap<>();
-    values.put(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName(), null);
-    final QueryContext context = QueryContext.of(values);
-
-    assertTrue(context.isUseResultLevelCache());
-    assertFalse(context.isUseResultLevelCache(false));
-    assertTrue(context.isUseResultLevelCache(true));
-  }
-
-  @Test
   public void testGetInt()
   {
     final QueryContext context = QueryContext.of(

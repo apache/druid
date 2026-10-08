@@ -22,6 +22,7 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
@@ -262,19 +263,23 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   @Test
   public void testMaxRowsQueuedForOrderingMustBeGreaterThanZero()
   {
-    final ScanQuery query = Druids.newScanQueryBuilder()
-                                  .dataSource("source")
-                                  .intervals(intervalSpec)
-                                  .build();
-
+    // Use a raw context so that ScanQuery itself validates the value.
     Assertions.assertThrows(
         BadQueryContextException.class,
-        () -> query.withOverriddenContext(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
+        () -> Druids.newScanQueryBuilder()
+                    .dataSource("source")
+                    .intervals(intervalSpec)
+                    .context(ImmutableMap.of(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 0))
+                    .build()
     );
     Assertions.assertEquals(
         1,
-        ((ScanQuery) query.withOverriddenContext(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 1))
-            .getMaxRowsQueuedForOrdering()
+        Druids.newScanQueryBuilder()
+              .dataSource("source")
+              .intervals(intervalSpec)
+              .context(ImmutableMap.of(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 1))
+              .build()
+              .getMaxRowsQueuedForOrdering()
     );
   }
 

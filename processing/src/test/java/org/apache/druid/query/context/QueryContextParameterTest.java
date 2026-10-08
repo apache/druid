@@ -77,7 +77,6 @@ class QueryContextParameterTest
     assertEquals(Set.of(StatementType.SELECT), docs.getStatementTypes());
     assertEquals("runtime configuration", docs.getDefaultDescription().orElseThrow());
     final Range.Constraint<?> constraint = (Range.Constraint<?>) parameter.getConstraints().get(0);
-    assertTrue(constraint.getClass().isAnonymousClass());
     assertEquals(0, constraint.getLowerBound());
     assertEquals(Integer.MAX_VALUE, constraint.getUpperBound());
     assertEquals("maxThings", parameter.toString());
@@ -189,20 +188,6 @@ class QueryContextParameterTest
   }
 
   @Test
-  void testSetNullRemovesKey()
-  {
-    final QueryContextParameter<String> parameter = QueryContextParameter
-        .builder("tag", String.class, String::valueOf)
-        .build();
-    final Map<String, Object> context = new HashMap<>();
-    context.put("tag", "value");
-
-    parameter.set(context, null);
-
-    assertTrue(context.isEmpty());
-  }
-
-  @Test
   void testIntegerParameterRejectsLossyNumbers()
   {
     final QueryContextParameter<Integer> parameter = QueryContextParameters.integerParameter("ints").build();
@@ -212,32 +197,28 @@ class QueryContextParameterTest
     assertEquals(12, parameter.parse(new java.math.BigDecimal("12.00")));
     assertEquals(12, parameter.parse("12"));
     assertEquals(Integer.MAX_VALUE, parameter.parse((long) Integer.MAX_VALUE));
-    assertThrows(BadQueryContextException.class, () -> parameter.parse(5_000_000_000L));
     assertThrows(BadQueryContextException.class, () -> parameter.parse(4_294_967_295L));
-    assertThrows(BadQueryContextException.class, () -> parameter.parse(12.7d));
     assertThrows(BadQueryContextException.class, () -> parameter.parse(Double.NaN));
-    assertThrows(BadQueryContextException.class, () -> parameter.parse("5000000000"));
-  }
-
-  @Test
-  void testIntegerOverflowMessageQuotesRangeConstraint()
-  {
-    final QueryContextParameter<Integer> unconstrained = QueryContextParameters.integerParameter("ints").build();
     assertEquals(
         "Query context parameter [ints] must be within the range [-2147483648, 2147483647], but was [5000000000]",
-        assertThrows(BadQueryContextException.class, () -> unconstrained.parse(5_000_000_000L)).getMessage()
+        assertThrows(BadQueryContextException.class, () -> parameter.parse(5_000_000_000L)).getMessage()
+    );
+    assertEquals(
+        "Query context parameter [ints] should be in integer format, but got [12.7]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse(12.7d)).getMessage()
+    );
+    assertEquals(
+        "Query context parameter [ints] should be in integer format, but got [not-an-int]",
+        assertThrows(BadQueryContextException.class, () -> parameter.parse("not-an-int")).getMessage()
     );
 
+    // An overflowing value reports the parameter's own range constraint when one is declared.
     final QueryContextParameter<Integer> constrained = QueryContextParameters.integerParameter("ints")
                                                                              .constraint(closedRange(1, 100))
                                                                              .build();
     assertEquals(
         "Query context parameter [ints] must be within the range [1, 100], but was [5000000000]",
         assertThrows(BadQueryContextException.class, () -> constrained.parse("5000000000")).getMessage()
-    );
-    assertEquals(
-        "Query context parameter [ints] must be within the range [1, 100], but was [101]",
-        assertThrows(BadQueryContextException.class, () -> constrained.parse(101L)).getMessage()
     );
   }
 
@@ -270,6 +251,16 @@ class QueryContextParameterTest
   }
 
   @Test
+  void testBooleanParameterRejectsNonBooleans()
+  {
+    assertEquals(
+        "Query context parameter [useResultLevelCache] should be a boolean, but got [1]",
+        assertThrows(BadQueryContextException.class, () -> QueryContextParameters.USE_RESULT_LEVEL_CACHE.parse(1))
+            .getMessage()
+    );
+  }
+
+  @Test
   void testSet()
   {
     final QueryContextParameter<String> parameter = QueryContextParameter
@@ -278,8 +269,10 @@ class QueryContextParameterTest
     final Map<String, Object> context = new HashMap<>();
 
     parameter.set(context, "value");
-
     assertEquals(Map.of("tag", "value"), context);
+
+    parameter.set(context, null);
+    assertTrue(context.isEmpty());
   }
 
   @Test

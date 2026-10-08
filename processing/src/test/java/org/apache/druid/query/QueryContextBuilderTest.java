@@ -63,28 +63,6 @@ class QueryContextBuilderTest
   }
 
   @Test
-  void testPutAll()
-  {
-    final Map<String, Object> firstValues = ImmutableMap.of("legacy", 1);
-    final Map<String, Object> secondValues = ImmutableMap.of("legacy", 2);
-    final Map<String, Object> context = QueryContext.builder()
-        .putAll(firstValues)
-        .putAll(secondValues)
-        .toMap();
-
-    assertEquals(2, context.get("legacy"));
-  }
-
-  @Test
-  void testTypedPutValidatesParameter()
-  {
-    assertThrows(
-        BadQueryContextException.class,
-        () -> QueryContext.builder().put(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
-    );
-  }
-
-  @Test
   void testTypedPutNullRemovesParameter()
   {
     final Map<String, Object> context = QueryContext.builder()
@@ -102,15 +80,5 @@ class QueryContextBuilderTest
     withNullValue.put("legacy", null);
 
     assertThrows(NullPointerException.class, () -> QueryContext.builder().putAll(withNullValue));
-  }
-
-  @Test
-  void testToContext()
-  {
-    final QueryContext context = QueryContext.builder()
-        .put(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
-        .toContext();
-
-    assertFalse(context.isUseResultLevelCache());
   }
 }

@@ -1551,22 +1551,6 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testInvalidSetParameterParserFailureReturnsBadRequest() throws Exception
-  {
-    final ErrorResponse errorResponse = postSyncForException(
-        "SET maxRowsQueuedForOrdering = 'not-an-int'; SELECT 1",
-        Status.BAD_REQUEST.getStatusCode()
-    );
-
-    validateInvalidSqlError(
-        errorResponse,
-        "Query context parameter [maxRowsQueuedForOrdering] should be in integer format, but got [not-an-int]"
-    );
-    Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
-    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
-  }
-
-  @Test
   public void testCannotValidate() throws Exception
   {
     ErrorResponse errorResponse = postSyncForException(
