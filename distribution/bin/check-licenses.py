@@ -50,18 +50,23 @@ class DependencyReportParser(HTMLParser):
 
     def parse(self, f):
         self.dep_to_license = {}
+        self.tables_started = 0
+        self.tables_finished = 0
         self.feed(f.read())
+        if self.tables_finished < self.tables_started:
+            raise Exception("Parsed only {} of {} compile dependency tables".format(self.tables_finished, self.tables_started))
         return self.dep_to_license
 
     def handle_starttag(self, tag, attrs):
         # print("current: {}, start tag: {}, attrs:{} ".format(self.state, tag, attrs))
+        if tag == "a" and dict(attrs).get("id") in ("Project_Dependencies_compile", "Project_Transitive_Dependencies_compile"):
+            self.state = "h3_end"
+            self.include_classifier = False
+            self.tables_started += 1
+
         if self.state == "none":
             if tag == "h2":
                 self.state = "h2_start"
-            elif tag == "a":
-                for attr in attrs:
-                    if attr[0] == "id" and attr[1] == "Project_Dependencies_compile":
-                        self.state = "modern_compile_anchor"
 
         if self.state == "h2_start":
             if tag == "a":
@@ -79,10 +84,6 @@ class DependencyReportParser(HTMLParser):
                 for attr in attrs:
                     if attr[0] == "name" and attr[1] == "compile":
                         self.state = "compile_start"
-
-        if self.state == "modern_compile_heading":
-            if tag == "h2":
-                self.state = "h3_end"
 
         if self.state == "h3_end":
             if tag == "table":
@@ -117,10 +118,6 @@ class DependencyReportParser(HTMLParser):
         if self.state == "project_dependencies_start":
             if tag == "a":
                 self.state = "project_dependencies_end"
-
-        if self.state == "modern_compile_anchor":
-            if tag == "a":
-                self.state = "modern_compile_heading"
 
         if self.state == "h2_start":
             if tag == "h2":
@@ -169,6 +166,7 @@ class DependencyReportParser(HTMLParser):
         if self.state == "row_end":
             if tag == "table":
                 self.state = "none"
+                self.tables_finished += 1
 
     def handle_data(self, data):
         if self.state == "td_start":
@@ -258,6 +256,7 @@ def build_compatible_license_names():
     compatible_licenses['BSD-2-Clause'] = 'BSD-2-Clause License'
     compatible_licenses['BSD 2-Clause license'] = 'BSD-2-Clause License'
     compatible_licenses['BSD 2-Clause License'] = 'BSD-2-Clause License'
+    compatible_licenses['The BSD 2-Clause License'] = 'BSD-2-Clause License'
 
     compatible_licenses['BSD-3-Clause License'] = 'BSD-3-Clause License'
     compatible_licenses['New BSD license'] = 'BSD-3-Clause License'
@@ -326,10 +325,12 @@ def build_compatible_license_names():
     compatible_licenses['Bouncy Castle Licence'] = 'MIT License'
     compatible_licenses['SPDX-License-Identifier: MIT'] = 'MIT License'
     compatible_licenses['MIT'] = 'MIT License'
+    compatible_licenses['MIT license'] = 'MIT License'
 
     compatible_licenses['MIT-0'] = 'MIT No Attribution'
 
     compatible_licenses['The Go license'] = 'The Go license'
+    compatible_licenses['Go License'] = 'The Go license'
     compatible_licenses['Universal Permissive License, Version 1.0'] = 'Universal Permissive License, Version 1.0'
 
     compatible_licenses['-'] = '-'
