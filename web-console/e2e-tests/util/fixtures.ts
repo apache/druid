@@ -52,6 +52,7 @@ export const test = base.extend<{
 
   // Makes a unique datasource name (the prefix and the time), for the test to create. After the test passes, the
   // datasource is deleted (with its tasks, compaction config and segments). After it fails, it is kept to look into.
+  // Nothing is deleted on a cluster that is thrown away after the tests (an embedded one, see WebConsoleTestBase).
   newDatasourceName: [
     async ({ request }, use, testInfo) => {
       const datasourceNames: string[] = [];
@@ -61,6 +62,7 @@ export const test = base.extend<{
         return datasourceName;
       });
 
+      if (process.env['DRUID_E2E_TEST_CLUSTER_IS_DISPOSABLE'] === 'true') return;
       if (testInfo.status !== testInfo.expectedStatus) {
         for (const datasourceName of datasourceNames) {
           console.log(`Keeping datasource ${datasourceName} of the failed test`);

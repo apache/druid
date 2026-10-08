@@ -112,8 +112,9 @@ Found on the way (fixed in the specs, they were latent races that the quickstart
 - `extractTableRecords` read a view's table right after opening it, before the view loaded its data.
 - `cancelQuery` waited for any SQL `POST` (it could be the column tree's) and canceled before the query was sent.
 
-Left:
-- Make the `newDatasourceName` cleanup optional (a new cluster per class doesn't need it), or drop it with the
-  quickstart way.
-- A check that every spec is run by some `*WebConsoleTest` (they are listed by hand).
-- The JUnit report names the cases `testSpec(String)[1]`..., not by spec.
+Also done:
+- The specs don't delete their datasources on an embedded cluster (`runSpec` sets
+  `DRUID_E2E_TEST_CLUSTER_IS_DISPOSABLE=true`, except in keep-alive mode), as it's thrown away after the class.
+- `WebConsoleSpecsTest` (a unit test, no cluster) checks that every spec is run by a `*WebConsoleTest`, and that they
+  run only specs that exist.
+- Each spec has its own `@Test`, so the JUnit report names them.

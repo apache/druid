@@ -158,6 +158,10 @@ public abstract class WebConsoleTestBase extends EmbeddedClusterTestBase
       return;
     }
 
+    // The cluster is thrown away after this class, so the specs don't need to delete what they create. (A kept-alive
+    // cluster is reused for runs of the specs by hand, so they do.)
+    specEnv.put("DRUID_E2E_TEST_CLUSTER_IS_DISPOSABLE", "true");
+
     log.info("Running spec[%s] in [%s] with env[%s].", spec, webConsoleDir, specEnv);
     final ProcessBuilder processBuilder = new ProcessBuilder(command).directory(webConsoleDir)
                                                                      .redirectErrorStream(true);

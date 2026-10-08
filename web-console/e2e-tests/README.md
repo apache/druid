@@ -88,14 +88,15 @@ artifacts of a failed spec in `test-results/<spec>/`. The tests are tagged `web-
 - **Test a dev server instead of the bundled console**: add `-Dweb.console.port=18081`, with `npm start` running (it
   proxies to :8888).
 - **A new spec** gets a `@Test` in the `*WebConsoleTest` class of its functionality (or a new class, next to the
-  embedded tests of that functionality). One that needs more than Druid (S3, Kafka...) adds the resource in
+  embedded tests of that functionality). `WebConsoleSpecsTest`, a unit test, fails if a spec isn't run by any. One that needs more than Druid (S3, Kafka...) adds the resource in
   `addResources` and passes its settings (endpoint, bucket...) to the spec as environment variables of `runSpec`. See
   `S3WebConsoleTest` and `s3-ingestion.spec.ts`. The resources run in Docker containers (with Testcontainers), so
   Docker has to be running.
 
 A test deletes the datasources it created when it passes: it stops their tasks, removes their compaction config and
 permanently deletes their segments (with a `kill` task). When it fails, they are kept to look into (the log says which)
-and have to be deleted by hand, from the Datasources view.
+and have to be deleted by hand, from the Datasources view. On an embedded cluster nothing is deleted, as the cluster is
+thrown away after the test class (`DRUID_E2E_TEST_CLUSTER_IS_DISPOSABLE=true`).
 
 ## The tests
 
