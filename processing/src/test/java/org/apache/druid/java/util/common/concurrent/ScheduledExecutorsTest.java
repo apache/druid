@@ -79,7 +79,7 @@ public class ScheduledExecutorsTest
     Assertions.assertEquals(4, executionCount.get(), "Should have exactly 4 executions");
 
     // Verify first task starts at approximately the initial delay.
-    // It can fire exactly on time, so the 100ms lower bound is inclusive,
+    // It can fire exactly on time, so the 100ms lower bound is inclusive.
     final long firstTaskStart = taskStartTimes.get(0);
     Assertions.assertTrue(
         firstTaskStart >= 100 && firstTaskStart < 500,
