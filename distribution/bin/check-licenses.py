@@ -54,12 +54,13 @@ class DependencyReportParser(HTMLParser):
         self.tables_finished = 0
         self.feed(f.read())
         if self.tables_finished < self.tables_started:
-            raise Exception("Parsed only {} of {} compile dependency tables".format(self.tables_finished, self.tables_started))
+            raise Exception("Parsed only {} of {} dependency tables".format(self.tables_finished, self.tables_started))
         return self.dep_to_license
 
     def handle_starttag(self, tag, attrs):
         # print("current: {}, start tag: {}, attrs:{} ".format(self.state, tag, attrs))
-        if tag == "a" and dict(attrs).get("id") in ("Project_Dependencies_compile", "Project_Transitive_Dependencies_compile"):
+        if tag == "a" and dict(attrs).get("id") in ("Project_Dependencies_compile", "Project_Transitive_Dependencies_compile",
+                                                    "Project_Dependencies_runtime", "Project_Transitive_Dependencies_runtime"):
             self.state = "h3_end"
             self.include_classifier = False
             self.tables_started += 1
@@ -299,6 +300,7 @@ def build_compatible_license_names():
     compatible_licenses['Eclipse Public License - Version 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['Eclipse Public License, Version 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['Eclipse Public License v2.0'] = 'Eclipse Public License 2.0'
+    compatible_licenses['Eclipse Public License v. 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['EPL 2.0'] = 'Eclipse Public License 2.0'
     compatible_licenses['EPL-2.0'] = 'Eclipse Public License 2.0'
 
