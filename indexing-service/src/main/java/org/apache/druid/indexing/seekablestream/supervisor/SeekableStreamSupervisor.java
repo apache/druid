@@ -1078,6 +1078,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private int initRetryCounter = 0;
   private volatile DateTime firstRunTime;
   private volatile DateTime earlyStopTime = null;
+  /**
+   * The data source metadata most recently read during {@link #createNewTasks()}. It is kept so that the
+   * post-reset rebuild of task groups can reuse it instead of calling the coordinator again, which keeps the
+   * number of metadata lookups identical to the pre-rebuild behaviour.
+   */
+  private DataSourceMetadata dataSourceMetadataFetchedInCreateNewTasks;
   protected volatile RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
@@ -4385,12 +4391,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       // reading the stale partition from its old position until the next rollover, and would make a group
       // that consists only of reset partitions run no task at all. Rebuild the affected groups now that
       // partitionOffsets has been reset, so that each of them starts from the reset position.
+      // Collect the affected groupIds first: rebuilding a group mutates 'partitionsToReset', so iterating
+      // its keys directly would risk a ConcurrentModificationException, and several reset partitions can
+      // map to the same group.
+      final Set<Integer> groupsToRebuild = new HashSet<>();
       for (PartitionIdType partition : partitionsToReset.keySet()) {
-        final int groupId = getTaskGroupIdForPartition(partition);
-        final TaskGroup taskGroup = newTaskGroups.get(groupId);
+        groupsToRebuild.add(getTaskGroupIdForPartition(partition));
+      }
 
-        if (taskGroup != null) {
-          newTaskGroups.put(groupId, buildNewTaskGroup(groupId, metadataOffsets, partitionsToReset));
+      for (Integer groupId : groupsToRebuild) {
+        if (newTaskGroups.containsKey(groupId)) {
+          // Reuse the metadata already read in createNewTasks so that the rebuild does not issue an
+          // additional coordinator lookup.
+          newTaskGroups.put(
+              groupId,
+              buildNewTaskGroup(groupId, metadataOffsets, partitionsToReset, dataSourceMetadataFetchedInCreateNewTasks)
+          );
           log.info(
               "Rebuilt taskGroup[%d] after resetting partitions[%s] - the group now reads partitions[%s] "
               + "from the reset offsets",
@@ -4499,6 +4515,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       final Map<PartitionIdType, SequenceOffsetType> partitionsToReset
   )
   {
+    return buildNewTaskGroup(groupId, metadataOffsets, partitionsToReset, null);
+  }
+
+  private TaskGroup buildNewTaskGroup(
+      final int groupId,
+      final Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
+      final Map<PartitionIdType, SequenceOffsetType> partitionsToReset,
+      final DataSourceMetadata cachedDataSourceMetadata
+  )
+  {
     final DateTime minimumMessageTime;
     if (ioConfig.getLateMessageRejectionStartDateTime().isPresent()) {
       minimumMessageTime = ioConfig.getLateMessageRejectionStartDateTime().get();
@@ -4515,7 +4541,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                         : null;
 
     final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> unfilteredStartingOffsets =
-        generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset);
+        cachedDataSourceMetadata == null
+        ? generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset)
+        : generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset, cachedDataSourceMetadata);
 
     final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets;
     if (supportsPartitionExpiration()) {
@@ -4593,9 +4621,22 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Map<PartitionIdType, SequenceOffsetType> partitionsToReset
   )
   {
+    final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
+    // Remember what we just read so that a post-reset rebuild of the task groups can reuse it instead of
+    // issuing another metadata lookup. Rebuilding happens after the reset and must not add coordinator calls.
+    this.dataSourceMetadataFetchedInCreateNewTasks = dataSourceMetadata;
+    return generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset, dataSourceMetadata);
+  }
+
+  private Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> generateStartingSequencesForPartitionGroup(
+      int groupId,
+      Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
+      Map<PartitionIdType, SequenceOffsetType> partitionsToReset,
+      DataSourceMetadata dataSourceMetadata
+  )
+  {
     // Existing logic for both streaming and bounded mode
     ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
-    final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
     final BoundedStreamConfig metadataBoundedConfig = getBoundedConfigFromMetadata(dataSourceMetadata);
 
     for (PartitionIdType partitionId : partitionGroups.get(groupId)) {
