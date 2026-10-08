@@ -44,7 +44,7 @@ public class ScheduledExecutorsTest
     List<Long> taskStartTimes = new ArrayList<>();
     AtomicInteger executionCount = new AtomicInteger(0);
     CountDownLatch latch = new CountDownLatch(1);
-    long startTime = System.currentTimeMillis();
+    final long startTime = System.nanoTime();
 
     ScheduledExecutors.scheduleWithFixedDelay(
         exec,
@@ -52,7 +52,7 @@ public class ScheduledExecutorsTest
         delay,
         () -> {
           try {
-            long taskStart = System.currentTimeMillis();
+            final long taskStart = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
             int count = executionCount.getAndIncrement();
             synchronized (taskStartTimes) {
               taskStartTimes.add(taskStart);
@@ -78,10 +78,11 @@ public class ScheduledExecutorsTest
     Assertions.assertTrue(completed, "Should complete within timeout");
     Assertions.assertEquals(4, executionCount.get(), "Should have exactly 4 executions");
 
-    // Verify first task starts at approximately the initial delay, in real life this is greater than 100ms due to overhead.
-    long firstTaskStart = taskStartTimes.get(0) - startTime;
+    // Verify first task starts at approximately the initial delay.
+    // It can fire exactly on time, so the 100ms lower bound is inclusive,
+    final long firstTaskStart = taskStartTimes.get(0);
     Assertions.assertTrue(
-        firstTaskStart > 100 && firstTaskStart < 500,
+        firstTaskStart >= 100 && firstTaskStart < 500,
         "First task should start at approximately initial delay (100ms), was: " + firstTaskStart
     );
 
