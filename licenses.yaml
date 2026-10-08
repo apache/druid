@@ -4326,17 +4326,18 @@ version: 2.2.0
 libraries:
   - com.google.http-client: google-http-client
   - com.google.http-client: google-http-client-jackson2
+  - com.google.http-client: google-http-client-apache-v2
+  - com.google.http-client: google-http-client-gson
 
 ---
 
-name: Google HTTP Client Library For Java
+name: Google API Common
 license_category: binary
 module: java-core
-license_name: Apache License version 2.0
-version: 1.45.2
+license_name: BSD-3-Clause License
+version: 2.70.0
 libraries:
-  - com.google.http-client: google-http-client-apache-v2
-  - com.google.http-client: google-http-client-gson
+  - com.google.api: api-common
 
 ---
 
@@ -4344,7 +4345,7 @@ name: google-auth
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 1.30.0
+version: 1.54.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4355,7 +4356,7 @@ name: grpc-java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.70.0
+version: 1.83.0
 libraries:
   - io.grpc: grpc-api
   - io.grpc: grpc-context
@@ -4386,7 +4387,7 @@ name: Google Cloud Monitoring
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 3.52.0
+version: 3.100.0
 libraries:
   - com.google.cloud: google-cloud-monitoring
 
@@ -4396,7 +4397,7 @@ name: proto-google-cloud-monitoring-v3
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 3.52.0
+version: 3.100.0
 libraries:
   - com.google.api.grpc: proto-google-cloud-monitoring-v3
 
@@ -4569,7 +4570,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.84.0
+version: 1.83.0
 libraries:
   - io.grpc: grpc-api
 
@@ -4579,7 +4580,7 @@ name: grpc-context
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.84.0
+version: 1.83.0
 libraries:
   - io.grpc: grpc-context
 
@@ -4712,7 +4713,7 @@ name: google-protobuf
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 4.33.6
+version: 4.36.2
 libraries:
   - com.google.protobuf: protobuf-java-util
 
@@ -4763,7 +4764,7 @@ name: Google OAuth Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.36.0
+version: 1.39.0
 libraries:
   - com.google.oauth-client: google-oauth-client
 
