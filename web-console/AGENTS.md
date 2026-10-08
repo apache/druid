@@ -30,8 +30,8 @@ The Apache Druid web console: a React + TypeScript single page app built with Bl
   changing a `.grammar` file or the SQL docs, or when typecheck can't find those files. Without
   `public/web-console-<version>.js` it also builds the whole console bundle, which is slow.
 - **Dev server**: `npm start` serves on http://localhost:18081 and proxies API calls to Druid on `localhost:8888`
-  (`druid_host=host:port npm start` for another one). A dev server may already be running there, so check the port
-  before starting one. Views are hash routes, like `/unified-console.html#workbench`.
+  (`druid_host=host:port npm start` for another one). Agents run their own on :18082 instead, see below. Views are
+  hash routes, like `/unified-console.html#workbench`.
 - **Checks**:
   - `npx jest src/path/to/file.spec.ts` runs some specs (add `-u` to update their snapshots), `npm run jest` all of
     them.
@@ -40,7 +40,23 @@ The Apache Druid web console: a React + TypeScript single page app built with Bl
     bundle first.
   - `npm run autofix` fixes ESLint, stylelint and Prettier issues.
 - **End-to-end tests** (`e2e-tests/`, Playwright) need a running Druid: `script/druid build && script/druid start`,
-  then `npm run test-e2e`. See the README for running one test or with a visible browser.
+  then `npm run test-e2e`. See the README for running one test or with a visible browser, and below for running them
+  against your own changes.
+
+## Developing against a running Druid
+
+- **Druid on :8888**: expect an up to date Druid (a cluster built with all the relevant changes) to be running on
+  `localhost:8888`. Its router serves the console that was bundled when Druid was built, not the code in the working
+  tree.
+- **Your own dev server on :18082**: the user likely has their own dev server on :18081, so don't use, restart or stop
+  it. Start one you manage on :18082 with `npx webpack serve --port 18082 --no-open` (it proxies to :8888 like
+  `npm start`), wait for `compiled successfully`, and note its PID. When done, stop only the processes you started
+  (`npx` spawns `npm exec` and then `webpack`, so stop the children too).
+- **End-to-end tests against your changes**: `DRUID_E2E_TEST_UNIFIED_CONSOLE_PORT=18082 npm run test-e2e`. Without
+  it the tests run against :8888 and so test the console bundled with Druid, not your changes. The full suite takes
+  several minutes and prints a lot, so send its output to a file.
+- **Comparing with :8888**: it is always fine to open the console on :18082 and on :8888 in a browser and compare them,
+  to check that something you don't expect to change has stayed the same.
 
 ## Where things are
 
