@@ -4202,7 +4202,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.76.0
+version: 2.77.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
