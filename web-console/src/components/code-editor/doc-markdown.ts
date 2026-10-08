@@ -43,7 +43,7 @@ function renderInline(text: string): (Node | string)[] {
 }
 
 /**
- * Renders "doc markdown", the simplified markdown that the SQL docs in lib/sql-docs.ts are written in (see
+ * Renders "doc markdown", the simplified markdown that the SQL docs in src/editor-languages/dsql-docs.ts are written in (see
  * sanitizeMarkdown in script/create-sql-docs.mjs):
  * - `code` spans
  * - *emphasis*

@@ -21,7 +21,7 @@
 import fs from 'node:fs/promises';
 
 const INPUT_FILELIST_FILE = 'script/sql-doc-files.txt';
-const OUTPUT_FILE = 'lib/sql-docs.ts';
+const OUTPUT_FILE = 'src/editor-languages/dsql-docs.ts';
 
 const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 198;
 const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 15;

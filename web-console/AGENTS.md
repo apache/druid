@@ -6,7 +6,7 @@ The Apache Druid web console: a React + TypeScript single page app built with Bl
 ## Commands
 
 - **Node** is pinned in `.node-version` and installed with mise (`mise install`). Don't change the global Node version.
-- **Generated sources**: `lib/sql-docs.ts` and `src/editor-languages/*.parser*.ts` are generated and gitignored.
+- **Generated sources**: `src/editor-languages/dsql-docs.ts` and `src/editor-languages/*.parser*.ts` are generated and gitignored.
   `npm run compile` (`script/build`) makes them, and only rebuilds what is out of date. Run it after a fresh clone, after
   changing a `.grammar` file or the SQL docs, or when typecheck can't find those files. Without
   `public/web-console-<version>.js` it also builds the whole console bundle, which is slow.

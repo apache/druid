@@ -19,10 +19,10 @@
 import type { Stack } from '@lezer/lr';
 import { dedupe } from 'druid-query-toolkit';
 
-import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
 import type { AvailableFunctions } from '../helpers';
 
 import { Constant, FunctionName, Keyword, TypeName } from './dsql.parser.terms';
+import { SQL_DATA_TYPES, SQL_FUNCTIONS } from './dsql-docs';
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from './dsql-keywords';
 
 /**

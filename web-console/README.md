@@ -143,10 +143,9 @@ As part of this directory:
 
 - `assets/` - The images (and other assets) used within the console
 - `e2e-tests/` - End-to-end tests for the console
-- `lib/` - The SQL docs generated from the Druid docs (`sql-docs.ts`, not checked in)
 - `public/` - The compiled destination for the files powering this console
 - `script/` - Some helper bash scripts for running this console
-- `src/` - This directory (together with `lib`) constitutes all the source code for this console
+- `src/` - This directory constitutes all the source code for this console
 
 ## List of non SQL data reading APIs used
 

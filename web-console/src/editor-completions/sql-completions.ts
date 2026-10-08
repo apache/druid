@@ -21,10 +21,10 @@ import type { EditorState } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 import { C, filterMap, N, T } from 'druid-query-toolkit';
 
-import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
 import type { CompletionWord } from '../components/code-editor/completion-source';
 import { completeSyntaxTree, tokenBefore } from '../components/code-editor/completion-source';
 import { DEFAULT_SERVER_QUERY_CONTEXT } from '../druid-models';
+import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../editor-languages/dsql-docs';
 import { SQL_CONSTANTS, SQL_DYNAMICS, SQL_KEYWORDS } from '../editor-languages/dsql-keywords';
 import type { AvailableFunctions } from '../helpers';
 import type { ColumnMetadata } from '../utils';
