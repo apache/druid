@@ -116,7 +116,7 @@ function validateConnectLocalData(lines: string[]) {
 async function validateTasksView(page: Page, datasourceName: string) {
   const tasksOverview = new TasksOverview(page);
 
-  // Retried as the view loads its data after it opens
+  // Retried in case the view is a step behind the cluster state polled above
   await expect(async () => {
     const tasks = await tasksOverview.getTasks(datasourceName);
     const task = tasks.find(t => t.datasource === datasourceName);
@@ -128,7 +128,7 @@ async function validateTasksView(page: Page, datasourceName: string) {
 async function validateDatasourcesView(page: Page, datasourceName: string) {
   const datasourcesOverview = new DatasourcesOverview(page);
 
-  // Retried as the view loads its data after it opens
+  // Retried in case the view is a step behind the cluster state polled above
   await expect(async () => {
     const datasources = await datasourcesOverview.getDatasources(datasourceName);
     const datasource = datasources.find(t => t.name === datasourceName);

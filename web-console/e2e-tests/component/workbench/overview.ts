@@ -67,8 +67,12 @@ export class WorkbenchOverview {
 
     await setQueryInput(this.page, query);
 
+    // Matched on the query, as the view sends other SQL (like the one of its column tree) as it loads
     const queryRequest = this.page.waitForRequest(
-      request => request.url().includes('druid/v2') && request.method() === 'POST',
+      request =>
+        request.url().includes('druid/v2') &&
+        request.method() === 'POST' &&
+        (request.postData() ?? '').includes(JSON.stringify(query).slice(1, -1)),
     );
     await clickButton(this.page, 'Run');
     await queryRequest;

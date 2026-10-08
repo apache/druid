@@ -52,6 +52,33 @@ Before the tests start, a global setup (`util/global-setup.ts`) waits for the co
   (git ignored). Every HTTP response with a status of 400 or more is also logged with its body
   (`util/fixtures.ts`).
 
+### On an embedded cluster (prototype)
+
+`CoreWebConsoleTest` in `embedded-tests` (package `org.apache.druid.testing.embedded.console`) starts an embedded
+cluster (in one JVM, with an in-memory metadata store, its Router on :8888) and runs each spec on it with
+`npx playwright test <spec>`. There's no distribution to build and nothing left behind, as every test class gets a new
+cluster. It needs this checkout's Druid modules installed (`mvn install -DskipTests`), with the `web-console` one built
+with the console (not with `-Dweb.console.skip=true`, which leaves the Router with no console to serve):
+
+```bash
+# from the root of the checkout
+mvn -pl web-console install -DskipTests   # after changing the console (not the tests), for the Router to serve it
+mvn -pl embedded-tests verify -Pweb-console-tests -Dit.test=CoreWebConsoleTest
+```
+
+The Druid logs and the Playwright output are in `embedded-tests/target/failsafe-reports/*-output.txt`, and the
+artifacts of a failed spec in `test-results/<spec>/`. The tests are tagged `web-console`, so they run only with the
+`web-console-tests` profile.
+
+- **Keep the cluster up to work on a spec**: add `-Dweb.console.keepAlive=true -Dmaven.test.redirectTestOutputToFile=false`.
+  Rather than running the specs, it prints the command to run one against the cluster (with `--ui` or `--debug` added
+  as you like) and waits until it's stopped.
+- **Test a dev server instead of the bundled console**: add `-Dweb.console.port=18081`, with `npm start` running (it
+  proxies to :8888).
+- **A spec that needs more than Druid** (S3, Kafka...) gets its own `*WebConsoleTest` class that extends
+  `WebConsoleTestBase`, adds the resource in `addResources` and passes its settings (endpoint, bucket...) to the spec as
+  environment variables of `runSpec`.
+
 A test deletes the datasources it created when it passes: it stops their tasks, removes their compaction config and
 permanently deletes their segments (with a `kill` task). When it fails, they are kept to look into (the log says which)
 and have to be deleted by hand, from the Datasources view.

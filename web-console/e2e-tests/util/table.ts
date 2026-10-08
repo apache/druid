@@ -27,11 +27,18 @@ export async function extractTable(table: Locator): Promise<string[][]> {
 }
 
 /**
- * Reads the data rows of a ConsoleTable as text, each row keyed by its column headers. Headers on two lines are read
- * with a space for the line break (like "Datasource name").
+ * Reads the data rows of a view's ConsoleTable as text, each row keyed by its column headers, once the view has
+ * loaded its data. Headers on two lines are read with a space for the line break (like "Datasource name").
  * @param table locator of the table (its `.console-table` element, or one containing it)
  */
 export async function extractTableRecords(table: Locator): Promise<Record<string, string>[]> {
+  // A view loads its data after it opens, and shows its no data text (like "No tasks", or the error) only after that
+  await table
+    .locator('.ct-tbody .ct-tr:not(.-padRow)')
+    .or(table.locator('.ct-no-data').filter({ hasText: /\S/ }))
+    .first()
+    .waitFor();
+
   const { headers, rows } = await readTable(table);
   return rows.map(row => Object.fromEntries(headers.map((header, i) => [header, row[i]])));
 }
