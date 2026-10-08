@@ -62,7 +62,7 @@ for up to 2 minutes.
 
 | Spec                         | What it does                                                                                                                                                                                                                                                                                                                                                                                         |
 |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `tutorial-batch.spec.ts`     | Follows the [batch loading tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-batch) through the classic **data loader**: connects to `wikiticker-2015-09-12-sampled.json.gz` on local disk, checks the first and last preview lines, sets the timestamp to `timestamp_parse("time") + 1` (so the `__time` check below proves the expression was used), turns rollup off, sets DAY granularity and submits. It then waits for the task to succeed on the **Tasks** view, for the datasource to be fully available as 1 segment with 39,244 rows on the **Datasources** view, and checks the first row of `SELECT *` in the **Query** view. The datasource name contains a string of special and non-Latin characters to test quoting and escaping. |
+| `tutorial-batch.spec.ts`     | Follows the [batch loading tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-batch) through the classic **data loader**: connects to `wikiticker-2015-09-12-sampled.json.gz` on local disk, checks the first and last preview lines, sets the timestamp to `timestamp_parse("time") + 1` (so the `__time` check below proves the expression was used), turns rollup off, sets DAY granularity and submits. It then waits (through SQL on `sys.tasks` and `sys.segments`) for the task to succeed and for the datasource to be fully available as 1 segment with 39,244 rows, checks that the **Tasks** and **Datasources** views show the same, and checks the first row of `SELECT *` in the **Query** view. The datasource name contains a string of special and non-Latin characters to test quoting and escaping. |
 | `reindexing.spec.ts`         | Loads `wikipedia-index.json` with `post-index-task` (1 segment), then reindexes it through the data loader's **Reindex from Druid** connector into range partitions on `channel` with 10,000 target rows per segment. Checks the preview rows, that the task succeeds, and that the datasource ends up as 4 segments with the same 39,244 rows.                                                         |
 | `auto-compaction.spec.ts`    | Follows the [compaction tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-compaction): loads 2 hours of `compaction-init-index.json` with `post-index-task` (3 segments, 1,412 rows), sets a compaction config (`skipOffsetFromLatest: PT0S`, hashed partitions) from the **Datasources** view, reopens the dialog until it reads back the same config, then forces compaction runs (from the Alt-click "more" menu) until there are 2 segments. |
 | `multi-stage-query.spec.ts`  | Runs an MSQ `SELECT` over `EXTERN(...)` on the tutorial file in the **Query** view, clicking "Run it anyway" if the cluster warns it lacks task slots, and checks the top 2 of the 10 channels by count.                                                                                                                                                                                             |
@@ -85,8 +85,9 @@ e2e-tests/
     fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses)
     global-setup.ts    waits for the console's SQL endpoint before the tests start
     druid.ts           tutorial data dir, runIndexTask
+    sql.ts             querySql, and the cluster state the tests wait for: task statuses, a datasource's segments
     playwright.ts      openView, and helpers that find inputs and buttons by their label or text
-    table.ts           extractTable: reads a table's rows as text, skipping blank rows
+    table.ts           extractTable / extractTableRecords: read a table's rows as text (by position / by header)
 ```
 
 ### Writing a test
@@ -102,10 +103,12 @@ e2e-tests/
 - Open a view with `openView(page, 'datasources', { datasource: ... })`. Filtering to the test's own rows keeps the
   test working on a cluster with more datasources or tasks than fit on one page.
 - The query editor is CodeMirror; type into it with `setQueryInput`, which fills its `.cm-content`.
-- Table helpers read columns by position (see the column enums in `component/datasources/overview.ts` and
-  `component/ingestion/overview.ts`), so adding, removing or reordering a default visible column needs the enum
-  updated.
-- Wrap checks on cluster state in `await expect(async () => { ... }).toPass()`: segments load and tasks finish some
-  time after the console reports success. Make each attempt fail fast (like `QueryOverview.runQuery` throwing on a
-  query error) rather than wait out a timeout.
+- Wait for the cluster state (a task finishing, segments loading) through SQL rather than by reading a view:
+  `await expect.poll(() => getDatasourceSegments(request, name), CLUSTER_STATE_POLL).toEqual({ ... })`, with the
+  `request` fixture. Check a view only when the view is what you are testing, and once the cluster is in the state
+  it should show.
+- Read the console's tables with `extractTableRecords`, which keys each row by its column headers, so a column
+  being added, hidden or moved doesn't break the test.
+- Retry UI checks that depend on data loading with `await expect(async () => { ... }).toPass()`. Make each attempt
+  fail fast (like `QueryOverview.runQuery` throwing on a query error) rather than wait out a timeout.
 - Give anything you create a unique name (append `new Date().toISOString()`).

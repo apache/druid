@@ -20,22 +20,23 @@ import type { Page } from '@playwright/test';
 import path from 'path';
 
 import { CompactionConfig } from './component/datasources/compaction';
-import type { Datasource } from './component/datasources/datasource';
 import { DatasourcesOverview } from './component/datasources/overview';
 import { HashedPartitionsSpec } from './component/load-data/config/partition';
 import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, runIndexTask } from './util/druid';
 import { expect, test } from './util/fixtures';
+import { CLUSTER_STATE_POLL, getDatasourceSegments } from './util/sql';
 
 // The workflow in these tests is based on the compaction tutorial:
 // https://druid.apache.org/docs/latest/tutorials/tutorial-compaction.html
 test.describe('Auto-compaction', () => {
-  test('Compacts segments from dynamic to hash partitions', async ({ page }) => {
+  test('Compacts segments from dynamic to hash partitions', async ({ page, request }) => {
     const datasourceName = 'autocompaction-dynamic-to-hash' + new Date().toISOString();
     loadInitialData(datasourceName);
 
-    const uncompactedNumSegment = 3;
-    const numRow = 1412;
-    await validateDatasourceStatus(page, datasourceName, uncompactedNumSegment, numRow);
+    const numRows = 1412;
+    await expect
+      .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual({ numSegments: 3, numAvailableSegments: 3, numRows });
 
     const compactionConfig = new CompactionConfig({
       skipOffsetFromLatest: 'PT0S',
@@ -48,12 +49,14 @@ test.describe('Auto-compaction', () => {
     // Depending on the number of configured tasks slots, autocompaction may
     // need several iterations if several time chunks need compaction
     const datasourcesOverview = new DatasourcesOverview(page);
-    const compactedNumSegment = 2;
     await expect(async () => {
       await datasourcesOverview.triggerCompaction();
       await expect
-        .poll(() => getNumSegment(page, datasourceName), { timeout: 60 * 1000, intervals: [1000] })
-        .toBe(compactedNumSegment);
+        .poll(() => getDatasourceSegments(request, datasourceName), {
+          ...CLUSTER_STATE_POLL,
+          timeout: 60 * 1000,
+        })
+        .toEqual({ numSegments: 2, numAvailableSegments: 2, numRows });
     }).toPass({ timeout: 4 * 60 * 1000 });
   });
 });
@@ -67,27 +70,6 @@ function loadInitialData(datasourceName: string) {
   const setIntervals = 's|2015-09-12/2015-09-13|2015-09-12/2015-09-12T02:00|'; // shorten to reduce test duration
   const sedCommands = [setDatasourceName, setIntervals];
   runIndexTask(ingestionSpec, sedCommands);
-}
-
-async function validateDatasourceStatus(
-  page: Page,
-  datasourceName: string,
-  expectedNumSegment: number,
-  expectedNumRow: number,
-) {
-  await expect(async () => {
-    const datasource = await getDatasource(page, datasourceName);
-    expect(datasource.availability).toMatch(`Fully available (${expectedNumSegment} segments)`);
-    expect(datasource.totalRows).toBe(expectedNumRow);
-  }).toPass();
-}
-
-async function getDatasource(page: Page, datasourceName: string): Promise<Datasource> {
-  const datasourcesOverview = new DatasourcesOverview(page);
-  const datasources = await datasourcesOverview.getDatasources(datasourceName);
-  const datasource = datasources.find(t => t.name === datasourceName);
-  expect(datasource).toBeDefined();
-  return datasource!;
 }
 
 async function configureCompaction(
@@ -104,10 +86,4 @@ async function configureCompaction(
       await datasourcesOverview.getCompactionConfiguration(datasourceName);
     expect(savedCompactionConfig).toEqual(compactionConfig);
   }).toPass();
-}
-
-async function getNumSegment(page: Page, datasourceName: string): Promise<number> {
-  const datasource = await getDatasource(page, datasourceName);
-  const currNumSegmentString = /(\d+)/.exec(datasource.availability)![0];
-  return Number(currNumSegmentString);
 }

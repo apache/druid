@@ -19,23 +19,35 @@
 import type { Locator } from '@playwright/test';
 
 /**
- * Reads the rows of a table as text, skipping the blank rows that pad it.
- * @param rows locator matching the table's rows
- * @param cellSelector CSS selector for a cell within a row
+ * Reads the data rows (not the rows that pad the table) of a ConsoleTable as text, one array of cells per row.
+ * @param table locator of the table (its `.console-table` element, or one containing it)
  */
-export async function extractTable(rows: Locator, cellSelector: string): Promise<string[][]> {
-  return await rows.evaluateAll((rowElements, cellSelector) => {
-    const BLANK_VALUE = '\xa0';
-    const data: string[][] = [];
-    for (const row of rowElements) {
-      const values = Array.from(row.querySelectorAll(cellSelector)).map(c => {
-        const realText = c.querySelector('.real-text');
-        return ((realText ?? c) as HTMLElement).innerText;
-      });
-      if (!values.every(value => value === BLANK_VALUE)) {
-        data.push(values);
-      }
-    }
-    return data;
-  }, cellSelector);
+export async function extractTable(table: Locator): Promise<string[][]> {
+  return (await readTable(table)).rows;
+}
+
+/**
+ * Reads the data rows of a ConsoleTable as text, each row keyed by its column headers. Headers on two lines are read
+ * with a space for the line break (like "Datasource name").
+ * @param table locator of the table (its `.console-table` element, or one containing it)
+ */
+export async function extractTableRecords(table: Locator): Promise<Record<string, string>[]> {
+  const { headers, rows } = await readTable(table);
+  return rows.map(row => Object.fromEntries(headers.map((header, i) => [header, row[i]])));
+}
+
+async function readTable(table: Locator): Promise<{ headers: string[]; rows: string[][] }> {
+  return await table.evaluate(tableElement => {
+    const cellText = (cell: Element) =>
+      ((cell.querySelector('.real-text') ?? cell) as HTMLElement).innerText;
+
+    return {
+      headers: Array.from(tableElement.querySelectorAll('.ct-thead.-header .ct-th'), header =>
+        (header as HTMLElement).innerText.replace(/\s+/g, ' ').trim(),
+      ),
+      rows: Array.from(tableElement.querySelectorAll('.ct-tbody .ct-tr:not(.-padRow)'), row =>
+        Array.from(row.querySelectorAll('.ct-td'), cellText),
+      ),
+    };
+  });
 }

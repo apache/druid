@@ -43,7 +43,7 @@ export class QueryOverview {
     if (await error.isVisible()) {
       throw new Error(`Query failed: ${await error.innerText()}`);
     }
-    return await extractTable(results.locator('.ct-tr-group'), '.ct-td');
+    return await extractTable(results);
   }
 
   async cancelQuery(query: string): Promise<number> {

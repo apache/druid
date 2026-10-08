@@ -52,11 +52,15 @@ modernize them, in order. Each step should leave the suite passing.
   `parseHashRoute` ends the route at them, so going from a datasource whose name has `#` or `?` to its tasks or
   segments drops the rest of the name.
 
-## 3. Don't read tables by column position
+## 3. Don't read tables by column position (done)
 
-- The `DatasourceColumn` / `TaskColumn` enums break when a default visible column changes. Check cluster state
-  (task succeeded, N segments available, row count) through the SQL API (`sys.tasks`, `sys.segments`) where the UI
-  isn't what's being tested, or find columns by their header text.
+- The `DatasourceColumn` / `TaskColumn` enums broke when a default visible column changed.
+- The tests now wait for the cluster state through SQL (`util/sql.ts`: top-level task statuses from `sys.tasks`,
+  used and available segments and rows from `sys.segments`), with `expect.poll`. Only the tutorial test still checks
+  the Datasources and Tasks views, once the cluster is in the state they should show, reading the tables by their
+  headers (`extractTableRecords`).
+- Learned: `index_parallel` subtasks share the datasource (filter on `task_id = group_id`), `sys.segments` returns
+  no row for an aggregate over no segments, and `expect.poll` stops (does not retry) when its callback throws.
 
 ## 4. Set up data through the HTTP API
 

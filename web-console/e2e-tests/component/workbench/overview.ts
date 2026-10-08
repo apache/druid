@@ -48,6 +48,6 @@ export class WorkbenchOverview {
       await results.waitFor({ timeout });
     }
 
-    return await extractTable(results.locator('.ct-tr-group'), '.ct-td');
+    return await extractTable(results);
   }
 }

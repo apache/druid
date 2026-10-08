@@ -16,11 +16,8 @@
  * limitations under the License.
  */
 
-import type { Page } from '@playwright/test';
 import path from 'path';
 
-import { DatasourcesOverview } from './component/datasources/overview';
-import { TasksOverview } from './component/ingestion/overview';
 import { ConfigureSchemaConfig } from './component/load-data/config/configure-schema';
 import {
   PartitionConfig,
@@ -32,9 +29,10 @@ import { ReindexDataConnector } from './component/load-data/data-connector/reind
 import { DataLoader } from './component/load-data/data-loader';
 import { DRUID_EXAMPLES_QUICKSTART_TUTORIAL_DIR, runIndexTask } from './util/druid';
 import { expect, test } from './util/fixtures';
+import { CLUSTER_STATE_POLL, getDatasourceSegments, getTaskStatuses } from './util/sql';
 
 test.describe('Reindexing from Druid', () => {
-  test('Reindex datasource from dynamic to range partitions', async ({ page }) => {
+  test('Reindex datasource from dynamic to range partitions', async ({ page, request }) => {
     const datasourceName = 'reindex-dynamic-to-range' + new Date().toISOString();
     const interval = '2015-09-12/2015-09-13';
     const dataConnector = new ReindexDataConnector(page, {
@@ -64,14 +62,20 @@ test.describe('Reindexing from Druid', () => {
 
     loadInitialData(datasourceName);
 
-    const numInitialSegment = 1;
-    await validateDatasourceStatus(page, datasourceName, numInitialSegment);
+    await expect
+      .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual({ numSegments: 1, numAvailableSegments: 1, numRows: 39244 });
 
     await dataLoader.load();
-    await validateTaskStatus(page, datasourceName);
+    // The initial load and the reindexing
+    await expect
+      .poll(() => getTaskStatuses(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual(['SUCCESS', 'SUCCESS']);
 
-    const numReindexedSegment = 4; // 39k rows into segments of ~10k rows
-    await validateDatasourceStatus(page, datasourceName, numReindexedSegment);
+    // 39k rows into segments of ~10k rows
+    await expect
+      .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
+      .toEqual({ numSegments: 4, numAvailableSegments: 4, numRows: 39244 });
   });
 });
 
@@ -122,32 +126,4 @@ function validateConnectLocalData(lines: string[]) {
       ',"delta":1' +
       '}]',
   );
-}
-
-async function validateTaskStatus(page: Page, datasourceName: string) {
-  const tasksOverview = new TasksOverview(page);
-
-  await expect(async () => {
-    const tasks = await tasksOverview.getTasks(datasourceName);
-    const task = tasks.find(t => t.datasource === datasourceName);
-    expect(task).toBeDefined();
-    expect(task!.status).toMatch('SUCCESS');
-  }).toPass();
-}
-
-async function validateDatasourceStatus(
-  page: Page,
-  datasourceName: string,
-  expectedNumSegment: number,
-) {
-  const datasourcesOverview = new DatasourcesOverview(page);
-  const numSegmentString = `${expectedNumSegment} segment` + (expectedNumSegment !== 1 ? 's' : '');
-
-  await expect(async () => {
-    const datasources = await datasourcesOverview.getDatasources(datasourceName);
-    const datasource = datasources.find(t => t.name === datasourceName);
-    expect(datasource).toBeDefined();
-    expect(datasource!.availability).toMatch(`Fully available (${numSegmentString})`);
-    expect(datasource!.totalRows).toBe(39244);
-  }).toPass();
 }

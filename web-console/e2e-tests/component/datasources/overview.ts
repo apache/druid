@@ -26,33 +26,11 @@ import {
   openView,
   setLabeledInput,
 } from '../../util/playwright';
-import { extractTable } from '../../util/table';
+import { extractTableRecords } from '../../util/table';
 import { readPartitionSpec } from '../load-data/config/partition';
 
 import { CompactionConfig } from './compaction';
 import { Datasource } from './datasource';
-
-/**
- * Datasource overview table column identifiers.
- */
-enum DatasourceColumn {
-  NAME = 0,
-  AVAILABILITY,
-  SEGMENT_LOAD_DROP,
-  TOTAL_DATA_SIZE,
-  RUNNING_TASKS,
-  SEGMENT_ROWS,
-  // SEGMENT_SIZE, (Hidden by default)
-  // SEGMENT_GRANULARITY, (Hidden by default)
-  TOTAL_ROWS,
-  AVG_ROW_SIZE,
-  REPLICATED_SIZE,
-  COMPACTION,
-  PERCENT_COMPACTED,
-  LEFT_TO_BE_COMPACTED,
-  RETENTION,
-  ACTIONS,
-}
 
 const SKIP_OFFSET_FROM_LATEST = 'Skip offset from latest';
 
@@ -66,7 +44,7 @@ export class DatasourcesOverview {
     this.page = page;
   }
 
-  private readonly rows = () => this.page.locator('.datasources-view .ct-tr-group');
+  private readonly table = () => this.page.locator('.datasources-view .console-table');
 
   /**
    * The datasources whose name contains (the filterable end of) `datasourceName`.
@@ -74,14 +52,14 @@ export class DatasourcesOverview {
   async getDatasources(datasourceName: string): Promise<Datasource[]> {
     await openView(this.page, 'datasources', { datasource: filterableText(datasourceName) });
 
-    const data = await extractTable(this.rows(), '.ct-td');
+    const records = await extractTableRecords(this.table());
 
-    return data.map(
-      row =>
+    return records.map(
+      record =>
         new Datasource({
-          name: row[DatasourceColumn.NAME],
-          availability: row[DatasourceColumn.AVAILABILITY],
-          totalRows: DatasourcesOverview.parseNumber(row[DatasourceColumn.TOTAL_ROWS]),
+          name: record['Datasource name'],
+          availability: record['Availability'],
+          totalRows: DatasourcesOverview.parseNumber(record['Total rows']),
         }),
     );
   }
@@ -114,7 +92,7 @@ export class DatasourcesOverview {
 
   private async openCompactionConfigurationDialog(datasourceName: string) {
     await openView(this.page, 'datasources', { datasource: filterableText(datasourceName) });
-    await this.rows().locator('.action-cell .bp6-icon-more').click();
+    await this.table().locator('.ct-tbody .action-cell .bp6-icon-more').click();
     await clickMenuItem(this.page, 'Edit compaction configuration');
 
     const dialog = this.page.locator('.compaction-config-dialog');

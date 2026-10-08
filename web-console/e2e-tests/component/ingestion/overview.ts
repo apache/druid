@@ -19,23 +19,9 @@
 import type { Page } from '@playwright/test';
 
 import { filterableText, openView } from '../../util/playwright';
-import { extractTable } from '../../util/table';
+import { extractTableRecords } from '../../util/table';
 
 import { IngestionTask } from './task';
-
-/**
- * Ingestion overview task table column identifiers.
- */
-enum TaskColumn {
-  TASK_ID = 0,
-  GROUP_ID,
-  TYPE,
-  DATASOURCE,
-  STATUS,
-  CREATED_TIME,
-  DURATION,
-  LOCATION,
-}
 
 /**
  * Represents task tab.
@@ -53,13 +39,13 @@ export class TasksOverview {
   async getTasks(datasourceName: string): Promise<IngestionTask[]> {
     await openView(this.page, 'tasks', { datasource: filterableText(datasourceName) });
 
-    const data = await extractTable(this.page.locator('.tasks-view .ct-tr-group'), '.ct-td');
+    const records = await extractTableRecords(this.page.locator('.tasks-view .console-table'));
 
-    return data.map(
-      row =>
+    return records.map(
+      record =>
         new IngestionTask({
-          datasource: row[TaskColumn.DATASOURCE],
-          status: row[TaskColumn.STATUS],
+          datasource: record['Datasource'],
+          status: record['Status'],
         }),
     );
   }
