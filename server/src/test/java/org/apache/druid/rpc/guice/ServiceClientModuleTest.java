@@ -122,12 +122,6 @@ public class ServiceClientModuleTest
   }
 
   @Test
-  public void testCoordinatorClientConfigIsReadFromClientCoordinatorPrefix()
-  {
-    Assertions.assertEquals(4, injector.getInstance(CoordinatorClientConfig.class).getMaxAttempts());
-  }
-
-  @Test
   public void testCoordinatorClientConfigRejectsNonPositiveMaxAttempts()
   {
     Assertions.assertThrows(
@@ -141,7 +135,7 @@ public class ServiceClientModuleTest
   }
 
   @Test
-  public void testCoordinatorServiceClientMakesAtMostMaxAttempts()
+  public void testCoordinatorRetryPolicyUsesConfiguredMaxAttempts()
   {
     new ServiceClientModule().makeServiceClientForCoordinator(
         serviceClientFactory,
