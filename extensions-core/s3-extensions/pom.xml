@@ -114,10 +114,12 @@
       <artifactId>s3-transfer-manager</artifactId>
       <version>${aws.sdk.v2.version}</version>
     </dependency>
+    <!-- Keep CRT classes on the shared classpath, next to the crt-core that s3 brings there. -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>aws-crt-client</artifactId>
       <version>${aws.sdk.v2.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>software.amazon.awssdk</groupId>

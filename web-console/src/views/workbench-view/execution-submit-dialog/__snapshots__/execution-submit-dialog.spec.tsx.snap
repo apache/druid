@@ -1,70 +1,140 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
 exports[`ExecutionSubmitDialog matches snapshot 1`] = `
-<Blueprint5.Dialog
-  backdropProps={
-    {
-      "onDragLeave": [Function],
-      "onDragOver": [Function],
-      "onDrop": [Function],
-    }
-  }
-  canOutsideClickClose={false}
-  className="execution-submit-dialog"
-  isOpen={true}
-  onClose={[Function]}
-  title="Load query detail archive"
+<div
+  class="bp6-portal"
 >
   <div
-    className="bp5-dialog-body"
-  >
-    <p>
-      You can load query detail archive files from other Druid clusters to render the query detail here.
-    </p>
-    <p>
-      To download the query detail archive for a query, click on the query in the
-       
-      <ForwardRef>
-        Recent query tasks
-      </ForwardRef>
-       panel in the query view.
-    </p>
-    <Blueprint5.FormGroup
-      label="Select query detail archive file"
-    >
-      <Blueprint5.FileInput
-        fill={true}
-        hasSelection={false}
-        inputProps={
-          {
-            "accept": ".json",
-          }
-        }
-        onInputChange={[Function]}
-        text="Choose file..."
-      />
-    </Blueprint5.FormGroup>
-    <p>
-      Alternatively, drag a file directly onto this dialog.
-    </p>
-  </div>
-  <div
-    className="bp5-dialog-footer"
+    aria-live="polite"
+    class="bp6-overlay bp6-overlay-open bp6-overlay-scroll-container"
   >
     <div
-      className="bp5-dialog-footer-actions"
+      class="bp6-overlay-start-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
+    />
+    <div
+      class="bp6-overlay-backdrop bp6-overlay-appear bp6-overlay-appear-active"
+    />
+    <div
+      class="bp6-dialog-container bp6-overlay-content bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
     >
-      <Blueprint5.Button
-        onClick={[Function]}
-        text="Close"
-      />
-      <Blueprint5.Button
-        disabled={true}
-        intent="primary"
-        onClick={[Function]}
-        text="Submit"
-      />
+      <div
+        aria-labelledby="title-bp-dialog-0"
+        aria-modal="true"
+        class="bp6-dialog execution-submit-dialog"
+        role="dialog"
+      >
+        <div
+          class="bp6-dialog-header"
+        >
+          <h2
+            class="bp6-heading"
+            id="title-bp-dialog-0"
+          >
+            Load query detail archive
+          </h2>
+          <button
+            aria-label="Close"
+            class="bp6-button bp6-minimal bp6-dialog-close-button"
+            type="button"
+          >
+            <span
+              aria-hidden="true"
+              class="bp6-icon bp6-icon-small-cross"
+            >
+              <svg
+                data-icon="small-cross"
+              />
+            </span>
+          </button>
+        </div>
+        <div
+          class="bp6-dialog-body"
+        >
+          <p>
+            You can load query detail archive files from other Druid clusters to render the query detail here.
+          </p>
+          <p>
+            To download the query detail archive for a query, click on the query in the
+             
+            <code
+              class="bp6-code"
+            >
+              Recent query tasks
+            </code>
+             panel in the query view.
+          </p>
+          <div
+            class="bp6-form-group"
+          >
+            <label
+              class="bp6-label"
+            >
+              Select query detail archive file
+               
+              <span
+                class="bp6-text-muted"
+              />
+            </label>
+            <div
+              class="bp6-form-content"
+            >
+              <label
+                class="bp6-file-input bp6-fill"
+              >
+                <input
+                  accept=".json"
+                  type="file"
+                />
+                <span
+                  class="bp6-file-upload-input"
+                >
+                  Choose file...
+                </span>
+              </label>
+            </div>
+          </div>
+          <p>
+            Alternatively, drag a file directly onto this dialog.
+          </p>
+        </div>
+        <div
+          class="bp6-dialog-footer"
+        >
+          <div
+            class="bp6-dialog-footer-actions"
+          >
+            <button
+              class="bp6-button"
+              type="button"
+            >
+              <span
+                class="bp6-button-text"
+              >
+                Close
+              </span>
+            </button>
+            <button
+              class="bp6-button bp6-disabled bp6-intent-primary"
+              disabled=""
+              tabindex="-1"
+              type="button"
+            >
+              <span
+                class="bp6-button-text"
+              >
+                Submit
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+    <div
+      class="bp6-overlay-end-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
+      tabindex="0"
+    />
   </div>
-</Blueprint5.Dialog>
+</div>
 `;

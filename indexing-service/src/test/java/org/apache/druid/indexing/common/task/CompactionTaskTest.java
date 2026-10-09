@@ -2108,10 +2108,7 @@ public class CompactionTaskTest
         final Segment segment =
             new QueryableIndexSegment(indexIO.loadIndex(segments.get(dataSegment)), dataSegment.getId());
         final ReferenceCountedSegmentProvider provider = ReferenceCountedSegmentProvider.of(segment);
-        return new AcquireSegmentAction(
-            () -> Futures.immediateFuture(AcquireSegmentResult.cached(provider)),
-            null
-        );
+        return AcquireSegmentAction.completed(AcquireSegmentResult.of(provider.acquireReference()));
       }
 
       @Override

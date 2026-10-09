@@ -128,7 +128,7 @@ public class BenchmarkIndexibleWrites
       reference.set((V[]) new Object[initSize]);
     }
 
-    private static Boolean wasCopying(Long val)
+    private static boolean wasCopying(long val)
     {
       return (val & 1L) > 0;
     }
@@ -137,12 +137,13 @@ public class BenchmarkIndexibleWrites
     public void set(Integer index, V object)
     {
       ensureCapacity(index + 1);
-      Long pre, post;
+      long pre;
+      long post;
       do {
         pre = resizeCount.get();
         reference.get()[index] = object;
         post = resizeCount.get();
-      } while (wasCopying(pre) || wasCopying(post) || (!pre.equals(post)));
+      } while (wasCopying(pre) || wasCopying(post) || pre != post);
     }
 
     private final Object resizeMutex = new Object();
@@ -192,7 +193,7 @@ public class BenchmarkIndexibleWrites
     final AtomicInteger index = new AtomicInteger(0);
     List<ListenableFuture<?>> futures = new ArrayList<>();
 
-    final Integer loops = totalIndexSize / concurrentThreads;
+    final int loops = totalIndexSize / concurrentThreads;
 
     for (int i = 0; i < concurrentThreads; ++i) {
       futures.add(
@@ -244,7 +245,7 @@ public class BenchmarkIndexibleWrites
     final AtomicInteger queryableIndex = new AtomicInteger(0);
     List<ListenableFuture<?>> futures = new ArrayList<>();
 
-    final Integer loops = totalIndexSize / concurrentThreads;
+    final int loops = totalIndexSize / concurrentThreads;
 
     final AtomicBoolean done = new AtomicBoolean(false);
 

@@ -156,7 +156,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
                 text="Save"
                 onClick={() => void saveConfig()}
                 intent={Intent.PRIMARY}
-                rightIcon={IconNames.TICK}
+                endIcon={IconNames.TICK}
                 disabled={Boolean(jsonError)}
               />
             </div>

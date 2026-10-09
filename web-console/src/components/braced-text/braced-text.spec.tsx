@@ -16,22 +16,22 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../utils/shallow-renderer';
+import { render } from '@testing-library/react';
 
 import { BracedText } from './braced-text';
 
 describe('BracedText', () => {
   it('matches snapshot', () => {
-    const bracedText = shallow(<BracedText text="23.3" braces={['34', '23,423.4']} />);
+    const { container } = render(<BracedText text="23.3" braces={['34', '23,423.4']} />);
 
-    expect(bracedText).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 
   it('matches snapshot with padFractionalPart', () => {
-    const bracedText = shallow(
+    const { container } = render(
       <BracedText text="23.3" braces={['34', '23,423.437']} padFractionalPart />,
     );
 
-    expect(bracedText).toMatchSnapshot();
+    expect(container.firstChild).toMatchSnapshot();
   });
 });

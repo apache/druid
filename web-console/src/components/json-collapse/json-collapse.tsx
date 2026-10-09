@@ -35,7 +35,12 @@ export const JsonCollapse = React.memo(function JsonCollapse(props: JsonCollapse
   return (
     <div className="json-collapse">
       <div className="collapse-buttons">
-        <Button minimal active={isOpen} onClick={() => setIsOpen(!isOpen)} text={buttonText} />
+        <Button
+          variant="minimal"
+          active={isOpen}
+          onClick={() => setIsOpen(!isOpen)}
+          text={buttonText}
+        />
       </div>
       <Collapse isOpen={isOpen}>
         <TextArea readOnly value={prettyValue} />

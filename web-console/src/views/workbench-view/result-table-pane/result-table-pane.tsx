@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
@@ -24,10 +24,16 @@ import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar, SqlType } from 'druid
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
-import type { RowRenderProps } from 'react-table';
-import ReactTable from 'react-table';
 
-import { BracedText, Deferred, TableCell } from '../../../components';
+import type { ConsoleTableCellInfo } from '../../../components';
+import {
+  BracedText,
+  ConsoleTable,
+  Deferred,
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  TableCell,
+} from '../../../components';
 import { CellFilterMenu } from '../../../components/cell-filter-menu/cell-filter-menu';
 import { ShowValueDialog } from '../../../dialogs/show-value-dialog/show-value-dialog';
 import {
@@ -35,7 +41,6 @@ import {
   possibleDruidFormatForValues,
   TIME_COLUMN,
 } from '../../../druid-models';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../../react-table';
 import type { Pagination, QueryAction } from '../../../utils';
 import {
   columnToIcon,
@@ -657,7 +662,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
           />
         </div>
       ) : (
-        <ReactTable
+        <ConsoleTable
           className="-striped -highlight"
           data={queryResult.rows as any[][]}
           ofText={hasMoreResults ? '' : 'of'}
@@ -679,7 +684,11 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
             return {
               Header() {
                 return (
-                  <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
+                  <PopoverNext
+                    content={<Deferred content={() => getHeaderMenu(column, i)} />}
+                    lazy
+                    shouldReturnFocusOnClose={false}
+                  >
                     <div className="clickable-cell">
                       <div className="output-name" data-tooltip={columnToSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
@@ -694,16 +703,20 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                         </div>
                       )}
                     </div>
-                  </Popover>
+                  </PopoverNext>
                 );
               },
               headerClassName: getHeaderClassName(h),
               accessor: String(i),
-              Cell(row: RowRenderProps) {
+              Cell(row: ConsoleTableCellInfo<any>) {
                 const value = row.value;
                 return (
                   <div>
-                    <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                    <PopoverNext
+                      content={<Deferred content={() => getCellMenu(column, i, value)} />}
+                      lazy
+                      shouldReturnFocusOnClose={false}
+                    >
                       {numericColumnBraces[i] ? (
                         <BracedText
                           className="table-padding"
@@ -714,7 +727,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                       ) : (
                         <TableCell value={value} unlimited />
                       )}
-                    </Popover>
+                    </PopoverNext>
                   </div>
                 );
               },

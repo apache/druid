@@ -43,7 +43,7 @@ jobs:
         # depends on it. The web console assets are skipped too: no Docker test
         # uses the console, the router tolerates the missing assets, and the
         # console is fully built and packaged by packaging-check on every commit.
-        run: mvn -B -T1C clean install -pl '!benchmarks' -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests -Dweb.console.skip=true
+        run: ./mvnw -B -T1C clean install -pl '!benchmarks' -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests -Dweb.console.skip=true
       - name: Build the Docker image
         run: |
           set -o pipefail

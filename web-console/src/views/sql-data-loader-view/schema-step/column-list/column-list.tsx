@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Icon, Popover } from '@blueprintjs/core';
+import { Icon, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { QueryResult, SqlExpression } from 'druid-query-toolkit';
 import { useMemo } from 'react';
@@ -66,7 +66,7 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
           {metrics ? (
             <>
               {'Dimensions '}
-              <Popover
+              <PopoverNext
                 className="info-popover"
                 content={
                   <PopoverText>
@@ -78,10 +78,12 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
                     <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design`} />
                   </PopoverText>
                 }
-                position="left-bottom"
+                placement="left-end"
+                lazy
+                shouldReturnFocusOnClose={false}
               >
                 <Icon icon={IconNames.INFO_SIGN} size={14} />
-              </Popover>
+              </PopoverNext>
             </>
           ) : (
             'Columns'
@@ -111,7 +113,7 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
         <div className="list-column">
           <div className="list-label">
             {'Metrics '}
-            <Popover
+            <PopoverNext
               className="info-popover"
               content={
                 <PopoverText>
@@ -124,10 +126,12 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
                   <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design`} />
                 </PopoverText>
               }
-              position="left-bottom"
+              placement="left-end"
+              lazy
+              shouldReturnFocusOnClose={false}
             >
               <Icon icon={IconNames.INFO_SIGN} size={14} />
-            </Popover>
+            </PopoverNext>
           </div>
           <div className="list-container">
             {filterMap(metrics, (ex, i) => {

@@ -116,11 +116,7 @@ export type IngestionComboType =
 
 // Some extra values that can be selected in the initial screen
 export type IngestionComboTypeWithExtra =
-  | IngestionComboType
-  | 'azure-event-hubs'
-  | 'hadoop'
-  | 'example'
-  | 'other';
+  IngestionComboType | 'azure-event-hubs' | 'hadoop' | 'example' | 'other';
 
 function ingestionTypeToIoAndTuningConfigType(ingestionType: IngestionType): string {
   switch (ingestionType) {
@@ -2819,7 +2815,7 @@ export function updateSchemaWithSample(
           guessNumericStringsAsNumbers,
           arrayIngestMode,
           rollup,
-          forceSegmentSortByTime ?? DEFAULT_FORCE_SEGMENT_SORT_BY_TIME ? 'ignore' : 'preserve',
+          (forceSegmentSortByTime ?? DEFAULT_FORCE_SEGMENT_SORT_BY_TIME) ? 'ignore' : 'preserve',
         ),
       );
       break;

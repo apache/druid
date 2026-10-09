@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-@import '../../../variables';
+@use '../../../variables' as *;
 
 .explain-dialog {
   &.#{$bp-ns}-dialog {
@@ -50,6 +50,10 @@
 
       .query-group {
         flex: 1;
+
+        .query-string {
+          height: 100%;
+        }
 
         .#{$bp-ns}-form-content {
           flex: 1;
