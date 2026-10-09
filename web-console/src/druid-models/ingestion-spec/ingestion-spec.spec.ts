@@ -66,8 +66,25 @@ describe('ingestion-spec', () => {
     expect(partitionIdsField?.type).toBe('string-array');
     expect(partitionIdsField?.placeholder).toBe('Optional; comma-separated, e.g. 0, 2');
     expect(partitionIdsField?.valueAdjustment?.(['1', '2', '3'])).toEqual([1, 2, 3]);
+    // Values the server rejects are kept as strings, not coerced to numbers.
+    expect(partitionIdsField?.valueAdjustment?.(['1e3', '0x10', '-1', 'abc'])).toEqual([
+      '1e3',
+      '0x10',
+      '-1',
+      'abc',
+    ]);
     expect(partitionIdsField?.valueAdjustment?.([])).toBeUndefined();
     expect(partitionIdsField?.valueAdjustment?.(undefined)).toBeUndefined();
+
+    // The field is shown for a topic, and stays shown while it holds a value so it can be cleared.
+    const defined = partitionIdsField?.defined;
+    expect(typeof defined).toBe('function');
+    if (typeof defined === 'function') {
+      expect(defined({ type: 'kafka', topic: 'events' })).toBe(true);
+      expect(defined({ type: 'kafka', topicPattern: 'events.*' })).toBe(false);
+      expect(defined({ type: 'kafka', topicPattern: 'events.*', partitionIds: [0] })).toBe(true);
+      expect(defined({ type: 'kinesis', partitionIds: [0] })).toBe(false);
+    }
 
     const hideInMore = partitionIdsField?.hideInMore;
     expect(typeof hideInMore).toBe('function');

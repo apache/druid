@@ -1161,11 +1161,17 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           name: 'partitionIds',
           label: 'Partition IDs',
           type: 'string-array',
-          defined: ioConfig => ioConfig.type === 'kafka' && Boolean(ioConfig.topic),
+          // Keep the field visible while it holds a value, so it can still be cleared after switching to topicPattern.
+          defined: ioConfig =>
+            ioConfig.type === 'kafka' && (Boolean(ioConfig.topic) || ioConfig.partitionIds != null),
           placeholder: 'Optional; comma-separated, e.g. 0, 2',
           hideInMore: ioConfig => ioConfig.partitionIds == null,
+          // Only plain decimal digits become numbers. Anything else stays a string so that validation rejects it,
+          // as the server does, instead of being coerced (e.g. "1e3" or "0x10").
           valueAdjustment: partitionIds =>
-            partitionIds?.length ? partitionIds.map(Number) : undefined,
+            partitionIds?.length
+              ? partitionIds.map((id: string) => (/^\d+$/.test(id) ? Number(id) : id))
+              : undefined,
           info: 'Optional comma-separated partition IDs, such as 0,2. Omit to read all partitions. IDs must exist when Kafka metadata is discovered.',
         },
         {

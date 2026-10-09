@@ -99,7 +99,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(filter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter);
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter, null);
 
     ConsumerRecord<byte[], byte[]> prodRecord = createRecord("topic", 0, 100L,
         headers("environment", "production"));
@@ -141,7 +141,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(filter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter);
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter, null);
 
     ConsumerRecord<byte[], byte[]> prodRecord = createRecord("topic", 0, 100L,
         headers("environment", "production"));
@@ -176,7 +176,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter filter = new InDimFilter("service", Arrays.asList("user-service", "payment-service"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(filter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter);
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter, null);
 
     ConsumerRecord<byte[], byte[]> userServiceRecord = createRecord("topic", 0, 100L,
         headers("service", "user-service"));
@@ -218,7 +218,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter serviceFilter = new InDimFilter("service", Arrays.asList("user-service", "payment-service"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(serviceFilter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter);
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter, null);
 
     ConsumerRecord<byte[], byte[]> userServiceRecord = createRecord("topic", 0, 100L,
         headers("service", "user-service"));
@@ -260,7 +260,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(filter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter);
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter, null);
 
     // First poll
     ConsumerRecord<byte[], byte[]> prodRecord1 = createRecord("topic", 0, 100L,
@@ -305,7 +305,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(filter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter);
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter, null);
 
     EasyMock.expect(mockConsumer.poll(EasyMock.anyObject(Duration.class)))
         .andReturn(createConsumerRecords(Collections.emptyList()));
@@ -326,7 +326,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(filter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter);
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter, null);
 
     // All records have "staging" environment - none should pass the "production" filter
     ConsumerRecord<byte[], byte[]> stagingRecord1 = createRecord("topic", 0, 100L,
@@ -367,7 +367,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(filter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter);
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, false, null, headerFilter, null);
 
     ConsumerRecord<byte[], byte[]> prodRecord = createRecord("topic", 0, 100L,
         headers("environment", "production"));
@@ -407,7 +407,7 @@ public class KafkaRecordSupplierHeaderFilterTest
     InDimFilter filter = new InDimFilter("environment", Collections.singletonList("production"), null);
     KafkaHeaderBasedFilterConfig headerFilter = new KafkaHeaderBasedFilterConfig(filter, null, null);
 
-    recordSupplier = new KafkaRecordSupplier(mockConsumer, true, null, headerFilter); // multiTopic = true
+    recordSupplier = new KafkaRecordSupplier(mockConsumer, true, null, headerFilter, null); // multiTopic = true
 
     ConsumerRecord<byte[], byte[]> topic1Record = createRecord("topic1", 0, 100L,
         headers("environment", "production"));

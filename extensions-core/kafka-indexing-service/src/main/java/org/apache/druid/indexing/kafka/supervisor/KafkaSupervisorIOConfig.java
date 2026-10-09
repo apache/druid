@@ -65,66 +65,6 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final boolean emitTimeLagMetrics;
   private final KafkaHeaderBasedFilterConfig headerBasedFilterConfig;
 
-  /**
-   * Retains the signature used before {@code partitionIds} was introduced (defaults it to null), so that callers
-   * compiled against it keep working.
-   */
-  public KafkaSupervisorIOConfig(
-      String topic,
-      String topicPattern,
-      InputFormat inputFormat,
-      Integer replicas,
-      Integer taskCount,
-      Period taskDuration,
-      Map<String, Object> consumerProperties,
-      @Nullable AutoScalerConfig autoScalerConfig,
-      @Nullable LagAggregator lagAggregator,
-      Long pollTimeout,
-      Period startDelay,
-      Period period,
-      Boolean useEarliestOffset,
-      Period completionTimeout,
-      Period lateMessageRejectionPeriod,
-      Period earlyMessageRejectionPeriod,
-      DateTime lateMessageRejectionStartDateTime,
-      KafkaConfigOverrides configOverrides,
-      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig,
-      IdleConfig idleConfig,
-      Integer stopTaskCount,
-      @Nullable Boolean emitTimeLagMetrics,
-      @Nullable Map<Integer, Integer> serverPriorityToReplicas,
-      @Nullable BoundedStreamConfig boundedStreamConfig
-  )
-  {
-    this(
-        topic,
-        topicPattern,
-        inputFormat,
-        replicas,
-        taskCount,
-        taskDuration,
-        consumerProperties,
-        autoScalerConfig,
-        lagAggregator,
-        pollTimeout,
-        startDelay,
-        period,
-        useEarliestOffset,
-        completionTimeout,
-        lateMessageRejectionPeriod,
-        earlyMessageRejectionPeriod,
-        lateMessageRejectionStartDateTime,
-        configOverrides,
-        headerBasedFilterConfig,
-        idleConfig,
-        stopTaskCount,
-        emitTimeLagMetrics,
-        serverPriorityToReplicas,
-        boundedStreamConfig,
-        null
-    );
-  }
-
   @JsonCreator
   public KafkaSupervisorIOConfig(
       @JsonProperty("topic") String topic,
@@ -252,7 +192,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         stopTaskCount,
         emitTimeLagMetrics,
         serverPriorityToReplicas,
-        boundedStreamConfig
+        boundedStreamConfig,
+        null
     );
   }
 

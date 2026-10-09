@@ -104,27 +104,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
-    this(consumerProperties, sortingMapper, configOverrides, multiTopic, metricBuilderSupplier, null);
-  }
-
-  public KafkaRecordSupplier(
-      Map<String, Object> consumerProperties,
-      ObjectMapper sortingMapper,
-      KafkaConfigOverrides configOverrides,
-      boolean multiTopic,
-      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier,
-      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
-  )
-  {
-    this(
-        consumerProperties,
-        sortingMapper,
-        configOverrides,
-        multiTopic,
-        metricBuilderSupplier,
-        headerBasedFilterConfig,
-        null
-    );
+    this(consumerProperties, sortingMapper, configOverrides, multiTopic, metricBuilderSupplier, null, null);
   }
 
   public KafkaRecordSupplier(
@@ -153,18 +133,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier
   )
   {
-    this(consumer, multiTopic, metricBuilderSupplier, null);
-  }
-
-  @VisibleForTesting
-  public KafkaRecordSupplier(
-      KafkaConsumer<byte[], byte[]> consumer,
-      boolean multiTopic,
-      @Nullable Supplier<ServiceMetricEvent.Builder> metricBuilderSupplier,
-      @Nullable KafkaHeaderBasedFilterConfig headerBasedFilterConfig
-  )
-  {
-    this(consumer, multiTopic, metricBuilderSupplier, headerBasedFilterConfig, null);
+    this(consumer, multiTopic, metricBuilderSupplier, null, null);
   }
 
   @VisibleForTesting
