@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.indexing.ClientTaskQuery;
@@ -103,6 +104,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.InputStream;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -517,7 +519,6 @@ public class OverlordResource
   @ResourceFilters(StateResourceFilter.class)
   public void doAction(
       final TaskActionHolder holder,
-      @Nullable @PathParam("timeout") final Long timeoutMillis,
       @Context HttpServletRequest request
   )
   {
@@ -525,21 +526,20 @@ public class OverlordResource
     final Optional<TaskActionClient> taskActionClient = taskMaster.getTaskActionClient(holder.getTask());
     if (!taskActionClient.isPresent()) {
       // Encourage client to try again soon, when we'll likely have a redirect set up
-      completeRequest(asyncContext, Status.SERVICE_UNAVAILABLE.getStatusCode(), null);
+      completeAsyncRequest(asyncContext, Status.SERVICE_UNAVAILABLE.getStatusCode(), null);
       return;
     }
 
     final ListenableFuture<?> future = taskActionClient.get().submitAsync(holder.getAction());
     asyncContext.addListener(
         ServletResourceUtils.createAsyncTimeoutListener(event -> {
-          // HTTP 204 NO_CONTENT is sent to the client.
           future.cancel(true);
-          event.getAsyncContext().complete();
+          completeAsyncRequest(event.getAsyncContext(), HttpResponseStatus.GATEWAY_TIMEOUT.code(), null);
         })
     );
 
-    // Use a default timeout of 5 minutes
-    asyncContext.setTimeout(Configs.valueOrDefault(timeoutMillis, 5 * 60_000));
+    // Use a default timeout of 15 minutes
+    asyncContext.setTimeout(15 * 60_000);
 
     Futures.addCallback(
         future,
@@ -548,20 +548,20 @@ public class OverlordResource
           @Override
           public void onSuccess(Object result)
           {
-            completeRequest(
-                asyncContext,
-                Status.OK.getStatusCode(),
-                result == null ? Map.of() : Map.of("result", result)
-            );
+            // Use null-safe map since some task actions may return null result
+            final Map<String, Object> payload = new HashMap<>();
+            payload.put("result", result);
+
+            completeAsyncRequest(asyncContext, Status.OK.getStatusCode(), payload);
           }
 
           @Override
           public void onFailure(Throwable t)
           {
             if (t instanceof DruidException druidException) {
-              completeRequest(asyncContext, druidException.getStatusCode(), druidException.toErrorResponse());
+              completeAsyncRequest(asyncContext, druidException.getStatusCode(), druidException.toErrorResponse());
             } else {
-              completeRequest(asyncContext, Status.INTERNAL_SERVER_ERROR.getStatusCode(), null);
+              completeAsyncRequest(asyncContext, Status.INTERNAL_SERVER_ERROR.getStatusCode(), null);
             }
           }
         },
@@ -917,7 +917,7 @@ public class OverlordResource
     );
   }
 
-  private void completeRequest(AsyncContext context, int statusCode, Object result)
+  private void completeAsyncRequest(AsyncContext context, int statusCode, Object result)
   {
     try {
       final HttpServletResponse response = (HttpServletResponse) context.getResponse();

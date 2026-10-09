@@ -65,18 +65,23 @@ public class LocalTaskActionClient implements TaskActionClient
   @Override
   public <RetType> ListenableFuture<RetType> submitAsync(TaskAction<RetType> taskAction)
   {
-    if (taskAction.canPerformAsync(task, toolbox)) {
-      final Stopwatch actionRunTime = Stopwatch.createStarted();
-      return Futures.transform(
-          taskAction.performAsync(task, toolbox),
-          v -> {
-            emitTimerMetric(RUN_TIME_METRIC, taskAction, actionRunTime.millisElapsed());
-            return v;
-          },
-          MoreExecutors.directExecutor()
-      );
-    } else {
-      return Futures.immediateFuture(submit(taskAction));
+    try {
+      if (taskAction.canPerformAsync(task, toolbox)) {
+        final Stopwatch actionRunTime = Stopwatch.createStarted();
+        return Futures.transform(
+            taskAction.performAsync(task, toolbox),
+            v -> {
+              emitTimerMetric(RUN_TIME_METRIC, taskAction, actionRunTime.millisElapsed());
+              return v;
+            },
+            MoreExecutors.directExecutor()
+        );
+      } else {
+        return Futures.immediateFuture(submit(taskAction));
+      }
+    }
+    catch (Exception e) {
+      return Futures.immediateFailedFuture(e);
     }
   }
 

@@ -72,6 +72,9 @@ public class TaskActionToolbox
     this.supervisorManager = supervisorManager;
     this.jsonMapper = jsonMapper;
     this.segmentAllocationQueue = segmentAllocationQueue;
+
+    // This executor is currently used only for delayed segment publish actions.
+    // 4 threads are enough since each publish operation is expected to be fast.
     this.actionExec = scheduledExecutorFactory.create(4, "TaskActionToolbox-%s");
   }
 
@@ -186,26 +189,19 @@ public class TaskActionToolbox
         taskReadyToPublishFuture,
         readyToPublish -> {
           if (Boolean.TRUE.equals(readyToPublish)) {
-            // Task is already unblocked for publish, retrying will not fix offset mismatch
-            return doNotRetryOffsetMismatchFailure(publishAction.apply(task, this));
+            final SegmentPublishResult result = publishAction.apply(task, this);
+            if (result.isOffsetMismatch() && !result.isSuccess() && result.isRetryable()) {
+              // Do not retry offset mismatch failures since task is already
+              // unblocked for publish and retrying will not fix the mismatch.
+              return SegmentPublishResult.fail(result.getErrorMsg());
+            } else {
+              return result;
+            }
           } else {
             return SegmentPublishResult.retryableFailure("Task is not ready to publish yet");
           }
         },
         actionExec
     );
-  }
-
-  /**
-   * Converts the given publish result to a non-retryable failure if the publish
-   * had failed due to offset mismatch.
-   */
-  private static SegmentPublishResult doNotRetryOffsetMismatchFailure(SegmentPublishResult result)
-  {
-    if (result.isSuccess() || !result.isOffsetMismatch() || !result.isRetryable()) {
-      return result;
-    } else {
-      return SegmentPublishResult.fail(result.getErrorMsg());
-    }
   }
 }
