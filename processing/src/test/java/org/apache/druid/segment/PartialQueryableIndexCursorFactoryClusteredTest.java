@@ -36,6 +36,11 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.metadata.SegmentAnalyzer;
+import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressionStrategy;
@@ -44,6 +49,7 @@ import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.TemporaryFolderExtension;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -54,6 +60,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +89,9 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
   public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File segmentDir;
+
+  // segment whose groups disagree about column shapes; see buildMixedSegment
+  private static File mixedSegmentDir;
 
   @BeforeAll
   static void buildSegment() throws IOException
@@ -118,6 +128,47 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
                                  row(T0 + 1, "acme", "us-west-2")
                              ))
                              .buildMMappedIndexFile();
+    mixedSegmentDir = buildMixedSegment();
+  }
+
+  /**
+   * Builds a segment whose groups disagree about two columns: {@code tags} is multi-valued only in the second group
+   * (globex), and the {@code auto} column {@code num} is LONG in the first group (acme) but DOUBLE in the second.
+   */
+  private static File buildMixedSegment() throws IOException
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new LongDimensionSchema("__time"),
+                new StringDimensionSchema("tags"),
+                AutoTypeColumnSchema.of("num")
+            )
+            .clusteringColumns("tenant")
+            .build();
+    final IncrementalIndexSchema schema =
+        IncrementalIndexSchema.builder()
+                              .withMinTimestamp(T0)
+                              .withTimestampSpec(new TimestampSpec("ts", "millis", null))
+                              .withQueryGranularity(Granularities.NONE)
+                              .withDimensionsSpec(clusterSpec.getDimensionsSpec())
+                              .withRollup(false)
+                              .withClusterSpec(clusterSpec)
+                              .build();
+    final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_mixed_" + ThreadLocalRandom.current().nextInt());
+    return IndexBuilder.create()
+                       .useV10()
+                       .tmpDir(tmpDir)
+                       .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                       .schema(schema)
+                       .indexSpec(IndexSpec.builder().withMetadataCompression(CompressionStrategy.NONE).build())
+                       .rows(List.of(
+                           mixedRow(T0, "acme", "a", 1L),
+                           mixedRow(T0 + 1, "globex", List.of("b", "c"), 2.5),
+                           mixedRow(T0 + 2, "initech", "d", 3L)
+                       ))
+                       .buildMMappedIndexFile();
   }
 
   @Test
@@ -369,7 +420,7 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
       final PartialQueryableIndex index = opened.index();
       // clustering column: type comes from the clustered summary's typed signature
       Assertions.assertEquals(ValueType.STRING, index.getColumnCapabilities("tenant").getType());
-      // per-group data columns: type comes from the first group's ColumnDescriptor, never a group sub-index download
+      // per-group data columns: type comes from the groups' ColumnDescriptors, never a group sub-index download
       Assertions.assertEquals(ValueType.STRING, index.getColumnCapabilities("region").getType());
       Assertions.assertEquals(ValueType.LONG, index.getColumnCapabilities("__time").getType());
       // an unknown column resolves to null without touching the file mapper
@@ -378,6 +429,88 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
       Assertions.assertTrue(
           opened.mapper().getDownloadedFiles().isEmpty(),
           "column capabilities must be answered from metadata with no download; got: "
+          + opened.mapper().getDownloadedFiles()
+      );
+    }
+  }
+
+  @Test
+  void testClusteredColumnCapabilitiesCombineAllGroupsWithoutDownloads() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(mixedSegmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "mixed_capabilities");
+         QueryableIndex eagerIndex = TestHelper.getTestIndexIO().loadIndex(mixedSegmentDir)) {
+      final PartialQueryableIndex index = opened.index();
+
+      final ColumnCapabilities tagsCaps = index.getColumnCapabilities("tags");
+      Assertions.assertEquals(ColumnType.STRING, tagsCaps.toColumnType());
+      Assertions.assertTrue(tagsCaps.hasMultipleValues().isTrue());
+      Assertions.assertEquals(ColumnType.DOUBLE, index.getColumnCapabilities("num").toColumnType());
+
+      // the eager index reads the same descriptors, so it must agree
+      for (String column : List.of("tenant", ColumnHolder.TIME_COLUMN_NAME, "tags", "num")) {
+        final ColumnCapabilities eagerCaps = eagerIndex.getColumnCapabilities(column);
+        final ColumnCapabilities partialCaps = index.getColumnCapabilities(column);
+        Assertions.assertEquals(eagerCaps.toColumnType(), partialCaps.toColumnType(), column);
+        Assertions.assertEquals(eagerCaps.hasMultipleValues(), partialCaps.hasMultipleValues(), column);
+        Assertions.assertEquals(eagerCaps.hasNulls(), partialCaps.hasNulls(), column);
+      }
+
+      Assertions.assertTrue(
+          opened.mapper().getDownloadedFiles().isEmpty(),
+          "column capabilities must be answered from metadata with no download; got: "
+          + opened.mapper().getDownloadedFiles()
+      );
+    }
+  }
+
+  @Test
+  void testCursorCapabilitiesCombineAllGroups() throws IOException
+  {
+    // a cursor over several groups must answer for all of them, not just the group it is reading
+    final CountingRangeReader rangeReader = new CountingRangeReader(mixedSegmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "mixed_cursor_capabilities")) {
+      final PartialQueryableIndexCursorFactory factory = factory(opened.index());
+      try (AsyncCursorHolder asyncHolder = factory.makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+           CursorHolder holder = asyncHolder.release()) {
+        final ColumnSelectorFactory selectorFactory = holder.asCursor().getColumnSelectorFactory();
+        Assertions.assertTrue(selectorFactory.getColumnCapabilities("tags").hasMultipleValues().isTrue());
+        Assertions.assertEquals(ColumnType.DOUBLE, selectorFactory.getColumnCapabilities("num").toColumnType());
+        // descriptors don't record nulls, so the cursor must not claim there are none
+        Assertions.assertTrue(selectorFactory.getColumnCapabilities("num").hasNulls().isMaybeTrue());
+        Assertions.assertTrue(
+            selectorFactory.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME).hasNulls().isFalse()
+        );
+      }
+    }
+  }
+
+  @Test
+  void testSegmentAnalysisWithoutDownloads() throws IOException
+  {
+    final CountingRangeReader rangeReader = new CountingRangeReader(mixedSegmentDir);
+    try (IndexAndMapper opened = openIndex(rangeReader, "mixed_analysis")) {
+      final PartialQueryableIndexSegment segment = new PartialQueryableIndexSegment(
+          opened.index(),
+          SegmentId.dummy("test"),
+          () -> {},
+          noOpAcquirer(directExec())
+      );
+      final Map<String, ColumnAnalysis> analysis =
+          new SegmentAnalyzer(EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class)).analyze(segment);
+
+      for (Map.Entry<String, ColumnAnalysis> entry : analysis.entrySet()) {
+        Assertions.assertFalse(entry.getValue().isError(), entry.getKey() + ": " + entry.getValue());
+      }
+      Assertions.assertEquals(ColumnType.STRING, analysis.get("tenant").getTypeSignature());
+      Assertions.assertEquals(ColumnType.LONG, analysis.get(ColumnHolder.TIME_COLUMN_NAME).getTypeSignature());
+      Assertions.assertEquals(ColumnType.STRING, analysis.get("tags").getTypeSignature());
+      Assertions.assertTrue(analysis.get("tags").isHasMultipleValues());
+      Assertions.assertEquals(ColumnType.DOUBLE, analysis.get("num").getTypeSignature());
+
+      Assertions.assertTrue(
+          opened.mapper().getDownloadedFiles().isEmpty(),
+          "segment analysis must be answered from metadata with no download; got: "
           + opened.mapper().getDownloadedFiles()
       );
     }
@@ -423,6 +556,15 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
     event.put("tenant", tenant);
     event.put("region", region);
     return new MapBasedInputRow(ts, List.of("tenant", "region"), event);
+  }
+
+  private static InputRow mixedRow(long ts, String tenant, Object tags, Object num)
+  {
+    return new MapBasedInputRow(
+        ts,
+        List.of("tenant", "tags", "num"),
+        Map.of("ts", ts, "tenant", tenant, "tags", tags, "num", num)
+    );
   }
 
   /**

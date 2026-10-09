@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionS
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionary;
@@ -34,9 +35,11 @@ import org.apache.druid.segment.SortedDimensionDictionary;
 import org.apache.druid.segment.StringDimensionDictionary;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.ClusteredColumnInspector;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ClusteringDictionaries;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
@@ -68,7 +71,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Dictionaries here are insertion-order (id = first-seen position). The persist path sorts + remaps them into the
  * read-side {@link ClusteringDictionaries} shape (sorted, nulls first) at segment-write time.
  */
-public final class OnHeapClusteredBaseTable
+public final class OnHeapClusteredBaseTable implements ColumnInspector
 {
   private static final Comparator<TableClusterGroupSpec> BY_CLUSTERING_VALUE_IDS =
       Comparator.comparing(TableClusterGroupSpec::getClusteringValueIds, Ordering.<Integer>natural().lexicographical());
@@ -278,6 +281,32 @@ public final class OnHeapClusteredBaseTable
   public Map<List<Integer>, OnHeapClusterGroup> getGroups()
   {
     return Collections.unmodifiableMap(groups);
+  }
+
+  /**
+   * Returns capabilities of a logical column of the table, combined across all groups by
+   * {@link ClusteredColumnInspector#combineGroupCapabilities}, or null if no group has the column. Clustering columns
+   * resolve from their declared types.
+   */
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    final ColumnType clusteringType = clusteringColumns.getColumnType(column).orElse(null);
+    if (clusteringType != null) {
+      return ClusteredColumnInspector.clusteringColumnCapabilities(clusteringType);
+    }
+
+    ColumnCapabilities combined = null;
+    for (OnHeapClusterGroup group : groups.values()) {
+      final ColumnCapabilities groupCapabilities = group.getColumnCapabilities(column);
+      if (groupCapabilities != null) {
+        combined = combined == null
+                   ? groupCapabilities
+                   : ClusteredColumnInspector.combineGroupCapabilities(column, combined, groupCapabilities);
+      }
+    }
+    return combined;
   }
 
   /**

@@ -30,13 +30,10 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ConstantColumns;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
@@ -45,6 +42,7 @@ import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.segment.projections.BaseTableProjectionSchema;
 import org.apache.druid.segment.projections.ClusterGroupQueryPlan;
+import org.apache.druid.segment.projections.ClusteredColumnInspector;
 import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.ConstantTimeColumn;
 import org.apache.druid.segment.projections.ProjectionMetadata;
@@ -120,6 +118,10 @@ public class PartialQueryableIndex implements QueryableIndex
   // no top-level columns
   @Nullable
   private final ClusteredValueGroupsBaseTableSchema clusteredBaseSummary;
+
+  // capabilities of the clustered base table's logical columns, answered from metadata; null for non-clustered segments
+  @Nullable
+  private final ClusteredColumnInspector clusteredColumnInspector;
 
   // per-cluster-group column suppliers, keyed by group index (into the summary's group list). built on demand like
   // projectionColumnsByName; each supplier defers both mapFile() and deserialization until the column is read. null
@@ -232,6 +234,10 @@ public class PartialQueryableIndex implements QueryableIndex
       this.projectionColumnsByName = new ConcurrentHashMap<>();
     }
     this.clusterGroupColumnsByIndex = clusteredBaseSummary == null ? null : new ConcurrentHashMap<>();
+    this.clusteredColumnInspector = ClusteredColumnInspector.create(
+        clusteredBaseSummary,
+        metadata.getColumnDescriptors()
+    );
 
     // build per-column suppliers for the base table. each supplier is memoized and defers both mapFile() and
     // deserialization until the column is accessed. A clustered base has no top-level columns (its data lives in
@@ -325,48 +331,13 @@ public class PartialQueryableIndex implements QueryableIndex
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    if (clusteredBaseSummary != null) {
-      return getClusteredColumnCapabilities(column);
+    if (clusteredColumnInspector != null) {
+      return clusteredColumnInspector.getColumnCapabilities(column);
     }
     // look up the column in the base table projection's namespace
     final String smooshName = baseProjectionPrefix + column;
-    return capabilitiesFromDescriptor(metadata.getColumnDescriptors().get(smooshName));
-  }
-
-  /**
-   * Column capabilities for a clustered base table, answered from metadata only (no downloads): clustering columns
-   * resolve from the summary's typed clustering signature; data columns (and {@code __time}) resolve from the first
-   * cluster group's {@link ColumnDescriptor} (all groups share the same per-group shape). Mirrors the eager
-   * {@link SimpleQueryableIndex} clustered branch, but reads the descriptor directly rather than routing through a
-   * group sub-index's {@code getColumnHolder} (which would deserialize the column, throwing if it isn't resident).
-   */
-  @Nullable
-  private ColumnCapabilities getClusteredColumnCapabilities(String column)
-  {
-    final ColumnType clusteringType = clusteredBaseSummary.getClusteringColumns().getColumnType(column).orElse(null);
-    if (clusteringType != null) {
-      return clusteringType.is(ValueType.STRING)
-             ? ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities()
-             : ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(clusteringType);
-    }
-    final List<TableClusterGroupSpec> groups = clusteredBaseSummary.getClusterGroups();
-    if (groups.isEmpty()) {
-      return null;
-    }
-    final String smooshName =
-        Projections.getClusterGroupSegmentInternalFileName(groups.getFirst().getClusteringValueIds(), column);
-    return capabilitiesFromDescriptor(metadata.getColumnDescriptors().get(smooshName));
-  }
-
-  @Nullable
-  private static ColumnCapabilities capabilitiesFromDescriptor(@Nullable ColumnDescriptor descriptor)
-  {
-    if (descriptor == null) {
-      return null;
-    }
-    return ColumnCapabilitiesImpl.createDefault()
-                                 .setType(descriptor.toColumnType())
-                                 .setHasMultipleValues(descriptor.isHasMultipleValues());
+    final ColumnDescriptor descriptor = metadata.getColumnDescriptors().get(smooshName);
+    return descriptor == null ? null : ClusteredColumnInspector.capabilitiesFromDescriptor(column, descriptor);
   }
 
   @Nullable
@@ -432,6 +403,7 @@ public class PartialQueryableIndex implements QueryableIndex
         projColumns,
         fileMapper,
         projectionMetadata,
+        null,
         null,
         null,
         null
@@ -530,6 +502,7 @@ public class PartialQueryableIndex implements QueryableIndex
         groupColumns,
         fileMapper,
         groupMetadata,
+        null,
         null,
         null,
         null

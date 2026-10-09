@@ -26,6 +26,7 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.RowIdSupplier;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -40,11 +41,29 @@ class ClusteringColumnSelectorFactoryTest
 {
   private static final RowSignature SIGNATURE = RowSignature.builder().add("tenant", ColumnType.STRING).build();
 
+  /**
+   * Creates a factory with no query virtual columns, whose capabilities cover only the clustering columns.
+   */
+  private static ClusteringColumnSelectorFactory makeFactory(
+      ColumnSelectorFactory delegate,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues
+  )
+  {
+    return new ClusteringColumnSelectorFactory(
+        delegate,
+        clusteringColumns,
+        clusteringValues,
+        VirtualColumns.EMPTY,
+        column -> null
+    );
+  }
+
   @Test
   void testStringClusteringColumnDimensionSelector()
   {
     RecordingDelegate delegate = new RecordingDelegate();
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         delegate,
         SIGNATURE,
         new Object[]{"acme"}
@@ -58,7 +77,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testStringClusteringColumnValueSelector()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         SIGNATURE,
         new Object[]{"acme"}
@@ -73,7 +92,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testLongClusteringColumnValueSelectorTypedMethods()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         RowSignature.builder().add("priority", ColumnType.LONG).build(),
         new Object[]{42L}
@@ -90,7 +109,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testDoubleClusteringColumnValueSelector()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         RowSignature.builder().add("price", ColumnType.DOUBLE).build(),
         new Object[]{3.14}
@@ -104,7 +123,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testFloatClusteringColumnValueSelector()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         RowSignature.builder().add("ratio", ColumnType.FLOAT).build(),
         new Object[]{0.5f}
@@ -119,7 +138,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testNullClusteringValueDimensionSelectorIsNil()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         SIGNATURE,
         new Object[]{null}
@@ -132,7 +151,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testNullClusteringValueValueSelectorIsNull()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         RowSignature.builder().add("priority", ColumnType.LONG).build(),
         new Object[]{null}
@@ -147,7 +166,7 @@ class ClusteringColumnSelectorFactoryTest
   void testNonClusteringDimensionSelectorDelegated()
   {
     RecordingDelegate delegate = new RecordingDelegate();
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         delegate,
         SIGNATURE,
         new Object[]{"acme"}
@@ -166,7 +185,7 @@ class ClusteringColumnSelectorFactoryTest
   void testNonClusteringValueSelectorDelegated()
   {
     RecordingDelegate delegate = new RecordingDelegate();
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         delegate,
         SIGNATURE,
         new Object[]{"acme"}
@@ -183,7 +202,7 @@ class ClusteringColumnSelectorFactoryTest
   void testNonClusteringSelectorObservesNewDelegateAfterSetDelegate()
   {
     RecordingDelegate first = new RecordingDelegate();
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         first,
         SIGNATURE,
         new Object[]{"acme"}
@@ -208,7 +227,7 @@ class ClusteringColumnSelectorFactoryTest
     // that cached the supplier must observe the active group's row id (not the group current when it first asked).
     RecordingDelegate first = new RecordingDelegate();
     first.rowId = 7;
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(first, SIGNATURE, new Object[]{"acme"});
+    ClusteringColumnSelectorFactory f = makeFactory(first, SIGNATURE, new Object[]{"acme"});
 
     RowIdSupplier supplier = f.getRowIdSupplier();
     Assertions.assertNotNull(supplier);
@@ -228,7 +247,7 @@ class ClusteringColumnSelectorFactoryTest
   {
     // A group whose offset restarts at 0, followed by another such group, must not report the same row id across the
     // transition, or a single-slot row-id cache would hand back the previous group's stale row.
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),   // rowId 0
         SIGNATURE,
         new Object[]{"a"}
@@ -253,7 +272,7 @@ class ClusteringColumnSelectorFactoryTest
     // Within a group, row ids track the delegate offset as it advances. Across a transition, the next group's first
     // row id must be strictly greater than the last id the previous group handed out.
     RecordingDelegate d = new RecordingDelegate();
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    ClusteringColumnSelectorFactory f = makeFactory(d, SIGNATURE, new Object[]{"a"});
     RowIdSupplier supplier = f.getRowIdSupplier();
     d.rowId = 0;
     long id0 = supplier.getRowId();
@@ -274,7 +293,7 @@ class ClusteringColumnSelectorFactoryTest
     // strictly-increasing ids purely from change detection, so a non-monotonic sequence within a group and an id that
     // overlaps across a group boundary both still yield clean, collision-free ids.
     RecordingDelegate d = new RecordingDelegate();
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    ClusteringColumnSelectorFactory f = makeFactory(d, SIGNATURE, new Object[]{"a"});
     RowIdSupplier supplier = f.getRowIdSupplier();
 
     d.rowId = 100;
@@ -297,7 +316,7 @@ class ClusteringColumnSelectorFactoryTest
     // so callers take the no-caching path rather than caching against a fabricated id.
     RecordingDelegate d = new RecordingDelegate();
     d.supportsRowId = false;
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    ClusteringColumnSelectorFactory f = makeFactory(d, SIGNATURE, new Object[]{"a"});
     Assertions.assertNull(f.getRowIdSupplier());
   }
 
@@ -308,7 +327,7 @@ class ClusteringColumnSelectorFactoryTest
     // minted id, so a downstream row-id-keyed cache hits instead of recomputing. Guards against an always-tick regression.
     RecordingDelegate d = new RecordingDelegate();
     d.rowId = 3;
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    ClusteringColumnSelectorFactory f = makeFactory(d, SIGNATURE, new Object[]{"a"});
     RowIdSupplier supplier = f.getRowIdSupplier();
     long first = supplier.getRowId();
     Assertions.assertEquals(first, supplier.getRowId());
@@ -322,7 +341,7 @@ class ClusteringColumnSelectorFactoryTest
     // advance its minted counter, so a later real row still mints a fresh id starting at 0.
     RecordingDelegate d = new RecordingDelegate();
     d.rowId = RowIdSupplier.INIT;
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(d, SIGNATURE, new Object[]{"a"});
+    ClusteringColumnSelectorFactory f = makeFactory(d, SIGNATURE, new Object[]{"a"});
     RowIdSupplier supplier = f.getRowIdSupplier();
     Assertions.assertEquals(RowIdSupplier.INIT, supplier.getRowId());
 
@@ -333,7 +352,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testGetColumnCapabilitiesForClusteringColumns()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         RowSignature.builder()
                     .add("tenant", ColumnType.STRING)
@@ -350,23 +369,31 @@ class ClusteringColumnSelectorFactoryTest
   }
 
   @Test
-  void testGetColumnCapabilitiesForNonClusteringDelegated()
+  void testGetColumnCapabilitiesForNonClusteringFromAllGroupsInspector()
   {
-    RecordingDelegate delegate = new RecordingDelegate();
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    // the delegate only covers the current group, so it must not answer for the others
+    final RecordingDelegate delegate = new RecordingDelegate();
+    final ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
         delegate,
         SIGNATURE,
-        new Object[]{"acme"}
+        new Object[]{"acme"},
+        VirtualColumns.EMPTY,
+        column -> "metric".equals(column)
+                  ? ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.LONG).setHasNulls(true)
+                  : null
     );
 
-    f.getColumnCapabilities("metric");
-    Assertions.assertEquals("metric", delegate.lastCapabilitiesColumn);
+    final ColumnCapabilities caps = f.getColumnCapabilities("metric");
+    Assertions.assertEquals(ColumnType.LONG, caps.toColumnType());
+    Assertions.assertTrue(caps.hasNulls().isTrue());
+    Assertions.assertNull(f.getColumnCapabilities("nonexistent"));
+    Assertions.assertNull(delegate.lastCapabilitiesColumn);
   }
 
   @Test
   void testSetDelegateUpdatesClusteringValues()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         SIGNATURE,
         new Object[]{"acme"}
@@ -386,7 +413,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testSetDelegateUpdatesDimensionSelector()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         SIGNATURE,
         new Object[]{"acme"}
@@ -405,7 +432,7 @@ class ClusteringColumnSelectorFactoryTest
   {
     // The clustering-column path: a matcher built before the group transition still gives the right verdict
     // afterwards because it re-resolves through the generation-aware wrapper.
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         SIGNATURE,
         new Object[]{"acme"}
@@ -429,7 +456,7 @@ class ClusteringColumnSelectorFactoryTest
     // current delegate's matcher afterwards. We use two RecordingDelegates whose makeDimensionSelector returns
     // selectors with predictable lookupName, then drive the matcher across a delegate swap.
     final RecordingDelegate first = new RecordingDelegate();
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         first,
         SIGNATURE,
         new Object[]{"acme"}
@@ -459,7 +486,7 @@ class ClusteringColumnSelectorFactoryTest
     // stable: id 0 means a different clustering value in each group. The selector must therefore NOT advertise
     // dictionary-encoded grouping, otherwise the group-by engine keys on the per-group id and silently collapses
     // every group into one bucket.
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         SIGNATURE,
         new Object[]{"acme"}
@@ -477,7 +504,7 @@ class ClusteringColumnSelectorFactoryTest
   {
     // The non-clustering (delegating) path has the same cross-group id-instability and must also force value-based
     // grouping, even though its delegate here (a constant selector) would otherwise report a stable dictionary.
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         SIGNATURE,
         new Object[]{"acme"}
@@ -491,7 +518,7 @@ class ClusteringColumnSelectorFactoryTest
   @Test
   void testStringDimensionCapabilitiesFlavorIsSingleValue()
   {
-    ClusteringColumnSelectorFactory f = new ClusteringColumnSelectorFactory(
+    ClusteringColumnSelectorFactory f = makeFactory(
         new RecordingDelegate(),
         SIGNATURE,
         new Object[]{"acme"}
