@@ -146,3 +146,4 @@ jobs:
             **/target/jacoco*.exec
             **/target/ci-debug/**
             distribution/target/apache-druid-*/log/**
+            stability-results/**
