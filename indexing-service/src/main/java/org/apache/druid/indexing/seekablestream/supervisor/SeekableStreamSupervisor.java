@@ -4309,7 +4309,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (!stateManager.isAtLeastOneSuccessfulRun()) {
       // Set previous sequences to the current offsets in metadata store
       previousSequencesFromStream.clear();
-      previousSequencesFromStream.putAll(getOffsetsFromMetadataStorageForCurrentPartitions());
+      previousSequencesFromStream.putAll(getOffsetsFromMetadataStorage());
 
       // Force update partition lag since the reporting thread might not have run yet
       updatePartitionLagFromStream();
@@ -4343,12 +4343,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
       }
     }
-  }
-
-  /** Returns stored offsets for the current partition selection without changing saved metadata. */
-  public Map<PartitionIdType, SequenceOffsetType> getOffsetsFromMetadataStorageForCurrentPartitions()
-  {
-    return getOffsetsFromMetadataStorage();
   }
 
   private long computeTotalLag()

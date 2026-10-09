@@ -458,7 +458,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     Map<?, ?> endOffsets = streamSupervisor.getLatestSequencesFromStream();
 
     log.info("Capturing checkpointed offsets for supervisor[%s]", id);
-    Map<?, ?> startOffsets = streamSupervisor.getOffsetsFromMetadataStorageForCurrentPartitions();
+    Map<?, ?> startOffsets = streamSupervisor.getOffsetsFromMetadataStorage();
 
     if (endOffsets == null || endOffsets.isEmpty()) {
       throw new ISE("Skipping reset: Failed to get latest offsets from stream for supervisor[%s]", id);

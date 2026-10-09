@@ -587,18 +587,18 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
-  public void testOffsetsFromMetadataStorageForCurrentPartitionsIgnoreUnselected()
+  public void testOffsetsFromMetadataStorageIgnoreUnselectedPartitions()
   {
     selectedPartitionIds = Set.of(0);
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
+    // Partition 1 is outside the selection. Its saved offset stays in metadata storage but is not reported.
     final Map<KafkaTopicPartition, Long> storedOffsets = singlePartitionMap(topic, 0, 10L, 1, 20L);
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(topic, storedOffsets))
-    ).times(2);
+    );
     replayAll();
 
-    Assertions.assertEquals(singlePartitionMap(topic, 0, 10L), supervisor.getOffsetsFromMetadataStorageForCurrentPartitions());
-    Assertions.assertEquals(storedOffsets, supervisor.getOffsetsFromMetadataStorage());
+    Assertions.assertEquals(singlePartitionMap(topic, 0, 10L), supervisor.getOffsetsFromMetadataStorage());
     verifyAll();
   }
 

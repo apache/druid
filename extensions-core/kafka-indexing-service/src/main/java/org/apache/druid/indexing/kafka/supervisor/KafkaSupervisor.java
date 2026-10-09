@@ -348,19 +348,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     return offsets;
   }
 
-  /** Keeps offsets for the configured partitions only. */
-  @Override
-  public Map<KafkaTopicPartition, Long> getOffsetsFromMetadataStorageForCurrentPartitions()
-  {
-    final Set<Integer> selected = getIoConfig().getPartitionIds();
-    if (selected == null) {
-      return getOffsetsFromMetadataStorage();
-    }
-    final Map<KafkaTopicPartition, Long> offsets = new HashMap<>(getOffsetsFromMetadataStorage());
-    offsets.keySet().removeIf(partition -> !selected.contains(partition.partition()));
-    return offsets;
-  }
-
   @Override
   protected Map<KafkaTopicPartition, Long> getPartitionRecordLag()
   {
@@ -723,7 +710,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
   /**
    * Gets the offsets as stored in the metadata store. The map returned will only contain
-   * offsets from topic partitions that match the current supervisor config stream. This
+   * offsets from topic partitions that match the current supervisor config stream, and from the partitions
+   * selected by {@code partitionIds} if it is set. This
    * override is needed because in the case of multi-topic, a user could have updated the supervisor
    * config from single topic to multi-topic, where the new multi-topic pattern regex matches the
    * old config single topic. Without this override, the previously stored metadata for the single
@@ -769,6 +757,13 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
             partitionOffsets.put(matchingTopicPartition, value);
           }
         });
+
+        // Keep offsets for the configured partitions only. Offsets of excluded partitions stay in metadata storage.
+        final Set<Integer> selected = getIoConfig().getPartitionIds();
+        if (selected != null) {
+          partitionOffsets.keySet().removeIf(partition -> !selected.contains(partition.partition()));
+        }
+
         return partitionOffsets;
       }
     }
