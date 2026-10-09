@@ -525,6 +525,9 @@ public class FrameProcessorExecutor
    * Registers a cancellationId, so it can be provided to {@link #runFully} or {@link #runAllFully}. To avoid the
    * set of active cancellationIds growing without bound, callers must also call {@link #cancel(String)} on the
    * same cancellationId when done using it.
+   *
+   * A cancellationId must also not be registered again once canceled. Nothing here checks for it, and a run still in
+   * flight under the old registration would silently attach itself to the new one.
    */
   public void registerCancellationId(final String cancellationId)
   {
