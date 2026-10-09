@@ -343,11 +343,11 @@ Certain limitations apply when you use a top-level UNION ALL. For all top-level 
 
 ### Table-level
 
-In table-level queries, you must use UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION ALL operator as simple table SELECTs. You can't use features like expressions, column aliasing, JOIN, GROUP BY, or ORDER BY in table-level queries.
+In table-level queries, you must use UNION or UNION ALL in a subquery in the FROM clause, and create the lower-level subqueries that are inputs to the UNION operator as simple table SELECTs. Each input can filter its table with WHERE, and can select expressions and alias columns, but can't use features like JOIN, GROUP BY, or ORDER BY.
 
 The query runs natively using a [union datasource](datasource.md#union).
 
-At table-level queries, you must select the same columns from each table in the same order, and those columns must either have the same types, or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally more robust to write your queries to select specific columns. If you use `SELECT *`, you must modify your queries if a new column is added to one table but not to the others.
+At table-level queries, you must select the same number of columns from each table, which are matched up by position, and those columns must either have the same types, or types that can be implicitly cast to each other (such as different numeric types). For this reason, it is generally more robust to write your queries to select specific columns. If you use `SELECT *`, you must modify your queries if a new column is added to one table but not to the others.
 
 For example:
 

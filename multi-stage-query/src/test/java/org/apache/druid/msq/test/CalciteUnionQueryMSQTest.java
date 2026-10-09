@@ -54,18 +54,30 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
   }
 
   /**
-   * Generates a different error hint than what is required by the native engine, since planner does try to plan "UNION"
-   * using group by, however fails due to the column name mismatch.
-   * MSQ does wnat to support any type of data source, with least restrictive column names and types, therefore it
-   * should eventually work.
+   * MSQ plans a top-level UNION ALL only as a table-level union, so the arms this query leaves as subqueries, which
+   * the native engine runs one at a time, have nowhere to go. Same for the one below.
    */
   @Test
   @Override
-  public void testUnionDifferentColumnOrder()
+  public void testUnionAllWithLookupArm()
   {
     assertQueryIsUnplannable(
-        "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
-        "SQL requires union between two tables and column names queried for each table are different Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."
+        "SELECT k AS c FROM lookup.lookyloo WHERE k = 'abc'\n"
+        + "UNION ALL\n"
+        + "SELECT dim1 AS c FROM foo WHERE dim1 = 'abc'",
+        "SQL requires union with input of a datasource type that is not supported."
+    );
+  }
+
+  @Test
+  @Override
+  public void testUnionAllWithValuesArm()
+  {
+    assertQueryIsUnplannable(
+        "SELECT c FROM (VALUES ('x'), ('y')) AS t(c)\n"
+        + "UNION ALL\n"
+        + "SELECT dim1 AS c FROM foo WHERE dim1 = 'abc'",
+        "SQL requires union with input of a datasource type that is not supported."
     );
   }
 

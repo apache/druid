@@ -1408,8 +1408,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testSurfaceErrorsWhenInsertingThroughIncorrectSelectStatement()
   {
+    // UNION of tables would be plannable (as an aggregation over a union datasource); however, UNION of
+    // lookup and a table is not plannable.
     assertQueryIsUnplannable(
-        "INSERT INTO druid.dst SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo PARTITIONED BY ALL TIME",
+        "INSERT INTO druid.dst SELECT k, v FROM lookup.lookyloo UNION SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME",
         "SQL requires 'UNION' but only 'UNION ALL' is supported."
     );
 

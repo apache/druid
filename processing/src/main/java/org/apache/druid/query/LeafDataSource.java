@@ -20,10 +20,16 @@
 package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.FilterSegmentPruner;
+import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.VirtualColumns;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Leaf {@link DataSource}-s have no inputs.
@@ -50,5 +56,24 @@ public abstract class LeafDataSource implements DataSource
   public SegmentMapFunction createSegmentMapFunction(Query query)
   {
     return SegmentMapFunction.IDENTITY;
+  }
+
+  @Nullable
+  @Override
+  public SegmentPruner createSegmentPruner(@Nullable DimFilter filter, VirtualColumns virtualColumns)
+  {
+    return filter == null ? null : new FilterSegmentPruner(filter, null, virtualColumns);
+  }
+
+  @Override
+  public Set<String> getReservedColumns()
+  {
+    return Set.of();
+  }
+
+  @Override
+  public boolean mayFilterRows()
+  {
+    return false;
   }
 }

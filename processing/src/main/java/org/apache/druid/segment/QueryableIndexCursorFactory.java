@@ -87,7 +87,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
   {
     QueryableProjection<QueryableIndex> projection = index.getProjection(spec);
     if (projection != null) {
-      return makeAggregateProjectionCursorHolder(projection);
+      return makeAggregateProjectionCursorHolder(spec, projection);
     }
 
     // Cluster-group dispatch runs after aggregate-projection match, before the regular base-table fallback
@@ -106,7 +106,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
   )
   {
     if (projection != null) {
-      return makeAggregateProjectionCursorHolder(projection);
+      return makeAggregateProjectionCursorHolder(spec, projection);
     }
 
     // Cluster-group dispatch runs after aggregate-projection match, before the regular base-table fallback
@@ -198,10 +198,11 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     }
 
     // Omit cluster key from ordering if the caller requests (and is granted) time ordering.
-    // This way, the returned ordering will begin with {@code __time}.
     final ClusteredValueGroupsBaseTableSchema summary = valueGroup.getSummary();
-    final List<OrderBy> ordering =
-        Projections.useTimeOrderedCursors(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering();
+    final List<OrderBy> ordering = Cursors.trimOrdering(
+        Projections.useTimeOrderedCursors(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering(),
+        spec.getVirtualColumns()
+    );
 
     if (plan.virtualColumnRemap().isEmpty()) {
       return new QueryableIndexCursorHolder(
@@ -340,7 +341,10 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     return builder.build();
   }
 
-  private static CursorHolder makeAggregateProjectionCursorHolder(QueryableProjection<QueryableIndex> projection)
+  private static CursorHolder makeAggregateProjectionCursorHolder(
+      CursorBuildSpec spec,
+      QueryableProjection<QueryableIndex> projection
+  )
   {
     return new QueryableIndexCursorHolder(
         projection.getRowSelector(),
@@ -381,6 +385,12 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       public List<AggregatorFactory> getAggregatorsForPreAggregated()
       {
         return projection.getCursorBuildSpec().getAggregators();
+      }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return Cursors.trimOrdering(super.getOrdering(), spec.getVirtualColumns());
       }
     };
   }
@@ -476,7 +486,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
         // and within each group rows are sorted by the segment ordering's tail (clustering prefix dropped). So
         // back-to-back walking yields rows in the full segment ordering; the writer-side contract makes the
         // concatenation order-preserving without any merge work at read time.
-        return clusterSummary.getOrdering();
+        return Cursors.trimOrdering(clusterSummary.getOrdering(), spec.getVirtualColumns());
       }
 
       @Override

@@ -28,8 +28,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -290,6 +292,29 @@ public class TimeBoundaryQueryQueryToolChestTest
     );
 
     Assertions.assertEquals(7, segments.size());
+  }
+
+  @Test
+  public void testFilteredDataSourceFilterSegments()
+  {
+    // A filter on the datasource might remove every row of the earliest and latest segments, so all are kept.
+    final TimeBoundaryQuery query =
+        Druids.newTimeBoundaryQueryBuilder()
+              .dataSource(
+                  FilteredDataSource.create(new TableDataSource("test"), new SelectorDimFilter("foo", "bar", null))
+              )
+              .build();
+
+    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
+        query,
+        Arrays.asList(
+            createLogicalSegment(Intervals.of("2013-01-01/P1D")),
+            createLogicalSegment(Intervals.of("2013-01-02/P1D")),
+            createLogicalSegment(Intervals.of("2013-01-03/P1D"))
+        )
+    );
+
+    Assertions.assertEquals(3, segments.size());
   }
 
   @Test
