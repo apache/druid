@@ -282,6 +282,7 @@ public class ServerSideEncryptingAmazonS3Test
         null,
         clientConfig,
         null,
+        null,
         null
     );
 
