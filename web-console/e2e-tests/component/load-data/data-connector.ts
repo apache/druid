@@ -65,9 +65,10 @@ export function connectorIsStreaming(connector: DataConnector): boolean {
 }
 
 /**
- * Fills in the Connect step and applies it.
+ * Fills in the fields of the connector (of the classic data loader's Connect step, or of the SQL data loader's input
+ * source step, which share them).
  */
-export async function connect(page: Page, connector: DataConnector): Promise<void> {
+export async function fillConnector(page: Page, connector: DataConnector): Promise<void> {
   switch (connector.type) {
     case 'local':
       await setLabeledInput(page, 'Base directory', connector.baseDirectory);
@@ -89,6 +90,13 @@ export async function connect(page: Page, connector: DataConnector): Promise<voi
       await setLabeledInput(page, 'Interval', connector.interval);
       break;
   }
+}
+
+/**
+ * Fills in the Connect step and applies it.
+ */
+export async function connect(page: Page, connector: DataConnector): Promise<void> {
+  await fillConnector(page, connector);
   await clickButton(page, 'Apply');
 }
 

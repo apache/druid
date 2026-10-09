@@ -72,8 +72,10 @@ the spec needs, and runs the spec on it with `npx playwright test <spec>`:
 | `s3-ingestion.spec.ts`                        | `s3.S3WebConsoleTest` (with an S3 container)    |
 | `input-formats.spec.ts`                       | `indexer.InputFormatsWebConsoleTest`            |
 | `kafka-ingestion.spec.ts`                     | `indexing.KafkaWebConsoleTest` (with Kafka)     |
+| `sql-ingestion.spec.ts`                       | `msq.SqlIngestionWebConsoleTest`                |
 | `input-formats.spec.ts`      | Loads the same 10 rows (over 2 days) of Wikipedia edits from local CSV, TSV, Parquet, ORC and Avro OCF files through the data loader, one test per format. Checks that the **Parse data** step picks the right input format by itself and parses the columns, and that the datasource ends up as 2 segments with 10 rows. Skipped without `DRUID_E2E_TEST_DATA_DIR` (the data files of embedded-tests): it runs on an embedded cluster with the Avro, Parquet and ORC extensions, from `InputFormatsWebConsoleTest`. |
 | `kafka-ingestion.spec.ts`    | Follows the [Kafka tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-kafka): sets up a supervisor through the data loader's **Apache Kafka** connector on a topic with the 39,244 edits of the tutorial file (reading it from the earliest offset), and waits for the rows to be queryable. Then, from the **Supervisors** view, suspends the supervisor, resumes it and terminates it, checking its state each time (through SQL on `sys.supervisors` and in the view). Skipped without `DRUID_E2E_TEST_KAFKA_BOOTSTRAP_SERVERS` and `DRUID_E2E_TEST_KAFKA_TOPIC`: it runs on an embedded cluster with a Kafka container, from `KafkaWebConsoleTest`. |
+| `sql-ingestion.spec.ts`      | SQL-based ingestion (MSQ tasks). Loads the tutorial file through the **SQL data loader** ("Load data" > "Batch - SQL": input source, parse, schema with a new datasource as the destination, ingestion progress) and waits for its 39,244 rows to be queryable. Then, in the **Query** view, ingests it with `REPLACE ... FROM TABLE(EXTERN(...))` and reindexes the 11,549 rows of `#en.wikipedia` into another datasource with `REPLACE ... FROM` the first, checking what the view says it inserted and the rows queryable each time. |
 
 They extend `console.WebConsoleTestBase`. There's no distribution to build and nothing left behind, as every test class
 gets a new cluster. They need this checkout's Druid modules installed (`mvn install -DskipTests`), with the
@@ -131,9 +133,10 @@ e2e-tests/
     ingestion/         Tasks view (reads the table)
     load-data/         the classic data loader: loadData goes through each step with a DataLoaderConfig
                        (data-connector.ts: local disk, S3, Kafka, reindex from Druid; partitions-spec.ts: hashed,
-                       range)
+                       range); sql-data-loader.ts: the SQL data loader (loadDataWithSql)
     supervisors/       Supervisors view (reads the table, runs and confirms a supervisor's actions)
-    workbench/         Query view: run a query (accepting the task slot warning), cancel a query
+    workbench/         Query view: run a query or an ingestion query (accepting the task slot warning), cancel a
+                       query
   util/
     fixtures.ts        the `test` and `expect` to import in specs (`test` logs failed responses, shows the last
                        step, and has the newDatasourceName fixture)

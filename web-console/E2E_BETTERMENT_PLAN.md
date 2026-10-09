@@ -122,9 +122,10 @@ Streaming and the Supervisors view:
 - [ ] Editing a running supervisor (`IngestionSmokeTest.test_kafkaSupervisor_modifiedAndRestartedCombinations`)
 
 SQL-based ingestion (MSQ) and the Query view:
-- [ ] (3) `INSERT` / `REPLACE` from external data (`msq/ITSQLBasedBatchIngestionTest`, `MultiStageQueryTest`,
+- [x] (3) `INSERT` / `REPLACE` from external data (`msq/ITSQLBasedBatchIngestionTest`, `MultiStageQueryTest`,
   `IngestionSmokeTest.test_ingestWikipedia1DayWithMSQ`): Query view with MSQ, "Batch - SQL" data loader
-- [ ] (3) Reindex with `REPLACE ... SELECT FROM` a datasource (`msq/ITMSQReindexTest`)
+- [x] (3) Reindex with `REPLACE ... SELECT FROM` a datasource (`msq/ITMSQReindexTest`). Done (both):
+  `sql-ingestion.spec.ts`, run by `msq/SqlIngestionWebConsoleTest`
 - [ ] Export, `INSERT INTO EXTERN` (`MultiStageQueryTest.testExport`)
 - [ ] SQL ingestion / MSQ `SELECT` from S3 (`s3/ITS3SQLBasedIngestionTest`, `msq/S3ExternQueryTest`)
 - [ ] Dart: running and recent queries, reports, cancel (`msq/EmbeddedDartReportApiTest`): Dart engine, current
