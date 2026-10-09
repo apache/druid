@@ -18,7 +18,13 @@
 
 import type { Page } from '@playwright/test';
 
-import { clickButton, openView, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
+import {
+  clickButton,
+  getLabeledInput,
+  openView,
+  setLabeledInput,
+  setLabeledTextarea,
+} from '../../util/playwright';
 import { showStep } from '../../util/steps';
 
 import type { DataConnector } from './data-connector';
@@ -34,6 +40,9 @@ export interface DataLoaderConfig {
   readonly connector: DataConnector;
   /** Checks the raw lines of the preview */
   readonly validateConnect: (previewLines: string[]) => void;
+  // Parse data (when the connector's data needs parsing)
+  /** Checks the input format that the data loader picked and the columns it parsed */
+  readonly validateParseData?: (parsed: { inputFormat: string; columns: string[] }) => void;
   // Parse time (when the connector's data needs parsing)
   readonly timestampExpression?: string;
   // Configure schema
@@ -72,7 +81,15 @@ export async function loadData(page: Page, config: DataLoaderConfig): Promise<vo
     await clickNext('Parse data');
 
     // Parse data
-    await page.locator('.parse-data-table').waitFor();
+    const parseDataTable = page.locator('.parse-data-table');
+    await parseDataTable.waitFor();
+    if (config.validateParseData) {
+      await parseDataTable.locator('.column-name').first().waitFor();
+      config.validateParseData({
+        inputFormat: await getLabeledInput(page, 'Input format'),
+        columns: await parseDataTable.locator('.column-name').allTextContents(),
+      });
+    }
     await showStep(page, 'Data loader: Parse data');
     await clickNext('Parse time');
 

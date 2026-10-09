@@ -102,8 +102,9 @@ Classic data loader, connectors:
 - [ ] Delta Lake (`deltalake/DeltaLakeInputSourceIngestionTest`): "Delta Lake" card
 
 Classic data loader, formats and steps:
-- [ ] (1) CSV, TSV, Parquet, ORC, Avro OCF (`indexer/ITLocalInputSourceAllInputFormatTest`,
-  `ITLocalInputSourceAllFormatSchemalessTest`): Parse data step (only JSON is covered)
+- [x] (1) CSV, TSV, Parquet, ORC, Avro OCF (`indexer/ITLocalInputSourceAllInputFormatTest`,
+  `ITLocalInputSourceAllFormatSchemalessTest`): Parse data step. Done: `input-formats.spec.ts`, run by
+  `indexer/InputFormatsWebConsoleTest`
 - [ ] Transforms (`indexer/ITTransformTest`): Transform step
 - [ ] Nested columns (`indexing/NestedDataFormatsTest`): Configure schema step
 - [ ] Overwrite, with and without dropping existing data (`indexer/ITOverwriteBatchIndexTest`): Publish step

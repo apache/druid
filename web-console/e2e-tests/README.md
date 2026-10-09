@@ -70,6 +70,8 @@ the spec needs, and runs the spec on it with `npx playwright test <spec>`:
 | `multi-stage-query.spec.ts`                   | `msq.MultiStageQueryWebConsoleTest`             |
 | `cancel-query.spec.ts`                        | `query.SqlQueryCancelWebConsoleTest`            |
 | `s3-ingestion.spec.ts`                        | `s3.S3WebConsoleTest` (with an S3 container)    |
+| `input-formats.spec.ts`                       | `indexer.InputFormatsWebConsoleTest`            |
+| `input-formats.spec.ts`      | Loads the same 10 rows (over 2 days) of Wikipedia edits from local CSV, TSV, Parquet, ORC and Avro OCF files through the data loader, one test per format. Checks that the **Parse data** step picks the right input format by itself and parses the columns, and that the datasource ends up as 2 segments with 10 rows. Skipped without `DRUID_E2E_TEST_DATA_DIR` (the data files of embedded-tests): it runs on an embedded cluster with the Avro, Parquet and ORC extensions, from `InputFormatsWebConsoleTest`. |
 
 They extend `console.WebConsoleTestBase`. There's no distribution to build and nothing left behind, as every test class
 gets a new cluster. They need this checkout's Druid modules installed (`mvn install -DskipTests`), with the
