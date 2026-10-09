@@ -74,10 +74,14 @@ the spec needs, and runs the spec on it with `npx playwright test <spec>`:
 | `kafka-ingestion.spec.ts`                     | `indexing.KafkaWebConsoleTest` (with Kafka)     |
 | `sql-ingestion.spec.ts`                       | `msq.SqlIngestionWebConsoleTest`                |
 | `datasource-actions.spec.ts`                  | `indexing.DatasourceActionsWebConsoleTest`      |
+| `retention-rules.spec.ts`                     | `server.RetentionRulesWebConsoleTest`           |
+| `jdbc-lookup.spec.ts`                         | `lookup.JdbcLookupWebConsoleTest`               |
 | `input-formats.spec.ts`      | Loads the same 10 rows (over 2 days) of Wikipedia edits from local CSV, TSV, Parquet, ORC and Avro OCF files through the data loader, one test per format. Checks that the **Parse data** step picks the right input format by itself and parses the columns, and that the datasource ends up as 2 segments with 10 rows. Skipped without `DRUID_E2E_TEST_DATA_DIR` (the data files of embedded-tests): it runs on an embedded cluster with the Avro, Parquet and ORC extensions, from `InputFormatsWebConsoleTest`. |
 | `kafka-ingestion.spec.ts`    | Follows the [Kafka tutorial](https://druid.apache.org/docs/latest/tutorials/tutorial-kafka): sets up a supervisor through the data loader's **Apache Kafka** connector on a topic with the 39,244 edits of the tutorial file (reading it from the earliest offset), and waits for the rows to be queryable. Then, from the **Supervisors** view, suspends the supervisor, resumes it and terminates it, checking its state each time (through SQL on `sys.supervisors` and in the view). Skipped without `DRUID_E2E_TEST_KAFKA_BOOTSTRAP_SERVERS` and `DRUID_E2E_TEST_KAFKA_TOPIC`: it runs on an embedded cluster with a Kafka container, from `KafkaWebConsoleTest`. |
 | `sql-ingestion.spec.ts`      | SQL-based ingestion (MSQ tasks). Loads the tutorial file through the **SQL data loader** ("Load data" > "Batch - SQL": input source, parse, schema with a new datasource as the destination, ingestion progress) and waits for its 39,244 rows to be queryable. Then, in the **Query** view, ingests it with `REPLACE ... FROM TABLE(EXTERN(...))` and reindexes the 11,549 rows of `#en.wikipedia` into another datasource with `REPLACE ... FROM` the first, checking what the view says it inserted and the rows queryable each time. |
 | `datasource-actions.spec.ts` | Loads `wikipedia-index.json` through the API, then from the **Datasources** view: marks all its segments unused (the datasource then shows, as "Unused", only with "Show unused"), marks them used again (the data is back, fully available), marks them unused again and deletes them with a kill task (ticking the dialog's checks of what it does), after which the kill task succeeds and the datasource is gone even with "Show unused". |
+| `retention-rules.spec.ts`    | Loads `wikipedia-index.json` through the API, then edits its retention rules from the **Datasources** view (deleting the rules there, adding new ones and picking their type, then giving the reason the dialog asks for): a `loadForever` rule (as "New rule" makes it, 2 replicas), which the Retention column shows and with which the data stays loaded, then a `dropForever` rule in its place, with which the Coordinator drops the data (marking it unused). Checks the rules through the Coordinator API each time. |
+| `jdbc-lookup.spec.ts`        | From the **Lookups** view, initializes the lookups (if the cluster has none) and adds a JDBC lookup (cachedNamespace, jdbc) on a table of country codes and names, checks that the view lists it, and waits for `LOOKUP('PR', ...)` and `LOOKUP('AU', ...)` to return the names. Skipped without `DRUID_E2E_TEST_LOOKUP_CONNECT_URI` and `DRUID_E2E_TEST_LOOKUP_TABLE`: it runs on an embedded cluster, with the table in its Derby metadata store, from `JdbcLookupWebConsoleTest`. |
 
 They extend `console.WebConsoleTestBase`. There's no distribution to build and nothing left behind, as every test class
 gets a new cluster. They need this checkout's Druid modules installed (`mvn install -DskipTests`), with the
@@ -132,7 +136,8 @@ e2e-tests/
   *.spec.ts            the tests, one describe per file
   component/           page objects: one per view, wrapping its selectors
     datasources/       Datasources view (reads the table, with unused datasources or not, runs and confirms a
-                       datasource's actions, edits and triggers compaction)
+                       datasource's actions, edits retention rules, edits and triggers compaction)
+    lookups/           Lookups view (initializes the lookups, adds a JDBC lookup, reads the table)
     ingestion/         Tasks view (reads the table)
     load-data/         the classic data loader: loadData goes through each step with a DataLoaderConfig
                        (data-connector.ts: local disk, S3, Kafka, reindex from Druid; partitions-spec.ts: hashed,

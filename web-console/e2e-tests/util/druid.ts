@@ -121,3 +121,15 @@ export async function deleteDatasource(
     interval: '1000-01-01/3000-01-01',
   });
 }
+
+/**
+ * The retention rules of a datasource (none when it uses the cluster default rules).
+ */
+export async function getRetentionRules(
+  request: APIRequestContext,
+  datasourceName: string,
+): Promise<Record<string, unknown>[]> {
+  const response = await request.get(`/druid/coordinator/v1/rules/${encodePath(datasourceName)}`);
+  expect(response.status(), await response.text()).toBe(200);
+  return (await response.json()) as Record<string, unknown>[];
+}

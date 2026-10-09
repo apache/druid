@@ -138,7 +138,9 @@ Datasources, Segments and Tasks views:
 - [x] (4) Delete data with a kill task (`IngestionSmokeTest.test_runIndexTask_andKillData`,
   `OverlordClientTest.test_runKillTask`). Done (both): `datasource-actions.spec.ts`, run by
   `indexing/DatasourceActionsWebConsoleTest`
-- [ ] (5) Retention rules (`query/BroadcastJoinQueryTest`, `server/CoordinatorClientTest`)
+- [x] (5) Retention rules (`query/BroadcastJoinQueryTest`, `server/CoordinatorClientTest`). Done:
+  `retention-rules.spec.ts`, run by `server/RetentionRulesWebConsoleTest`. A drop rule marks the segments unused (so
+  the datasource loses its "Edit retention rules" action), it doesn't only unload them
 - [ ] Compaction supervisors and cluster compaction config (`compact/CompactionSupervisorTest`)
 - [ ] Compaction to another segment granularity (`CompactionSupervisorTest`, `CompactionTaskTest`)
 - [ ] Cancel a running task (`OverlordClientTest.test_cancelTask_*`): Tasks view "Kill"
@@ -148,7 +150,8 @@ Datasources, Segments and Tasks views:
 
 Services, Lookups, dynamic configs:
 - [ ] Server types, workers and capacity (`SystemTableQueryTest`, `OverlordClientTest.test_getWorkers`): Services view
-- [ ] (5) JDBC lookup (`lookup/JdbcLookupTest`): Lookups view
+- [x] (5) JDBC lookup (`lookup/JdbcLookupTest`): Lookups view. Done: `jdbc-lookup.spec.ts`, run by
+  `lookup/JdbcLookupWebConsoleTest`
 - [ ] Pause coordination (`server/CoordinatorPauseTest`), turbo loading (`server/HistoricalCloningTest`): Coordinator
   dynamic config dialog
 

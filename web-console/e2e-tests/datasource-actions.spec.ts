@@ -57,11 +57,11 @@ test.describe('Datasource actions', () => {
       .poll(() => getDatasourceSegments(request, datasourceName), CLUSTER_STATE_POLL)
       .toEqual({ numSegments: 1, numAvailableSegments: 1, numRows: NUM_ROWS });
     await expectInView(datasourcesOverview, datasourceName, false, [
-      {
+      expect.objectContaining({
         name: datasourceName,
         availability: expect.stringContaining('Fully available (1 segment)'),
         totalRows: NUM_ROWS,
-      },
+      }),
     ]);
 
     // Mark unused again, and delete the unused segments with a kill task: the datasource is gone

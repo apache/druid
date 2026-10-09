@@ -37,6 +37,8 @@ export interface Datasource {
   readonly name: string;
   readonly availability: string;
   readonly totalRows: number;
+  /** The retention rules (like "dropForever()"), or the cluster default ones ("Cluster default: ...") */
+  readonly retention: string;
 }
 
 /**
@@ -93,6 +95,7 @@ export class DatasourcesOverview {
       name: record['Datasource name'],
       availability: record['Availability'],
       totalRows: Number(record['Total rows'].replace(/,/g, '')),
+      retention: record['Retention'],
     }));
   }
 
@@ -142,6 +145,42 @@ export class DatasourcesOverview {
     await showStep(this.page, `Datasources view: ${action}, to confirm`);
     await clickButton(confirmation, CONFIRMED_ACTIONS[action]);
     await confirmation.waitFor({ state: 'detached' });
+  }
+
+  /**
+   * Replaces the retention rules of the datasource with rules of the given types (with their defaults), in order. With
+   * no rules, the datasource uses the cluster default rules.
+   * @param comment why (the dialog asks, for the audit history)
+   */
+  async setRetentionRules(
+    datasourceName: string,
+    ruleTypes: string[],
+    comment: string,
+  ): Promise<void> {
+    await this.open(datasourceName, false);
+    await this.openActionMenu();
+    await clickMenuItem(this.page, 'Edit retention rules');
+
+    const dialog = this.page.locator('.retention-dialog');
+    // The datasource's rules (the dialog also shows the cluster default rules, which can't be deleted here)
+    const ruleEditors = dialog
+      .locator('.rule-editor')
+      .filter({ has: this.page.locator('.title .bp6-icon-trash') });
+    await dialog.waitFor();
+    while ((await ruleEditors.count()) > 0) {
+      await ruleEditors.first().locator('.title .bp6-icon-trash').click();
+    }
+    for (const ruleType of ruleTypes) {
+      await clickButton(dialog, 'New rule');
+      await ruleEditors.last().locator('select').selectOption(ruleType);
+    }
+    await showStep(this.page, 'Retention rules dialog, filled in');
+    await clickButton(dialog, 'Next');
+
+    await this.page.getByPlaceholder('Enter description here').fill(comment);
+    await showStep(this.page, 'Retention rules dialog, why');
+    await clickButton(dialog, 'Save');
+    await dialog.waitFor({ state: 'detached' });
   }
 
   private async open(datasourceName: string, showUnused: boolean): Promise<void> {
