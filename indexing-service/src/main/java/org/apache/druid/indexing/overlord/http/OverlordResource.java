@@ -517,7 +517,7 @@ public class OverlordResource
   @Path("/action")
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(StateResourceFilter.class)
-  public void doAction(
+  public void performTaskAction(
       final TaskActionHolder holder,
       @Context HttpServletRequest request
   )
