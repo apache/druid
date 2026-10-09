@@ -25,6 +25,7 @@ export * from './braced-text/braced-text';
 export * from './center-message/center-message';
 export * from './clearable-input/clearable-input';
 export * from './click-to-copy/click-to-copy';
+export * from './code-editor/code-editor';
 export * from './console-table';
 export * from './deferred/deferred';
 export * from './druid-logo/druid-logo';

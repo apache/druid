@@ -261,7 +261,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.55.1
+version: 2.55.4
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -2220,7 +2220,7 @@ name: Apache Zookeeper
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.8.6
+version: 3.8.7
 libraries:
   - org.apache.zookeeper: zookeeper
   - org.apache.zookeeper: zookeeper-jute
@@ -3988,7 +3988,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.73.0
+version: 2.74.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -3998,7 +3998,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.68.0
+version: 2.69.0
 libraries:
   - com.google.api: api-common
 
@@ -4122,7 +4122,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.85.0
+version: 2.86.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4134,7 +4134,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.73.0
+version: 2.74.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4202,7 +4202,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.76.0
+version: 2.77.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4212,7 +4212,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.71.0
+version: 1.72.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4222,7 +4222,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.52.0
+version: 1.53.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4243,7 +4243,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.75.0
+version: 2.76.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
@@ -5441,6 +5441,66 @@ version: 6.3.6
 
 ---
 
+name: "@codemirror/autocomplete"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.20.3
+license_file_path: licenses/bin/@codemirror-autocomplete.MIT
+
+---
+
+name: "@codemirror/commands"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.11.1
+license_file_path: licenses/bin/@codemirror-commands.MIT
+
+---
+
+name: "@codemirror/language"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.12.4
+license_file_path: licenses/bin/@codemirror-language.MIT
+
+---
+
+name: "@codemirror/search"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.7.2
+license_file_path: licenses/bin/@codemirror-search.MIT
+
+---
+
+name: "@codemirror/state"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.7.6
+license_file_path: licenses/bin/@codemirror-state.MIT
+
+---
+
+name: "@codemirror/view"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 6.43.13
+license_file_path: licenses/bin/@codemirror-view.MIT
+
+---
+
 name: "@emotion/babel-plugin"
 license_category: binary
 module: web-console
@@ -5680,6 +5740,46 @@ license_file_path: licenses/bin/@jridgewell-trace-mapping.MIT
 
 ---
 
+name: "@lezer/common"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.5.3
+license_file_path: licenses/bin/@lezer-common.MIT
+
+---
+
+name: "@lezer/highlight"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.2.5
+license_file_path: licenses/bin/@lezer-highlight.MIT
+
+---
+
+name: "@lezer/lr"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.4.10
+license_file_path: licenses/bin/@lezer-lr.MIT
+
+---
+
+name: "@marijn/find-cluster-break"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.0.4
+license_file_path: licenses/bin/@marijn-find-cluster-break.MIT
+
+---
+
 name: "@popperjs/core"
 license_category: binary
 module: web-console
@@ -5756,16 +5856,6 @@ license_name: MIT License
 copyright: Microsoft Corporation.
 version: 19.3.0
 license_file_path: licenses/bin/@types-react.MIT
-
----
-
-name: "ace-builds"
-license_category: binary
-module: web-console
-license_name: BSD-3-Clause License
-copyright: Ajax.org B.V.
-version: 1.44.0
-license_file_path: licenses/bin/ace-builds.BSD3
 
 ---
 
@@ -5935,6 +6025,16 @@ license_name: MIT License
 copyright: David Clark
 version: 7.1.0
 license_file_path: licenses/bin/cosmiconfig.MIT
+
+---
+
+name: "crelt"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 1.0.7
+license_file_path: licenses/bin/crelt.MIT
 
 ---
 
@@ -6118,15 +6218,6 @@ license_file_path: licenses/bin/delayed-stream.MIT
 
 ---
 
-name: "diff-match-patch"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Google
-version: 1.0.5
-
----
-
 name: "diff"
 license_category: binary
 module: web-console
@@ -6242,16 +6333,6 @@ license_name: MIT License
 copyright: Sindre Sorhus
 version: 4.0.0
 license_file_path: licenses/bin/escape-string-regexp.MIT
-
----
-
-name: "fast-equals"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Tony Quetano
-version: 5.4.3
-license_file_path: licenses/bin/fast-equals.MIT
 
 ---
 
@@ -6754,16 +6835,6 @@ license_file_path: licenses/bin/proxy-from-env.MIT
 
 ---
 
-name: "react-ace"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: James Hrisho
-version: 15.0.0
-license_file_path: licenses/bin/react-ace.MIT
-
----
-
 name: "react-day-picker"
 license_category: binary
 module: web-console
@@ -6934,6 +7005,16 @@ license_file_path: licenses/bin/source-map.BSD3
 
 ---
 
+name: "style-mod"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 4.1.4
+license_file_path: licenses/bin/style-mod.MIT
+
+---
+
 name: "stylis"
 license_category: binary
 module: web-console
@@ -7011,6 +7092,16 @@ license_name: MIT License
 copyright: Robert Kieffer and other contributors
 version: 14.0.2
 license_file_path: licenses/bin/uuid.MIT
+
+---
+
+name: "w3c-keyname"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Marijn Haverbeke
+version: 2.2.8
+license_file_path: licenses/bin/w3c-keyname.MIT
 
 ---
 

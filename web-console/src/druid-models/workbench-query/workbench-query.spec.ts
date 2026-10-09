@@ -120,19 +120,19 @@ describe('WorkbenchQuery', () => {
     expect(String(WorkbenchQuery.fromString(tabString))).toEqual(tabString);
   });
 
-  describe('.getRowColumnFromIssue', () => {
+  describe('.getLineColumnFromIssue', () => {
     it('works when it can not find at line', () => {
-      expect(WorkbenchQuery.getRowColumnFromIssue(`lol`)).toBeUndefined();
+      expect(WorkbenchQuery.getLineColumnFromIssue(`lol`)).toBeUndefined();
     });
 
     it('works when it can find at line', () => {
       expect(
-        WorkbenchQuery.getRowColumnFromIssue(
+        WorkbenchQuery.getLineColumnFromIssue(
           `End of input while parsing an object (missing '}') at line 40,2 >>>} ...`,
         ),
       ).toEqual({
-        row: 39,
-        column: 1,
+        line: 40,
+        column: 2,
       });
     });
   });

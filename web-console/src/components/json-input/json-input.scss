@@ -20,6 +20,10 @@
   height: 100%;
   position: relative;
 
+  & > .code-editor {
+    width: 100%;
+  }
+
   &.invalid::after {
     content: '';
     position: absolute;

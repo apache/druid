@@ -175,6 +175,14 @@ public class FileUtilsTest
   }
 
   @Test
+  public void testWriteAtomicallyMaxLengthFileName() throws IOException
+  {
+    final File file = new File(temporaryFolder.getRoot(), StringUtils.repeat("a", 255));
+    FileUtils.writeAtomically(file, out -> true);
+    Assertions.assertTrue(file.exists());
+  }
+
+  @Test
   public void testResolveFileWithinDirectory()
   {
     final File resolved = FileUtils.resolveFileWithinDirectory(temporaryFolder.getRoot(), "nested/file");

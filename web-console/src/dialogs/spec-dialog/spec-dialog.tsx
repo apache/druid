@@ -19,10 +19,11 @@
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
-import AceEditor from 'react-ace';
 
+import { CodeEditor } from '../../components';
+import { hjson } from '../../editor-languages/hjson';
 import { AppToaster } from '../../singletons';
-import { offsetToRowColumn } from '../../utils';
+import { offsetToLineColumn } from '../../utils';
 
 import './spec-dialog.scss';
 
@@ -44,11 +45,11 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
     try {
       parsed = JSONBig.parse(spec);
     } catch (e) {
-      const rowColumn = typeof e.at === 'number' ? offsetToRowColumn(spec, e.at) : undefined;
+      const position = typeof e.at === 'number' ? offsetToLineColumn(spec, e.at) : undefined;
       AppToaster.show({
         intent: Intent.DANGER,
         message: `Could not parse JSON: ${e.message}${
-          rowColumn ? ` (at line ${rowColumn.row + 1}, column ${rowColumn.column + 1})` : ''
+          position ? ` (at line ${position.line}, column ${position.column})` : ''
         }`,
         timeout: 5000,
       });
@@ -67,27 +68,14 @@ export const SpecDialog = React.memo(function SpecDialog(props: SpecDialogProps)
       title={title}
       canOutsideClickClose={false}
     >
-      <AceEditor
-        mode="hjson"
-        theme="solarized_dark"
-        className="spec-dialog-textarea placeholder-padding"
+      <CodeEditor
+        language={hjson()}
+        className="spec-dialog-textarea"
         onChange={setSpec}
-        fontSize={12}
-        showPrintMargin={false}
-        showGutter
-        highlightActiveLine
+        showLineNumbers
+        padding={10}
         value={spec}
-        width="100%"
-        setOptions={{
-          showLineNumbers: true,
-          tabSize: 2,
-          newLineMode: 'unix',
-        }}
         placeholder="{ JSON spec... }"
-        onLoad={editor => {
-          editor.renderer.setPadding(10);
-          editor.renderer.setScrollMargin(10, 10, 0, 0);
-        }}
       />
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>

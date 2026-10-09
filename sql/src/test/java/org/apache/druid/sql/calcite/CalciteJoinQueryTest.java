@@ -81,6 +81,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
+import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
@@ -1624,6 +1626,53 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"", "a", "xa"},
             new Object[]{"1", "a", "xa"},
             new Object[]{"def", "abc", "xab"}
+        )
+    );
+  }
+
+  @MethodSource("provideQueryContexts")
+  @ParameterizedTest(name = "{0}")
+  public void testInnerJoinLookupWithChainedPostJoinVirtualColumns(Map<String, Object> queryContext)
+  {
+    // JSON_VALUE of JSON_OBJECT plans into two virtual columns: "v1" reads the joined column "j0.v", and "v0" reads
+    // only "v1". Both must be computed after the join.
+    testQuery(
+        "SELECT dim1, dim2, JSON_VALUE(JSON_OBJECT(KEY 'x' VALUE l.v), '$.x')\n"
+        + "FROM foo\n"
+        + "INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        new TableDataSource(CalciteTests.DATASOURCE1),
+                        new LookupDataSource("lookyloo"),
+                        "j0.",
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("j0.k")),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new NestedFieldVirtualColumn("v1", "$.x", "v0", ColumnType.STRING),
+                    new NestedObjectVirtualColumn(
+                        "v1",
+                        ImmutableMap.of(
+                            "x",
+                            new NestedObjectVirtualColumn.TypedExpression("\"j0.v\"", ColumnType.STRING)
+                        ),
+                        queryFramework().macroTable()
+                    )
+                )
+                .columns("dim1", "dim2", "v0")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .context(queryContext)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", "a", "xa"},
+            new Object[]{"1", "a", "xa"},
+            new Object[]{"def", "abc", "xabc"}
         )
     );
   }
