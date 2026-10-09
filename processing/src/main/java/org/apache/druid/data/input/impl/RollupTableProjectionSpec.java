@@ -191,6 +191,29 @@ public final class RollupTableProjectionSpec implements BaseTableProjectionSpec
     return withoutQueryGranularity().equals(((RollupTableProjectionSpec) other).withoutQueryGranularity());
   }
 
+  /**
+   * Since {@link #withAdditionalColumns} appends undeclared columns after the declared grouping columns and changes
+   * nothing else, {@code other} is this spec extended exactly when it declares the same virtual columns and
+   * aggregators and its grouping column list starts with this one. List equality is the zero-appended-columns case, so
+   * this subsumes {@link #hasEqualCompactionState(BaseTableProjectionSpec)}.
+   */
+  @Override
+  public boolean hasEqualCompactionState(BaseTableProjectionSpec other, boolean allowUndeclaredColumns)
+  {
+    if (!allowUndeclaredColumns) {
+      return hasEqualCompactionState(other);
+    }
+    if (!(other instanceof RollupTableProjectionSpec)) {
+      return false;
+    }
+    final RollupTableProjectionSpec mine = withoutQueryGranularity();
+    final RollupTableProjectionSpec theirs = ((RollupTableProjectionSpec) other).withoutQueryGranularity();
+    return mine.virtualColumns.equals(theirs.virtualColumns)
+           && Arrays.equals(mine.aggregators, theirs.aggregators)
+           && theirs.groupingColumns.size() >= mine.groupingColumns.size()
+           && theirs.groupingColumns.subList(0, mine.groupingColumns.size()).equals(mine.groupingColumns);
+  }
+
   @Override
   public RollupTableProjectionSpec withAdditionalColumns(@Nullable List<DimensionSchema> additionalColumns)
   {

@@ -46,6 +46,52 @@ import java.util.stream.Collectors;
  */
 class RollupTableProjectionSpecTest extends InitializedNullHandlingTest
 {
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsAcceptsAppendedColumns()
+  {
+    final RollupTableProjectionSpec declared = pagesSpec();
+    final RollupTableProjectionSpec recorded =
+        declared.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("city")));
+
+    // What a non-sealed compaction records is a superset of what the config declares; comparing it strictly would
+    // recompact the datasource on every run.
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded));
+    Assertions.assertFalse(declared.hasEqualCompactionState(recorded, false));
+    Assertions.assertTrue(declared.hasEqualCompactionState(recorded, true));
+    // Equality is the zero-appended-columns case.
+    Assertions.assertTrue(declared.hasEqualCompactionState(declared, true));
+    // The relaxation is one-directional: dropping a declared grouping column is still a change.
+    Assertions.assertFalse(recorded.hasEqualCompactionState(declared, true));
+  }
+
+  @Test
+  void testHasEqualCompactionStateAllowingUndeclaredColumnsStillComparesAggregators()
+  {
+    final RollupTableProjectionSpec declared = pagesSpec();
+
+    // Query granularity is compared by its own check, so it is excluded from both sides here too.
+    Assertions.assertTrue(
+        declared.hasEqualCompactionState(declared.withQueryGranularity(Granularities.HOUR), true)
+    );
+    // Appending grouping columns never changes the aggregators, so a different aggregator set is a real change even
+    // when the grouping columns still line up.
+    final RollupTableProjectionSpec differentAggs = RollupTableProjectionSpec
+        .builder()
+        .groupingColumns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+        .aggregators(new LongSumAggregatorFactory("total", "total"))
+        .build();
+    Assertions.assertFalse(declared.hasEqualCompactionState(differentAggs, true));
+    // A spec of a different type is never equivalent.
+    Assertions.assertFalse(
+        declared.hasEqualCompactionState(
+            TableProjectionSpec.builder()
+                .columns(new StringDimensionSchema("page"), new LongDimensionSchema("__time"))
+                .build(),
+            true
+        )
+    );
+  }
+
   private static RollupTableProjectionSpec pagesSpec()
   {
     return RollupTableProjectionSpec.builder()

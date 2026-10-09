@@ -19,10 +19,13 @@
 
 package org.apache.druid.server.compaction;
 
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.catalog.MapMetadataCatalog;
 import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.RollupTableBaseTableMetadata;
 import org.apache.druid.catalog.model.TableBaseTableMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.TableBuilder;
@@ -45,7 +48,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
@@ -91,7 +96,24 @@ public class CompactionStatusTest
   private static final String SEALED_WIKI = TestDataSource.WIKI + "_sealed";
   private static final String UNSEALED_WIKI = TestDataSource.WIKI + "_unsealed";
   private static final String UNSEALED_PLAIN_WIKI = TestDataSource.WIKI + "_unsealed_plain";
-  private static final MapMetadataCatalog CATALOG = new MapMetadataCatalog(new DefaultObjectMapper());
+  private static final String UNSEALED_ROLLUP_WIKI = TestDataSource.WIKI + "_unsealed_rollup";
+  private static final MapMetadataCatalog CATALOG = new MapMetadataCatalog(catalogMapper());
+
+  /**
+   * Aggregators in a rollup table's layout deserialize through the catalog's mapper, and their creators take an
+   * injected {@link ExprMacroTable}.
+   */
+  private static ObjectMapper catalogMapper()
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+    );
+    return mapper;
+  }
 
   static {
     // Same clustered layout under both names; the only difference is whether the table declares itself sealed.
@@ -106,6 +128,26 @@ public class CompactionStatusTest
                     .columns(columns)
                     .baseTable(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null))
                     .sealed(true)
+                    .buildSpec()
+    );
+    CATALOG.addSpec(
+        TableId.datasource(UNSEALED_ROLLUP_WIKI),
+        TableBuilder.datasource(UNSEALED_ROLLUP_WIKI, "PT1H")
+                    // A rollup table declares its metric columns too, after the grouping columns, with the type the
+                    // aggregator produces.
+                    .columns(
+                        ImmutableList.<ColumnSpec>builder()
+                            .addAll(columns)
+                            .add(new ColumnSpec("cnt", ColumnType.LONG.asTypeString(), null))
+                            .build()
+                    )
+                    .baseTable(
+                        new RollupTableBaseTableMetadata(
+                            null,
+                            new AggregatorFactory[]{new LongSumAggregatorFactory("cnt", "cnt")},
+                            null
+                        )
+                    )
                     .buildSpec()
     );
     CATALOG.addSpec(
@@ -519,6 +561,22 @@ public class CompactionStatusTest
     // Same contract as the clustered case, for a plain 'table' layout: a non-sealed table appends what it finds in
     // the segments, so the recorded spec is a superset of the declared one and must still read as compacted.
     final DataSourceCompactionConfig unsealed = catalogCompactionConfig(UNSEALED_PLAIN_WIKI);
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(stateWithUndeclaredColumn(unsealed))
+        .build();
+
+    Assertions.assertTrue(
+        CompactionStatus.compute(List.of(segment), unsealed, fingerprintMapper).isComplete()
+    );
+  }
+
+  @Test
+  public void testStatusWhenRollupBaseTableHasUndeclaredColumnsAndCatalogTableIsNotSealed()
+  {
+    // Same contract again for a 'rollupTable' layout: appended grouping columns must still read as compacted, and the
+    // declared aggregators are unchanged by the append.
+    final DataSourceCompactionConfig unsealed = catalogCompactionConfig(UNSEALED_ROLLUP_WIKI);
     final DataSegment segment = DataSegment
         .builder(WIKI_SEGMENT)
         .lastCompactionState(stateWithUndeclaredColumn(unsealed))
