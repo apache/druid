@@ -2415,6 +2415,7 @@
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
                                 <exclude>**/.editorconfig</exclude>
+                                <exclude>**/.node-version</exclude>
                                 <exclude>**/node_modules/**</exclude>
                                 <exclude>**/public/**</exclude>
                                 <exclude>**/hadoop.indexer.libs.version</exclude>

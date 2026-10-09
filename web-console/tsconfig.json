@@ -15,7 +15,6 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "removeComments": true,
-    "rootDirs": ["lib", "src"],
     "skipLibCheck": true,
     "strict": true,
     "useUnknownInCatchVariables": false,

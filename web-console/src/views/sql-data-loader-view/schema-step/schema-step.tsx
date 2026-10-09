@@ -905,7 +905,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
               queryString={queryString}
               onQueryStringChange={onQueryStringChange}
               columnMetadata={undefined}
-              leaveBackground
+              transparentBackground={false}
             />
           )}
         </div>

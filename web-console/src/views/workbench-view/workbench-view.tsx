@@ -31,7 +31,7 @@ import type { SqlQuery } from 'druid-query-toolkit';
 import { SqlExpression } from 'druid-query-toolkit';
 import React from 'react';
 
-import { MenuCheckbox, SplitterLayout } from '../../components';
+import { forgetEditorState, MenuCheckbox, SplitterLayout } from '../../components';
 import { SpecDialog, StringInputDialog, SupervisorToSqlDialog } from '../../dialogs';
 import type {
   CapacityInfo,
@@ -51,7 +51,6 @@ import type { Capabilities } from '../../helpers';
 import { convertSpecToSql, getSpecDatasourceName, getTaskExecution } from '../../helpers';
 import { getLink } from '../../links';
 import { AppToaster } from '../../singletons';
-import { AceEditorStateCache } from '../../singletons/ace-editor-state-cache';
 import { ExecutionStateCache } from '../../singletons/execution-state-cache';
 import { WorkbenchRunningPromises } from '../../singletons/workbench-running-promises';
 import type { ColumnMetadata } from '../../utils';
@@ -102,7 +101,7 @@ function cleanupTabEntry(tabEntry: TabEntry): void {
   const discardedId = tabEntry.id;
   WorkbenchRunningPromises.deletePromise(discardedId);
   ExecutionStateCache.deleteState(discardedId);
-  AceEditorStateCache.deleteState(discardedId);
+  forgetEditorState(discardedId);
 }
 
 function externalDataTabId(tabId: string | undefined): boolean {

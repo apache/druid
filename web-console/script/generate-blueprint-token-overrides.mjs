@@ -72,10 +72,10 @@ function toPaletteExpression(value) {
 function convertTokenFile(file) {
   const css = fs.readFileSync(`${TOKENS_DIR}/${file}`, 'utf-8');
   const blocks = [];
-  for (const [, selector, body] of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+  for (const [, selector, body] of css.matchAll(/(?<![^{}])([^{}]+)\{([^}]*)\}/g)) {
     const declarations = [];
     const seen = new Set();
-    for (const [, name, value] of body.matchAll(/(--bp-[a-z0-9-]+):\s*([^;]+);/g)) {
+    for (const [, name, value] of body.matchAll(/(--bp-[a-z0-9-]+):\s*([^\s;][^;]*);/g)) {
       if (seen.has(name)) continue; // Later definitions are relative color syntax derived from other tokens
       seen.add(name);
       const expression = TOKEN_VARIABLES[name]
@@ -86,8 +86,13 @@ function convertTokenFile(file) {
     const cleanSelector = selector
       .replace(/\/\*[\s\S]*?\*\//g, '')
       .trim()
-      .split(/\s*,\s*/)
-      .map(part => part.replace(/"/g, "'").replace(/\.bp\d+-/g, '.#{$ns}-'))
+      .split(',')
+      .map(part =>
+        part
+          .trim()
+          .replace(/"/g, "'")
+          .replace(/\.bp\d+-/g, '.#{$ns}-'),
+      )
       .join(',\n');
     if (declarations.length) blocks.push(`${cleanSelector} {\n${declarations.join('\n')}\n}`);
   }
