@@ -110,13 +110,15 @@ Classic data loader, formats and steps:
 - [ ] Overwrite, with and without dropping existing data (`indexer/ITOverwriteBatchIndexTest`): Publish step
 
 Streaming and the Supervisors view:
-- [ ] (2) Kafka supervisor (`IngestionSmokeTest.test_runKafkaSupervisor`, `kafka/simulate/EmbeddedKafkaSupervisorTest`):
-  "Apache Kafka" card
+- [x] (2) Kafka supervisor (`IngestionSmokeTest.test_runKafkaSupervisor`, `kafka/simulate/EmbeddedKafkaSupervisorTest`):
+  "Apache Kafka" card. Done: `kafka-ingestion.spec.ts`, run by `indexing/KafkaWebConsoleTest`
 - [ ] Kafka formats: Avro and Protobuf with or without a schema registry, CSV... (`indexing/KafkaIndexDataFormatsTest`)
 - [ ] Kinesis supervisor and formats (`kinesis/KinesisDataFormatsTest`): "Amazon Kinesis" card
-- [ ] (2) Suspend / resume (`KafkaIndexFaultToleranceTest`, `KinesisFaultToleranceTest`), handoff early
-  (`StreamIndexFaultToleranceTest`), reset to latest and backfill (`KafkaBoundedSupervisorTest`), terminate
-  (`server/KillSupervisorsCustomDutyTest`): Supervisors view actions
+- [x] (2) Suspend / resume (`KafkaIndexFaultToleranceTest`, `KinesisFaultToleranceTest`), terminate
+  (`server/KillSupervisorsCustomDutyTest`): Supervisors view actions. Done: in `kafka-ingestion.spec.ts`
+- [ ] Handoff early (`StreamIndexFaultToleranceTest`), reset to latest and backfill (`KafkaBoundedSupervisorTest`):
+  Supervisors view actions (`SupervisorsOverview.runAction` has them, or is a line away)
+- [ ] Several topics through a topic pattern (`server/KafkaMultiSupervisorTest`): Kafka connector's "Topic pattern"
 - [ ] Editing a running supervisor (`IngestionSmokeTest.test_kafkaSupervisor_modifiedAndRestartedCombinations`)
 
 SQL-based ingestion (MSQ) and the Query view:
@@ -148,8 +150,7 @@ Services, Lookups, dynamic configs:
 - [ ] Pause coordination (`server/CoordinatorPauseTest`), turbo loading (`server/HistoricalCloningTest`): Coordinator
   dynamic config dialog
 
-Left out: no console UI (SQL, combining and Iceberg input sources, catalog DDL, JDBC queries, Kafka topic
-patterns), not a console user's concern (TLS, HA, Consul, Kubernetes, metadata stores, emitters, autoscaling,
+Left out: no console UI (SQL, combining and Iceberg input sources, catalog DDL, JDBC queries), not a console user's concern (TLS, HA, Consul, Kubernetes, metadata stores, emitters, autoscaling,
 partial loading, faults, performance). Borderline: basic auth, what a restricted user sees (with `auth/`).
 
 ## 8. Run on embedded clusters (prototype done)

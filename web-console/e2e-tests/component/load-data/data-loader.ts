@@ -28,7 +28,13 @@ import {
 import { showStep } from '../../util/steps';
 
 import type { DataConnector } from './data-connector';
-import { connect, connectorCardTitle, connectorNeedsParse } from './data-connector';
+import {
+  connect,
+  connectorCardTitle,
+  connectorIsStreaming,
+  connectorNeedsParse,
+  tune,
+} from './data-connector';
 import type { PartitionsSpec } from './partitions-spec';
 import { applyPartitionsSpec } from './partitions-spec';
 
@@ -56,7 +62,7 @@ export interface DataLoaderConfig {
 }
 
 /**
- * Goes through each step of the data loader and submits the task.
+ * Goes through each step of the data loader and submits the task (or the supervisor, for a stream).
  */
 export async function loadData(page: Page, config: DataLoaderConfig): Promise<void> {
   const nextBar = page.locator('.next-bar');
@@ -134,6 +140,7 @@ export async function loadData(page: Page, config: DataLoaderConfig): Promise<vo
 
   // Tune
   await page.locator('.load-data-view.tuning').waitFor();
+  await tune(page, config.connector);
   await showStep(page, 'Data loader: Tune');
   await clickNext('Publish');
 
@@ -146,7 +153,10 @@ export async function loadData(page: Page, config: DataLoaderConfig): Promise<vo
   // Edit spec
   await page.locator('.load-data-view.spec').waitFor();
   await showStep(page, 'Data loader: Edit spec');
-  await clickButton(nextBar, 'Submit task');
+  await clickButton(
+    nextBar,
+    connectorIsStreaming(config.connector) ? 'Submit supervisor (running)' : 'Submit task',
+  );
 }
 
 async function setRollup(page: Page, rollup: boolean): Promise<void> {

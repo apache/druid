@@ -18,7 +18,12 @@
 
 import type { Page } from '@playwright/test';
 
-import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/playwright';
+import {
+  clickButton,
+  setLabeledBoolean,
+  setLabeledInput,
+  setLabeledTextarea,
+} from '../../util/playwright';
 
 /**
  * Where the data loader reads the data from.
@@ -26,6 +31,7 @@ import { clickButton, setLabeledInput, setLabeledTextarea } from '../../util/pla
 export type DataConnector =
   | { readonly type: 'local'; readonly baseDirectory: string; readonly fileFilter: string }
   | { readonly type: 's3'; readonly uris: string[] }
+  | { readonly type: 'kafka'; readonly bootstrapServers: string; readonly topic: string }
   | { readonly type: 'reindex'; readonly datasourceName: string; readonly interval: string };
 
 /**
@@ -37,6 +43,8 @@ export function connectorCardTitle(connector: DataConnector): string {
       return 'Local disk';
     case 's3':
       return 'Amazon S3';
+    case 'kafka':
+      return 'Apache Kafka';
     case 'reindex':
       return 'Reindex from Druid';
   }
@@ -47,6 +55,13 @@ export function connectorCardTitle(connector: DataConnector): string {
  */
 export function connectorNeedsParse(connector: DataConnector): boolean {
   return connector.type !== 'reindex';
+}
+
+/**
+ * Whether the connector reads a stream, so the data loader sets up a supervisor (rather than run a task).
+ */
+export function connectorIsStreaming(connector: DataConnector): boolean {
+  return connector.type === 'kafka';
 }
 
 /**
@@ -63,10 +78,26 @@ export async function connect(page: Page, connector: DataConnector): Promise<voi
       await setLabeledTextarea(page, 'S3 URIs', connector.uris.join(', '));
       break;
 
+    case 'kafka':
+      // The data is sampled from the start of the stream (the default)
+      await setLabeledInput(page, 'Bootstrap servers', connector.bootstrapServers);
+      await setLabeledInput(page, 'Topic', connector.topic);
+      break;
+
     case 'reindex':
       await setLabeledInput(page, 'Datasource', connector.datasourceName);
       await setLabeledInput(page, 'Interval', connector.interval);
       break;
   }
   await clickButton(page, 'Apply');
+}
+
+/**
+ * Fills in what the Tune step needs for the connector.
+ */
+export async function tune(page: Page, connector: DataConnector): Promise<void> {
+  if (connector.type === 'kafka') {
+    // Required for streaming, as there's no default: read the topic from its start (the data the test put in it)
+    await setLabeledBoolean(page, 'Use earliest offset', true);
+  }
 }

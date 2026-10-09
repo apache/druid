@@ -69,6 +69,19 @@ export function labeledTextarea(scope: Page | Locator, label: string): Locator {
   return formGroup(scope, label).locator('textarea');
 }
 
+/**
+ * Sets a labeled boolean field of an AutoForm (its False / True buttons).
+ */
+export async function setLabeledBoolean(
+  scope: Page | Locator,
+  label: string,
+  value: boolean,
+): Promise<void> {
+  await formGroup(scope, label)
+    .getByText(value ? 'True' : 'False', { exact: true })
+    .click();
+}
+
 export async function getLabeledInput(scope: Page | Locator, label: string): Promise<string> {
   return await labeledInput(scope, label).inputValue();
 }

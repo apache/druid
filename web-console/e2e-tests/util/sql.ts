@@ -17,6 +17,7 @@
  */
 
 import type { APIRequestContext } from '@playwright/test';
+import { T } from 'druid-query-toolkit';
 
 /**
  * For expect.poll() on the cluster state: a task finishing, segments loading.
@@ -91,4 +92,40 @@ WHERE "datasource" = ? AND "is_published" = 1 AND "is_overshadowed" = 0`,
     numAvailableSegments: Number(row['numAvailableSegments']),
     numRows: row['numRows'] == null ? null : Number(row['numRows']),
   };
+}
+
+/**
+ * The number of rows of a datasource that queries see, including the rows of realtime (streaming) tasks that are not
+ * in published segments yet.
+ */
+export async function getQueryableRowCount(
+  request: APIRequestContext,
+  datasource: string,
+): Promise<number> {
+  // Through INFORMATION_SCHEMA first, as querying a datasource that doesn't exist yet is an error
+  const tables = await querySql(
+    request,
+    `SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE "TABLE_SCHEMA" = 'druid' AND "TABLE_NAME" = ?`,
+    [datasource],
+  );
+  if (!tables.length) return 0;
+
+  const [row] = await querySql(request, `SELECT COUNT(*) AS "numRows" FROM ${T(datasource)}`);
+  return Number(row['numRows']);
+}
+
+/**
+ * The detailed state of a supervisor (like RUNNING or SUSPENDED), or null when there is no such supervisor (not yet,
+ * or not anymore as it was terminated).
+ */
+export async function getSupervisorState(
+  request: APIRequestContext,
+  supervisorId: string,
+): Promise<string | null> {
+  const [row] = await querySql(
+    request,
+    `SELECT "detailed_state" FROM sys.supervisors WHERE "supervisor_id" = ?`,
+    [supervisorId],
+  );
+  return row ? String(row['detailed_state']) : null;
 }
