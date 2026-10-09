@@ -32,8 +32,8 @@ public class ProtobufEventSerializer implements EventSerializer
   public static final String TYPE = "protobuf";
 
   public static final Descriptors.Descriptor DESCRIPTOR = new FileBasedProtobufBytesDecoder(
-      MoreResources.ProbufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
-      MoreResources.ProbufData.WIKI_PROTO_MESSAGE_TYPE
+      MoreResources.ProtobufData.WIKI_PROTOBUF_BYTES_DECODER_RESOURCE,
+      MoreResources.ProtobufData.WIKI_PROTO_MESSAGE_TYPE
   ).getDescriptor();
 
   @Override

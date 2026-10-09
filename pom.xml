@@ -118,16 +118,16 @@
         <postgresql.version>42.7.13</postgresql.version>
         <protobuf.version>4.36.2</protobuf.version>
         <resilience4j.version>2.4.0</resilience4j.version>
-        <slf4j.version>2.0.19</slf4j.version>
+        <slf4j.version>2.0.20</slf4j.version>
         <jna.version>5.19.1</jna.version>
         <jna-platform.version>5.19.1</jna-platform.version>
         <hadoop.compile.version>3.5.0</hadoop.compile.version>
         <graaljs.version>25.3.4.1</graaljs.version>
-        <mockito.version>5.23.0</mockito.version>
+        <mockito.version>5.24.0</mockito.version>
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
-        <aws.sdk.v2.version>2.55.1</aws.sdk.v2.version>
+        <aws.sdk.v2.version>2.55.4</aws.sdk.v2.version>
         <caffeine.version>3.3.0</caffeine.version>
         <jacoco.version>0.8.15</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
@@ -140,7 +140,7 @@
         <com.google.apis.client.version>2.7.2</com.google.apis.client.version>
         <com.google.http.client.apis.version>2.2.0</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.cloud.storage.version>2.73.0</com.google.cloud.storage.version>
+        <com.google.cloud.storage.version>2.74.0</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine>
             <!-- Strong encapsulation parameters -->
             <!-- When updating this list, update all four locations: -->
