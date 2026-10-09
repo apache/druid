@@ -105,6 +105,10 @@ public class FrameProcessorExecutor
    * If "cancellationId" is provided, it must have previously been registered with {@link #registerCancellationId}.
    * Then, it can be used with the {@link #cancel(String)} method to cancel all processors with that
    * same cancellationId.
+   *
+   * This method always cleans the processor up, whether or not it runs (callers must never clean it up themselves).
+   * The processor is not run at all if "cancellationId" has already been canceled, in which case the returned future
+   * comes back already canceled. With a null cancellationId the processor always runs.
    */
   public <T> ListenableFuture<T> runFully(final FrameProcessor<T> processor, @Nullable final String cancellationId)
   {
@@ -113,7 +117,8 @@ public class FrameProcessorExecutor
     final SettableFuture<T> finished = registerCancelableFuture(SettableFuture.create(), true, cancellationId);
 
     if (finished.isDone()) {
-      // Possibly due to starting life out being canceled.
+      // Canceled either before or just after registerCancelableFuture ran; clean up because nothing else can
+      cancel(Collections.singleton(processor));
       return finished;
     }
 
@@ -451,8 +456,40 @@ public class FrameProcessorExecutor
     );
 
     logProcessorStatusString(processor, finished.isDone(), null, null, null);
-    registerCancelableProcessor(processor, cancellationId);
-    exec.execute(runnable);
+
+    if (!registerCancelableProcessor(processor, cancellationId)) {
+      // cancel(cancellationId) ran after "finished" was registered, so it already cleaned cancelableProcessors
+      // without seeing this one; clean up because nothing else can, and cancel "finished" because that cancel
+      // resolves return futures last (after waiting on the processors it did see)
+      cancel(Collections.singleton(processor));
+      finished.cancel(true);
+      return finished;
+    }
+
+    try {
+      exec.execute(runnable);
+    }
+    catch (Throwable e) {
+      // registered, but never going to run; clean up only if we took the processor out of cancelableProcessors
+      // ourselves (otherwise a concurrent cancel is doing the cleanup)
+      final boolean doCleanup;
+
+      if (cancellationId != null) {
+        synchronized (lock) {
+          doCleanup = cancelableProcessors.remove(cancellationId, processor);
+        }
+      } else {
+        doCleanup = true;
+      }
+
+      if (doCleanup) {
+        cancel(Collections.singleton(processor));
+      }
+
+      finished.setException(e);
+      throw e;
+    }
+
     return finished;
   }
 
@@ -488,6 +525,9 @@ public class FrameProcessorExecutor
    * Registers a cancellationId, so it can be provided to {@link #runFully} or {@link #runAllFully}. To avoid the
    * set of active cancellationIds growing without bound, callers must also call {@link #cancel(String)} on the
    * same cancellationId when done using it.
+   *
+   * A cancellationId must also not be registered again once canceled. Nothing here checks for it, and a run still in
+   * flight under the old registration would silently attach itself to the new one.
    */
   public void registerCancellationId(final String cancellationId)
   {
@@ -666,13 +706,26 @@ public class FrameProcessorExecutor
     }
   }
 
-  private <T> void registerCancelableProcessor(final FrameProcessor<T> processor, @Nullable final String cancellationId)
+  /**
+   * Register a processor so {@link #cancel(String)} can find it.
+   *
+   * @return true if registered, or if there is no cancellationId to register under. False if {@code cancellationId}
+   * is already canceled, in which case the caller must not run the processor and owns cleaning it up.
+   */
+  private <T> boolean registerCancelableProcessor(
+      final FrameProcessor<T> processor,
+      @Nullable final String cancellationId
+  )
   {
     if (cancellationId != null) {
       synchronized (lock) {
+        if (!activeCancellationIds.contains(cancellationId)) {
+          return false;
+        }
         cancelableProcessors.put(cancellationId, processor);
       }
     }
+    return true;
   }
 
   /**
