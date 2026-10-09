@@ -87,10 +87,69 @@ modernize them, in order. Each step should leave the suite passing.
 - Done earlier, in steps 1-2: no `goto` + `reload({ waitUntil: 'networkidle' })`, one `expect` in `cancel-query`,
   no `--disable-local-storage`.
 
-## 7. More coverage (later, separately)
+## 7. More coverage: what the embedded tests cover that the console can do, without a console e2e test
 
-- SQL-based ingestion (the SQL data loader, `INSERT` / `REPLACE` in the Query view), Explore, Supervisors,
-  Segments, Services, Lookups.
+In the order to do them: (1) input formats, (2) Kafka and the Supervisors view, (3) SQL-based ingestion, (4) the
+Datasources view's destructive actions, (5) retention rules and lookups; then the rest. Each goes in a
+`*WebConsoleTest` next to the embedded tests of its functionality.
+
+Classic data loader, connectors:
+- [ ] HTTP (`indexer/ITHttpInputSourceTest`): "HTTP(s)" card
+- [ ] Inline (`indexing/IndexTaskTest`): "Paste data" card
+- [ ] Azure (`azure/ITAzureToAzureParallelIndexTest`, `ITAzureV2ParallelIndexTest`): "Azure" card
+- [ ] Google Cloud Storage (`gcs/ITGcsToGcsParallelIndexTest`): "Google Cloud Storage" card
+- [ ] HDFS (`hdfs/HdfsToHdfsParallelIndexTest`): "HDFS" card
+- [ ] Delta Lake (`deltalake/DeltaLakeInputSourceIngestionTest`): "Delta Lake" card
+
+Classic data loader, formats and steps:
+- [ ] (1) CSV, TSV, Parquet, ORC, Avro OCF (`indexer/ITLocalInputSourceAllInputFormatTest`,
+  `ITLocalInputSourceAllFormatSchemalessTest`): Parse data step (only JSON is covered)
+- [ ] Transforms (`indexer/ITTransformTest`): Transform step
+- [ ] Nested columns (`indexing/NestedDataFormatsTest`): Configure schema step
+- [ ] Overwrite, with and without dropping existing data (`indexer/ITOverwriteBatchIndexTest`): Publish step
+
+Streaming and the Supervisors view:
+- [ ] (2) Kafka supervisor (`IngestionSmokeTest.test_runKafkaSupervisor`, `kafka/simulate/EmbeddedKafkaSupervisorTest`):
+  "Apache Kafka" card
+- [ ] Kafka formats: Avro and Protobuf with or without a schema registry, CSV... (`indexing/KafkaIndexDataFormatsTest`)
+- [ ] Kinesis supervisor and formats (`kinesis/KinesisDataFormatsTest`): "Amazon Kinesis" card
+- [ ] (2) Suspend / resume (`KafkaIndexFaultToleranceTest`, `KinesisFaultToleranceTest`), handoff early
+  (`StreamIndexFaultToleranceTest`), reset to latest and backfill (`KafkaBoundedSupervisorTest`), terminate
+  (`server/KillSupervisorsCustomDutyTest`): Supervisors view actions
+- [ ] Editing a running supervisor (`IngestionSmokeTest.test_kafkaSupervisor_modifiedAndRestartedCombinations`)
+
+SQL-based ingestion (MSQ) and the Query view:
+- [ ] (3) `INSERT` / `REPLACE` from external data (`msq/ITSQLBasedBatchIngestionTest`, `MultiStageQueryTest`,
+  `IngestionSmokeTest.test_ingestWikipedia1DayWithMSQ`): Query view with MSQ, "Batch - SQL" data loader
+- [ ] (3) Reindex with `REPLACE ... SELECT FROM` a datasource (`msq/ITMSQReindexTest`)
+- [ ] Export, `INSERT INTO EXTERN` (`MultiStageQueryTest.testExport`)
+- [ ] SQL ingestion / MSQ `SELECT` from S3 (`s3/ITS3SQLBasedIngestionTest`, `msq/S3ExternQueryTest`)
+- [ ] Dart: running and recent queries, reports, cancel (`msq/EmbeddedDartReportApiTest`): Dart engine, current
+  Dart queries panel
+- [ ] Query errors: parse, validation, timeout, capacity, resource limits (`query/QueryErrorTest`): error pane
+- [ ] Query blocklist, default query context (`server/EmbeddedBrokerDynamicConfigTest`): Broker dynamic config dialog
+
+Datasources, Segments and Tasks views:
+- [ ] (4) Mark segments unused / used (`IngestionSmokeTest`, `OverlordClientTest`, `ConcurrentAppendReplaceTest`)
+- [ ] (4) Delete data with a kill task (`IngestionSmokeTest.test_runIndexTask_andKillData`,
+  `OverlordClientTest.test_runKillTask`)
+- [ ] (5) Retention rules (`query/BroadcastJoinQueryTest`, `server/CoordinatorClientTest`)
+- [ ] Compaction supervisors and cluster compaction config (`compact/CompactionSupervisorTest`)
+- [ ] Compaction to another segment granularity (`CompactionSupervisorTest`, `CompactionTaskTest`)
+- [ ] Cancel a running task (`OverlordClientTest.test_cancelTask_*`): Tasks view "Kill"
+- [ ] Stream a task's log (`IngestionSmokeTest.test_streamLogs_ofCancelledTask`)
+- [ ] Submit a JSON task (`OverlordClientTest.test_runTask_ofTypeNoop`)
+- [ ] Segment counts (`query/SystemTableQueryTest`): Segments view
+
+Services, Lookups, dynamic configs:
+- [ ] Server types, workers and capacity (`SystemTableQueryTest`, `OverlordClientTest.test_getWorkers`): Services view
+- [ ] (5) JDBC lookup (`lookup/JdbcLookupTest`): Lookups view
+- [ ] Pause coordination (`server/CoordinatorPauseTest`), turbo loading (`server/HistoricalCloningTest`): Coordinator
+  dynamic config dialog
+
+Left out: no console UI (SQL, combining and Iceberg input sources, catalog DDL, JDBC queries, Kafka topic
+patterns), not a console user's concern (TLS, HA, Consul, Kubernetes, metadata stores, emitters, autoscaling,
+partial loading, faults, performance). Borderline: basic auth, what a restricted user sees (with `auth/`).
 
 ## 8. Run on embedded clusters (prototype done)
 
