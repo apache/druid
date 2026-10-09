@@ -19,13 +19,13 @@ set -e
 set -x
 
 echo 'Running Maven install...'
-mvn -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
+./mvnw -B clean install -q -ff -pl '!distribution' -P skip-tests -Dweb.console.skip=true -Dmaven.javadoc.skip=true -T1C
 
-mvn -B checkstyle:checkstyle --fail-at-end
+./mvnw -B checkstyle:checkstyle --fail-at-end
 
 # Repo-wide RAT check. packaging-check also runs RAT, but it excludes the
 # benchmarks module from its reactor, so keep this standalone pass here.
-mvn -B apache-rat:check -Prat --fail-at-end \
+./mvnw -B apache-rat:check -Prat --fail-at-end \
   -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn \
   -Drat.consoleOutput=true
 
@@ -36,13 +36,13 @@ mvn -B apache-rat:check -Prat --fail-at-end \
 
 ./.github/scripts/analyze_dependencies_script.sh
 
-mvn -B animal-sniffer:check --fail-at-end
+./mvnw -B animal-sniffer:check --fail-at-end
 
-mvn -B enforcer:enforce --fail-at-end
+./mvnw -B enforcer:enforce --fail-at-end
 
-mvn -B forbiddenapis:check forbiddenapis:testCheck --fail-at-end
+./mvnw -B forbiddenapis:check forbiddenapis:testCheck --fail-at-end
 
 # TODO: consider adding pmd:cpd-check
-mvn -B pmd:check --fail-at-end
+./mvnw -B pmd:check --fail-at-end
 
-mvn -B spotbugs:check --fail-at-end -pl '!benchmarks'
+./mvnw -B spotbugs:check --fail-at-end -pl '!benchmarks'

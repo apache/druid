@@ -13215,6 +13215,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testFilterDoubleDimensionCastAsDecimal()
+  {
+    testQuery(
+        "SELECT dim1 FROM numfoo WHERE CAST(dbl1 AS DECIMAL) = 1.7 LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1")
+                .columnTypes(ColumnType.STRING)
+                .filters(equality("dbl1", 1.7, ColumnType.DOUBLE))
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .limit(1)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"10.1"}
+        )
+    );
+  }
+
+  @Test
+  public void testCoalesceDoubleDimensionCastAsDecimal()
+  {
+    testQuery(
+        "SELECT dim1, COALESCE(CAST(dbl1 AS DECIMAL), 0.5) FROM numfoo",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(CalciteTests.DATASOURCE3)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(expressionVirtualColumn("v0", "nvl(\"dbl1\",0.5)", ColumnType.DOUBLE))
+                .columns("dim1", "v0")
+                .columnTypes(ColumnType.STRING, ColumnType.DOUBLE)
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", 1.0},
+            new Object[]{"10.1", 1.7},
+            new Object[]{"2", 0.0},
+            new Object[]{"1", 0.5},
+            new Object[]{"def", 0.5},
+            new Object[]{"abc", 0.5}
+        )
+    );
+  }
+
+  @Test
   public void testFilterLongDimension()
   {
     testQuery(

@@ -17,7 +17,6 @@
  */
 
 import { Button, ButtonGroup, Intent } from '@blueprintjs/core';
-import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -25,7 +24,7 @@ import AceEditor from 'react-ace';
 import { Execution } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api, AppToaster, UrlBaser } from '../../singletons';
-import { downloadFile } from '../../utils';
+import { copyToClipboard, downloadFile } from '../../utils';
 import { ExecutionStagesPane } from '../../views/workbench-view/execution-stages-pane/execution-stages-pane';
 import { Loader } from '../loader/loader';
 
@@ -71,23 +70,23 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
           <Button
             disabled={jsonState.loading}
             text="Refresh"
-            minimal
+            variant="minimal"
             onClick={() => queryManager.rerunLastQuery()}
           />
           {downloadFilename && (
             <Button
               disabled={jsonState.loading}
               text="Download"
-              minimal
+              variant="minimal"
               onClick={() => downloadFile(jsonValue, 'json', downloadFilename)}
             />
           )}
           <Button
             text="Copy"
-            minimal
+            variant="minimal"
             disabled={jsonState.loading}
             onClick={() => {
-              copy(jsonValue, { format: 'text/plain' });
+              copyToClipboard(jsonValue);
               AppToaster.show({
                 message: 'JSON value copied to clipboard',
                 intent: Intent.SUCCESS,
@@ -97,7 +96,7 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
           <Button
             text="View raw"
             disabled={!jsonValue}
-            minimal
+            variant="minimal"
             onClick={() => window.open(UrlBaser.base(endpoint), '_blank')}
           />
         </ButtonGroup>
@@ -119,7 +118,6 @@ export const ShowJsonOrStages = React.memo(function ShowJsonOrStages(props: Show
             showPrintMargin={false}
             showGutter={false}
             value={!jsonState.error ? jsonValue : jsonState.getErrorMessage()}
-            style={{}}
           />
         )}
       </div>

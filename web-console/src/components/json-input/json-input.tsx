@@ -20,10 +20,11 @@ import type { Ace } from 'ace-builds';
 import classNames from 'classnames';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import AceEditor from 'react-ace';
 
 import { getHjsonCompletions } from '../../ace-completions/hjson-completions';
+import { usePermanentCallback } from '../../hooks';
 import type { JsonCompletionRule } from '../../utils';
 
 import './json-input.scss';
@@ -97,41 +98,47 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
     stringified: stringifyJson(value),
   }));
   const [showErrorIfNeeded, setShowErrorIfNeeded] = useState(false);
-  const aceEditor = useRef<Ace.Editor | undefined>();
+  const aceEditor = useRef<Ace.Editor | undefined>(undefined);
 
-  useEffect(() => {
+  const showValue = useEffectEvent((value: any) => {
     if (deepEqual(value, internalValue.lastShownValue)) return;
     setInternalValue({
       lastShownValue: value,
       stringified: stringifyJson(value),
     });
-  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  });
 
-  const cmp: false | Ace.Completer[] = useMemo(() => {
-    if (!jsonCompletions) return false;
-    return [
-      {
-        getCompletions: (_state, session, pos, prefix, callback) => {
-          const allText = session.getValue();
-          const line = session.getLine(pos.row);
-          const charBeforePrefix = line[pos.column - prefix.length - 1];
+  useEffect(() => {
+    showValue(value);
+  }, [value]);
 
-          const lines = allText.split('\n').slice(0, pos.row + 1);
-          const lastLineIndex = lines.length - 1;
-          lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
-          callback(
-            null,
-            getHjsonCompletions({
-              jsonCompletions,
-              textBefore: lines.join('\n'),
-              charBeforePrefix,
-              prefix,
-            }),
-          );
-        },
-      },
-    ];
-  }, [jsonCompletions]);
+  // Ace reads the completers once, when autocompletion is enabled, so they must not change. The callback always sees
+  // the latest props.
+  const getCompletions = usePermanentCallback<Ace.Completer['getCompletions']>(
+    (_editor, session, pos, prefix, callback) => {
+      if (!jsonCompletions) {
+        callback(null, []);
+        return;
+      }
+      const allText = session.getValue();
+      const line = session.getLine(pos.row);
+      const charBeforePrefix = line[pos.column - prefix.length - 1];
+
+      const lines = allText.split('\n').slice(0, pos.row + 1);
+      const lastLineIndex = lines.length - 1;
+      lines[lastLineIndex] = lines[lastLineIndex].slice(0, pos.column - prefix.length - 1);
+      callback(
+        null,
+        getHjsonCompletions({
+          jsonCompletions,
+          textBefore: lines.join('\n'),
+          charBeforePrefix,
+          prefix,
+        }),
+      );
+    },
+  );
+  const completers = useMemo<Ace.Completer[]>(() => [{ getCompletions }], [getCompletions]);
 
   const internalValueError = internalValue.error;
   return (
@@ -181,17 +188,14 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
         showGutter={Boolean(showLineNumbers)}
         value={internalValue.stringified}
         placeholder={placeholder}
-        enableBasicAutocompletion={cmp as any}
-        enableLiveAutocompletion={cmp as any}
-        editorProps={{
-          $blockScrolling: Infinity,
-        }}
+        editorProps={{ completers }}
+        enableBasicAutocompletion={Boolean(jsonCompletions)}
+        enableLiveAutocompletion={Boolean(jsonCompletions)}
         setOptions={{
           showLineNumbers: Boolean(showLineNumbers),
           tabSize: 2,
-          newLineMode: 'unix' as any, // newLineMode is incorrectly assumed to be boolean in the typings
+          newLineMode: 'unix',
         }}
-        style={{}}
         onLoad={editor => {
           aceEditor.current = editor;
         }}

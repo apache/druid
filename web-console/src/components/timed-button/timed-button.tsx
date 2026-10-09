@@ -17,7 +17,7 @@
  */
 
 import type { ButtonProps } from '@blueprintjs/core';
-import { Button, ButtonGroup, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
+import { Button, ButtonGroup, Menu, MenuDivider, MenuItem, PopoverNext } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React, { useState } from 'react';
@@ -76,7 +76,7 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
   return (
     <ButtonGroup className={classNames('timed-button', className)}>
       <Button {...other} text={text} icon={icon} onClick={() => onRefresh(false)} />
-      <Popover
+      <PopoverNext
         content={
           <Menu>
             <MenuDivider title={label} />
@@ -90,9 +90,11 @@ export const TimedButton = React.memo(function TimedButton(props: TimedButtonPro
             ))}
           </Menu>
         }
+        lazy
+        shouldReturnFocusOnClose={false}
       >
-        <Button {...other} rightIcon={IconNames.CARET_DOWN} />
-      </Popover>
+        <Button {...other} endIcon={IconNames.CARET_DOWN} />
+      </PopoverNext>
     </ButtonGroup>
   );
 });

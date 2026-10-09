@@ -20,6 +20,7 @@
 package org.apache.druid.rpc;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.junit.jupiter.api.Assertions;
@@ -104,6 +105,23 @@ public class ServiceLocationTest
     Assertions.assertEquals(
         new ServiceLocation("hostName", -1, 8100, ""),
         ServiceLocation.fromDruidServerMetadata(druidServerMetadata)
+    );
+  }
+
+  @Test
+  public void test_fromDruidNode_usesAdvertisedPlaintextPort()
+  {
+    Assertions.assertEquals(
+        new ServiceLocation("host", 8080, -1, ""),
+        ServiceLocation.fromDruidNode(new DruidNode("svc", "host", false, 8080, null, true, false))
+    );
+    Assertions.assertEquals(
+        new ServiceLocation("host", 9080, -1, ""),
+        ServiceLocation.fromDruidNode(new DruidNode("svc", "host", false, 8080, null, null, true, false, null, 9080))
+    );
+    Assertions.assertEquals(
+        new ServiceLocation("host", 9080, 8443, ""),
+        ServiceLocation.fromDruidNode(new DruidNode("svc", "host", false, 8080, null, 8443, true, true, null, 9080))
     );
   }
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
+import { Menu, MenuDivider, MenuItem, PopoverNext } from '@blueprintjs/core';
 import type { ReactNode } from 'react';
 import React from 'react';
 
@@ -46,7 +46,7 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
     props;
 
   return (
-    <Popover
+    <PopoverNext
       className="table-filterable-cell"
       content={
         <Deferred
@@ -67,8 +67,10 @@ export const TableFilterableCell = React.memo(function TableFilterableCell(
           )}
         />
       }
+      lazy
+      shouldReturnFocusOnClose={false}
     >
       {children ?? value}
-    </Popover>
+    </PopoverNext>
   );
 });

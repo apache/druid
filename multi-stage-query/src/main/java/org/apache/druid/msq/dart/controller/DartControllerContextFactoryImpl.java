@@ -23,6 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.discovery.DruidNodeDiscovery;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
@@ -30,6 +33,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
+import org.apache.druid.msq.dart.worker.DartWorkerService;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
@@ -52,6 +56,7 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
   protected final MemoryIntrospector memoryIntrospector;
   protected final List<InputSpecSlicerProvider> inputSpecSlicerProviders;
   protected final ServiceEmitter emitter;
+  protected final DruidNodeDiscovery dartWorkerDiscovery;
 
   @Inject
   public DartControllerContextFactoryImpl(
@@ -63,7 +68,8 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
       @Dart final Set<InputSpecSlicerProvider> inputSpecSlicerProviders,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final DruidNodeDiscoveryProvider discoveryProvider
   )
   {
     this.injector = injector;
@@ -75,6 +81,8 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
     this.memoryIntrospector = memoryIntrospector;
     this.inputSpecSlicerProviders = List.copyOf(inputSpecSlicerProviders);
     this.emitter = emitter;
+    this.dartWorkerDiscovery =
+        discoveryProvider.getForServiceAndRoles(DartWorkerService.NAME, Set.of(NodeRole.HISTORICAL));
   }
 
   @Override
@@ -90,7 +98,8 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
         serverView,
         inputSpecSlicerProviders,
         emitter,
-        context
+        context,
+        dartWorkerDiscovery
     );
   }
 }

@@ -2,33 +2,33 @@
 
 exports[`AlertDialog matches snapshot 1`] = `
 <div
-  class="bp5-portal"
+  class="bp6-portal"
 >
   <div
     aria-live="polite"
-    class="bp5-overlay bp5-overlay-open bp5-overlay-scroll-container"
+    class="bp6-overlay bp6-overlay-open bp6-overlay-scroll-container"
   >
     <div
-      class="bp5-overlay-start-focus-trap bp5-overlay-appear bp5-overlay-appear-active"
+      class="bp6-overlay-start-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
       tabindex="0"
     />
     <div
-      class="bp5-overlay-backdrop bp5-overlay-appear bp5-overlay-appear-active"
+      class="bp6-overlay-backdrop bp6-overlay-appear bp6-overlay-appear-active"
     />
     <div
-      class="bp5-dialog-container bp5-overlay-content bp5-overlay-appear bp5-overlay-appear-active"
+      class="bp6-dialog-container bp6-overlay-content bp6-overlay-appear bp6-overlay-appear-active"
       tabindex="0"
     >
       <div
         aria-modal="true"
-        class="bp5-dialog bp5-alert alert-dialog"
+        class="bp6-dialog bp6-alert alert-dialog"
         role="dialog"
       >
         <div
-          class="bp5-alert-body"
+          class="bp6-alert-body"
         >
           <div
-            class="bp5-alert-contents"
+            class="bp6-alert-contents"
           >
             <p>
               Blah blah
@@ -39,24 +39,24 @@ exports[`AlertDialog matches snapshot 1`] = `
           </div>
         </div>
         <div
-          class="bp5-alert-footer"
+          class="bp6-alert-footer"
         >
           <button
-            class="bp5-button bp5-intent-primary"
+            class="bp6-button bp6-intent-primary"
             type="button"
           >
             <span
-              class="bp5-button-text"
+              class="bp6-button-text"
             >
               Run it anyway
             </span>
           </button>
           <button
-            class="bp5-button"
+            class="bp6-button"
             type="button"
           >
             <span
-              class="bp5-button-text"
+              class="bp6-button-text"
             >
               Cancel
             </span>
@@ -65,7 +65,7 @@ exports[`AlertDialog matches snapshot 1`] = `
       </div>
     </div>
     <div
-      class="bp5-overlay-end-focus-trap bp5-overlay-appear bp5-overlay-appear-active"
+      class="bp6-overlay-end-focus-trap bp6-overlay-appear bp6-overlay-appear-active"
       tabindex="0"
     />
   </div>

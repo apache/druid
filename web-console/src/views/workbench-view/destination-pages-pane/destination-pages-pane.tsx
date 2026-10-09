@@ -25,15 +25,13 @@ import {
   Label,
   Menu,
   MenuItem,
-  Popover,
-  Position,
+  PopoverNext,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
-import ReactTable from 'react-table';
 
+import { ConsoleTable, SMALL_TABLE_PAGE_SIZE } from '../../../components';
 import type { Execution } from '../../../druid-models';
-import { SMALL_TABLE_PAGE_SIZE } from '../../../react-table';
 import { Api, UrlBaser } from '../../../singletons';
 import { clamp, formatBytes, formatInteger, pluralIfNeeded, tickIcon } from '../../../utils';
 
@@ -121,9 +119,10 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             rightElement={<Button disabled text={`.${desiredExtension}`} />}
             fill
           />
-          <Popover
-            minimal
-            position={Position.BOTTOM_LEFT}
+          <PopoverNext
+            animation="minimal"
+            arrow={false}
+            placement="bottom-start"
             content={
               <Menu>
                 {RESULT_FORMATS.map((resultFormat, i) => (
@@ -137,12 +136,14 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 ))}
               </Menu>
             }
+            lazy
+            shouldReturnFocusOnClose={false}
           >
             <Button
               text={RESULT_FORMAT_DESCRIPTION[desiredResultFormat]}
-              rightIcon={IconNames.CARET_DOWN}
+              endIcon={IconNames.CARET_DOWN}
             />
-          </Popover>
+          </PopoverNext>
         </ControlGroup>
         <AnchorButton
           intent={Intent.PRIMARY}
@@ -152,7 +153,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
           download
         />
       </p>
-      <ReactTable
+      <ConsoleTable
         data={pages}
         loading={false}
         sortable={false}
@@ -192,7 +193,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
                 className="download-button"
                 icon={IconNames.DOWNLOAD}
                 text="Download"
-                minimal
+                variant="minimal"
                 href={getResultUrl(value)}
                 download
               />

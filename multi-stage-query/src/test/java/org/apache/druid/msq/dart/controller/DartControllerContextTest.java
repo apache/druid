@@ -22,12 +22,17 @@ package org.apache.druid.msq.dart.controller;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.discovery.DiscoveryDruidNode;
+import org.apache.druid.discovery.DruidNodeDiscovery;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.msq.dart.worker.DartWorkerService;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.MemoryIntrospectorImpl;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.test.TestDartControllerContextFactoryImpl;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -43,6 +48,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -104,9 +110,68 @@ public class DartControllerContextTest
   }
 
   @Test
-  public void test_queryKernelConfig()
+  public void test_queryKernelConfig_allHistoricalsAdvertiseDartWorker()
   {
-    final DartControllerContext controllerContext = new DartControllerContext(
+    // Both HISTORICALs advertise a Dart worker: enroll both, matching pre-capability behavior.
+    final ControllerQueryKernelConfig queryKernelConfig =
+        makeControllerContext(discoveryOf(SERVERS.get(0), SERVERS.get(1))).queryKernelConfig(querySpec);
+
+    assertCommonKernelConfig(queryKernelConfig);
+    Assertions.assertEquals(
+        ImmutableList.of(
+            WorkerId.fromDruidServerMetadata(SERVERS.get(0), QUERY_ID).toString(),
+            WorkerId.fromDruidServerMetadata(SERVERS.get(1), QUERY_ID).toString()
+        ),
+        sortedWorkerIds(queryKernelConfig)
+    );
+  }
+
+  @Test
+  public void test_queryKernelConfig_onlySomeHistoricalsAdvertiseDartWorker()
+  {
+    // Only the first HISTORICAL advertises a Dart worker: the Dart-disabled one is excluded.
+    final ControllerQueryKernelConfig queryKernelConfig =
+        makeControllerContext(discoveryOf(SERVERS.get(0))).queryKernelConfig(querySpec);
+
+    assertCommonKernelConfig(queryKernelConfig);
+    Assertions.assertEquals(
+        ImmutableList.of(WorkerId.fromDruidServerMetadata(SERVERS.get(0), QUERY_ID).toString()),
+        sortedWorkerIds(queryKernelConfig)
+    );
+  }
+
+  @Test
+  public void test_queryKernelConfig_noHistoricalsAdvertiseDartWorker_failsFast()
+  {
+    // Historicals are present in the server view but none advertise a Dart worker so we must fail fast
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> makeControllerContext(discoveryOf()).queryKernelConfig(querySpec)
+    );
+
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertTrue(e.getMessage().contains("No Dart workers are available"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("druid.msq.dart.enabled"), e.getMessage());
+  }
+
+  @Test
+  public void test_queryKernelConfig_noHistoricalsAtAll_failsFast()
+  {
+    // No historical servers at all: still fail fast, but with a descriptive message about the cause
+    Mockito.when(serverView.getDruidServerMetadatas())
+           .thenReturn(ImmutableList.of(SERVERS.get(2))); // realtime only
+
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> makeControllerContext(discoveryOf()).queryKernelConfig(querySpec)
+    );
+
+    Assertions.assertTrue(e.getMessage().contains("no Historicals are currently available"), e.getMessage());
+  }
+
+  private DartControllerContext makeControllerContext(final DruidNodeDiscovery dartWorkerDiscovery)
+  {
+    return new DartControllerContext(
         null,
         null,
         SELF_NODE,
@@ -115,24 +180,39 @@ public class DartControllerContextTest
         serverView,
         List.of(),
         null,
-        queryContext
+        queryContext,
+        dartWorkerDiscovery
     );
-    final ControllerQueryKernelConfig queryKernelConfig = controllerContext.queryKernelConfig(querySpec);
+  }
 
+  private static void assertCommonKernelConfig(final ControllerQueryKernelConfig queryKernelConfig)
+  {
     Assertions.assertFalse(queryKernelConfig.isFaultTolerant());
     Assertions.assertFalse(queryKernelConfig.isDurableStorage());
     Assertions.assertEquals(3, queryKernelConfig.getMaxConcurrentStages());
     Assertions.assertEquals(TaskReportMSQDestination.instance(), queryKernelConfig.getDestination());
     Assertions.assertTrue(queryKernelConfig.isPipeline());
+  }
 
-    // Check workerIds after sorting, because they've been shuffled.
-    Assertions.assertEquals(
-        ImmutableList.of(
-            // Only the HISTORICAL servers
-            WorkerId.fromDruidServerMetadata(SERVERS.get(0), QUERY_ID).toString(),
-            WorkerId.fromDruidServerMetadata(SERVERS.get(1), QUERY_ID).toString()
-        ),
-        queryKernelConfig.getWorkerIds().stream().sorted().collect(Collectors.toList())
-    );
+  /**
+   * The workerIds are shuffled by {@link DartControllerContext#queryKernelConfig}, so sort before comparing.
+   */
+  private static List<String> sortedWorkerIds(final ControllerQueryKernelConfig queryKernelConfig)
+  {
+    return queryKernelConfig.getWorkerIds().stream().sorted().collect(Collectors.toList());
+  }
+
+  /**
+   * A {@link DruidNodeDiscovery} that reports the given servers as Historicals advertising a {@link DartWorkerService}.
+   */
+  private static DruidNodeDiscovery discoveryOf(final DruidServerMetadata... servers)
+  {
+    final List<DiscoveryDruidNode> nodes =
+        Arrays.stream(servers)
+              .map(TestDartControllerContextFactoryImpl::historicalDartWorkerNode)
+              .collect(Collectors.toList());
+    final DruidNodeDiscovery discovery = Mockito.mock(DruidNodeDiscovery.class);
+    Mockito.when(discovery.getAllNodes()).thenReturn(nodes);
+    return discovery;
   }
 }
