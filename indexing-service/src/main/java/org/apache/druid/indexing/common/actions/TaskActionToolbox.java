@@ -162,10 +162,20 @@ public class TaskActionToolbox
       BiFunction<Task, TaskActionToolbox, SegmentPublishResult> publishAction
   )
   {
-    if (startMetadata == null || supervisorId == null) {
-      return Futures.immediateFuture(publishAction.apply(task, this));
+    // First try publishing synchronously
+    try {
+      final SegmentPublishResult firstAttemptResult = publishAction.apply(task, this);
+      if (firstAttemptResult.isSuccess()
+          || !firstAttemptResult.isOffsetMismatch()
+          || !firstAttemptResult.isRetryable()) {
+        return Futures.immediateFuture(firstAttemptResult);
+      }
+    }
+    catch (Exception e) {
+      return Futures.immediateFailedFuture(e);
     }
 
+    // Try publishing later if the failure was due to offset mismatch
     final ListenableFuture<Boolean> taskReadyToPublishFuture = supervisorManager.isTaskReadyToPublishSegments(
         supervisorId,
         task.getId(),
