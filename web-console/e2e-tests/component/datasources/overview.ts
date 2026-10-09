@@ -50,6 +50,18 @@ export interface CompactionConfig {
 const SKIP_OFFSET_FROM_LATEST = 'Skip offset from latest';
 
 /**
+ * An action of a datasource's menu that asks for confirmation, with the text of its confirm button. The menu of a
+ * datasource with used segments has the "unused" actions, the menu of one shown only as unused the others.
+ */
+const CONFIRMED_ACTIONS = {
+  'Mark as unused all segments': 'Mark as unused all segments',
+  'Mark as used all segments': 'Mark as used all segments',
+  'Delete segments (issue kill task)': 'Permanently delete unused segments',
+} as const;
+
+export type DatasourceAction = keyof typeof CONFIRMED_ACTIONS;
+
+/**
  * Represents datasource overview tab.
  */
 export class DatasourcesOverview {
@@ -63,12 +75,19 @@ export class DatasourcesOverview {
 
   /**
    * The datasource named `datasourceName` (none, if it doesn't exist yet), as the view shows it.
+   * @param showUnused whether to show the datasource also when all of its segments are unused (with "Show unused")
    */
-  async getDatasources(datasourceName: string): Promise<Datasource[]> {
-    await openView(this.page, 'datasources', { datasource: datasourceName });
+  async getDatasources(
+    datasourceName: string,
+    { showUnused = false }: { showUnused?: boolean } = {},
+  ): Promise<Datasource[]> {
+    await this.open(datasourceName, showUnused);
 
     const records = await extractTableRecords(this.table());
-    await showStep(this.page, `Datasources view, filtered on ${datasourceName}`);
+    await showStep(
+      this.page,
+      `Datasources view, filtered on ${datasourceName}${showUnused ? ', with unused' : ''}`,
+    );
 
     return records.map(record => ({
       name: record['Datasource name'],
@@ -101,9 +120,50 @@ export class DatasourcesOverview {
     return { skipOffsetFromLatest, partitionsSpec: partitionsSpec! };
   }
 
-  private async openCompactionConfigurationDialog(datasourceName: string) {
+  /**
+   * Runs an action from the datasource's menu, and confirms it (ticking the checks of what it does, if it asks).
+   * @param showUnused whether the datasource is only shown with "Show unused" (all of its segments are unused)
+   */
+  async runAction(
+    datasourceName: string,
+    action: DatasourceAction,
+    { showUnused = false }: { showUnused?: boolean } = {},
+  ): Promise<void> {
+    await this.open(datasourceName, showUnused);
+    await this.openActionMenu();
+    await clickMenuItem(this.page, action);
+
+    const confirmation = this.page.locator('.async-action-dialog');
+    await confirmation.waitFor();
+    // The checks of what it does (like "I understand that this operation cannot be undone") are switches
+    for (const check of await confirmation.locator('.warning-checklist .bp6-switch').all()) {
+      await check.click();
+    }
+    await showStep(this.page, `Datasources view: ${action}, to confirm`);
+    await clickButton(confirmation, CONFIRMED_ACTIONS[action]);
+    await confirmation.waitFor({ state: 'detached' });
+  }
+
+  private async open(datasourceName: string, showUnused: boolean): Promise<void> {
     await openView(this.page, 'datasources', { datasource: datasourceName });
+    if (!showUnused) return;
+
+    // Showing the unused datasources fetches them; until then the table shows what it had
+    const unusedFetched = this.page.waitForResponse(response =>
+      response.url().includes('/druid/coordinator/v1/metadata/datasources?includeUnused'),
+    );
+    await this.page.locator('.datasources-view').getByText('Show unused', { exact: true }).click();
+    await unusedFetched;
+    await this.table().locator('.loader').waitFor({ state: 'hidden' });
+  }
+
+  private async openActionMenu(): Promise<void> {
     await this.table().locator('.ct-tbody .action-cell .bp6-icon-more').click();
+  }
+
+  private async openCompactionConfigurationDialog(datasourceName: string) {
+    await this.open(datasourceName, false);
+    await this.openActionMenu();
     await clickMenuItem(this.page, 'Edit compaction configuration');
 
     const dialog = this.page.locator('.compaction-config-dialog');

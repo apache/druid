@@ -134,9 +134,10 @@ SQL-based ingestion (MSQ) and the Query view:
 - [ ] Query blocklist, default query context (`server/EmbeddedBrokerDynamicConfigTest`): Broker dynamic config dialog
 
 Datasources, Segments and Tasks views:
-- [ ] (4) Mark segments unused / used (`IngestionSmokeTest`, `OverlordClientTest`, `ConcurrentAppendReplaceTest`)
-- [ ] (4) Delete data with a kill task (`IngestionSmokeTest.test_runIndexTask_andKillData`,
-  `OverlordClientTest.test_runKillTask`)
+- [x] (4) Mark segments unused / used (`IngestionSmokeTest`, `OverlordClientTest`, `ConcurrentAppendReplaceTest`)
+- [x] (4) Delete data with a kill task (`IngestionSmokeTest.test_runIndexTask_andKillData`,
+  `OverlordClientTest.test_runKillTask`). Done (both): `datasource-actions.spec.ts`, run by
+  `indexing/DatasourceActionsWebConsoleTest`
 - [ ] (5) Retention rules (`query/BroadcastJoinQueryTest`, `server/CoordinatorClientTest`)
 - [ ] Compaction supervisors and cluster compaction config (`compact/CompactionSupervisorTest`)
 - [ ] Compaction to another segment granularity (`CompactionSupervisorTest`, `CompactionTaskTest`)
