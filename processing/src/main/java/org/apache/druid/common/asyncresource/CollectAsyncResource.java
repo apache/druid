@@ -24,6 +24,7 @@ import org.apache.druid.utils.CloseableUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -38,6 +39,12 @@ public class CollectAsyncResource<T> implements AsyncResource<List<T>>
   private final SettableAsyncResource<List<T>> targetResource = new SettableAsyncResource<>();
 
   /**
+   * Whether a source has failed. Only the first failure is reported, since {@link #targetResource} can only be
+   * completed once.
+   */
+  private final AtomicBoolean failed = new AtomicBoolean(false);
+
+  /**
    * Constructor. Can also be created with {@link AsyncResources#collect(List)}.
    */
   CollectAsyncResource(final List<AsyncResource<T>> sourceResources)
@@ -48,7 +55,7 @@ public class CollectAsyncResource<T> implements AsyncResource<List<T>>
       targetResource.set(List.of(), null);
     } else {
       for (final AsyncResource<T> asyncResource : sourceResources) {
-        asyncResource.addReadyCallback(this::onOneSourceReady);
+        asyncResource.addReadyCallback(() -> onOneSourceReady(asyncResource));
       }
     }
   }
@@ -80,9 +87,23 @@ public class CollectAsyncResource<T> implements AsyncResource<List<T>>
     CloseableUtils.closeAndWrapExceptions(closer);
   }
 
-  private void onOneSourceReady()
+  private void onOneSourceReady(final AsyncResource<T> sourceResource)
   {
+    try {
+      sourceResource.get();
+    }
+    catch (Throwable e) {
+      // Fail without waiting for the other sources, but deliberately leave them open: closing them is up to the
+      // caller, via close().
+      if (failed.compareAndSet(false, true)) {
+        targetResource.setException(e);
+      }
+      return;
+    }
+
     if (readyCount.incrementAndGet() == sourceResources.size()) {
+      // Will only enter this block if all source resources succeeded, because a failed resource
+      // does not increment readyCount.
       try {
         final List<T> resources = new ArrayList<>(sourceResources.size());
         for (final AsyncResource<T> asyncResource : sourceResources) {
