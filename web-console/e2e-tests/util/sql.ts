@@ -129,3 +129,19 @@ export async function getSupervisorState(
   );
   return row ? String(row['detailed_state']) : null;
 }
+
+/**
+ * The state of a Dart query (like RUNNING or SUCCESS) in sys.queries, or null when it isn't there (not yet, or not
+ * anymore).
+ */
+export async function getDartQueryState(
+  request: APIRequestContext,
+  sqlQueryId: string,
+): Promise<string | null> {
+  const [row] = await querySql(
+    request,
+    `SELECT "state" FROM sys.queries WHERE "engine" = 'msq-dart' AND "info" LIKE ?`,
+    [`%${sqlQueryId}%`],
+  );
+  return row ? String(row['state']) : null;
+}

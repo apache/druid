@@ -128,8 +128,9 @@ SQL-based ingestion (MSQ) and the Query view:
   `sql-ingestion.spec.ts`, run by `msq/SqlIngestionWebConsoleTest`
 - [ ] Export, `INSERT INTO EXTERN` (`MultiStageQueryTest.testExport`)
 - [ ] SQL ingestion / MSQ `SELECT` from S3 (`s3/ITS3SQLBasedIngestionTest`, `msq/S3ExternQueryTest`)
-- [ ] Dart: running and recent queries, reports, cancel (`msq/EmbeddedDartReportApiTest`): Dart engine, current
-  Dart queries panel
+- [x] Dart: running and recent queries, reports, cancel (`msq/EmbeddedDartReportApiTest`): Dart engine, current
+  Dart queries panel. Done: `dart.spec.ts`, run by `msq/DartWebConsoleTest` (which gives the Broker and Historical
+  the memory Dart needs; the base cluster now keeps Dart reports, as `script/druid build` does)
 - [ ] Query errors: parse, validation, timeout, capacity, resource limits (`query/QueryErrorTest`): error pane
 - [ ] Query blocklist, default query context (`server/EmbeddedBrokerDynamicConfigTest`): Broker dynamic config dialog
 

@@ -97,6 +97,9 @@ public abstract class WebConsoleTestBase extends EmbeddedClusterTestBase
     // SleepModule has the sleep() function, for queries that run long enough to be canceled
     cluster.addExtensions(SketchModule.class, HllSketchModule.class, DoublesSketchModule.class, SleepModule.class)
            .addCommonProperty("druid.msq.dart.enabled", "true")
+           // Keep the reports of finished Dart queries, for the console to show them (as script/druid build does)
+           .addCommonProperty("druid.msq.dart.controller.maxRetainedReportCount", "100")
+           .addCommonProperty("druid.msq.dart.controller.maxRetainedReportDuration", "PT3600S")
            .addCommonProperty("druid.sql.planner.enableSysQueriesTable", "true")
            // The console waits for the cluster state to change, so make it change quickly
            .addCommonProperty("druid.manager.segments.pollDuration", "PT1S")

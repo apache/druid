@@ -18,15 +18,37 @@
 
 import type { Locator, Page, Request } from '@playwright/test';
 
-import { clickButton, openView, setQueryInput } from '../../util/playwright';
+import { expect } from '../../util/fixtures';
+import { clickButton, clickMenuItem, openView, setQueryInput } from '../../util/playwright';
 import { showStep } from '../../util/steps';
 import { extractTable } from '../../util/table';
+
+/**
+ * How to run a query.
+ */
+export interface QueryOptions {
+  /** The engine to pick in the view's engine menu, by its name there (like "SQL (Dart)"), rather than "Auto" */
+  readonly engine?: string;
+}
+
+/**
+ * What the view sent to run a query.
+ */
+export interface SubmittedQuery {
+  /** The engine of the query's context, which the view sets for the engine picked (like "msq-dart") */
+  readonly engine?: string;
+  /** The ID that the view gives the query (SQL queries, natively or with Dart), to cancel it */
+  readonly sqlQueryId?: string;
+}
 
 /**
  * Represents the Query view (the workbench).
  */
 export class WorkbenchOverview {
   private readonly page: Page;
+
+  /** What the view sent to run the last query run (or started) */
+  lastSubmittedQuery: SubmittedQuery | undefined;
 
   constructor(page: Page) {
     this.page = page;
@@ -35,9 +57,9 @@ export class WorkbenchOverview {
   /**
    * Runs a query and returns its results (as text, one array of cells per row). Throws if the query fails.
    */
-  async runQuery(query: string): Promise<string[][]> {
+  async runQuery(query: string, options: QueryOptions = {}): Promise<string[][]> {
     const results = this.page.locator('.result-table-pane');
-    await this.run(query, results);
+    await this.run(query, options, results);
     await showStep(this.page, 'Query view: the query results');
     return await extractTable(results);
   }
@@ -46,17 +68,38 @@ export class WorkbenchOverview {
    * Runs an ingestion query (INSERT or REPLACE, run as an MSQ task) and returns what the view says when it is done
    * (like "39,244 rows inserted into ..."). Throws if the query fails.
    */
-  async runIngestQuery(query: string): Promise<string> {
+  async runIngestQuery(query: string, options: QueryOptions = {}): Promise<string> {
     const ingestSuccess = this.page.locator('.ingest-success-pane');
-    await this.run(query, ingestSuccess);
+    await this.run(query, options, ingestSuccess);
     await showStep(this.page, 'Query view: the data ingested');
     return await ingestSuccess.innerText();
   }
 
-  private async run(query: string, done: Locator): Promise<void> {
+  /**
+   * Starts a query, without waiting for it to finish, and returns what the view sent to run it.
+   */
+  async startQuery(query: string, options: QueryOptions = {}): Promise<SubmittedQuery> {
+    await this.submit(query, options);
+    await showStep(this.page, 'Query view: the query running');
+    return this.lastSubmittedQuery!;
+  }
+
+  private async run(query: string, options: QueryOptions, done: Locator): Promise<void> {
+    await this.submit(query, options);
+
+    const error = this.page.locator('.execution-error-pane');
+    await done.or(error).waitFor({ timeout: QUERY_TIMEOUT });
+    if (await error.isVisible()) {
+      await showStep(this.page, 'Query view: the query failed');
+      throw new Error(`Query failed: ${await error.innerText()}`);
+    }
+  }
+
+  private async submit(query: string, options: QueryOptions): Promise<void> {
     await openView(this.page, 'workbench');
 
     await setQueryInput(this.page, query);
+    if (options.engine) await this.pickEngine(options.engine);
     // The view shows the result of the last query until it sends the new one (even after a reload)
     const queryRequest = this.page.waitForRequest(request => isQueryRequest(request, query), {
       timeout: QUERY_TIMEOUT,
@@ -71,14 +114,19 @@ export class WorkbenchOverview {
     if (await capacityAlert.isVisible()) {
       await runAnyway(this.page, capacityAlert);
     }
-    await queryRequest;
 
-    const error = this.page.locator('.execution-error-pane');
-    await done.or(error).waitFor({ timeout: QUERY_TIMEOUT });
-    if (await error.isVisible()) {
-      await showStep(this.page, 'Query view: the query failed');
-      throw new Error(`Query failed: ${await error.innerText()}`);
-    }
+    const context = (await queryRequest).postDataJSON()?.context ?? {};
+    this.lastSubmittedQuery = { engine: context.engine, sqlQueryId: context.sqlQueryId };
+  }
+
+  private async pickEngine(engine: string): Promise<void> {
+    const engineButton = this.page.getByRole('button', { name: /^Engine: / });
+    await engineButton.click();
+    await clickMenuItem(this.page, engine);
+    // The menu stays open (to pick other settings in it)
+    await this.page.keyboard.press('Escape');
+    await expect(engineButton).toHaveText(`Engine: ${engine}`);
+    await showStep(this.page, `Query view: engine ${engine} picked`);
   }
 
   /**
