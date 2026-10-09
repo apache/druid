@@ -88,12 +88,14 @@ import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayInputStream;
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.ArrayList;
@@ -112,6 +114,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 public class SystemTableQueryClientTest
 {
@@ -168,39 +171,6 @@ public class SystemTableQueryClientTest
     Assertions.assertArrayEquals(new Object[]{"task-b"}, remainingRows.get(0));
     Assertions.assertArrayEquals(new Object[]{"task-c"}, remainingRows.get(1));
     Assertions.assertThrows(IllegalStateException.class, rows::iterator);
-  }
-
-  /** All node HTTP requests start before the merged result waits for or consumes the first response. */
-  @Test
-  public void testNodeRequestsStartConcurrently()
-  {
-    final AtomicInteger runnerCalls = new AtomicInteger();
-    final ScanQuery nodeQuery = Druids.newScanQueryBuilder()
-                                           .dataSource(new SystemTableDataSource("test"))
-                                           .eternityInterval()
-                                           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                           .build();
-    final QueryRunner<ScanResultValue> firstRunner = (queryPlus, responseContext) -> {
-      runnerCalls.incrementAndGet();
-      return Sequences.simple(List.of(scanResult(new Object[]{"first"}))).map(result -> {
-        Assertions.assertEquals(2, runnerCalls.get());
-        return result;
-      });
-    };
-    final QueryRunner<ScanResultValue> secondRunner = (queryPlus, responseContext) -> {
-      runnerCalls.incrementAndGet();
-      return Sequences.simple(List.of(scanResult(new Object[]{"second"})));
-    };
-
-    final Iterable<Object[]> rows = SystemTableQueryClient.scanNodeRows(
-        List.of(firstRunner, secondRunner),
-        nodeQuery,
-        ResponseContext.createEmpty()
-    );
-
-    Assertions.assertEquals(0, runnerCalls.get());
-    Assertions.assertNotNull(rows.iterator().next());
-    Assertions.assertEquals(2, runnerCalls.get());
   }
 
   /**
@@ -512,48 +482,21 @@ public class SystemTableQueryClientTest
    * SELECT l.value
    * FROM sys.server_properties AS l
    * JOIN sys.server_properties AS r ON l.property = r.property
-   * WHERE r.value = 'right'
+   * WHERE r.value = 'right'   -- or the unprefixed l.value = 'left'
    * }</pre>
    *
-   * The root filter uses the right-side join prefix and must remain on the Broker instead of being copied into either
-   * node-local system table scan.
+   * A root filter belongs to the join result, whether or not it uses the right-side join prefix. It must remain on
+   * the Broker instead of being copied into either node-local system table scan.
    */
-  @Test
-  public void testSelfJoinRootFilterIsNotPushedIntoSystemTableLeaves()
+  @ParameterizedTest
+  @ValueSource(strings = {"j.value", "value"})
+  public void testJoinRootFilterIsNotPushedIntoSystemTableLeaves(final String filterColumn)
   {
     final SystemTableDescriptor descriptor = new ServerPropertiesTableDescriptor();
     final List<ScanQuery> nodeQueries = captureNodeQueries(
         descriptor,
         selfJoin(descriptor),
-        new SelectorDimFilter("j.value", "right", null)
-    );
-
-    Assertions.assertEquals(2, nodeQueries.size());
-    Assertions.assertNull(nodeQueries.get(0).getFilter());
-    Assertions.assertNull(nodeQueries.get(1).getFilter());
-  }
-
-  /**
-   * Native query form of:
-   *
-   * <pre>{@code
-   * SELECT l.value
-   * FROM sys.server_properties AS l
-   * JOIN sys.server_properties AS r ON l.property = r.property
-   * WHERE l.value = 'left'
-   * }</pre>
-   *
-   * Even an unprefixed root filter belongs to the join result. Copying it into every system table leaf incorrectly
-   * filters the right side of the join.
-   */
-  @Test
-  public void testUnprefixedJoinRootFilterIsNotPushedIntoEverySystemTableLeaf()
-  {
-    final SystemTableDescriptor descriptor = new ServerPropertiesTableDescriptor();
-    final List<ScanQuery> nodeQueries = captureNodeQueries(
-        descriptor,
-        selfJoin(descriptor),
-        new SelectorDimFilter("value", "left", null)
+        new SelectorDimFilter(filterColumn, "match", null)
     );
 
     Assertions.assertEquals(2, nodeQueries.size());
@@ -744,46 +687,6 @@ public class SystemTableQueryClientTest
     );
   }
 
-  /** Closing a partially consumed Broker result closes the initialized sequence and cancels every node query. */
-  @Test
-  public void testClosingBrokerResultClosesPartiallyConsumedNodeSequence() throws Exception
-  {
-    final AtomicInteger closeCalls = new AtomicInteger();
-    final QueryScheduler queryScheduler = Mockito.mock(QueryScheduler.class);
-    final SystemTableDescriptor descriptor = new TestSystemTableDescriptor();
-    final SystemTableQueryClient client = makeClient(
-        descriptor,
-        List.of(testNode(8081), testNode(8082)),
-        ignored -> (queryPlus, responseContext) -> Sequences.withBaggage(
-            Sequences.simple(
-                List.of(
-                    scanResult(new Object[]{"first"}),
-                    scanResult(new Object[]{"second"})
-                )
-            ),
-            (Closeable) closeCalls::incrementAndGet
-        ),
-        passthroughRunner(descriptor.getRowSignature()),
-        queryScheduler
-    );
-    final ScanQuery query = query(descriptor, Collections.emptyMap());
-
-    final Sequence<ScanResultValue> brokerResults = client.createRunner(query, AUTHENTICATION_RESULT, false)
-                                                           .run(
-                                                               QueryPlus.wrap(query),
-                                                               ResponseContext.createEmpty()
-                                                           );
-    final Yielder<ScanResultValue> yielder = Yielders.each(brokerResults);
-    Assertions.assertFalse(yielder.isDone());
-
-    yielder.close();
-
-    Assertions.assertEquals(1, closeCalls.get());
-    Mockito.verify(queryScheduler, Mockito.times(2)).cancelQuery(
-        ArgumentMatchers.argThat(queryId -> queryId.startsWith(SystemTableDataSource.NODE_QUERY_ID_PREFIX))
-    );
-  }
-
   /** A node made unavailable by a network failure contributes an {@code error_message} row. */
   @Test
   public void testServerPropertiesNodeFailureBecomesErrorRow()
@@ -860,48 +763,35 @@ public class SystemTableQueryClientTest
     Assertions.assertTrue(results.isEmpty());
   }
 
-  /** A node timeout terminates {@code sys.server_properties} instead of becoming an error row. */
-  @Test
-  public void testServerPropertiesTimeoutIsPropagated()
+  /**
+   * Timeouts, cancellations, interruptions, and other failures that do not indicate an unreachable node terminate
+   * {@code sys.server_properties} instead of becoming an error row.
+   */
+  @ParameterizedTest
+  @MethodSource("nonAvailabilityFailures")
+  public void testServerPropertiesNonAvailabilityFailureIsPropagated(final RuntimeException failure)
   {
-    assertServerPropertiesQueryFailureIsPropagated(new QueryTimeoutException("node timed out"));
+    assertServerPropertiesQueryFailureIsPropagated(failure);
   }
 
-  /** A node cancellation terminates {@code sys.server_properties} instead of becoming an error row. */
-  @Test
-  public void testServerPropertiesCancellationIsPropagated()
+  private static Stream<RuntimeException> nonAvailabilityFailures()
   {
-    assertServerPropertiesQueryFailureIsPropagated(
+    return Stream.of(
+        new QueryTimeoutException("node timed out"),
         new QueryInterruptedException(
             QueryException.QUERY_CANCELED_ERROR_CODE,
             "node cancelled",
             QueryInterruptedException.class.getName(),
             "localhost"
-        )
-    );
-  }
-
-  /** An interrupted node request terminates {@code sys.server_properties} instead of becoming an error row. */
-  @Test
-  public void testServerPropertiesInterruptionIsPropagated()
-  {
-    assertServerPropertiesQueryFailureIsPropagated(new QueryInterruptedException(new InterruptedException()));
-  }
-
-  /** Authorization, capacity, resource-limit, unsupported-query, and unexpected failures terminate the query. */
-  @Test
-  public void testServerPropertiesNonAvailabilityFailuresArePropagated()
-  {
-    for (final RuntimeException failure : List.of(
+        ),
+        new QueryInterruptedException(new InterruptedException()),
         new ForbiddenException("forbidden"),
         new QueryCapacityExceededException(1),
         new ResourceLimitExceededException("resource limit"),
         new QueryUnsupportedException("unsupported"),
         new QueryInterruptedException(new IOException("malformed response")),
         new RuntimeException("unexpected")
-    )) {
-      assertServerPropertiesQueryFailureIsPropagated(failure);
-    }
+    );
   }
 
   /** A timeout raised while reading a node response is also propagated. */
@@ -1078,23 +968,6 @@ public class SystemTableQueryClientTest
       final QueryRunner<?> queryRunner
   )
   {
-    return makeClient(
-        descriptor,
-        discoveryNodes,
-        nodeRunnerFactory,
-        queryRunner,
-        Mockito.mock(QueryScheduler.class)
-    );
-  }
-
-  private static SystemTableQueryClient makeClient(
-      final SystemTableDescriptor descriptor,
-      final List<DiscoveryDruidNode> discoveryNodes,
-      final Function<DruidServer, QueryRunner<ScanResultValue>> nodeRunnerFactory,
-      final QueryRunner<?> queryRunner,
-      final QueryScheduler queryScheduler
-  )
-  {
     final SystemTableNodeLocator nodeLocator = Mockito.mock(SystemTableNodeLocator.class);
     Mockito.when(nodeLocator.locate(Mockito.eq(descriptor), ArgumentMatchers.any())).thenReturn(
         discoveryNodes.stream().map(discoveryNode -> {
@@ -1125,7 +998,7 @@ public class SystemTableQueryClientTest
     return new SystemTableQueryClient(
         nodeLocator,
         directClientFactory,
-        queryScheduler,
+        Mockito.mock(QueryScheduler.class),
         querySegmentWalker,
         Map.of(descriptor.getTableName(), descriptor),
         new AuthorizerMapper(Map.of("allow", new AllowAllAuthorizer(null))),

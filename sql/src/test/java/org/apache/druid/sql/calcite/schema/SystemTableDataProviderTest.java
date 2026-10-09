@@ -29,8 +29,6 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 public class SystemTableDataProviderTest
 {
   @Test
@@ -87,18 +85,6 @@ public class SystemTableDataProviderTest
   public void testSystemSchemaRejectsTableWithoutNativeCapability()
   {
     final RelOptTable table = EasyMock.createMock(RelOptTable.class);
-    EasyMock.expect(table.unwrap(NativeSystemTable.class)).andReturn(null).once();
-    EasyMock.replay(table);
-
-    Assertions.assertNull(SystemSchema.getNativeSystemTable(table));
-    EasyMock.verify(table);
-  }
-
-  @Test
-  public void testQualifiedNameAloneDoesNotEnableNativeExecution()
-  {
-    final RelOptTable table = EasyMock.createMock(RelOptTable.class);
-    EasyMock.expect(table.getQualifiedName()).andStubReturn(List.of("sys", "tasks"));
     EasyMock.expect(table.unwrap(NativeSystemTable.class)).andReturn(null).once();
     EasyMock.replay(table);
 

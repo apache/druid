@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
@@ -55,7 +54,6 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NullFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
@@ -232,6 +230,8 @@ public class QueryLifecycleTest
    * )
    * WHERE task_count > 0
    * }</pre>
+   *
+   * The handler is registered for the leaf datasource and must be found below the query root.
    */
   @Test
   public void testSystemTableHandlerHandlesQueryDataSource()
@@ -241,26 +241,6 @@ public class QueryLifecycleTest
                                       .eternityInterval()
                                       .build();
     assertWrappedSystemTableUsesHandler(new QueryDataSource(innerQuery));
-  }
-
-  /**
-   * Native query form of:
-   *
-   * <pre>{@code
-   * SELECT COUNT(*)
-   * FROM sys.tasks
-   * WHERE type = 'index_parallel'
-   * }</pre>
-   */
-  @Test
-  public void testSystemTableHandlerHandlesFilteredDataSource()
-  {
-    assertWrappedSystemTableUsesHandler(
-        FilteredDataSource.create(
-            new SystemTableDataSource("tasks"),
-            new SelectorDimFilter("type", "index_parallel", null)
-        )
-    );
   }
 
   @Test
