@@ -22,9 +22,11 @@ package org.apache.druid.storage.s3;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 class CustomServerSideEncryption implements ServerSideEncryption
 {
@@ -72,5 +74,21 @@ class CustomServerSideEncryption implements ServerSideEncryption
         .sseCustomerKey(base64EncodedKey)
         .copySourceSSECustomerAlgorithm(ALGORITHM)
         .copySourceSSECustomerKey(base64EncodedKey);
+  }
+
+  @Override
+  public CreateMultipartUploadRequest.Builder decorate(CreateMultipartUploadRequest.Builder builder)
+  {
+    return builder
+        .sseCustomerAlgorithm(ALGORITHM)
+        .sseCustomerKey(base64EncodedKey);
+  }
+
+  @Override
+  public UploadPartRequest.Builder decorate(UploadPartRequest.Builder builder)
+  {
+    return builder
+        .sseCustomerAlgorithm(ALGORITHM)
+        .sseCustomerKey(base64EncodedKey);
   }
 }
