@@ -34,10 +34,20 @@ import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.overlord.ShareInboxBatch;
+import org.apache.druid.indexing.overlord.ShareInboxClaimRequest;
+import org.apache.druid.indexing.overlord.ShareInboxClaimResult;
+import org.apache.druid.indexing.overlord.ShareInboxCompletionRequest;
+import org.apache.druid.indexing.overlord.ShareInboxManifest;
+import org.apache.druid.indexing.overlord.ShareInboxRenewRequest;
+import org.apache.druid.indexing.overlord.ShareInboxRenewResult;
+import org.apache.druid.indexing.overlord.ShareInboxStageResult;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
@@ -103,6 +113,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -156,6 +170,8 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     derbyConnector.createUpgradeSegmentsTable();
     derbyConnector.createPendingSegmentsTable();
     derbyConnector.createIndexingStatesTable();
+    derbyConnector.createShareReceiptsTable();
+    derbyConnector.createShareInboxTable();
     metadataUpdateCounter.set(0);
     segmentTableDropUpdateCounter.set(0);
 
@@ -240,6 +256,366 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     };
   }
 
+  @Test
+  public void testStageShareInboxBatchIsIdempotentAndExact()
+  {
+    final ShareInboxBatch firstBatch = shareInboxBatch("manifest-1", "fingerprint", List.of(1L, 3L, 4_097L));
+
+    final ShareInboxStageResult first = coordinator.stageShareInboxBatch(firstBatch);
+    final ShareInboxStageResult retry = coordinator.stageShareInboxBatch(firstBatch);
+    final ShareInboxStageResult overlap = coordinator.stageShareInboxBatch(
+        shareInboxBatch("manifest-2", "fingerprint", List.of(3L, 4L, 4_097L, 5_000L))
+    );
+
+    Assertions.assertEquals(ShareInboxStageResult.Status.STAGED, first.getStatus());
+    Assertions.assertEquals(List.of(1L, 3L, 4_097L), first.getAdmittedOffsets());
+    Assertions.assertEquals(ShareInboxStageResult.Status.ALREADY_STAGED, retry.getStatus());
+    Assertions.assertTrue(retry.getAdmittedOffsets().isEmpty());
+    Assertions.assertEquals(ShareInboxStageResult.Status.STAGED, overlap.getStatus());
+    Assertions.assertEquals(List.of(4L, 5_000L), overlap.getAdmittedOffsets());
+
+    final MetadataStorageTablesConfig tables = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    derbyConnector.getDBI().withHandle(handle -> {
+      final int manifestCount = handle.createQuery(
+          StringUtils.format("SELECT COUNT(*) FROM %s", tables.getShareInboxTable())
+      ).mapTo(Integer.class).first();
+      final int receiptCount = handle.createQuery(
+          StringUtils.format("SELECT COUNT(*) FROM %s", tables.getShareReceiptsTable())
+      ).mapTo(Integer.class).first();
+      final List<byte[]> selectedOffsets = handle.createQuery(
+          StringUtils.format(
+              "SELECT selected_offsets_bitmap FROM %s ORDER BY manifest_id",
+              tables.getShareInboxTable()
+          )
+      ).map(org.skife.jdbi.v2.util.ByteArrayMapper.FIRST).list();
+
+      Assertions.assertEquals(2, manifestCount);
+      Assertions.assertEquals(3, receiptCount);
+      Assertions.assertEquals(List.of(1L, 3L, 4_097L), ShareInboxOffsetCodec.decode(selectedOffsets.get(0)));
+      Assertions.assertEquals(List.of(4L, 5_000L), ShareInboxOffsetCodec.decode(selectedOffsets.get(1)));
+      return null;
+    });
+  }
+
+  @Test
+  public void testStageShareInboxBatchRejectsFingerprintChange()
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint-1", List.of(1L)));
+
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> coordinator.stageShareInboxBatch(
+            shareInboxBatch("manifest-2", "fingerprint-2", List.of(2L))
+        )
+    );
+
+    Assertions.assertTrue(exception.getMessage().contains("different spec fingerprint"));
+  }
+
+  @Test
+  public void testStageShareInboxBatchRejectsReceiptPageSizeChange()
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint", List.of(1L)));
+    final ShareInboxBatch changedPageSize = new ShareInboxBatch(
+        "datasource",
+        "inbox",
+        "group",
+        "cluster",
+        "topic-id",
+        "topic",
+        0,
+        "fingerprint",
+        "manifest-2",
+        "path/manifest-2",
+        "hash-manifest-2",
+        100,
+        List.of(2L),
+        8_192
+    );
+
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> coordinator.stageShareInboxBatch(changedPageSize)
+    );
+
+    Assertions.assertTrue(exception.getMessage().contains("different receipt page size"));
+  }
+
+  @Test
+  public void testConcurrentShareInboxBatchesPreserveDisjointOffsets() throws Exception
+  {
+    final CountDownLatch ready = new CountDownLatch(2);
+    final CountDownLatch start = new CountDownLatch(1);
+    final ExecutorService executor = Execs.multiThreaded(2, "share-inbox-stage-test-%d");
+    try {
+      final Future<ShareInboxStageResult> first = executor.submit(
+          () -> stageShareInboxBatchAfterLatch(ready, start, "manifest-1", List.of(1L))
+      );
+      final Future<ShareInboxStageResult> second = executor.submit(
+          () -> stageShareInboxBatchAfterLatch(ready, start, "manifest-2", List.of(2L))
+      );
+      Assertions.assertTrue(ready.await(10, TimeUnit.SECONDS));
+      start.countDown();
+
+      Assertions.assertEquals(ShareInboxStageResult.Status.STAGED, first.get(10, TimeUnit.SECONDS).getStatus());
+      Assertions.assertEquals(ShareInboxStageResult.Status.STAGED, second.get(10, TimeUnit.SECONDS).getStatus());
+    }
+    finally {
+      executor.shutdownNow();
+    }
+
+    final MetadataStorageTablesConfig tables = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    derbyConnector.getDBI().withHandle(handle -> {
+      final byte[] receivedOffsets = handle.createQuery(
+          StringUtils.format(
+              "SELECT received_bitmap FROM %s WHERE partition_id = 0",
+              tables.getShareReceiptsTable()
+          )
+      ).map(org.skife.jdbi.v2.util.ByteArrayMapper.FIRST).first();
+      final int manifestCount = handle.createQuery(
+          StringUtils.format("SELECT COUNT(*) FROM %s", tables.getShareInboxTable())
+      ).mapTo(Integer.class).first();
+
+      Assertions.assertEquals(List.of(1L, 2L), decodeReceiptPage(receivedOffsets, 0, 4_096));
+      Assertions.assertEquals(2, manifestCount);
+      return null;
+    });
+  }
+
+  @Test
+  public void testShareInboxClaimRenewAndExpiredTakeover()
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint", List.of(1L, 2L)));
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-2", "fingerprint", List.of(3L, 4L)));
+
+    final ShareInboxClaimResult firstClaim = coordinator.claimShareInboxManifests(
+        shareInboxClaimRequest("owner-1", 100)
+    );
+    Assertions.assertEquals(1, firstClaim.getManifests().size());
+    final ShareInboxManifest firstManifest = firstClaim.getManifests().get(0);
+    Assertions.assertEquals("manifest-1", firstManifest.getManifestId());
+    Assertions.assertEquals(List.of(1L, 2L), firstManifest.getSelectedOffsets());
+    Assertions.assertEquals("owner-1", firstManifest.getClaimOwner());
+    Assertions.assertEquals(1, firstManifest.getClaimEpoch());
+    Assertions.assertEquals(1, firstManifest.getProcessingAttempts());
+
+    final ShareInboxClaimResult secondClaim = coordinator.claimShareInboxManifests(
+        shareInboxClaimRequest("owner-2", 100)
+    );
+    Assertions.assertEquals(List.of("manifest-2"), manifestIds(secondClaim));
+
+    final ShareInboxRenewResult renewed = coordinator.renewShareInboxClaims(
+        shareInboxRenewRequest("owner-1", Map.of("manifest-1", 1L))
+    );
+    Assertions.assertEquals(List.of("manifest-1"), renewed.getRenewedManifestIds());
+    Assertions.assertTrue(
+        coordinator.renewShareInboxClaims(
+            shareInboxRenewRequest("owner-1", Map.of("manifest-1", 2L))
+        ).getRenewedManifestIds().isEmpty()
+    );
+
+    final MetadataStorageTablesConfig tables = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    derbyConnector.getDBI().withHandle(handle -> {
+      handle.createStatement(
+          StringUtils.format(
+              "UPDATE %s SET claim_expires_at = :expired WHERE manifest_id = 'manifest-1'",
+              tables.getShareInboxTable()
+          )
+      ).bind("expired", "2000-01-01T00:00:00.000Z").execute();
+      return null;
+    });
+
+    final ShareInboxClaimResult takeover = coordinator.claimShareInboxManifests(
+        shareInboxClaimRequest("owner-2", 100)
+    );
+    Assertions.assertEquals(1, takeover.getManifests().size());
+    Assertions.assertEquals("manifest-1", takeover.getManifests().get(0).getManifestId());
+    Assertions.assertEquals("owner-2", takeover.getManifests().get(0).getClaimOwner());
+    Assertions.assertEquals(2, takeover.getManifests().get(0).getClaimEpoch());
+    Assertions.assertEquals(2, takeover.getManifests().get(0).getProcessingAttempts());
+    Assertions.assertTrue(
+        coordinator.renewShareInboxClaims(
+            shareInboxRenewRequest("owner-1", Map.of("manifest-1", 1L))
+        ).getRenewedManifestIds().isEmpty()
+    );
+  }
+
+  @Test
+  public void testShareInboxCompletionPublishesSegmentsAndIsIdempotent()
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint", List.of(1L, 2L)));
+    final ShareInboxManifest manifest = coordinator.claimShareInboxManifests(
+        shareInboxClaimRequest("task-1", 1_000)
+    ).getManifests().get(0);
+    final ShareInboxCompletionRequest request = shareInboxCompletionRequest(manifest, "completion-1");
+    final DataSegment segment = shareInboxSegment("segment-version");
+
+    final SegmentPublishResult first = coordinator.commitAppendSegmentsAndShareInbox(
+        Set.of(segment),
+        Map.of(),
+        "task-allocator",
+        null,
+        request
+    );
+    final SegmentPublishResult retry = coordinator.commitAppendSegmentsAndShareInbox(
+        Set.of(segment),
+        Map.of(),
+        "task-allocator",
+        null,
+        request
+    );
+
+    Assertions.assertTrue(first.isSuccess());
+    Assertions.assertEquals(Set.of(segment), first.getSegments());
+    Assertions.assertTrue(retry.isSuccess());
+    Assertions.assertTrue(retry.getSegments().isEmpty());
+    final MetadataStorageTablesConfig tables = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    derbyConnector.getDBI().withHandle(handle -> {
+      Assertions.assertEquals(
+          1,
+          handle.createQuery(
+              StringUtils.format("SELECT COUNT(*) FROM %s WHERE id = :id", tables.getSegmentsTable())
+          ).bind("id", segment.getId().toString()).mapTo(Integer.class).first()
+      );
+      final List<String> completion = handle.createQuery(
+          StringUtils.format(
+              "SELECT state, completion_id, completed_by_task FROM %s WHERE manifest_id = 'manifest-1'",
+              tables.getShareInboxTable()
+          )
+      ).map(
+          (index, resultSet, context) -> List.of(
+              resultSet.getString("state"),
+              resultSet.getString("completion_id"),
+              resultSet.getString("completed_by_task")
+          )
+      ).first();
+      Assertions.assertEquals(List.of("COMPLETE", "completion-1", "task-1"), completion);
+      return null;
+    });
+  }
+
+  @Test
+  public void testShareInboxCompletionSupportsZeroRowManifest()
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint", List.of(1L)));
+    final ShareInboxManifest manifest = coordinator.claimShareInboxManifests(
+        shareInboxClaimRequest("task-1", 1_000)
+    ).getManifests().get(0);
+
+    final SegmentPublishResult result = coordinator.commitAppendSegmentsAndShareInbox(
+        Set.of(),
+        Map.of(),
+        "task-allocator",
+        null,
+        shareInboxCompletionRequest(manifest, "completion-empty")
+    );
+
+    Assertions.assertTrue(result.isSuccess());
+    Assertions.assertTrue(result.getSegments().isEmpty());
+    Assertions.assertEquals("COMPLETE", shareInboxState("manifest-1"));
+  }
+
+  @Test
+  public void testStaleShareInboxClaimCannotPublishSegment()
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint", List.of(1L)));
+    final ShareInboxManifest manifest = coordinator.claimShareInboxManifests(
+        shareInboxClaimRequest("task-1", 1_000)
+    ).getManifests().get(0);
+    final ShareInboxCompletionRequest staleRequest = new ShareInboxCompletionRequest(
+        "datasource",
+        "inbox",
+        "fingerprint",
+        "task-1",
+        Map.of(manifest.getManifestId(), manifest.getClaimEpoch() + 1),
+        "completion-stale"
+    );
+    final DataSegment segment = shareInboxSegment("stale-version");
+
+    final SegmentPublishResult result = coordinator.commitAppendSegmentsAndShareInbox(
+        Set.of(segment),
+        Map.of(),
+        "task-allocator",
+        null,
+        staleRequest
+    );
+
+    Assertions.assertFalse(result.isSuccess());
+    Assertions.assertNull(coordinator.retrieveSegmentForId(segment.getId()));
+    Assertions.assertEquals("CLAIMED", shareInboxState("manifest-1"));
+  }
+
+  @Test
+  public void testShareInboxClaimRejectsFingerprintChange()
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint", List.of(1L)));
+    final ShareInboxClaimRequest request = new ShareInboxClaimRequest(
+        "datasource",
+        "inbox",
+        "different-fingerprint",
+        "owner",
+        10,
+        10,
+        1_000,
+        60_000
+    );
+
+    Assertions.assertThrows(DruidException.class, () -> coordinator.claimShareInboxManifests(request));
+  }
+
+  @Test
+  public void testShareInboxGenerationRejectsFingerprintChangeAcrossTopics()
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint", List.of(1L)));
+    final ShareInboxBatch differentTopic = new ShareInboxBatch(
+        "datasource",
+        "inbox",
+        "group",
+        "cluster",
+        "different-topic-id",
+        "different-topic",
+        0,
+        "different-fingerprint",
+        "manifest-2",
+        "path/manifest-2",
+        "hash-manifest-2",
+        100,
+        List.of(1L),
+        4_096
+    );
+
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> coordinator.stageShareInboxBatch(differentTopic)
+    );
+  }
+
+  @Test
+  public void testConcurrentShareInboxClaimsHaveOneWinner() throws Exception
+  {
+    coordinator.stageShareInboxBatch(shareInboxBatch("manifest-1", "fingerprint", List.of(1L)));
+    final CountDownLatch ready = new CountDownLatch(2);
+    final CountDownLatch start = new CountDownLatch(1);
+    final ExecutorService executor = Execs.multiThreaded(2, "share-inbox-completion-test-%d");
+    try {
+      final Future<ShareInboxClaimResult> first = executor.submit(
+          () -> claimShareInboxAfterLatch(ready, start, "owner-1")
+      );
+      final Future<ShareInboxClaimResult> second = executor.submit(
+          () -> claimShareInboxAfterLatch(ready, start, "owner-2")
+      );
+      Assertions.assertTrue(ready.await(10, TimeUnit.SECONDS));
+      start.countDown();
+
+      final int claimed = first.get(10, TimeUnit.SECONDS).getManifests().size()
+                          + second.get(10, TimeUnit.SECONDS).getManifests().size();
+      Assertions.assertEquals(1, claimed);
+    }
+    finally {
+      executor.shutdownNow();
+    }
+  }
+
   @AfterEach
   public void tearDown()
   {
@@ -254,7 +630,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       cachePollExecutor.finishNextPendingTasks(2);
     }
   }
-  
+
   private boolean isCacheEnabled()
   {
     return cacheMode != SegmentMetadataCache.UsageMode.NEVER;
@@ -4847,6 +5223,135 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
                       .shardSpec(pendingSegment.getShardSpec())
                       .loadSpec(Map.of(id.toString(), id.toString()))
                       .build();
+  }
+
+  private static ShareInboxBatch shareInboxBatch(String manifestId, String fingerprint, List<Long> offsets)
+  {
+    return new ShareInboxBatch(
+        "datasource",
+        "inbox",
+        "group",
+        "cluster",
+        "topic-id",
+        "topic",
+        0,
+        fingerprint,
+        manifestId,
+        "path/" + manifestId,
+        "hash-" + manifestId,
+        100,
+        offsets,
+        4_096
+    );
+  }
+
+  private static ShareInboxClaimRequest shareInboxClaimRequest(String owner, long maxBytes)
+  {
+    return new ShareInboxClaimRequest(
+        "datasource",
+        "inbox",
+        "fingerprint",
+        owner,
+        10,
+        10,
+        maxBytes,
+        60_000
+    );
+  }
+
+  private static ShareInboxRenewRequest shareInboxRenewRequest(String owner, Map<String, Long> claims)
+  {
+    return new ShareInboxRenewRequest(
+        "datasource",
+        "inbox",
+        "fingerprint",
+        owner,
+        claims,
+        60_000
+    );
+  }
+
+  private static ShareInboxCompletionRequest shareInboxCompletionRequest(
+      ShareInboxManifest manifest,
+      String completionId
+  )
+  {
+    return new ShareInboxCompletionRequest(
+        manifest.getDataSource(),
+        manifest.getInboxId(),
+        manifest.getSpecFingerprint(),
+        manifest.getClaimOwner(),
+        Map.of(manifest.getManifestId(), manifest.getClaimEpoch()),
+        completionId
+    );
+  }
+
+  private static DataSegment shareInboxSegment(String version)
+  {
+    return new DataSegment(
+        "datasource",
+        Intervals.of("2026-01-01/2026-01-02"),
+        version,
+        Map.of(),
+        List.of("dim"),
+        List.of("metric"),
+        new LinearShardSpec(0),
+        9,
+        100
+    );
+  }
+
+  private String shareInboxState(String manifestId)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getShareInboxTable();
+    return derbyConnector.getDBI().withHandle(
+        handle -> handle.createQuery(
+            StringUtils.format("SELECT state FROM %s WHERE manifest_id = :manifestId", table)
+        ).bind("manifestId", manifestId).mapTo(String.class).first()
+    );
+  }
+
+  private static List<String> manifestIds(ShareInboxClaimResult result)
+  {
+    return result.getManifests().stream().map(ShareInboxManifest::getManifestId).toList();
+  }
+
+  private ShareInboxStageResult stageShareInboxBatchAfterLatch(
+      CountDownLatch ready,
+      CountDownLatch start,
+      String manifestId,
+      List<Long> offsets
+  ) throws InterruptedException
+  {
+    ready.countDown();
+    if (!start.await(10, TimeUnit.SECONDS)) {
+      throw new ISE("Timed out waiting to stage share inbox batch");
+    }
+    return coordinator.stageShareInboxBatch(shareInboxBatch(manifestId, "fingerprint", offsets));
+  }
+
+  private ShareInboxClaimResult claimShareInboxAfterLatch(
+      CountDownLatch ready,
+      CountDownLatch start,
+      String owner
+  ) throws InterruptedException
+  {
+    ready.countDown();
+    if (!start.await(10, TimeUnit.SECONDS)) {
+      throw new ISE("Timed out waiting to claim share inbox batch");
+    }
+    return coordinator.claimShareInboxManifests(shareInboxClaimRequest(owner, 100));
+  }
+
+  private static List<Long> decodeReceiptPage(byte[] bitmap, long pageStart, int pageSize)
+  {
+    final List<Long> offsets = new ArrayList<>();
+    for (int bit = 0; bit < pageSize; bit++) {
+      if (ShareInboxOffsetCodec.get(bitmap, bit)) {
+        offsets.add(pageStart + bit);
+      }
+    }
+    return offsets;
   }
 
   private void verifyIntervalHasUsedSegments(

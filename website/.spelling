@@ -2675,6 +2675,15 @@ nginx
 NIO
 checksum
 
+- ../docs/ingestion/kafka-share-group-ingestion.md
+KIP
+KIP-932
+appenderator
+ACK
+deduplicate
+checksum
+unstaged
+
 - ../docs/development/extensions-contrib/druid-opa-authorizer.md
 Rego
 alice
