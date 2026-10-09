@@ -40,6 +40,7 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   private final Meter processedWithError;
   private final Meter unparseable;
   private final Meter[] thrownAwayByReason = new Meter[InputRowFilterResult.numValues()];
+  private final Meter filtered;
 
   public DropwizardRowIngestionMeters()
   {
@@ -51,6 +52,7 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
     for (InputRowFilterResult reason : InputRowFilterResult.values()) {
       this.thrownAwayByReason[reason.ordinal()] = metricRegistry.meter(THROWN_AWAY + "_" + reason.name());
     }
+    this.filtered = metricRegistry.meter(FILTERED);
   }
 
   @Override
@@ -131,6 +133,18 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
   }
 
   @Override
+  public long getFiltered()
+  {
+    return filtered.getCount();
+  }
+
+  @Override
+  public void incrementFiltered()
+  {
+    filtered.mark();
+  }
+
+  @Override
   public RowIngestionMetersTotals getTotals()
   {
     return new RowIngestionMetersTotals(
@@ -138,7 +152,8 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
         processedBytes.getCount(),
         processedWithError.getCount(),
         getThrownAwayByReason(),
-        unparseable.getCount()
+        unparseable.getCount(),
+        filtered.getCount()
     );
   }
 
@@ -153,6 +168,7 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
     oneMinute.put(PROCESSED_WITH_ERROR, processedWithError.getOneMinuteRate());
     oneMinute.put(UNPARSEABLE, unparseable.getOneMinuteRate());
     oneMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).mapToDouble(Meter::getOneMinuteRate).sum());
+    oneMinute.put(FILTERED, filtered.getOneMinuteRate());
 
     Map<String, Object> fiveMinute = new HashMap<>();
     fiveMinute.put(PROCESSED, processed.getFiveMinuteRate());
@@ -160,6 +176,7 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
     fiveMinute.put(PROCESSED_WITH_ERROR, processedWithError.getFiveMinuteRate());
     fiveMinute.put(UNPARSEABLE, unparseable.getFiveMinuteRate());
     fiveMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).mapToDouble(Meter::getFiveMinuteRate).sum());
+    fiveMinute.put(FILTERED, filtered.getFiveMinuteRate());
 
     Map<String, Object> fifteenMinute = new HashMap<>();
     fifteenMinute.put(PROCESSED, processed.getFifteenMinuteRate());
@@ -167,6 +184,7 @@ public class DropwizardRowIngestionMeters implements RowIngestionMeters
     fifteenMinute.put(PROCESSED_WITH_ERROR, processedWithError.getFifteenMinuteRate());
     fifteenMinute.put(UNPARSEABLE, unparseable.getFifteenMinuteRate());
     fifteenMinute.put(THROWN_AWAY, Arrays.stream(thrownAwayByReason).mapToDouble(Meter::getFifteenMinuteRate).sum());
+    fifteenMinute.put(FILTERED, filtered.getFifteenMinuteRate());
 
     movingAverages.put(ONE_MINUTE_NAME, oneMinute);
     movingAverages.put(FIVE_MINUTE_NAME, fiveMinute);

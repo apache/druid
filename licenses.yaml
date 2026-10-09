@@ -165,6 +165,27 @@ notice: |
 
 ---
 
+name: Maven Wrapper scripts from Apache Maven Wrapper
+license_category: source
+module: java-core
+license_name: Apache License version 2.0
+version: 3.3.4
+source_paths:
+  - mvnw
+  - mvnw.cmd
+notice: |
+  Apache Maven Wrapper
+  Copyright 2013-2022 The Apache Software Foundation
+
+  This product includes software developed at
+  The Apache Software Foundation (http://www.apache.org/).
+
+  The original idea and initial implementation of the maven-wrapper module is derived
+  from the Gradle Wrapper which was written originally by Hans Dockter and Adam Murdoch.
+  Copyright 2007 the original author or authors.
+
+---
+
 name: LDAP string encoding function from OWASP ESAPI
 license_category: source
 module: extensions/druid-basic-security
@@ -240,7 +261,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.55.1
+version: 2.55.4
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -322,7 +343,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-databind
@@ -375,7 +396,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -425,7 +446,7 @@ name: Caffeine
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.2.4
+version: 3.3.0
 libraries:
   - com.github.ben-manes.caffeine: caffeine
 
@@ -1062,7 +1083,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1997,14 +2018,24 @@ name: Apache HttpCore 5
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.4.3
+version: 5.4.4
 libraries:
   - org.apache.httpcomponents.core5: httpcore5
-  - org.apache.httpcomponents.core5: httpcore5-h2
 notices:
   - httpcore5: |
       Apache HttpComponents Core HTTP/1.1
       Copyright 2005-2021 The Apache Software Foundation
+
+---
+
+name: Apache HttpCore 5 HTTP/2
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 5.4.3
+libraries:
+  - org.apache.httpcomponents.core5: httpcore5-h2
+notices:
   - httpcore5-h2: |
       Apache HttpComponents Core HTTP/2
       Copyright 2005-2021 The Apache Software Foundation
@@ -2730,7 +2761,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -2740,7 +2771,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
@@ -2753,7 +2784,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
 notice: |
@@ -2784,7 +2815,7 @@ name: Jackson
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.22.2
+version: 2.22.3
 libraries:
   - com.fasterxml.jackson.datatype: jackson-datatype-jsr310
 notice: |
@@ -3957,7 +3988,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.73.0
+version: 2.74.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -3967,7 +3998,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.68.0
+version: 2.69.0
 libraries:
   - com.google.api: api-common
 
@@ -4091,7 +4122,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.85.0
+version: 2.86.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4103,7 +4134,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.73.0
+version: 2.74.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4171,7 +4202,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.76.0
+version: 2.77.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4181,7 +4212,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.71.0
+version: 1.72.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4191,7 +4222,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.52.0
+version: 1.53.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4212,7 +4243,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.75.0
+version: 2.76.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
@@ -7243,7 +7274,7 @@ libraries:
 ---
 
 name: Jackson Datatype JDK8
-version: 2.22.2
+version: 2.22.3
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0

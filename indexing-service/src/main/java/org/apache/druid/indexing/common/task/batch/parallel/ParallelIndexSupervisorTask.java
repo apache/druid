@@ -1658,7 +1658,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
           ((Number) buildSegmentsRowStatsMap.get("thrownAway")).longValue(),
           // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
           thrownAwayByReason != null ? CollectionUtils.mapValues(thrownAwayByReason, Integer::longValue) : null,
-          ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue()
+          ((Number) buildSegmentsRowStatsMap.get("unparseable")).longValue(),
+          buildSegmentsRowStatsMap.containsKey("filtered")
+              ? ((Number) buildSegmentsRowStatsMap.get("filtered")).longValue() : 0
       );
     } else {
       // should never happen
