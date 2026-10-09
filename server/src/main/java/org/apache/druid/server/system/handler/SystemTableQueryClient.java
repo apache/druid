@@ -764,9 +764,8 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
         emittedResult = true;
       }
       catch (Exception e) {
-        if (recoverOrThrow(e)) {
-          return next();
-        }
+        // Either the leader retry restarted the sequence or a failure row is pending; next() serves both.
+        recoverOrThrow(e);
         return next();
       }
       try {

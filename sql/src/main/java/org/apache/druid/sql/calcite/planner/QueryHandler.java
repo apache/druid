@@ -61,10 +61,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
@@ -619,11 +617,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
           // Native system tables preserve the traditional row-level authorization model. They therefore have no
           // SQL resource action unless direct system-table authorization is enabled, and must not make this
           // datasource-resource sanity check fail.
-          removeSystemTableNames(
-              // The explain form of an outer query uses a dummy datasource and hides its inner system table.
-              druidRel.toDruidQuery(false).getQuery().getDataSource(),
-              authorizationTrackedDataSourceNames
-          );
+          authorizationTrackedDataSourceNames.removeAll(getNativeSystemTableNames(rootQueryRel.rel));
         }
         Preconditions.checkState(
             readResourceActions.isEmpty() == authorizationTrackedDataSourceNames.isEmpty()
@@ -639,12 +633,28 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     }
   }
 
-  private static void removeSystemTableNames(final DataSource dataSource, final Set<String> dataSourceNames)
+  /**
+   * Returns the datasource names of the native system tables scanned by the logical plan. Reading them from the
+   * logical plan avoids generating the native query just for the authorization sanity check.
+   */
+  private static Set<String> getNativeSystemTableNames(final RelNode relNode)
   {
-    if (dataSource instanceof SystemTableDataSource) {
-      dataSourceNames.removeAll(dataSource.getTableNames());
-    }
-    dataSource.getChildren().forEach(child -> removeSystemTableNames(child, dataSourceNames));
+    final Set<String> names = new HashSet<>();
+    new RelVisitor()
+    {
+      @Override
+      public void visit(RelNode node, int ordinal, RelNode parent)
+      {
+        if (node instanceof TableScan) {
+          final DruidTable nativeTable = SystemSchema.getNativeSystemTable(node.getTable());
+          if (nativeTable != null) {
+            names.addAll(nativeTable.getDataSource().getTableNames());
+          }
+        }
+        super.visit(node, ordinal, parent);
+      }
+    }.go(relNode);
+    return names;
   }
 
   /**
