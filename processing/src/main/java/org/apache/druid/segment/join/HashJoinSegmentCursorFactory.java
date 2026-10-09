@@ -231,7 +231,7 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
         Iterables.concat(
             Sets.difference(
                 ImmutableSet.copyOf(spec.getVirtualColumns().getVirtualColumns()),
-                joinFilterPreAnalysis.getPostJoinVirtualColumns()
+                actualPreAnalysis.getPostJoinVirtualColumns()
             ),
             joinFilterSplit.getPushDownVirtualColumns()
         )
