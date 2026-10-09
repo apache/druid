@@ -686,9 +686,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainReplaceFromExternal() throws IOException
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query = StringUtils.format(
         "EXPLAIN PLAN FOR REPLACE INTO dst OVERWRITE ALL SELECT * FROM %s PARTITIONED BY ALL TIME",
         externSql(externalDataSource)
@@ -764,9 +761,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainReplaceTimeChunksWithPartitioningAndClustering() throws IOException
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
         .dataSource("foo")
@@ -843,9 +837,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainReplaceWithLimitAndClusteredByOrdinals() throws IOException
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     ObjectMapper queryJsonMapper = queryFramework().queryJsonMapper();
     final ScanQuery expectedQuery = newScanQueryBuilder()
         .dataSource("foo")
@@ -933,8 +924,6 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testExplainPlanReplaceWithClusteredByDescThrowsException()
   {
-    skipVectorize();
-
     final String sql = "EXPLAIN PLAN FOR"
                        + " REPLACE INTO dst"
                        + " OVERWRITE WHERE __time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-01-02 00:00:00' "

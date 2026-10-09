@@ -214,11 +214,6 @@ public class QueryTestBuilder
     return this;
   }
 
-  public QueryTestBuilder skipVectorize()
-  {
-    return skipVectorize(true);
-  }
-
   public QueryTestBuilder skipVectorize(boolean skipVectorize)
   {
     this.skipVectorize = skipVectorize;

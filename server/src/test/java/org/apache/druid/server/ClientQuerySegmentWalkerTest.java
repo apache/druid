@@ -861,6 +861,7 @@ public class ClientQuerySegmentWalkerTest
               .dataSource(FOO)
               .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
               .columns("s")
+              .columnTypes(ColumnType.STRING)
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .build()
               .withId(DUMMY_QUERY_ID);
@@ -895,7 +896,7 @@ public class ClientQuerySegmentWalkerTest
                             new Object[]{"y"},
                             new Object[]{"z"}
                         ),
-                        RowSignature.builder().add("s", null).build()
+                        RowSignature.builder().add("s", ColumnType.STRING).build()
                     )
                 )
             )
@@ -942,6 +943,77 @@ public class ClientQuerySegmentWalkerTest
         + "JVM's memory or set the 'maxSubqueryBytes' in the query context to increase the space "
         + "allocated for subqueries to materialize their results. Manually alter the value carefully as it can cause "
         + "the broker to go out of memory."));
+  }
+
+  @Test
+  public void testTimeseriesOnGroupByOnTableSubqueryErrorWithMaxSubqueryBytes()
+  {
+    // Subquery fails while materializing as frames. Its error should surface rather than falling back to rows.
+    final GroupByQuery subquery =
+        GroupByQuery.builder()
+                    .setDataSource(FOO)
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Collections.singletonList(INTERVAL))
+                    .setDimensions(DefaultDimensionSpec.of("s"))
+                    .setContext(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, "force"))
+                    .build();
+
+    final TimeseriesQuery query =
+        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+                                .dataSource(new QueryDataSource(subquery))
+                                .granularity(Granularities.ALL)
+                                .intervals(Intervals.ONLY_ETERNITY)
+                                .aggregators(new CountAggregatorFactory("cnt"))
+                                .context(
+                                    ImmutableMap.of(
+                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "10000",
+                                        QueryContexts.MAX_SUBQUERY_ROWS_KEY, "0"
+                                    )
+                                )
+                                .build()
+                                .withId(DUMMY_QUERY_ID);
+
+    final RuntimeException e = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> testQuery(query, ImmutableList.of(), ImmutableList.of())
+    );
+    Assertions.assertTrue(e.getMessage().contains("Cannot vectorize!"), e.getMessage());
+  }
+
+  @Test
+  public void testTimeseriesOnScanOnTableSubqueryErrorWithMaxSubqueryBytes()
+  {
+    // Subquery fails partway through materializing as frames. Its error should surface rather than being wrapped.
+    final ScanQuery subquery =
+        Druids.newScanQueryBuilder()
+              .dataSource(FOO)
+              .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(INTERVAL)))
+              .columns("s")
+              .columnTypes(ColumnType.STRING)
+              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+              .context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, "force"))
+              .build();
+
+    final TimeseriesQuery query =
+        (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+                                .dataSource(new QueryDataSource(subquery))
+                                .granularity(Granularities.ALL)
+                                .intervals(Intervals.ONLY_ETERNITY)
+                                .aggregators(new CountAggregatorFactory("cnt"))
+                                .context(
+                                    ImmutableMap.of(
+                                        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "10000",
+                                        QueryContexts.MAX_SUBQUERY_ROWS_KEY, "0"
+                                    )
+                                )
+                                .build()
+                                .withId(DUMMY_QUERY_ID);
+
+    final RuntimeException e = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> testQuery(query, ImmutableList.of(), ImmutableList.of())
+    );
+    Assertions.assertTrue(e.getMessage().contains("Cannot vectorize!"), e.getMessage());
   }
 
   @Test

@@ -832,7 +832,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final ServiceEmitter emitter
   )
   {
-    boolean startedAccumulating = false;
     try {
       Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
           query,
@@ -842,13 +841,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
 
       if (!framesOptional.isPresent()) {
-        throw DruidException.defensive("Unable to materialize the results as frames. Defaulting to materializing the results as rows");
+        return Optional.empty();
       }
 
       Sequence<FrameSignaturePair> frames = framesOptional.get();
       List<FrameSignaturePair> frameSignaturePairs = new ArrayList<>();
-
-      startedAccumulating = true;
 
       final int initialSubqueryRows = limitAccumulator.get();
       final long initialSubqueryBytes = memoryLimitAccumulator.get();
@@ -884,24 +881,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       subqueryStatsProvider.incrementSubqueriesFallingBackDueToUnsufficientTypeInfo();
       log.debug(e, "Type info in signature insufficient to materialize rows as frames.");
       return Optional.empty();
-    }
-    catch (ResourceLimitExceededException e) {
-      throw e;
-    }
-    catch (Exception e) {
-      if (startedAccumulating) {
-        // If we have opened the resultSequence, we can't fall back safely as the resultSequence might hold some resources
-        // that we release on exception, and we need to throw the exception to disable the 'maxSubqueryBytes' configuration
-        throw DruidException.defensive()
-                            .build(
-                                e,
-                                "Unable to materialize the results as frames for estimating the byte footprint. "
-                                + "Please disable the 'maxSubqueryBytes' by setting it to 'disabled' in the query context or removing it altogether "
-                                + "from the query context and/or the server config."
-                            );
-      } else {
-        return Optional.empty();
-      }
     }
   }
 

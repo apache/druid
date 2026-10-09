@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -449,6 +450,13 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
             .build()
     );
 
+    if ("force".equals(vectorize)) {
+      // Cannot vectorize native TopN.
+      final Throwable e = Assertions.assertThrows(Throwable.class, seq::toList);
+      Assertions.assertEquals("Cannot vectorize!", Throwables.getRootCause(e).getMessage());
+      return;
+    }
+
     Result<TopNResultValue> result = Iterables.getOnlyElement(seq.toList());
 
     Assertions.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
@@ -540,6 +548,13 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
             .context(ImmutableMap.of("vectorize", vectorize.toString()))
             .build()
     );
+
+    if ("force".equals(vectorize)) {
+      // Cannot vectorize native TopN.
+      final Throwable e = Assertions.assertThrows(Throwable.class, seq::toList);
+      Assertions.assertEquals("Cannot vectorize!", Throwables.getRootCause(e).getMessage());
+      return;
+    }
 
     Result<TopNResultValue> result = Iterables.getOnlyElement(seq.toList());
 

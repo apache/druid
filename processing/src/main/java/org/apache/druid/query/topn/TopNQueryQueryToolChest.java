@@ -560,23 +560,26 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   {
     final RowSignature rowSignature = query.getResultRowSignature(query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
 
+    RowSignature modifiedRowSignature = useNestedForUnknownTypes
+                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
+                                        : rowSignature;
+
+    // Validate before getCursorFromSequence, which starts running the query.
+    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
+    FrameCursorUtils.throwIfSubqueryColumnsHaveDisallowedNames(modifiedRowSignature);
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
+        memoryAllocatorFactory,
+        modifiedRowSignature,
+        new ArrayList<>()
+    );
+
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
     );
     Cursor cursor = cursorAndCloseable.lhs;
     Closeable closeable = cursorAndCloseable.rhs;
-
-    RowSignature modifiedRowSignature = useNestedForUnknownTypes
-                                        ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
-                                        : rowSignature;
-    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
-
-    FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
-        memoryAllocatorFactory,
-        rowSignature,
-        new ArrayList<>()
-    );
 
     Sequence<Frame> frames = FrameCursorUtils.cursorToFramesSequence(cursor, frameWriterFactory).withBaggage(closeable);
 

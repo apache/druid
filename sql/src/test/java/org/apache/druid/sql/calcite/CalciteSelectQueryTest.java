@@ -70,6 +70,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantExpression()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Test with a Druid-specific function, to make sure they are hooked up correctly even when not selecting
     // from a table.
     testQuery(
@@ -106,6 +109,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelect1024pow4()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // This case is here to document the current behavior and not to test it.
     // The fact that the signature is the same for both of them is misleading -
     // not sure if it could cause problems.
@@ -138,6 +144,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExpressionContainingNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT ARRAY ['Hello', NULL]",
         ImmutableList.of(
@@ -192,6 +201,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testValuesContainingNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT * FROM (VALUES (NULL, 'United States'))",
         ImmutableList.of(
@@ -220,6 +232,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultipleValuesContainingNull()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT * FROM (VALUES (NULL, 'United States'), ('Delhi', 'India'))",
         ImmutableList.of(
@@ -248,6 +263,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultipleValuesContainingNullAndIntegerValues()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT * FROM (VALUES (NULL, 'United States'), (50, 'India'))",
         ImmutableList.of(
@@ -276,6 +294,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectNonNumericNumberLiterals()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Tests to convert NaN, positive infinity and negative infinity as literals.
     testQuery(
         "SELECT"
@@ -323,6 +344,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDruidLogicalValuesRule()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT FLOOR(123), CEIL(123), CAST(123.0 AS INTEGER)",
         ImmutableList.of(
@@ -353,6 +377,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectConstantExpressionFromTable()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT 1 + 1, dim1 FROM foo LIMIT 1",
         ImmutableList.of(
@@ -484,6 +511,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testBitwiseExpressions()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     List<Object[]> expected = ImmutableList.of(
         new Object[]{null, null, null, -8L, 28L, 1L, 4607182418800017408L, 3.5E-323},
         new Object[]{325323L, 325323L, 0L, -325324L, 1301292L, 81330L, 4610334938539176755L, 1.60731E-318},
@@ -539,6 +569,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSafeDivideWithoutTable()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
     testQuery(
@@ -589,6 +622,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSafeDivideExpressions()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     List<Object[]> expected = ImmutableList.of(
         new Object[]{null, null, null, 7.0F},
         new Object[]{1.0F, 1L, 1.0D, 3253230.0F},
@@ -627,8 +663,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainSelectConstantExpression()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
     final String query = "EXPLAIN PLAN FOR SELECT 1 + 1";
     final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"inline\",\"columnNames\":[\"EXPR$0\"],\"columnTypes\":[\"LONG\"],\"rows\":[[2]]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"EXPR$0\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"LONG\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"EXPR$0\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"EXPR$0\",\"outputColumn\":\"EXPR$0\"}]}]";
     final String resources = "[]";
@@ -652,6 +686,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarWithDimFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
@@ -858,6 +895,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectNonAggregatingWithLimitLiterallyZero()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Query reduces to LIMIT 0.
 
     testQuery(
@@ -884,6 +924,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectNonAggregatingWithLimitReducedToZero()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Query reduces to LIMIT 0.
 
     testQuery(
@@ -909,6 +952,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectAggregatingWithLimitReducedToZero()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Query reduces to LIMIT 0.
 
     testQuery(
@@ -934,6 +980,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectCurrentTimeAndDateLosAngeles()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00.123Z");
     context.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
@@ -1118,6 +1167,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarFromLookup()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT * FROM lookup.lookyloo",
         ImmutableList.of(
@@ -1141,6 +1193,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStar()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
@@ -1274,6 +1329,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarOnForbiddenTable_superUser()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // The superuser can see and query forbiddenDatasource.
     testBuilder()
         .sql("SELECT * FROM druid.forbiddenDatasource")
@@ -1327,6 +1385,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarOnForbiddenView()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     final String sql = "SELECT * FROM view.forbiddenView";
 
     // The regular user does not have access to forbiddenDatasource, so they shouldn't see it.
@@ -1382,6 +1443,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarOnRestrictedView()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         "SELECT * FROM view.restrictedView",
@@ -1456,9 +1520,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExplainSelectStar()
   {
-    // Skip vectorization since otherwise the "context" will change for each subtest.
-    skipVectorize();
-
     final String query = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
     final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"dim1\",\"dim2\",\"dim3\",\"cnt\",\"m1\",\"m2\",\"unique_dim1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"LONG\",\"STRING\",\"STRING\",\"STRING\",\"LONG\",\"FLOAT\",\"DOUBLE\",\"COMPLEX<hyperUnique>\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
@@ -1482,6 +1543,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarWithLimit()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
@@ -1526,6 +1590,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarWithLimitAndOffset()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
@@ -1571,6 +1638,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectWithProjection()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT SUBSTRING(dim2, 1, 1) FROM druid.foo LIMIT 2",
         ImmutableList.of(
@@ -1597,6 +1667,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectWithExpressionFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1 FROM druid.foo WHERE m1 + 1 = 7",
         ImmutableList.of(
@@ -1624,6 +1697,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarWithLimitTimeDescending()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
@@ -1660,6 +1736,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarWithoutLimitTimeAscending()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
@@ -1710,6 +1789,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectSingleColumnTwice()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim2 x, dim2 y FROM druid.foo LIMIT 2",
         ImmutableList.of(
@@ -1733,6 +1815,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectSingleColumnWithLimitDescending()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 2",
         ImmutableList.of(
@@ -1757,6 +1842,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectStarFromSelectSingleColumnWithLimitDescending()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // After upgrading to Calcite 1.21, Calcite no longer respects the ORDER BY __time DESC
     // in the inner query. This is valid, as the SQL standard considers the subquery results to be an unordered
     // set of rows.
@@ -1784,6 +1872,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectLimitWrapping()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC",
         OUTER_LIMIT_CONTEXT,
@@ -1809,6 +1900,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectLimitWrappingOnTopOfOffset()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC OFFSET 1",
         OUTER_LIMIT_CONTEXT,
@@ -1835,6 +1929,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectLimitWrappingOnTopOfOffsetAndLowLimit()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 1 OFFSET 1",
         OUTER_LIMIT_CONTEXT,
@@ -1860,6 +1957,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectLimitWrappingOnTopOfOffsetAndHighLimit()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 10 OFFSET 1",
         OUTER_LIMIT_CONTEXT,
@@ -1886,6 +1986,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectLimitWrappingAgainAkaIDontReallyQuiteUnderstandCalciteQueryPlanning()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // this test is for a specific bug encountered where the 2nd query would not plan with auto limit wrapping, but if
     // *any* column was removed from the select output, e.g. the first query in this test, then it does plan and
     // function correctly. Running the query supplying an explicit limit worked, and turning off auto limit worked.
@@ -2061,6 +2164,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectProjectionFromSelectSingleColumnWithInnerLimitDescending()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 2)",
         ImmutableList.of(
@@ -2086,6 +2192,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectProjectionFromSelectSingleColumnDescending()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     // Regression test for https://github.com/apache/druid/issues/7768.
 
     // After upgrading to Calcite 1.21, Calcite no longer respects the ORDER BY __time DESC
@@ -2119,6 +2228,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectProjectionFromSelectSingleColumnWithInnerAndOuterLimitDescending()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT 'beep ' || dim1 FROM (SELECT dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) LIMIT 2",
         ImmutableList.of(
@@ -2144,6 +2256,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderThenLimitThenFilter()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testQuery(
         "SELECT dim1 FROM "
         + "(SELECT __time, dim1 FROM druid.foo ORDER BY __time DESC LIMIT 4) "
@@ -2372,7 +2487,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCacheKeyConsistency()
   {
-    skipVectorize();
     // possibly pollute the cache
     // https://github.com/apache/druid/issues/16552
     testBuilder()
@@ -2399,7 +2513,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimseriesResultCachePullConsistency()
   {
-    skipVectorize();
+    // Cannot vectorize due to GROUP BY on subquery results.
+    cannotVectorize();
 
     String query = "SELECT \n"
                    + "  (t1.\"__time\") AS \"__time\", \n"
@@ -2439,6 +2554,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSqlToRelInConversion()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     testBuilder()
         .sql(
             "SELECT channel FROM wikipedia\n"

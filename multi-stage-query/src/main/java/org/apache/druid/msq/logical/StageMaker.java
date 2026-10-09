@@ -64,12 +64,18 @@ public class StageMaker
     this.plannerContext = plannerContext;
   }
 
-  public static ScanQueryStageProcessor makeScanStageProcessor(
+  public ScanQueryStageProcessor makeScanStageProcessor(
       VirtualColumns virtualColumns,
       RowSignature signature,
-      DimFilter dimFilter)
+      DimFilter dimFilter
+  )
   {
-    return ScanQueryStageProcessor.makeScanStageProcessor(virtualColumns, signature, dimFilter);
+    return ScanQueryStageProcessor.makeScanStageProcessor(
+        virtualColumns,
+        signature,
+        dimFilter,
+        plannerContext.queryContextMap()
+    );
   }
 
   public StageDefinitionBuilder buildStage(LogicalStage stage)
@@ -164,7 +170,7 @@ public class StageMaker
 
   public StageProcessor<?, ?> makeSegmentMapProcessor(RowSignature signature, DataSource dataSource)
   {
-    return ScanQueryStageProcessor.makeSegmentMapFnProcessor(signature, dataSource);
+    return ScanQueryStageProcessor.makeSegmentMapFnProcessor(signature, dataSource, plannerContext.queryContextMap());
   }
 
   /**

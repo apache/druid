@@ -44,7 +44,7 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   {
     return new QueryTestBuilder(new CalciteTestConfig(true))
         .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
-        .skipVectorize(true)
+        .cannotVectorize(isCannotVectorizeExpected())
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }
 
@@ -149,6 +149,9 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   @Timeout(value = 40000, unit = TimeUnit.MILLISECONDS)
   public void testJoinMultipleTablesWithWhereCondition()
   {
+    // Cannot vectorize due to Scan on row-based frames.
+    cannotVectorize();
+
     testBuilder()
         .queryContext(
             ImmutableMap.of(

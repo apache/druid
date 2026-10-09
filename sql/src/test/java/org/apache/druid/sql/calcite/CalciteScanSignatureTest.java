@@ -37,6 +37,9 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
   @Test
   public void testScanSignature()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
 
     testQuery(
@@ -70,6 +73,9 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
   @Test
   public void testScanSignatureWithDimAsValuePrimitiveByteArr()
   {
+    // Cannot vectorize native Scan.
+    cannotVectorize();
+
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "SELECT CAST(dim1 AS BIGINT) as dimX FROM foo2 limit 2",
