@@ -20,8 +20,11 @@
 package org.apache.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableSortedSet;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
@@ -31,6 +34,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.jackson.StrictIntegerDeserializer;
 import org.apache.druid.java.util.common.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -38,6 +42,7 @@ import org.joda.time.Period;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -55,6 +60,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final KafkaConfigOverrides configOverrides;
   private final String topic;
   private final String topicPattern;
+  @Nullable
+  private final ImmutableSortedSet<Integer> partitionIds;
   private final boolean emitTimeLagMetrics;
   private final KafkaHeaderBasedFilterConfig headerBasedFilterConfig;
 
@@ -83,7 +90,9 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
       @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics,
       @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
-      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
+      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig,
+      @Nullable @JsonProperty("partitionIds")
+      @JsonDeserialize(contentUsing = StrictIntegerDeserializer.class) Set<Integer> partitionIds
   )
   {
     super(
@@ -117,6 +126,15 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.configOverrides = configOverrides;
     this.topic = topic;
     this.topicPattern = topicPattern;
+    if (partitionIds != null) {
+      if (partitionIds.isEmpty() || partitionIds.stream().anyMatch(id -> id == null || id < 0)) {
+        throw InvalidInput.exception("partitionIds must contain nonnegative partition IDs and must not be empty");
+      }
+      if (topicPattern != null || boundedStreamConfig != null) {
+        throw InvalidInput.exception("partitionIds requires a single topic and cannot be combined with boundedStreamConfig");
+      }
+    }
+    this.partitionIds = partitionIds == null ? null : ImmutableSortedSet.copyOf(partitionIds);
     this.emitTimeLagMetrics = Configs.valueOrDefault(emitTimeLagMetrics, false);
   }
 
@@ -174,7 +192,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         stopTaskCount,
         emitTimeLagMetrics,
         serverPriorityToReplicas,
-        boundedStreamConfig
+        boundedStreamConfig,
+        null
     );
   }
 
@@ -194,6 +213,14 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public String getTopicPattern()
   {
     return topicPattern;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Set<Integer> getPartitionIds()
+  {
+    return partitionIds;
   }
 
   @JsonProperty
@@ -248,6 +275,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return "KafkaSupervisorIOConfig{" +
            "topic='" + getTopic() + '\'' +
            "topicPattern='" + getTopicPattern() + '\'' +
+           ", partitionIds=" + partitionIds +
            ", replicas=" + getReplicas() +
            ", taskCount=" + getTaskCount() +
            ", taskDuration=" + getTaskDuration() +
@@ -299,6 +327,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            && Objects.equals(configOverrides, that.configOverrides)
            && Objects.equals(topic, that.topic)
            && Objects.equals(topicPattern, that.topicPattern)
+           && Objects.equals(partitionIds, that.partitionIds)
            && Objects.equals(headerBasedFilterConfig, that.headerBasedFilterConfig);
   }
 
@@ -312,6 +341,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         configOverrides,
         topic,
         topicPattern,
+        partitionIds,
         emitTimeLagMetrics,
         headerBasedFilterConfig
     );

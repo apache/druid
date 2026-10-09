@@ -206,7 +206,8 @@ public class KafkaSupervisorSpec extends SeekableStreamSupervisorSpec
         ioConfig.getStopTaskCount(),
         ioConfig.isEmitTimeLagMetrics(),
         ioConfig.getServerPriorityToReplicas(),
-        boundedStreamConfig
+        boundedStreamConfig,
+        null
     );
     return new KafkaSupervisorSpec(
         backfillId,
