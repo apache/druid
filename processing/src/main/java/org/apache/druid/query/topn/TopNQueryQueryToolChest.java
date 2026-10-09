@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.CacheStrategy;
 import org.apache.druid.query.FrameSignaturePair;
@@ -60,9 +61,11 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -461,49 +464,34 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           final QueryPlus<Result<TopNResultValue>> queryPlus, final ResponseContext responseContext
       )
       {
-        // thresholdRunner.run throws ISE if query is not TopNQuery
-        final Sequence<Result<TopNResultValue>> resultSequence = thresholdRunner.run(queryPlus, responseContext);
-        final TopNQuery topNQuery = (TopNQuery) queryPlus.getQuery();
-        if (!TopNQueryEngine.canApplyExtractionInPost(topNQuery)) {
-          return resultSequence;
-        } else {
-          return Sequences.map(
-              resultSequence,
-              new Function<>()
-              {
-                @Override
-                public Result<TopNResultValue> apply(Result<TopNResultValue> input)
-                {
-                  TopNResultValue resultValue = input.getValue();
+        final Query<Result<TopNResultValue>> query = queryPlus.getQuery();
+        if (!(query instanceof TopNQuery) || !TopNQueryEngine.canApplyExtractionInPost((TopNQuery) query)) {
+          // thresholdRunner.run throws ISE if query is not TopNQuery.
+          return thresholdRunner.run(queryPlus, responseContext);
+        }
 
-                  return new Result<>(
-                      input.getTimestamp(),
-                      TopNResultValue.create(
-                          Lists.transform(
-                              resultValue.getValue(),
-                              new Function<DimensionAndMetricValueExtractor, DimensionAndMetricValueExtractor>()
-                              {
-                                @Override
-                                public DimensionAndMetricValueExtractor apply(
-                                    DimensionAndMetricValueExtractor input
-                                )
-                                {
-                                  String dimOutputName = topNQuery.getDimensionSpec().getOutputName();
-                                  Object dimValue = input.getDimensionValue(dimOutputName);
-                                  Map<String, Object> map = input.getBaseObject();
-                                  map.put(
-                                      dimOutputName,
-                                      topNQuery.getDimensionSpec().getExtractionFn().apply(dimValue)
-                                  );
-                                  return input;
-                                }
-                              }
-                          )
-                      )
-                  );
+        final Closer closer = Closer.create();
+        try {
+          final DimensionSpec dimensionSpec = ((TopNQuery) query).getDimensionSpec();
+          final String dimOutputName = dimensionSpec.getOutputName();
+          final ExtractionFn extractionFn = dimensionSpec.getExtractionFn(closer);
+          return Sequences.map(
+              thresholdRunner.run(queryPlus, responseContext),
+              input -> {
+                final List<DimensionAndMetricValueExtractor> values = input.getValue().getValue();
+                final List<DimensionAndMetricValueExtractor> extractedValues = new ArrayList<>(values.size());
+                // Materialize extraction while the lookup is retained. Results may be read after the sequence closes.
+                for (final DimensionAndMetricValueExtractor value : values) {
+                  final Map<String, Object> map = new LinkedHashMap<>(value.getBaseObject());
+                  map.put(dimOutputName, extractionFn.apply(value.getDimensionValue(dimOutputName)));
+                  extractedValues.add(new DimensionAndMetricValueExtractor(map));
                 }
+                return new Result<>(input.getTimestamp(), new TopNResultValue(extractedValues));
               }
-          );
+          ).withBaggage(closer);
+        }
+        catch (Throwable t) {
+          throw CloseableUtils.closeAndWrapInCatch(t, closer);
         }
       }
     };

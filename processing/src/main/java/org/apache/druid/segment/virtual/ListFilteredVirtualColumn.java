@@ -145,13 +145,13 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       return ListFilteredDimensionSpec.filterAllowList(
           values,
           factory.makeDimensionSelector(delegate),
-          delegate.getExtractionFn() != null
+          delegate.getExtractionFnForMetadata() != null
       );
     } else {
       return ListFilteredDimensionSpec.filterDenyList(
           values,
           factory.makeDimensionSelector(delegate),
-          delegate.getExtractionFn() != null
+          delegate.getExtractionFnForMetadata() != null
       );
     }
   }
@@ -199,7 +199,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       ColumnIndexSelector indexSelector
   )
   {
-    if (delegate.getExtractionFn() != null) {
+    if (delegate.getExtractionFnForMetadata() != null) {
       return NoIndexesColumnIndexSupplier.getInstance();
     }
     return new ColumnIndexSupplier()

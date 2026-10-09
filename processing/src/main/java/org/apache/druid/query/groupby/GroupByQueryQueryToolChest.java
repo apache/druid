@@ -436,6 +436,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       final MetricManipulationFn fn
   )
   {
+    return makePostComputeManipulatorFn(query, fn, null);
+  }
+
+  @Override
+  public Function<ResultRow, ResultRow> makePostComputeManipulatorFn(
+      final GroupByQuery query,
+      final MetricManipulationFn fn,
+      @Nullable final Closer closer
+  )
+  {
     final BitSet optimizedDims = extractionsToRewrite(query);
     final Function<ResultRow, ResultRow> preCompute = makePreComputeManipulatorFn(query, fn);
 
@@ -452,7 +462,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       final ExtractionFn extractionFnToAdd;
 
       if (optimizedDims.get(i)) {
-        extractionFnToAdd = dimensionSpec.getExtractionFn();
+        extractionFnToAdd = closer == null ? dimensionSpec.getExtractionFn() : dimensionSpec.getExtractionFn(closer);
       } else {
         extractionFnToAdd = null;
       }
@@ -825,8 +835,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     final List<DimensionSpec> dimensions = query.getDimensions();
     for (int i = 0; i < dimensions.size(); i++) {
       final DimensionSpec dimensionSpec = dimensions.get(i);
-      if (dimensionSpec.getExtractionFn() != null
-          && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(dimensionSpec.getExtractionFn().getExtractionType())) {
+      // inspection only
+      final ExtractionFn extractionFn = dimensionSpec.getExtractionFnForMetadata();
+      if (extractionFn != null
+          && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(extractionFn.getExtractionType())) {
         retVal.set(i);
       }
     }

@@ -40,6 +40,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
 import java.util.Optional;
@@ -101,22 +102,37 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
 
     final SegmentMapFunction segmentMapFn = ev.createSegmentMapFunction(policyEnforcer);
 
-    final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
-    final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(
-        DirectQueryProcessingPool.INSTANCE,
-        () -> StreamSupport.stream(segments.spliterator(), false)
-                           .map(s -> segmentMapFn.apply(s).orElseThrow())
-                           .map(queryRunnerFactory::createRunner).iterator()
-    );
+    try {
+      final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
+      final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(
+          DirectQueryProcessingPool.INSTANCE,
+          () -> StreamSupport.stream(segments.spliterator(), false)
+                             .map(s -> segmentMapFn.apply(s).orElseThrow())
+                             .map(queryRunnerFactory::createRunner).iterator()
+      );
 
-    // Note: Not calling 'postProcess'; it isn't official/documented functionality so we'll only support it where
-    // it is already supported.
-    return FluentQueryRunner
-        .create(scheduler.wrapQueryRunner(baseRunner), queryRunnerFactory.getToolchest())
-        .applyPreMergeDecoration()
-        .mergeResults(true)
-        .applyPostMergeDecoration()
-        .emitCPUTimeMetric(emitter, cpuAccumulator);
+      // Note: Not calling 'postProcess'; it isn't official/documented functionality so we'll only support it where
+      // it is already supported.
+      final QueryRunner<T> runner = FluentQueryRunner
+          .create(scheduler.wrapQueryRunner(baseRunner), queryRunnerFactory.getToolchest())
+          .applyPreMergeDecoration()
+          .mergeResults(true)
+          .applyPostMergeDecoration()
+          .emitCPUTimeMetric(emitter, cpuAccumulator);
+
+      // Own resources outside all runner wrappers, including lazy scheduling and query execution failures
+      return (queryPlus, responseContext) -> {
+        try {
+          return runner.run(queryPlus, responseContext).withBaggage(segmentMapFn);
+        }
+        catch (Throwable t) {
+          throw CloseableUtils.closeAndWrapInCatch(t, segmentMapFn);
+        }
+      };
+    }
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, segmentMapFn);
+    }
   }
 
   @Override

@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join.filter;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -27,16 +28,16 @@ import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableClause;
 import org.apache.druid.segment.join.JoinableFactory;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class JoinableClauses
 {
@@ -55,20 +56,30 @@ public class JoinableClauses
     // Since building a JoinableClause can be expensive, check for prefix conflicts before building
     checkPreJoinableClausesForDuplicatesAndShadowing(preClauses);
 
-    List<JoinableClause> joinableClauses = preClauses.stream().map(preJoinableClause -> {
-      final Optional<Joinable> joinable = joinableFactory.build(
-          preJoinableClause.maybeUnwrapRestrictedDataSource(),
-          preJoinableClause.getCondition()
-      );
+    final List<JoinableClause> joinableClauses = new ArrayList<>();
+    final Closer closer = Closer.create();
+    try {
+      for (final PreJoinableClause preJoinableClause : preClauses) {
+        final Joinable joinable = joinableFactory.build(
+            preJoinableClause.maybeUnwrapRestrictedDataSource(),
+            preJoinableClause.getCondition()
+        ).orElseThrow(() -> new ISE("dataSource is not joinable: %s", preJoinableClause.getDataSource()));
 
-      return new JoinableClause(
-          preJoinableClause.getPrefix(),
-          joinable.orElseThrow(() -> new ISE("dataSource is not joinable: %s", preJoinableClause.getDataSource())),
-          preJoinableClause.getJoinType(),
-          preJoinableClause.getCondition()
-      );
-    }).collect(Collectors.toList());
-    return new JoinableClauses(joinableClauses);
+        if (joinable instanceof Closeable) {
+          closer.register((Closeable) joinable);
+        }
+        joinableClauses.add(new JoinableClause(
+            preJoinableClause.getPrefix(),
+            joinable,
+            preJoinableClause.getJoinType(),
+            preJoinableClause.getCondition()
+        ));
+      }
+      return new JoinableClauses(joinableClauses);
+    }
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, closer);
+    }
   }
 
   /**

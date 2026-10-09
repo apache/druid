@@ -51,6 +51,7 @@ import org.mockito.ArgumentMatchers;
 
 import javax.ws.rs.core.Response;
 
+import java.io.Closeable;
 import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
@@ -61,7 +62,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.atMostOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -260,6 +260,43 @@ public class NamespaceLookupExtractorFactoryTest
     verify(versionedCache).getVersion();
     verify(versionedCache, atLeastOnce()).asLookupExtractor(ArgumentMatchers.eq(false), ArgumentMatchers.any());
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
+  }
+
+  @Test
+  public void testAcquireRetainedLookupExtractor() throws Exception
+  {
+    final ExtractionNamespace extractionNamespace = () -> 0;
+    expectScheduleAndWaitOnce(extractionNamespace);
+    final Closeable retainedReference = mock(Closeable.class);
+    final Map<String, String> map = new HashMap<>();
+    map.put("foo", "bar");
+    final LookupExtractor lookupExtractor = new MapLookupExtractor(map, false);
+
+    when(entry.getCacheState()).thenReturn(versionedCache);
+    when(versionedCache.acquireReference()).thenReturn(retainedReference);
+    when(versionedCache.asLookupExtractor(ArgumentMatchers.eq(false), ArgumentMatchers.any())).thenReturn(lookupExtractor);
+    when(versionedCache.getVersion()).thenReturn("0");
+
+    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
+        extractionNamespace,
+        scheduler
+    );
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
+
+    final RetainedLookupExtractor retainedLookupExtractor =
+        namespaceLookupExtractorFactory.acquireRetainedLookupExtractor().orElseThrow(AssertionError::new);
+
+    Assertions.assertNotSame(lookupExtractor, retainedLookupExtractor);
+    Assertions.assertEquals("bar", retainedLookupExtractor.apply("foo"));
+    retainedLookupExtractor.close();
+
+    verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
+    verify(entry).getCacheState();
+    verify(versionedCache).acquireReference();
+    verify(versionedCache).getVersion();
+    verify(versionedCache).asLookupExtractor(ArgumentMatchers.eq(false), ArgumentMatchers.any());
+    verify(retainedReference).close();
+    verifyNoMoreInteractions(scheduler, entry, versionedCache, retainedReference);
   }
 
 
@@ -544,18 +581,12 @@ public class NamespaceLookupExtractorFactoryTest
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
     reset(scheduler, entry, versionedCache);
 
-    when(entry.getCacheState()).thenReturn(versionedCache);
-    when(entry.getCache()).thenReturn(new HashMap<String, String>());
-    when(versionedCache.getCache()).thenReturn(new HashMap<>());
-    when(versionedCache.getVersion()).thenThrow(new ISE("some exception"));
+    when(entry.getCacheState()).thenReturn(CacheScheduler.NoCache.CACHE_NOT_INITIALIZED);
 
     final Response response = (Response) clazz.getMethod(method).invoke(handler);
     Assertions.assertEquals(404, response.getStatus());
 
     verify(entry).getCacheState();
-    verify(entry, atMostOnce()).getCache();
-    verify(versionedCache, atMostOnce()).getCache();
-    verify(versionedCache).getVersion();
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
