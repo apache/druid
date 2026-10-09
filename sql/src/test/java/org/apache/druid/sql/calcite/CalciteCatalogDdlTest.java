@@ -31,6 +31,7 @@ import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
+import org.apache.druid.catalog.model.RollupTableBaseTableMetadata;
 import org.apache.druid.catalog.model.TableBaseTableMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -42,6 +43,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -1058,21 +1061,188 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testBaseProjectionRejectsFilterOrGrouping()
+  public void testBaseProjectionRejectsFilter()
   {
-    for (String body : new String[]{
-        "SELECT tenant, __time WHERE tenant <> 'x'",
-        "SELECT tenant, __time GROUP BY tenant, __time"
-    }) {
-      final DruidException e = assertThrows(
-          DruidException.class,
-          () -> execute(
-              "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP, PROJECTION __base AS (" + body + "))"
-          ),
-          body
-      );
-      assertTrue(e.getMessage().contains("filters or groups"), e.getMessage());
-    }
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT tenant, __time WHERE tenant <> 'x'))"
+        )
+    );
+    assertTrue(e.getMessage().contains("its body filters"), e.getMessage());
+  }
+
+  /**
+   * A {@code __base} body with {@code GROUP BY} declares the rollup layout: the body is the query that rolls the
+   * table up onto itself. Grouping columns reference themselves, {@code TIME_FLOOR(__time, <period>)} becomes the
+   * query granularity carrier, and each aggregate becomes the aggregator filling the declared metric column it is
+   * named for, reading the column it fills, since aggregating a stored rollup table is done with the combining form
+   * of its aggregators.
+   */
+  @Test
+  public void testCreateTableWithRollupBaseProjection()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, total BIGINT,"
+        + " PROJECTION __base AS (SELECT tenant, TIME_FLOOR(__time, 'PT1H') AS __time, SUM(total) AS total"
+        + " GROUP BY 1, 2))"
+    );
+    assertEquals(
+        new RollupTableBaseTableMetadata(
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+            ),
+            new AggregatorFactory[]{new LongSumAggregatorFactory("total", "total")},
+            null
+        ),
+        WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  /**
+   * Grouping on {@code __time} directly (no TIME_FLOOR) is a rollup at {@code NONE} granularity, and a body with no
+   * aggregates at all is a dedup table: rows with identical grouping values collapse into one.
+   */
+  @Test
+  public void testRollupBaseProjectionWithBareTimeAndNoAggregates()
+  {
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP,"
+        + " PROJECTION __base AS (SELECT tenant, __time GROUP BY tenant, __time))"
+    );
+    assertEquals(
+        new RollupTableBaseTableMetadata(null, null, null),
+        WRITER.calls.get(0).spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  @Test
+  public void testRollupBaseProjectionRejectsClusteredBy()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, total BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time, SUM(total) AS total GROUP BY 1, 2 CLUSTERED BY tenant))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains("a base table is either clustered or rollup, not both"),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  @Test
+  public void testRollupBaseProjectionRejectsComputedGroupingColumn()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, total BIGINT,"
+            + " PROJECTION __base AS (SELECT UPPER(tenant) AS tenant, __time, SUM(total) AS total GROUP BY 1, 2))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains(
+            "its column [tenant] is computed by an expression. Computed columns are not supported; compute the column"
+            + " at ingestion time instead"
+        ),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
+   * The body plans against the declared columns, so an aggregate reading an undeclared column cannot resolve: the
+   * rollup body is the table's self-rollup query, so an aggregate reads the metric column it fills.
+   */
+  @Test
+  public void testRollupBaseProjectionRejectsAggregateOverUndeclaredColumn()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, total BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time, SUM(cnt) AS total GROUP BY 1, 2))"
+        )
+    );
+    assertTrue(e.getMessage().contains("cnt"), e.getMessage());
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
+   * Subtotal groupings produce rows of several different grouping shapes, while a stored grouping has exactly one, so
+   * GROUPING SETS (and ROLLUP/CUBE, which plan to the same form) are rejected rather than silently storing only the
+   * full grouping tuple. The guard is shared with aggregate projections, so both spellings are covered.
+   */
+  @Test
+  public void testGroupingSetsRejected()
+  {
+    final DruidException base = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, total BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time, SUM(total) AS total"
+            + " GROUP BY GROUPING SETS ((tenant, __time), (__time))))"
+        )
+    );
+    assertTrue(base.getMessage().contains("GROUPING SETS"), base.getMessage());
+
+    final DruidException projection = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, page VARCHAR, __time TIMESTAMP, cnt BIGINT,"
+            + " PROJECTION subtotals AS (SELECT tenant, page, SUM(cnt) AS total"
+            + " GROUP BY GROUPING SETS ((tenant, page), (tenant))))"
+        )
+    );
+    assertTrue(projection.getMessage().contains("GROUPING SETS"), projection.getMessage());
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
+   * A rollup table's aggregators must combine their own output (the same aggregators serve ingestion and
+   * re-aggregation of stored rows), so an aggregate that is not its own combining form is rejected: a count is stored
+   * by summing a count column, not with {@code COUNT(*)}.
+   */
+  @Test
+  public void testRollupBaseProjectionRejectsNonSelfCombiningAggregate()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, cnt BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time, COUNT(*) AS cnt GROUP BY 1, 2))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains("aggregator [cnt] is not its own combining form"),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
+   * The declared type of a metric column must match what its aggregator stores; the check runs in the metadata's
+   * createSpec, attributed to the statement.
+   */
+  @Test
+  public void testRollupBaseProjectionRejectsMetricTypeMismatch()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, total DOUBLE,"
+            + " PROJECTION __base AS (SELECT tenant, __time, COUNT(*) AS total GROUP BY 1, 2))"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains("metric column [total] is declared as type [DOUBLE], but its aggregator produces [LONG]"),
+        e.getMessage()
+    );
+    assertTrue(WRITER.calls.isEmpty());
   }
 
   /**

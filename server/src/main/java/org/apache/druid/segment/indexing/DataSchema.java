@@ -217,7 +217,8 @@ public class DataSchema
    * {@link GranularitySpec}, which is already the complete source of truth (segment + query granularity + rollup), so
    * it is returned as-is. In baseTable mode the pieces live apart and are recombined: segment granularity + intervals
    * from {@code segmentGranularitySpec} (or defaults), query granularity from the spec's
-   * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} virtual column (absent ⇒ {@code NONE}).
+   * {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} virtual column (absent ⇒ {@code NONE}), and rollup from the
+   * spec's layout type ({@link BaseTableProjectionSpec#isRollup()}).
    */
   private static GranularitySpec computeEffectiveGranularitySpec(
       BaseTableProjectionSpec effectiveSpec,
@@ -234,7 +235,7 @@ public class DataSchema
     return new UniformGranularitySpec(
         segmentGranularity,
         queryGranularityFromSpec(effectiveSpec),
-        false,
+        effectiveSpec.isRollup(),
         intervals
     );
   }

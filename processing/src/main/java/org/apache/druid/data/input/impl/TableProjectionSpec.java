@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.collect.Sets;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -40,7 +39,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * {@link BaseTableProjectionSpec} for a plain (non-clustered, non-rollup) table: the operator declares a single
@@ -86,15 +84,15 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
       @JsonProperty("columns") List<DimensionSchema> columns
   )
   {
-    validate(columns);
+    BaseTableProjectionSpec.validateDeclaredColumns(columns, "columns", TYPE_NAME);
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
-    validateVirtualColumns(this.virtualColumns);
+    BaseTableProjectionSpec.validateGranularityOnlyVirtualColumns(this.virtualColumns, TYPE_NAME);
     this.columns = Collections.unmodifiableList(new ArrayList<>(columns));
     this.dimensionsSpec = DimensionsSpec.builder()
                                         .setDimensions(this.columns)
                                         .setForceSegmentSortByTime(false)
                                         .build();
-    this.ordering = computeOrdering(this.columns);
+    this.ordering = BaseTableProjectionSpec.declaredOrderAscending(this.columns);
   }
 
   @Override
@@ -223,74 +221,6 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
       }
     }
     return new TableProjectionSpec(VirtualColumns.create(remaining), columns);
-  }
-
-  private static void validate(List<DimensionSchema> columns)
-  {
-    if (columns == null || columns.isEmpty()) {
-      throw InvalidInput.exception("columns must be non-empty for [%s] base table", TYPE_NAME);
-    }
-    final Set<String> seen = Sets.newHashSetWithExpectedSize(columns.size());
-    for (DimensionSchema d : columns) {
-      if (!seen.add(d.getName())) {
-        throw InvalidInput.exception("columns contains duplicate name [%s]", d.getName());
-      }
-    }
-    boolean foundTime = false;
-    for (DimensionSchema column : columns) {
-      final String name = column.getName();
-      // The query-granularity virtual column is a granularity carrier in virtualColumns (it floors the stored __time
-      // column); it is not itself a stored column, so it must not be declared in 'columns'.
-      if (Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(name)) {
-        throw InvalidInput.exception(
-            "[%s] is the query-granularity virtual column, not a stored column; declare it in 'virtualColumns' and use"
-            + " [%s] as the time column in 'columns'",
-            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME,
-            ColumnHolder.TIME_COLUMN_NAME
-        );
-      }
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(name)) {
-        foundTime = true;
-      }
-    }
-    if (!foundTime) {
-      throw InvalidInput.exception(
-          "[%s] base table must include [%s] in 'columns' to define the time position",
-          TYPE_NAME,
-          ColumnHolder.TIME_COLUMN_NAME
-      );
-    }
-  }
-
-  /**
-   * A plain base table accepts only the {@link Granularities#GRANULARITY_VIRTUAL_COLUMN_NAME} carrier: the standard
-   * segment-generation path does not evaluate spec virtual columns, so any other virtual column would be dead metadata
-   * whose column never gets materialized. Computed columns belong in a {@code transformSpec}.
-   */
-  private static void validateVirtualColumns(VirtualColumns virtualColumns)
-  {
-    for (VirtualColumn virtualColumn : virtualColumns.getVirtualColumns()) {
-      if (!Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME.equals(virtualColumn.getOutputName())) {
-        throw InvalidInput.exception(
-            "virtual column [%s] is not supported: a [%s] base table stores only declared columns and does not"
-            + " materialize virtual columns; use a transformSpec to compute columns at ingest, or the [%s] virtual"
-            + " column to carry query granularity",
-            virtualColumn.getOutputName(),
-            TYPE_NAME,
-            Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME
-        );
-      }
-      BaseTableProjectionSpec.validateGranularity(virtualColumn, TYPE_NAME);
-    }
-  }
-
-  private static List<OrderBy> computeOrdering(List<DimensionSchema> columns)
-  {
-    final List<OrderBy> ordering = new ArrayList<>(columns.size());
-    for (DimensionSchema d : columns) {
-      ordering.add(OrderBy.ascending(d.getName()));
-    }
-    return Collections.unmodifiableList(ordering);
   }
 
   @Override
