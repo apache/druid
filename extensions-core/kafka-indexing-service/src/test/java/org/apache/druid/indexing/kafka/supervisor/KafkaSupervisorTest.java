@@ -6705,6 +6705,31 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testBoundedSupervisorReportsLagOnlyForBoundedPartitions() throws Exception
+  {
+    // The topic has more partitions than the bounded config covers, as in a backfill of a partition selection.
+    final BoundedStreamConfig boundedConfig = new BoundedStreamConfig(Map.of("0", 0L), Map.of("0", 100L));
+    supervisor = getTestableSupervisorWithBoundedConfig(1, 1, "PT1H", boundedConfig);
+    addSomeEvents(100);
+    EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    EasyMock.expect(taskQueue.getActiveTasksForDatasource(DATASOURCE)).andReturn(Map.of()).anyTimes();
+    EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(null)
+    ).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
+    replayAll();
+    supervisor.start();
+    supervisor.runInternal();
+
+    supervisor.updatePartitionLagFromStream();
+
+    // Partitions the bounded run never assigned must not be queried, as reading their positions throws.
+    Assertions.assertEquals(Set.of(new KafkaTopicPartition(false, topic, 0)), supervisor.getPartitionRecordLag().keySet());
+  }
+
+  @Test
   public void testBoundedStreamConfig_withCheckpoint_resumesFromCheckpoint() throws Exception
   {
     Map<String, Long> startOffsets = ImmutableMap.of("0", 0L, "1", 0L, "2", 0L);

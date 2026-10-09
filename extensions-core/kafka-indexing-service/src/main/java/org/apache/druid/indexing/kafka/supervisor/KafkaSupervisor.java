@@ -522,6 +522,25 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   /**
+   * Partitions to report lag for. A bounded supervisor, such as a backfill, only assigns the partitions in its bounded
+   * config, which can be a subset of the topic. Reading positions of any other partition would fail.
+   * Must be called while holding the record supplier lock.
+   */
+  private Set<KafkaTopicPartition> getPartitionsForLag()
+  {
+    if (getIoConfig().isBounded()) {
+      return new HashSet<>(partitionIds);
+    }
+    try {
+      return recordSupplier.getPartitionIds(getIoConfig().getStream());
+    }
+    catch (Exception e) {
+      log.warn("Could not fetch partitions for topic/stream [%s]", getIoConfig().getStream());
+      throw new StreamException(e);
+    }
+  }
+
+  /**
    * This method is similar to updatePartitionLagFromStream
    * but also determines time lag. Once this method has been
    * tested, we can remove the older one.
@@ -532,14 +551,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     getRecordSupplierLock().lock();
     try {
-      Set<KafkaTopicPartition> partitionIds;
-      try {
-        partitionIds = recordSupplier.getPartitionIds(getIoConfig().getStream());
-      }
-      catch (Exception e) {
-        log.warn("Could not fetch partitions for topic/stream [%s]", getIoConfig().getStream());
-        throw new StreamException(e);
-      }
+      final Set<KafkaTopicPartition> partitionIds = getPartitionsForLag();
 
       final Set<StreamPartition<KafkaTopicPartition>> partitions = partitionIds
           .stream()
@@ -641,14 +653,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     getRecordSupplierLock().lock();
     try {
-      Set<KafkaTopicPartition> partitionIds;
-      try {
-        partitionIds = recordSupplier.getPartitionIds(getIoConfig().getStream());
-      }
-      catch (Exception e) {
-        log.warn("Could not fetch partitions for topic/stream [%s]", getIoConfig().getStream());
-        throw new StreamException(e);
-      }
+      final Set<KafkaTopicPartition> partitionIds = getPartitionsForLag();
 
       Set<StreamPartition<KafkaTopicPartition>> partitions = partitionIds
           .stream()
