@@ -268,7 +268,8 @@ public class TaskActionTestKit implements BeforeEachCallback, AfterEachCallback
         segmentAllocationQueue,
         emitter,
         supervisorManager,
-        objectMapper
+        objectMapper,
+        ScheduledExecutors::fixed
     );
     taskActionDelegate = new HashMap<>();
     testDerbyConnector.createDataSourceTable();

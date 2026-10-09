@@ -425,19 +425,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     final CountDownLatch latch;
     final SettableFuture<Boolean> readyToPublish = SettableFuture.create();
-    final Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups;
+    final ConcurrentHashMap<TaskGroup, Set<PartitionIdType>> blockingTaskGroups;
 
     TaskWaitingToPublish(String taskId, Map<TaskGroup, Set<PartitionIdType>> blockingTaskGroups)
     {
       this.latch = new CountDownLatch(blockingTaskGroups.size());
-      this.blockingTaskGroups = new HashMap<>(blockingTaskGroups);
+      this.blockingTaskGroups = new ConcurrentHashMap<>(blockingTaskGroups);
 
       tasksWaitingToPublish.put(taskId, this);
 
       for (TaskGroup group : blockingTaskGroups.keySet()) {
         group.addCompletionListener(() -> {
           latch.countDown();
-          blockingTaskGroups.remove(group);
+          this.blockingTaskGroups.remove(group);
 
           if (latch.getCount() == 0) {
             readyToPublish.set(true);

@@ -29,11 +29,17 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.BiFunction;
 
 public class TaskActionToolbox
 {
@@ -44,6 +50,7 @@ public class TaskActionToolbox
   private final ServiceEmitter emitter;
   private final SupervisorManager supervisorManager;
   private final ObjectMapper jsonMapper;
+  private final ScheduledExecutorService actionExec;
   private Optional<TaskRunnerFactory> factory = Optional.absent();
 
   @Inject
@@ -54,7 +61,8 @@ public class TaskActionToolbox
       SegmentAllocationQueue segmentAllocationQueue,
       ServiceEmitter emitter,
       SupervisorManager supervisorManager,
-      @Json ObjectMapper jsonMapper
+      @Json ObjectMapper jsonMapper,
+      ScheduledExecutorFactory scheduledExecutorFactory
   )
   {
     this.taskLockbox = taskLockbox;
@@ -64,6 +72,7 @@ public class TaskActionToolbox
     this.supervisorManager = supervisorManager;
     this.jsonMapper = jsonMapper;
     this.segmentAllocationQueue = segmentAllocationQueue;
+    this.actionExec = scheduledExecutorFactory.create(4, "TaskActionToolbox-%s");
   }
 
   public TaskActionToolbox(
@@ -82,7 +91,8 @@ public class TaskActionToolbox
         null,
         emitter,
         supervisorManager,
-        jsonMapper
+        jsonMapper,
+        ScheduledExecutors::fixed
     );
   }
 
@@ -141,24 +151,51 @@ public class TaskActionToolbox
   }
 
   /**
-   * Returns a future that completes when the given task is ready to publish its
-   * segments. A streaming task must wait for previously created tasks that are
+   * Performs the segment publish action when the given task is unblocked for publish.
+   * A streaming task must wait for previously created tasks that are
    * yet to publish offsets for an overlapping set of partitions.
    */
-  public ListenableFuture<Boolean> isTaskReadyToPublish(
+  public ListenableFuture<SegmentPublishResult> publishSegmentsWhenReady(
       Task task,
       String supervisorId,
-      DataSourceMetadata startMetadata
+      DataSourceMetadata startMetadata,
+      BiFunction<Task, TaskActionToolbox, SegmentPublishResult> publishAction
   )
   {
     if (startMetadata == null || supervisorId == null) {
-      return Futures.immediateFuture(true);
+      return Futures.immediateFuture(publishAction.apply(task, this));
     }
 
-    return supervisorManager.isTaskReadyToPublishSegments(
+    final ListenableFuture<Boolean> taskReadyToPublishFuture = supervisorManager.isTaskReadyToPublishSegments(
         supervisorId,
         task.getId(),
         startMetadata
     );
+
+    return Futures.transform(
+        taskReadyToPublishFuture,
+        readyToPublish -> {
+          if (Boolean.TRUE.equals(readyToPublish)) {
+            // Task is already unblocked for publish, retrying will not fix offset mismatch
+            return doNotRetryOffsetMismatchFailure(publishAction.apply(task, this));
+          } else {
+            return SegmentPublishResult.retryableFailure("Task is not ready to publish yet");
+          }
+        },
+        actionExec
+    );
+  }
+
+  /**
+   * Converts the given publish result to a non-retryable failure if the publish
+   * had failed due to offset mismatch.
+   */
+  private static SegmentPublishResult doNotRetryOffsetMismatchFailure(SegmentPublishResult result)
+  {
+    if (result.isSuccess() || !result.isOffsetMismatch() || !result.isRetryable()) {
+      return result;
+    } else {
+      return SegmentPublishResult.fail(result.getErrorMsg());
+    }
   }
 }

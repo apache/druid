@@ -517,6 +517,7 @@ public class OverlordResource
   @ResourceFilters(StateResourceFilter.class)
   public void doAction(
       final TaskActionHolder holder,
+      @Nullable @PathParam("timeout") final Long timeoutMillis,
       @Context HttpServletRequest request
   )
   {
@@ -536,7 +537,9 @@ public class OverlordResource
           event.getAsyncContext().complete();
         })
     );
-    asyncContext.setTimeout(5 * 60_000);
+
+    // Use a default timeout of 5 minutes
+    asyncContext.setTimeout(Configs.valueOrDefault(timeoutMillis, 5 * 60_000));
 
     Futures.addCallback(
         future,
@@ -545,7 +548,11 @@ public class OverlordResource
           @Override
           public void onSuccess(Object result)
           {
-            completeRequest(asyncContext, Status.OK.getStatusCode(), Map.of("result", result));
+            completeRequest(
+                asyncContext,
+                Status.OK.getStatusCode(),
+                result == null ? Map.of() : Map.of("result", result)
+            );
           }
 
           @Override
@@ -919,6 +926,7 @@ public class OverlordResource
         response.setContentType(MediaType.APPLICATION_JSON);
         jsonMapper.writeValue(response.getOutputStream(), result);
       }
+      context.complete();
     }
     catch (Exception e) {
       log.noStackTrace().warn(e, "Request timed out or is closed already");

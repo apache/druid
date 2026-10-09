@@ -70,20 +70,6 @@ public class SegmentPublishResult
     return new SegmentPublishResult(Set.of(), false, true, StringUtils.format(errorMsg, args), null, true);
   }
 
-  /**
-   * Converts the given publish result to a non-retryable failure if the publish
-   * had failed due to offset mismatch. If the task has already waited for older
-   * tasks before trying to publish its segments, retrying the publish would not make it pass.
-   */
-  public static SegmentPublishResult doNotRetryOffsetMismatchFailure(SegmentPublishResult result)
-  {
-    if (result.isSuccess() || !result.isOffsetMismatch() || !result.isRetryable()) {
-      return result;
-    } else {
-      return SegmentPublishResult.fail(result.getErrorMsg());
-    }
-  }
-
   @JsonCreator
   private SegmentPublishResult(
       @JsonProperty("segments") Set<DataSegment> segments,
