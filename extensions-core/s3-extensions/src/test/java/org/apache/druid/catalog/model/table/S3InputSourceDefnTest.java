@@ -151,6 +151,7 @@ public class S3InputSourceDefnTest
         config,
         null,
         null,
+        null,
         null
     );
   }

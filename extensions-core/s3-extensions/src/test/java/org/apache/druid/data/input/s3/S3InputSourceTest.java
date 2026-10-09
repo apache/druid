@@ -291,6 +291,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
     final S3InputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), S3InputSource.class);
@@ -1272,6 +1273,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -1292,7 +1294,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     EqualsVerifier.forClass(S3InputSource.class)
                   .usingGetClass()
-                  .withIgnoredFields("s3ClientSupplier", "inputDataConfig")
+                  .withIgnoredFields("s3ClientSupplier", "inputDataConfig", "intermediateRoleConfig")
                   // maxRetries is nonfinal due to code structure, although it's effectively final
                   .suppress(Warning.NONFINAL_FIELDS)
                   .verify();
