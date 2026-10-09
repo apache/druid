@@ -183,6 +183,28 @@ public final class TableProjectionSpec implements BaseTableProjectionSpec
     return withoutQueryGranularity().equals(((TableProjectionSpec) other).withoutQueryGranularity());
   }
 
+  /**
+   * Since {@link #withAdditionalColumns} appends undeclared columns after the declared ones and changes nothing else,
+   * {@code other} is this spec extended exactly when it declares the same virtual columns and its column list starts
+   * with this one. List equality is the zero-appended-columns case, so this subsumes
+   * {@link #hasEqualCompactionState(BaseTableProjectionSpec)}.
+   */
+  @Override
+  public boolean hasEqualCompactionState(BaseTableProjectionSpec other, boolean allowUndeclaredColumns)
+  {
+    if (!allowUndeclaredColumns) {
+      return hasEqualCompactionState(other);
+    }
+    if (!(other instanceof TableProjectionSpec)) {
+      return false;
+    }
+    final TableProjectionSpec mine = withoutQueryGranularity();
+    final TableProjectionSpec theirs = ((TableProjectionSpec) other).withoutQueryGranularity();
+    return mine.virtualColumns.equals(theirs.virtualColumns)
+           && theirs.columns.size() >= mine.columns.size()
+           && theirs.columns.subList(0, mine.columns.size()).equals(mine.columns);
+  }
+
   @Override
   public TableProjectionSpec withAdditionalColumns(@Nullable List<DimensionSchema> additionalColumns)
   {

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.catalog.MapMetadataCatalog;
 import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.TableBaseTableMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
@@ -89,6 +90,7 @@ public class CompactionStatusTest
 
   private static final String SEALED_WIKI = TestDataSource.WIKI + "_sealed";
   private static final String UNSEALED_WIKI = TestDataSource.WIKI + "_unsealed";
+  private static final String UNSEALED_PLAIN_WIKI = TestDataSource.WIKI + "_unsealed_plain";
   private static final MapMetadataCatalog CATALOG = new MapMetadataCatalog(new DefaultObjectMapper());
 
   static {
@@ -104,6 +106,13 @@ public class CompactionStatusTest
                     .columns(columns)
                     .baseTable(new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null))
                     .sealed(true)
+                    .buildSpec()
+    );
+    CATALOG.addSpec(
+        TableId.datasource(UNSEALED_PLAIN_WIKI),
+        TableBuilder.datasource(UNSEALED_PLAIN_WIKI, "PT1H")
+                    .columns(columns)
+                    .baseTable(new TableBaseTableMetadata(null, null))
                     .buildSpec()
     );
     CATALOG.addSpec(
@@ -494,6 +503,22 @@ public class CompactionStatusTest
     // records a baseTable that is a superset of the declared one. Comparing that strictly would leave the datasource
     // permanently "pending" and recompact it on every coordinator run.
     final DataSourceCompactionConfig unsealed = catalogCompactionConfig(UNSEALED_WIKI);
+    final DataSegment segment = DataSegment
+        .builder(WIKI_SEGMENT)
+        .lastCompactionState(stateWithUndeclaredColumn(unsealed))
+        .build();
+
+    Assertions.assertTrue(
+        CompactionStatus.compute(List.of(segment), unsealed, fingerprintMapper).isComplete()
+    );
+  }
+
+  @Test
+  public void testStatusWhenPlainBaseTableHasUndeclaredColumnsAndCatalogTableIsNotSealed()
+  {
+    // Same contract as the clustered case, for a plain 'table' layout: a non-sealed table appends what it finds in
+    // the segments, so the recorded spec is a superset of the declared one and must still read as compacted.
+    final DataSourceCompactionConfig unsealed = catalogCompactionConfig(UNSEALED_PLAIN_WIKI);
     final DataSegment segment = DataSegment
         .builder(WIKI_SEGMENT)
         .lastCompactionState(stateWithUndeclaredColumn(unsealed))
