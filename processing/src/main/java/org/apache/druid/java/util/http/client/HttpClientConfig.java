@@ -194,7 +194,7 @@ public class HttpClientConfig
   {
     private int numConnections = 1;
     private boolean eagerInitialization = true;
-    private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.ADAPTIVE;
+    private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.RETAINING;
     private SSLContext sslContext = null;
     private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;

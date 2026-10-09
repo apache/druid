@@ -75,7 +75,7 @@ public class DruidHttpClientConfig
   private Boolean eagerInitialization = null;
 
   @JsonProperty
-  private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.ADAPTIVE;
+  private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.RETAINING;
 
   @JsonProperty
   private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);

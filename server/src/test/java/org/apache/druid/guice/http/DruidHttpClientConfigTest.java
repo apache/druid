@@ -38,18 +38,18 @@ public class DruidHttpClientConfigTest
   private static final String PROPERTY_BASE = "druid.broker.http";
 
   @Test
-  public void testPoolImplementationDefaultsToAdaptive()
+  public void testPoolImplementationDefaultsToRetaining()
   {
-    Assertions.assertEquals(ResourcePool.Implementation.ADAPTIVE, configure(new Properties()).getPoolImplementation());
+    Assertions.assertEquals(ResourcePool.Implementation.RETAINING, configure(new Properties()).getPoolImplementation());
   }
 
   @Test
-  public void testPoolImplementationCanBeSwitchedBackToRetaining()
+  public void testPoolImplementationCanBeSwitchedToAdaptive()
   {
     final Properties properties = new Properties();
-    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "retaining");
+    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "adaptive");
 
-    Assertions.assertEquals(ResourcePool.Implementation.RETAINING, configure(properties).getPoolImplementation());
+    Assertions.assertEquals(ResourcePool.Implementation.ADAPTIVE, configure(properties).getPoolImplementation());
   }
 
   /**
@@ -59,9 +59,9 @@ public class DruidHttpClientConfigTest
   public void testPoolImplementationIsNotCaseSensitive()
   {
     final Properties properties = new Properties();
-    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "RETAINING");
+    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "ADAPTIVE");
 
-    Assertions.assertEquals(ResourcePool.Implementation.RETAINING, configure(properties).getPoolImplementation());
+    Assertions.assertEquals(ResourcePool.Implementation.ADAPTIVE, configure(properties).getPoolImplementation());
   }
 
   /**
