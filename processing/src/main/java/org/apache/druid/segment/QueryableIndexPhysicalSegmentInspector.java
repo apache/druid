@@ -109,8 +109,15 @@ public class QueryableIndexPhysicalSegmentInspector implements PhysicalSegmentIn
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     // For a clustered segment (empty top-level columns) the index resolves logical-column capabilities from its
-    // summary and cluster group descriptors; for everything else this is the usual holder-based lookup.
-    return index.getColumnCapabilities(column);
+    // summary and cluster group descriptors.
+    if (index.getClusteredBaseSummary() != null) {
+      return index.getColumnCapabilities(column);
+    }
+
+    // For everything else, read the holder rather than calling index.getColumnCapabilities. Allows returning
+    // full-fidelity capabilities from PartialQueryableIndex when the segment is fully-downloaded.
+    final BaseColumnHolder columnHolder = index.getColumnHolder(column);
+    return columnHolder == null ? null : columnHolder.getCapabilities();
   }
 
   @Override

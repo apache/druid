@@ -25,6 +25,7 @@ import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.common.asyncresource.AsyncResources;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -81,14 +82,15 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
 
   private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                 .add("dim1", ColumnType.STRING)
+                                                                .add("dim2", ColumnType.STRING)
                                                                 .add("metric1", ColumnType.LONG)
                                                                 .build();
 
   private static final List<InputRow> ROWS = Arrays.asList(
-      new ListBasedInputRow(ROW_SIGNATURE, TIME, ROW_SIGNATURE.getColumnNames(), Arrays.asList("a", 1L)),
-      new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(1), ROW_SIGNATURE.getColumnNames(), Arrays.asList("a", 2L)),
-      new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(2), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 3L)),
-      new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
+      new ListBasedInputRow(ROW_SIGNATURE, TIME, ROW_SIGNATURE.getColumnNames(), List.of("a", "x", 1L)),
+      new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(1), ROW_SIGNATURE.getColumnNames(), List.of("a", "y", 2L)),
+      new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(2), ROW_SIGNATURE.getColumnNames(), List.of("b", "y", 3L)),
+      new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), List.of("b", "z", 4L))
   );
 
   @RegisterExtension
@@ -103,6 +105,12 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
   static void buildSegment() throws IOException
   {
     final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
+    final List<DimensionSchema> dimensions = List.of(
+        new StringDimensionSchema("dim1"),
+        // No bitmap index, so segment analysis must read the dictionary instead.
+        new StringDimensionSchema("dim2", null, false),
+        new LongDimensionSchema("metric1")
+    );
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmpDir)
@@ -111,12 +119,7 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
                                  IncrementalIndexSchema.builder()
                                                        .withDimensionsSpec(
                                                            DimensionsSpec.builder()
-                                                                         .setDimensions(
-                                                                             List.of(
-                                                                                 new StringDimensionSchema("dim1"),
-                                                                                 new LongDimensionSchema("metric1")
-                                                                             )
-                                                                         )
+                                                                         .setDimensions(dimensions)
                                                                          .build()
                                                        )
                                                        .withRollup(false)
@@ -298,11 +301,25 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
         new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG);
 
     try (Segment segment = makeSegment(index)) {
-      final Map<String, ColumnAnalysis> analysis =
-          new SegmentAnalyzer(EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY)).analyze(segment);
+      final Map<String, ColumnAnalysis> analysis = new SegmentAnalyzer(
+          EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY, SegmentMetadataQuery.AnalysisType.MINMAX)
+      ).analyze(segment);
       Assertions.assertEquals(ColumnType.LONG, analysis.get(ColumnHolder.TIME_COLUMN_NAME).getTypeSignature());
-      Assertions.assertEquals(ColumnType.STRING, analysis.get("dim1").getTypeSignature());
-      Assertions.assertEquals(2, analysis.get("dim1").getCardinality());
+
+      final ColumnAnalysis dim1 = analysis.get("dim1");
+      Assertions.assertEquals(ColumnType.STRING, dim1.getTypeSignature());
+      Assertions.assertFalse(dim1.isHasNulls());
+      Assertions.assertEquals(2, dim1.getCardinality());
+      Assertions.assertEquals("a", dim1.getMinValue());
+      Assertions.assertEquals("b", dim1.getMaxValue());
+
+      final ColumnAnalysis dim2 = analysis.get("dim2");
+      Assertions.assertEquals(ColumnType.STRING, dim2.getTypeSignature());
+      Assertions.assertFalse(dim2.isHasNulls());
+      Assertions.assertEquals(3, dim2.getCardinality());
+      Assertions.assertEquals("x", dim2.getMinValue());
+      Assertions.assertEquals("z", dim2.getMaxValue());
+
       Assertions.assertEquals(ColumnType.LONG, analysis.get("metric1").getTypeSignature());
     }
   }
