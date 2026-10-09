@@ -197,6 +197,32 @@ When you define the consumer properties in the supervisor spec, use the dynamic 
 
 When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
 
+##### Amazon MSK with IAM authentication
+
+The `druid-kafka-indexing-service` extension includes the [Amazon MSK Library for AWS Identity and Access Management](https://github.com/aws/aws-msk-iam-auth), so supervisors can read from an MSK cluster that uses [IAM access control](https://docs.aws.amazon.com/msk/latest/developerguide/iam-access-control.html) with nothing extra to install. Set these consumer properties, pointing `bootstrap.servers` at the cluster's [IAM bootstrap brokers](https://docs.aws.amazon.com/msk/latest/developerguide/msk-get-bootstrap-brokers.html):
+
+```json
+"consumerProperties": {
+  "bootstrap.servers": "b-1.example.c1.kafka.us-east-1.amazonaws.com:9098",
+  "security.protocol": "SASL_SSL",
+  "sasl.mechanism": "AWS_MSK_IAM",
+  "sasl.jaas.config": "software.amazon.msk.auth.iam.IAMLoginModule required;",
+  "sasl.client.callback.handler.class": "software.amazon.msk.auth.iam.IAMClientCallbackHandler"
+}
+```
+
+Grant the IAM identity that Druid uses the actions AWS lists for [consuming data](https://docs.aws.amazon.com/msk/latest/developerguide/iam-access-control-use-cases.html): `kafka-cluster:Connect`, `kafka-cluster:DescribeTopic`, `kafka-cluster:ReadData`, `kafka-cluster:DescribeGroup`, and `kafka-cluster:AlterGroup`. [Scope each action](https://docs.aws.amazon.com/msk/latest/developerguide/kafka-actions.html) to the cluster, topic, or group it applies to.
+
+Druid finds credentials through the default AWS credentials provider chain. The Overlord and the Peons or Indexers that run Kafka tasks pick up an EC2 instance profile, a Kubernetes service account role, or environment credentials without extra configuration.
+
+To assume a role, add `awsRoleArn` and `awsStsRegion` to `sasl.jaas.config`. Also add `awsAddDefaultProviders="false"`. Without it, a failed role assumption falls back to the default credentials, and Druid connects as that identity instead:
+
+```json
+"sasl.jaas.config": "software.amazon.msk.auth.iam.IAMLoginModule required awsRoleArn=\"arn:aws:iam::123456789012:role/msk-consumer\" awsStsRegion=\"us-east-1\" awsAddDefaultProviders=\"false\";"
+```
+
+Kafka lookups take the same properties in `kafkaProperties`. See [Kafka lookups](../querying/kafka-extraction-namespace.md#amazon-msk-with-iam-authentication).
+
 #### Idle configuration
 
 :::info
