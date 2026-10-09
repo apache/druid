@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -61,9 +62,11 @@ public class KafkaWebConsoleTest extends WebConsoleTestBase
   {
     final File dataFile = new File(webConsoleDir(), "../examples/quickstart/tutorial/wikiticker-2015-09-12-sampled.json.gz");
     final List<byte[]> records = new ArrayList<>();
-    try (BufferedReader reader = new BufferedReader(
-        new InputStreamReader(new GZIPInputStream(new FileInputStream(dataFile)), StandardCharsets.UTF_8)
-    )) {
+    // The file is its own resource, to be closed even when reading the gzip header fails
+    try (InputStream fileIn = new FileInputStream(dataFile);
+         BufferedReader reader = new BufferedReader(
+             new InputStreamReader(new GZIPInputStream(fileIn), StandardCharsets.UTF_8)
+         )) {
       String line;
       while ((line = reader.readLine()) != null) {
         records.add(StringUtils.toUtf8(line));
