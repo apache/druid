@@ -133,13 +133,29 @@ public class ExpressionSelectors
       Expr expression
   )
   {
-    ExpressionPlan plan = ExpressionPlanner.plan(
+    if (columnSelectorFactory instanceof ExprEvalSelectorCache) {
+      return ((ExprEvalSelectorCache) columnSelectorFactory).getOrCreateExprEvalSelector(expression);
+    }
+    return makeExprEvalSelectorUncached(columnSelectorFactory, expression);
+  }
+
+  /**
+   * Makes an uncached expression selector. Used by {@link ExprEvalSelectorCache} implementations to avoid recursively
+   * calling back into the cache.
+   */
+  public static ColumnValueSelector<ExprEval> makeExprEvalSelectorUncached(
+      ColumnSelectorFactory columnSelectorFactory,
+      Expr expression
+  )
+  {
+    final ExpressionPlan plan = ExpressionPlanner.plan(
         columnSelectorFactory,
         Expr.singleThreaded(expression, columnSelectorFactory)
     );
     final RowIdSupplier rowIdSupplier = columnSelectorFactory.getRowIdSupplier();
 
-    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR)) {
+    // Non-deterministic expressions must be evaluated for each row, so they cannot use input-value result caches.
+    if (plan.is(ExpressionPlan.Trait.SINGLE_INPUT_SCALAR) && !plan.getAnalysis().isNonDeterministic()) {
       final String column = plan.getSingleInputName();
       final ColumnType inputType = plan.getSingleInputType();
       if (inputType.is(ValueType.LONG)) {
@@ -234,7 +250,6 @@ public class ExpressionSelectors
       }
     }
   }
-
 
   /**
    * Returns whether an expression can be applied to unique values of a particular column (like those in a dictionary)
