@@ -874,7 +874,9 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
     final List<VirtualColumn> virtualColumns = new ArrayList<>(List.of(query.getVirtualColumns().getVirtualColumns()));
     if (query instanceof WindowOperatorQuery) {
       for (final OperatorFactory operator : ((WindowOperatorQuery) query).getLeafOperators()) {
-        if (operator instanceof ScanOperatorFactory) {
+        // WindowOperatorQuery stores null rather than empty virtual columns for a leaf scan without any.
+        if (operator instanceof ScanOperatorFactory
+            && ((ScanOperatorFactory) operator).getVirtualColumns() != null) {
           virtualColumns.addAll(List.of(((ScanOperatorFactory) operator).getVirtualColumns().getVirtualColumns()));
         }
       }

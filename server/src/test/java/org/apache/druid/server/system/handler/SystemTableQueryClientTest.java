@@ -630,6 +630,45 @@ public class SystemTableQueryClientTest
     );
   }
 
+  /**
+   * A window query is planned over a Scan subquery, which {@link WindowOperatorQuery} converts into a leaf scan. For a
+   * Scan without virtual columns the leaf stores null virtual columns; the filter is still pushed into the node scan,
+   * with no virtual columns.
+   */
+  @Test
+  public void testWindowLeafFilterWithoutVirtualColumns()
+  {
+    final SystemTableDescriptor descriptor = new ServerPropertiesTableDescriptor();
+    final AtomicReference<ScanQuery> capturedNodeQuery = new AtomicReference<>();
+    final SystemTableQueryClient client = makeClient(
+        descriptor,
+        List.of(testNode()),
+        (queryPlus, responseContext) -> {
+          capturedNodeQuery.set((ScanQuery) queryPlus.getQuery());
+          return Sequences.empty();
+        }
+    );
+    final SelectorDimFilter filter = new SelectorDimFilter("property", "druid.host", null);
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            Druids.ScanQueryBuilder.copy(query(descriptor, Collections.emptyMap())).filters(filter).build()
+        ),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        Collections.emptyMap(),
+        descriptor.getRowSignature(),
+        Collections.emptyList(),
+        null
+    );
+    Assertions.assertNull(((ScanOperatorFactory) query.getLeafOperators().get(0)).getVirtualColumns());
+
+    client.createRunner(query, AUTHENTICATION_RESULT, false)
+          .run(QueryPlus.wrap(query), ResponseContext.createEmpty())
+          .toList();
+
+    Assertions.assertEquals(filter, capturedNodeQuery.get().getFilter());
+    Assertions.assertEquals(VirtualColumns.EMPTY, capturedNodeQuery.get().getVirtualColumns());
+  }
+
   /** The private node transport always uses plain scan results even when the user query requests by-segment results. */
   @Test
   public void testNodeQueryDisablesBySegmentContext()
