@@ -434,9 +434,10 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
         taskId, runDurationMillis
     );
 
-    // The peon pushes its log after the process exits, so the stream can become present before it
-    // contains any content. Poll until the expected line shows up, rather than just until the stream
-    // is present, to avoid a race against that delayed push.
+    // The Indexer serves this task's log over HTTP straight from its own process log file
+    // (see HttpRemoteTaskRunner#streamTaskLog), so the stream can become present before the
+    // expected line has actually been written to that file. Poll until the expected line shows
+    // up, rather than just until the stream is present, to avoid racing against that lag.
     final String logs = cluster.callApi().waitForResult(
         () -> {
           final Optional<InputStream> streamOptional = overlord.bindings()
