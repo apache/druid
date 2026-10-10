@@ -429,22 +429,30 @@ public class IngestionSmokeTest extends EmbeddedClusterTestBase
                       .hasDimension(DruidMetrics.TASK_STATUS, "FAILED")
     );
 
-    final Optional<InputStream> streamOptional =
-        cluster.callApi().waitForResult(
-            () -> overlord.bindings()
-                          .getInstance(TaskLogStreamer.class)
-                          .streamTaskLog(taskId, 0),
-            Optional::isPresent
-        ).go();
-
-    Assertions.assertTrue(streamOptional.isPresent());
-
-    final String logs = IOUtils.toString(streamOptional.get(), StandardCharsets.UTF_8);
-
     final String expectedLogLine = StringUtils.format(
         "Running task[%s] for [%d] millis",
         taskId, runDurationMillis
     );
+
+    // The Indexer serves this task's log over HTTP straight from its own process log file
+    // (see HttpRemoteTaskRunner#streamTaskLog), so the stream can become present before the
+    // expected line has actually been written to that file. Poll until the expected line shows
+    // up, rather than just until the stream is present, to avoid racing against that lag.
+    final String logs = cluster.callApi().waitForResult(
+        () -> {
+          final Optional<InputStream> streamOptional = overlord.bindings()
+                                                                 .getInstance(TaskLogStreamer.class)
+                                                                 .streamTaskLog(taskId, 0);
+          if (!streamOptional.isPresent()) {
+            return "";
+          }
+          try (InputStream stream = streamOptional.get()) {
+            return IOUtils.toString(stream, StandardCharsets.UTF_8);
+          }
+        },
+        logContent -> logContent.contains(expectedLogLine)
+    ).go();
+
     Assertions.assertFalse(logs.isEmpty());
     Assertions.assertTrue(logs.contains(expectedLogLine), "Actual logs are: " + logs);
   }
