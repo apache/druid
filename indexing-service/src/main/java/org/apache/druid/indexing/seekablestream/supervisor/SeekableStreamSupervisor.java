@@ -2060,13 +2060,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       logDebugReport();
     }
     catch (Exception e) {
-      stateManager.recordThrowableEvent(e);
-      if (e instanceof StreamException) {
-        // When a StreamException is thrown, the error message is more useful than the stack trace in telling what's wrong.
-        log.makeAlert("Exception in supervisor run loop for supervisor[%s] for dataSource[%s]: [%s]",
-            supervisorId, dataSource, e.getMessage()).emit();
+      if (e instanceof ExecutionException || e instanceof InterruptedException) {
+        // Task-level errors (e.g., task communication timeouts) are recoverable and should not
+        // cause the supervisor to enter UNHEALTHY state. Log a warning instead of recording
+        // as a throwable event that would count toward the unhealthiness threshold.
+        log.noStackTrace().warn(
+            e,
+            "Recoverable task-level error in supervisor run loop for supervisor[%s] for dataSource[%s]",
+            supervisorId,
+            dataSource
+        );
       } else {
-        log.makeAlert(e, "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]", supervisorId, dataSource).emit();
+        stateManager.recordThrowableEvent(e);
+        if (e instanceof StreamException) {
+          // When a StreamException is thrown, the error message is more useful than the stack trace in telling what's wrong.
+          log.makeAlert("Exception in supervisor run loop for supervisor[%s] for dataSource[%s]: [%s]",
+              supervisorId, dataSource, e.getMessage()).emit();
+        } else {
+          log.makeAlert(e, "Exception in supervisor run loop for supervisor[%s] for dataSource[%s]", supervisorId, dataSource).emit();
+        }
       }
     }
     finally {
