@@ -20,8 +20,10 @@
 package org.apache.druid.server.system;
 
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -30,14 +32,20 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.RangeFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.operator.ScanOperatorFactory;
+import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.system.table.SystemTablePushdownFilter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 public class SystemTablePushdownFilterTest
@@ -115,6 +123,59 @@ public class SystemTablePushdownFilterTest
     Assertions.assertEquals("id", ((LikeDimFilter) likeFilters.get(0)).getDimension());
     final NotDimFilter notFilter = (NotDimFilter) notFilters.get(0);
     Assertions.assertEquals("id", ((SelectorDimFilter) notFilter.getField()).getDimension());
+  }
+
+  /**
+   * A virtual column shadows the physical column of the same name, so its filter must stay in the native scan instead
+   * of being compared against the provider's column. Filters on columns that are not shadowed are still extracted.
+   */
+  @Test
+  public void testDoesNotExtractFilterOnColumnShadowedByVirtualColumn()
+  {
+    final DimFilter shadowedFilter = new SelectorDimFilter("task_id", "alias", null);
+    final DimFilter createdTimeFilter = new SelectorDimFilter("created_time", "2026-01-01", null);
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource(new TableDataSource("test"))
+                                  .intervals(new LegacySegmentSpec(Intervals.ETERNITY))
+                                  .virtualColumns(shadowingVirtualColumns())
+                                  .filters(new AndDimFilter(shadowedFilter, createdTimeFilter))
+                                  .build();
+
+    Assertions.assertEquals(
+        List.of(new SelectorDimFilter("created_date", "2026-01-01", null)),
+        SystemTablePushdownFilter.extract(query, PUSHDOWN_FILTERS)
+    );
+  }
+
+  @Test
+  public void testDoesNotExtractWindowLeafFilterOnColumnShadowedByLeafVirtualColumn()
+  {
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new TableDataSource("test"),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        Collections.emptyMap(),
+        RowSignature.builder().add("task_id", ColumnType.STRING).build(),
+        Collections.emptyList(),
+        List.of(
+            new ScanOperatorFactory(
+                null,
+                new SelectorDimFilter("task_id", "alias", null),
+                null,
+                null,
+                shadowingVirtualColumns(),
+                null
+            )
+        )
+    );
+
+    Assertions.assertTrue(SystemTablePushdownFilter.extract(query, PUSHDOWN_FILTERS).isEmpty());
+  }
+
+  private static VirtualColumns shadowingVirtualColumns()
+  {
+    return VirtualColumns.create(
+        new ExpressionVirtualColumn("task_id", "'alias'", ColumnType.STRING, ExprMacroTable.nil())
+    );
   }
 
   private static List<DimFilter> extract(final DimFilter filter)

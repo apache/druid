@@ -19,7 +19,9 @@
 
 package org.apache.druid.server.system;
 
+import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
@@ -34,9 +36,16 @@ import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.system.handler.SystemTableQueryHandler;
+import org.apache.druid.server.system.table.ServerPropertiesTableDataProvider;
+import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableDataProvider;
 import org.apache.druid.server.system.table.SystemTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableRowAuthorizer;
@@ -46,6 +55,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -146,6 +156,62 @@ public class SystemTableQueryHandlerTest
         ),
         result.get(0).getEvents()
     );
+  }
+
+  /**
+   * A virtual column shadows the physical column of the same name. A filter on the virtual {@code server} column must
+   * be evaluated by the native scan rather than pushed to the provider, which compares it to the physical host.
+   */
+  @Test
+  public void testFilterOnVirtualColumnShadowingPushdownColumnKeepsMatchingRows()
+  {
+    final AuthorizerMapper authorizerMapper = new AuthorizerMapper(null)
+    {
+      @Override
+      public Authorizer getAuthorizer(final String name)
+      {
+        return (authenticationResult, resource, action) -> Access.OK;
+      }
+    };
+    final Properties properties = new Properties();
+    properties.setProperty("druid.test.visible", "visible");
+    final ServerPropertiesTableDataProvider provider = new ServerPropertiesTableDataProvider(
+        new DruidNode("overlord", "localhost", false, 8080, null, true, false),
+        Set.of(NodeRole.OVERLORD),
+        authorizerMapper,
+        properties,
+        new DruidServerConfig(null, null)
+    );
+    final SystemTableQueryHandler handler = new SystemTableQueryHandler(
+        Map.of(ServerPropertiesTableDescriptor.TABLE_NAME, provider),
+        Map.of(ServerPropertiesTableDescriptor.TABLE_NAME, new ServerPropertiesTableDescriptor()),
+        new ScanQueryEngine(),
+        authorizerMapper
+    );
+    final ScanQuery query = Druids.newScanQueryBuilder()
+                                  .dataSource(new SystemTableDataSource(ServerPropertiesTableDescriptor.TABLE_NAME))
+                                  .eternityInterval()
+                                  .virtualColumns(
+                                      new ExpressionVirtualColumn(
+                                          "server",
+                                          "'alias'",
+                                          ColumnType.STRING,
+                                          ExprMacroTable.nil()
+                                      )
+                                  )
+                                  .filters(new SelectorDimFilter("server", "alias", null))
+                                  .columns("property", "value")
+                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                  .build();
+
+    final List<ScanResultValue> result = handler.createRunner(
+        query,
+        new AuthenticationResult("alice", AuthConfig.ALLOW_ALL_NAME, null, null),
+        true
+    ).run(QueryPlus.wrap(query), ResponseContext.createEmpty()).toList();
+
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals(List.of(List.of("druid.test.visible", "visible")), result.get(0).getEvents());
   }
 
   /** A node-local handler rejects a composite root instead of casting it to a system-table datasource. */

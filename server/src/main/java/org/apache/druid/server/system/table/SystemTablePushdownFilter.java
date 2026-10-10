@@ -35,11 +35,14 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -60,12 +63,18 @@ public record SystemTablePushdownFilter(String key, @Nullable String value)
     if (pushdownFilters.isEmpty()) {
       return Collections.emptyList();
     }
-    final Map<String, String> columnMappings = pushdownFilters.stream().collect(
-        Collectors.toMap(
-            SystemTablePushdownFilter::key,
-            filter -> filter.value() == null ? filter.key() : filter.value()
-        )
-    );
+    // A virtual column shadows a physical column of the same name, so a filter on it is not a filter on the
+    // provider's column and must not be pushed down.
+    final Set<String> virtualColumnNames = getVirtualColumnNames(query);
+    final Map<String, String> columnMappings = new HashMap<>();
+    for (final SystemTablePushdownFilter filter : pushdownFilters) {
+      if (!virtualColumnNames.contains(filter.key())) {
+        columnMappings.put(filter.key(), filter.value() == null ? filter.key() : filter.value());
+      }
+    }
+    if (columnMappings.isEmpty()) {
+      return Collections.emptyList();
+    }
 
     final List<DimFilter> extracted = new ArrayList<>();
     extractConjuncts(query.getFilter(), columnMappings, extracted);
@@ -77,6 +86,27 @@ public record SystemTablePushdownFilter(String key, @Nullable String value)
       }
     }
     return Collections.unmodifiableList(extracted);
+  }
+
+  private static Set<String> getVirtualColumnNames(final Query<?> query)
+  {
+    final Set<String> names = new HashSet<>();
+    for (final VirtualColumn virtualColumn : query.getVirtualColumns().getVirtualColumns()) {
+      names.add(virtualColumn.getOutputName());
+    }
+    if (query instanceof WindowOperatorQuery) {
+      for (final OperatorFactory leafOperator : ((WindowOperatorQuery) query).getLeafOperators()) {
+        if (leafOperator instanceof ScanOperatorFactory) {
+          final VirtualColumns leafVirtualColumns = ((ScanOperatorFactory) leafOperator).getVirtualColumns();
+          if (leafVirtualColumns != null) {
+            for (final VirtualColumn virtualColumn : leafVirtualColumns.getVirtualColumns()) {
+              names.add(virtualColumn.getOutputName());
+            }
+          }
+        }
+      }
+    }
+    return names;
   }
 
   private static void extractConjuncts(
