@@ -1078,6 +1078,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private int initRetryCounter = 0;
   private volatile DateTime firstRunTime;
   private volatile DateTime earlyStopTime = null;
+  /**
+   * The data source metadata most recently read during {@link #createNewTasks()}. It is kept so that the
+   * post-reset rebuild of task groups can reuse it instead of calling the coordinator again, which keeps the
+   * number of metadata lookups identical to the pre-rebuild behaviour.
+   */
+  private DataSourceMetadata dataSourceMetadataFetchedInCreateNewTasks;
   protected volatile RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType> recordSupplier;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
@@ -2213,6 +2219,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (currentMetadata == null) {
           metadataUpdateSuccess = true;
         } else {
+          // Use minus() to remove the stale offsets from the metadata, so that
+          // the supervisor will use auto.offset.reset to determine the starting
+          // position. Using plus() would preserve the invalid offsets, causing
+          // an infinite reset loop on the next run.
           final DataSourceMetadata newMetadata = currentMetadata.minus(resetMetadata);
           try {
             metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(supervisorId, newMetadata);
@@ -4367,101 +4377,46 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
 
         log.info("Creating new taskGroup[%d] for partitions[%s].", groupId, partitionGroups.get(groupId));
-        final DateTime minimumMessageTime;
-        if (ioConfig.getLateMessageRejectionStartDateTime().isPresent()) {
-          minimumMessageTime = ioConfig.getLateMessageRejectionStartDateTime().get();
-        } else {
-          minimumMessageTime = ioConfig.getLateMessageRejectionPeriod().isPresent()
-                               ? DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
-                               : null;
-        }
-
-        final DateTime maximumMessageTime = ioConfig.getEarlyMessageRejectionPeriod().isPresent()
-                                            ? DateTimes.nowUtc()
-                                                       .plus(ioConfig.getTaskDuration())
-                                                       .plus(ioConfig.getEarlyMessageRejectionPeriod().get())
-                                            : null;
-
-        final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> unfilteredStartingOffsets =
-            generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset);
-
-        final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets;
-        if (supportsPartitionExpiration()) {
-          startingOffsets = filterExpiredPartitionsFromStartingOffsets(unfilteredStartingOffsets);
-        } else {
-          startingOffsets = unfilteredStartingOffsets;
-        }
-
-        ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
-            .entrySet()
-            .stream()
-            .filter(entry -> entry.getValue().get() != null)
-            .collect(
-                Collectors.collectingAndThen(
-                    Collectors.toMap(Entry::getKey, entry -> entry.getValue().get()),
-                    ImmutableMap::copyOf
-                )
-            );
-
-        ImmutableMap<PartitionIdType, SequenceOffsetType> simpleUnfilteredStartingOffsets;
-        if (supportsPartitionExpiration()) {
-          simpleUnfilteredStartingOffsets = unfilteredStartingOffsets
-              .entrySet()
-              .stream()
-              .filter(entry -> entry.getValue().get() != null)
-              .collect(
-                  Collectors.collectingAndThen(
-                      Collectors.toMap(Entry::getKey, entry -> entry.getValue().get()),
-                      ImmutableMap::copyOf
-                  )
-              );
-        } else {
-          simpleUnfilteredStartingOffsets = simpleStartingOffsets;
-        }
-
-        Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
-        if (!useExclusiveStartingSequence) {
-          exclusiveStartSequenceNumberPartitions = Collections.emptySet();
-        } else {
-          exclusiveStartSequenceNumberPartitions = startingOffsets
-              .entrySet()
-              .stream()
-              .filter(x -> x.getValue().get() != null
-                           && x.getValue().isExclusive())
-              .map(Entry::getKey)
-              .collect(Collectors.toSet());
-        }
-
-        // NEW: Extract end offsets for bounded mode
-        ImmutableMap<PartitionIdType, SequenceOffsetType> endOffsets = null;
-        if (ioConfig.isBounded()) {
-          endOffsets = ImmutableMap.copyOf(getEndOffsetsForGroup(groupId));
-        }
-
-        log.info(
-            "Initializing taskGroup[%d] with startingOffsets[%s] and endOffsets[%s]",
-            groupId,
-            simpleStartingOffsets,
-            endOffsets
-        );
-        newTaskGroups.put(
-            groupId,
-            new TaskGroup(
-                groupId,
-                simpleStartingOffsets,
-                simpleUnfilteredStartingOffsets,
-                endOffsets,
-                minimumMessageTime,
-                maximumMessageTime,
-                exclusiveStartSequenceNumberPartitions
-            )
-        );
+        newTaskGroups.put(groupId, buildNewTaskGroup(groupId, metadataOffsets, partitionsToReset));
       }
     }
 
     // If any partitions need a reset, issue a single batch reset.
     if (!partitionsToReset.isEmpty()) {
       resetInternal(createDataSourceMetaDataForReset(ioConfig.getStream(), partitionsToReset));
+
+      // The new task groups were built before the reset, so the ones that cover a partition which has to
+      // be reset hold no offset for it: 'getOffsetFromStorageForPartition' left the partition out rather
+      // than taking it from metadata storage. Installing them as they are would leave a mixed group
+      // reading the stale partition from its old position until the next rollover, and would make a group
+      // that consists only of reset partitions run no task at all. Rebuild the affected groups now that
+      // partitionOffsets has been reset, so that each of them starts from the reset position.
+      // Collect the affected groupIds first: rebuilding a group mutates 'partitionsToReset', so iterating
+      // its keys directly would risk a ConcurrentModificationException, and several reset partitions can
+      // map to the same group.
+      final Set<Integer> groupsToRebuild = new HashSet<>();
+      for (PartitionIdType partition : partitionsToReset.keySet()) {
+        groupsToRebuild.add(getTaskGroupIdForPartition(partition));
+      }
+
+      for (Integer groupId : groupsToRebuild) {
+        if (newTaskGroups.containsKey(groupId)) {
+          // Reuse the metadata already read in createNewTasks so that the rebuild does not issue an
+          // additional coordinator lookup.
+          newTaskGroups.put(
+              groupId,
+              buildNewTaskGroup(groupId, metadataOffsets, partitionsToReset, dataSourceMetadataFetchedInCreateNewTasks)
+          );
+          log.info(
+              "Rebuilt taskGroup[%d] after resetting partitions[%s] - the group now reads partitions[%s] "
+              + "from the reset offsets",
+              groupId,
+              partitionsToReset.keySet(),
+              partitionGroups.get(groupId)
+          );
+        }
+      }
+
       throw new StreamException(
           new ISE(
               "Previous sequenceNumbers %s are no longer available - automatically resetting sequences",
@@ -4549,15 +4504,139 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @param metadataOffsets pre-fetched metadata offsets shared across all groups in this run
    * @param partitionsToReset accumulator for partitions that need to be reset; mutated in-place
    */
+  /**
+   * Builds the task group for the partitions of 'groupId', using the given offsets from metadata storage.
+   * Partitions whose stored offset is no longer available are added to 'partitionsToReset' rather than being
+   * given a starting sequence.
+   */
+  private TaskGroup buildNewTaskGroup(
+      final int groupId,
+      final Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
+      final Map<PartitionIdType, SequenceOffsetType> partitionsToReset
+  )
+  {
+    return buildNewTaskGroup(groupId, metadataOffsets, partitionsToReset, null);
+  }
+
+  private TaskGroup buildNewTaskGroup(
+      final int groupId,
+      final Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
+      final Map<PartitionIdType, SequenceOffsetType> partitionsToReset,
+      final DataSourceMetadata cachedDataSourceMetadata
+  )
+  {
+    final DateTime minimumMessageTime;
+    if (ioConfig.getLateMessageRejectionStartDateTime().isPresent()) {
+      minimumMessageTime = ioConfig.getLateMessageRejectionStartDateTime().get();
+    } else {
+      minimumMessageTime = ioConfig.getLateMessageRejectionPeriod().isPresent()
+                           ? DateTimes.nowUtc().minus(ioConfig.getLateMessageRejectionPeriod().get())
+                           : null;
+    }
+
+    final DateTime maximumMessageTime = ioConfig.getEarlyMessageRejectionPeriod().isPresent()
+                                        ? DateTimes.nowUtc()
+                                                   .plus(ioConfig.getTaskDuration())
+                                                   .plus(ioConfig.getEarlyMessageRejectionPeriod().get())
+                                        : null;
+
+    final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> unfilteredStartingOffsets =
+        cachedDataSourceMetadata == null
+        ? generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset)
+        : generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset, cachedDataSourceMetadata);
+
+    final Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> startingOffsets;
+    if (supportsPartitionExpiration()) {
+      startingOffsets = filterExpiredPartitionsFromStartingOffsets(unfilteredStartingOffsets);
+    } else {
+      startingOffsets = unfilteredStartingOffsets;
+    }
+
+    final ImmutableMap<PartitionIdType, SequenceOffsetType> simpleStartingOffsets = startingOffsets
+        .entrySet()
+        .stream()
+        .filter(entry -> entry.getValue().get() != null)
+        .collect(
+            Collectors.collectingAndThen(
+                Collectors.toMap(Entry::getKey, entry -> entry.getValue().get()),
+                ImmutableMap::copyOf
+            )
+        );
+
+    final ImmutableMap<PartitionIdType, SequenceOffsetType> simpleUnfilteredStartingOffsets;
+    if (supportsPartitionExpiration()) {
+      simpleUnfilteredStartingOffsets = unfilteredStartingOffsets
+          .entrySet()
+          .stream()
+          .filter(entry -> entry.getValue().get() != null)
+          .collect(
+              Collectors.collectingAndThen(
+                  Collectors.toMap(Entry::getKey, entry -> entry.getValue().get()),
+                  ImmutableMap::copyOf
+              )
+          );
+    } else {
+      simpleUnfilteredStartingOffsets = simpleStartingOffsets;
+    }
+
+    final Set<PartitionIdType> exclusiveStartSequenceNumberPartitions;
+    if (!useExclusiveStartingSequence) {
+      exclusiveStartSequenceNumberPartitions = Collections.emptySet();
+    } else {
+      exclusiveStartSequenceNumberPartitions = startingOffsets
+          .entrySet()
+          .stream()
+          .filter(x -> x.getValue().get() != null
+                       && x.getValue().isExclusive())
+          .map(Entry::getKey)
+          .collect(Collectors.toSet());
+    }
+
+    // NEW: Extract end offsets for bounded mode
+    ImmutableMap<PartitionIdType, SequenceOffsetType> endOffsets = null;
+    if (ioConfig.isBounded()) {
+      endOffsets = ImmutableMap.copyOf(getEndOffsetsForGroup(groupId));
+    }
+
+    log.info(
+        "Initializing taskGroup[%d] with startingOffsets[%s] and endOffsets[%s]",
+        groupId,
+        simpleStartingOffsets,
+        endOffsets
+    );
+    return new TaskGroup(
+        groupId,
+        simpleStartingOffsets,
+        simpleUnfilteredStartingOffsets,
+        endOffsets,
+        minimumMessageTime,
+        maximumMessageTime,
+        exclusiveStartSequenceNumberPartitions
+    );
+  }
+
   private Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> generateStartingSequencesForPartitionGroup(
       int groupId,
       Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
       Map<PartitionIdType, SequenceOffsetType> partitionsToReset
   )
   {
+    final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
+    // Remember what we just read so that a post-reset rebuild of the task groups can reuse it instead of
+    // issuing another metadata lookup. Rebuilding happens after the reset and must not add coordinator calls.
+    this.dataSourceMetadataFetchedInCreateNewTasks = dataSourceMetadata;
+    return generateStartingSequencesForPartitionGroup(groupId, metadataOffsets, partitionsToReset, dataSourceMetadata);
+  }
+
+  private Map<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> generateStartingSequencesForPartitionGroup(
+      int groupId,
+      Map<PartitionIdType, SequenceOffsetType> metadataOffsets,
+      Map<PartitionIdType, SequenceOffsetType> partitionsToReset,
+      DataSourceMetadata dataSourceMetadata
+  )
+  {
     // Existing logic for both streaming and bounded mode
     ImmutableMap.Builder<PartitionIdType, OrderedSequenceNumber<SequenceOffsetType>> builder = ImmutableMap.builder();
-    final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
     final BoundedStreamConfig metadataBoundedConfig = getBoundedConfigFromMetadata(dataSourceMetadata);
 
     for (PartitionIdType partitionId : partitionGroups.get(groupId)) {
