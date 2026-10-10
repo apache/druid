@@ -48,6 +48,7 @@ import org.apache.druid.sql.calcite.aggregation.builtin.MaxSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.MinSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SingleValueSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.StringSqlAggregator;
+import org.apache.druid.sql.calcite.aggregation.builtin.SumFilterElseSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumSqlAggregator;
 import org.apache.druid.sql.calcite.aggregation.builtin.SumZeroSqlAggregator;
 import org.apache.druid.sql.calcite.expression.AliasedOperatorConversion;
@@ -167,6 +168,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new MaxSqlAggregator())
                    .add(new SumSqlAggregator())
                    .add(new SumZeroSqlAggregator())
+                   .add(new SumFilterElseSqlAggregator())
                    .add(new GroupingSqlAggregator())
                    .add(new LiteralSqlAggregator())
                    .add(new ArraySqlAggregator())

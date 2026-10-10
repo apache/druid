@@ -21,15 +21,21 @@ package org.apache.druid.query.aggregation;
 
 import org.apache.druid.query.filter.ValueMatcher;
 
+import javax.annotation.Nullable;
+
 public class FilteredAggregator implements Aggregator
 {
   private final ValueMatcher matcher;
   private final Aggregator delegate;
+  @Nullable
+  private final Number elseValue;
+  private boolean hasUnmatchedRow;
 
-  public FilteredAggregator(ValueMatcher matcher, Aggregator delegate)
+  public FilteredAggregator(ValueMatcher matcher, Aggregator delegate, @Nullable Number elseValue)
   {
     this.matcher = matcher;
     this.delegate = delegate;
+    this.elseValue = elseValue;
   }
 
   @Override
@@ -37,37 +43,56 @@ public class FilteredAggregator implements Aggregator
   {
     if (matcher.matches(false)) {
       delegate.aggregate();
+    } else if (elseValue != null) {
+      hasUnmatchedRow = true;
     }
   }
 
   @Override
   public boolean isNull()
   {
-    return delegate.isNull();
+    return delegate.isNull() && (elseValue == null || !hasUnmatchedRow);
   }
 
   @Override
+  @Nullable
   public Object get()
   {
-    return delegate.get();
+    if (elseValue != null && hasUnmatchedRow && delegate.isNull()) {
+      return elseValue;
+    } else {
+      return delegate.get();
+    }
   }
 
   @Override
   public float getFloat()
   {
-    return delegate.getFloat();
+    if (elseValue != null && hasUnmatchedRow && delegate.isNull()) {
+      return elseValue.floatValue();
+    } else {
+      return delegate.getFloat();
+    }
   }
 
   @Override
   public long getLong()
   {
-    return delegate.getLong();
+    if (elseValue != null && hasUnmatchedRow && delegate.isNull()) {
+      return elseValue.longValue();
+    } else {
+      return delegate.getLong();
+    }
   }
 
   @Override
   public double getDouble()
   {
-    return delegate.getDouble();
+    if (elseValue != null && hasUnmatchedRow && delegate.isNull()) {
+      return elseValue.doubleValue();
+    } else {
+      return delegate.getDouble();
+    }
   }
 
   @Override
