@@ -31,6 +31,10 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryColumnUsageAnalyzer;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
@@ -48,6 +52,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +90,12 @@ public class OpenLineageRequestLogger implements RequestLogger
       + "/src/main/resources/openlineage-schema/";
   private static final String CONTEXT_FACET_SCHEMA_URL = CUSTOM_SCHEMA_BASE + "DruidQueryContextRunFacet.json";
   private static final String STATS_FACET_SCHEMA_URL = CUSTOM_SCHEMA_BASE + "DruidQueryStatisticsRunFacet.json";
+  // Standard OpenLineage SchemaDatasetFacet listing the input columns referenced by the query (names only).
+  private static final String SCHEMA_FACET_SCHEMA_URL =
+      "https://openlineage.io/spec/facets/1-1-1/SchemaDatasetFacet.json";
+  // Custom dataset facet describing how each referenced column was used (filter, group-by, aggregation, ...).
+  private static final String COLUMN_USAGE_FACET_SCHEMA_URL =
+      CUSTOM_SCHEMA_BASE + "DruidColumnUsageDatasetFacet.json";
   static final int SQL_FACET_MAX_LENGTH = 64 * 1024;
   static final int DEFAULT_EMIT_QUEUE_CAPACITY = 1000;
   static final int DEFAULT_EMIT_THREAD_COUNT = 1;
@@ -105,6 +116,7 @@ public class OpenLineageRequestLogger implements RequestLogger
   @Nullable
   private final String transportUrl;
   private final Set<String> excludedNativeQueryTypes;
+  private final boolean columnLineageEnabled;
   @Nullable
   private final HttpClient httpClient;
   @Nullable
@@ -120,7 +132,7 @@ public class OpenLineageRequestLogger implements RequestLogger
   )
   {
     this(jsonMapper, namespace, transportType, transportUrl, excludedNativeQueryTypes,
-         DEFAULT_EMIT_QUEUE_CAPACITY, DEFAULT_EMIT_THREAD_COUNT, null);
+         true, DEFAULT_EMIT_QUEUE_CAPACITY, DEFAULT_EMIT_THREAD_COUNT, null);
   }
 
   public OpenLineageRequestLogger(
@@ -129,6 +141,7 @@ public class OpenLineageRequestLogger implements RequestLogger
       OpenLineageRequestLoggerProvider.TransportType transportType,
       @Nullable String transportUrl,
       Set<String> excludedNativeQueryTypes,
+      boolean columnLineageEnabled,
       int emitQueueCapacity,
       int emitThreadCount,
       @Nullable HttpClient httpClient
@@ -139,6 +152,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     this.transportType = transportType;
     this.transportUrl = transportUrl;
     this.excludedNativeQueryTypes = excludedNativeQueryTypes;
+    this.columnLineageEnabled = columnLineageEnabled;
     if (transportType == OpenLineageRequestLoggerProvider.TransportType.HTTP && transportUrl == null) {
       throw new IllegalStateException(
           "druid.request.logging.transportUrl must be set when transportType=HTTP"
@@ -215,14 +229,34 @@ public class OpenLineageRequestLogger implements RequestLogger
       return;
     }
 
-    List<String> inputs = new ArrayList<>(new LinkedHashSet<>(requestLogLine.getQuery().getDataSource().getTableNames()));
+    List<String> inputs = new ArrayList<>(extractInputTables(requestLogLine.getQuery()));
     String queryId = requestLogLine.getQuery().getId();
     if (queryId == null) {
       log.debug("Native query reached OpenLineage logger without a query ID");
       queryId = UNKNOWN_QUERY_ID;
     }
 
-    emit(buildRunEvent(queryId, queryType, requestLogLine, inputs, null));
+    Map<String, Map<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>>> columnsByTable =
+        columnLineageEnabled ? extractColumnsByTable(requestLogLine.getQuery()) : null;
+    emit(buildRunEvent(queryId, queryType, requestLogLine, inputs, columnsByTable, null));
+  }
+
+  /**
+   * Collects the input table names of a native query. A top-level {@link UnionQuery} has no single
+   * datasource ({@link UnionQuery#getDataSource()} throws by design), so its branches are unioned;
+   * every other query exposes its tables through {@code getDataSource().getTableNames()}.
+   */
+  private static Set<String> extractInputTables(Query<?> query)
+  {
+    Set<String> tables = new LinkedHashSet<>();
+    if (query instanceof UnionQuery) {
+      for (DataSource dataSource : ((UnionQuery) query).getDataSources()) {
+        tables.addAll(dataSource.getTableNames());
+      }
+    } else {
+      tables.addAll(query.getDataSource().getTableNames());
+    }
+    return tables;
   }
 
   /**
@@ -254,7 +288,7 @@ public class OpenLineageRequestLogger implements RequestLogger
       queryId = UNKNOWN_QUERY_ID;
     }
 
-    emit(buildRunEvent(queryId, "msq", requestLogLine, List.of(), outputTable));
+    emit(buildRunEvent(queryId, "msq", requestLogLine, List.of(), null, outputTable));
   }
 
   /**
@@ -309,11 +343,35 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
   }
 
+  /**
+   * Resolves the per-base-table column-usage map for a native query by delegating to the core
+   * {@link QueryColumnUsageAnalyzer}, then used to attach the {@code schema} and {@code druid_columnUsage}
+   * dataset facets to input datasets. Returns {@code null} (yielding table-level lineage only) when no
+   * base-table columns can be determined, or on any error -- lineage extraction must never break the
+   * request-logging path, so it never fabricates or mis-attributes columns.
+   */
+  @Nullable
+  private Map<String, Map<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>>> extractColumnsByTable(Query<?> query)
+  {
+    try {
+      Map<String, Map<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>>> result =
+          QueryColumnUsageAnalyzer.analyze(query);
+      return result.isEmpty() ? null : result;
+    }
+    // StackOverflowError (an Error, not an Exception) is caught too so that a pathologically deep
+    // query plan degrades to table-level lineage rather than breaking the request-logging path.
+    catch (Exception | StackOverflowError e) {
+      log.debug(e, "Failed to extract column lineage; falling back to table-level lineage");
+      return null;
+    }
+  }
+
   private ObjectNode buildRunEvent(
       String queryId,
       String queryType,
       RequestLogLine requestLogLine,
       List<String> inputs,
+      @Nullable Map<String, Map<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>>> columnsByTable,
       @Nullable String output
   )
   {
@@ -327,8 +385,8 @@ public class OpenLineageRequestLogger implements RequestLogger
     event.put("schemaURL", SCHEMA_URL);
     event.set("run", buildRun(queryId, queryType, requestLogLine, stats, success));
     event.set("job", buildJob(queryId, requestLogLine.getSql()));
-    event.set("inputs", buildDatasets(inputs));
-    event.set("outputs", buildDatasets(output != null ? List.of(output) : List.of()));
+    event.set("inputs", buildDatasets(inputs, columnsByTable));
+    event.set("outputs", buildDatasets(output != null ? List.of(output) : List.of(), null));
     return event;
   }
 
@@ -434,19 +492,58 @@ public class OpenLineageRequestLogger implements RequestLogger
     return facet;
   }
 
-  private ArrayNode buildDatasets(List<String> tableNames)
+  private ArrayNode buildDatasets(
+      List<String> tableNames,
+      @Nullable Map<String, Map<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>>> columnsByTable
+  )
   {
     ArrayNode array = jsonMapper.createArrayNode();
     for (String name : tableNames) {
       ObjectNode node = jsonMapper.createObjectNode();
       node.put("namespace", namespace);
       node.put("name", name);
-      node.set("facets", jsonMapper.createObjectNode());
+      ObjectNode facets = jsonMapper.createObjectNode();
+      Map<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>> columns = columnsByTable == null ? null : columnsByTable.get(name);
+      if (columns != null && !columns.isEmpty()) {
+        addColumnFacets(facets, columns);
+      }
+      node.set("facets", facets);
       array.add(node);
     }
     return array;
   }
 
+  /**
+   * Attaches the standard OpenLineage {@code schema} facet (referenced column names, sorted) and the
+   * custom {@code druid_columnUsage} facet (column to usage roles) to an input dataset's facets.
+   */
+  private void addColumnFacets(ObjectNode facets, Map<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>> columns)
+  {
+    ObjectNode schemaFacet = createFacet(SCHEMA_FACET_SCHEMA_URL);
+    ArrayNode fields = jsonMapper.createArrayNode();
+    ObjectNode usageFields = jsonMapper.createObjectNode();
+    // columns is a TreeMap, so iteration (and the emitted JSON) is deterministically sorted by name.
+    for (Map.Entry<String, EnumSet<QueryColumnUsageAnalyzer.ColumnUsage>> entry : columns.entrySet()) {
+      ObjectNode field = jsonMapper.createObjectNode();
+      field.put("name", entry.getKey());
+      fields.add(field);
+
+      ArrayNode usages = jsonMapper.createArrayNode();
+      // EnumSet iterates in enum declaration order, so usage lists are deterministic too.
+      for (QueryColumnUsageAnalyzer.ColumnUsage role : entry.getValue()) {
+        usages.add(role.name());
+      }
+      ObjectNode usageEntry = jsonMapper.createObjectNode();
+      usageEntry.set("usages", usages);
+      usageFields.set(entry.getKey(), usageEntry);
+    }
+    schemaFacet.set("fields", fields);
+    facets.set("schema", schemaFacet);
+
+    ObjectNode usageFacet = createFacet(COLUMN_USAGE_FACET_SCHEMA_URL);
+    usageFacet.set("fields", usageFields);
+    facets.set("druid_columnUsage", usageFacet);
+  }
 
   protected void emit(ObjectNode event)
   {
@@ -571,5 +668,4 @@ public class OpenLineageRequestLogger implements RequestLogger
       }
     }
   }
-
 }
