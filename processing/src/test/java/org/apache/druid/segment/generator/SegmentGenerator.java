@@ -47,8 +47,8 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.serde.ComplexMetrics;
+import org.apache.druid.segment.transform.BaseTransformer;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.segment.transform.Transformer;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -253,7 +253,7 @@ public class SegmentGenerator implements Closeable
     final List<InputRow> rows = new ArrayList<>();
     final List<QueryableIndex> indexes = new ArrayList<>();
 
-    final Transformer transformer = transformSpec.toTransformer();
+    final BaseTransformer transformer = transformSpec.toTransformer();
     final InputRowSchema rowSchema = new InputRowSchema(
         TimestampSpec.DEFAULT,
         dimensionsSpec,
@@ -397,7 +397,7 @@ public class SegmentGenerator implements Closeable
     final List<InputRow> rows = new ArrayList<>();
     final List<QueryableIndex> indexes = new ArrayList<>();
 
-    final Transformer transformer = transformSpec.toTransformer();
+    final BaseTransformer transformer = transformSpec.toTransformer();
     final InputRowSchema rowSchema = new InputRowSchema(
         TimestampSpec.DEFAULT,
         dimensionsSpec,
@@ -510,7 +510,7 @@ public class SegmentGenerator implements Closeable
 
     final List<InputRow> rows = new ArrayList<>();
 
-    final Transformer transformer = transformSpec.toTransformer();
+    final BaseTransformer transformer = transformSpec.toTransformer();
     final InputRowSchema rowSchema = new InputRowSchema(
         TimestampSpec.DEFAULT,
         dimensionsSpec,
